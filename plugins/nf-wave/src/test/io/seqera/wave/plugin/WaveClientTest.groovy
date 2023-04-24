@@ -360,28 +360,27 @@ class WaveClientTest extends Specification {
         then:
         client.spackRecipeToDockerFile(RECIPE) == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.1 as builder
+FROM spack/ubuntu-jammy:v0.19.2 as builder
 
 RUN mkdir -p /opt/spack-env \\
+&&  spack env create -d /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  echo -e "\\
-spack: \\n\\
-  include: [/opt/spack-env/compilers.yaml] \\n\\
-  concretizer: \\n\\
-    unify: true \\n\\
-  specs: [bwa@0.7.15] \\n\\
-  packages: \\n\\
-    all: \\n\\
-      target: [x86_64] \\n\\
-  config: \\n\\
-    install_tree: /opt/software \\n\\
-  view: /opt/view \\n\\
-" > /opt/spack-env/spack.yaml
+&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
+&& spack add bwa@0.7.15 \\
+&& spack config add config:install_tree:/opt/software \\
+&& spack config add concretizer:unify:true \\
+&& spack config add concretizer:reuse:false
+
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack concretize -f \\
+&& spack install --fail-fast && spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
@@ -488,25 +487,24 @@ CMD [ "/bin/bash" ]
 FROM spack/foo:1 as builder
 
 RUN mkdir -p /opt/spack-env \\
+&&  spack env create -d /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -foo\\n      cxxflags: -foo2\\n      fflags: -foo3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  echo -e "\\
-spack: \\n\\
-  include: [/opt/spack-env/compilers.yaml] \\n\\
-  concretizer: \\n\\
-    unify: true \\n\\
-  specs: [bwa@0.7.15] \\n\\
-  packages: \\n\\
-    all: \\n\\
-      target: [nextcpu] \\n\\
-  config: \\n\\
-    install_tree: /opt/software \\n\\
-  view: /opt/view \\n\\
-" > /opt/spack-env/spack.yaml
+&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
+&& spack add bwa@0.7.15 \\
+&& spack config add config:install_tree:/opt/software \\
+&& spack config add concretizer:unify:true \\
+&& spack config add concretizer:reuse:false
+
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack config add packages:all:target:[nextcpu]
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast -n && spack gc -y
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack concretize -f \\
+&& spack install --fail-fast -n && spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
@@ -581,25 +579,27 @@ CMD [ "/bin/bash" ]
         then:
         client.spackFileToDockerFile()== '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.1 as builder
+FROM spack/ubuntu-jammy:v0.19.2 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&&  echo -e "\\
-  packages: \\n\\
-    all: \\n\\
-      target: [x86_64] \\n\\
-  config: \\n\\
-    install_tree: /opt/software \\n\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
+&& spack env view enable \\
+&& spack config add config:install_tree:/opt/software \\
+&& spack config add concretizer:unify:true \\
+&& spack config add concretizer:reuse:false
+
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack concretize -f \\
+&& spack install --fail-fast && spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
@@ -795,28 +795,27 @@ CMD [ "/bin/bash" ]
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.1 as builder
+FROM spack/ubuntu-jammy:v0.19.2 as builder
 
 RUN mkdir -p /opt/spack-env \\
+&&  spack env create -d /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  echo -e "\\
-spack: \\n\\
-  include: [/opt/spack-env/compilers.yaml] \\n\\
-  concretizer: \\n\\
-    unify: true \\n\\
-  specs: [salmon@1.2.3] \\n\\
-  packages: \\n\\
-    all: \\n\\
-      target: [x86_64] \\n\\
-  config: \\n\\
-    install_tree: /opt/software \\n\\
-  view: /opt/view \\n\\
-" > /opt/spack-env/spack.yaml
+&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
+&& spack add salmon@1.2.3 \\
+&& spack config add config:install_tree:/opt/software \\
+&& spack config add concretizer:unify:true \\
+&& spack config add concretizer:reuse:false
+
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack concretize -f \\
+&& spack install --fail-fast && spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
@@ -906,25 +905,27 @@ CMD [ "/bin/bash" ]
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.1 as builder
+FROM spack/ubuntu-jammy:v0.19.2 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&&  echo -e "\\
-  packages: \\n\\
-    all: \\n\\
-      target: [x86_64] \\n\\
-  config: \\n\\
-    install_tree: /opt/software \\n\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
+&& spack env view enable \\
+&& spack config add config:install_tree:/opt/software \\
+&& spack config add concretizer:unify:true \\
+&& spack config add concretizer:reuse:false
+
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack concretize -f \\
+&& spack install --fail-fast && spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\

@@ -123,9 +123,9 @@ The above setting instructs Wave to only use the ``spack`` directive to provisio
 the ``container`` directive and any Dockerfile(s).
 
 .. note::
-  If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, 
-  which are already configured by the Wave plugin: ``packages``, ``config`` and ``view`` (your edits will be ignored), and 
-  ``compilers`` and ``concretizer`` (your edits will be considered, and may interfere with the setup by the Wave plugin).
+  If using a Spack YAML file to provide the required packages, you should avoid editing the following sections,
+  which are already configured by the Wave plugin: ``packages``, ``config``, ``view`` and ``concretizer`` (your edits may be ignored),
+  and ``compilers`` (your edits will be considered, and may interfere with the setup by the Wave plugin).
 
 Push to a private repository
 ----------------------------

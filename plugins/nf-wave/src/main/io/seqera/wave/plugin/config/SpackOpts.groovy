@@ -43,7 +43,7 @@ class SpackOpts {
     final List<String> commands
 
     SpackOpts(Map opts) {
-        this.checksum = opts.checksum ?: true
+        this.checksum = ( opts.checksum != null ) ? opts.checksum : true
         this.builderImage = opts.builderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
         this.runnerImage = opts.runnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
         this.osPackages = opts.osPackages ?: DEFAULT_SPACK_OSPACKAGES

@@ -457,18 +457,24 @@ RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&&  echo -e "\\
-  packages: \\n\\
-    all: \\n\\
-      target: [${config.spackOpts().target}] \\n\\
-  config: \\n\\
-    install_tree: /opt/software \\n\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
+&& spack env view enable \\
+&& spack config add config:install_tree:/opt/software \\
+&& spack config add concretizer:unify:true \\
+&& spack config add concretizer:reuse:false
+""" //.stripIndent()
 
+        if( config.spackOpts().target ) result += """
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack config add packages:all:target:[${config.spackOpts().target}]
+""" //.stripIndent()
+
+        result += """
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${checksumString}&& spack gc -y
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack concretize -f \\
+&& spack install --fail-fast ${checksumString}&& spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
@@ -558,25 +564,28 @@ CMD [ "/bin/bash" ]
 FROM ${config.spackOpts().builderImage} as builder
 
 RUN mkdir -p /opt/spack-env \\
+&&  spack env create -d /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  echo -e "\\
-spack: \\n\\
-  include: [/opt/spack-env/compilers.yaml] \\n\\
-  concretizer: \\n\\
-    unify: true \\n\\
-  specs: [${recipe}] \\n\\
-  packages: \\n\\
-    all: \\n\\
-      target: [${config.spackOpts().target}] \\n\\
-  config: \\n\\
-    install_tree: /opt/software \\n\\
-  view: /opt/view \\n\\
-" > /opt/spack-env/spack.yaml
+&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
+&& spack add ${recipe} \\
+&& spack config add config:install_tree:/opt/software \\
+&& spack config add concretizer:unify:true \\
+&& spack config add concretizer:reuse:false
+""" //.stripIndent()
 
+        if( config.spackOpts().target ) result += """
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack config add packages:all:target:[${config.spackOpts().target}]
+""" //.stripIndent()
+
+        result += """
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${checksumString}&& spack gc -y
+RUN cd /opt/spack-env && spack env activate . \\
+&& spack concretize -f \\
+&& spack install --fail-fast ${checksumString}&& spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
