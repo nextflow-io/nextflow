@@ -113,11 +113,11 @@ class OarExecutor extends AbstractGridExecutor {
     static private Pattern SUBMIT_REGEX = ~/OAR_JOB_ID=(\d+)/
     
     @Override
-    def parseJobId(String text) {
-    for( String line : text.readLines() ) {
-        def m = SUBMIT_REGEX.matcher(line)
-        if( m.matches() ) {
-            return m.group(1).toString()
+    String parseJobId(String text) {
+        for( String line : text.readLines() ) {
+            def m = SUBMIT_REGEX.matcher(line)
+            if( m.matches() ) {
+                return m.group(1).toString()
             }
         }
         throw new IllegalStateException("Invalid OAR submit response:\n$text\n\n")

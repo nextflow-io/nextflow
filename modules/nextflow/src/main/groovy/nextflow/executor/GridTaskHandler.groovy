@@ -139,6 +139,12 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
         }
     }
 
+    @Override
+    Path prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
+    }
+
     protected BashWrapperBuilder createTaskWrapper(TaskRun task) {
         return fusionEnabled()
             ? fusionLauncher()
@@ -185,8 +191,6 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
     void submit() {
         ProcessBuilder builder = null
         try {
-            // -- create the wrapper script
-            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
@@ -213,6 +217,10 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }
 
+    }
+
+    void setJobId(jobId) {
+        this.jobId = jobId
     }
 
 

@@ -48,13 +48,17 @@ class ArrayGridTaskHandler extends ArrayTaskHandler implements SubmitRetryAware 
         try {
             // -- create the array job script
             final arrayScript = executor.createArrayTaskWrapper(this)
+
             // -- create the submit command
             builder = createProcessBuilder()
+
             // -- submit the array job with a retryable strategy
             final result = safeExecute( () -> processStart(builder, arrayScript) )
+
             // -- save the job id
-            this.jobId = executor.parseJobId(result)
-            this.status = TaskStatus.SUBMITTED
+            this.setJobId(executor.parseJobId(result))
+            this.setStatus(TaskStatus.SUBMITTED)
+
             log.debug "[${executor.name.toUpperCase()}] submitted array job > jobId: ${jobId}"
         }
         catch( Exception e ) {
@@ -70,8 +74,15 @@ class ArrayGridTaskHandler extends ArrayTaskHandler implements SubmitRetryAware 
                 for( TaskHandler handler : array )
                     handler.task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
             }
-            this.status = TaskStatus.COMPLETED
+            this.setStatus(TaskStatus.COMPLETED)
             throw new ProcessFailedException("Error submitting array job for execution", e)
+        }
+    }
+
+    protected void setJobId(String jobId) {
+        this.jobId = jobId
+        array.eachWithIndex { handler, i ->
+            ((GridTaskHandler)handler).setJobId(executor.getArrayTaskId(jobId, i))
         }
     }
 

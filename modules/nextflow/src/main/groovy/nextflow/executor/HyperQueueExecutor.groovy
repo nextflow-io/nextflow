@@ -86,7 +86,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    def parseJobId(String text) {
+    String parseJobId(String text) {
         try {
             text as Integer as String
         }

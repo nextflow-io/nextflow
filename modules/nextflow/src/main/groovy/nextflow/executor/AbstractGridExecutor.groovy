@@ -206,7 +206,7 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
     /**
      * Given the string returned the by grid submit command, extract the process handle i.e. the grid jobId
      */
-    abstract parseJobId( String text );
+    abstract String parseJobId( String text );
 
     /**
      * Kill a grid job
@@ -443,6 +443,10 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
     }
 
     protected List<String> getArraySubmitCommandLine() {
+        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+    }
+
+    protected String getArrayTaskId(String jobId, int index) {
         throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
     }
 }

@@ -17,6 +17,7 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -43,11 +44,27 @@ class ArrayTaskHandler extends TaskHandler {
     }
 
     @Override
+    Path prepareLauncher() {
+        for( TaskHandler handler : array )
+            handler.prepareLauncher()
+
+        return null
+    }
+
+    @Override
     void submit() {
         for( TaskHandler handler : array )
             handler.submit()
 
-        status = TaskStatus.SUBMITTED
+        setStatus(TaskStatus.SUBMITTED)
+    }
+ 
+    @Override
+    void setStatus(TaskStatus status) {
+        super.setStatus(status)
+
+        for( TaskHandler handler : array )
+            handler.setStatus(status)
     }
 
     protected Set<TaskHandler> runningCache = [] as Set
@@ -62,7 +79,7 @@ class ArrayTaskHandler extends TaskHandler {
             else
                 return false
 
-        status = TaskStatus.RUNNING
+        setStatus(TaskStatus.RUNNING)
         return true
     }
 
@@ -78,7 +95,7 @@ class ArrayTaskHandler extends TaskHandler {
             else
                 return false
 
-        status = TaskStatus.COMPLETED
+        setStatus(TaskStatus.COMPLETED)
         return true
     }
 

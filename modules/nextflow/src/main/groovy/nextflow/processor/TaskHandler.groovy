@@ -19,6 +19,7 @@ package nextflow.processor
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
@@ -84,6 +85,14 @@ abstract class TaskHandler {
      * Note: the underlying execution platform may schedule it in its own queue
      */
     abstract void submit()
+
+    /**
+     * Prepare the launcher script.
+     *
+     * This method is optional. If it is not implemented, the launcher script should
+     * be prepared in the submit() method.
+     */
+    Path prepareLauncher() { return null }
 
     /**
      * Task status attribute setter.

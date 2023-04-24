@@ -115,7 +115,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
-    def parseJobId(String text) {
+    String parseJobId(String text) {
 
         for( String line : text.readLines() ) {
             def m = SUBMIT_REGEX.matcher(line)
@@ -209,5 +209,8 @@ class SlurmExecutor extends AbstractGridExecutor {
     protected String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
 
     @Override
-    List<String> getArraySubmitCommandLine() { List.of('sbatch') }
+    protected List<String> getArraySubmitCommandLine() { List.of('sbatch') }
+
+    @Override
+    protected String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
 }
