@@ -57,6 +57,7 @@ allprojects {
     apply plugin: 'idea'
     apply plugin: 'groovy'
     apply plugin: 'java-library'
+    apply plugin: 'jacoco'
 
     java {
         toolchain {
@@ -156,6 +157,25 @@ allprojects {
             ])
         }
     }
+
+    /**
+     * Code coverage with JaCoCo.
+     * See: https://www.jacoco.org/; https://docs.gradle.org/current/userguide/jacoco_plugin.html
+     */
+    // Code coverage report is always generated after tests run
+    test { finalizedBy jacocoTestReport }
+    jacocoTestReport {
+        // Tests are required to run before generating the code coverage report
+        dependsOn test
+
+        // Remove closure classes from the report, as they are already covered by the enclosing class coverage stats adding only noise.
+        // See: https://stackoverflow.com/questions/39453696
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect { dir ->
+                fileTree(dir: dir, excludes: ['**/*$*_closure*'])
+            }))
+        }
+    }
 }
 
 // disable jar for root project
@@ -206,7 +226,7 @@ task buildInfo { doLast {
             .eachDir { if(it.name.startsWith('nf-')) plugins << project(":plugins:${it.name}") }
 
     def meta = plugins .collect { "$it.name@$it.version" }
-    file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.join('\n')
+    file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.toSorted().join('\n')
 }}
 
 

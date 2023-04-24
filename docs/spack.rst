@@ -83,9 +83,8 @@ activated when the process is executed.
 The usual Spack package syntax and naming conventions can be used. The version of a package can be
 specified after the package name as shown here ``bwa@0.7.15``.
 
-Optimisation for the local CPU microarchitetcure can be requested by adding the option ``target=<LOCAL ARCH>``
-after a package name. For instance, if the compute infrastructure uses AMD Zen3 microprocessors,
-use the following to optimise all packages for it: ``bwa target=zen3 samtools target=zen3 py-multiqc target=zen3``.
+Spack is able to infer the local CPU microarchitecture and optimise the build accordingly.
+If you really need to customise this option, the :ref:`process-arch` directive can be used.
 
 Read the Spack documentation for more details about `package specifications <https://spack.readthedocs.io/en/latest/basic_usage.html#specs-dependencies>`_.
 
@@ -101,26 +100,17 @@ lists the required packages and channels structured using the YAML format. For e
       - star@2.5.4a
       - bwa@0.7.15
     
-      view: true
       concretizer:
         unify: true
 
-Here, the ``view`` and ``concretizer`` options are sensible Spack defaults for environments.
+Here, the ``concretizer`` option is a sensible Spack default for environments.
 
-There are concise ways to specify the target microarchitecture (and eventually other options) within a Spack environment file.
-For instance, the following environment file specifies build optimisation for an AMD Zen3 target microprocessor::
+.. note:: when creating a Spack environment, Nextflow always enables the corresponding Spack view.
+  This is required by Nextflow to locate executables at pipeline runtime.
 
-    spack:
-      packages:
-        all:
-          target: [zen3]
-      specs:
-      - star@2.5.4a
-      - bwa@0.7.15
-    
-      view: true
-      concretizer:
-        unify: true
+As mentioned above, Spack is able to guess the target microarchitecture and optimise the build accordingly.
+If you really need to customise this option, we advise to use the :ref:`process-arch` directive
+rather than the available options for the Spack environment file.
 
 Read the Spack documentation for more details about how to create `environment files <https://spack.readthedocs.io/en/latest/environments.html>`_.
 
@@ -169,6 +159,7 @@ Here we briefly discuss two strategies to mitigate this aspect, and render the u
 
     spack env create myenv /path/to/spack.yaml
     spack env activate myenv
+    spack env view enable
     spack concretize -f
     spack install -y
     spack env deactivate
