@@ -56,6 +56,7 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     protected boolean typesAuto
     protected List<String> columnTypes
+    protected Map<String,String> columnTypesMap
     protected List<String> validColumnTypes = ['string', 'boolean', 'character', 'short', 'integer', 'long', 'float', 'double']
 
     /**
@@ -109,6 +110,15 @@ class CsvSplitter extends AbstractTextSplitter {
                 }
                 columnTypes = options.types as List
             }
+            else if ( options.types instanceof Map ) {
+                if ( !options.header ) {
+                    throw new IllegalArgumentException("Column types associated to column names can only be provided together with a header.")
+                }
+                if (!options.types.every { validColumnTypes.contains(it.value) }) {
+                    throw new IllegalArgumentException("Provided types are not allowed: ${options.types}. Valid column types are: ${validColumnTypes}")
+                }
+                columnTypesMap = options.types as Map
+            }
             else
                 throw new IllegalArgumentException("Not a valid types parameter value: ${options.types}")
         }
@@ -129,7 +139,7 @@ class CsvSplitter extends AbstractTextSplitter {
         result.header = [ Boolean, List ]
         result.quote = String
         result.skip = Integer
-        result.types = [ Boolean, List ]
+        result.types = [ Boolean, List, Map ]
         return result
     }
 
@@ -199,6 +209,8 @@ class CsvSplitter extends AbstractTextSplitter {
                 map[columnsHeader[i]] = inferValueType(tokens[i])
             else if( columnTypes )
                 map[columnsHeader[i]] = castValueType(tokens[i], columnTypes[i])
+            else if( columnTypesMap )
+                map[columnsHeader[i]] = castValueType(tokens[i], columnTypesMap[columnsHeader[i]])
             else
                 map[columnsHeader[i]] = tokens[i]
         }
