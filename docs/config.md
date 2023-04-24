@@ -1004,7 +1004,7 @@ The `notification` scope allows you to define the automatic sending of a notific
 
 The notification message is sent my using the STMP server defined in the configuration {ref}`mail scope<config-mail>`.
 
-If no mail configuration is provided, it tries to send the notification message by using the external mail command eventually provided by the underlying system (eg. `sendmail` or `mail`).
+If no mail configuration is provided, it tries to send the notification message by using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
 
 (config-params)=
 

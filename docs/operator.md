@@ -340,7 +340,7 @@ Available options:
 : A value or a map of values used to initialise the files content.
 
 `skip`
-: Skip the first `n` lines eg. `skip: 1`.
+: Skip the first `n` lines e.g. `skip: 1`.
 
 `sort`
 : Defines sorting criteria of content in resulting file(s). Can be one of the following values:
@@ -1464,7 +1464,7 @@ Available options:
   - `width`: Define the length of a single line when the `sequence` field is used, after that the sequence data continues on a new line.
 
 `size`
-: Defines the size in memory units of the expected chunks eg. `1.MB`.
+: Defines the size in memory units of the expected chunks e.g. `1.MB`.
 
 :::{tip}
 You can also use `countFasta` to count the number of entries in the FASTA file(s).

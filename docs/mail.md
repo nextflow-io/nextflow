@@ -116,7 +116,7 @@ sendMail {
 
 ### Mail configuration
 
-If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command eventually provided by the underlying system (eg. `sendmail` or `mail`).
+If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
 
 If your system does not provide access to none of the above you can configure a SMTP server in the `nextflow.config` file. For example:
 
