@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Pawsey Supercomputing Research Centre
+ * Copyright 2022-2023, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class SpackCache {
      */
     private SpackConfig config
 
-    private boolean noChecksum
+    private boolean checksum = true
 
     private Integer parallelBuilds
 
@@ -83,8 +83,8 @@ class SpackCache {
     SpackCache(SpackConfig config) {
         this.config = config
 
-        if( config.noChecksum )
-            noChecksum = config.noChecksum as boolean
+        if( config.checksum )
+            checksum = config.checksum as boolean
 
         if( config.parallelBuilds )
             parallelBuilds = config.parallelBuilds as Integer
@@ -134,7 +134,7 @@ class SpackCache {
 
     @PackageScope
     boolean isYamlFilePath(String str) {
-        (str.endsWith('.yaml')) && !str.contains('\n')
+        str.endsWith('.yaml') && !str.contains('\n')
     }
 
 
@@ -145,7 +145,7 @@ class SpackCache {
      * @return the spack unique prefix {@link Path} where the env is created
      */
     @PackageScope
-    Path spackPrefixPath(String spackEnv) {
+    Path spackPrefixPath(String spackEnv, String arch) {
         assert spackEnv
 
         String content
@@ -185,6 +185,8 @@ class SpackCache {
             content = spackEnv
         }
 
+        if( arch ) content += arch
+
         final hash = CacheHelper.hasher(content).hash().toString()
         getCacheDir().resolve("$name-$hash")
     }
@@ -196,8 +198,8 @@ class SpackCache {
      * @return the spack environment prefix {@link Path}
      */
     @PackageScope
-    Path createLocalSpackEnv(String spackEnv) {
-        final prefixPath = spackPrefixPath(spackEnv)
+    Path createLocalSpackEnv(String spackEnv, String arch) {
+        final prefixPath = spackPrefixPath(spackEnv, arch)
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
         final wait = "Another Nextflow instance is creating the spack environment $spackEnv -- please wait till it completes"
@@ -219,7 +221,7 @@ class SpackCache {
         }
 
         try {
-            mutex .lock { createLocalSpackEnv0(spackEnv, prefixPath) }
+            mutex .lock { createLocalSpackEnv0(spackEnv, prefixPath, arch) }
         }
         finally {
             file.delete()
@@ -238,7 +240,7 @@ class SpackCache {
 
         log.debug "Checking env using spack: $spackEnv [cache $prefixPath]"
 
-        String opts = noChecksum ? "-n " : ''
+        String opts = checksum ? '' : "-n "
         opts += parallelBuilds ? "-j $parallelBuilds " : ''
         opts += '-y '
 
@@ -260,11 +262,11 @@ class SpackCache {
     }
 
     @PackageScope
-    Path createLocalSpackEnv0(String spackEnv, Path prefixPath) {
+    Path createLocalSpackEnv0(String spackEnv, Path prefixPath, String arch) {
 
         log.info "Creating env using spack: $spackEnv [cache $prefixPath]"
 
-        String opts = noChecksum ? "-n " : ''
+        String opts = checksum ? '' : "-n "
         opts += parallelBuilds ? "-j $parallelBuilds " : ''
         opts += '-y '
 
@@ -272,6 +274,9 @@ class SpackCache {
         if( isYamlFilePath(spackEnv) ) {
             cmd =  "spack env create -d ${Escape.path(prefixPath)} ${Escape.path(makeAbsolute(spackEnv))} ; "
             cmd += "spack env activate ${Escape.path(prefixPath)} ; "
+            cmd += "spack env view enable ; "
+            cmd += "spack config add concretizer:reuse:false ; "
+            if( arch ) cmd += "spack config add packages:all:target:[$arch] ; "
             cmd += "spack concretize -f ; "
             cmd += "spack install ${opts}; "
             cmd += "spack env deactivate"
@@ -281,6 +286,8 @@ class SpackCache {
             cmd =  "spack env create -d ${Escape.path(prefixPath)} ; "
             cmd += "spack env activate ${Escape.path(prefixPath)} ; "
             cmd += "spack add $spackEnv ; "
+            cmd += "spack config add concretizer:reuse:false ; "
+            if( arch ) cmd += "spack config add packages:all:target:[$arch] ; "
             cmd += "spack concretize -f ; "
             cmd += "spack install ${opts}; "
             cmd += "spack env deactivate"
@@ -332,21 +339,29 @@ class SpackCache {
      *      The {@link DataflowVariable} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String spackEnv) {
+    DataflowVariable<Path> getLazyImagePath(String spackEnv, String arch) {
+
+        def spackEnvArch
+
+        spackEnvArch = arch ? "${spackEnv}_${arch}".toString() : spackEnv
 
         if( spackEnv in spackPrefixPaths ) {
-            log.trace "spack found local environment `$spackEnv`"
-            return spackPrefixPaths[spackEnv]
+            def msg = "spack found local environment `$spackEnv`"
+            if( arch ) msg += " and arch `$arch`"
+            log.trace "$msg"
+            return spackPrefixPaths[spackEnvArch]
         }
 
         synchronized (spackPrefixPaths) {
-            def result = spackPrefixPaths[spackEnv]
+            def result = spackPrefixPaths[spackEnvArch]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalSpackEnv(spackEnv) })
-                spackPrefixPaths[spackEnv] = result
+                result = new LazyDataflowVariable<Path>({ createLocalSpackEnv(spackEnv, arch) })
+                spackPrefixPaths[spackEnvArch] = result
             }
             else {
-                log.trace "spack found local cache for environment `$spackEnv` (2)"
+                def msg = "spack found local cache for environment `$spackEnv` (2)"
+                if( arch ) msg += " and arch `$arch`"
+                log.trace "$msg"
             }
             return result
         }
@@ -361,8 +376,8 @@ class SpackCache {
      * @param spackEnv The spack environment string
      * @return the local environment path prefix {@link Path}
      */
-    Path getCachePathFor(String spackEnv) {
-        def promise = getLazyImagePath(spackEnv)
+    Path getCachePathFor(String spackEnv, String arch) {
+        def promise = getLazyImagePath(spackEnv, arch)
         def result = promise.getVal()
         if( promise.isError() )
             throw new IllegalStateException(promise.getError())
