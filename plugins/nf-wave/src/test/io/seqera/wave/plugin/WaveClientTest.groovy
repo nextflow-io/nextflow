@@ -354,7 +354,7 @@ class WaveClientTest extends Specification {
     def 'should create dockerfile content from spack recipe' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
-        def RECIPE = 'bwa@0.7.15' // salmon@1.1.1' MARCO MARCO TO BE READDED
+        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
         when:
         def client = new WaveClient(session)
         then:
@@ -369,7 +369,7 @@ RUN mkdir -p /opt/spack-env \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
-&& spack add bwa@0.7.15 \\
+&& spack add bwa@0.7.15 salmon@1.1.1 \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false
@@ -478,7 +478,7 @@ CMD [ "/bin/bash" ]
         given:
         def SPACK_OPTS = [ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', target:'nextcpu', commands:['USER hola'] ]
         def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
-        def RECIPE = 'bwa@0.7.15' // salmon@1.1.1' MARCO MARCO TO BE READDED
+        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
         when:
         def client = new WaveClient(session)
         then:
@@ -493,7 +493,7 @@ RUN mkdir -p /opt/spack-env \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
-&& spack add bwa@0.7.15 \\
+&& spack add bwa@0.7.15 salmon@1.1.1 \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false

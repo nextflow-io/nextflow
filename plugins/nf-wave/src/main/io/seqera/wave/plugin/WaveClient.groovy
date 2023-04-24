@@ -550,9 +550,6 @@ CMD [ "/bin/bash" ]
         return addCommands(result)
     }
 
-    // MARCO MARCO WORK IN PROGRESS
-    // DEFINE recipeWithCommas
-    //
     // Dockerfile template adpated from the Spack package manager
     // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
     // LICENSE APACHE 2.0
