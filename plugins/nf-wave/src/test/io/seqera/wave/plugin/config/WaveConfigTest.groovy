@@ -110,7 +110,8 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.19.1'
+        opts.spackOpts().checksum == true
+        opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.19.2'
         opts.spackOpts().runnerImage == 'ubuntu:22.04'
         opts.spackOpts().osPackages == ''
         opts.spackOpts().cFlags == '-O3'
@@ -121,8 +122,9 @@ class WaveConfigTest extends Specification {
         opts.spackOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[spack:[ builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', genericTarget:'nextx86', target:'nextcpu', commands:['USER hola'] ]]])
+        opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', genericTarget:'nextx86', target:'nextcpu', commands:['USER hola'] ]]])
         then:
+        opts.spackOpts().checksum == false
         opts.spackOpts().builderImage == 'spack/foo:1'
         opts.spackOpts().runnerImage == 'ubuntu/foo'
         opts.spackOpts().osPackages == 'libfoo'
