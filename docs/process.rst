@@ -2320,6 +2320,30 @@ for each species specified by an input parameter::
 
 .. note:: The use of AWS S3 paths is supported, however it requires the installation of the `AWS CLI <https://aws.amazon.com/cli/>`_
   (i.e. ``aws``) in the target compute node.
+  
+.. _process-directive-shell:
+
+shell
+-----
+
+The ``shell`` directive defines the interpreter and options used to execute the process command.
+By default, ``/bin/bash` is used with the options ``-ue``. If you would like to specify a different shell executable
+location or options, you can do so as follows::
+
+    process foo {
+        shell '/bin/bash', '-euo', 'pipefail'
+
+        '''
+        your_command_here
+        '''
+    }
+
+
+.. tip::
+  It can be defined for all process in your pipeline script specifying it in the ``nextflow.config`` file
+  using the following syntax::
+
+    process.shell = ['/bin/bash', '-euo', 'pipefail']
 
 
 .. _process-stageInMode:
