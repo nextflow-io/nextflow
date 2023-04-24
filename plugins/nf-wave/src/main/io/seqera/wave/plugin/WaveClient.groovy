@@ -447,7 +447,7 @@ class WaveClient {
     // LICENSE APACHE 2.0
     protected String spackFileToDockerFile() {
 
-        def noChecksumString = config.spackOpts().noChecksum ? '-n ' : ''
+        def checksumString = config.spackOpts().checksum ? '' : '-n '
         def result = """\
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
@@ -468,7 +468,7 @@ RUN mkdir -p /opt/spack-env \\
 " >> /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${noChecksumString}&& spack gc -y
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${checksumString}&& spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
@@ -552,7 +552,7 @@ CMD [ "/bin/bash" ]
     // LICENSE APACHE 2.0
     protected String spackRecipeToDockerFile(String recipe) {
 
-        def noChecksumString = config.spackOpts().noChecksum ? '-n ' : ''
+        def checksumString = config.spackOpts().checksum ? '' : '-n '
         def result = """\
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
@@ -576,7 +576,7 @@ spack: \\n\\
 " > /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${noChecksumString}&& spack gc -y
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${checksumString}&& spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\

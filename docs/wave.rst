@@ -170,7 +170,7 @@ wave.build.cacheRepository                      The container repository used to
 wave.build.conda.mambaImage                     The Mamba container image is used to build Conda based container. This is expected to be `micromamba-docker <https://github.com/mamba-org/micromamba-docker>`_ image.
 wave.build.conda.commands                       One or more commands to be added to the Dockerfile used to build a Conda based image.
 wave.build.conda.basePackages                   One or more Conda packages to be always added in the resulting container, e.g. ``conda-forge::procps-ng``.
-wave.build.spack.noChecksum                     Disable checksum verification for source tarballs (unsafe). Useful when requesting a package version not yet encoded in the corresponding Spack recipe (default: ``false``).
+wave.build.spack.checksum                       Enable checksum verification for source tarballs (recommended). Disable only when requesting a package version not yet encoded in the corresponding Spack recipe (default: ``true``).
 wave.build.spack.builderImage                   The Spack container image is used to build Spack based container. This is expected to be one of the `Spack-provided <https://spack.readthedocs.io/en/latest/containers.html>`_ images.
 wave.build.spack.runnerImage                    The OS container image is used for the production container. This is expected to match the OS of the ``builderImage`` above.
 wave.build.spack.osPackages                     Additional OS packages to be installed in the production container. Note that package names may vary depending on the OS of the ``runnerImage`` above.
