@@ -459,10 +459,12 @@ RUN mkdir -p /opt/spack-env \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
-&& spack env view enable \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false
+&& spack config add concretizer:reuse:false \\
+&& echo -e "\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 """ //.stripIndent()
 
         if( config.spackOpts().target ) result += """
@@ -570,7 +572,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack add ${recipe} \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false
+&& spack config add concretizer:reuse:false \\
+&& echo -e "\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 """ //.stripIndent()
 
         if( config.spackOpts().target ) result += """

@@ -372,7 +372,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack add bwa@0.7.15 salmon@1.1.1 \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false
+&& spack config add concretizer:reuse:false \\
+&& echo -e "\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 
 RUN cd /opt/spack-env && spack env activate . \\
 && spack config add packages:all:target:[x86_64]
@@ -496,7 +499,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack add bwa@0.7.15 salmon@1.1.1 \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false
+&& spack config add concretizer:reuse:false \\
+&& echo -e "\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 
 RUN cd /opt/spack-env && spack env activate . \\
 && spack config add packages:all:target:[nextcpu]
@@ -588,10 +594,12 @@ RUN mkdir -p /opt/spack-env \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
-&& spack env view enable \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false
+&& spack config add concretizer:reuse:false \\
+&& echo -e "\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 
 RUN cd /opt/spack-env && spack env activate . \\
 && spack config add packages:all:target:[x86_64]
@@ -807,7 +815,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack add salmon@1.2.3 \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false
+&& spack config add concretizer:reuse:false \\
+&& echo -e "\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 
 RUN cd /opt/spack-env && spack env activate . \\
 && spack config add packages:all:target:[x86_64]
@@ -914,10 +925,12 @@ RUN mkdir -p /opt/spack-env \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
-&& spack env view enable \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false
+&& spack config add concretizer:reuse:false \\
+&& echo -e "\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 
 RUN cd /opt/spack-env && spack env activate . \\
 && spack config add packages:all:target:[x86_64]
