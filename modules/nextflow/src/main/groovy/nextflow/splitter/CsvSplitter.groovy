@@ -54,7 +54,6 @@ class CsvSplitter extends AbstractTextSplitter {
     /**
      * Define the types to cast each csv column or the automatic casting of types.
      */
-    protected boolean typesAuto
     protected List<String> columnTypes
     protected Map<String,String> columnTypesMap
     protected List<String> validColumnTypes = ['string', 'boolean', 'character', 'short', 'integer', 'long', 'float', 'double']
@@ -102,9 +101,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
         // cast variables to their type
         if( options.types ) {
-            if( options.types == true )
-                typesAuto = true
-            else if( options.types instanceof List ) {
+            if( options.types instanceof List ) {
                 if (!options.types.every { validColumnTypes.contains(it) }) {
                     throw new IllegalArgumentException("Provided types are not allowed: ${options.types}. Valid column types are: ${validColumnTypes}")
                 }
@@ -139,7 +136,7 @@ class CsvSplitter extends AbstractTextSplitter {
         result.header = [ Boolean, List ]
         result.quote = String
         result.skip = Integer
-        result.types = [ Boolean, List, Map ]
+        result.types = [ List, Map ]
         return result
     }
 
@@ -205,9 +202,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
         def map = [:]
         for( int i = 0; i < tokens.size(); i++ ) {
-            if( typesAuto )
-                map[columnsHeader[i]] = inferValueType(tokens[i])
-            else if( columnTypes )
+            if( columnTypes )
                 map[columnsHeader[i]] = castValueType(tokens[i], columnTypes[i])
             else if( columnTypesMap )
                 map[columnsHeader[i]] = castValueType(tokens[i], columnTypesMap[columnsHeader[i]])
@@ -219,26 +214,6 @@ class CsvSplitter extends AbstractTextSplitter {
             map[columnsHeader[i]] = null
 
         return map
-    }
-
-    /**
-     * Infer a value to its variable type
-     *
-     * @param str
-     * @return The value casted to its primitive type
-     */
-    static protected inferValueType(String str) {
-
-        if( str == null || str == "" ) return null
-
-        if( str.toLowerCase() == 'true') return Boolean.TRUE
-        if( str.toLowerCase() == 'false' ) return Boolean.FALSE
-
-        if( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
-        if( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
-
-        return str
     }
 
     /**

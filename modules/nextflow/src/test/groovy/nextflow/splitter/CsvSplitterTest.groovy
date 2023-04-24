@@ -159,24 +159,6 @@ class CsvSplitterTest extends Specification {
         items[2].z == 'iota'
     }
 
-    def testSplitCsvWithTypesAuto() {
-
-        when:
-        def items = new CsvSplitter().target(typesText).options(header:true,types:true).list()
-        then:
-        items.size() == 4
-
-        items[0].string == 'gamma' && items[0].string instanceof String
-        items[0].integer == 1 && items[0].integer instanceof Integer
-        items[0].boolean == true && items[0].boolean instanceof Boolean
-        items[0].float == 1.1.toDouble() && items[0].float instanceof Double
-
-        items[1].string == 'eta' && items[1].string instanceof String
-        items[1].integer == 2 && items[1].integer instanceof Integer
-        items[1].boolean == false && items[1].boolean instanceof Boolean
-        items[1].float == 2 && items[1].float instanceof Integer
-    }
-
     def testSplitCsvWithTypesArray() {
 
         when:
