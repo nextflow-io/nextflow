@@ -1216,6 +1216,35 @@ The `afterScript` directive allows you to execute a custom (Bash) snippet immedi
 When combined with the {ref}`container directive <process-container>`, the `afterScript` will be executed outside the specified container. In other words, the `afterScript` is always executed in the host environment.
 :::
 
+(process-arch)=
+
+### arch
+
+The `arch` directive allows you to define the CPU architecture to build the software in use by the process' task. For example:
+
+```groovy
+process cpu_task {
+    spack 'blast-plus@2.13.0'
+    arch 'linux/x86_64', target: 'cascadelake'
+
+    """
+    blastp -query input_sequence -num_threads ${task.cpus}
+    """
+}
+```
+
+The example above declares that the CPU architecture is `x86_64` (X86 64 bit), and more specifically that the microarchitecture is `cascadelake` (a specific generation of Intel CPUs).
+
+This directive is currently used only by the Spack package manager, by means of the [spack](#spack) directive, to build architecture-optimised applications.
+
+Allowed values for the `arch` directive are as follows, grouped by equivalent meaning (choices available for the sake of compatibility):
+- X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
+- ARM 64 bit: `linux/aarch64`, `aarch64`, `linux/arm64`, `arm64`, `linux/arm64/v8`
+- ARM 64 bit, older generation: `linux/arm64/v7`
+- ARM 32 bit: `linux/arm`, `arm`, `linux/arm/v7`, `linux/arm/7`, `linux/arm/v5`, `linux/arm/5`
+
+Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
+
 (process-beforescript)=
 
 ### beforeScript
@@ -2123,12 +2152,16 @@ The `shell` directive allows you to define a custom shell command for process sc
 process doMoreThings {
     shell '/bin/bash', '-euo', 'pipefail'
 
-    """
-    blastp -db $db -query query.fa -outfmt 6 > blast_result
-    cat blast_result | head -n 10 | cut -f 2 > top_hits
-    blastdbcmd -db $db -entry_batch top_hits > sequences
-    """
+    '''
+    your_command_here
+    '''
 }
+```
+
+The same directive could be specified in your Nextflow configuration as follows:
+
+```groovy
+process.shell = ['/bin/bash', '-euo', 'pipefail']
 ```
 
 (process-spack)=

@@ -1260,11 +1260,11 @@ The following settings are available:
 `spack.cacheDir`
 : Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
 
+`spack.checksum`
+: Enables checksum verification for source tarballs (default: `true`). Only disable when requesting a package version not yet encoded in the corresponding Spack recipe.
+
 `spack.createTimeout`
 : Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: `60 min`).
-
-`spack.noChecksum`
-: Disables checksum verification for source tarballs (unsafe). Useful when requesting a package version not yet encoded in the corresponding Spack recipe (default: `false`).
 
 `spack.parallelBuilds`
 : Sets number of parallel package builds (Spack default: coincides with number of available CPU cores).

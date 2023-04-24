@@ -23,6 +23,8 @@ The pipeline can be launched either in a local computer, or an EC2 instance. EC2
 Resource requests and other job characteristics can be controlled via the following process directives:
 
 - {ref}`process-accelerator`
+- {ref}`process-container`
+- {ref}`process-containerOptions`
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-queue`
@@ -41,6 +43,16 @@ The pipeline processes must specify the Docker image to use by defining the `con
 To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file.
 
 The pipeline can be launched either in a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+- {ref}`process-cpus`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-queue`
+- {ref}`process-time`
 
 See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
 
@@ -76,10 +88,10 @@ To enable the Flux executor, set `process.executor = 'flux'` in the `nextflow.co
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-* {ref}`process-clusterOptions`
-* {ref}`process-cpus`
-* {ref}`process-queue`
-* {ref}`process-time`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-queue`
+- {ref}`process-time`
 
 :::{note}
 Flux does not support the `memory` directive.
@@ -155,15 +167,15 @@ To enable this executor, set `process.executor = 'google-batch'` in the `nextflo
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-* {ref}`process-accelerator`
-* {ref}`process-container`
-* {ref}`process-containerOptions`
-* {ref}`process-cpus`
-* {ref}`process-disk`
-* {ref}`process-machineType`
-* {ref}`process-memory`
-* {ref}`process-time`
-* {ref}`process-resourcelabels`
+- {ref}`process-accelerator`
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-time`
+- {ref}`process-resourcelabels`
 
 See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
 
@@ -236,11 +248,11 @@ To enable the HTCondor executor, set `process.executor = 'hyperqueue'` in the `n
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-* {ref}`process-accelerator`
-* {ref}`process-clusterOptions`
-* {ref}`process-cpus`
-* {ref}`process-memory`
-* {ref}`process-time`
+- {ref}`process-accelerator`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-memory`
+- {ref}`process-time`
 
 (ignite-executor)=
 
@@ -272,7 +284,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 - {ref}`process-accelerator`
 - {ref}`process-cpus`
-* :ref:`process-disk`
+- {ref}`process-disk`
 - {ref}`process-memory`
 - {ref}`process-pod`
 - {ref}`process-time`
@@ -381,7 +393,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ### Known Limitations
 
-* Multiple `clusterOptions` should be semicolon-separated to ensure that the OAR job script is accurately formatted:
+- Multiple `clusterOptions` should be semicolon-separated to ensure that the OAR job script is accurately formatted:
   ```groovy
   clusterOptions = '-t besteffort;--project myproject'
   ```

@@ -75,7 +75,7 @@ The following batch schedulers are supported:
 - [Univa grid engine](http://www.univa.com/)
 - [Platform LSF](http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/)
 - [Linux SLURM](https://computing.llnl.gov/linux/slurm/)
-* [Flux Framework](https://flux-framework.org/)
+- [Flux Framework](https://flux-framework.org/)
 - [PBS Works](http://www.pbsworks.com/gridengine/)
 - [Torque](http://www.adaptivecomputing.com/products/open-source/torque/)
 - [HTCondor](https://research.cs.wisc.edu/htcondor/)

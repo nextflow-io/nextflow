@@ -337,11 +337,11 @@ If no run name or session id is provided, it will clean the latest run.
 | -after                   |         | Clean up runs executed *after* the specified one.                            |
 | -before                  |         | Clean up runs executed *before* the specified one.                           |
 | -but                     |         | Clean up all runs *except* the specified one.                                |
-| -dry-run, -n             | false   | Print names of files to be removed without deleting them.                    |
-| -force, -f               | false   | Force clean command.                                                         |
-| -help, -h                | false   | Print the command usage.                                                     |
-| -keep-logs, -k           | false   | Removes only temporary files but retains execution log entries and metadata. |
-| -quiet, -q               | false   | Do not print names of files removed.                                         |
+| -n, -dry-run             | false   | Print names of files to be removed without deleting them.                    |
+| -f, -force               | false   | Force clean command.                                                         |
+| -h, -help                | false   | Print the command usage.                                                     |
+| -k, -keep-logs           | false   | Removes only temporary files but retains execution log entries and metadata. |
+| -q, -quiet               | false   | Do not print names of files removed.                                         |
 
 **Examples**
 
@@ -424,7 +424,8 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 
 | Name, shorthand (if any) | Default | Description                                                               |
 | ------------------------ | ------- | ------------------------------------------------------------------------- |
-| -help, -h                | false   | Print the command usage.                                                  |
+| -d -deep                 |         | Create a shallow clone of the specified depth.                            |
+| -h, -help                | false   | Print the command usage.                                                  |
 | -hub                     | github  | Service hub where the project is hosted. Options: `gitlab` or `bitbucket` |
 | -r                       | master  | Revision to clone - It can be a git `branch`, `tag` or `revision number`  |
 | -user                    |         | Private repository user name                                              |
@@ -464,10 +465,10 @@ The `config` command is used for printing the project's configuration i.e. the `
 | Name, shorthand (if any) | Default | Description                                  |
 | ------------------------ | ------- | -------------------------------------------- |
 | -flat                    | false   | Print config using flat notation.            |
-| -help, -h                | false   | Print the command usage.                     |
+| -h, -help                | false   | Print the command usage.                     |
 | -profile                 |         | Choose a configuration profile.              |
 | -properties              | false   | Print config using Java properties notation. |
-| -show-profiles, -a       | false   | Show all configuration profiles.             |
+| -a, -show-profiles       | false   | Show all configuration profiles.             |
 | -sort                    | false   | Sort config attributes.                      |
 
 **Examples**
@@ -573,7 +574,7 @@ The `drop` command is used to remove the projects which have been downloaded int
 | Name, shorthand (if any) | Default | Description                                                 |
 | ------------------------ | ------- | ----------------------------------------------------------- |
 | -f                       | false   | Delete the repository without taking care of local changes. |
-| -help, -h                | false   | Print the command usage.                                    |
+| -h, -help                | false   | Print the command usage.                                    |
 
 **Examples**
 
@@ -607,7 +608,7 @@ The `help` command prints out the overview of the CLI interface and enumerates t
 
 | Name, shorthand (if any) | Default | Description              |
 | ------------------------ | ------- | ------------------------ |
-| -help, -h                | false   | Print the command usage. |
+| -h, -help                | false   | Print the command usage. |
 
 **Examples**
 
@@ -647,9 +648,9 @@ If no run name or session id is provided, it will clean the latest run.
 
 | Name, shorthand (if any) | Default | Description                                     |
 | ------------------------ | ------- | ----------------------------------------------- |
-| -check-updates, -u       | false   | Check for remote updates.                       |
+| -u, -check-updates       | false   | Check for remote updates.                       |
 | -d                       | false   | Show detailed information.                      |
-| -help, -h                | false   | Print the command usage.                        |
+| -h, -help                | false   | Print the command usage.                        |
 | -o                       | text    | Output format, either `text`, `json` or `yaml`. |
 
 **Examples**
@@ -784,7 +785,7 @@ The `list` commands prints a list of the projects which are already downloaded i
 
 | Name, shorthand (if any) | Default | Description              |
 | ------------------------ | ------- | ------------------------ |
-| -help, -h                | false   | Print the command usage. |
+| -h, -help                | false   | Print the command usage. |
 
 **Examples**
 
@@ -818,13 +819,13 @@ The `log` command is used to query the execution metadata associated with pipeli
 | -after                   |         | Show log entries for runs executed *after* the specified one.                                |
 | -before                  |         | Show log entries for runs executed *before* the specified one.                               |
 | -but                     |         | Show log entries for runs executed *but* the specified one.                                  |
-| -fields, -f              |         | Comma separated list of fields to include in the printed log.                                |
-| -filter, -F              |         | Filter log entries by a custom expression e.g. `process =~ /foo.*/ && status == 'COMPLETED'` |
-| -help, -h                | false   | Print the command usage.                                                                     |
-| -list-fields, -l         | false   | Show all available fields.                                                                   |
+| -f, -fields              |         | Comma separated list of fields to include in the printed log.                                |
+| -F, -filter              |         | Filter log entries by a custom expression e.g. `process =~ /foo.*/ && status == 'COMPLETED'` |
+| -h, -help                | false   | Print the command usage.                                                                     |
+| -l, -list-fields         | false   | Show all available fields.                                                                   |
 | -quiet                   | false   | Show only run names.                                                                         |
 | -s                       |         | Character used to separate column values                                                     |
-| -template, -t            |         | Text template used to each record in the log.                                                |
+| -t, -template            |         | Text template used to each record in the log.                                                |
 
 **Examples**
 
@@ -928,7 +929,8 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 | Name, shorthand (if any) | Default | Description                                                               |
 | ------------------------ | ------- | ------------------------------------------------------------------------- |
 | -all                     | false   | Update all downloaded projects.                                           |
-| -help, -h                | false   | Print the command usage.                                                  |
+| -d, -deep                |         | Create a shallow clone of the specified depth.                            |
+| -h, -help                | false   | Print the command usage.                                                  |
 | -hub                     | github  | Service hub where the project is hosted. Options: `gitlab` or `bitbucket` |
 | -r, -revision            |         | Revision of the project to run (either a git branch, tag or commit SHA number). When passing a git tag or branch, the `workflow.revision` and the associated `workflow.commitId` is populated. When passing only the commit ID, no `workflow.revision` is returned. |
 | -user                    |         | Private repository user name                                              |
@@ -986,6 +988,7 @@ The `run` command is used to initiate the execution of the a pipeline script or 
 | -ansi-log                |               | Enable/disable ANSI console logging.                                                                                      |
 | -bucket-dir              |               | Remote bucket where intermediate result files are stored.                                                                 |
 | -cache                   |               | Enable/disable processes caching.                                                                                         |
+| -deep                    |               | Create a shallow clone of the specified depth.                                                                            |
 | -disable-jobs-cancellation |             | Prevent the cancellation of child jobs on execution termination                                                           |
 | -dsl1                    | false         | Execute the workflow using DSL1 syntax.                                                                                   |
 | -dsl2                    | true          | Execute the workflow using DSL2 syntax.                                                                                   |
@@ -1155,7 +1158,7 @@ The `view` command is used to inspect the pipelines that are already stored in t
 
 | Name, shorthand (if any) | Default | Description              |
 | ------------------------ | ------- | ------------------------ |
-| -help, -h                | false   | Print the command usage. |
+| -h, -help                | false   | Print the command usage. |
 | -l                       | false   | List repository content. |
 | -q                       | false   | Hide header line.        |
 

@@ -8,7 +8,7 @@ This page is a comprehensive reference for all Nextflow operators. However, if y
 
 - Filtering: [filter](#filter), [randomSample](#randomsample), [take](#take), [unique](#unique)
 - Reduction: [collect](#collect), [groupTuple](#grouptuple), [reduce](#reduce)
-- Parsing text data: [splitCsv](#splitcsv), [splitText](#splittext)
+- Parsing text data: [splitCsv](#splitcsv), [splitJson](#splitjson), [splitText](#splittext)
 - Combining channels: [combine](#combine), [concat](#concat), [join](#join), [mix](#mix)
 - Forking channels: [branch](#branch), [multiMap](#multimap)
 - Maths: [count](#count), [max](#max), [min](#min), [sum](#sum)
@@ -1555,6 +1555,73 @@ Available options:
 You can also use `countFastq` to count the number of entries in the FASTQ file(s).
 :::
 
+## splitJson
+
+*Returns: queue channel*
+
+The `splitJson` operator allows you to split a JSON document from a source channel into individual records. If the document is a JSON array, each element of the array will be emitted. If the document is a JSON object, each key-value pair will be emitted as a map with the properties `key`  and `value`.
+
+An example with a JSON array:
+
+```groovy
+Channel.of('[1,null,["A",{}],true]')
+    .splitJson()
+    .view{"Item: ${it}"}
+```
+
+Produces the following output:
+
+```
+Item: 1
+Item: null
+Item: [A, [:]]
+Item: true
+```
+
+An example with a JSON object:
+
+```groovy
+Channel.of('{"A":1,"B":[1,2,3],"C":{"D":null}}')
+    .splitJson()
+    .view{"Item: ${it}"}
+```
+
+Produces the following output:
+
+```
+Item: [value:1, key:A]
+Item: [value:[1, 2, 3], key:B]
+Item: [value:[D:null], key:C]
+```
+
+You can optionally query a section of the JSON document to parse and split, using the `path` option:
+
+```groovy
+Channel.of('{"A":1,"B":[2,3,{"C":{"D":null,"E":4,"F":5}}]}')
+    .splitJson(path: "B[2].C")
+    .view{"Item: ${it}"}
+```
+
+Produces the following output:
+
+```
+Item: [value:null, key:D]
+Item: [value:4, key:E]
+Item: [value:5, key:F]
+```
+
+Available options:
+
+`limit`
+: Limits the number of retrieved lines for each file to the specified value.
+
+`path`
+: Define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to [JSONPath](https://goessner.net/articles/JsonPath/). The empty string is the document root (default). An integer in brackets is the 0-based index in a JSON array. A string preceded by a dot `.` is the key in a JSON object.
+
+:::{tip}
+You can also use `countJson` to count the number of elements in a JSON array or object.
+:::
+
 ## splitText
 
 *Returns: queue channel*
@@ -1824,8 +1891,8 @@ Done
 :::{note}
 There are two differences between `toList` and `collect`:
 
-* When there is no input, `toList` emits an empty list whereas `collect` emits nothing.
-* By default, `collect` flattens list items by one level.
+- When there is no input, `toList` emits an empty list whereas `collect` emits nothing.
+- By default, `collect` flattens list items by one level.
 
 In other words, `toList` is equivalent to:
 

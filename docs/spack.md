@@ -10,7 +10,7 @@ This feature requires Nextflow  `23.02.0-edge` or later.
 
 Nextflow has built-in support for Spack that allows the configuration of workflow dependencies using Spack recipes and environment files.
 
-This allows Nextflow applications to build packages from source on the compute infrastructure in use, whilst taking advantage of the configuration flexibility provided by Nextflow. At shared compute facilities where Spack has been configured by the administrators, this may result in optimised builds without user intervention. With appropriate options, this also permits end users to customise binary optimizations by themselves.
+This allows Nextflow applications to build packages from source on the compute infrastructure in use, whilst taking advantage of the configuration flexibility provided by Nextflow. At shared compute facilities where Spack has been configured by the administrators, this may result in optimized builds without user intervention. With appropriate options, this also permits end users to customize binary optimizations by themselves.
 
 ## Prerequisites
 
@@ -60,7 +60,7 @@ Using the above definition, a Spack environment that includes BWA, Samtools, and
 
 The usual Spack package syntax and naming conventions can be used. The version of a package can be specified after the package name like so: `bwa@0.7.15`.
 
-Optimization for the local CPU microarchitetcure can be requested by adding the option `target=<LOCAL ARCH>` after a package name. For instance, if the compute infrastructure uses AMD Zen3 microprocessors, use the following to optimize all packages for it: `bwa target=zen3 samtools target=zen3 py-multiqc target=zen3`.
+Spack is able to infer the local CPU microarchitecture and optimize the build accordingly. If you really need to customize this option, you can use the {ref}`process-arch` directive.
 
 Read the Spack documentation for more details about [package specifications](https://spack.readthedocs.io/en/latest/basic_usage.html#specs-dependencies).
 
@@ -74,28 +74,17 @@ spack:
   - star@2.5.4a
   - bwa@0.7.15
 
-  view: true
   concretizer:
     unify: true
 ```
 
-Here, the `view` and `concretizer` options are sensible Spack defaults for environments.
+Here, the `concretizer` option is a sensible default for Spack environments.
 
-There are concise ways to specify the target microarchitecture (and eventually other options) within a Spack environment file. For instance, the following environment file specifies build optimization for an AMD Zen3 target microprocessor:
+:::{note}
+When creating a Spack environment, Nextflow always enables the corresponding Spack view. This is required by Nextflow to locate executables at pipeline runtime.
+:::
 
-```yaml
-spack:
-  packages:
-    all:
-      target: [zen3]
-  specs:
-  - star@2.5.4a
-  - bwa@0.7.15
-
-  view: true
-  concretizer:
-    unify: true
-```
+As mentioned above, Spack is able to guess the target microarchitecture and optimize the build accordingly. If you really need to customize this option, we advise to use the {ref}`process-arch` directive rather than the available options for the Spack environment file.
 
 Read the Spack documentation for more details about how to create [environment files](https://spack.readthedocs.io/en/latest/environments.html).
 
@@ -112,7 +101,7 @@ process foo {
 ```
 
 :::{warning}
-The environment file name **must** have a `.yaml` extension or else it won't be properly recognised.
+The environment file name **must** have a `.yaml` extension or else it won't be properly recognized.
 :::
 
 ### Use existing Spack environments
@@ -142,6 +131,7 @@ Spack builds most software package from their source codes, and it does this for
    ```bash
    spack env create myenv /path/to/spack.yaml
    spack env activate myenv
+   spack env view enable
    spack concretize -f
    spack install -y
    spack env deactivate
