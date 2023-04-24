@@ -195,6 +195,15 @@ class CsvSplitterTest extends Specification {
         items[1].float == 2.0.toFloat() && items[1].float instanceof Float
     }
 
+    def testSplitCsvWithInvalidTypesArray() {
+
+        when:
+        def items = new CsvSplitter().target(typesText).options(header:true,types:['invalid']).list()
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
     def testSplitCsvGroupMap() {
 
         when:

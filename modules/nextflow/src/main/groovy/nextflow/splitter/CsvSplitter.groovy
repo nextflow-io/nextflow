@@ -56,6 +56,7 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     protected boolean typesAuto
     protected List<String> columnTypes
+    protected List<String> validColumnTypes = ['string', 'boolean', 'character', 'short', 'integer', 'long', 'float', 'double']
 
     /**
      * Set the splitter options by specifying a map of named parameters.
@@ -102,8 +103,12 @@ class CsvSplitter extends AbstractTextSplitter {
         if( options.types ) {
             if( options.types == true )
                 typesAuto = true
-            else if( options.types instanceof List )
+            else if( options.types instanceof List ) {
+                if (!options.types.every { validColumnTypes.contains(it) }) {
+                    throw new IllegalArgumentException("Provided types are not allowed: ${options.types}. Valid column types are: ${validColumnTypes}")
+                }
                 columnTypes = options.types as List
+            }
             else
                 throw new IllegalArgumentException("Not a valid types parameter value: ${options.types}")
         }
