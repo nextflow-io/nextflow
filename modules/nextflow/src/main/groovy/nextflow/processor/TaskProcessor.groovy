@@ -2106,8 +2106,14 @@ class TaskProcessor {
         }
 
         final spack = task.getSpackEnv()
+        final arch = task.getConfig().getArchitecture()
+
         if( spack ) {
             keys.add(spack)
+
+            if( arch ) {
+                keys.add(arch)
+            }
         }
 
         if( session.stubRun ) {

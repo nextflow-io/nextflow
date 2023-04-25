@@ -169,7 +169,7 @@ Conda environments
 Spack environments
 ------------------
 
-Spack environments provide an option to build software packages from source using Spack, a popular package manager within the HPC community.
+[Spack environments](https://www.nextflow.io/docs/latest/spack.html) provide an option to build software packages from source using Spack, a popular package manager within the HPC community.
 
 
 Environment Modules
