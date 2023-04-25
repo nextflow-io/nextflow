@@ -486,11 +486,11 @@ RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     awk -F: '{print \$1}' | xargs strip -s
 
 RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \\
+    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
     original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \\
+    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
+    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
     rm -rf /opt/view
 
 # Runner image
@@ -499,20 +499,26 @@ FROM ${config.spackOpts().runnerImage}
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
-COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
 RUN ( apt update -y && apt install -y procps libgomp1 ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
     ( yum install -y procps libgomp ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
     ( zypper ref && zypper install -y procps libgomp1 ${config.spackOpts().osPackages} && zypper clean -a ) || \\
     ( apk update && apk add --no-cache procps libgomp bash ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
+
+# Entrypoint for Singularity
+RUN mkdir -p /.singularity.d/env && \
+    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+# Entrypoint for Docker
+RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
+    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
 """ //.stripIndent()
 
         result = addCommands(result)
 
         result += """\
 
-ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
 
@@ -597,11 +603,11 @@ RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     awk -F: '{print \$1}' | xargs strip -s
 
 RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \\
+    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
     original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \\
+    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
+    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
     rm -rf /opt/view
 
 # Runner image
@@ -610,20 +616,26 @@ FROM ${config.spackOpts().runnerImage}
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
-COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
 RUN ( apt update -y && apt install -y procps libgomp1 ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
     ( yum install -y procps libgomp ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
     ( zypper ref && zypper install -y procps libgomp1 ${config.spackOpts().osPackages} && zypper clean -a ) || \\
     ( apk update && apk add --no-cache procps libgomp bash ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
+
+# Entrypoint for Singularity
+RUN mkdir -p /.singularity.d/env && \
+    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+# Entrypoint for Docker
+RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
+    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
 """ //.stripIndent()
 
         result = addCommands(result)
 
         result += """\
 
-ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
 
