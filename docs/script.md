@@ -590,7 +590,7 @@ To include the schema, the `toUriString()` method should be used instead:
 assert ref.toUriString() == 's3://some-bucket/foo.txt'
 ```
 
-Also, instead of composing paths through string interpolation, the `resolve()` method or the `/` operator should be used instead::
+Also, instead of composing paths through string interpolation, the `resolve()` method or the `/` operator should be used instead:
 
 ```groovy
 def dir = file('s3://bucket/some/data/path')
