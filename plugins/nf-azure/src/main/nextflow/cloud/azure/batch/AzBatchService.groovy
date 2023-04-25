@@ -16,9 +16,6 @@
 
 package nextflow.cloud.azure.batch
 
-import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
-import com.microsoft.azure.batch.auth.BatchCredentials
-
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -26,6 +23,8 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
+import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
+import com.microsoft.azure.batch.auth.BatchCredentials
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
@@ -52,6 +51,7 @@ import com.microsoft.azure.batch.protocol.models.PoolState
 import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.StartTask
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
+import com.microsoft.azure.batch.protocol.models.TaskConstraints
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
 import com.microsoft.azure.batch.protocol.models.TaskSchedulingPolicy
 import com.microsoft.azure.batch.protocol.models.UserIdentity
@@ -66,6 +66,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -73,6 +74,8 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.fusion.FusionHelper
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
@@ -393,22 +396,41 @@ class AzBatchService implements Closeable {
         // custom container settings
         if( task.config.getContainerOptions() )
             opts += "${task.config.getContainerOptions()} "
+        // fusion environment settings
+        final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
+        final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
+        if( fusionEnabled ) {
+            opts += "--privileged "
+            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
+                opts += "-e $it.key=$it.value "
+            }
+        }
         // config overall container settings
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 .withContainerRunOptions(opts)
-
+        // submit command line
+        final String cmd = fusionEnabled
+                ? launcher.fusionSubmitCli(task).join(' ')
+                : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
+        // cpus and memory
         final slots = computeSlots(task, pool)
+        // max wall time
+        final constraints = new TaskConstraints()
+        if( task.config.getTime() )
+            constraints.withMaxWallClockTime( new Period(task.config.getTime().toMillis()) )
+
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
         return new TaskAddParameter()
                 .withId(taskId)
                 .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
                 .withContainerSettings(containerOpts)
-                .withCommandLine("sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'")
+                .withCommandLine(cmd)
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
+                .withConstraints(constraints)
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
@@ -742,14 +764,19 @@ class AzBatchService implements Closeable {
             '''.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
+        final vars = poolCreationBindings(opts, Instant.now())
+        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
+        log.debug "Pool autoscale formula:\n$result"
+        return result
+    }
+
+    protected Map poolCreationBindings(AzPoolOpts opts, Instant time) {
         final vars = new HashMap<String, String>()
         vars.scaleInterval = opts.scaleInterval.minutes
         vars.vmCount = opts.vmCount
         vars.maxVmCount = opts.maxVmCount
-        vars.poolCreationTime = Instant.now().toString()
-        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
-        log.debug "Pool autoscale formula:\n$result"
-        return result
+        vars.poolCreationTime = time.truncatedTo(ChronoUnit.MICROS).toString()
+        return vars
     }
 
     void deleteTask(AzTaskKey key) {

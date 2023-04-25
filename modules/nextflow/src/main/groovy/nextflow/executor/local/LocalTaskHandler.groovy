@@ -17,6 +17,7 @@
 
 package nextflow.executor.local
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -25,7 +26,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.extension.FilesEx
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
@@ -130,6 +133,9 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     protected ProcessBuilder localProcessBuilder() {
         final cmd = new ArrayList<String>(BashWrapperBuilder.BASH) << wrapperFile.getName()
         log.debug "Launch cmd line: ${cmd.join(' ')}"
+        // make sure it's a posix file system
+        if( task.workDir.fileSystem != FileSystems.default )
+            throw new ProcessUnrecoverableException("Local executor requires the use of POSIX compatible file system — offending path: ${FilesEx.toUriString(task.workDir)}")
 
         // NOTE: make sure to redirect process output to a file otherwise
         // execution can hang when stdout/stderr is bigger than 64k
@@ -144,6 +150,9 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder fusionProcessBuilder() {
+        if( task.workDir.fileSystem == FileSystems.default )
+            throw new ProcessUnrecoverableException("Fusion file system requires the use of an object storage as work directory — offending path: ${task.workDir}")
+
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()

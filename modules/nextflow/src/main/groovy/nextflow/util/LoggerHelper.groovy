@@ -56,6 +56,7 @@ import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
+import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
 import nextflow.file.FileHelper
@@ -167,7 +168,7 @@ class LoggerHelper {
         packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
 
         // -- add the S3 uploader by default
-        if( !containsClassName(debugConf,traceConf, 'com.upplication.s3fs') )
+        if( !containsClassName(debugConf,traceConf, 'nextflow.cloud.aws.nio') )
             debugConf << S3_UPLOADER_CLASS
         if( !containsClassName(debugConf,traceConf, 'io.seqera') )
             debugConf << 'io.seqera'
@@ -491,6 +492,9 @@ class LoggerHelper {
         else {
             buffer.append("Unexpected error")
         }
+        if( fail instanceof PlainExceptionMessage )
+            return
+
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
 
