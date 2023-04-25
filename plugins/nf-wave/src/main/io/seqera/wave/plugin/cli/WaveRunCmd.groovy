@@ -111,6 +111,6 @@ class WaveRunCmd {
         final target = resolveTargetImage(image)
         log.info """\
                 Source container: $image
-                Waved  container: $target""".stripIndent()
+                Waved  container: $target""".stripIndent(true)
     }
 }

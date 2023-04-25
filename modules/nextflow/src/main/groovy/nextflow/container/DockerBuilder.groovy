@@ -192,9 +192,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         }
 
         if( kill )  {
-            killCommand = 'docker kill '
+            killCommand = 'docker stop '
             // if `kill` is a string it is interpreted as a the kill signal
-            if( kill instanceof String ) killCommand += "-s $kill "
+            if( kill instanceof String ) killCommand = "docker kill -s $kill "
             killCommand += name
             // prefix with sudo if required
             if( sudo ) killCommand = 'sudo ' + killCommand
