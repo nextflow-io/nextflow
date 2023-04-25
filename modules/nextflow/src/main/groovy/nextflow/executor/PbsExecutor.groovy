@@ -172,4 +172,20 @@ class PbsExecutor extends AbstractGridExecutor {
     static protected boolean matchOptions(String value) {
         value ? OPTS_REGEX.matcher(value).find() : null
     }
+
+    @Override
+    protected String getArrayDirective(int arraySize) {
+        "-J 0-${arraySize - 1}"
+    }
+
+    @Override
+    protected String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
+
+    @Override
+    protected List<String> getArraySubmitCommandLine() { List.of('qsub') }
+
+    @Override
+    protected String getArrayTaskId(String jobId, int index) {
+        jobId.replace('[]', "[$index]")
+    }
 }

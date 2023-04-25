@@ -183,4 +183,18 @@ class SgeExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    protected String getArrayDirective(int arraySize) {
+        "-t 0-${arraySize - 1}"
+    }
+
+    @Override
+    protected String getArrayIndexName() { 'SGE_TASK_ID' }
+
+    @Override
+    protected List<String> getArraySubmitCommandLine() { List.of('qsub', '-') }
+
+    @Override
+    protected String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
 }

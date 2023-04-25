@@ -1277,6 +1277,10 @@ process cpu_task {
 Nextflow currently supports array jobs for the following executors:
 
 - {ref}`local-executor`
+- {ref}`lsf-executor`
+- {ref}`pbs-executor`
+- {ref}`pbspro-executor`
+- {ref}`sge-executor`
 - {ref}`slurm-executor`
 
 A process using array jobs will collect tasks and submit each batch as an array job when it is ready. Any "leftover" tasks will be submitted as a partial array job.

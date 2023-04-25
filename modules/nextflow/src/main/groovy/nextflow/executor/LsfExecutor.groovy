@@ -300,4 +300,20 @@ class LsfExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    private volatile int arrayTaskCount = 0
+
+    @Override
+    protected String getArrayDirective(int arraySize) {
+        "-J \"nf-array-${arrayTaskCount++}[0-${arraySize - 1}]\""
+    }
+
+    @Override
+    protected String getArrayIndexName() { 'LSB_JOBINDEX' }
+
+    @Override
+    protected List<String> getArraySubmitCommandLine() { List.of('bsub') }
+
+    @Override
+    protected String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }
 }
