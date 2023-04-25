@@ -93,7 +93,7 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    String parseJobId(String text) {
+    def parseJobId(String text) {
         text.tokenize(' -')[0]
     }
 

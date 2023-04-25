@@ -26,12 +26,12 @@ import nextflow.processor.TaskHandler
 trait ArrayTaskAware {
 
     /**
-     * Create a task handler for an array job.
+     * Create a submitter for an array job.
      *
      * @param array
      */
-    ArrayTaskHandler createArrayTaskHandler(List<TaskHandler> array) {
-        new ArrayTaskHandler(array)
+    ArrayTaskSubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+        new ArrayTaskSubmitter(array)
     }
 
 }

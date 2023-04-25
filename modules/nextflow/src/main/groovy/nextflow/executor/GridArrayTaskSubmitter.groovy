@@ -21,29 +21,33 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.CmdLineHelper
 /**
- * Handles the execution of an array job for any grid executor.
+ * Submit tasks as an array job for a grid executor.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class ArrayGridTaskHandler extends ArrayTaskHandler implements SubmitRetryAware {
+class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements SubmitRetryAware {
 
-    final AbstractGridExecutor executor
+    private AbstractGridExecutor executor
 
-    private jobId
-
-    ArrayGridTaskHandler(List<TaskHandler> array, AbstractGridExecutor executor) {
+    GridArrayTaskSubmitter(List<TaskHandler> array, AbstractGridExecutor executor) {
         super(array)
-
         this.executor = executor
     }
 
     @Override
-    void submit() {
+    Executor getExecutor() { executor }
+
+    @Override
+    TaskRun getTask() { array.first().getTask() }
+
+    @Override
+    protected void submit() {
         ProcessBuilder builder = null
         try {
             // -- create the array job script
@@ -54,9 +58,10 @@ class ArrayGridTaskHandler extends ArrayTaskHandler implements SubmitRetryAware 
 
             // -- submit the array job with a retryable strategy
             final result = safeExecute( () -> processStart(builder, arrayScript) )
+            final jobId = (String)executor.parseJobId(result)
 
-            // -- save the job id
-            this.setJobId(executor.parseJobId(result))
+            // -- set the job id and status of each task
+            this.setJobId(jobId)
             this.setStatus(TaskStatus.SUBMITTED)
 
             log.debug "[${executor.name.toUpperCase()}] submitted array job > jobId: ${jobId}"
@@ -78,19 +83,23 @@ class ArrayGridTaskHandler extends ArrayTaskHandler implements SubmitRetryAware 
             throw new ProcessFailedException("Error submitting array job for execution", e)
         }
     }
-
+ 
     protected void setJobId(String jobId) {
-        this.jobId = jobId
         array.eachWithIndex { handler, i ->
             ((GridTaskHandler)handler).setJobId(executor.getArrayTaskId(jobId, i))
         }
+    }
+
+    protected void setStatus(TaskStatus status) {
+        for( TaskHandler handler : array )
+            handler.setStatus(status)
     }
 
     protected ProcessBuilder createProcessBuilder() {
 
         // -- log the submit command
         final cli = executor.getArraySubmitCommandLine()
-        log.trace "submit array job > cli: ${cli}"
+        log.trace "[${executor.name.toUpperCase()}] Submit array job > cli: ${cli}"
 
         // -- launch array job script
         new ProcessBuilder()
@@ -135,18 +144,6 @@ class ArrayGridTaskHandler extends ArrayTaskHandler implements SubmitRetryAware 
             .append(arrayScript.trim())
             .append('\nLAUNCH_COMMAND_EOF\n')
             .toString()
-    }
-
-    @Override
-    void kill() {
-        executor.killTask(jobId)
-    }
-
-    @Override
-    protected StringBuilder toStringBuilder(StringBuilder builder) {
-        builder << "\n    array jobId: $jobId; "
-
-        return super.toStringBuilder(builder)
     }
 
 }

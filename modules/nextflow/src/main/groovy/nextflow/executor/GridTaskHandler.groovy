@@ -189,6 +189,11 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
      */
     @Override
     void submit() {
+        if( arraySubmitter ) {
+            arraySubmitter.collect(this)
+            return
+        }
+
         ProcessBuilder builder = null
         try {
             // -- start the execution and notify the event to the monitor
@@ -219,10 +224,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
 
     }
 
-    void setJobId(jobId) {
+    void setJobId(String jobId) {
         this.jobId = jobId
     }
-
 
     private long startedMillis
 

@@ -136,7 +136,7 @@ class LsfExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
-    String parseJobId(String text) {
+    def parseJobId(String text) {
 
         def pattern = ~/Job <(\d+)> is submitted/
         for( String line : text.readLines() ) {

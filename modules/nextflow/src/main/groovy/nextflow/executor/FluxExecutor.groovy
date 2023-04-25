@@ -109,7 +109,7 @@ class FluxExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
-    String parseJobId(String text) {
+    def parseJobId(String text) {
 
         // Parse the special "f" first
         for( String line : text.readLines() ) {

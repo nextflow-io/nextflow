@@ -103,7 +103,7 @@ class SgeExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
-    String parseJobId( String text ) {
+    def parseJobId( String text ) {
         // return always the last line
         String id
         def lines = text.trim().readLines()

@@ -253,6 +253,8 @@ class TaskProcessor {
 
     private Boolean isFair0
 
+    private ArrayTaskCollector arrayCollector
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -307,6 +309,9 @@ class TaskProcessor {
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+        
+        final arraySize = config.getArray()
+        this.arrayCollector = arraySize > 0 ? new ArrayTaskCollector(executor, arraySize) : null
     }
 
     /**
@@ -2204,7 +2209,10 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task)
+        if( arrayCollector )
+            arrayCollector.submit(task)
+        else
+            executor.submit(task)
 
     }
 
@@ -2296,6 +2304,10 @@ class TaskProcessor {
 
         // increment the number of processes executed
         state.update { StateObj it -> it.incCompleted() }
+    }
+
+    protected void closeProcess() {
+        arrayCollector?.close()
     }
 
     protected void terminateProcess() {
@@ -2432,21 +2444,6 @@ class TaskProcessor {
                 log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
-
-                // check whether all input channels are closed
-                def closed = true
-                for( int i = 0; i < openPorts.length() - 1; i++ ) {
-                    if( openPorts.get(i) != 0 ) {
-                        closed = false
-                        break
-                    }
-                }
-
-                // notify session that the process is closed
-                if( closed ) {
-                    log.trace "<${name}> All ports are closed, closing process"
-                    session.notifyProcessClose(name)
-                }
             }
 
             return message
@@ -2455,6 +2452,7 @@ class TaskProcessor {
         @Override
         void afterStop(final DataflowProcessor processor) {
             log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**

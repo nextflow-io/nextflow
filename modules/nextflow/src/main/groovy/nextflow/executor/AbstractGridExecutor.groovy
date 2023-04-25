@@ -206,7 +206,7 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
     /**
      * Given the string returned the by grid submit command, extract the process handle i.e. the grid jobId
      */
-    abstract String parseJobId( String text );
+    abstract parseJobId( String text );
 
     /**
      * Kill a grid job
@@ -410,25 +410,23 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
     }
 
     @Override
-    ArrayTaskHandler createArrayTaskHandler(List<TaskHandler> array) {
-        new ArrayGridTaskHandler(array, this)
+    ArrayTaskSubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+        new GridArrayTaskSubmitter(array, this)
     }
 
-    String createArrayTaskWrapper(ArrayGridTaskHandler handler) {
-        final array = handler.array
-        final task = array.first().getTask()
-
-        final arrayHeader = getArrayDirective(array.size())
-        final taskHeaders = getHeaders(task)
-        final files = array
-            .collect { h -> ((GridTaskHandler)h).wrapperFile }
+    String createArrayTaskWrapper(GridArrayTaskSubmitter arraySubmitter) {
+        final array = arraySubmitter.getArray()
+        final arrayDirective = getArrayDirective(array.size())
+        final taskHeaders = getHeaders(array.first().getTask())
+        final wrapperFiles = array
+            .collect { handler -> ((GridTaskHandler)handler).wrapperFile }
             .join(' ')
 
         final builder = new StringBuilder()
             << '#!/bin/bash\n'
-            << "${headerToken} ${arrayHeader}\n"
+            << "${headerToken} ${arrayDirective}\n"
             << taskHeaders
-            << "declare -a array=( ${files} )\n"
+            << "declare -a array=( ${wrapperFiles} )\n"
             << "bash \${array[\$${arrayIndexName}]}\n"
 
         return builder.toString()

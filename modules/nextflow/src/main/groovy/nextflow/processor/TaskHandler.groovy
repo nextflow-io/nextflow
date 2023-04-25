@@ -22,6 +22,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
+import nextflow.executor.ArrayTaskSubmitter
 import nextflow.trace.TraceRecord
 /**
  * Actions to handle the underlying job running the user task.
@@ -51,6 +52,11 @@ abstract class TaskHandler {
      * The task managed by this handler
      */
     TaskRun getTask() { task }
+
+    /**
+     * Submitter for array jobs
+     */
+    ArrayTaskSubmitter arraySubmitter
 
     /**
      * Task current status
@@ -240,14 +246,14 @@ abstract class TaskHandler {
     /**
      * Increment the number of current forked processes
      */
-    void incProcessForks() {
+    final void incProcessForks() {
         task.processor.forksCount?.increment()
     }
 
     /**
      * Decrement the number of current forked processes
      */
-    void decProcessForks() {
+    final void decProcessForks() {
         task.processor.forksCount?.decrement()
     }
 

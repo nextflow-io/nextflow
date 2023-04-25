@@ -115,7 +115,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
-    String parseJobId(String text) {
+    def parseJobId(String text) {
 
         for( String line : text.readLines() ) {
             def m = SUBMIT_REGEX.matcher(line)

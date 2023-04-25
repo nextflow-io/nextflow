@@ -99,7 +99,7 @@ class MoabExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
-    String parseJobId( String text ) {
+    def parseJobId( String text ) {
         String result
         try {
             result = new XmlSlurper()

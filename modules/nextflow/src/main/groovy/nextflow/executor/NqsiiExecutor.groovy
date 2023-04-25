@@ -98,9 +98,9 @@ class NqsiiExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
-    String parseJobId( String text ) {
-        def pattern = ~/Request (\d+).+ submitted to queue.+/
-        for( String line : text.readLines() ) {
+    def parseJobId( String text ) {
+    def pattern = ~/Request (\d+).+ submitted to queue.+/
+    for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.find() ) {
                 return m.group(1)

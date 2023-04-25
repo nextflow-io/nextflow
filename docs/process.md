@@ -1245,6 +1245,64 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent me
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
+(array-executor)=
+
+## array
+
+:::{note}
+This feature requires Nextflow version `23.05.0-edge` or later.
+:::
+
+:::{warning}
+This feature is experimental and may change in a future release.
+:::
+
+The `array` directive allows you to submit tasks as *array jobs* for executors that support it.
+
+An array job is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Array jobs incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
+
+It should be specified with a given array size, as well as an executor that supports array jobs. For example:
+
+```groovy
+process cpu_task {
+    executor 'slurm'
+    array 100
+
+    '''
+    your_command --here
+    '''
+}
+```
+
+Nextflow currently supports array jobs for the following executors:
+
+- {ref}`local-executor`
+- {ref}`slurm-executor`
+
+A process using array jobs will collect tasks and submit each batch as an array job when it is ready. Any "leftover" tasks will be submitted as a partial array job.
+
+Once an array job is submitted, the "child" tasks are executed in the same way:
+
+- Each task is executed in its own work directory with its own script.
+- Any tasks that fail (and can be retried) will be retried in another array job without interfering with the tasks that succeeded.
+
+The following directives msut be uniform across all tasks in a process that uses array jobs, because these directives are specified once for the entire array job:
+
+- {ref}`process-accelerator`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-queue`
+- {ref}`process-resourcelabels`
+- {ref}`process-time`
+
+For cloud-based executors like AWS Batch, the following additional directives must be uniform:
+
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+
 (process-beforescript)=
 
 ### beforeScript
