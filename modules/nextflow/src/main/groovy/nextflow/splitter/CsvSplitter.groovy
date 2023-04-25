@@ -225,13 +225,17 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     static protected castValueType(String str, String type) {
 
-        if( type.toLowerCase() == 'boolean' ) return str.toBoolean()
-        if( type.toLowerCase() == 'character' ) return str.toCharacter()
-        if( type.toLowerCase() == 'short' ) return str.toShort()
-        if( type.toLowerCase() == 'integer' ) return str.toInteger()
-        if( type.toLowerCase() == 'long' ) return str.toLong()
-        if( type.toLowerCase() == 'float' ) return str.toFloat()
-        if( type.toLowerCase() == 'double' ) return str.toDouble()
+        try {
+            if( type.toLowerCase() == 'boolean' ) return str.toBoolean()
+            if( type.toLowerCase() == 'character' ) return str.toCharacter()
+            if( type.toLowerCase() == 'short' ) return str.toShort()
+            if( type.toLowerCase() == 'integer' ) return str.toInteger()
+            if( type.toLowerCase() == 'long' ) return str.toLong()
+            if( type.toLowerCase() == 'float' ) return str.toFloat()
+            if( type.toLowerCase() == 'double' ) return str.toDouble()
+        } catch (Exception e) {
+            return str
+        }
 
         return str
     }
