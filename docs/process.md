@@ -1245,7 +1245,7 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent me
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
-(array-executor)=
+(process-array)=
 
 ## array
 

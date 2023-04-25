@@ -90,7 +90,7 @@ class ArrayTaskCollector {
 
     synchronized protected void submit0( Queue<TaskHandler> queue, int size ) {
         // remove tasks from the queue
-        def array = new ArrayList<TaskHandler>()
+        def array = new ArrayList<TaskHandler>(size)
         def iter = queue.iterator()
 
         while( iter.hasNext() && array.size() < size ) {
