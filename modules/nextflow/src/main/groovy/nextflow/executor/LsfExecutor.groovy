@@ -18,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
@@ -301,11 +302,11 @@ class LsfExecutor extends AbstractGridExecutor {
         return FusionHelper.isFusionEnabled(session)
     }
 
-    private volatile int arrayTaskCount = 0
+    private AtomicInteger arrayTaskCount = new AtomicInteger()
 
     @Override
     protected String getArrayDirective(int arraySize) {
-        "-J \"nf-array-${arrayTaskCount++}[0-${arraySize - 1}]\""
+        "-J \"nf-array-${arrayTaskCount.getAndIncrement()}[0-${arraySize - 1}]\""
     }
 
     @Override

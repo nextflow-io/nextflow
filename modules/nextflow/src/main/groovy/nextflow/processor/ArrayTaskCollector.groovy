@@ -17,6 +17,8 @@
 package nextflow.processor
 
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -39,9 +41,11 @@ class ArrayTaskCollector {
 
     private int arraySize
 
-    private volatile Queue<TaskHandler> queue = new ConcurrentLinkedQueue<>()
+    private Lock sync = new ReentrantLock()
 
-    private volatile boolean closed = false
+    private List<TaskHandler> array
+
+    private boolean closed = false
 
     ArrayTaskCollector(Executor executor, int arraySize) {
         if( executor !instanceof ArrayTaskAware )
@@ -50,30 +54,40 @@ class ArrayTaskCollector {
         this.executor = executor
         this.monitor = executor.monitor
         this.arraySize = arraySize
+        this.array = new ArrayList<>(arraySize)
     }
 
     /**
-     * Add a task to the queue, and submit an array job when the
-     * queue reaches the desired size.
+     * Add a task to the current array, and submit the array when it
+     * reaches the desired size.
      *
      * @param handler
      */
-    synchronized void submit(TaskRun task) {
-        // submit task directly if the collector is closed
-        if( closed ) {
-            executor.submit(task)
-            return
+    void submit(TaskRun task) {
+        sync.lock()
+
+        try {
+            // submit task directly if the collector is closed
+            if( closed ) {
+                executor.submit(task)
+                return
+            }
+
+            // create task handler
+            final handler = executor.createTaskHandler(task)
+
+            // add task to the array array
+            array << handler
+
+            // submit array job when the array is ready
+            if( array.size() == arraySize ) {
+                submit0(array)
+                array = new ArrayList<>(arraySize)
+            }
         }
-
-        // create task handler
-        final handler = executor.createTaskHandler(task)
-
-        // add task to the array queue
-        queue.add(handler)
-
-        // submit array job when a batch is ready
-        if( queue.size() >= arraySize )
-            submit0(queue, arraySize)
+        finally {
+            sync.unlock()
+        }
     }
 
     /**
@@ -82,25 +96,20 @@ class ArrayTaskCollector {
      * @param process
      */
     void close() {
-        if( queue.size() > 0 )
-            submit0(queue, queue.size())
+        sync.lock()
 
-        closed = true
+        try {
+            if( array.size() > 0 )
+                submit0(array)
+
+            closed = true
+        }
+        finally {
+            sync.unlock()
+        }
     }
 
-    synchronized protected void submit0( Queue<TaskHandler> queue, int size ) {
-        // remove tasks from the queue
-        def array = new ArrayList<TaskHandler>(size)
-        def iter = queue.iterator()
-
-        while( iter.hasNext() && array.size() < size ) {
-            array << iter.next()
-            iter.remove()
-        }
-
-        if( array.size() < size )
-            log.warn "Array job expected ${size} tasks but received only ${array.size()}"
-
+    protected void submit0(List<TaskHandler> array) {
         // create submitter for array job
         ((ArrayTaskAware)executor).createArrayTaskSubmitter(array)
 

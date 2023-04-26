@@ -16,6 +16,8 @@
 
 package nextflow.executor
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskHandler
@@ -31,7 +33,7 @@ class ArrayTaskSubmitter {
 
     protected List<TaskHandler> array
 
-    private volatile int collected = 0
+    private AtomicInteger collected = new AtomicInteger()
 
     ArrayTaskSubmitter(List<TaskHandler> array) {
         this.array = array
@@ -47,10 +49,8 @@ class ArrayTaskSubmitter {
      *
      * @param handler
      */
-    synchronized void collect(TaskHandler handler) {
-        collected += 1
-
-        if( collected == array.size() )
+    void collect(TaskHandler handler) {
+        if( collected.incrementAndGet() == array.size() )
             submit()
     }
 
