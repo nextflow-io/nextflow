@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import io.seqera.wave.plugin.config.FusionConfig
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -43,8 +42,10 @@ import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
+import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.MustacheTemplateEngine
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -56,6 +57,8 @@ import org.slf4j.LoggerFactory
 class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
+
+    private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
 
     final private HttpClient httpClient
 
@@ -79,12 +82,15 @@ class WaveClient {
 
     private CookieManager cookieManager
 
+    private List<String> condaChannels
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
+        this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave server endpoint: ${endpoint}"
         this.packer = new Packer()
         // create cache
@@ -97,7 +103,7 @@ class WaveClient {
         // create http client
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .cookieHandler(cookieManager)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build()
@@ -145,8 +151,10 @@ class WaveClient {
     SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
         final req = makeRequest(assets)
         req.towerAccessToken = tower.accessToken
+        req.towerRefreshToken = tower.refreshToken
         req.towerWorkspaceId = tower.workspaceId
         req.towerEndpoint = tower.endpoint
+        req.workflowId = tower.workflowId
         return sendRequest(req)
     }
 
@@ -157,7 +165,8 @@ class WaveClient {
                 containerConfig: containerConfig,
                 towerAccessToken: tower.accessToken,
                 towerWorkspaceId: tower.workspaceId,
-                towerEndpoint: tower.endpoint )
+                towerEndpoint: tower.endpoint,
+                workflowId: tower.workflowId)
         return sendRequest(request)
     }
 
@@ -175,6 +184,7 @@ class WaveClient {
 
         // set the request access token
         request.towerAccessToken = accessToken
+        request.towerRefreshToken = refreshToken
 
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/container-token")
@@ -199,7 +209,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorised [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
@@ -219,10 +229,18 @@ class WaveClient {
         return new Gson().fromJson(json, type)
     }
 
+    protected URL defaultFusionUrl() {
+        final isArm = config.containerPlatform()?.tokenize('/')?.contains('arm64')
+        return isArm
+                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
+                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+    }
+
     ContainerConfig resolveContainerConfig() {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
-        if( fusion.enabled() && fusion.containerConfigUrl() ) {
-            urls.add( fusion.containerConfigUrl() )
+        if( fusion.enabled() ) {
+            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl()
+            urls.add(fusionUrl)
         }
         if( !urls )
             return null
@@ -244,14 +262,12 @@ class WaveClient {
                 .build()
 
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( resp.statusCode()==200 ) {
-            log.debug "Wave container config response: ${resp.body()}"
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container config response: [$code] ${resp.body()}"
             return jsonToContainerConfig(resp.body())
         }
-        else {
-            log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
-            return null
-        }
+        throw new BadResponseException("Unexpected response for containerContainerConfigUrl \'$configUrl\': [${resp.statusCode()}] ${resp.body()}")
     }
 
     protected void checkConflicts(Map<String,String> attrs, String name) {
@@ -313,7 +329,7 @@ class WaveClient {
                 throw new IllegalArgumentException("Unexpected conda and dockerfile conflict")
 
             // map the recipe to a dockerfile
-            if( isCondaFile(attrs.conda) ) {
+            if( isCondaLocalFile(attrs.conda) ) {
                 condaFile = Path.of(attrs.conda)
                 dockerScript = condaFileToDockerFile()
             }
@@ -380,12 +396,17 @@ class WaveClient {
     }
 
     protected String condaFileToDockerFile() {
-        def result = """\
-        FROM ${config.condaOpts().mambaImage}
+        final template = """\
+        FROM {{base_image}}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+            {{base_packages}}
             micromamba clean -a -y
-        """.stripIndent()
+        """.stripIndent(true)
+        final image = config.condaOpts().mambaImage
+        final basePackage =  config.condaOpts().basePackages ? "micromamba install -y -n base ${config.condaOpts().basePackages} && \\".toString() : null
+        final binding = ['base_image': image, 'base_packages': basePackage]
+        final result = new MustacheTemplateEngine().render(template, binding)
 
         return addCommands(result)
     }
@@ -400,19 +421,30 @@ class WaveClient {
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
-        def result = """\
-        FROM ${config.condaOpts().mambaImage}
+        final template = """\
+        FROM {{base_image}}
         RUN \\
-           micromamba install -y -n base -c defaults -c conda-forge \\
-           $recipe \\
-           && micromamba clean -a -y
-        """.stripIndent()
+            micromamba install -y -n base {{channel_opts}} \\
+            {{target}} \\
+            {{base_packages}}
+            && micromamba clean -a -y
+        """.stripIndent(true)
 
+        final channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
+        final image = config.condaOpts().mambaImage
+        final target = recipe.startsWith('http://') || recipe.startsWith('https://')
+                ? "-f $recipe".toString()
+                : recipe
+        final basePackage =  config.condaOpts().basePackages ? "&& micromamba install -y -n base ${config.condaOpts().basePackages} \\".toString() : null
+        final binding = [base_image: image, channel_opts: channelsOpts, target:target, base_packages: basePackage]
+        final result = new MustacheTemplateEngine().render(template, binding)
         return addCommands(result)
     }
 
-    protected boolean isCondaFile(String value) {
+    static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )
+            return false
+        if( value.startsWith('http://') || value.startsWith('https://') )
             return false
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
     }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +95,7 @@ class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
     @Override
     String getRunCommand() {
         def run = super.getRunCommand()
-        def result = "((udocker.py images | egrep -o \"^$image\\s\") || udocker.py pull \"$image\")>/dev/null\n"
+        def result = "((udocker.py images | grep -E -o \"^$image\\s\") || udocker.py pull \"$image\")>/dev/null\n"
         result += "[[ \$? != 0 ]] && echo \"Udocker failed while pulling container \\`$image\\`\" >&2 && exit 1\n"
         result += run
         return result
