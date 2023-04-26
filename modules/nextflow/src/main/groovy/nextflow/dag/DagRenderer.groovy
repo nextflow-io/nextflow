@@ -26,7 +26,7 @@ import java.nio.file.Path
 trait DagRenderer {
 
     /**
-     * Render an abstract (process/operator) DAG.
+     * Render an abstract (process) DAG.
      */
     void renderAbstractGraph(DAG dag, Path file) {
         throw new UnsupportedOperationException("Abstract graph rendering is not supported for this file format")
