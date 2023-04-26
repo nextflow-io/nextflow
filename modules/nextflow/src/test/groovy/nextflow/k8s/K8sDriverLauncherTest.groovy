@@ -132,6 +132,8 @@ class K8sDriverLauncherTest extends Specification {
         l.getLaunchCli() == 'nextflow run foo -name bar'
     }
 
+
+
     def 'should create launcher spec pod' () {
 
         given:

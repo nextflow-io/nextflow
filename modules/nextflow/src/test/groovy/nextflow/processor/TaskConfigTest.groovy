@@ -26,7 +26,6 @@ import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -276,6 +275,7 @@ class TaskConfigTest extends Specification {
 
     @Unroll
     def testGetCpus() {
+
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
@@ -299,6 +299,7 @@ class TaskConfigTest extends Specification {
 
     @Unroll
     def testGetCpuDecimal() {
+
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
@@ -321,6 +322,7 @@ class TaskConfigTest extends Specification {
 
     @Unroll
     def testGetCpuMillis() {
+
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = VALUE

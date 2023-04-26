@@ -303,7 +303,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 0
+        1 * config.getCpuUnits() >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -360,8 +360,8 @@ class K8sTaskHandlerTest extends Specification {
                     kind: 'Pod',
                     metadata: [name:'nf-123', namespace:'just-a-namespace' ],
                     spec: [
-                            restartPolicy:'Never',
                             serviceAccountName: 'pedantic-kallisto',
+                            restartPolicy:'Never',
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
@@ -605,9 +605,9 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getConfig() >> config
 
         result == [
-            apiVersion: 'batch/v1',
-            kind: 'Job',
-            metadata:[name: 'nf-123', namespace: 'default'],
+            apiVersion: 'batch/v1', 
+            kind: 'Job', 
+            metadata:[name: 'nf-123', namespace: 'default'], 
             spec:[
               backoffLimit: 0,
               template: [
@@ -792,7 +792,7 @@ class K8sTaskHandlerTest extends Specification {
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
-
+        
         when:
         def state = handler.getState()
         then:

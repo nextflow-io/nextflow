@@ -62,9 +62,9 @@ class TaskBean implements Serializable, Cloneable {
 
     ContainerConfig containerConfig
 
-    CpuUnit containerCpus
-
     String containerCpuset
+
+    CpuUnit containerCpus
 
     MemoryUnit containerMemory
 

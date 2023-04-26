@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,14 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 /**
- * Model a CPU requirement measured in cpu units. 1 CPU unit is equivalent to 1 physical CPU core, or 1 virtual core, depending
- * on whether the node is a physical host or a virtual machine running inside a physical machine.
+ * Model a CPU requirement measured in cpu units. 1 CPU unit is equivalent to
+ * 1 physical CPU core, or 1 virtual core, depending on whether the node is a
+ * physical host or a virtual machine running inside a physical machine.
  *
- * The following formats are allow:
- * - integer number: represents a full CPU unit eg. `1` => 1 CPUs
- * - decimal number: represents a percentage of the CPU 0.1 => 10% CPU or 100m, etc
- * - number with `m` suffix: represents milli cpus notation ie 100m == 0.1 CPU, 1000m == 1 CPU, etc
+ * The following formats are allowed:
+ * - integer number: represents a full CPU unit, e.g. `1` => 1 CPUs
+ * - decimal number: represents a percentage of the CPU, e.g. 0.1 => 10% CPU or 100m
+ * - number with `m` suffix: represents milli cpus notation, e.g. 100m == 0.1 CPU, 1000m == 1 CPU
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -142,7 +143,7 @@ class CpuUnit implements Comparable<CpuUnit>, Serializable, Cloneable {
     }
 
     int toCores() {
-        return IntMath.divide(millis, 1_000, RoundingMode.CEILING);
+        return IntMath.divide(millis, 1_000, RoundingMode.CEILING)
     }
 
     BigDecimal toDecimal() {
@@ -150,7 +151,7 @@ class CpuUnit implements Comparable<CpuUnit>, Serializable, Cloneable {
     }
 
     int toMillis() {
-        return millis;
+        return millis
     }
 
     String toDecimalString() {
