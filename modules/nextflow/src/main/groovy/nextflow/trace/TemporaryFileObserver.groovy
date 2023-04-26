@@ -16,22 +16,21 @@
 
 package nextflow.trace
 
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
-import groovy.transform.MapConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
 import nextflow.dag.ConcreteDAG
-import nextflow.extension.FilesEx
+import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.params.FileOutParam
 /**
- * Watch for temporary output files and "clean" them once they
+ * Track temporary output files and delete them once they
  * are no longer needed.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -41,12 +40,13 @@ class TemporaryFileObserver implements TraceObserver {
 
     private DAG dag
 
-    private Map<String,Status> statusMap
+    private Map<String,Status> statusMap = new ConcurrentHashMap<>()
+
+    private Lock sync = new ReentrantLock()
 
     @Override
     void onFlowCreate(Session session) {
         this.dag = session.dag
-        this.statusMap = new ConcurrentHashMap<>()
     }
 
     /**
@@ -60,28 +60,29 @@ class TemporaryFileObserver implements TraceObserver {
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         // find all temporary output files
         final task = handler.task
-        final temporaryOutputs = task
+        final tempOutputs = task
             .getOutputsByType(FileOutParam)
             .findAll { param, paths -> param.temporary }
             .values()
             .flatten()
 
-        if( temporaryOutputs.isEmpty() )
+        if( tempOutputs.isEmpty() )
             return
 
         // update status tracker for the task's process
         final processName = task.processor.name
 
-        if( processName !in statusMap ) {
-            log.trace "Process ${processName} has temporary output files, tracking for automatic cleanup"
-
-            statusMap[processName] = new Status(
-                paths: [] as Set,
-                processBarriers: findAllConsumers(processName)
-            )
+        sync.lock()
+        try {
+            if( processName !in statusMap ) {
+                log.trace "Process ${processName} has temporary output files, tracking for automatic cleanup"
+                statusMap[processName] = new Status(findAllConsumers(processName))
+            }
+            statusMap[processName].paths.addAll(tempOutputs)
         }
-
-        statusMap[processName].paths.addAll(temporaryOutputs)
+        finally {
+            sync.unlock()
+        }
     }
 
     /**
@@ -89,7 +90,7 @@ class TemporaryFileObserver implements TraceObserver {
      *
      * @param processName
      */
-    Set<String> findAllConsumers(String processName) {
+    private Set<String> findAllConsumers(String processName) {
 
         // find the task's process node in the abstract dag
         final processNode = dag.vertices
@@ -135,39 +136,45 @@ class TemporaryFileObserver implements TraceObserver {
      */
     @Override
     void onProcessTerminate(TaskProcessor process) {
-        for( def entry : statusMap ) {
-            // remove barrier from each upstream process
-            final producer = entry.key
-            final status = entry.value
-            final consumers = status.processBarriers
+        sync.lock()
+        try {
+            for( def entry : statusMap ) {
+                // remove barrier from each upstream process
+                final producer = entry.key
+                final status = entry.value
+                final consumers = status.processBarriers
 
-            consumers.remove(process.name)
+                consumers.remove(process.name)
 
-            // if a process has no more barriers, trigger the cleanup
-            if( consumers.isEmpty() ) {
-                log.trace "All consumers of process ${producer} are complete, time to clean up temporary files"
+                // if a process has no more barriers, trigger the cleanup
+                if( consumers.isEmpty() ) {
+                    log.trace "All consumers of process ${producer} are complete, deleting temporary files"
 
-                deleteTemporaryFiles(status.paths)
-                statusMap.remove(producer)
+                    deleteTemporaryFiles(status.paths)
+                    statusMap.remove(producer)
+                }
             }
         }
-    }
-
-    void deleteTemporaryFiles(Collection<Path> paths) {
-        for( Path path : paths ) {
-            log.trace "Cleaning temporary file: ${path}"
-
-            if( Files.isDirectory(path) )
-                FilesEx.deleteDir(path)
-            else
-                Files.delete(path)
+        finally {
+            sync.unlock()
         }
     }
 
-    @MapConstructor
-    static protected class Status {
+    private void deleteTemporaryFiles(Collection<Path> paths) {
+        for( Path path : paths ) {
+            log.trace "Deleting temporary file: ${path}"
+            FileHelper.deletePath(path)
+        }
+    }
+
+    static private class Status {
         Set<Path> paths
         Set<String> processBarriers
+
+        Status(Set<String> processes) {
+            this.paths = [] as Set
+            this.processBarriers = processes
+        }
     }
 
 }

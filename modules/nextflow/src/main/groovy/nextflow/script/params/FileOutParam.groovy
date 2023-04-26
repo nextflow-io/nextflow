@@ -83,7 +83,7 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
     boolean glob = true
 
     /**
-     * When true the file will be "cleaned" once it is no longer needed by downstream tasks.
+     * When true the target files will be deleted once they are no longer needed by downstream tasks.
      */
     boolean temporary = false
 
