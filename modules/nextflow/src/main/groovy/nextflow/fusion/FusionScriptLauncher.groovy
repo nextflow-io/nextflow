@@ -88,6 +88,8 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             final work = toContainerMount(remoteWorkDir).toString()
             final result = new LinkedHashMap(10)
             result.FUSION_WORK = work
+            result.AZURE_BATCH_ACCOUNT_NAME=System.getenv("AZURE_BATCH_ACCOUNT_NAME")
+            result.AZURE_STORAGE_SAS_TOKEN=System.getenv("AZURE_STORAGE_SAS_TOKEN")
             // foreign env
             final provider = new FusionEnvProvider()
             result.putAll(provider.getEnvironment(scheme))
