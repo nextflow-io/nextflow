@@ -94,7 +94,7 @@ class ProcessConfigTest extends Specification {
         when:
         config.memory '2GB'
         then:
-        config.memory == [limit: '2GB']
+        config.memory == '2GB'
         config.createTaskConfig().memory == new MemoryUnit('2GB')
 
         when:
@@ -603,7 +603,7 @@ class ProcessConfigTest extends Specification {
         then:
         config.queue == 'cn-el6'
         config.container == 'ubuntu:latest'
-        config.memory == [limit: '10 GB']
+        config.memory == '10 GB'
         config.getInputs().size() == 2
         config.getOutputs().size() == 1
 
@@ -618,14 +618,14 @@ class ProcessConfigTest extends Specification {
         then:
         copy.queue == 'long'
         copy.container == 'debian:wheezy'
-        copy.memory == [limit: '5 GB']
+        copy.memory == '5 GB'
         copy.getInputs().size() == 3
         copy.getOutputs().size() == 2
 
         // original config is not affected
         config.queue == 'cn-el6'
         config.container == 'ubuntu:latest'
-        config.memory == [limit: '10 GB']
+        config.memory == '10 GB'
         config.getInputs().size() == 2
         config.getOutputs().size() == 1
     }
@@ -636,29 +636,29 @@ class ProcessConfigTest extends Specification {
         def process = new ProcessConfig(Mock(BaseScript))
 
         when:
-        process.accelerator 2
+        process.accelerator 5
         then:
-        process.accelerator == [limit: 2]
+        process.accelerator == [limit: 5]
 
         when:
-        process.accelerator request: 1, limit: 4, type: 'nvida'
+        process.accelerator request: 1, limit: 5, type: 'nvida'
         then:
-        process.accelerator == [request: 1, limit: 4, type: 'nvida']
+        process.accelerator == [request: 1, limit: 5, type: 'nvida']
 
         when:
-        process.accelerator 2, type: 'nvida'
+        process.accelerator 5, type: 'nvida'
         then:
-        process.accelerator == [limit: 2, type: 'nvida']
+        process.accelerator == [limit: 5, type: 'nvida']
 
         when:
-        process.accelerator 1, limit: 4
+        process.accelerator 1, limit: 5
         then:
-        process.accelerator == [request: 1, limit: 4]
+        process.accelerator == [request: 1, limit:5]
 
         when:
-        process.accelerator 4, request: 1
+        process.accelerator 5, request: 1
         then:
-        process.accelerator == [request: 1, limit: 4]
+        process.accelerator == [request: 1, limit:5]
     }
 
 

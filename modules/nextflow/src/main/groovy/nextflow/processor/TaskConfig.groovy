@@ -31,8 +31,6 @@ import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.CpuResource
-import nextflow.executor.res.DiskResource
-import nextflow.executor.res.MemoryResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
@@ -238,30 +236,39 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
-    MemoryResource getMemoryResource() {
-        def value = get('memory')
-        if( value instanceof Map )
-            return new MemoryResource(value as Map)
-        if( value != null )
-            return new MemoryResource(value)
-        return null
-    }
 
     MemoryUnit getMemory() {
-        getMemoryResource()?.getRequest()
-    }
+        def value = get('memory')
 
-    DiskResource getDiskResource() {
-        def value = get('disk')
-        if( value instanceof Map )
-            return new DiskResource(value as Map)
-        if( value != null )
-            return new DiskResource(value)
-        return null
+        if( !value )
+            return null
+
+        if( value instanceof MemoryUnit )
+            return (MemoryUnit)value
+
+        try {
+            new MemoryUnit(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
+        }
     }
 
     MemoryUnit getDisk() {
-        getDiskResource()?.getRequest()
+        def value = get('disk')
+
+        if( !value )
+            return null
+
+        if( value instanceof MemoryUnit )
+            return (MemoryUnit)value
+
+        try {
+            new MemoryUnit(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
+        }
     }
 
     Duration getTime() {

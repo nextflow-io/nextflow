@@ -24,7 +24,6 @@ import nextflow.Session
 import nextflow.exception.NodeTerminationException
 import nextflow.executor.fusion.FusionScriptLauncher
 import nextflow.executor.res.CpuResource
-import nextflow.executor.res.MemoryResource
 import nextflow.file.http.XPath
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
@@ -77,7 +76,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> null
-        1 * config.getMemoryResource() >> null
+        1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -111,7 +110,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> new CpuResource(1)
-        1 * config.getMemoryResource() >> null
+        1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -145,7 +144,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> new CpuResource(4)
-        1 * config.getMemoryResource() >> new MemoryResource('16GB')
+        1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -189,7 +188,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> null
-        1 * config.getMemoryResource() >> null
+        1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -225,7 +224,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> new CpuResource(1)
-        1 * config.getMemoryResource() >> null
+        1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -258,7 +257,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> new CpuResource(4)
-        1 * config.getMemoryResource() >> new MemoryResource('16GB')
+        1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -415,7 +414,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> null
-        1 * config.getMemoryResource() >> null
+        1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
 
@@ -459,7 +458,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpusResource() >> null
-        1 * config.getMemoryResource() >> null
+        1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
 
         result == [
@@ -1013,7 +1012,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getContainerMounts() >> []
         and:
         1 * config.getCpusResource() >> null
-        1 * config.getMemoryResource() >> null
+        1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',

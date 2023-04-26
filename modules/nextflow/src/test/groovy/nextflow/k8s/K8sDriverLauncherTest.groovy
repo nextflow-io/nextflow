@@ -336,7 +336,7 @@ class K8sDriverLauncherTest extends Specification {
         driver.@k8sConfig = k8s
         driver.@headImage = 'foo/bar'
         driver.@headCpus = 2
-        driver.@headMemory = '200 MB'
+        driver.@headMemory = '200Mi'
 
         when:
         def spec = driver.makeLauncherSpec()

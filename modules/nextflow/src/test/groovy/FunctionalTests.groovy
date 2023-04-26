@@ -242,7 +242,7 @@ class FunctionalTests extends Specification {
         then:
         processor instanceof TaskProcessor
         processor.config.cpus == [request: 2]
-        processor.config.memory == [limit: MemoryUnit.of('3 GB')]
+        processor.config.memory == MemoryUnit.of('3 GB')
         processor.config.time == '1 h'
         processor.config.errorStrategy == 'finish'
 

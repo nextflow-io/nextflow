@@ -19,8 +19,6 @@ package nextflow.k8s.model
 
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.CpuResource
-import nextflow.executor.res.DiskResource
-import nextflow.executor.res.MemoryResource
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -253,9 +251,9 @@ class PodSpecBuilderTest extends Specification {
                 .withEnv(PodEnv.value('ALPHA','hello'))
                 .withEnv(PodEnv.value('DELTA', 'world'))
                 .withCpus( new CpuResource(8) )
-                .withMemory( new MemoryResource('100 GB') )
-                .withDisk( new DiskResource('10 GB') )
-                .withAccelerator( new AcceleratorResource(request: 1, limit: 4, type: 'foo.org') )
+                .withAccelerator( new AcceleratorResource(request: 5, limit:10, type: 'foo.org') )
+                .withMemory('100Gi')
+                .withDisk('10Gi')
                 .build()
 
         then:
@@ -274,8 +272,8 @@ class PodSpecBuilderTest extends Specification {
                                             [name:'DELTA', value:'world']
                                     ],
                                     resources:[
-                                            requests: [cpu:8, memory:'102400Mi', 'ephemeral-storage':'10240Mi', 'foo.org/gpu':1],
-                                            limits:  [memory:'102400Mi', 'ephemeral-storage':'10240Mi', 'foo.org/gpu':4]
+                                            requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi', 'ephemeral-storage':'10Gi'],
+                                            limits: ['foo.org/gpu':10, memory:'100Gi', 'ephemeral-storage':'10Gi']
                                     ]
                                    ]
                            ]

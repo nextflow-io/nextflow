@@ -25,8 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.CpuResource
-import nextflow.executor.res.DiskResource
-import nextflow.executor.res.MemoryResource
+import nextflow.util.MemoryUnit
 import groovy.util.logging.Slf4j
 
 /**
@@ -79,15 +78,15 @@ class PodSpecBuilder {
 
     CpuResource cpus
 
-    MemoryResource memory
+    String memory
 
-    DiskResource disk
-
-    AcceleratorResource accelerator
+    String disk
 
     String serviceAccount
 
     boolean automountServiceAccountToken = true
+
+    AcceleratorResource accelerator
 
     Collection<PodMountConfig> configMaps = []
 
@@ -176,18 +175,28 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withMemory( MemoryResource memory ) {
-        this.memory = memory
+    PodSpecBuilder withMemory(String mem) {
+        this.memory = mem
         return this
     }
 
-    PodSpecBuilder withDisk( DiskResource disk ) {
+    PodSpecBuilder withMemory(MemoryUnit mem)  {
+        this.memory = "${mem.mega}Mi".toString()
+        return this
+    }
+
+    PodSpecBuilder withDisk(String disk) {
         this.disk = disk
         return this
     }
 
-    PodSpecBuilder withAccelerator( AcceleratorResource accelerator ) {
-        this.accelerator = accelerator
+    PodSpecBuilder withDisk(MemoryUnit disk)  {
+        this.disk = "${disk.mega}Mi".toString()
+        return this
+    }
+
+    PodSpecBuilder withAccelerator(AcceleratorResource acc) {
+        this.accelerator = acc
         return this
     }
 
@@ -456,19 +465,19 @@ class PodSpecBuilder {
         }
 
         if( this.memory ) {
-            if( this.memory.request ) res.requests['memory'] = this.memory.request.toMega() + 'Mi'
-            if( this.memory.limit ) res.limits['memory'] = this.memory.limit.toMega() + 'Mi'
-        }
-
-        if( this.disk ) {
-            if( this.disk.request ) res.requests['ephemeral-storage'] = this.disk.request.toMega() + 'Mi'
-            if( this.disk.limit ) res.limits['ephemeral-storage'] = this.disk.limit.toMega() + 'Mi'
+            res.requests['memory'] = this.memory
+            res.limits['memory'] = this.memory
         }
 
         if( this.accelerator ) {
             final type = getAcceleratorType(this.accelerator)
             if( this.accelerator.request ) res.requests[type] = this.accelerator.request
             if( this.accelerator.limit ) res.limits[type] = this.accelerator.limit
+        }
+
+        if( this.disk ) {
+            res.requests['ephemeral-storage'] = this.disk
+            res.limits['ephemeral-storage'] = this.disk
         }
 
         if( !res.requests )

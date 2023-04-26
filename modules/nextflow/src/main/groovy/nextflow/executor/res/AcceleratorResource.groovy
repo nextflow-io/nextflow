@@ -41,16 +41,16 @@ class AcceleratorResource {
     }
 
     AcceleratorResource( Map res ) {
-        if( res.request != null && res.limit != null ) {
-            this.request = res.request as int
+        if( res.limit!=null && res.request!=null ) {
             this.limit = res.limit as int
+            this.request = res.request as int
+        }
+        else if( res.limit!=null ) {
+            this.limit = res.limit as int
+            this.request = res.limit as int
         }
         else if( res.request != null ) {
             this.request = res.request as int
-        }
-        else if( res.limit != null ) {
-            this.request = res.limit as int
-            this.limit = res.limit as int
         }
 
         if( res.type )

@@ -904,10 +904,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig accelerator( Map params, value )  {
         if( value instanceof Number ) {
-            if( params.limit == null )
-                params.limit = value
-            else if( params.request == null )
-                params.request = value
+            if( params.limit==null )
+                params.limit=value
+            else if( params.request==null )
+                params.request=value
         }
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
@@ -979,90 +979,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('cpus', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `cpus` directive value: $value [${value.getClass().getName()}]")
-        return this
-    }
-
-    /**
-     * Allow user to specify `disk` directive as a value with a list of params, eg:
-     *
-     *     disk 2.GB, limit: 4.GB
-     *
-     * @param params
-     *      A map representing the disk params
-     * @param value
-     *      The default disk value
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig disk( Map params, value )  {
-        if( value ) {
-            if( params.limit == null )
-                params.limit = value
-            else if( params.request == null )
-                params.request = value
-        }
-        disk(params)
-        return this
-    }
-
-    /**
-     * Allow user to specify `disk` directive as a value or a list of params, eg:
-     *
-     *     disk 2.GB
-     *     disk request: 1.GB, limit: 4.GB
-     *
-     * @param value
-     *      The default disk value or map of params
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig disk( value ) {
-        if( value instanceof Map || value instanceof Closure )
-            configProperties.put('disk', value)
-        else if( value != null )
-            configProperties.put('disk', [limit: value])
-        return this
-    }
-
-    /**
-     * Allow user to specify `memory` directive as a value with a list of params, eg:
-     *
-     *     memory 2.GB, limit: 4.GB
-     *
-     * @param params
-     *      A map representing the memory params
-     * @param value
-     *      The default memory value
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig memory( Map params, value )  {
-        if( value ) {
-            if( params.limit == null )
-                params.limit = value
-            else if( params.request == null )
-                params.request = value
-        }
-        memory(params)
-        return this
-    }
-
-    /**
-     * Allow user to specify `memory` directive as a value or a list of params, eg:
-     *
-     *     memory 2.GB
-     *     memory request: 1.GB, limit: 4.GB
-     *
-     * @param value
-     *      The default memory value or map of params
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig memory( value ) {
-        if( value instanceof Map || value instanceof Closure )
-            configProperties.put('memory', value)
-        else if( value != null )
-            configProperties.put('memory', [limit: value])
         return this
     }
 
