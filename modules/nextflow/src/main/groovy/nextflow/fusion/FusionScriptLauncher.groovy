@@ -17,7 +17,7 @@
 
 package nextflow.fusion
 
-
+import static nextflow.fusion.FusionConfig.FUSION_PATH
 import static nextflow.fusion.FusionHelper.*
 
 import java.nio.file.Path
@@ -80,7 +80,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     }
 
     Path toContainerMount(Path path) {
-        toContainerMount(path,scheme)
+        return toContainerMount(path, scheme)
     }
 
     Map<String,String> fusionEnv() {
@@ -111,4 +111,8 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
+    List<String> fusionSubmitCli(TaskRun task) {
+        final runFile = toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN), scheme)
+        return List.of(FUSION_PATH, 'bash', runFile.toString())
+    }
 }

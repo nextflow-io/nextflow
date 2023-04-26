@@ -18,6 +18,8 @@ package nextflow.dag
 
 import java.nio.file.Path
 import java.util.regex.Pattern
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.MapConstructor
 import groovy.transform.ToString
@@ -32,14 +34,20 @@ import nextflow.script.params.FileOutParam
 @Slf4j
 class ConcreteDAG {
 
-    Map<String,Task> nodes = new HashMap<>(100)
+    private Lock sync = new ReentrantLock()
+
+    private Map<String,Task> nodes = new HashMap<>(100)
+
+    Map<String,Task> getNodes() {
+        nodes
+    }
 
     /**
      * Add a task to the graph
      *
      * @param task
      */
-    synchronized void addTask( TaskRun task ) {
+    void addTask(TaskRun task) {
         final hash = task.hash.toString()
         final label = "[${hash.substring(0,2)}/${hash.substring(2,8)}] ${task.name}"
         final inputs = task.getInputFilesMap()
@@ -47,11 +55,17 @@ class ConcreteDAG {
                 new Input(name: name, path: path, predecessor: getPredecessorHash(path))
             }
 
-        nodes[hash] = new Task(
-            index: nodes.size(),
-            label: label,
-            inputs: inputs
-        )
+        sync.lock()
+        try {
+            nodes[hash] = new Task(
+                index: nodes.size(),
+                label: label,
+                inputs: inputs
+            )
+        }
+        finally {
+            sync.unlock()
+        }
     }
 
     static public String getPredecessorHash(Path path) {
@@ -66,7 +80,7 @@ class ConcreteDAG {
      *
      * @param task
      */
-    synchronized void addTaskOutputs( TaskRun task ) {
+    void addTaskOutputs(TaskRun task) {
         final hash = task.hash.toString()
         final outputs = task.getOutputsByType(FileOutParam)
             .values()
@@ -75,7 +89,13 @@ class ConcreteDAG {
                 new Output(name: path.name, path: path)
             }
 
-        nodes[hash].outputs = outputs
+        sync.lock()
+        try {
+            nodes[hash].outputs = outputs
+        }
+        finally {
+            sync.unlock()
+        }
     }
 
     @MapConstructor

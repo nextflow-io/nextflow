@@ -250,9 +250,9 @@ class Channel  {
         }
 
         if( NF.isDsl2() )
-            session.addIgniter { timer.schedule( task as TimerTask, millis ) }  
+            session.addIgniter { timer.schedule( task as TimerTask, 0, millis ) }  
         else 
-            timer.schedule( task as TimerTask, millis )
+            timer.schedule( task as TimerTask, 0, millis )
         
         return result
     }
