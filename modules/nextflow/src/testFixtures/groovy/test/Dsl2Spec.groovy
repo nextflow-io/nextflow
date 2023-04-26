@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +16,15 @@
 
 package test
 
-
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.NF
 import nextflow.NextflowMeta
+import nextflow.processor.TaskProcessor
+import nextflow.script.ScriptMeta
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,6 +34,13 @@ class Dsl2Spec extends BaseSpec {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
+
+    def setup() {
+        TaskProcessor.reset()
+        ScriptMeta.reset()
+        Global.reset()
+        NF.init()
+    }
 
     def dsl_eval(String str) {
         new MockScriptRunner().setScript(str).execute()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,4 +45,23 @@ class CondaConfigTest extends Specification {
         true        | [enabled: true]   | [NXF_CONDA_ENABLED: true]
     }
 
+
+    @Unroll
+    def 'should check channels options'() {
+        given:
+        def conda = new CondaConfig(CONFIG, [:])
+        expect:
+        conda.getChannels() == EXPECTED
+
+        where:
+        EXPECTED                | CONFIG
+        []                      | [:]
+        ['bioconda']            | [channels:'bioconda']
+        ['bioconda']            | [channels:['bioconda']]
+        and:
+        ['this','that','other'] | [channels:'this,that,other']
+        ['this','that','other'] | [channels:'this, that ,other']
+        and:
+        ['this','that','other'] | [channels:['this','that','other']]
+    }
 }

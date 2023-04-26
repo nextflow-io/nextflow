@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,17 +38,19 @@ class WaveConfig {
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
+    final private String containerPlatform
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.containerConfigUrl = parseConfig(opts, env)
-        this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
+        this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
         this.buildRepository = opts.navigate('build.repository') as String
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
+        this.containerPlatform = opts.containerPlatform
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
@@ -117,5 +119,8 @@ class WaveConfig {
     Duration tokensCacheMaxDuration() { 
         return tokensCacheMaxDuration 
     }
-    
+
+    String containerPlatform() {
+        return containerPlatform
+    }
 }

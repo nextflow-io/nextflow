@@ -17,20 +17,19 @@ package nextflow.cloud.azure.batch
 
 import java.nio.file.Path
 
-import com.microsoft.azure.batch.protocol.models.TaskState
 import com.microsoft.azure.batch.protocol.models.TaskExecutionInformation
 import com.microsoft.azure.batch.protocol.models.TaskExecutionResult
+import com.microsoft.azure.batch.protocol.models.TaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.processor.TaskBean
+import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
-
 /**
  * Implements a task handler for Azure Batch service
  *
@@ -38,11 +37,9 @@ import nextflow.trace.TraceRecord
  */
 @Slf4j
 @CompileStatic
-class AzBatchTaskHandler extends TaskHandler {
+class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     AzBatchExecutor executor
-
-    private TaskBean taskBean
 
     private Path exitFile
 
@@ -61,7 +58,6 @@ class AzBatchTaskHandler extends TaskHandler {
     AzBatchTaskHandler(TaskRun task, AzBatchExecutor executor) {
         super(task)
         this.executor = executor
-        this.taskBean = new TaskBean(task)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -82,7 +78,9 @@ class AzBatchTaskHandler extends TaskHandler {
     }
 
     protected BashWrapperBuilder createBashWrapper() {
-        new AzBatchScriptLauncher(taskBean, executor)
+        fusionEnabled()
+                ? fusionLauncher()
+                : new AzBatchScriptLauncher(task.toTaskBean(), executor)
     }
 
     @Override

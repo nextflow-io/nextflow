@@ -270,8 +270,8 @@ class OarExecutorTest extends Specification {
         when:
         def executor = [:] as OarExecutor
         then:
-        executor.queueStatusCommand(null) == ['sh','-c', "oarstat -f | egrep '(Job_Id:|state =)' ".toString()]
-        executor.queueStatusCommand('xxx') == ['sh','-c', "oarstat -f xxx | egrep '(Job_Id:|state =)' ".toString()]
+        executor.queueStatusCommand(null) == ['sh','-c', "oarstat -f | grep -E '(Job_Id:|state =)' ".toString()]
+        executor.queueStatusCommand('xxx') == ['sh','-c', "oarstat -f xxx | grep -E '(Job_Id:|state =)' ".toString()]
 
     }
 

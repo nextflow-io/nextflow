@@ -17,7 +17,10 @@
 
 package nextflow.cloud.google.batch
 
+import com.google.cloud.batch.v1.GCS
+import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
@@ -39,6 +42,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with minimal spec' () {
         given:
+        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
@@ -56,23 +60,32 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getResourceLabels() >> [:]
             }
         }
-
         and:
-        def handler = new GoogleBatchTaskHandler(task, exec)
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def volumes = [GCS_VOL]
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
+        
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
 
         when:
-        def req = handler.newSubmitRequest(task)
+        def req = handler.newSubmitRequest(task, launcher)
         then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_) >> null
+
+        and:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
-        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         and:
         taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == ''
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
@@ -82,9 +95,13 @@ class GoogleBatchTaskHandlerTest extends Specification {
         instancePolicy.getMinCpuPlatform() == ''
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
         and:
-        req.getAllocationPolicy().getNetwork().getNetworkInterfacesCount() == 0
+        allocationPolicy.getLocation().getAllowedLocationsCount() == 0
+        allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        and:
+        taskGroup.getTaskSpec().getVolumesList().size()==1
+        taskGroup.getTaskSpec().getVolumes(0) == GCS_VOL
     }
 
     def 'should create submit request with maximal spec' () {
@@ -104,6 +121,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig) {
+                getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
                 getCpuPlatform() >> CPU_PLATFORM
                 getSpot() >> true
@@ -131,13 +149,20 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getResourceLabels() >> [foo: 'bar']
             }
         }
+        and:
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def launcher = new GoogleBatchLauncherSpecMock( 'bash .command.run', mounts )
 
         and:
-        def handler = new GoogleBatchTaskHandler(task, exec)
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
 
         when:
-        def req = handler.newSubmitRequest(task)
+        def req = handler.newSubmitRequest(task, launcher)
         then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_) >> null
+
+        and:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
@@ -149,7 +174,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == '--this --that --privileged'
         runnable.getContainer().getVolumesList() == [
@@ -158,6 +183,11 @@ class GoogleBatchTaskHandlerTest extends Specification {
             '/var/lib/nvidia/bin:/usr/local/nvidia/bin'
         ]
         and:
+        runnable.getEnvironment().getVariablesMap() == [:]
+        and:
+        allocationPolicy.getLocation().getAllowedLocationsCount() == 2
+        allocationPolicy.getLocation().getAllowedLocations(0) == 'zones/us-central1-a'
+        allocationPolicy.getLocation().getAllowedLocations(1) == 'zones/us-central1-c'
         allocationPolicy.getInstances(0).getInstallGpuDrivers() == true
         allocationPolicy.getLabelsMap() == [foo: 'bar']
         allocationPolicy.getServiceAccount().getEmail() == 'foo@bar.baz'
@@ -200,5 +230,68 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         trace.native_id == 'xyz-123/789'
         trace.executorName == 'google-batch'
+    }
+
+    def 'should create submit request with fusion enabled' () {
+        given:
+        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> Mock(BatchConfig)
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [:]
+            }
+        }
+        and:
+        def env = [FUSION_WORK: '/xyz']
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [], [], env)
+
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> true
+        handler.findBestMachineType(_) >> null
+        and:
+        def taskGroup = req.getTaskGroups(0)
+        def runnable = taskGroup.getTaskSpec().getRunnables(0)
+        def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
+        and:
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
+        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
+        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
+        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
+        and:
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
+        runnable.getContainer().getImageUri() == CONTAINER_IMAGE
+        runnable.getContainer().getOptions() == '--privileged'
+        runnable.getContainer().getVolumesList() == []
+        and:
+        runnable.getEnvironment().getVariablesMap() == env
+        and:
+        instancePolicy.getAcceleratorsCount() == 0
+        instancePolicy.getMachineType() == ''
+        instancePolicy.getMinCpuPlatform() == ''
+        instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
+        and:
+        allocationPolicy.getLocation().getAllowedLocationsCount() == 0
+        allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
+        and:
+        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        and:
+        taskGroup.getTaskSpec().getVolumesList().size()==0
     }
 }

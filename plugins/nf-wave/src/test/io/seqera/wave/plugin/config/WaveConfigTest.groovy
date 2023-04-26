@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,15 @@ class WaveConfigTest extends Specification {
         opts.endpoint() == 'http://localhost'
     }
 
+    def 'should config containerPlatform' () {
+        when:
+        // config options have priority over sys env
+        def opts = new WaveConfig([enabled:true, containerPlatform: 'linux/arm64'], [:])
+        then:
+        opts.enabled()
+        opts.containerPlatform() == 'linux/arm64'
+    }
+
     def 'should remove ending slash' () {
         when:
         def opts = new WaveConfig([enabled:true, endpoint: 'http://localhost/v1//'])
@@ -86,7 +95,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:0.27.0'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.1'
         opts.condaOpts().commands == null
 
         when:

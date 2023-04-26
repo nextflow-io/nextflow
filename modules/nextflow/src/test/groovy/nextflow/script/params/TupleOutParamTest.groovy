@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +18,13 @@ package nextflow.script.params
 
 import static test.TestParser.*
 
-import groovyx.gpars.dataflow.DataflowQueue
-import spock.lang.Specification
+import groovyx.gpars.dataflow.DataflowVariable
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TupleOutParamTest extends Specification {
+class TupleOutParamTest extends Dsl2Spec {
 
     def 'should define output tuples'() {
 
@@ -33,11 +32,15 @@ class TupleOutParamTest extends Specification {
         def text = '''
             process hola {
               output:
-                tuple(x) into p
-                tuple(y, '-', '*.fa') into q mode flatten
-                tuple(stdout, z) into t mode combine
+                tuple val(x)
+                tuple val(y), stdout, file('*.fa') 
+                tuple stdout, val(z)
 
               return ''
+            }
+            
+            workflow {
+              hola()
             }
             '''
 
@@ -52,16 +55,13 @@ class TupleOutParamTest extends Specification {
         then:
         process.config.getOutputs().size() == 3
 
-        out0.outChannel instanceof DataflowQueue
-        out0.outChannel == binding.p
+        out0.outChannel instanceof DataflowVariable
         out0.inner.size() == 1
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'x'
         out0.inner[0].index == 0
-        out0.mode == BasicMode.standard
 
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.q
+        out1.outChannel instanceof DataflowVariable
         out1.inner[0] instanceof ValueOutParam
         out1.inner[0].name == 'y'
         out1.inner[0].index == 1
@@ -73,10 +73,8 @@ class TupleOutParamTest extends Specification {
         out1.inner[2].filePattern == '*.fa'
         out1.inner[2].index == 1
         out1.inner.size() ==3
-        out1.mode == BasicMode.flatten
 
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.t
+        out2.outChannel instanceof DataflowVariable
         out2.inner.size() == 2
         out2.inner[0] instanceof StdOutParam
         out2.inner[0].name == '-'
@@ -84,7 +82,6 @@ class TupleOutParamTest extends Specification {
         out2.inner[1] instanceof ValueOutParam
         out2.inner[1].name == 'z'
         out2.inner[1].index == 2
-        out2.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -94,11 +91,15 @@ class TupleOutParamTest extends Specification {
         def text = '''
             process hola {
               output:
-                tuple val(x) into p
-                tuple val(y), stdout, file('*.fa') into q mode flatten
-                tuple stdout, val(z) into t mode combine
+                tuple val(x)
+                tuple val(y), stdout, file('*.fa')
+                tuple stdout, val(z)
 
               return ''
+            }
+            
+            workflow {
+              hola()
             }
             '''
 
@@ -113,16 +114,13 @@ class TupleOutParamTest extends Specification {
         then:
         process.config.getOutputs().size() == 3
 
-        out0.outChannel instanceof DataflowQueue
-        out0.outChannel == binding.p
+        out0.outChannel instanceof DataflowVariable
         out0.inner.size() == 1
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'x'
         out0.inner[0].index == 0
-        out0.mode == BasicMode.standard
 
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.q
+        out1.outChannel instanceof DataflowVariable
         out1.inner[0] instanceof ValueOutParam
         out1.inner[0].name == 'y'
         out1.inner[0].index == 1
@@ -134,10 +132,8 @@ class TupleOutParamTest extends Specification {
         out1.inner[2].filePattern == '*.fa'
         out1.inner[2].index == 1
         out1.inner.size() ==3
-        out1.mode == BasicMode.flatten
 
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.t
+        out2.outChannel instanceof DataflowVariable
         out2.inner.size() == 2
         out2.inner[0] instanceof StdOutParam
         out2.inner[0].name == '-'
@@ -145,7 +141,6 @@ class TupleOutParamTest extends Specification {
         out2.inner[1] instanceof ValueOutParam
         out2.inner[1].name == 'z'
         out2.inner[1].index == 2
-        out2.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -154,9 +149,13 @@ class TupleOutParamTest extends Specification {
         def text = '''
             process hola {
               output:
-                tuple env(FOO), env(BAR) into ch
+                tuple env(FOO), env(BAR)
               
               /echo command/ 
+            }
+            
+            workflow {
+              hola()
             }
             '''
 
@@ -169,8 +168,7 @@ class TupleOutParamTest extends Specification {
         println outs.outChannel
         outs.size() == 1
         and:
-        outs[0].outChannel instanceof DataflowQueue
-        outs[0].outChannel == binding.ch
+        outs[0].outChannel instanceof DataflowVariable
         and:
         outs[0].inner.size() ==2
         and:

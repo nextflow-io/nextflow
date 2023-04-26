@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -560,6 +559,17 @@ class K8sDriverLauncherTest extends Specification {
                 [volumeClaim:'bar', mountPath: '/mnt/bar']
         ])
 
+    }
+
+    def 'should add the plugin into the config' () {
+        given:
+        def cmd = new CmdKubeRun()
+        cmd.launcher = new Launcher(options: new CliOptions())
+
+        when:
+        def l = new K8sDriverLauncher(cmd: cmd, plugins: 'nf-cws@1.0.0', runName: 'bar')
+        then:
+        l.makeConfig( "/bar").get('plugins') == [ 'nf-cws@1.0.0' ]
     }
 
     def 'should make config - deprecated' () {
