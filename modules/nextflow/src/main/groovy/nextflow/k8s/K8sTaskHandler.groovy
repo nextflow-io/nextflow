@@ -226,7 +226,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         final clientConfig = client.config
 
         final podOptions = getPodOptions()
-        resourceType = podOptions.resourceType ?: k8sConfig.resourceType ?: 'Pod'
+        resourceType = podOptions.resourceType ?: 'Pod'
 
         final builder = createSpecBuilder(resourceType)
             .withImageName(imageName)

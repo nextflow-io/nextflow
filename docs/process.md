@@ -1924,10 +1924,10 @@ The `pod` directive supports the following options:
 : Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.
 
 `privileged: <B>`
-: Whether the process task should run as a *privileged* container (default: `false`)
+: Whether the process task should run as a *privileged* container (default: `false`).
 
 `resourceType: <V>`
-: *Requires version `23.05.0-edge` or later.*
+: *Requires version `23.05.0-edge` or later*
 : Specifies the resource type to be used for tasks, can be `'Pod'` or `'Job'` (default: `'Pod'`).
 
 `runAsUser: <UID>`

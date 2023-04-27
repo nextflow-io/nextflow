@@ -67,7 +67,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -100,7 +99,6 @@ class K8sTaskHandlerTest extends Specification {
         then:
         _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
@@ -137,7 +135,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -182,7 +179,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [foo: 'bar', hello: 'world']
@@ -217,7 +213,6 @@ class K8sTaskHandlerTest extends Specification {
         then:
         _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
@@ -253,7 +248,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -301,7 +295,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
         1 * handler.getPodOptions() >> new PodOptions()
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -350,7 +343,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
@@ -402,7 +394,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -464,7 +455,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> []
         1 * handler.getLabels(task) >> [:]
@@ -509,7 +499,6 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
         1 * handler.getLabels(task) >> [:]
@@ -1189,7 +1178,6 @@ class K8sTaskHandlerTest extends Specification {
         and:
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
-        1 * handler.getK8sConfig() >> new K8sConfig()
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
