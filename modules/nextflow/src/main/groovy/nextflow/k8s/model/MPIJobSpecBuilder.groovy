@@ -38,15 +38,16 @@ class MPIJobSpecBuilder extends PodSpecBuilder {
     @Override
     ResourceSpecBuilder withPodOptions(PodOptions opts) {
         super.withPodOptions(opts)
+        withMpiOptions(opts.unmatched.mpi as Map)
+    }
 
-        final mpiOptions = opts.mpiOptions
-        if( mpiOptions.workers )
-            workers = mpiOptions.workers as Integer
-        if( mpiOptions.sshAuthMountPath )
-            sshAuthMountPath = mpiOptions.sshAuthMountPath as String
-        if( mpiOptions.waitForWorkers )
-            waitForWorkers = mpiOptions.waitForWorkers as Boolean
-
+    ResourceSpecBuilder withMpiOptions(Map opts) {
+        if( opts.workers )
+            workers = opts.workers as Integer
+        if( opts.sshAuthMountPath )
+            sshAuthMountPath = opts.sshAuthMountPath as String
+        if( opts.waitForWorkers )
+            waitForWorkers = opts.waitForWorkers as Boolean
         return this
     }
 

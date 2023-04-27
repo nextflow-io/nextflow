@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
+import groovy.util.logging.Slf4j
 
 /**
  * Model K8s pod options such as environment variables,
@@ -30,6 +31,7 @@ import groovy.transform.ToString
 @CompileStatic
 @ToString(includeNames = true)
 @EqualsAndHashCode(includeFields = true)
+@Slf4j
 class PodOptions {
 
     private String imagePullPolicy
@@ -68,7 +70,7 @@ class PodOptions {
 
     private String resourceType
 
-    private Map mpiOptions
+    private Map unmatched = [:]
 
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -157,11 +159,10 @@ class PodOptions {
         else if( entry.resourceType ) {
             this.resourceType = entry.resourceType as String
         }
-        else if( entry.mpi instanceof Map ) {
-            this.mpiOptions = entry.mpiOptions as Map
+        else {
+            log.debug "Unmatched pod option: $entry"
+            this.unmatched.putAll(entry)
         }
-        else
-            throw new IllegalArgumentException("Unknown pod options: $entry")
     }
 
 
@@ -226,7 +227,12 @@ class PodOptions {
 
     String getResourceType() { resourceType }
 
-    Map getMpiOptions() { mpiOptions }
+    PodOptions setResourceType( String resourceType ) {
+        this.resourceType = resourceType
+        return this
+    }
+
+    Map getUnmatched() { unmatched }
 
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
@@ -302,8 +308,8 @@ class PodOptions {
         // resource type
         result.resourceType = other.resourceType ?: this.resourceType
 
-        // mpi job options
-        result.mpiOptions = other.mpiOptions ?: this.mpiOptions
+        // unmatched options
+        result.unmatched = other.unmatched ?: this.unmatched
 
         return result
     }

@@ -634,11 +634,11 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
         def podOptions = Spy(PodOptions) {
             resourceType >> 'MPIJob'
-            mpiOptions >> [
+            unmatched >> [mpi: [
                 workers: 2,
                 sshAuthMountPath: '/ssh/path',
                 waitForWorkers: true
-            ]
+            ]]
         }
 
         when:

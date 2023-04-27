@@ -206,29 +206,6 @@ class PodOptionsTest extends Specification {
 
     }
 
-
-    def 'should not create env' () {
-        when:
-        new PodOptions([ [env:'FOO'] ])
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        new PodOptions([ [secret:'FOO'] ])
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        new PodOptions([ [config:'FOO'] ])
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        new PodOptions([ [volumeClaim:'FOO'] ])
-        then:
-        thrown(IllegalArgumentException)
-    }
-
     def 'should merge podOptions' () {
 
         given:
