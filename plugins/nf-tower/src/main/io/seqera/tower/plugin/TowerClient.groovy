@@ -38,6 +38,8 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import nextflow.util.Threads
+
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -360,7 +362,7 @@ class TowerClient implements TraceObserver {
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
-        this.sender = Thread.start('Tower-thread', this.&sendTasks0)
+        this.sender = Threads.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Nextflow Tower using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
