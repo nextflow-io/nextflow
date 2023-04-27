@@ -226,18 +226,25 @@ class CsvSplitter extends AbstractTextSplitter {
     static protected castValueType(String str, String type) {
 
         try {
-            if( type.toLowerCase() == 'boolean' ) return str.toBoolean()
-            if( type.toLowerCase() == 'character' ) return str.toCharacter()
-            if( type.toLowerCase() == 'short' ) return str.toShort()
-            if( type.toLowerCase() == 'integer' ) return str.toInteger()
-            if( type.toLowerCase() == 'long' ) return str.toLong()
-            if( type.toLowerCase() == 'float' ) return str.toFloat()
-            if( type.toLowerCase() == 'double' ) return str.toDouble()
+            if( str == null || str == "" ) return null
+            else if( type.toLowerCase() == 'boolean' && str.toLowerCase() in ["true", "false"] ) return str.toBoolean()
+            else if( type.toLowerCase() == 'character' ) return str.toCharacter()
+            else if( type.toLowerCase() == 'short' && str.isNumber() ) return str.toShort()
+            else if( type.toLowerCase() == 'integer' && str.isInteger() ) return str.toInteger()
+            else if( type.toLowerCase() == 'long'  && str.isLong() ) return str.toLong()
+            else if( type.toLowerCase() == 'float'  && str.isFloat() ) return str.toFloat()
+            else if( type.toLowerCase() == 'double' && str.isDouble() ) return str.toDouble()
+            else if( type.toLowerCase() == 'string' ) return str
+            else {
+                log.warn("Value $str is not a $type: returning a string") 
+                return str
+            }
         } catch (Exception e) {
+            log.warn("Unable to cast value $str to type $type: $e")
             return str
         }
 
-        return str
+        
     }
 
     protected CollectorStrategy createCollector() {
