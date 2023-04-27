@@ -46,7 +46,7 @@ class CacheHelperTest extends Specification {
         def anObjectArray = Hashing.murmur3_128().newHasher().putInt(1).putInt(2).putInt(3).hash()
         def aMap =  Hashing.murmur3_128().newHasher().putInt(1).putUnencodedChars('String1').putBoolean(true).hash()
         def aList = Hashing.murmur3_128().newHasher().putUnencodedChars('A').putUnencodedChars('B').putUnencodedChars('C').hash()
-        def anEnum = Hashing.murmur3_128().newHasher().putUnencodedChars('TEST_A').hash()
+        def anEnum = Hashing.murmur3_128().newHasher().putUnencodedChars('nextflow.util.CacheHelperTest$TestEnum.TEST_A').hash()
 
         def file = Files.createTempFile('test', null)
         file.deleteOnExit()
