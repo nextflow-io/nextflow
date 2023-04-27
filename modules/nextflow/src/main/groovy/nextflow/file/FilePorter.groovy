@@ -43,6 +43,8 @@ import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.ThreadPoolManager
+import nextflow.util.Threads
+
 /**
  * Move foreign (ie. remote) files to the staging work area
  *
@@ -84,7 +86,9 @@ class FilePorter {
         maxTransfers = session.config.navigate('filePorter.maxTransfers') as Integer ?: MAX_TRANSFERS
         log.debug "File porter settings maxRetries=$maxRetries; maxTransfers=$maxTransfers; pollTimeout=$threadPool"
         sync = new ReentrantLock()
-        semaphore = new Semaphore(maxTransfers)
+        // use a semaphore to cap the number of max transfer when using virtual thread
+        // when using platform threads the max transfers are limited by the thread pool itself
+        semaphore = Threads.useVirtual() ? new Semaphore(maxTransfers) : null
         threadPool = new ThreadPoolManager('FileTransfer')
                 .withConfig(session.config)
                 .createAndRegisterShutdownCallback(session)
@@ -272,11 +276,11 @@ class FilePorter {
          */
         final int maxRetries
 
+        final private Semaphore semaphore
         final AtomicInteger refCount
         volatile Future result
         private String message
         private int debugDelay
-        private Semaphore semaphore
 
         FileTransfer(Path foreignPath, Path stagePath, int maxRetries, Semaphore semaphore) {
             this.semaphore = semaphore
@@ -290,12 +294,14 @@ class FilePorter {
 
         @Override
         void run() throws Exception {
-            semaphore.acquire()
+            if( semaphore )
+                semaphore.acquire()
             try {
                 stageForeignFile(source, target)
             }
             finally {
-                semaphore.release()
+                if( semaphore )
+                    semaphore.release()
             }
         }
 

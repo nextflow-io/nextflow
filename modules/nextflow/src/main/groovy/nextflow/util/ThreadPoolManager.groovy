@@ -43,11 +43,11 @@ class ThreadPoolManager {
     final static public Duration DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
     final static public Duration DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
-    @Deprecated private Integer minThreads = DEFAULT_MIN_THREAD
-    @Deprecated private Integer maxThreads = DEFAULT_MAX_THREAD
-    @Deprecated private Integer maxQueueSize = DEFAULT_QUEUE_SIZE
-    @Deprecated private Duration keepAlive = DEFAULT_KEEP_ALIVE
-    @Deprecated private Boolean allowThreadTimeout
+    private Integer minThreads = DEFAULT_MIN_THREAD
+    private Integer maxThreads = DEFAULT_MAX_THREAD
+    private Integer maxQueueSize = DEFAULT_QUEUE_SIZE
+    private Duration keepAlive = DEFAULT_KEEP_ALIVE
+    private Boolean allowThreadTimeout
     private Duration maxAwait = DEFAULT_MAX_AWAIT
     private ExecutorService executorService
     final private String name
