@@ -21,6 +21,7 @@ import jline.TerminalFactory
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.util.Duration
+import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import static nextflow.util.LoggerHelper.isHashLogPrefix
@@ -405,7 +406,7 @@ class AnsiLogObserver implements TraceObserver {
         this.statsObserver = session.statsObserver
         this.startTimestamp = System.currentTimeMillis()
         AnsiConsole.systemInstall()
-        this.renderer = Thread.start('AnsiLogObserver', this.&render0)
+        this.renderer = Threads.start('AnsiLogObserver', this.&render0)
     }
 
     @Override

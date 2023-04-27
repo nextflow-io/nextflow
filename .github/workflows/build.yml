@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 19]
+        java_version: [11, 17, 19]
 
     steps:
       - name: Environment
@@ -92,7 +92,7 @@ jobs:
       any_changed: ${{ steps.changed-files.outputs.any_changed }}
 
   test:
-    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
+    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') }}
     needs: build
     runs-on: ubuntu-latest
     strategy:

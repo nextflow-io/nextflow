@@ -35,6 +35,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.util.CustomThreadFactory
+import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -186,7 +187,10 @@ class PathVisitor {
     @Memoized
     @PackageScope
     static ExecutorService createExecutor(Session session) {
-        final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
+        final factory = new CustomThreadFactory('PathVisitor')
+        final result = Threads.useVirtual()
+                ? Executors.newThreadPerTaskExecutor(factory)
+                : Executors.newCachedThreadPool(factory)
         Global.onCleanup((it) -> result.shutdown())
         return result
     }

@@ -61,7 +61,7 @@ allprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(19)
         }
     }
 
@@ -139,6 +139,7 @@ allprojects {
     if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
         tasks.withType(Test) {
             jvmArgs ([
+                    '--enable-preview',
                     '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.io=ALL-UNNAMED',
                     '--add-opens=java.base/java.nio=ALL-UNNAMED',
@@ -154,6 +155,7 @@ allprojects {
                     '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
                     '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+                    '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
             ])
         }
     }

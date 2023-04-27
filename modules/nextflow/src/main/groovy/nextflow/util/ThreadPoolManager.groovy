@@ -17,8 +17,9 @@
 
 package nextflow.util
 
-
-import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -34,6 +35,8 @@ import nextflow.Session
 @CompileStatic
 class ThreadPoolManager {
 
+    private static final AtomicInteger poolCount = new AtomicInteger()
+    
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
     final static public int DEFAULT_QUEUE_SIZE = 10_000
@@ -46,7 +49,7 @@ class ThreadPoolManager {
     private Duration keepAlive = DEFAULT_KEEP_ALIVE
     private Boolean allowThreadTimeout
     private Duration maxAwait = DEFAULT_MAX_AWAIT
-    private ThreadPoolExecutor executorService
+    private ExecutorService executorService
     final private String name
 
     ThreadPoolManager(String name) {
@@ -69,13 +72,19 @@ class ThreadPoolManager {
         return this
     }
 
-    ThreadPoolExecutor create() {
+    ExecutorService create() {
         if( minThreads>maxThreads ) {
             log.debug("Thread pool '$name' minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
             minThreads = maxThreads
         }
 
-        executorService = new ThreadPoolBuilder()
+        return executorService = Threads.useVirtual()
+                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
+                : legacyThreadPool()
+    }
+
+    protected ExecutorService legacyThreadPool() {
+        new ThreadPoolBuilder()
                 .withName(name)
                 .withMinSize(minThreads)
                 .withMaxSize(maxThreads)
@@ -83,10 +92,9 @@ class ThreadPoolManager {
                 .withKeepAliveTime(keepAlive)
                 .withAllowCoreThreadTimeout(allowThreadTimeout)
                 .build()
-        return executorService
     }
 
-    ThreadPoolExecutor createAndRegisterShutdownCallback(Session session) {
+    ExecutorService createAndRegisterShutdownCallback(Session session) {
         final result = create()
         // register the cleanup callback
         Global.onCleanup( (it) -> shutdown(session))
@@ -115,7 +123,7 @@ class ThreadPoolManager {
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
     }
 
-    static ThreadPoolExecutor create(String name, int maxThreads=0) {
+    static ExecutorService create(String name, int maxThreads=0) {
         final session = Global.session as Session
         new ThreadPoolManager(name)
             .withMaxThreads(maxThreads) // default max threads

@@ -45,7 +45,7 @@ class SimpleAgent<T> {
         if(state == null)
             throw new IllegalArgumentException("Missing state argument")
         this.state = state
-        this.runner = Thread.startDaemon(this.&run)
+        this.runner = Threads.start(this.&run)
     }
 
     SimpleAgent onError(@ClosureParams(value = SimpleType, options = ['java.lang.Throwable']) Closure handler) {

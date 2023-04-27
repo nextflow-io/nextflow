@@ -33,6 +33,8 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.util.Threads
+
 /**
  * Watch the content of a directory for file system events
  *
@@ -133,7 +135,7 @@ class DirWatcher implements DirListener {
         this.watcher = base.getFileSystem().newWatchService()
         this.watchedPaths = new HashMap<WatchKey,Path>()
 
-        thread = Thread.startDaemon {
+        thread = Threads.start {
             try {
                 apply0()
             }

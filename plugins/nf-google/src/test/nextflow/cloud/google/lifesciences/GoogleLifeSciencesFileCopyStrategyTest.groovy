@@ -220,8 +220,8 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         envScript == '''\
                 chmod +x /work/xx/yy/nextflow-bin/* || true
                 export PATH=/work/xx/yy/nextflow-bin:$PATH
-                export BAR="2"
                 export FOO="1"
+                export BAR="2"
                 '''.stripIndent()
 
         when:
