@@ -535,6 +535,8 @@ baseDir
     └─P7-template.sh
 ```
 
+(module-binaries)=
+
 ### Module binaries
 
 As of version `22.10.0`, modules can define binary scripts that are locally scoped to the processes defined by the tasks.
