@@ -1,5 +1,5 @@
 #
-#  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+#  Copyright 2013-2023, Seqera Labs
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ version ?= none
 
 build: dist/docker
 	cp ../nextflow .
-	docker build --platform linux/amd64 --output=type=docker --progress=plain --tag nextflow/nextflow:${version} .
+	docker buildx build --platform linux/amd64 --output=type=docker --progress=plain --tag nextflow/nextflow:${version} .
 
 release: build
 	docker tag nextflow/nextflow:${version} nextflow/nextflow:latest

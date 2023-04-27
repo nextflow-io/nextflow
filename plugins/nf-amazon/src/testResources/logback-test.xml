@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+  ~ Copyright 2013-2023, Seqera Labs
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 
     <logger name="org.apache.http" level="INFO" />
     <logger name="com.amazonaws" level="INFO" />
+    <logger name="com.upplication" level="DEBUG" />
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

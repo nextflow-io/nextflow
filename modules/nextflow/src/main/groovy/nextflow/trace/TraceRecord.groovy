@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -232,7 +231,7 @@ class TraceRecord implements Serializable {
 
         }
         catch( Exception e ) {
-            log.debug "Not a valid percentual value: '$value'"
+            log.debug "Not a valid percentage value: '$value'"
             return NA
         }
     }
@@ -394,8 +393,8 @@ class TraceRecord implements Serializable {
     }
 
     CharSequence renderJson(StringBuilder result = new StringBuilder()) {
-        def fields = []
-        def formats = []
+        List<String> fields = []
+        List<String> formats = []
         FIELDS.each { name, type -> fields << name; formats << type }
         renderJson(result, fields, formats)
     }

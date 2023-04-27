@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +28,11 @@ import nextflow.splitter.FastqSplitter
 import nextflow.splitter.SplitterFactory
 /**
  * Implements splitter operators:
- * - splitText
  * - splitCsv
  * - splitFasta
  * - splitFastq
+ * - splitJson
+ * - splitText
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -101,7 +101,7 @@ class SplitOp {
 
         // -- validate options
         if( params.containsKey('autoClose') )
-            throw new IllegalArgumentException('Parameter `autoClose` do not supported')
+            throw new IllegalArgumentException('Parameter `autoClose` is not supported')
         // turn off channel auto-close
         params.autoClose = false
 

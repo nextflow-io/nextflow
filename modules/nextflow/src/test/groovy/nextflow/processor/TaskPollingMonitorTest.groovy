@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +15,7 @@
  */
 
 package nextflow.processor
-import java.util.concurrent.ArrayBlockingQueue
+
 
 import nextflow.Session
 import nextflow.util.Duration
@@ -43,7 +42,6 @@ class TaskPollingMonitorTest extends Specification {
         monitor.pollIntervalMillis == Duration.of('1h').toMillis()
         monitor.capacity == 11
         monitor.dumpInterval ==  Duration.of('3h')
-        monitor.runningQueue instanceof ArrayBlockingQueue
 
     }
 

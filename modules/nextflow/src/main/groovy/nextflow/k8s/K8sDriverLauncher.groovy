@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +58,7 @@ class K8sDriverLauncher {
     /**
      * Container image to be used for the Nextflow driver pod
      */
-    private String podImage
+    private String headImage
 
     /** 
      * Request CPUs to be used for the Nextflow driver pod
@@ -127,6 +126,11 @@ class K8sDriverLauncher {
     private List<String> args
 
     /**
+     * Plugins to run the workflow
+     */
+    private String plugins
+
+    /**
      * Launcher entry point. Set-up the environment and create a pod that run the Nextflow
      * application (which in turns executed each task as a pod)
      *
@@ -188,7 +192,7 @@ class K8sDriverLauncher {
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for ${resourceType.lower()} to stop running"
+                log.warn "Caught exception while waiting for ${resourceType.lower()} to stop running"
             }
         }
     }
@@ -356,6 +360,12 @@ class K8sDriverLauncher {
         else if( !k8s.isSet('workDir') && config.workDir )
             k8s.workDir = config.workDir
 
+        if ( plugins ) {
+            LinkedList<String> plugins = config.plugins ?: []
+            plugins.addAll( this.plugins.tokenize(',') )
+            config.plugins = plugins
+        }
+
         // -- some cleanup
         if( !k8s.pod )
             k8s.remove('pod')
@@ -384,7 +394,7 @@ class K8sDriverLauncher {
     private void checkUnsupportedOption(String name) {
         def field = getField(cmd,name)
         if( !field ) {
-            log.warn "Unknown cli option to check: $name"
+            log.warn "Unknown command-line option to check: $name"
             return
         }
         field.setAccessible(true)
@@ -494,6 +504,7 @@ class K8sDriverLauncher {
                 cmd.&executorOptions,
                 cmd.&stdin,
                 cmd.&withSingularity,
+                cmd.&withApptainer,
                 cmd.&withDocker,
                 cmd.&withoutDocker,
                 cmd.&withMpi,
@@ -520,7 +531,7 @@ class K8sDriverLauncher {
         // create the launcher pod
         PodSpecBuilder builder = new PodSpecBuilder()
             .withPodName(runName)
-            .withImageName(podImage ?: k8sConfig.getNextflowImageName())
+            .withImageName(headImage ?: k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)

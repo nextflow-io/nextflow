@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.CacheHelper
@@ -46,7 +47,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     final private static String ONLY_OWNER_PERMS = 'rw-------'
 
-    private Map<String,String> env = System.getenv()
+    private Map<String,String> env = SysEnv.get()
 
     private Map<String,Secret> secretsMap
 
@@ -66,8 +67,8 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
                 ? Paths.get(name)
                 : Const.APP_HOME_DIR.resolve(name)
         final path = secretFile.parent
-        if( !path.exists() && !path.parent.mkdirs() )
-            throw new IllegalStateException("Cannot create directory '${path}' -- make sure you have write permissions or file with the same name already exists")
+        if( path && !path.exists() && !path.mkdirs() )
+            throw new IllegalStateException("Cannot create directory '${path}' -- make sure a file with the same name doesn't already exist and you have write permissions")
         return secretFile
     }
 
@@ -144,7 +145,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         assert secrets != null
         final parent = storeFile.getParent()
         if( !parent.exists() && !parent.mkdirs() )
-            throw new IOException("Unable to create folder: $parent -- Check file system permission" )
+            throw new IOException("Unable to create directory: $parent -- Check file system permissions" )
         // save the secrets as JSON file
         final json = new GsonBuilder().setPrettyPrinting().create().toJson(secrets)
         Files.write(storeFile, json.getBytes('utf-8'))

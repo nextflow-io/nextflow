@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
  */
 
 package nextflow.plugin
+
+import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -37,6 +39,10 @@ class Plugins {
 
     static synchronized void init(boolean embeddedMode=false) {
         INSTANCE.init(embeddedMode)
+    }
+
+    static synchronized void init(Path root, String mode, CustomPluginManager pluginManager) {
+        INSTANCE.init(root, mode, pluginManager)
     }
 
     static synchronized void setup(Map config = Collections.emptyMap()) {

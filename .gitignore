@@ -6,6 +6,9 @@
 .cache/*
 .nextflow*
 .node-nextflow*
+.devcontainer
+.vscode/*
+*/*/bin/*
 **/build/**
 build/**
 modules/**/build/
@@ -31,9 +34,8 @@ docker-test
 docker/dist
 docker/nextflow
 temp
-gradle.properties
 .dockerignore
 .launch.classpath
 plugins-prod
 sandbox
-/plugins/nf-sqldb/src/dist/lib/AthenaJDBC42_2.0.25.1001.jar
+wave-tests

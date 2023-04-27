@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +25,7 @@ import nextflow.Channel
 import nextflow.util.CheckHelper
 
 /**
- * Implements {@link OperatorEx#phase} operator logic
+ * Implements {@link OperatorImpl#phase} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -41,7 +40,7 @@ class PhaseOp {
 
     private DataflowReadChannel target
 
-    private Closure mapper = OperatorEx.DEFAULT_MAPPING_CLOSURE
+    private Closure mapper = OperatorImpl.DEFAULT_MAPPING_CLOSURE
 
     PhaseOp( DataflowReadChannel source, DataflowReadChannel target ) {
         this.source = source
@@ -56,7 +55,7 @@ class PhaseOp {
     }
 
     PhaseOp setMapper( Closure mapper ) {
-        this.mapper = mapper ?: OperatorEx.DEFAULT_MAPPING_CLOSURE
+        this.mapper = mapper ?: OperatorImpl.DEFAULT_MAPPING_CLOSURE
         return this
     }
 

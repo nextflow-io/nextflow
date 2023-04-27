@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +25,7 @@ import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import nextflow.NF
 import static nextflow.extension.DataflowHelper.newOperator
 /**
- * Implements the {@link OperatorEx#tap} operator
+ * Implements the {@link OperatorImpl#tap} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -72,7 +71,7 @@ class TapOp {
         names.each { item ->
             def channel = CH.createBy(source)
             if( binding.hasVariable(item) )
-                log.warn "A variable named '${item}' already exists in script global context -- Consider renaming it "
+                log.warn "A variable named '${item}' already exists in the script global context -- Consider renaming it "
 
             binding.setVariable(item, channel)
             outputs << channel
@@ -86,6 +85,7 @@ class TapOp {
      * @param source An instance of {@link DataflowReadChannel} used to feed the operator
      * @param target An instance of {@link DataflowWriteChannel} that will receive the items emitted by the source
      */
+    @Deprecated
     TapOp( DataflowReadChannel source, DataflowWriteChannel target ) {
         assert source != null
         assert target != null

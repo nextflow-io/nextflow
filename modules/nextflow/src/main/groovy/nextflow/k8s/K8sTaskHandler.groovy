@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +24,12 @@ import java.time.format.DateTimeFormatter
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.container.DockerBuilder
 import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.fusion.FusionAwareTask
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
@@ -48,7 +49,7 @@ import nextflow.util.PathTrie
  */
 @Slf4j
 @CompileStatic
-class K8sTaskHandler extends TaskHandler {
+class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Lazy
     static private final String OWNER = {
@@ -69,7 +70,7 @@ class K8sTaskHandler extends TaskHandler {
 
     private String podName
 
-    private K8sWrapperBuilder builder
+    private BashWrapperBuilder builder
 
     private Path outputFile
 
@@ -123,11 +124,13 @@ class K8sTaskHandler extends TaskHandler {
 
         // get input files paths
         final paths = DockerBuilder.inputFilesToPaths(builder.getInputFiles())
-        final binDir = builder.binDir
+        final binDirs = builder.binDirs
         final workDir = builder.workDir
         // add standard paths
-        if( binDir ) paths << binDir
-        if( workDir ) paths << workDir
+        if( binDirs )
+            paths.addAll(binDirs)
+        if( workDir )
+            paths << workDir
 
         def trie = new PathTrie()
         paths.each { trie.add(it) }
@@ -136,8 +139,22 @@ class K8sTaskHandler extends TaskHandler {
         trie.longest()
     }
 
-    protected K8sWrapperBuilder createBashWrapper(TaskRun task) {
-        new K8sWrapperBuilder(task)
+    protected BashWrapperBuilder createBashWrapper(TaskRun task) {
+        return fusionEnabled()
+                ? fusionLauncher()
+                : new K8sWrapperBuilder(task)
+    }
+
+    protected List<String> classicSubmitCli(TaskRun task) {
+        final result = new ArrayList(BashWrapperBuilder.BASH)
+        result.add("${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}")
+        return result
+    }
+
+    protected List<String> getSubmitCommand(TaskRun task) {
+        return fusionEnabled()
+                ? fusionSubmitCli()
+                : classicSubmitCli(task)
     }
 
     protected String getSyntheticPodName(TaskRun task) {
@@ -145,6 +162,10 @@ class K8sTaskHandler extends TaskHandler {
     }
 
     protected String getOwner() { OWNER }
+
+    protected Boolean fixOwnership() {
+        task.containerConfig.fixOwnership
+    }
 
     /**
      * Creates a Pod specification that executed that specified task
@@ -166,14 +187,13 @@ class K8sTaskHandler extends TaskHandler {
         }
     }
 
-    protected boolean preserveContainerEntrypoint() {
-        return executor.getK8sConfig().preserveContainerEntrypoint()
+    protected boolean entrypointOverride() {
+        return executor.getK8sConfig().entrypointOverride()
     }
 
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
-        final fixOwnership = builder.fixOwnership()
-        final launcher = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << "${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}".toString()
+        final launcher = getSubmitCommand(task)
         final taskCfg = task.getConfig()
 
         final clientConfig = client.config
@@ -186,9 +206,9 @@ class K8sTaskHandler extends TaskHandler {
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
 
-        // when `preserveEntrypoint` is true the launcher is run via `args` instead of `command`
+        // when `entrypointOverride` is false the launcher is run via `args` instead of `command`
         // to not override the container entrypoint
-        if( preserveContainerEntrypoint() ) {
+        if( !entrypointOverride() ) {
             builder.withArgs(launcher)
         }
         else {
@@ -197,17 +217,23 @@ class K8sTaskHandler extends TaskHandler {
 
         // note: task environment is managed by the task bash wrapper
         // do not add here -- see also #680
-        if( fixOwnership )
+        if( fixOwnership() )
             builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
+        if( SysEnv.containsKey('NXF_DEBUG') )
+            builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
+        
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
+        final disk = taskCfg.getDisk()
         final acc = taskCfg.getAccelerator()
         if( cpus )
             builder.withCpus(cpus)
         if( mem )
             builder.withMemory(mem)
+        if( disk )
+            builder.withDisk(disk)
         if( acc )
             builder.withAccelerator(acc)
 
@@ -219,6 +245,14 @@ class K8sTaskHandler extends TaskHandler {
         if ( taskCfg.time ) {
             final duration = taskCfg.getTime()
             builder.withActiveDeadline(duration.toSeconds() as int)
+        }
+
+        if ( fusionEnabled() ) {
+            builder.withPrivileged(true)
+
+            final env = fusionLauncher().fusionEnv()
+            for( Map.Entry<String,String> it : env )
+                builder.withEnv(PodEnv.value(it.key, it.value))
         }
 
         return useJobResource()
@@ -236,16 +270,21 @@ class K8sTaskHandler extends TaskHandler {
 
 
     protected Map<String,String> getLabels(TaskRun task) {
-        def result = new LinkedHashMap<String,String>(10)
-        def labels = k8sConfig.getLabels()
+        final result = new LinkedHashMap<String,String>(10)
+        final labels = k8sConfig.getLabels()
         if( labels ) {
             result.putAll(labels)
         }
-        result.app = 'nextflow'
-        result.runName = getRunName()
-        result.taskName = task.getName()
-        result.processName = task.getProcessor().getName()
-        result.sessionId = "uuid-${executor.getSession().uniqueId}" as String
+        final resLabels = task.config.getResourceLabels()
+        if( resLabels )
+            resLabels.putAll(resLabels)
+        result.'nextflow.io/app' = 'nextflow'
+        result.'nextflow.io/runName' = getRunName()
+        result.'nextflow.io/taskName' = task.getName()
+        result.'nextflow.io/processName' = task.getProcessor().getName()
+        result.'nextflow.io/sessionId' = "uuid-${executor.getSession().uniqueId}" as String
+        if( task.config.queue )
+            result.'nextflow.io/queue' = task.config.queue
         return result
     }
 
@@ -468,7 +507,7 @@ class K8sTaskHandler extends TaskHandler {
             if ( k8sConfig.fetchNodeName() && !runsOnNode )
                 runsOnNode = client.getNodeOfPod( podName )
         } catch ( Exception e ){
-            log.warn ("Unable to fetch pod: $podName its node -- see the log file for details", e)
+            log.warn ("Unable to get the node name of pod $podName -- see the log file for details", e)
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,11 +82,11 @@ class DefaultCacheStore implements CacheStore {
             if( e.message?.startsWith('Unable to acquire lock') ) {
                 msg = "Unable to acquire lock on session with ID $uniqueId"
                 msg += "\n\n"
-                msg += "Common reasons of this error are:"
+                msg += "Common reasons for this error are:"
                 msg += "\n - You are trying to resume the execution of an already running pipeline"
-                msg += "\n - A previous execution was abruptly interrupted leaving the session open"
+                msg += "\n - A previous execution was abruptly interrupted, leaving the session open"
                 msg += '\n'
-                msg += '\nYou can check what process is holding the lock file by using the following command:'
+                msg += '\nYou can see which process is holding the lock file by using the following command:'
                 msg += "\n - lsof $file/LOCK"
                 throw new IOException(msg)
             }
@@ -94,8 +94,8 @@ class DefaultCacheStore implements CacheStore {
                 msg = "Can't open cache DB: $file"
                 msg += '\n\n'
                 msg += "Nextflow needs to be executed in a shared file system that supports file locks.\n"
-                msg += "Alternatively you can run it in a local directory and specify the shared work\n"
-                msg += "directory by using by `-w` command line option."
+                msg += "Alternatively, you can run it in a local directory and specify the shared work\n"
+                msg += "directory by using the `-w` command line option."
                 throw new IOException(msg, e)
             }
         }

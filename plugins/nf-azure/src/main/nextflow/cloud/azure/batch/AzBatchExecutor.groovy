@@ -21,11 +21,13 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -58,17 +60,22 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
+    @Override
     Path getWorkDir() {
         session.bucketDir ?: session.workDir
     }
 
     protected void validateWorkDir() {
         /*
-         * make sure the work dir is a S3 bucket
+         * make sure the work dir is an Azure bucket
          */
         if( !(workDir instanceof AzPath) ) {
             session.abort()
-            throw new AbortOperationException("When using `$name` executor an Azure bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
+            throw new AbortOperationException("When using `$name` executor an Azure bucket must be provided as working directory using either the `-bucket-dir` or `-work-dir` command line option")
         }
     }
 
@@ -83,8 +90,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * upload local binaries
          */
-        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
-        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             final remote = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${remote.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, remote)
@@ -94,11 +100,15 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     protected void initBatchService() {
         config = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
-        // generate an account SAS token if missing
-        if( !config.storage().sasToken )
-            config.storage().sasToken = AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
 
-        session.onShutdown { batchService.close() }
+        // Generate an account SAS token using either activeDirectory configs or storage account keys
+        if (!config.storage().sasToken) {
+            config.storage().sasToken = config.activeDirectory().isConfigured()
+                    ? AzHelper.generateContainerSasWithActiveDirectory(workDir, config.storage().tokenDuration)
+                    : AzHelper.generateAccountSasWithAccountKey(workDir, config.storage().tokenDuration)
+        }
+
+        Global.onCleanup((it) -> batchService.close())
     }
 
     /**
@@ -132,5 +142,10 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     Path getRemoteBinDir() { return remoteBinDir }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 
 }

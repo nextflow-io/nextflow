@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -269,6 +268,35 @@ class ChannelTest extends Specification {
         result == ['alpha.txt']
     }
 
+    def testRelative() {
+
+        setup:
+        def file1 = new File('alpha.txt')
+
+        when:
+        def result = Channel
+                .fromPath([relative:false], 'alpha.txt')
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ file1.absolutePath ]
+
+        when:
+        result = Channel
+                .fromPath([relative:true], 'alpha.txt')
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ 'alpha.txt' ]
+
+        when:
+        result = Channel
+                .fromPath([:], 'alpha.txt') //no relative option set
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ file1.absolutePath ]
+
+        cleanup:
+        file1.delete()
+    }
 
     def testGlobHiddenFiles() {
 

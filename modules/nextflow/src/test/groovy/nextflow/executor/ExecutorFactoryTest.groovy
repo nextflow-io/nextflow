@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import nextflow.executor.local.LocalExecutor
 import spock.lang.Specification
 
 import nextflow.Session

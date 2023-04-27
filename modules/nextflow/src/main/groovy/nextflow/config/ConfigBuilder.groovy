@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -284,7 +283,7 @@ class ConfigBuilder {
             env.putAll(System.getenv())
         }
         if( vars ) {
-            log.debug "Adding following variables to session environment: $vars"
+            log.debug "Adding the following variables to session environment: $vars"
             env.putAll(vars)
         }
 
@@ -343,7 +342,10 @@ class ConfigBuilder {
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
+        final ignoreIncludes = options ? options.ignoreConfigIncludes : false
+        final slurper = new ConfigParser()
+                .setRenderClosureAsString(showClosures)
+                .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
         if( cmdRun && (cmdRun.hasParams()) )
@@ -512,8 +514,9 @@ class ConfigBuilder {
     private String normalizeResumeId( String uniqueId ) {
         if( !uniqueId )
             return null
-
         if( uniqueId == 'last' || uniqueId == 'true' ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
 
             if( !uniqueId ) {
@@ -560,9 +563,30 @@ class ConfigBuilder {
             config.process[name] = parseValue(value)
         }
 
+        if( cmdRun.withoutConda && config.conda instanceof Map ) {
+            // disable conda execution
+            log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
+            config.conda.enabled = false
+        }
+
         // -- apply the conda environment
         if( cmdRun.withConda ) {
-            config.process.conda = cmdRun.withConda
+            if( cmdRun.withConda != '-' )
+                config.process.conda = cmdRun.withConda
+            config.conda.enabled = true
+        }
+
+        if( cmdRun.withoutSpack && config.spack instanceof Map ) {
+            // disable spack execution
+            log.debug "Disabling execution with Spack as requested by command-line option `-without-spack`"
+            config.spack.enabled = false
+        }
+
+        // -- apply the spack environment
+        if( cmdRun.withSpack ) {
+            if( cmdRun.withSpack != '-' )
+                config.process.spack = cmdRun.withSpack
+            config.spack.enabled = true
         }
 
         // -- sets the resume option
@@ -662,7 +686,28 @@ class ConfigBuilder {
             if( !(config.tower instanceof Map) )
                 config.tower = [:]
             config.tower.enabled = true
-            config.tower.endpoint = cmdRun.withTower
+            if( cmdRun.withTower != '-' )
+                config.tower.endpoint = cmdRun.withTower
+            else if( !config.tower.endpoint )
+                config.tower.endpoint = 'https://api.tower.nf'
+        }
+
+        // -- set wave options
+        if( cmdRun.withWave ) {
+            if( !(config.wave instanceof Map) )
+                config.wave = [:]
+            config.wave.enabled = true
+            if( cmdRun.withWave != '-' )
+                config.wave.endpoint = cmdRun.withWave
+            else if( !config.wave.endpoint )
+                config.wave.endpoint = 'https://wave.seqera.io'
+        }
+
+        // -- set fusion options
+        if( cmdRun.withFusion ) {
+            if( !(config.fusion instanceof Map) )
+                config.fusion = [:]
+            config.fusion.enabled = cmdRun.withFusion == 'true'
         }
 
         // -- nextflow setting
@@ -681,7 +726,7 @@ class ConfigBuilder {
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
-            log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
+            log.debug "Disabling execution in Docker container as requested by command-line option `-without-docker`"
             config.docker.enabled = false
         }
 
@@ -697,13 +742,17 @@ class ConfigBuilder {
             configContainer(config, 'singularity', cmdRun.withSingularity)
         }
 
+        if( cmdRun.withApptainer ) {
+            configContainer(config, 'apptainer', cmdRun.withApptainer)
+        }
+
         if( cmdRun.withCharliecloud ) {
             configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
         }
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {
-        log.debug "Enabling execution in ${engine.capitalize()} container as requested by cli option `-with-$engine ${cmdRun.withDocker}`"
+        log.debug "Enabling execution in ${engine.capitalize()} container as requested by command-line option `-with-$engine ${cmdRun.withDocker}`"
 
         if( !config.containsKey(engine) )
             config.put(engine, [:])
@@ -722,7 +771,7 @@ class ConfigBuilder {
         }
 
         if( !hasContainerDirective(config.process) )
-            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image were specified")
+            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image was specified")
 
     }
 

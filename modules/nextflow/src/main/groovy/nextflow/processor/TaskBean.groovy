@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +47,8 @@ class TaskBean implements Serializable, Cloneable {
 
     Path condaEnv
 
+    Path spackEnv
+
     List<String> moduleNames
 
     Path workDir
@@ -62,7 +63,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerCpuset
 
-    Float containerCpus
+    Integer containerCpus
 
     MemoryUnit containerMemory
 
@@ -93,13 +94,15 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
-    Path binDir
+    List<Path> binDirs
 
     def cleanup
 
     boolean secretNative
 
     List<String> secretNames
+
+    Map<String,String> resourceLabels
 
     @PackageScope
     TaskBean() {
@@ -122,6 +125,7 @@ class TaskBean implements Serializable, Cloneable {
         this.environment = task.getEnvironment()
 
         this.condaEnv = task.getCondaEnv()
+        this.spackEnv = task.getSpackEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()
@@ -147,10 +151,11 @@ class TaskBean implements Serializable, Cloneable {
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
-        this.binDir = task.getProcessor().getExecutor().getBinDir()
+        this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
 
+        this.resourceLabels = task.config.getResourceLabels()
     }
 
     @Override

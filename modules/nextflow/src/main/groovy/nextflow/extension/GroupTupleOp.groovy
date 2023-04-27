@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +24,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
 /**
- * Implements {@link OperatorEx#groupTuple} operator logic
+ * Implements {@link OperatorImpl#groupTuple} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -105,8 +104,12 @@ class GroupTupleOp {
 
         int count=-1
         for( int i=0; i<len; i++ ) {                    // append the values in the tuple
-            if( ! (i in indices) ) {
+            if( i !in indices ) {
                 def list = (items[i] as List)
+                if( list==null ) {
+                    list = new ArrayBag()
+                    items.add(i, list)
+                }
                 list.add( tuple[i] )
                 count=list.size()
             }

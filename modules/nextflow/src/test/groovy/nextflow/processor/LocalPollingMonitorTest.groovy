@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,7 +179,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e1 = thrown(ProcessUnrecoverableException)
-        e1.message == 'Process requirement exceed available CPUs -- req: 12; avail: 10'
+        e1.message == 'Process requirement exceeds available CPUs -- req: 12; avail: 10'
 
 
     }
@@ -208,7 +207,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e2 = thrown(ProcessUnrecoverableException)
-        e2.message == 'Process requirement exceed available memory -- req: 22 GB; avail: 20 GB'
+        e2.message == 'Process requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
 
     }
 

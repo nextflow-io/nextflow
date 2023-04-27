@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,14 +36,14 @@ class BashWrapperBuilderWithS3Test extends Specification {
         Global.session = Mock(Session) { getConfig() >> [:] }
         and:
         def folder = Paths.get('/work/dir')
-        def target = S3PathFactory.parse('s3://some/bucket')
+        def target = S3PathFactory.parse('s3://some/buck et')  // <-- path with blank
 
         def bean = new TaskBean([
                 name: 'Hello 1',
                 workDir: folder,
                 targetDir: target,
                 scratch: true,
-                outputFiles: ['test.bam','test.bai'],
+                outputFiles: ['test.bam','test.bai', 'bla nk.txt'],  // <-- file name with blank
                 script: 'echo Hello world!',
         ])
 
@@ -58,8 +57,8 @@ class BashWrapperBuilderWithS3Test extends Specification {
         then:
         binding.unstage_outputs == '''\
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        nxf_s3_upload '$name' s3://some/bucket || true
+                    for name in $(eval "ls -1d test.bam test.bai bla\\ nk.txt" | sort | uniq); do
+                        nxf_s3_upload $name s3://some/buck\\ et || true
                     done
                     unset IFS
                     '''.stripIndent().rightTrim()

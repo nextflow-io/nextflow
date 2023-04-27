@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -313,7 +312,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         def value = get('module')
 
         if( value instanceof List ) {
-            def result = []
+            List<String> result = []
             for( String name : value ) {
                 result.addAll( name.tokenize(':') )
             }
@@ -373,6 +372,20 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    def getContainer() {
+        return get('container')
+    }
+
+    Architecture getArchitecture() {
+        final value = get('arch')
+        if( value instanceof CharSequence )
+            return new Architecture(value.toString())
+        if( value instanceof Map )
+            return new Architecture(value)
+        if( value != null )
+            throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
+        return null
+    }
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
@@ -437,6 +450,21 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( opts!=null )
             throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
         return CmdLineOptionMap.emptyOption()
+    }
+
+    Map<String, String> getResourceLabels() {
+        return get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
+    }
+
+    String getResourceLabelsAsString() {
+        final res = getResourceLabels()
+        final result = new StringBuilder()
+        int c=0
+        for( Map.Entry<String,String> it : res ) {
+            if(c++>0) result.append(',')
+            result.append(it.key).append('=').append(it.value)
+        }
+        return result
     }
 
     /**

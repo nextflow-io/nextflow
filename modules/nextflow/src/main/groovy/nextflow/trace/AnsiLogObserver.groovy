@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +21,7 @@ import jline.TerminalFactory
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.util.Duration
+import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import static nextflow.util.LoggerHelper.isHashLogPrefix
@@ -350,7 +350,9 @@ class AnsiLogObserver implements TraceObserver {
     }
     
     protected void printAnsiLines(String lines) {
-        final text = lines.replace(NEWLINE,  ansi().eraseLine().toString() + NEWLINE)
+        final text = lines
+                .replace('\r','')
+                .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
         AnsiConsole.out.print(text)
     } 
 
@@ -404,7 +406,7 @@ class AnsiLogObserver implements TraceObserver {
         this.statsObserver = session.statsObserver
         this.startTimestamp = System.currentTimeMillis()
         AnsiConsole.systemInstall()
-        this.renderer = Thread.start('AnsiLogObserver', this.&render0)
+        this.renderer = Threads.start('AnsiLogObserver', this.&render0)
     }
 
     @Override

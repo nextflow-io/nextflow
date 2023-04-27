@@ -1,37 +1,29 @@
+/*
+ * Copyright 2013-2023, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package nextflow.extension
 
-import groovy.transform.PackageScope
-import nextflow.Session
-import org.pf4j.ExtensionPoint
+import nextflow.plugin.extension.PluginExtensionPoint
+
 /**
- * Define a channel factory extension. A plugin can extend a channel factory
- * by implementing this interface. Public methods in such class are accessible
- * as channel extensions over the declared scope.
- *
- * For example having the `foo` scope and the `bar` method. It will be possible
- * to invoke `channel.foo.bar()` 
+ * This class is deprecated, use {@link PluginExtensionPoint} instead
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-abstract class ChannelExtensionPoint implements ExtensionPoint {
-
-    private boolean initialised
-
-    @PackageScope
-    synchronized void checkInit(Session session) {
-        if( !initialised ) {
-            init(session)
-            initialised = true
-        }
-    }
-
-
-    /**
-     * Channel factory initialization. This method is invoked one and only once before
-     * the before target extension method is called.
-     *
-     * @param session The current nextflow {@link Session}
-     */
-    abstract protected void init(Session session)
-
+@Deprecated
+abstract class ChannelExtensionPoint extends PluginExtensionPoint {
 }

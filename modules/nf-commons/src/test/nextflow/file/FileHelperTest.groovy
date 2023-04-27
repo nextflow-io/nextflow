@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +30,6 @@ import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import nextflow.Global
-import nextflow.ISession
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -74,13 +71,13 @@ class FileHelperTest extends Specification {
         FileHelper.asPath('\n/some/file.txt')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == "Path string cannot start with blank or a special characters -- Offending path: '\\n/some/file.txt'"
+        e.message == "Path string cannot start with a blank or special characters -- Offending path: '\\n/some/file.txt'"
 
         when:
         FileHelper.asPath('/some/file.txt\n')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == "Path string cannot ends with blank or a special characters -- Offending path: '/some/file.txt\\n'"
+        e.message == "Path string cannot ends with a blank or special characters -- Offending path: '/some/file.txt\\n'"
     }
 
     def 'should strip query params from http files' () {
@@ -312,24 +309,6 @@ class FileHelperTest extends Specification {
         new File('.').absolutePath.startsWith('/')
     }
 
-
-    def 'get env map'() {
-
-        given:
-        def sess = Global.session = Mock(ISession)
-        def env = [:]
-        env.put('AWS_ACCESS_KEY','a1')
-        env.put('AWS_SECRET_KEY','s1')
-
-        expect:
-        // properties have priority over the environment map
-        FileHelper.envFor0('s3', env).access_key == 'a1'
-        FileHelper.envFor0('s3', env).secret_key == 's1'
-
-        // any other return just the session
-        FileHelper.envFor0('dx', env).session == sess
-
-    }
 
     def 'cached path'() {
 
@@ -968,19 +947,24 @@ class FileHelperTest extends Specification {
         null        | '/a/bc/'
     }
 
-    @Unroll
-    def 'should add max error retry' () {
+    def 'should check symlink status'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def dirReal = folder.resolve('x/y/z'); dirReal.mkdirs()
+        def link = Files.createSymbolicLink(folder.resolve('link'), folder.resolve('x'))
 
         expect:
-        FileHelper.checkDefaultErrorRetry(SOURCE, ENV) == EXPECTED
+        !FileHelper.isPathSymlink(Path.of('/opt'))
+        !FileHelper.isPathSymlink(Path.of('/unknown'))
+        and:
+        Files.exists(link)
+        Files.isSymbolicLink(link)
+        FileHelper.isPathSymlink(link)
+        and:
+        Files.exists(link.resolve('y/z'))
+        FileHelper.isPathSymlink(link.resolve('y/z'))
 
-        where:
-        SOURCE                          | ENV                   | EXPECTED
-        null                            | null                  | [max_error_retry: '5']
-        [foo: 1]                        | [:]                   | [max_error_retry: '5', foo: 1]
-        [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
-        [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
-        [:]                             | [:]                   | [max_error_retry: '5']
+        cleanup:
+        folder?.deleteDir()
     }
-
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +35,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.util.CustomThreadFactory
+import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -166,7 +166,7 @@ class PathVisitor {
             }
         }
         catch (NoSuchFileException e) {
-            log.debug "No such file: $folder -- Skipping visit"
+            log.debug "No such file or directory: $folder -- Skipping visit"
         }
         finally {
             if( !count && opts.checkIfExists as boolean )
@@ -187,8 +187,11 @@ class PathVisitor {
     @Memoized
     @PackageScope
     static ExecutorService createExecutor(Session session) {
-        final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
-        session?.onShutdown { result.shutdown() }
+        final factory = new CustomThreadFactory('PathVisitor')
+        final result = Threads.useVirtual()
+                ? Executors.newThreadPerTaskExecutor(factory)
+                : Executors.newCachedThreadPool(factory)
+        Global.onCleanup((it) -> result.shutdown())
         return result
     }
 

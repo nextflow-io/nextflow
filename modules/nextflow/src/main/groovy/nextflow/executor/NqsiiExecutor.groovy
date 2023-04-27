@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +15,10 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import nextflow.processor.TaskRun
-import nextflow.util.Escape
-
 /**
  * Execute a task script by running it on the NQSII cluster
  *
@@ -87,13 +85,6 @@ class NqsiiExecutor extends AbstractGridExecutor {
     }
 
     protected String getHeaderToken() { '#PBS' }
-
-    @Override
-    String getHeaders( TaskRun task ) {
-        String result = super.getHeaders(task)
-        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
-        return result
-    }
 
     String sanitizeJobName( String name ) {
         // NQSII does not allow more than 63 characters for the job name string

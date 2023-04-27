@@ -352,6 +352,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.subnetwork = executor.config.subnetwork
         req.serviceAccountEmail = executor.config.serviceAccountEmail
         req.keepAliveOnFailure = executor.config.keepAliveOnFailure
+        req.resourceLabels = task.config?.getResourceLabels()  ?: Collections.emptyMap() as Map<String,String>
         req.timeout = task.config.getTime() ? "${task.config.getTime().toSeconds()}s" : null
 
         return req

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,12 +36,12 @@ class TaskBeanTest extends Specification {
         def session = Mock(Session)
         session.getStatsEnabled() >> true
 
-        def process = Mock(TaskProcessor)
+        def process = Mock(TaskProcessor) {
+            getBinDirs() >> [Paths.get('/bin/dir') ]
+        }
         process.getConfig() >> Mock(ProcessConfig)
         process.getSession() >> session
-        process.getExecutor() >> Mock(Executor) {
-            getBinDir() >> Paths.get('/bin/dir')
-        }
+        process.getExecutor() >> Mock(Executor)
 
         def config = new TaskConfig()
         config.module = ['blast/1.1']
@@ -96,7 +95,7 @@ class TaskBeanTest extends Specification {
         bean.inputFiles == [file_1: Paths.get('/file/one'), file_2: Paths.get('/file/two')]
         bean.outputFiles ==  [ 'simple.txt', 'my/path/file.bam' ]
         bean.workDir == Paths.get('/work/dir')
-        bean.binDir == Paths.get('/bin/dir')
+        bean.binDirs == [Paths.get('/bin/dir')]
         bean.stageInMode == 'link'
         bean.stageOutMode == 'rsync'
 

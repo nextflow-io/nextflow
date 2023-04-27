@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package nextflow.executor
 
 import java.nio.file.Path
 
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
@@ -37,7 +36,13 @@ import nextflow.util.TupleHelper
 @Slf4j
 class HyperQueueExecutor extends AbstractGridExecutor {
 
-    private final JsonSlurper parser = new JsonSlurper()
+    private static final STATUSES = [
+        'CANCELED': QueueStatus.DONE,
+        'FAILED': QueueStatus.ERROR,
+        'FINISHED': QueueStatus.DONE,
+        'RUNNING': QueueStatus.RUNNING,
+        'WAITING': QueueStatus.HOLD
+    ]
 
     @Override
     protected String getHeaderToken() {
@@ -47,7 +52,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     @Override
     protected void register() {
         super.register()
-        log.warn "The support for HyperQueue is an experimental feature and it may change in a future release"
+        log.warn 'The support for HyperQueue is an experimental feature and it may change in a future release'
     }
 
     @Override
@@ -66,7 +71,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
             result << '--time-limit' << (task.config.getTime().toSeconds() + 'sec')
         if( task.config.getAccelerator() )
             result << '--resource' << "gpus=${task.config.getAccelerator().limit}".toString()
-        
+
         // -- At the end append the command script wrapped file name
         if( task.config.clusterOptions ) {
             result << task.config.clusterOptions.toString() << ''
@@ -77,79 +82,51 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return TupleHelper.listOf('hq', '--output-mode=json','submit', '--directives=file', scriptFile.getName())
+        return TupleHelper.listOf('hq', '--output-mode=quiet', 'submit', '--directives=file', scriptFile.getName())
     }
 
     @Override
     def parseJobId(String text) {
-        Map result = null
         try {
-            result = parser.parseText(text) as Map
+            text as Integer as String
         }
         catch (Exception e) {
-            throw new IllegalArgumentException("Invalid HyperQueue submit JSON response:\n$text\n\n")
+            throw new IllegalArgumentException("HyperQueue submit failed or response is invalid:\n$text\n\n")
         }
-
-        if( result.id )
-            return result.id as String
-
-        final err = result.error
-                    ? "HyperQueue submit error: ${result.error}"
-                    : "Invalid HyperQueue submit response:\n$text\n\n"
-        throw new IllegalArgumentException(err)
     }
 
     @Override
     protected List<String> getKillCommand() {
-        return TupleHelper.listOf('hq','job', 'cancel')
+        return TupleHelper.listOf('hq', 'job', 'cancel')
     }
 
-    // JobIds to the cancel command need to be separated by a comma 
     @Override
-    protected List<String> killTaskCommand(def jobId) { 
-        final result = getKillCommand()                 
-        if( jobId instanceof Collection ) {             
+    protected List<String> killTaskCommand(def jobId) {
+        final result = getKillCommand()
+        if( jobId instanceof Collection ) {
             result.add(jobId.join(','))
-    //        log.trace "Kill command: ${result}"         
-        }                                               
-        else {                                          
-            result.add(jobId.toString())                
-        }                                               
-        return result                                   
-    }                                                   
+        }
+        else {
+            result.add(jobId.toString())
+        }
+        return result
+    }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        return TupleHelper.listOf('hq','--output-mode=json','job', 'list', '--all')
+        return TupleHelper.listOf('hq', '--output-mode=quiet', 'job', 'list', '--all')
     }
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-        final jobs = parser.parseText(text) as List<Map>
         final result = new HashMap()
-        for( Map entry : jobs ) {
-            final id = entry.id as String
-            final status = parseJobStatus(entry)
+        for( String line : text.split('\n') ) {
+            final tokens = line.split(' ')
+            final id = tokens[0]
+            final status = STATUSES[tokens[1]]
             result.put(id, status)
         }
         return result
     }
 
-    protected QueueStatus parseJobStatus( Map entry ) {
-        Map stats = entry.task_stats as Map
-        if( !stats )
-            return QueueStatus.UNKNOWN
-        if( stats.canceled )
-            return QueueStatus.DONE
-        if( stats.failed )
-            return QueueStatus.ERROR
-        if( stats.finished )
-            return QueueStatus.DONE
-        if( stats.running )
-            return QueueStatus.RUNNING
-        if( stats.waiting )
-            return QueueStatus.HOLD
-        else
-            return QueueStatus.UNKNOWN
-    }
 }
