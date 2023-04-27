@@ -10,17 +10,15 @@ To enable this feature you need to define the following directive at the beginni
 nextflow.enable.dsl=2
 ```
 
-:::{tip}
-As of version `22.03.0-edge` Nextflow defaults to DSL 2 if no version is specified explicitly. You can restore the previous behavior setting in into your environment the following variable:
+*Changed in version `22.03.0-edge`:* Nextflow uses DSL2 if no version is specified explicitly. You can restore the previous behavior by setting the following environment variable:
 
 ```bash
 export NXF_DEFAULT_DSL=1
 ```
-:::
 
-:::{note}
-As of version `22.03.0-edge` the DSL version specification (either 1 or 2) can also be specified in the Nextflow configuration file using the same notation shown above.
-:::
+*Changed in version `22.03.0-edge`:* the DSL version specification (either 1 or 2) can also be specified in the Nextflow configuration file using the same notation shown above.
+
+*Changed in version `22.11.0-edge`:* support for DSL1 was removed from Nextflow.
 
 ## Function
 
@@ -358,7 +356,9 @@ Relative paths must begin with the `./` prefix. Also, the `include` statement mu
 
 ### Module directory
 
-As of version `22.10.0`, the module can be defined as a directory whose name matches the module name and contains a script named `main.nf`. For example:
+*New in version `22.10.0`*
+
+The module can be defined as a directory whose name matches the module name and contains a script named `main.nf`. For example:
 
 ```
 some
@@ -539,7 +539,9 @@ baseDir
 
 ### Module binaries
 
-As of version `22.10.0`, modules can define binary scripts that are locally scoped to the processes defined by the tasks.
+*New in version `22.10.0`*
+
+Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 
 To enable this feature add the following setting in pipeline configuration file:
 

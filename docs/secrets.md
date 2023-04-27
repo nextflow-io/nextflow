@@ -2,11 +2,9 @@
 
 # Secrets
 
-As of version `22.10.0`, Nextflow has built-in support for pipeline secrets to allow users to safely provide sensitive information to a pipeline execution.
+*New in version `22.10.0` (previewed in `21.09.0-edge`)*
 
-:::{note}
-A preview implementation of this feature has been available as of Nextflow version `21.09.0-edge`.
-:::
+Nextflow has built-in support for pipeline secrets to allow users to safely provide sensitive information to a pipeline execution.
 
 ## How it works
 

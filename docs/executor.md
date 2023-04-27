@@ -36,6 +36,8 @@ See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
 
 ## Azure Batch
 
+*New in version `21.04.0`*
+
 Nextflow supports the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service that allows job submission in the cloud without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks, which greatly simplifies pipeline deployment.
 
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file.
@@ -60,6 +62,8 @@ See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
 
 ## Bridge
 
+*New in version `22.09.1-edge`*
+
 [Bridge](https://github.com/cea-hpc/bridge) is an abstraction layer to ease batch system and resource manager usage in heterogeneous HPC environments.
 
 It is open source software that can be installed on top of existing classical job schedulers such as Slurm, LSF, or other schedulers. Bridge allows you to submit jobs, get information on running jobs, stop jobs, get information on the cluster system, etc.
@@ -79,6 +83,8 @@ Resource requests and other job characteristics can be controlled via the follow
 (flux-executor)=
 
 ## Flux Executor
+
+*New in version `22.11.0-edge`*
 
 The `flux` executor allows you to run your pipeline script using the [Flux Framework](https://flux-framework.org).
 
@@ -105,13 +111,11 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 
 ## GA4GH TES
 
-:::{warning}
-This is an experimental feature and it may change in future releases.
-:::
+*EXPERIMENTAL: may change in a future release*
 
 The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to define a standardized schema and API for describing batch execution tasks in a portable manner.
 
-Nextflow includes experimental support for the TES API by providing a `tes` executor, which allows the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
+Nextflow supports the TES API via the `tes` executor, which allows the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
 
 To use this feature, define the following variables in the workflow launching environment:
 
@@ -157,9 +161,11 @@ Make sure the TES backend can access the Nextflow work directory when data is ex
 
 ## Google Cloud Batch
 
+*New in version `22.07.1-edge`*
+
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines (requires Nextflow `22.07.1-edge` or later).
+Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
 
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
 
@@ -183,9 +189,11 @@ See the {ref}`Google Cloud Batch <google-batch>` page for further configuration 
 
 ## Google Life Sciences
 
+*New in version `20.01.0`*
+
 [Google Cloud Life Sciences](https://cloud.google.com/life-sciences) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Life Sciences API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines (requires Nextflow `20.01.0` or later).
+Nextflow provides built-in support for the Life Sciences API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
 
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
 
@@ -206,9 +214,7 @@ See the {ref}`Google Life Sciences <google-lifesciences>` page for further confi
 
 ## HTCondor
 
-:::{warning}
-This feature is experimental, and it may change in future Nextflow releases.
-:::
+*EXPERIMENTAL: may change in a future release*
 
 The `condor` executor allows you to run your pipeline script by using the [HTCondor](https://research.cs.wisc.edu/htcondor/) resource manager.
 
@@ -234,9 +240,9 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## HyperQueue
 
-:::{warning}
-This feature is experimental, and it may change in future Nextflow releases.
-:::
+*New in version `22.05.0-edge`*
+
+*EXPERIMENTAL: may change in a future release*
 
 The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
 
@@ -258,9 +264,11 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## Ignite
 
-:::{danger}
-This feature is no longer maintained. In order to use it in Nextflow 22.01 or later, it must be loaded via the `nf-ignite` plugin.
+:::{warning}
+This feature is no longer maintained.
 :::
+
+*Changed in version `22.01.0-edge`:* the `ignite` executor must be enabled via the `nf-ignite` plugin.
 
 The `ignite` executor allows you to run a pipeline on an [Apache Ignite](https://ignite.apache.org/) cluster.
 
@@ -331,9 +339,9 @@ See also the [Platform LSF documentation](https://www.ibm.com/support/knowledgec
 
 ## Moab
 
-:::{warning}
-This feature is experimental, and it may change in future Nextflow releases.
-:::
+*New in version `19.07.0`*
+
+*EXPERIMENTAL: may change in a future release*
 
 The `moab` executor allows you to run your pipeline script using the [Moab](https://en.wikipedia.org/wiki/Moab_Cluster_Suite) resource manager by [Adaptive Computing](http://www.adaptivecomputing.com/).
 
@@ -374,6 +382,8 @@ Resource requests and other job characteristics can be controlled via the follow
 (oar-executor)=
 
 ## OAR
+
+*New in version `19.11.0-edge`*
 
 The `oar` executor allows you to run your pipeline script using the [OAR](https://oar.imag.fr) resource manager.
 
