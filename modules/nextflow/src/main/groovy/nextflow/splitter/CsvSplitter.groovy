@@ -57,6 +57,7 @@ class CsvSplitter extends AbstractTextSplitter {
     protected List<String> columnTypes
     protected Map<String,String> columnTypesMap
     protected List<String> validColumnTypes = ['string', 'boolean', 'character', 'short', 'integer', 'long', 'float', 'double']
+    protected String castFunction
 
     /**
      * Set the splitter options by specifying a map of named parameters.
@@ -67,6 +68,7 @@ class CsvSplitter extends AbstractTextSplitter {
      * <li>{@code quote}
      * <li>{@code skip}
      * <li>{@code types}
+     * <li>{@code typesStrict}
      *
      * @param options
      * @return The splitter instance itself
@@ -100,24 +102,33 @@ class CsvSplitter extends AbstractTextSplitter {
             skipLines = options.skip as int
 
         // cast variables to their type
-        if( options.types ) {
-            if( options.types instanceof List ) {
-                if (!options.types.every { validColumnTypes.contains(it) }) {
-                    throw new IllegalArgumentException("Provided types are not allowed: ${options.types}. Valid column types are: ${validColumnTypes}")
+        def optionsTypes = null
+        if( options.types) {
+            optionsTypes = options.types
+            castFunction = "castValueType"
+        }
+        if( options.typesStrict ) {
+            optionsTypes = options.typesStrict
+            castFunction = "castValueTypeStrict"
+        }
+        if( optionsTypes ) {
+            if( optionsTypes instanceof List ) {
+                if (!optionsTypes.every { validColumnTypes.contains(it) }) {
+                    throw new IllegalArgumentException("Provided types are not allowed: ${optionsTypes}. Valid column types are: ${validColumnTypes}")
                 }
-                columnTypes = options.types as List
+                columnTypes = optionsTypes as List
             }
-            else if ( options.types instanceof Map ) {
+            else if ( optionsTypes instanceof Map ) {
                 if ( !options.header ) {
                     throw new IllegalArgumentException("Column types associated to column names can only be provided together with a header.")
                 }
-                if (!options.types.every { validColumnTypes.contains(it.value) }) {
-                    throw new IllegalArgumentException("Provided types are not allowed: ${options.types}. Valid column types are: ${validColumnTypes}")
+                if (!optionsTypes.every { validColumnTypes.contains(it.value) }) {
+                    throw new IllegalArgumentException("Provided types are not allowed: ${optionsTypes}. Valid column types are: ${validColumnTypes}")
                 }
-                columnTypesMap = options.types as Map
+                columnTypesMap = optionsTypes as Map
             }
             else
-                throw new IllegalArgumentException("Not a valid types parameter value: ${options.types}")
+                throw new IllegalArgumentException("Not a valid types parameter value: ${optionsTypes}")
         }
 
         return this
@@ -137,6 +148,7 @@ class CsvSplitter extends AbstractTextSplitter {
         result.quote = String
         result.skip = Integer
         result.types = [ List, Map ]
+        result.typesStrict = [ List, Map]
         return result
     }
 
@@ -202,11 +214,21 @@ class CsvSplitter extends AbstractTextSplitter {
 
         def map = [:]
         for( int i = 0; i < tokens.size(); i++ ) {
-            if( columnTypes )
-                map[columnsHeader[i]] = castValueType(tokens[i], columnTypes[i])
-            else if( columnTypesMap )
-                map[columnsHeader[i]] = castValueType(tokens[i], columnTypesMap[columnsHeader[i]])
-            else
+            if( columnTypes ) {
+                if( castFunction == "castValueType" ) {
+                    map[columnsHeader[i]] = castValueType(tokens[i], columnTypes[i])
+                }
+                else if( castFunction == "castValueTypeStrict" ) {
+                    map[columnsHeader[i]] = castValueTypeStrict(tokens[i], columnTypes[i])
+                }
+            } else if( columnTypesMap ) {
+                if( castFunction == "castValueType" ) {
+                    map[columnsHeader[i]] = castValueType(tokens[i], columnTypesMap[columnsHeader[i]])
+                }
+                else if( castFunction == "castValueTypeStrict" ) {
+                    map[columnsHeader[i]] = castValueTypeStrict(tokens[i], columnTypesMap[columnsHeader[i]])
+                }
+            } else
                 map[columnsHeader[i]] = tokens[i]
         }
 
@@ -227,24 +249,51 @@ class CsvSplitter extends AbstractTextSplitter {
 
         try {
             if( str == null || str == "" ) return null
-            else if( type.toLowerCase() == 'boolean' && str.toLowerCase() in ["true", "false"] ) return str.toBoolean()
+            else if( type.toLowerCase() == 'boolean' ) return str.toBoolean()
             else if( type.toLowerCase() == 'character' ) return str.toCharacter()
-            else if( type.toLowerCase() == 'short' && str.isNumber() ) return str.toShort()
-            else if( type.toLowerCase() == 'integer' && str.isInteger() ) return str.toInteger()
-            else if( type.toLowerCase() == 'long'  && str.isLong() ) return str.toLong()
-            else if( type.toLowerCase() == 'float'  && str.isFloat() ) return str.toFloat()
-            else if( type.toLowerCase() == 'double' && str.isDouble() ) return str.toDouble()
+            else if( type.toLowerCase() == 'short' ) return str.toShort()
+            else if( type.toLowerCase() == 'integer' ) return str.toInteger()
+            else if( type.toLowerCase() == 'long' ) return str.toLong()
+            else if( type.toLowerCase() == 'float' ) return str.toFloat()
+            else if( type.toLowerCase() == 'double' ) return str.toDouble()
             else if( type.toLowerCase() == 'string' ) return str
             else {
-                log.warn("Value $str is not a $type: returning a string") 
+                log.warn("Unable to cast value $str to type $type") 
                 return str
             }
         } catch (Exception e) {
             log.warn("Unable to cast value $str to type $type: $e")
             return str
         }
+    }
 
-        
+    /**
+     * Cast a value to the provided type in a Strict mode
+     *
+     * @param str
+     * @param type
+     * @return The value casted to its primitive type
+     */
+    static protected castValueTypeStrict(String str, String type) {
+
+        try {
+            if( str == null || str == "" ) return null
+            else if( type.toLowerCase() == 'boolean' && str.toLowerCase() in ["true", "false"] ) return str.toBoolean()
+            else if( type.toLowerCase() == 'character' ) return str.toCharacter()
+            else if( type.toLowerCase() == 'short' && str.isNumber() ) return str.toShort()
+            else if( type.toLowerCase() == 'integer' && str.isInteger() ) return str.toInteger()
+            else if( type.toLowerCase() == 'long' && str.isLong() ) return str.toLong()
+            else if( type.toLowerCase() == 'float' && str.isFloat() ) return str.toFloat()
+            else if( type.toLowerCase() == 'double' && str.isDouble() ) return str.toDouble()
+            else if( type.toLowerCase() == 'string' ) return str
+            else {
+                log.warn("Value $str is not of type $type: returning a string") 
+                return str
+            }
+        } catch (Exception e) {
+            log.warn("Unable to cast value $str to type $type: $e")
+            return str
+        }
     }
 
     protected CollectorStrategy createCollector() {
