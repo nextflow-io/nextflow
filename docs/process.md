@@ -1020,13 +1020,13 @@ This feature is experimental and may change in a future release.
 
 When a `path` output is declared with `temporary: true`, the target files for this output will be automatically deleted during pipeline execution, as soon as they are no longer needed by downstream tasks. This feature is useful for cleaning up large intermediate files in order to free up disk storage.
 
-The lifetime of a temporary file is determined by the processes that are downstream of the file's originating process, either directly or indirectly through channel operators. When all of these processes finish (i.e. all of their tasks finish), all temporary files produced by the original process can be deleted.
+The lifetime of a temporary file is determined by the downstream tasks that take the file as an input. When all of these tasks finish, the temporary file can be deleted.
 
 The following caveats apply when using temporary outputs:
 
-- This feature will break the resumability of your pipeline. If you try to resume a run with temporary outputs, any tasks whose outputs were deleted will have to be re-run.
+- Resumability is not currently supported for tasks with temporary outputs. If you try to resume a run with temporary outputs, any tasks whose outputs were deleted will have to be re-run.
 
-- A temporary output should not be forwarded by a downstream process using the `includeInputs` option. In this case, the temporary output will be deleted prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output.
+- A temporary output should not be forwarded by a downstream process using the `includeInputs` option. In this case, the temporary output will be deleted prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output. To avoid this problem, only the most downstream output should be declared as temporary.
 
 - If a file captured by a temporary output path is also captured by a regular output path, it will still be treated as a temporary file. If the regular output path is also published, some outputs may be deleted before they can be published.
 
