@@ -1383,6 +1383,9 @@ There are additional variables that can be defined within a configuration file t
   The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
   :::
 
+`dumpHashes`
+: If `true`, dump task hash keys in the log file, for debugging purposes.
+
 (config-profiles)=
 
 ## Config profiles
