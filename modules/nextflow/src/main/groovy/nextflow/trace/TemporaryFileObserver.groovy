@@ -23,7 +23,6 @@ import groovy.transform.MapConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
-import nextflow.dag.ConcreteDAG
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor

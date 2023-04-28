@@ -40,7 +40,7 @@ class NodeMarker {
     static private Session getSession() { Global.session as Session }
 
     /**
-     * Creates a vertex in the abstract DAG representing a computing `process`
+     *  Creates a new vertex in the DAG representing a computing `process`
      *
      * @param label The label associated to the process
      * @param inputs The list of inputs entering in the process
@@ -52,7 +52,7 @@ class NodeMarker {
     }
 
     /**
-     * Creates a vertex in the abstract DAG representing a dataflow operator
+     * Creates a new DAG vertex representing a dataflow operator
      *
      * @param label The operator label
      * @param inputs The operator input(s). It can be either a single channel or a list of channels.
@@ -66,7 +66,7 @@ class NodeMarker {
     }
 
     /**
-     * Creates a vertex in the abstract DAG representing a dataflow channel source.
+     * Creates a vertex in the DAG representing a dataflow channel source.
      *
      * @param label The node description
      * @param source Either a dataflow channel or a list of channel.
