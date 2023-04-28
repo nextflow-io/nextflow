@@ -117,12 +117,10 @@ class WaveConfigTest extends Specification {
         opts.spackOpts().cFlags == '-O3'
         opts.spackOpts().cxxFlags == '-O3'
         opts.spackOpts().fFlags == '-O3'
-        opts.spackOpts().genericTarget == 'x86_64' // MARCO MARCO use archspec
-        opts.spackOpts().target == 'x86_64' // MARCO MARCO use archspec
         opts.spackOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', genericTarget:'nextx86', target:'nextcpu', commands:['USER hola'] ]]])
+        opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', commands:['USER hola'] ]]])
         then:
         opts.spackOpts().checksum == false
         opts.spackOpts().builderImage == 'spack/foo:1'
@@ -131,8 +129,6 @@ class WaveConfigTest extends Specification {
         opts.spackOpts().cFlags == '-foo'
         opts.spackOpts().cxxFlags == '-foo2'
         opts.spackOpts().fFlags == '-foo3'
-        opts.spackOpts().genericTarget == 'nextx86'
-        opts.spackOpts().target == 'nextcpu'
         opts.spackOpts().commands == ['USER hola']
         
     }
