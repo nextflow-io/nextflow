@@ -311,9 +311,7 @@ class WaveClient {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the Spack architecture
-        String spackArch = task.config.getArchitecture()?.spackArch
-        if ( ! spackArch )
-            spackArch = DEFAULT_SPACK_ARCH
+        String spackArch = task.config.getArchitecture()?.spackArch ?: DEFAULT_SPACK_ARCH
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
