@@ -115,6 +115,8 @@ wave.strategy = ['spack']
 The above setting instructs Wave to only use the `spack` directive to provision the pipeline containers, ignoring the use of
 the `container` directive and any Dockerfile(s).
 
+In order to request the build of containers that are optimised for a specific CPU microarchitecture, the latter can be specified by means of the {ref}`process-arch` directive. The architecture must always be specified for processes that run on an ARM system. Otherwise, by default, Wave will build containers for the generic `x86_64` architecture family.
+
 :::{note}
 If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
 :::
@@ -188,9 +190,6 @@ The following configuration options are available:
 
 `wave.build.spack.fFlags`
 : Fortran compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
-
-`wave.build.spack.target`
-: Target CPU architecture for which the compiler will optimise the build (default: architecture identified by Nextflow in the execution machine).
 
 `wave.build.spack.commands`
 : One or more commands to be added to the Dockerfile used to build a Spack based image.
