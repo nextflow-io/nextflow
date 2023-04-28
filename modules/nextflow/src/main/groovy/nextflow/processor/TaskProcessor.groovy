@@ -2298,6 +2298,10 @@ class TaskProcessor {
         state.update { StateObj it -> it.incCompleted() }
     }
 
+    protected void closeProcess() {
+        session.notifyProcessClose(this)
+    }
+
     protected void terminateProcess() {
         log.trace "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
@@ -2440,6 +2444,7 @@ class TaskProcessor {
         @Override
         void afterStop(final DataflowProcessor processor) {
             log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**

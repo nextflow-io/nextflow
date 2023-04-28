@@ -18,33 +18,46 @@ package nextflow.trace
 
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
-import groovy.transform.MapConstructor
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.script.params.FileOutParam
 /**
- * Watch for temporary output files and "clean" them once they
- * are no longer needed.
+ * Delete task directories once they are no longer needed.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class TemporaryFileObserver implements TraceObserver {
 
     private DAG dag
 
-    private Map<String,Status> statusMap
+    private Map<String,ProcessState> processes = new HashMap<>()
+
+    private Map<TaskRun,TaskState> tasks = new HashMap<>()
+
+    private Map<Path,TaskRun> taskLookup = new HashMap<>()
+
+    private Lock sync = new ReentrantLock()
 
     @Override
     void onFlowCreate(Session session) {
         this.dag = session.dag
-        this.statusMap = new ConcurrentHashMap<>()
     }
 
+    /**
+     * When the workflow begins, determine the consumers of each process
+     * in the DAG.
+     */
     @Override
     void onFlowBegin() {
 
@@ -84,73 +97,129 @@ class TemporaryFileObserver implements TraceObserver {
 
             log.trace "Process `${processName}` is consumed by the following processes: ${consumers.collect({ "`${it}`" }).join(', ')}"
 
-            statusMap[processName] = new Status(
-                paths: [] as Set,
-                processBarriers: consumers ?: [processName] as Set
-            )
+            processes[processName] = new ProcessState(consumers ?: [processName] as Set)
         }
     }
 
     /**
-     * When a task is started, track the task directory for automatic cleanup.
+     * When a task is created, add it to the state map and add it as a consumer
+     * of any task whose output it takes as input.
      *
      * @param handler
      * @param trace
      */
     @Override
-    synchronized void onProcessStart(TaskHandler handler, TraceRecord trace) {
-        // add task directory to status map
+    void onProcessPending(TaskHandler handler, TraceRecord trace) {
+        // query task input files
         final task = handler.task
-        final processName = task.processor.name
+        final inputs = task.getInputFilesMap().values()
 
-        log.trace "Task completed from process `${processName}`, tracking task directory for automatic cleanup"
+        sync.lock()
+        try {
+            // add task to the task state map
+            tasks[task] = new TaskState()
 
-        statusMap[processName].paths.add(task.workDir)
+            // add task as consumer to each task whoes output it takes as input
+            for( Path path : inputs )
+                if( path in taskLookup )
+                    tasks[taskLookup[path]].consumers.add(task)
+        }
+        finally {
+            sync.unlock()
+        }
     }
 
     /**
-     * When all tasks of a process are completed, update the status of any processes
-     * that are waiting on it in order to be cleaned up.
+     * When a task is completed, track any temporary output files
+     * for automatic cleanup.
      *
-     * If, after this update is removed, a process has no more barriers,
-     * then delete all temporary files for that process.
+     * @param handler
+     * @param trace
+     */
+    @Override
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+        // query task output files
+        final task = handler.task
+        final outputs = task
+            .getOutputsByType(FileOutParam)
+            .values()
+            .flatten() as List<Path>
+
+        sync.lock()
+        try {
+            // mark task as completed
+            tasks[task].completed = true
+
+            // scan tasks for cleanup
+            cleanup0()
+
+            // add new output files to task lookup
+            for( Path path : outputs )
+                taskLookup[path] = task
+        }
+        finally {
+            sync.unlock()
+        }
+    }
+
+    /**
+     * When a process is closed (all tasks of the process have been created),
+     * mark the process as closed and scan tasks for cleanup.
      *
      * @param process
      */
     @Override
-    synchronized void onProcessTerminate(TaskProcessor process) {
-        log.trace "Process `${process.name}` is complete, updating barriers for upstream processes"
+    void onProcessClose(TaskProcessor process) {
+        sync.lock()
+        try {
+            processes[process.name].closed = true
+            cleanup0()
+        }
+        finally {
+            sync.unlock()
+        }
+    }
 
-        for( def entry : statusMap ) {
-            // remove barrier from each upstream process
-            final producer = entry.key
-            final status = entry.value
-            final barriers = status.processBarriers
-
-            barriers.remove(process.name)
-
-            // if a process has no more barriers, trigger the cleanup
-            if( barriers.isEmpty() ) {
-                log.trace "All barriers for process `${producer}` are complete, time to clean up temporary files"
-
-                deleteTemporaryFiles(status.paths)
-                statusMap.remove(producer)
+    /**
+     * Delete any task directories that have no more barriers.
+     */
+    private void cleanup0() {
+        for( TaskRun task : tasks.keySet() ) {
+            final taskState = tasks[task]
+            if( taskState.completed && !taskState.deleted && canDelete(task) ) {
+                log.trace "Deleting task directory: ${task.workDir.toUriString()}"
+                FileHelper.deletePath(task.workDir)
+                taskState.deleted = true
             }
         }
     }
 
-    void deleteTemporaryFiles(Collection<Path> paths) {
-        for( Path path : paths ) {
-            log.trace "Cleaning temporary file: ${path}"
+    /**
+     * Determine whether a task directory can be deleted.
+     *
+     * A task directory can be deleted if all of its process consumers
+     * are closed and all of its task consumers are completed.
+     */
+    private boolean canDelete(TaskRun task) {
+        final taskState = tasks[task]
+        final processConsumers = processes[task.processor.name].consumers
+        final taskConsumers = taskState.consumers
+        processConsumers.every { p -> processes[p].closed } && taskConsumers.every { t -> tasks[t].completed }
+    }
 
-            FileHelper.deletePath(path)
+    static private class ProcessState {
+        Set<String> consumers
+        boolean closed = false
+
+        ProcessState(Set<String> consumers) {
+            this.consumers = consumers
         }
     }
 
-    @MapConstructor
-    static protected class Status {
-        Set<Path> paths
-        Set<String> processBarriers
+    static private class TaskState {
+        Set<TaskRun> consumers = [] as Set
+        boolean completed = false
+        boolean deleted = false
     }
 
 }
