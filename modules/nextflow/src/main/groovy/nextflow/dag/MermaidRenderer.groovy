@@ -26,7 +26,11 @@ import java.nio.file.Path
 class MermaidRenderer implements DagRenderer {
 
     @Override
-    void renderAbstractGraph(DAG dag, Path file) {
+    void renderDocument(DAG dag, Path file) {
+        file.text = renderNetwork(dag)
+    }
+
+    String renderNetwork(DAG dag) {
         def lines = []
         lines << "flowchart TD"
 
@@ -40,7 +44,7 @@ class MermaidRenderer implements DagRenderer {
 
         lines << ""
 
-        file.text = lines.join('\n')
+        return lines.join('\n')
     }
 
     private String renderVertex(DAG.Vertex vertex) {
@@ -70,50 +74,5 @@ class MermaidRenderer implements DagRenderer {
         String label = edge.label ? "|${edge.label}|" : ""
 
         return "${edge.from.name} -->${label} ${edge.to.name}"
-    }
-
-    @Override
-    void renderConcreteGraph(ConcreteDAG graph, Path file) {
-        def renderedOutputs = [] as Set<Path>
-        def numInputs = 0
-        def numOutputs = 0
-
-        def lines = []
-        lines << "flowchart TD"
-
-        // render tasks and task inputs
-        graph.nodes.values().each { task ->
-            // render task node
-            lines << "    ${task.getSlug()}[\"${task.label}\"]"
-
-            task.inputs.each { input ->
-                // render task input from predecessor
-                if( input.predecessor != null ) {
-                    final pred = graph.nodes[input.predecessor]
-                    lines << "    ${pred.getSlug()} -->|${input.name}| ${task.getSlug()}"
-                    renderedOutputs << input.path
-                }
-
-                // render task input from source node
-                else {
-                    numInputs += 1
-                    lines << "    i${numInputs}(( )) -->|${input.name}| ${task.getSlug()}"
-                }
-            }
-        }
-
-        // render task outputs with sink nodes
-        graph.nodes.values().each { task ->
-            task.outputs.each { output ->
-                if( output.path !in renderedOutputs ) {
-                    numOutputs += 1
-                    lines << "    ${task.getSlug()} -->|${output.name}| o${numOutputs}(( ))"
-                }
-            }
-        }
-
-        lines << ""
-
-        file.text = lines.join('\n')
     }
 }

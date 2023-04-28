@@ -543,7 +543,7 @@ class TaskProcessor {
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
-        // notify the creation of a new process in the abstract DAG
+        // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
 
         // fix issue #41

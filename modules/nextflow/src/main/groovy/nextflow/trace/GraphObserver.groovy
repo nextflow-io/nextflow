@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
-import nextflow.dag.ConcreteDAG
 import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
 import nextflow.dag.GexfRenderer
@@ -46,11 +45,7 @@ class GraphObserver implements TraceObserver {
 
     private Path file
 
-    private String type = 'abstract'
-
-    private DAG abstractDag
-
-    private ConcreteDAG concreteDag
+    private DAG dag
 
     private String name
 
@@ -71,8 +66,7 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onFlowCreate(Session session) {
-        this.abstractDag = session.dag
-        this.concreteDag = session.concreteDag
+        this.dag = session.dag
         // check file existance
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
@@ -84,39 +78,15 @@ class GraphObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        concreteDag.addTask( handler.task )
-    }
-
-    @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        concreteDag.addTaskOutputs( handler.task )
-    }
-
-    @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
-        concreteDag.addTask( handler.task )
-        concreteDag.addTaskOutputs( handler.task )
-    }
-
-    @Override
     void onFlowComplete() {
-        if( type == 'abstract' ) {
-            // -- normalise the DAG
-            abstractDag.normalize()
-            // -- render it to a file
-            createRenderer().renderAbstractGraph(abstractDag,file)
-        }
-        else if( type == 'concrete' ) {
-            createRenderer().renderConcreteGraph(concreteDag,file)
-        }
-        else {
-            log.warn("Invalid DAG type '${type}', should be 'abstract' or 'concrete'")
-        }
+        // -- normalise the DAG
+        dag.normalize()
+        // -- render it to a file
+        createRender().renderDocument(dag,file)
     }
 
     @PackageScope
-    DagRenderer createRenderer() {
+    DagRenderer createRender() {
         if( format == 'dot' )
             new DotRenderer(name)
 
@@ -131,6 +101,28 @@ class GraphObserver implements TraceObserver {
 
         else
             new GraphvizRenderer(name, format)
+    }
+
+
+    @Override
+    void onProcessCreate(TaskProcessor process) {
+
+    }
+
+
+    @Override
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
+
+    }
+
+    @Override
+    void onProcessStart(TaskHandler handler, TraceRecord trace) {
+
+    }
+
+    @Override
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+
     }
 
     @Override
