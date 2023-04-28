@@ -60,6 +60,10 @@ class WaveClient {
 
     private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
 
+    private static final String DEFAULT_SPACK_ARCH = 'x86_64'
+
+    private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
+
     final private HttpClient httpClient
 
     final private WaveConfig config
@@ -306,6 +310,10 @@ class WaveClient {
     WaveAssets resolveAssets(TaskRun task, String containerImage) {
         // get the bundle
         final bundle = task.getModuleBundle()
+        // get the Spack architecture
+        String spackArch = task.config.getArchitecture()?.spackArch
+        if ( ! spackArch )
+            spackArch = DEFAULT_SPACK_ARCH
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
@@ -322,10 +330,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle)
+        return resolveAssets0(attrs, bundle, spackArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, String spackArch) {
 
         String dockerScript = attrs.dockerfile
         final containerImage = attrs.container
@@ -361,10 +369,10 @@ class WaveClient {
             // map the recipe to a dockerfile
             if( isSpackFile(attrs.spack) ) {
                 spackFile = Path.of(attrs.spack)
-                dockerScript = spackFileToDockerFile()
+                dockerScript = spackFileToDockerFile(spackArch)
             }
             else {
-                dockerScript = spackRecipeToDockerFile(attrs.spack)
+                dockerScript = spackRecipeToDockerFile(attrs.spack, spackArch)
             }
         }
 
@@ -445,7 +453,7 @@ class WaveClient {
     // Dockerfile template adpated from the Spack package manager
     // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
     // LICENSE APACHE 2.0
-    protected String spackFileToDockerFile() {
+    protected String spackFileToDockerFile(String spackArch) {
 
         def checksumString = config.spackOpts().checksum ? '' : '-n '
         def result = """\
@@ -462,14 +470,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
+&& spack config add packages:all:target:[${spackArch}] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-""" //.stripIndent()
-
-        if( config.spackOpts().target ) result += """
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack config add packages:all:target:[${config.spackOpts().target}]
 """ //.stripIndent()
 
         result += """
@@ -561,7 +565,7 @@ CMD [ "/bin/bash" ]
     // Dockerfile template adpated from the Spack package manager
     // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
     // LICENSE APACHE 2.0
-    protected String spackRecipeToDockerFile(String recipe) {
+    protected String spackRecipeToDockerFile(String recipe, String spackArch) {
 
         def checksumString = config.spackOpts().checksum ? '' : '-n '
         def result = """\
@@ -579,14 +583,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
+&& spack config add packages:all:target:[${spackArch}] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-""" //.stripIndent()
-
-        if( config.spackOpts().target ) result += """
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack config add packages:all:target:[${config.spackOpts().target}]
 """ //.stripIndent()
 
         result += """

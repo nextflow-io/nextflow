@@ -28,8 +28,6 @@ class SpackOpts {
     final public String DEFAULT_SPACK_RUNNER_IMAGE = 'ubuntu:22.04'
     final public String DEFAULT_SPACK_OSPACKAGES = ''
     final public String DEFAULT_SPACK_FLAGS = '-O3'
-    final public String DEFAULT_SPACK_GENERIC_TARGET = 'x86_64' // MARCO MARCO use archspec
-    final public String DEFAULT_SPACK_TARGET = 'x86_64' // MARCO MARCO use archspec
 
     final Boolean checksum
     final String builderImage
@@ -38,8 +36,6 @@ class SpackOpts {
     final String cFlags
     final String cxxFlags
     final String fFlags
-    final String genericTarget
-    final String target
     final List<String> commands
 
     SpackOpts(Map opts) {
@@ -50,8 +46,6 @@ class SpackOpts {
         this.cFlags = opts.cFlags ?: DEFAULT_SPACK_FLAGS
         this.cxxFlags = opts.cxxFlags ?: DEFAULT_SPACK_FLAGS
         this.fFlags = opts.fFlags ?: DEFAULT_SPACK_FLAGS
-        this.genericTarget = opts.genericTarget ?: DEFAULT_SPACK_GENERIC_TARGET
-        this.target = opts.target ?: DEFAULT_SPACK_TARGET
         this.commands = opts.commands as List<String>
     }
 
