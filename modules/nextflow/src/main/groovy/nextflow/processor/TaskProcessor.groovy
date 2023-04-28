@@ -59,9 +59,9 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
@@ -81,6 +81,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -1367,6 +1368,7 @@ class TaskProcessor {
 
             case EnvOutParam:
             case ValueOutParam:
+            case DefaultOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add(value)
                 break
@@ -1472,6 +1474,10 @@ class TaskProcessor {
 
                 case EnvOutParam:
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
+                    break
+
+                case DefaultOutParam:
+                    task.setOutput(param, DefaultOutParam.Completion.DONE)
                     break
 
                 default:
@@ -1695,8 +1701,9 @@ class TaskProcessor {
     protected List<Path> getBinDirs() {
         final result = new ArrayList(10)
         // module bundle bin dir have priority, add before
-        if( moduleBundle!=null && session.enableModuleBinaries() )
-            result.addAll(moduleBundle.getBinDirs())
+        final bundle = session.enableModuleBinaries() ? getModuleBundle() : null
+        if( bundle!=null )
+            result.addAll(bundle.getBinDirs())
         // then add project bin dir
         if( executor.binDir )
             result.add(executor.binDir)
@@ -2099,8 +2106,14 @@ class TaskProcessor {
         }
 
         final spack = task.getSpackEnv()
+        final arch = task.getConfig().getArchitecture()
+
         if( spack ) {
             keys.add(spack)
+
+            if( arch ) {
+                keys.add(arch)
+            }
         }
 
         if( session.stubRun ) {

@@ -29,7 +29,7 @@ class S3PathSerializerTest extends Specification {
         def path = S3PathFactory.parse('s3://mybucket/file.txt')
         def buffer = KryoHelper.serialize(path)
         then:
-        KryoHelper.deserialize(buffer).getClass().getName() == 'com.upplication.s3fs.S3Path'
+        KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.cloud.aws.nio.S3Path'
         KryoHelper.deserialize(buffer) == S3PathFactory.parse('s3://mybucket/file.txt')
     }
 
@@ -38,7 +38,7 @@ class S3PathSerializerTest extends Specification {
         def path = S3PathFactory.parse('s3://mybucket/file with spaces.txt')
         def buffer = KryoHelper.serialize(path)
         then:
-        KryoHelper.deserialize(buffer).getClass().getName() == 'com.upplication.s3fs.S3Path'
+        KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.cloud.aws.nio.S3Path'
         KryoHelper.deserialize(buffer) == S3PathFactory.parse('s3://mybucket/file with spaces.txt')
     }
 
