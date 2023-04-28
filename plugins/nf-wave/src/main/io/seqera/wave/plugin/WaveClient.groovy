@@ -235,7 +235,8 @@ class WaveClient {
     }
 
     protected URL defaultFusionUrl() {
-        final isArm = config.containerPlatform()?.tokenize('/')?.contains('arm64')
+        // MARCO MARCO TO BE FIXED - platform is process specific
+        final isArm = false //config.containerPlatform()?.tokenize('/')?.contains('arm64')
         return isArm
                 ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
                 : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
@@ -312,6 +313,7 @@ class WaveClient {
         final bundle = task.getModuleBundle()
         // get the Spack architecture
         String spackArch = task.config.getArchitecture()?.spackArch ?: DEFAULT_SPACK_ARCH
+        String dockerArch = task.config.getArchitecture()?.dockerArch ?: DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
@@ -328,10 +330,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, spackArch)
+        return resolveAssets0(attrs, bundle, spackArch, dockerArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, String spackArch, String dockerArch) {
 
         String dockerScript = attrs.dockerfile
         final containerImage = attrs.container
@@ -393,7 +395,7 @@ class WaveClient {
         /*
          * the container platform to be used
          */
-        final platform = config.containerPlatform()
+        final platform = dockerArch
 
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig()

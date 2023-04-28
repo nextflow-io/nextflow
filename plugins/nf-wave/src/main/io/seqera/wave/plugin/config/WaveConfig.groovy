@@ -39,7 +39,6 @@ class WaveConfig {
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
-    final private String containerPlatform
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -52,7 +51,6 @@ class WaveConfig {
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        this.containerPlatform = opts.containerPlatform
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
@@ -122,9 +120,5 @@ class WaveConfig {
 
     Duration tokensCacheMaxDuration() { 
         return tokensCacheMaxDuration 
-    }
-
-    String containerPlatform() {
-        return containerPlatform
     }
 }
