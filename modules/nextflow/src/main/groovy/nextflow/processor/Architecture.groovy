@@ -73,6 +73,23 @@ class Architecture {
             return chunks[0]
     }
 
+    protected String validateArchToDockerArch( Map res ) {
+        def value = getArch(res.name as String)
+        def name = res.name as String
+        if( value == 'x86_64' || value == 'amd64' )
+            return 'linux/amd64'
+        else if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
+            return 'linux/arm64'
+        else if( value == 'arm64/v7' )
+            return 'linux/arm64/v7'
+        else if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' )
+            return 'linux/arm/v7'
+        else if( value == 'arm/v5' || value == 'arm/5' )
+            return 'linux/arm/v5'
+        else
+            throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
+    }
+
     protected String validateArchToSpackArch( String value, String inputArch ) {
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
@@ -101,7 +118,7 @@ class Architecture {
 
     Architecture( Map res ) {
         if( res.name != null ) {
-            this.dockerArch = res.name as String
+            this.dockerArch = validateArchToDockerArch(res)
             this.platform = getPlatform(res.name as String)
             this.arch = getArch(res.name as String)
         }
