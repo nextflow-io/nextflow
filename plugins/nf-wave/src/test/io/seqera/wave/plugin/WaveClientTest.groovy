@@ -355,10 +355,11 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
+        def ARCH = 'x86_64'
         when:
         def client = new WaveClient(session)
         then:
-        client.spackRecipeToDockerFile(RECIPE) == '''\
+        client.spackRecipeToDockerFile(RECIPE, ARCH) == '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.2 as builder
 
@@ -373,12 +374,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
+&& spack config add packages:all:target:[x86_64] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . \\
@@ -485,13 +484,14 @@ CMD [ "/bin/bash" ]
 
     def 'should create dockerfile content with custom spack config' () {
         given:
-        def SPACK_OPTS = [ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', target:'nextcpu', commands:['USER hola'] ]
+        def SPACK_OPTS = [ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', commands:['USER hola'] ]
         def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
         def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
+        def ARCH = 'nextcpu'
         when:
         def client = new WaveClient(session)
         then:
-        client.spackRecipeToDockerFile(RECIPE) == '''\
+        client.spackRecipeToDockerFile(RECIPE, ARCH) == '''\
 # Builder image
 FROM spack/foo:1 as builder
 
@@ -506,12 +506,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
+&& spack config add packages:all:target:[nextcpu] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack config add packages:all:target:[nextcpu]
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . \\
@@ -592,10 +590,11 @@ CMD [ "/bin/bash" ]
     def 'should create dockerfile content from spack file' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
+        def ARCH = 'x86_64'
         when:
         def client = new WaveClient(session)
         then:
-        client.spackFileToDockerFile()== '''\
+        client.spackFileToDockerFile(ARCH)== '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.2 as builder
 COPY spack.yaml /tmp/spack.yaml
@@ -609,12 +608,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
+&& spack config add packages:all:target:[x86_64] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . \\
@@ -834,12 +831,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
+&& spack config add packages:all:target:[x86_64] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . \\
@@ -952,12 +947,10 @@ RUN mkdir -p /opt/spack-env \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
+&& spack config add packages:all:target:[x86_64] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack config add packages:all:target:[x86_64]
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . \\
