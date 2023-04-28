@@ -379,13 +379,11 @@ RUN mkdir -p /opt/spack-env \\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
 
-# Install packages, clean afterwards
+# Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast && spack gc -y
-
-# Strip binaries
-RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+&& spack install --fail-fast && spack gc -y \\
+&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
@@ -511,13 +509,11 @@ RUN mkdir -p /opt/spack-env \\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
 
-# Install packages, clean afterwards
+# Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast -n && spack gc -y
-
-# Strip binaries
-RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+&& spack install --fail-fast -n && spack gc -y \\
+&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
@@ -613,13 +609,11 @@ RUN mkdir -p /opt/spack-env \\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
 
-# Install packages, clean afterwards
+# Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast && spack gc -y
-
-# Strip binaries
-RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+&& spack install --fail-fast && spack gc -y \\
+&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
@@ -836,13 +830,11 @@ RUN mkdir -p /opt/spack-env \\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
 
-# Install packages, clean afterwards
+# Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast && spack gc -y
-
-# Strip binaries
-RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+&& spack install --fail-fast && spack gc -y \\
+&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
@@ -952,13 +944,11 @@ RUN mkdir -p /opt/spack-env \\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
 
-# Install packages, clean afterwards
+# Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast && spack gc -y
-
-# Strip binaries
-RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+&& spack install --fail-fast && spack gc -y \\
+&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
