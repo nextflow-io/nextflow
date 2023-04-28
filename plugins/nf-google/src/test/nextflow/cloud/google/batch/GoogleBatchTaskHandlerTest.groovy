@@ -248,7 +248,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpus() >> 2
+                getCpuUnits() >> CpuUnit.of(2)
                 getResourceLabels() >> [:]
             }
         }
