@@ -18,7 +18,6 @@ Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with doub
 
 Available options:
 
-
 `-C`
 : Use the specified configuration file(s) overriding any defaults.
 
@@ -647,7 +646,6 @@ The `kuberun` command builds upon the `run` command and offers a deep integratio
 
 **Options**
 
-
 `-E`
 : Exports all current system environment.
 
@@ -1066,7 +1064,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 **Options**
 
-
 `-E`
 : Exports all current system environment.
 
@@ -1132,7 +1129,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Comma separated list of plugin ids to be applied in the pipeline execution.
 
 `-process.<key>=<value>`
-: Set process options.
+: Set process config options.
 
 `-profile`
 : Choose a configuration profile.
@@ -1209,7 +1206,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 **Examples**
 
-- Run a specific revision of a downloaded pipeline.
+- Run a specific revision of a remote pipeline.
 
   ```console
   $ nextflow run nextflow-io/hello -r v1.1
@@ -1224,13 +1221,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -profile docker
   ```
 
-- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
+- Execute a pipeline and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
 
   ```console
   $ nextflow run main.nf -with-report
   ```
 
-- Invoke the nextflow pipeline execution with a custom queue size. By default, the queue size is the number of available CPUs.
+- Execute a pipeline with a custom queue size. By default, the queue size is the number of available CPUs.
 
   ```console
   $ nextflow run nextflow-io/hello -qs 4
@@ -1242,19 +1239,19 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run nextflow-io/hello -dsl2
   ```
 
-- Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
+- Execute a pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
 
   ```console
   $ nextflow run main.nf -entry workflow_A
   ```
 
-- Invoke the nextflow pipeline execution with the integrated monitoring in [Tower](https://cloud.tower.nf).
+- Execute a pipeline with integrated monitoring in [Tower](https://cloud.tower.nf).
 
   ```console
   $ nextflow run nextflow-io/hello -with-tower
   ```
 
-- Invoke the nextflow pipeline execution with a custom parameters file (YAML or JSON).
+- Execute a pipeline with a custom parameters file (YAML or JSON).
 
   ```console
   $ nextflow run main.nf -params-file pipeline_params.yml
