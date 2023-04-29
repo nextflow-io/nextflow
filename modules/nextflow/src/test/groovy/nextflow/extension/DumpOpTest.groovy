@@ -42,7 +42,7 @@ class DumpOpTest extends Specification {
         new Session(dumpChannels: ['*'])
 
         when:
-        def result = Channel.from(1, 2, 3).dump()
+        def result = Channel.of(1, 2, 3).dump()
         then:
         result.val == 1
         result.val == 2
@@ -60,7 +60,7 @@ class DumpOpTest extends Specification {
         new Session(dumpChannels: ['*'])
 
         when:
-        def result = Channel.from(1, 2, 3).dump { it * it }
+        def result = Channel.of(1, 2, 3).dump { it * it }
         then:
         result.val == 1
         result.val == 2
@@ -78,7 +78,7 @@ class DumpOpTest extends Specification {
         new Session(dumpChannels: ['*'])
 
         when:
-        def result = Channel.from(1, 2, 3).dump(tag: 'foo')
+        def result = Channel.of(1, 2, 3).dump(tag: 'foo')
         then:
         result.val == 1
         result.val == 2
