@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,10 @@
 
 package nextflow.executor.local
 
-import java.nio.file.FileSystems
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
-import nextflow.extension.FilesEx
 import nextflow.fusion.FusionHelper
 import nextflow.processor.LocalPollingMonitor
 import nextflow.processor.TaskHandler
@@ -41,8 +37,6 @@ import nextflow.script.ScriptType
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends Executor {
 
-    private Map<String,String> sysEnv = System.getenv()
-
     @Override
     protected TaskMonitor createTaskMonitor() {
         return LocalPollingMonitor.create(session, name)
@@ -57,17 +51,6 @@ class LocalExecutor extends Executor {
             return new NativeTaskHandler(task,this)
         else
             return new LocalTaskHandler(task,this)
-
-    }
-
-    @Override
-    protected void register() {
-        super.register()
-        final remoteFs = workDir.fileSystem!=FileSystems.default
-        if(  isFusionEnabled() && !remoteFs )
-            throw new ProcessUnrecoverableException("Fusion file system requires the use of a S3-compatible object storage — offending work directory path: ${FilesEx.toUriString(workDir)}")
-        if( remoteFs && !isFusionEnabled())
-            throw new ProcessUnrecoverableException("Local executor requires the use of POSIX compatible file system — offending work directory path: ${FilesEx.toUriString(workDir)}")
     }
 
     @Override
@@ -77,7 +60,7 @@ class LocalExecutor extends Executor {
 
     @Override
     boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session, sysEnv)
+        return FusionHelper.isFusionEnabled(session)
     }
 }
 

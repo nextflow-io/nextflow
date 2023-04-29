@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
 import nextflow.processor.TaskRun
+import nextflow.util.StringUtils
+
 /**
  * Implement Wave container resolve logic
  *
@@ -82,9 +84,6 @@ class WaveContainerResolver implements ContainerResolver {
             // then adapt it to singularity format
             return defaultResolver.resolveImage(task, image.target)
         }
-        else if ( engine == 'sarus' ) {
-            return defaultResolver.resolveImage(task, imageName)
-        }
         else
             throw new IllegalArgumentException("Wave does not support '$engine' container engine")
     }
@@ -104,6 +103,7 @@ class WaveContainerResolver implements ContainerResolver {
      *      when the task does not request any container or dockerfile to build
      */
     protected ContainerInfo waveContainer(TaskRun task, String container) {
+        validateContainerRepo(container)
         final assets = client().resolveAssets(task, container)
         if( assets ) {
             return client().fetchContainerImage(assets)
@@ -111,6 +111,14 @@ class WaveContainerResolver implements ContainerResolver {
         // no container and no dockerfile, wave cannot do anything
         log.trace "No container image or build recipe defined for task ${task.processor.name}"
         return null
+    }
+
+    static protected void validateContainerRepo(String name) {
+        if( !name )
+            return 
+        final scheme = StringUtils.getUrlProtocol(name)
+        if( scheme )
+            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
     }
 
 }

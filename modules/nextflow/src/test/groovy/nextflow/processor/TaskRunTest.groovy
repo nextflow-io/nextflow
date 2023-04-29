@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -365,7 +364,7 @@ class TaskRunTest extends Specification {
         when:
         def result = task.getContainerFingerprint()
         then:
-        task.getContainerInfo0() >> new ContainerInfo('a','b',HASH)
+        task.containerInfo() >> new ContainerInfo('a','b',HASH)
         and:
         result == '12345'
     }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,13 +153,13 @@ class ScriptMeta {
         if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
             return
         }
-        if (functionsCount.get(component.name)) {
+        if (functionsCount.get(name)) {
             final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
             if (NF.isStrictMode())
                 throw new DuplicateModuleFunctionException(msg)
             log.warn(msg)
         }
-        if (imports.get(component.name)) {
+        if (imports.get(name)) {
             final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
             if (NF.isStrictMode())
                 throw new DuplicateModuleFunctionException(msg)
@@ -339,8 +338,6 @@ class ScriptMeta {
     ResourcesBundle getModuleBundle() {
         if( !scriptPath )
             throw new IllegalStateException("Module scriptPath has not been defined yet")
-        if( scriptPath.getName()!='main.nf' )
-            return null
         final bundlePath = scriptPath.resolveSibling('resources')
         return ResourcesBundle.scan(bundlePath)
     }
