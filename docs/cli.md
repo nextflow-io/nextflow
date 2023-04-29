@@ -1100,9 +1100,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-entry`
 : Entry workflow to be executed.
 
-`-executor.<key>=<value>`
-: Set executor config options.
-
 `-h, -help`
 : Print the command usage.
 
@@ -1130,9 +1127,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-plugins`
 : Comma separated list of plugin ids to be applied in the pipeline execution.
-
-`-ps, -pool-size`
-: Maximum number of threads in the execution pool.
 
 `-process.<key>=<value>`
 : Set process config options.
@@ -1238,14 +1232,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   ```console
   $ nextflow run nextflow-io/hello -qs 4
   ```
-
-  You can also force a pipeline to run more concurrent tasks than the number of available CPUs.
-
-  ```console
-  $ nextflow run main.nf -executor.cpus 1000 -ps 1000 -qs 1000
-  ```
-
-  This setup is useful only for a pipeline that uses the `local` executor and produces many small tasks that can be run concurrently on a few CPUs. It is not recommended for CPU-intensive tasks. In general, you should design your processes to produce a few large tasks rather than many small tasks.
 
 - Execute the pipeline with DSL-2 syntax.
 
