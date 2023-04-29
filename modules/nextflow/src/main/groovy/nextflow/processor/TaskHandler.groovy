@@ -18,14 +18,9 @@ package nextflow.processor
 
 import static nextflow.processor.TaskStatus.*
 
-import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 
-import groovy.json.JsonBuilder
 import groovy.util.logging.Slf4j
-import nextflow.dag.ConcreteDAG
-import nextflow.extension.FilesEx
-import nextflow.script.params.FileOutParam
 import nextflow.trace.TraceRecord
 /**
  * Actions to handle the underlying job running the user task.
@@ -216,29 +211,6 @@ abstract class TaskHandler {
         }
 
         return record
-    }
-
-    void writeMetaFile() {
-        final record = [
-            hash: task.hash.toString(),
-            inputs: task.getInputFilesMap().collect { name, path ->
-                [
-                    name: name,
-                    path: path.toString(),
-                    predecessor: ConcreteDAG.getPredecessorHash(path)
-                ]
-            },
-            outputs: task.getOutputsByType(FileOutParam).values().flatten().collect { path ->
-                [
-                    name: path.name,
-                    path: path.toString(),
-                    size: Files.size(path),
-                    checksum: FilesEx.getChecksum(path)
-                ]
-            }
-        ]
-
-        task.workDir.resolve(TaskRun.CMD_META).text = new JsonBuilder(record).toString()
     }
 
     /**

@@ -73,7 +73,7 @@ class MermaidRenderer implements DagRenderer {
     }
 
     @Override
-    void renderConcreteGraph(ConcreteDAG graph, Path file) {
+    void renderConcreteGraph(ConcreteDAG dag, Path file) {
         def renderedOutputs = [] as Set<Path>
         def numInputs = 0
         def numOutputs = 0
@@ -82,32 +82,32 @@ class MermaidRenderer implements DagRenderer {
         lines << "flowchart TD"
 
         // render tasks and task inputs
-        graph.nodes.values().each { task ->
-            // render task node
-            lines << "    ${task.getSlug()}[\"${task.label}\"]"
+        dag.vertices.each { task, vertex ->
+            // render task vertex
+            lines << "    ${vertex.getSlug()}[\"${vertex.label}\"]"
 
-            task.inputs.each { input ->
-                // render task input from predecessor
-                if( input.predecessor != null ) {
-                    final pred = graph.nodes[input.predecessor]
-                    lines << "    ${pred.getSlug()} -->|${input.name}| ${task.getSlug()}"
-                    renderedOutputs << input.path
+            vertex.inputs.each { path ->
+                // render task input from predecessor task
+                final pred = dag.getProducerVertex(path)
+                if( pred != null ) {
+                    lines << "    ${pred.getSlug()} -->|${path.name}| ${vertex.getSlug()}"
+                    renderedOutputs << path
                 }
 
                 // render task input from source node
                 else {
                     numInputs += 1
-                    lines << "    i${numInputs}(( )) -->|${input.name}| ${task.getSlug()}"
+                    lines << "    i${numInputs}(( )) -->|${path}| ${vertex.getSlug()}"
                 }
             }
         }
 
         // render task outputs with sink nodes
-        graph.nodes.values().each { task ->
-            task.outputs.each { output ->
-                if( output.path !in renderedOutputs ) {
+        dag.vertices.each { task, vertex ->
+            vertex.outputs.each { path ->
+                if( path !in renderedOutputs ) {
                     numOutputs += 1
-                    lines << "    ${task.getSlug()} -->|${output.name}| o${numOutputs}(( ))"
+                    lines << "    ${vertex.getSlug()} -->|${path.name}| o${numOutputs}(( ))"
                 }
             }
         }

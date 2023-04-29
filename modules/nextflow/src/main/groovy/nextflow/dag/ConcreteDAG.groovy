@@ -16,14 +16,16 @@
 
 package nextflow.dag
 
+import java.nio.file.Files
 import java.nio.file.Path
-import java.util.regex.Pattern
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
-import groovy.transform.MapConstructor
-import groovy.transform.ToString
+import groovy.json.JsonBuilder
+import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import nextflow.extension.FilesEx
 import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
 /**
@@ -32,94 +34,108 @@ import nextflow.script.params.FileOutParam
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ConcreteDAG {
+
+    private Map<TaskRun,Vertex> vertices = new HashMap<>()
+
+    private Map<Path,TaskRun> taskLookup = new HashMap<>()
 
     private Lock sync = new ReentrantLock()
 
-    private Map<String,Task> nodes = new HashMap<>(100)
-
-    Map<String,Task> getNodes() {
-        nodes
-    }
+    Map<TaskRun,Vertex> getVertices() { vertices }
 
     /**
-     * Add a task to the graph
+     * Add a task to the graph.
      *
      * @param task
      */
     void addTask(TaskRun task) {
         final hash = task.hash.toString()
         final label = "[${hash.substring(0,2)}/${hash.substring(2,8)}] ${task.name}"
-        final inputs = task.getInputFilesMap()
-            .collect { name, path ->
-                new Input(name: name, path: path, predecessor: getPredecessorHash(path))
-            }
+        final inputs = task.getInputFilesMap().values() as Set<Path>
 
         sync.lock()
         try {
-            nodes[hash] = new Task(
-                index: nodes.size(),
-                label: label,
-                inputs: inputs
-            )
+            // add new task to graph
+            vertices[task] = new Vertex(vertices.size(), label, inputs)
         }
         finally {
             sync.unlock()
         }
     }
 
-    static public String getPredecessorHash(Path path) {
-        final pattern = Pattern.compile('.*/([0-9a-f]{2}/[0-9a-f]{30})')
-        final matcher = pattern.matcher(path.toString())
-
-        matcher.find() ? matcher.group(1).replace('/', '') : null
-    }
-
     /**
-     * Add a task's outputs to the graph
+     * Add a task's outputs to the graph.
      *
      * @param task
      */
     void addTaskOutputs(TaskRun task) {
-        final hash = task.hash.toString()
-        final outputs = task.getOutputsByType(FileOutParam)
+        final outputs = task
+            .getOutputsByType(FileOutParam)
             .values()
-            .flatten()
-            .collect { path ->
-                new Output(name: path.name, path: path)
-            }
+            .flatten() as Set<Path>
 
         sync.lock()
         try {
-            nodes[hash].outputs = outputs
+            // add task outputs to graph
+            vertices[task].outputs = outputs
+
+            // add new output files to task lookup
+            for( Path path : outputs )
+                taskLookup[path] = task
         }
         finally {
             sync.unlock()
         }
     }
 
-    @MapConstructor
-    @ToString(includeNames = true, includes = 'label', includePackage=false)
-    static protected class Task {
+    /**
+     * Get the vertex for the task that produced the given file.
+     *
+     * @param path
+     */
+    Vertex getProducerVertex(Path path) { vertices[taskLookup[path]] }
+
+    /**
+     * Write the metadata JSON file for a task.
+     *
+     * @param task
+     */
+    void writeMetaFile(TaskRun task) {
+        final record = [
+            hash: task.hash.toString(),
+            inputs: task.getInputFilesMap().collect { name, path ->
+                [
+                    name: name,
+                    path: path.toUriString(),
+                    predecessor: taskLookup[path]?.hash?.toString()
+                ]
+            },
+            outputs: vertices[task].outputs.collect { path ->
+                [
+                    name: path.name,
+                    path: path.toUriString(),
+                    size: Files.size(path),
+                    checksum: FilesEx.getChecksum(path)
+                ]
+            }
+        ]
+
+        task.workDir.resolve(TaskRun.CMD_META).text = new JsonBuilder(record).toString()
+    }
+
+    @TupleConstructor(excludes = 'outputs')
+    static class Vertex {
         int index
         String label
-        List<Input> inputs
-        List<Output> outputs
+        Set<Path> inputs
+        Set<Path> outputs
 
         String getSlug() { "t${index}" }
-    }
 
-    @MapConstructor
-    static protected class Input {
-        String name
-        Path path
-        String predecessor
-    }
-
-    @MapConstructor
-    static protected class Output {
-        String name
-        Path path
+        @Override
+        String toString() { label }
     }
 
 }

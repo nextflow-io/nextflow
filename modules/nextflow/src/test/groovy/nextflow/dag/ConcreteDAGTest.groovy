@@ -27,27 +27,27 @@ import spock.lang.Specification
  */
 class ConcreteDAGTest extends Specification {
 
-    def 'should add task nodes and outputs' () {
+    def 'should add task vertices and outputs' () {
 
         given:
         def task1 = Mock(TaskRun) {
-            getHash() >> HashCode.fromString('00112233445566778899aabbccddeeff')
+            getHash() >> HashCode.fromString('00112233')
             getName() >> 'foo'
             getInputFilesMap() >> [
                 'data.txt': Paths.get('/inputs/data.txt')
             ]
             getOutputsByType(_) >> [
-                'data.foo': Paths.get('/work/00/112233445566778899aabbccddeeff/data.foo')
+                'data.foo': Paths.get('/work/00112233/data.foo')
             ]
         }
         def task2 = Mock(TaskRun) {
-            getHash() >> HashCode.fromString('aabbccddeeff00112233445566778899')
+            getHash() >> HashCode.fromString('aabbccdd')
             getName() >> 'bar'
             getInputFilesMap() >> [
-                'data.foo': Paths.get('/work/00/112233445566778899aabbccddeeff/data.foo')
+                'data.foo': Paths.get('/work/00112233/data.foo')
             ]
             getOutputsByType(_) >> [
-                'data.bar': Paths.get('/work/aa/bbccddeeff00112233445566778899/data.bar')
+                'data.bar': Paths.get('/work/aabbccdd/data.bar')
             ]
         }
         def dag = new ConcreteDAG()
@@ -55,32 +55,65 @@ class ConcreteDAGTest extends Specification {
         when:
         dag.addTask( task1 )
         dag.addTask( task2 )
-        def node1 = dag.nodes['00112233445566778899aabbccddeeff']
-        def node2 = dag.nodes['aabbccddeeff00112233445566778899']
+        def v1 = dag.vertices[task1]
+        def v2 = dag.vertices[task2]
         then:
-        node1.index == 0
-        node1.label == '[00/112233] foo'
-        node1.inputs.size() == 1
-        node1.inputs[0].name == 'data.txt'
-        node1.inputs[0].path == Paths.get('/inputs/data.txt')
-        node1.inputs[0].predecessor == null
-        node2.index == 1
-        node2.label == '[aa/bbccdd] bar'
-        node2.inputs.size() == 1
-        node2.inputs[0].name == 'data.foo'
-        node2.inputs[0].path == Paths.get('/work/00/112233445566778899aabbccddeeff/data.foo')
-        node2.inputs[0].predecessor == '00112233445566778899aabbccddeeff'
+        v1.index == 0
+        v1.label == '[00/112233] foo'
+        v1.inputs.size() == 1
+        v1.inputs[0] == Paths.get('/inputs/data.txt')
+        and:
+        v2.index == 1
+        v2.label == '[aa/bbccdd] bar'
+        v2.inputs.size() == 1
+        v2.inputs[0] == Paths.get('/work/00112233/data.foo')
 
         when:
         dag.addTaskOutputs( task1 )
         dag.addTaskOutputs( task2 )
         then:
-        node1.outputs.size() == 1
-        node1.outputs[0].name == 'data.foo'
-        node1.outputs[0].path == Paths.get('/work/00/112233445566778899aabbccddeeff/data.foo')
-        node2.outputs.size() == 1
-        node2.outputs[0].name == 'data.bar'
-        node2.outputs[0].path == Paths.get('/work/aa/bbccddeeff00112233445566778899/data.bar')
+        v1.outputs.size() == 1
+        v1.outputs[0] == Paths.get('/work/00112233/data.foo')
+        and:
+        v2.outputs.size() == 1
+        v2.outputs[0] == Paths.get('/work/aabbccdd/data.bar')
+        and:
+        dag.getProducerVertex(v1.inputs[0]) == null
+        dag.getProducerVertex(v2.inputs[0]) == v1
+    }
+
+    def 'should write meta file' () {
+
+        given:
+        def folder = File.createTempDir()
+        def outputFile = new File(folder, 'data.bar') ; outputFile.text = 'bar'
+
+        def task1 = Mock(TaskRun) {
+            name >> 'foo'
+            hash >> HashCode.fromString('00112233')
+            getInputFilesMap() >> [ 'data.txt': Paths.get('/inputs/data.txt') ]
+            getOutputsByType(_) >> [ 'data.foo': Paths.get('/work/00112233/data.foo') ]
+        }
+        def task2 = Mock(TaskRun) {
+            name >> 'bar'
+            workDir >> folder.toPath()
+            hash >> HashCode.fromString('aabbccdd')
+            getInputFilesMap() >> [ 'data.foo': Paths.get('/work/00112233/data.foo') ]
+            getOutputsByType(_) >> [ 'data.bar': outputFile.toPath() ]
+        }
+        def dag = new ConcreteDAG()
+
+        when:
+        dag.addTask(task1)
+        dag.addTaskOutputs(task1)
+        dag.addTask(task2)
+        dag.addTaskOutputs(task2)
+        dag.writeMetaFile(task2)
+        then:
+        task2.workDir.resolve(TaskRun.CMD_META).text == """{"hash":"aabbccdd","inputs":[{"name":"data.foo","path":"/work/00112233/data.foo","predecessor":"00112233"}],"outputs":[{"name":"data.bar","path":"${folder}/data.bar","size":3,"checksum":"37b51d194a7513e45b56f6524f2d51f2"}]}"""
+
+        cleanup:
+        folder.delete()
     }
 
 }

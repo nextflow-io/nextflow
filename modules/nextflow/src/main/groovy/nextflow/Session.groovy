@@ -1014,7 +1014,7 @@ class Session implements ISession {
         cache.putTaskAsync(handler, trace)
 
         // save the task meta file to the task directory
-        handler.writeMetaFile()
+        concreteDag.writeMetaFile(handler.task)
 
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {

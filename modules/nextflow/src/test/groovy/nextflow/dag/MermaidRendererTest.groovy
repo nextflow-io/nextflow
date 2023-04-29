@@ -21,6 +21,7 @@ import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
+import nextflow.processor.TaskRun
 import spock.lang.Specification
 
 /**
@@ -70,43 +71,27 @@ class MermaidRendererTest extends Specification {
         given:
         def file = Files.createTempFile('test', null)
 
+        def task1 = Mock(TaskRun)
+        def task2 = Mock(TaskRun)
+        def output1 = Paths.get('/work/012345/data.foo')
+        def v1 = new ConcreteDAG.Vertex(
+            index: 1,
+            label: 'foo',
+            inputs: [ Paths.get('/inputs/data.txt') ],
+            outputs: [ output1 ]
+        )
+        def v2 = new ConcreteDAG.Vertex(
+            index: 2,
+            label: 'bar',
+            inputs: [ output1 ],
+            outputs: [ Paths.get('/work/abcdef/data.bar') ]
+        )
         def dag = Mock(ConcreteDAG) {
-            nodes >> [
-                '012345': new ConcreteDAG.Task(
-                    index: 1,
-                    label: 'foo',
-                    inputs: [
-                        new ConcreteDAG.Input(
-                            name: 'data.txt',
-                            path: Paths.get('/inputs/data.txt'),
-                            predecessor: null
-                        )
-                    ],
-                    outputs: [
-                        new ConcreteDAG.Output(
-                            name: 'data.foo',
-                            path: Paths.get('/work/012345/data.foo'),
-                        )
-                    ]
-                ),
-                'abcdef': new ConcreteDAG.Task(
-                    index: 2,
-                    label: 'bar',
-                    inputs: [
-                        new ConcreteDAG.Input(
-                            name: 'data.foo',
-                            path: Paths.get('/work/012345/data.foo'),
-                            predecessor: '012345'
-                        )
-                    ],
-                    outputs: [
-                        new ConcreteDAG.Output(
-                            name: 'data.bar',
-                            path: Paths.get('/work/abcdef/data.bar'),
-                        )
-                    ]
-                )
+            vertices >> [
+                (task1): v1,
+                (task2): v2
             ]
+            getProducerVertex(output1) >> v1
         }
 
         when:
@@ -116,7 +101,7 @@ class MermaidRendererTest extends Specification {
             '''
             flowchart TD
                 t1["foo"]
-                i1(( )) -->|data.txt| t1
+                i1(( )) -->|/inputs/data.txt| t1
                 t2["bar"]
                 t1 -->|data.foo| t2
                 t2 -->|data.bar| o1(( ))
