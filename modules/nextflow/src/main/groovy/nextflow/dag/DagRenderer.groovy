@@ -26,16 +26,16 @@ import java.nio.file.Path
 trait DagRenderer {
 
     /**
-     * Render an abstract (process) DAG.
+     * Render a process DAG.
      */
-    void renderAbstractGraph(DAG dag, Path file) {
-        throw new UnsupportedOperationException("Abstract graph rendering is not supported for this file format")
+    void renderProcessGraph(DAG dag, Path file) {
+        throw new UnsupportedOperationException("Process DAG rendering is not supported for this file format")
     }
 
     /**
-     * Render a concrete (task) DAG.
+     * Render a task DAG.
      */
-    void renderConcreteGraph(ConcreteDAG dag, Path file) {
-        throw new UnsupportedOperationException("Concrete graph rendering is not supported for this file format")
+    void renderTaskGraph(TaskDAG dag, Path file) {
+        throw new UnsupportedOperationException("Task DAG rendering is not supported for this file format")
     }
 }

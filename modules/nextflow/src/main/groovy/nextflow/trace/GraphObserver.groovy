@@ -23,7 +23,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
-import nextflow.dag.ConcreteDAG
+import nextflow.dag.TaskDAG
 import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
 import nextflow.dag.GexfRenderer
@@ -46,11 +46,11 @@ class GraphObserver implements TraceObserver {
 
     private Path file
 
-    private String type = 'abstract'
+    private String type = 'process'
 
-    private DAG abstractDag
+    private DAG dag
 
-    private ConcreteDAG concreteDag
+    private TaskDAG taskDag
 
     private String name
 
@@ -71,8 +71,8 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onFlowCreate(Session session) {
-        this.abstractDag = session.dag
-        this.concreteDag = session.concreteDag
+        this.dag = session.dag
+        this.taskDag = session.taskDag
         // check file existance
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
@@ -85,33 +85,33 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        concreteDag.addTask( handler.task )
+        taskDag.addTask(handler.task)
     }
 
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        concreteDag.addTaskOutputs( handler.task )
+        taskDag.addTaskOutputs(handler.task)
     }
 
     @Override
     void onProcessCached(TaskHandler handler, TraceRecord trace) {
-        concreteDag.addTask( handler.task )
-        concreteDag.addTaskOutputs( handler.task )
+        taskDag.addTask(handler.task)
+        taskDag.addTaskOutputs(handler.task)
     }
 
     @Override
     void onFlowComplete() {
-        if( type == 'abstract' ) {
+        if( type == 'process' ) {
             // -- normalise the DAG
-            abstractDag.normalize()
+            dag.normalize()
             // -- render it to a file
-            createRenderer().renderAbstractGraph(abstractDag,file)
+            createRenderer().renderProcessGraph(dag, file)
         }
-        else if( type == 'concrete' ) {
-            createRenderer().renderConcreteGraph(concreteDag,file)
+        else if( type == 'task' ) {
+            createRenderer().renderTaskGraph(taskDag, file)
         }
         else {
-            log.warn("Invalid DAG type '${type}', should be 'abstract' or 'concrete'")
+            log.warn("Invalid DAG type '${type}', should be 'process' or 'task'")
         }
     }
 

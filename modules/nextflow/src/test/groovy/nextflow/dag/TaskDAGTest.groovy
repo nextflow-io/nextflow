@@ -25,7 +25,7 @@ import spock.lang.Specification
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class ConcreteDAGTest extends Specification {
+class TaskDAGTest extends Specification {
 
     def 'should add task vertices and outputs' () {
 
@@ -50,7 +50,7 @@ class ConcreteDAGTest extends Specification {
                 'data.bar': Paths.get('/work/aabbccdd/data.bar')
             ]
         }
-        def dag = new ConcreteDAG()
+        def dag = new TaskDAG()
 
         when:
         dag.addTask( task1 )
@@ -101,7 +101,7 @@ class ConcreteDAGTest extends Specification {
             getInputFilesMap() >> [ 'data.foo': Paths.get('/work/00112233/data.foo') ]
             getOutputsByType(_) >> [ 'data.bar': outputFile.toPath() ]
         }
-        def dag = new ConcreteDAG()
+        def dag = new TaskDAG()
 
         when:
         dag.addTask(task1)

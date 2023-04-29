@@ -29,13 +29,13 @@ import nextflow.extension.FilesEx
 import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
 /**
- * Model the conrete (task) graph of a pipeline execution.
+ * Model the task graph of a pipeline execution.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class ConcreteDAG {
+class TaskDAG {
 
     private Map<TaskRun,Vertex> vertices = new HashMap<>()
 

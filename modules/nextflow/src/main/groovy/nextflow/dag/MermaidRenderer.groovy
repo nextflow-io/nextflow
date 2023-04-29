@@ -26,7 +26,7 @@ import java.nio.file.Path
 class MermaidRenderer implements DagRenderer {
 
     @Override
-    void renderAbstractGraph(DAG dag, Path file) {
+    void renderProcessGraph(DAG dag, Path file) {
         def lines = []
         lines << "flowchart TD"
 
@@ -73,7 +73,7 @@ class MermaidRenderer implements DagRenderer {
     }
 
     @Override
-    void renderConcreteGraph(ConcreteDAG dag, Path file) {
+    void renderTaskGraph(TaskDAG dag, Path file) {
         def renderedOutputs = [] as Set<Path>
         def numInputs = 0
         def numOutputs = 0

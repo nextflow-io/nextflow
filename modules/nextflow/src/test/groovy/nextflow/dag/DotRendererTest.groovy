@@ -54,7 +54,7 @@ class DotRendererTest extends Specification {
         dag.normalize()
 
         when:
-        new DotRenderer('TheGraph').renderAbstractGraph(dag, file)
+        new DotRenderer('TheGraph').renderProcessGraph(dag, file)
         then:
         file.text ==
             '''

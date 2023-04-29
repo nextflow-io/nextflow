@@ -39,7 +39,7 @@ import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
-import nextflow.dag.ConcreteDAG
+import nextflow.dag.TaskDAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
@@ -194,7 +194,7 @@ class Session implements ISession {
 
     private DAG dag
 
-    private ConcreteDAG concreteDag
+    private TaskDAG taskDag
 
     private CacheDB cache
 
@@ -348,7 +348,7 @@ class Session implements ISession {
 
         // -- DAG object
         this.dag = new DAG()
-        this.concreteDag = new ConcreteDAG()
+        this.taskDag = new TaskDAG()
 
         // -- init work dir
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
@@ -803,7 +803,7 @@ class Session implements ISession {
 
     DAG getDag() { this.dag }
 
-    ConcreteDAG getConcreteDAG() { this.concreteDag }
+    TaskDAG getTaskDag() { this.taskDag }
 
     ExecutorService getExecService() { execService }
 
@@ -1014,7 +1014,7 @@ class Session implements ISession {
         cache.putTaskAsync(handler, trace)
 
         // save the task meta file to the task directory
-        concreteDag.writeMetaFile(handler.task)
+        taskDag.writeMetaFile(handler.task)
 
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {

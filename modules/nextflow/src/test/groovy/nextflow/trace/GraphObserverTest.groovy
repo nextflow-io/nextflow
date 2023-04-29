@@ -78,7 +78,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf_','.dot')
         def gr = new GraphObserver(file)
-        gr.abstractDag = dag
+        gr.dag = dag
 
         when:
         gr.onFlowComplete()
@@ -105,7 +105,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.html')
         def gr = new GraphObserver(file)
-        gr.abstractDag = dag
+        gr.dag = dag
 
         when:
         gr.onFlowComplete()
@@ -133,7 +133,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.svg')
         def gr = new GraphObserver(file)
-        gr.abstractDag = dag
+        gr.dag = dag
 
         when:
         gr.onFlowComplete()
@@ -151,7 +151,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.png')
         def gr = new GraphObserver(file)
-        gr.abstractDag = dag
+        gr.dag = dag
 
         when:
         gr.onFlowComplete()
@@ -168,7 +168,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.pdf')
         def gr = new GraphObserver(file)
-        gr.abstractDag = dag
+        gr.dag = dag
 
         when:
         gr.onFlowComplete()
@@ -185,7 +185,7 @@ class GraphObserverTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def file = folder.resolve('nope')
         def gr = new GraphObserver(file)
-        gr.abstractDag = dag
+        gr.dag = dag
 
         when:
         gr.onFlowComplete()

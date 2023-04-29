@@ -34,7 +34,7 @@ class MermaidRendererTest extends Specification {
         new Session()
     }
 
-    def 'should render an abstract graph using the `mmd` format' () {
+    def 'should render a process graph using the `mmd` format' () {
         given:
         def file = Files.createTempFile('test', null)
         def ch1 = new DataflowQueue()
@@ -48,7 +48,7 @@ class MermaidRendererTest extends Specification {
         dag.normalize()
 
         when:
-        new MermaidRenderer().renderAbstractGraph(dag, file)
+        new MermaidRenderer().renderProcessGraph(dag, file)
         then:
         file.text ==
             '''
@@ -67,26 +67,26 @@ class MermaidRendererTest extends Specification {
         file.delete()
     }
 
-    def 'should render a concrete graph using the `mmd` format' () {
+    def 'should render a task graph using the `mmd` format' () {
         given:
         def file = Files.createTempFile('test', null)
 
         def task1 = Mock(TaskRun)
         def task2 = Mock(TaskRun)
         def output1 = Paths.get('/work/012345/data.foo')
-        def v1 = new ConcreteDAG.Vertex(
+        def v1 = new TaskDAG.Vertex(
             index: 1,
             label: 'foo',
             inputs: [ Paths.get('/inputs/data.txt') ],
             outputs: [ output1 ]
         )
-        def v2 = new ConcreteDAG.Vertex(
+        def v2 = new TaskDAG.Vertex(
             index: 2,
             label: 'bar',
             inputs: [ output1 ],
             outputs: [ Paths.get('/work/abcdef/data.bar') ]
         )
-        def dag = Mock(ConcreteDAG) {
+        def dag = Mock(TaskDAG) {
             vertices >> [
                 (task1): v1,
                 (task2): v2
@@ -95,7 +95,7 @@ class MermaidRendererTest extends Specification {
         }
 
         when:
-        new MermaidRenderer().renderConcreteGraph(dag, file)
+        new MermaidRenderer().renderTaskGraph(dag, file)
         then:
         file.text ==
             '''
