@@ -217,8 +217,9 @@ public class CacheHelper {
             return ((CacheFunnel) value).funnel(hasher,mode);
         }
 
-        if( value instanceof Enum )
-            return hasher.putUnencodedChars( value.getClass().getName() + "." + value.toString() );
+        if( value instanceof Enum ) {
+            return hasher.putUnencodedChars( value.getClass().getName() + "." + value );
+        }
 
         Bolts.debug1(log, FIRST_ONLY, "[WARN] Unknown hashing type: "+value.getClass());
         return hasher.putInt( value.hashCode() );
