@@ -94,15 +94,17 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
      * @return A multi-line string containing the job directives
      */
     String getHeaders( TaskRun task ) {
+        getHeaders(getDirectives(task))
+    }
 
+    String getHeaders( List<String> directives ) {
         final token = getHeaderToken()
         def result = new StringBuilder()
         def header = new ArrayList(2)
-        def dir = getDirectives(task)
-        def len = dir.size()-1
-        for( int i=0; i<len; i+=2) {
-            def opt = dir[i]
-            def val = dir[i+1]
+        def len = directives.size()-1
+        for( int i = 0; i < len; i += 2 ) {
+            def opt = directives[i]
+            def val = directives[i+1]
             if( opt ) header.add(opt)
             if( val ) header.add(wrapHeader(val))
 
@@ -414,37 +416,23 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
         new GridArrayTaskSubmitter(array, this)
     }
 
-    String createArrayTaskWrapper(GridArrayTaskSubmitter arraySubmitter) {
-        final array = arraySubmitter.getArray()
-        final arrayDirective = getArrayDirective(array.size())
-        final taskHeaders = getHeaders(array.first().getTask())
-        final wrapperFiles = array
-            .collect { handler -> ((GridTaskHandler)handler).wrapperFile }
-            .join(' ')
-
-        final builder = new StringBuilder()
-            << '#!/bin/bash\n'
-            << "${headerToken} ${arrayDirective}\n"
-            << taskHeaders
-            << "declare -a array=( ${wrapperFiles} )\n"
-            << "bash \${array[\$${arrayIndexName}]}\n"
-
-        return builder.toString()
+    String getArrayHeaders(int arraySize, TaskRun task) {
+        arrayTaskNotSupported()
     }
 
-    protected String getArrayDirective(int arraySize) {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+    String getArrayIndexName() {
+        arrayTaskNotSupported()
     }
 
-    protected String getArrayIndexName() {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+    List<String> getArraySubmitCommandLine() {
+        arrayTaskNotSupported()
     }
 
-    protected List<String> getArraySubmitCommandLine() {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+    String getArrayTaskId(String jobId, int index) {
+        arrayTaskNotSupported()
     }
 
-    protected String getArrayTaskId(String jobId, int index) {
+    protected void arrayTaskNotSupported() {
         throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
     }
 }

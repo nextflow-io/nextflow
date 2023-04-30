@@ -185,16 +185,19 @@ class SgeExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected String getArrayDirective(int arraySize) {
-        "-t 0-${arraySize - 1}"
+    String getArrayHeaders(int arraySize, TaskRun task) {
+        final directives = getDirectives(task)
+            << '-t' << "0-${arraySize - 1}"
+
+        getHeaders(directives)
     }
 
     @Override
-    protected String getArrayIndexName() { 'SGE_TASK_ID' }
+    String getArrayIndexName() { 'SGE_TASK_ID' }
 
     @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('qsub', '-') }
+    List<String> getArraySubmitCommandLine() { List.of('qsub', '-') }
 
     @Override
-    protected String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
+    String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
 }

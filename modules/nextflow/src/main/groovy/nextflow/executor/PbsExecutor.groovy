@@ -174,18 +174,21 @@ class PbsExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected String getArrayDirective(int arraySize) {
-        "-J 0-${arraySize - 1}"
+    String getArrayHeaders(int arraySize, TaskRun task) {
+        final directives = getDirectives(task)
+            << '-J' << "0-${arraySize - 1}"
+
+        getHeaders(directives)
     }
 
     @Override
-    protected String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
+    String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
 
     @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('qsub') }
+    List<String> getArraySubmitCommandLine() { List.of('qsub') }
 
     @Override
-    protected String getArrayTaskId(String jobId, int index) {
+    String getArrayTaskId(String jobId, int index) {
         jobId.replace('[]', "[$index]")
     }
 }

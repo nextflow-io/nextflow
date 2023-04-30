@@ -305,16 +305,19 @@ class LsfExecutor extends AbstractGridExecutor {
     private AtomicInteger arrayTaskCount = new AtomicInteger()
 
     @Override
-    protected String getArrayDirective(int arraySize) {
-        "-J \"nf-array-${arrayTaskCount.getAndIncrement()}[0-${arraySize - 1}]\""
+    String getArrayHeaders(int arraySize, TaskRun task) {
+        final directives = getDirectives(task)
+            << '-J' << "nf-array-${arrayTaskCount.getAndIncrement()}[0-${arraySize - 1}]"
+
+        getHeaders(directives)
     }
 
     @Override
-    protected String getArrayIndexName() { 'LSB_JOBINDEX' }
+    String getArrayIndexName() { 'LSB_JOBINDEX' }
 
     @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('bsub') }
+    List<String> getArraySubmitCommandLine() { List.of('bsub') }
 
     @Override
-    protected String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }
+    String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }
 }

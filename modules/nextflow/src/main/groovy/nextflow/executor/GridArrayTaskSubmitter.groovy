@@ -20,6 +20,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -31,7 +33,7 @@ import nextflow.util.CmdLineHelper
  */
 @Slf4j
 @CompileStatic
-class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements SubmitRetryAware {
+class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements FusionAwareTask, SubmitRetryAware {
 
     private AbstractGridExecutor executor
 
@@ -51,13 +53,13 @@ class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements SubmitRetryAw
         ProcessBuilder builder = null
         try {
             // -- create the array job script
-            final arrayScript = executor.createArrayTaskWrapper(this)
+            final launcherScript = getLauncherScript()
 
             // -- create the submit command
             builder = createProcessBuilder()
 
             // -- submit the array job with a retryable strategy
-            final result = safeExecute( () -> processStart(builder, arrayScript) )
+            final result = safeExecute( () -> processStart(builder, launcherScript) )
             final jobId = (String)executor.parseJobId(result)
 
             // -- set the job id and status of each task
@@ -83,6 +85,52 @@ class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements SubmitRetryAw
             throw new ProcessFailedException("Error submitting array job for execution", e)
         }
     }
+
+    protected String getLauncherScript() {
+        return fusionEnabled()
+            ? fusionLauncherScript()
+            : classicLauncherScript()
+    }
+
+    protected String fusionLauncherScript() {
+        final remoteLog = task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        final fusionWorkDir = FusionHelper.toContainerMount(task.workDir).toString()
+        final arrayHeaders = executor.getArrayHeaders(array.size(), getTask())
+        final arrayIndexName = executor.getArrayIndexName()
+        final workDirs = array
+            .collect { handler -> FusionHelper.toContainerMount(handler.task.workDir) }
+            .join(' ')
+
+        final cmd = FusionHelper.runWithContainer(
+            fusionLauncher(),
+            task.getContainerConfig(),
+            task.getContainer(),
+            fusionSubmitCli() )
+
+        final builder = new StringBuilder()
+            << '#!/bin/bash\n'
+            << arrayHeaders.replace(remoteLog, '/dev/null')
+            << "declare -a array=( ${workDirs} )\n"
+            << cmd.replace(fusionWorkDir, "\${array[\$${arrayIndexName}]}")
+
+        return builder.toString()
+    }
+
+    protected String classicLauncherScript() {
+        final arrayHeaders = executor.getArrayHeaders(array.size(), getTask())
+        final arrayIndexName = executor.getArrayIndexName()
+        final workDirs = array
+            .collect { handler -> handler.task.workDir }
+            .join(' ')
+
+        final builder = new StringBuilder()
+            << '#!/bin/bash\n'
+            << arrayHeaders
+            << "declare -a array=( ${workDirs} )\n"
+            << "bash \${array[\$${arrayIndexName}]}/${TaskRun.CMD_RUN}\n"
+
+        return builder.toString()
+    }
  
     protected void setJobId(String jobId) {
         array.eachWithIndex { handler, i ->
@@ -107,19 +155,19 @@ class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements SubmitRetryAw
             .redirectErrorStream(true)
     }
 
-    protected String processStart(ProcessBuilder builder, String arrayScript) {
+    protected String processStart(ProcessBuilder builder, String launcherScript) {
         final process = builder.start()
 
         try {
             // -- pipe the array job script to the command stdin 
-            log.trace "[${executor.name.toUpperCase()}] Submit array job >\n${arrayScript.indent()}"
-            process.out << arrayScript
+            log.trace "[${executor.name.toUpperCase()}] Submit array job >\n${launcherScript.indent()}"
+            process.out << launcherScript
             process.out.close()
 
             // -- wait for the submission to complete
             final result = process.text
             final exitStatus = process.waitFor()
-            final cmd = launchCmd0(builder, arrayScript)
+            final cmd = launchCmd0(builder, launcherScript)
 
             if( exitStatus )
                 throw new ProcessNonZeroExitStatusException("Failed to submit array job to grid scheduler for execution", result, exitStatus, cmd)
@@ -136,12 +184,12 @@ class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements SubmitRetryAw
         }
     }
 
-    protected String launchCmd0(ProcessBuilder builder, String arrayScript) {
+    protected String launchCmd0(ProcessBuilder builder, String launcherScript) {
         final cmd = CmdLineHelper.toLine(builder.command())
 
         new StringBuilder()
             .append("cat << 'LAUNCH_COMMAND_EOF' | ${cmd}\n")
-            .append(arrayScript.trim())
+            .append(launcherScript.trim())
             .append('\nLAUNCH_COMMAND_EOF\n')
             .toString()
     }

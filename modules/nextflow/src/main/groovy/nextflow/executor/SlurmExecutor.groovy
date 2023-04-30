@@ -201,16 +201,19 @@ class SlurmExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected String getArrayDirective(int arraySize) {
-        "--array 0-${arraySize - 1}"
+    String getArrayHeaders(int arraySize, TaskRun task) {
+        final directives = getDirectives(task)
+            << '--array' << "0-${arraySize - 1}"
+
+        getHeaders(directives)
     }
 
     @Override
-    protected String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
+    String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
 
     @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('sbatch') }
+    List<String> getArraySubmitCommandLine() { List.of('sbatch') }
 
     @Override
-    protected String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
+    String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
 }
