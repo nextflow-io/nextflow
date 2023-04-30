@@ -88,4 +88,8 @@ class FusionHelper {
         return Path.of(result)
     }
 
+    static Path toContainerMount(Path path) {
+        toContainerMount(path, path.scheme)
+    }
+
 }

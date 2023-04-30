@@ -32,6 +32,8 @@ import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
+import nextflow.executor.ArrayTaskAware
+import nextflow.executor.ArrayTaskSubmitter
 import nextflow.executor.Executor
 import nextflow.fusion.FusionHelper
 import nextflow.extension.FilesEx
@@ -54,7 +56,7 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName('awsbatch')
 @CompileStatic
-class AwsBatchExecutor extends Executor implements ExtensionPoint {
+class AwsBatchExecutor extends Executor implements ExtensionPoint, ArrayTaskAware {
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -217,6 +219,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         assert task.workDir
         log.trace "[AWS BATCH] Launching process > ${task.name} -- work folder: ${task.workDirStr}"
         new AwsBatchTaskHandler(task, this)
+    }
+
+    @Override
+    ArrayTaskSubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+        new AwsBatchArraySubmitter(array, this)
     }
 
     /**
