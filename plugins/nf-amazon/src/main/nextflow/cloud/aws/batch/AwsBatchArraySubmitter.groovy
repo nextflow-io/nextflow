@@ -80,7 +80,7 @@ class AwsBatchArraySubmitter extends ArrayTaskSubmitter implements SubmitJobAwar
             bash \${array[\$AWS_BATCH_JOB_ARRAY_INDEX]}/${TaskRun.CMD_RUN}
             """.stripIndent().trim()
 
-        return List.of(FUSION_PATH, 'bash', cmd.toString())
+        return List.of(FUSION_PATH, 'bash', '-c', cmd.toString())
     }
 
     protected List<String> classicSubmitCli() {
