@@ -143,6 +143,16 @@ class TaskRun implements Cloneable {
     def stderr
 
     /**
+     * This task makes part of a task array submission
+     */
+    Integer arrayIndex
+
+    /**
+     * The collection of tasks that makes part of a job array submission
+     */
+    List<TaskRun> arrayTasks
+
+    /**
      * @return The task produced stdout result as string
      */
     String getStdout() {

@@ -55,6 +55,10 @@ class SlurmExecutor extends AbstractGridExecutor {
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
         result << '--no-requeue' << '' // note: directive need to be returned as pairs
 
+        if( task.arrayTasks ) {
+            result << "--array" << "0-${task.arrayTasks.size()-1}".toString()
+        }
+
         if( !hasSignalOpt(task.config) ) {
             // see https://github.com/nextflow-io/nextflow/issues/2163
             // and https://slurm.schedmd.com/sbatch.html#OPT_signal
@@ -200,17 +204,11 @@ class SlurmExecutor extends AbstractGridExecutor {
         return FusionHelper.isFusionEnabled(session)
     }
 
-    @Override
-    protected String getArrayDirective(int arraySize) {
-        "--array 0-${arraySize - 1}"
-    }
 
     @Override
-    protected String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
+    String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
 
     @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('sbatch') }
+    String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
 
-    @Override
-    protected String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
 }

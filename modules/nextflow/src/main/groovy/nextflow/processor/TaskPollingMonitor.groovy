@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.ArrayTaskAware
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
@@ -192,9 +193,34 @@ class TaskPollingMonitor implements TaskMonitor {
      *      A {@link TaskHandler} instance representing the task to be submitted for execution
      */
     protected void submit(TaskHandler handler) {
-        // submit the job execution -- throws a ProcessException when submit operation fail
-        handler.prepareLauncher()
-        handler.submit()
+        if( handler.isTaskArray() )  {
+            // 1. prepare launcher of task array
+            final tasks = handler.task.arrayTasks
+            final children = new ArrayList<TaskHandler>(tasks.size())
+            final executor = (ArrayTaskAware) handler.task.processor.executor
+            for( TaskRun it : tasks ) {
+                final h0 = executor.createTaskHandler(it)
+                h0.prepareLauncher()
+                children.add( h0 )
+            }
+            // 2. submit task array
+            handler.prepareLauncher()
+            handler.submit()
+            // 3. update run status
+            for( TaskHandler h0 : children ) {
+                h0.status = TaskStatus.SUBMITTED
+                h0.setArrayJobId( handler.getJobId() )
+                runningQueue.add(h0)
+                session.notifyTaskSubmit(h0)
+            }
+
+        }
+        else {
+            // prepare launcher
+            handler.prepareLauncher()
+            // submit the job execution -- throws a ProcessException when submit operation fail
+            handler.submit()
+        }
         // note: add the 'handler' into the polling queue *after* the submit operation,
         // this guarantees that in the queue are only jobs successfully submitted
         runningQueue.add(handler)

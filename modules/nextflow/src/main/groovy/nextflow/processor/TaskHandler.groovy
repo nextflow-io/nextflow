@@ -19,10 +19,8 @@ package nextflow.processor
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
-import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
-import nextflow.executor.ArrayTaskSubmitter
 import nextflow.trace.TraceRecord
 /**
  * Actions to handle the underlying job running the user task.
@@ -52,11 +50,6 @@ abstract class TaskHandler {
      * The task managed by this handler
      */
     TaskRun getTask() { task }
-
-    /**
-     * Submitter for array jobs
-     */
-    ArrayTaskSubmitter arraySubmitter
 
     /**
      * Task current status
@@ -98,7 +91,7 @@ abstract class TaskHandler {
      * This method is optional. If it is not implemented, the launcher script should
      * be prepared in the submit() method.
      */
-    Path prepareLauncher() { return null }
+    void prepareLauncher() {  }
 
     /**
      * Task status attribute setter.
@@ -257,4 +250,15 @@ abstract class TaskHandler {
         task.processor.forksCount?.decrement()
     }
 
+    final boolean isTaskArray() {
+        task.arrayTasks != null
+    }
+
+    void setArrayJobId(String jobId) {
+        throw new UnsupportedOperationException("Job array not supported")
+    }
+
+    String getJobId() {
+        throw new UnsupportedOperationException("Job id not supported")
+    }
 }

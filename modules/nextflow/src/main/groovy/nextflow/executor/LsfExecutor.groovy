@@ -53,6 +53,8 @@ class LsfExecutor extends AbstractGridExecutor {
 
     private String usageUnit = 'MB'
 
+    private AtomicInteger arrayTaskCount = new AtomicInteger()
+
     protected boolean getPerJobMemLimit() { perJobMemLimit }
     protected boolean getPerTaskReserve() { perTaskReserve }
     protected String getMemUnit() { memUnit }
@@ -68,6 +70,10 @@ class LsfExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+
+        if( task.arrayTasks ) {
+            result << "-J" << "\"nf-array-${arrayTaskCount.getAndIncrement()}[0-${task.arrayTasks.size() - 1}]\"".toString()
+        }
 
         // add other parameters (if any)
         if( task.config.queue ) {
@@ -302,19 +308,9 @@ class LsfExecutor extends AbstractGridExecutor {
         return FusionHelper.isFusionEnabled(session)
     }
 
-    private AtomicInteger arrayTaskCount = new AtomicInteger()
+    @Override
+    String getArrayIndexName() { 'LSB_JOBINDEX' }
 
     @Override
-    protected String getArrayDirective(int arraySize) {
-        "-J \"nf-array-${arrayTaskCount.getAndIncrement()}[0-${arraySize - 1}]\""
-    }
-
-    @Override
-    protected String getArrayIndexName() { 'LSB_JOBINDEX' }
-
-    @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('bsub') }
-
-    @Override
-    protected String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }
+    String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }
 }

@@ -21,7 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
@@ -70,7 +69,7 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
         assert task
         assert task.workDir
 
-        new GridTaskHandler(task, this)
+        return new GridTaskHandler(task, this)
     }
 
     protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
@@ -409,43 +408,5 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
         return isFusionEnabled()
     }
 
-    @Override
-    ArrayTaskSubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
-        new GridArrayTaskSubmitter(array, this)
-    }
-
-    String createArrayTaskWrapper(GridArrayTaskSubmitter arraySubmitter) {
-        final array = arraySubmitter.getArray()
-        final arrayDirective = getArrayDirective(array.size())
-        final taskHeaders = getHeaders(array.first().getTask())
-        final wrapperFiles = array
-            .collect { handler -> ((GridTaskHandler)handler).wrapperFile }
-            .join(' ')
-
-        final builder = new StringBuilder()
-            << '#!/bin/bash\n'
-            << "${headerToken} ${arrayDirective}\n"
-            << taskHeaders
-            << "declare -a array=( ${wrapperFiles} )\n"
-            << "bash \${array[\$${arrayIndexName}]}\n"
-
-        return builder.toString()
-    }
-
-    protected String getArrayDirective(int arraySize) {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
-    }
-
-    protected String getArrayIndexName() {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
-    }
-
-    protected List<String> getArraySubmitCommandLine() {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
-    }
-
-    protected String getArrayTaskId(String jobId, int index) {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
-    }
 }
 

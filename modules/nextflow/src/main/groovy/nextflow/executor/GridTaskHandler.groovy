@@ -20,7 +20,17 @@ import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
+import java.time.temporal.ChronoUnit
+import java.util.function.Predicate
+import java.util.regex.Pattern
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
@@ -38,7 +48,8 @@ import nextflow.util.Throttle
  * Handles a job execution in the underlying grid platform
  */
 @Slf4j
-class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetryAware {
+@CompileStatic
+class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     /** The target executor platform */
     final AbstractGridExecutor executor
@@ -67,7 +78,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
 
     private Duration sanityCheckInterval
 
-    final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
+    final static private Duration READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
 
     BatchCleanup batch
 
@@ -107,6 +118,62 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
         return builder
     }
 
+    @Memoized
+    protected Predicate<? extends Throwable> retryCondition(String reasonPattern) {
+        final pattern = Pattern.compile(reasonPattern)
+        return new Predicate<Throwable>() {
+            @Override
+            boolean test(Throwable failure) {
+                if( failure instanceof ProcessNonZeroExitStatusException ) {
+                    final reason = failure.reason
+                    return reason ? pattern.matcher(reason).find() : false
+                }
+                return false
+            }
+        }
+    }
+
+    protected <T> RetryPolicy<T> retryPolicy() {
+
+        final delay = executor.session.getConfigAttribute("executor.retry.delay", '500ms') as Duration
+        final maxDelay = executor.session.getConfigAttribute("executor.retry.maxDelay", '30s') as Duration
+        final jitter = executor.session.getConfigAttribute("executor.retry.jitter", '0.25') as double
+        final maxAttempts = executor.session.getConfigAttribute("executor.retry.maxAttempts", '3') as int
+        final reason = executor.session.getConfigAttribute("executor.submit.retry.reason", 'Socket timed out') as String
+
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                final failure = event.getLastFailure()
+                if( failure instanceof ProcessNonZeroExitStatusException ) {
+                    final msg = """\
+                        Failed to submit process '${task.name}'
+                         - attempt : ${event.attemptCount}
+                         - command : ${failure.getCommand()}
+                         - reason  : ${failure.getReason()}
+                        """.stripIndent(true)
+                    log.warn msg
+
+                } else {
+                    log.debug("Unexpected retry failure: ${failure?.message}", failure)
+                }
+            }
+        }
+
+        return RetryPolicy.<T>builder()
+                .handleIf(retryCondition(reason))
+                .withBackoff(delay.toMillis(), maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(maxAttempts)
+                .withJitter(jitter)
+                .onFailedAttempt(listener)
+                .build()
+    }
+
+    protected <T> T safeExecute(CheckedSupplier<T> action) {
+        final policy = retryPolicy()
+        return Failsafe.with(policy).get(action)
+    }
+
     protected String processStart(ProcessBuilder builder, String pipeScript) {
         final process = builder.start()
 
@@ -140,7 +207,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
     }
 
     @Override
-    Path prepareLauncher() {
+    void prepareLauncher() {
         // -- create the wrapper script
         createTaskWrapper(task).build()
     }
@@ -189,10 +256,6 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
      */
     @Override
     void submit() {
-        if( arraySubmitter ) {
-            arraySubmitter.collect(this)
-            return
-        }
 
         ProcessBuilder builder = null
         try {
@@ -258,7 +321,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        def exitAttrs = null
+        BasicFileAttributes exitAttrs = null
         if( !exitFile || !(exitAttrs=FileHelper.readAttributes(exitFile)) || !exitAttrs.lastModifiedTime()?.toMillis() ) {
             if( log.isTraceEnabled() ) {
                 if( !exitFile )
@@ -391,7 +454,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
     boolean checkIfCompleted() {
 
         // verify the exit file exists
-        def exit
+        Integer exit
         if( isRunning() && (exit = readExitStatus()) != null ) {
             // finalize the task
             task.exitStatus = exit
@@ -460,4 +523,12 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
         return trace
     }
 
+    @Override
+    void setArrayJobId(String jobId) {
+        this.jobId = executor.getArrayTaskId(jobId, task.arrayIndex)
+    }
+
+    String getJobId() {
+        return jobId
+    }
 }

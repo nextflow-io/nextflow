@@ -19,6 +19,7 @@ import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -253,6 +254,8 @@ class TaskProcessor {
 
     private Boolean isFair0
 
+    private final int arraySize
+
     private ArrayTaskCollector arrayCollector
 
     private CompilerConfiguration compilerConfig() {
@@ -309,9 +312,8 @@ class TaskProcessor {
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
-        
-        final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new ArrayTaskCollector(executor, arraySize) : null
+        this.arraySize = config.getArray()
+        this.arrayCollector = arraySize > 0 ? new ArrayTaskCollector(this, arraySize) : null
     }
 
     /**
@@ -746,6 +748,29 @@ class TaskProcessor {
         }
 
         return task
+    }
+
+    final TaskRun createTaskArray(List<TaskRun> tasks) {
+        final result = new TaskRun(
+                id: TaskId.next(),
+                index: indexCount.incrementAndGet(),
+                processor: this,
+                type: scriptType,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this),
+                arrayTasks: tasks
+        )
+
+        // setup config
+        result.config.index = result.index
+        result.config.process = result.processor.name
+        result.config.executor = result.processor.executor.name
+
+        // task hash & work dir
+        result.hash = CacheHelper.hasher( tasks.collect( it->it.getHash().asLong() ) ).hash()
+        result.workDir = FileHelper.getWorkFolder(executor.getWorkDir(), result.hash)
+        Files.createDirectories(result.workDir)
+        return result
     }
 
     /**

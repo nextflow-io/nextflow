@@ -16,15 +16,14 @@
 
 package nextflow.processor
 
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.nio.file.Path
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.ArrayTaskAware
-import nextflow.executor.Executor
-
+import nextflow.util.Escape
 /**
  * Task monitor that batches tasks and submits them as array jobs
  * to an underlying task monitor.
@@ -35,24 +34,23 @@ import nextflow.executor.Executor
 @CompileStatic
 class ArrayTaskCollector {
 
-    private Executor executor
+    private TaskProcessor processor
 
-    private TaskMonitor monitor
+    private ArrayTaskAware executor
 
     private int arraySize
 
     private Lock sync = new ReentrantLock()
 
-    private List<TaskHandler> array
+    private List<TaskRun> array
 
-    private boolean closed = false
+    private volatile boolean closed
 
-    ArrayTaskCollector(Executor executor, int arraySize) {
-        if( executor !instanceof ArrayTaskAware )
+    ArrayTaskCollector(TaskProcessor processor, int arraySize) {
+        if( processor.executor !instanceof ArrayTaskAware )
             throw new IllegalArgumentException("Executor '${executor.name}' does not support array jobs")
-
-        this.executor = executor
-        this.monitor = executor.monitor
+        this.processor = processor
+        this.executor = (ArrayTaskAware) processor.executor
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
     }
@@ -64,20 +62,17 @@ class ArrayTaskCollector {
      * @param handler
      */
     void submit(TaskRun task) {
+        // submit task directly if the collector is closed
+        if( closed ) {
+            throw new IllegalStateException("Process is already closed")
+        }
+
         sync.lock()
-
         try {
-            // submit task directly if the collector is closed
-            if( closed ) {
-                executor.submit(task)
-                return
-            }
-
-            // create task handler
-            final handler = executor.createTaskHandler(task)
-
+            // update the array index attribute
+            task.arrayIndex = array.size()
             // add task to the array array
-            array << handler
+            array.add(task)
 
             // submit array job when the array is ready
             if( array.size() == arraySize ) {
@@ -109,13 +104,32 @@ class ArrayTaskCollector {
         }
     }
 
-    protected void submit0(List<TaskHandler> array) {
-        // create submitter for array job
-        ((ArrayTaskAware)executor).createArrayTaskSubmitter(array)
+    protected void submit0(List<TaskRun> array) {
+        // final submit the task array
+        final task = processor.createTaskArray(array)
+        task.script = createTaskArrayScript(array)
+        executor.submit(task)
+    }
 
-        // submit each task to the underlying monitor
-        for( TaskHandler handler : array )
-            monitor.schedule(handler)
+    protected String createTaskArrayScript(List<TaskRun> array) {
+        final allLaunchers = new ArrayList<Path>()
+        final script = new StringBuilder()
+        script.append('tasks=()').append('\n')
+        for( TaskRun t0 : array ) {
+            final l0 = t0.workDir.resolve(TaskRun.CMD_RUN)
+            allLaunchers.add(l0)
+            script.append("tasks+=(${Escape.path(l0)})").append('\n')
+        }
+        // the launcher entry point
+        final index = executor.getArrayIndexName()
+        if( index ) {
+            script << '# execute the i-th task\n'
+            script << '/bin/bash ${tasks[' << index << ']}\n'
+        }
+        else {
+            script << '# execute all tasks\n'
+            script << 'for t in ${tasks[@]}; do /bin/bash $t; done\n'
+        }
     }
 
 }

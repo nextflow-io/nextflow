@@ -45,6 +45,10 @@ class PbsExecutor extends AbstractGridExecutor {
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'oe'
 
+        if( task.arrayTasks ) {
+            result << "-J" << "0-${task.arrayTasks.size()-1}".toString()
+        }
+
         // the requested queue name
         if( task.config.queue ) {
             result << '-q'  << (String)task.config.queue
@@ -174,18 +178,10 @@ class PbsExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected String getArrayDirective(int arraySize) {
-        "-J 0-${arraySize - 1}"
-    }
+    String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
 
     @Override
-    protected String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
-
-    @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('qsub') }
-
-    @Override
-    protected String getArrayTaskId(String jobId, int index) {
+    String getArrayTaskId(String jobId, int index) {
         jobId.replace('[]', "[$index]")
     }
 }

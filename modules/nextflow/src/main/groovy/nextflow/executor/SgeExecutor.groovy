@@ -40,6 +40,10 @@ class SgeExecutor extends AbstractGridExecutor {
         result << '-j' << 'y'
         result << '-terse' << ''    // note: directive need to be returned as pairs
 
+        if( task.arrayTasks ) {
+            result << "-t" << "0-${task.arrayTasks.size() - 1}".toString()
+        }
+
         /*
          * By using command line option -notify SIGUSR1 will be sent to your script prior to SIGSTOP
          * and SIGUSR2 will be sent to your script prior to SIGKILL
@@ -185,16 +189,8 @@ class SgeExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected String getArrayDirective(int arraySize) {
-        "-t 0-${arraySize - 1}"
-    }
+    String getArrayIndexName() { 'SGE_TASK_ID' }
 
     @Override
-    protected String getArrayIndexName() { 'SGE_TASK_ID' }
-
-    @Override
-    protected List<String> getArraySubmitCommandLine() { List.of('qsub', '-') }
-
-    @Override
-    protected String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
+    String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
 }
