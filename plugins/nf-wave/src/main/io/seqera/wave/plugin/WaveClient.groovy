@@ -330,10 +330,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, spackArch, dockerArch)
+        return resolveAssets0(attrs, bundle, dockerArch, spackArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, String spackArch, String dockerArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, String dockerArch, String spackArch) {
 
         String dockerScript = attrs.dockerfile
         final containerImage = attrs.container
