@@ -72,8 +72,8 @@ class WaveConfig {
     String cacheRepository() { cacheRepository }
 
     protected List<String> parseStrategy(value) {
+        final defaultStrategy = List.of('container','dockerfile','conda', 'spack')
         if( !value ) {
-            final defaultStrategy = List.of('container','dockerfile','conda', 'spack')
             log.debug "Wave strategy not specified - using default: $defaultStrategy"
             return defaultStrategy
         }
@@ -85,7 +85,7 @@ class WaveConfig {
         else
             throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
         for( String it : result ) {
-            if( it !in ['spack','conda','dockerfile','container'])
+            if( it !in defaultStrategy)
                 throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
         }
         return result
