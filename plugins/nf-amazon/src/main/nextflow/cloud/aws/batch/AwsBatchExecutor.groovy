@@ -309,7 +309,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
     }
 
     @Override
-    TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+    TaskArraySubmitter createTaskArraySubmitter(List<TaskHandler> array) {
         new AwsBatchTaskArraySubmitter(array, this)
     }
 

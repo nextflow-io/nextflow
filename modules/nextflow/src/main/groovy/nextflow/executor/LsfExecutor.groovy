@@ -41,6 +41,8 @@ class LsfExecutor extends AbstractGridExecutor {
 
     static private Pattern QUOTED_STRING_REGEX = ~/"((?:[^"\\]|\\.)*)"(\s*#.*)?/
 
+    static private AtomicInteger taskArrayCount = new AtomicInteger()
+
     private boolean perJobMemLimit
 
     private boolean perTaskReserve
@@ -296,12 +298,10 @@ class LsfExecutor extends AbstractGridExecutor {
         return FusionHelper.isFusionEnabled(session)
     }
 
-    private AtomicInteger arrayTaskCount = new AtomicInteger()
-
     @Override
     String getArrayHeaders(int arraySize, TaskRun task) {
         final directives = getDirectives(task)
-            << '-J' << "nf-array-${arrayTaskCount.getAndIncrement()}[0-${arraySize - 1}]"
+            << '-J' << "nf-array-${taskArrayCount.getAndIncrement()}[0-${arraySize - 1}]"
 
         getHeaders(directives)
     }

@@ -416,7 +416,7 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
     }
 
     @Override
-    TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+    TaskArraySubmitter createTaskArraySubmitter(List<TaskHandler> array) {
         new GridTaskArraySubmitter(array, this)
     }
 

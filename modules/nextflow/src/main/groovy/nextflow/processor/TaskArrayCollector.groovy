@@ -111,7 +111,7 @@ class TaskArrayCollector {
 
     protected void submit0(List<TaskHandler> array) {
         // create submitter for array job
-        executor.createArrayTaskSubmitter(array)
+        executor.createTaskArraySubmitter(array)
 
         // submit each task to the underlying monitor
         for( TaskHandler handler : array )

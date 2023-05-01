@@ -37,7 +37,7 @@ interface TaskArrayAware {
      *
      * @param array
      */
-    default TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+    default TaskArraySubmitter createTaskArraySubmitter(List<TaskHandler> array) {
         new TaskArraySubmitter(array)
     }
 
