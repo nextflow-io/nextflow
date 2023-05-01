@@ -196,7 +196,8 @@ Different queues bound to the same or different Compute Environments can be conf
 
 ## Container Options
 
-*New in version `21.12.1-edge`*
+:::{versionadded} 21.12.1-edge
+:::
 
 The {ref}`process-containerOptions` directive can be used to control the properties of the container execution associated with each Batch job.
 
