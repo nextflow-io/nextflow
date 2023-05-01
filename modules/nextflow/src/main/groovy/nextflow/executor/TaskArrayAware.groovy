@@ -23,15 +23,15 @@ import nextflow.processor.TaskHandler
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-trait ArrayTaskAware {
+trait TaskArrayAware {
 
     /**
      * Create a submitter for an array job.
      *
      * @param array
      */
-    ArrayTaskSubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
-        new ArrayTaskSubmitter(array)
+    TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+        new TaskArraySubmitter(array)
     }
 
 }

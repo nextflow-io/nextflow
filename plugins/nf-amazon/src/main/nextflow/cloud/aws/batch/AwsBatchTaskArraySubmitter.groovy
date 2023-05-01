@@ -27,7 +27,7 @@ import com.amazonaws.services.batch.model.SubmitJobResult
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessSubmitException
-import nextflow.executor.ArrayTaskSubmitter
+import nextflow.executor.TaskArraySubmitter
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -38,13 +38,13 @@ import nextflow.processor.TaskStatus
  */
 @Slf4j
 @CompileStatic
-class AwsBatchArraySubmitter extends ArrayTaskSubmitter implements SubmitJobAware {
+class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJobAware {
 
     private AwsBatchExecutor executor
 
     private AWSBatch client
 
-    AwsBatchArraySubmitter(List<TaskHandler> array, AwsBatchExecutor executor) {
+    AwsBatchTaskArraySubmitter(List<TaskHandler> array, AwsBatchExecutor executor) {
         super(array)
         this.executor = executor
         this.client = executor.client

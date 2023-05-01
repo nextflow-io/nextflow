@@ -19,7 +19,7 @@ package nextflow.executor.local
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.executor.ArrayTaskAware
+import nextflow.executor.TaskArrayAware
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
 import nextflow.fusion.FusionHelper
@@ -36,7 +36,7 @@ import nextflow.script.ScriptType
 @Slf4j
 @CompileStatic
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
-class LocalExecutor extends Executor implements ArrayTaskAware {
+class LocalExecutor extends Executor implements TaskArrayAware {
 
     @Override
     protected TaskMonitor createTaskMonitor() {

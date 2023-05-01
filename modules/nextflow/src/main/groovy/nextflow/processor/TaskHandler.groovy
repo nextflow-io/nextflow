@@ -22,7 +22,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
-import nextflow.executor.ArrayTaskSubmitter
+import nextflow.executor.TaskArraySubmitter
 import nextflow.trace.TraceRecord
 /**
  * Actions to handle the underlying job running the user task.
@@ -56,7 +56,7 @@ abstract class TaskHandler {
     /**
      * Submitter for array jobs
      */
-    ArrayTaskSubmitter arraySubmitter
+    TaskArraySubmitter arraySubmitter
 
     /**
      * Task current status

@@ -33,11 +33,11 @@ import nextflow.util.CmdLineHelper
  */
 @Slf4j
 @CompileStatic
-class GridArrayTaskSubmitter extends ArrayTaskSubmitter implements FusionAwareTask, SubmitRetryAware {
+class GridTaskArraySubmitter extends TaskArraySubmitter implements FusionAwareTask, SubmitRetryAware {
 
     private AbstractGridExecutor executor
 
-    GridArrayTaskSubmitter(List<TaskHandler> array, AbstractGridExecutor executor) {
+    GridTaskArraySubmitter(List<TaskHandler> array, AbstractGridExecutor executor) {
         super(array)
         this.executor = executor
     }

@@ -37,7 +37,7 @@ import org.apache.commons.lang.StringUtils
  */
 @Slf4j
 @CompileStatic
-abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
+abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
 
     protected Duration queueInterval
 
@@ -412,8 +412,8 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
     }
 
     @Override
-    ArrayTaskSubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
-        new GridArrayTaskSubmitter(array, this)
+    TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+        new GridTaskArraySubmitter(array, this)
     }
 
     String getArrayHeaders(int arraySize, TaskRun task) {

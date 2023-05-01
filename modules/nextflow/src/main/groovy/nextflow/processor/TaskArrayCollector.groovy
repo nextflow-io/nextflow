@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.executor.ArrayTaskAware
+import nextflow.executor.TaskArrayAware
 import nextflow.executor.Executor
 
 /**
@@ -33,7 +33,7 @@ import nextflow.executor.Executor
  */
 @Slf4j
 @CompileStatic
-class ArrayTaskCollector {
+class TaskArrayCollector {
 
     private Executor executor
 
@@ -47,8 +47,8 @@ class ArrayTaskCollector {
 
     private boolean closed = false
 
-    ArrayTaskCollector(Executor executor, int arraySize) {
-        if( executor !instanceof ArrayTaskAware )
+    TaskArrayCollector(Executor executor, int arraySize) {
+        if( executor !instanceof TaskArrayAware )
             throw new IllegalArgumentException("Executor '${executor.name}' does not support array jobs")
 
         this.executor = executor
@@ -111,7 +111,7 @@ class ArrayTaskCollector {
 
     protected void submit0(List<TaskHandler> array) {
         // create submitter for array job
-        ((ArrayTaskAware)executor).createArrayTaskSubmitter(array)
+        ((TaskArrayAware)executor).createArrayTaskSubmitter(array)
 
         // submit each task to the underlying monitor
         for( TaskHandler handler : array )

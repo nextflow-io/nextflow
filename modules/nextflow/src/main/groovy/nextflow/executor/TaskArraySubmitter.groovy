@@ -29,13 +29,13 @@ import nextflow.processor.TaskHandler
  */
 @Slf4j
 @CompileStatic
-class ArrayTaskSubmitter {
+class TaskArraySubmitter {
 
     protected List<TaskHandler> array
 
     private AtomicInteger collected = new AtomicInteger()
 
-    ArrayTaskSubmitter(List<TaskHandler> array) {
+    TaskArraySubmitter(List<TaskHandler> array) {
         this.array = array
 
         for( TaskHandler handler : array )

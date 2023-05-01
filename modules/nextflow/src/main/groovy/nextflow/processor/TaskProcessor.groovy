@@ -253,7 +253,7 @@ class TaskProcessor {
 
     private Boolean isFair0
 
-    private ArrayTaskCollector arrayCollector
+    private TaskArrayCollector arrayCollector
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -311,7 +311,7 @@ class TaskProcessor {
         this.isFair0 = config.getFair()
         
         final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new ArrayTaskCollector(executor, arraySize) : null
+        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(executor, arraySize) : null
     }
 
     /**
