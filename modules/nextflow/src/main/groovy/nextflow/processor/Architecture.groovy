@@ -82,10 +82,6 @@ class Architecture {
             return 'linux/arm64'
         if( value == 'arm64/v7' )
             return 'linux/arm64/v7'
-        if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' )
-            return 'linux/arm/v7'
-        if( value == 'arm/v5' || value == 'arm/5' )
-            return 'linux/arm/v5'
         throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
     }
 
@@ -96,8 +92,6 @@ class Architecture {
             return 'aarch64'
         if( value == 'arm64/v7' )
             return null
-        if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' || value == 'arm/v5' || value == 'arm/5' )
-            return 'arm'
         throw new IllegalArgumentException("Not a valid `arch` value: ${inputArch}")
     }
 

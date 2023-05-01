@@ -44,11 +44,6 @@ class ArchitectureTest extends Specification {
         'arm64'                                | null     | 'arm64'     | null   | 'linux/arm64'    | 'aarch64'
         'linux/arm64/v8'                       | 'linux'  | 'arm64/v8'  | null   | 'linux/arm64'    | 'aarch64'
         'linux/arm64/v7'                       | 'linux'  | 'arm64/v7'  | null   | 'linux/arm64/v7' | null
-        'arm'                                  | null     | 'arm'       | null   | 'linux/arm/v7'   | 'arm'
-        'linux/arm/v7'                         | 'linux'  | 'arm/v7'    | null   | 'linux/arm/v7'   | 'arm'
-        'linux/arm/7'                          | 'linux'  | 'arm/7'     | null   | 'linux/arm/v7'   | 'arm'
-        'linux/arm/v5'                         | 'linux'  | 'arm/v5'    | null   | 'linux/arm/v5'   | 'arm'
-        'linux/arm/5'                          | 'linux'  | 'arm/5'     | null   | 'linux/arm/v5'   | 'arm'
         [name: 'linux/x86_64', target: 'zen3'] | 'linux'  | 'x86_64'    | 'zen3' | 'linux/amd64'    | 'zen3'
     }
 }

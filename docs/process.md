@@ -1245,7 +1245,6 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent fa
 - X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
 - ARM 64 bit: `linux/aarch64`, `aarch64`, `linux/arm64`, `arm64`, `linux/arm64/v8`
 - ARM 64 bit, older generation: `linux/arm64/v7`
-- ARM 32 bit: `linux/arm`, `arm`, `linux/arm/v7`, `linux/arm/7`, `linux/arm/v5`, `linux/arm/5`
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
