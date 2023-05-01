@@ -686,13 +686,14 @@ CMD [ "/bin/bash" ]
         !assets.condaFile
         !assets.spackFile
         !assets.projectResources
-        !assets.containerPlatform
+        assets.containerPlatform == 'linux/amd64'
     }
 
     def 'should create asset with image and platform' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[containerPlatform:'linux/amd64']]}
-        def task = Mock(TaskRun) { getConfig() >> [:] }
+        def arch = 'linux/arm64'
+        def session = Mock(Session) { getConfig() >> [:] }
+        def task = Mock(TaskRun) { getConfig() >> [arch:arch.toString()] }
         def IMAGE = 'foo:latest'
         and:
         def client = new WaveClient(session)
@@ -701,7 +702,7 @@ CMD [ "/bin/bash" ]
         def assets = client.resolveAssets(task, IMAGE)
         then:
         assets.containerImage == IMAGE
-        assets.containerPlatform == 'linux/amd64'
+        assets.containerPlatform == 'linux/arm64'
         !assets.moduleResources
         !assets.dockerFileContent
         !assets.containerConfig
