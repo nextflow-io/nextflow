@@ -20,7 +20,7 @@ See the [Application Default Credentials](https://github.com/googleapis/google-a
 
 Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify location of the Google credentials file.
 
-If you don't have it, the credentials file can be download from the Google Cloud Console following these steps:
+If you don't have it, the credentials file can be downloaded from the Google Cloud Console following these steps:
 
 - Open the [Google Cloud Console](https://console.cloud.google.com)
 - Go to APIs & Services → Credentials
@@ -199,7 +199,7 @@ When Fusion is enabled, by default, only machine types that can attach local SSD
 
 ### Supported directives
 
-The integration with Google Batch is a developer preview feature. Currently the following Nextflow directives are supported:
+The integration with Google Batch is a developer preview feature. Currently, the following Nextflow directives are supported:
 
 - {ref}`process-accelerator`
 - {ref}`process-container`
@@ -235,7 +235,7 @@ Nextflow provides built-in support for Cloud Life Sciences, allowing the seamles
 Read the {ref}`Google Life Sciences executor <google-lifesciences-executor>` page to learn about the `google-lifesciences` executor in Nextflow.
 
 :::{warning}
-This API works well for coarse-grained workloads (i.e. long running jobs). It's not suggested the use this feature for pipelines spawning many short lived tasks.
+This API works well for coarse-grained workloads (i.e. long-running jobs). It's not suggested the use this feature for pipelines spawning many short lived tasks.
 :::
 
 (google-lifesciences-config)=
@@ -380,7 +380,7 @@ The Google Storage path needs to contain at least one sub-directory (e.g. `gs://
 
 - Compute resources in Google Cloud are subject to [resource quotas](https://cloud.google.com/compute/quotas), which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. You can initially request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
 
-- Currently it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
+- Currently, it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
 
 ### Troubleshooting
 
