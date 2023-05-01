@@ -78,29 +78,27 @@ class Architecture {
         def name = res.name as String
         if( value == 'x86_64' || value == 'amd64' )
             return 'linux/amd64'
-        else if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
+        if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
             return 'linux/arm64'
-        else if( value == 'arm64/v7' )
+        if( value == 'arm64/v7' )
             return 'linux/arm64/v7'
-        else if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' )
+        if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' )
             return 'linux/arm/v7'
-        else if( value == 'arm/v5' || value == 'arm/5' )
+        if( value == 'arm/v5' || value == 'arm/5' )
             return 'linux/arm/v5'
-        else
-            throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
+        throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
     }
 
     protected String validateArchToSpackArch( String value, String inputArch ) {
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
-        else if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
+        if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
             return 'aarch64'
-        else if( value == 'arm64/v7' )
+        if( value == 'arm64/v7' )
             return null
-        else if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' || value == 'arm/v5' || value == 'arm/5' )
+        if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' || value == 'arm/v5' || value == 'arm/5' )
             return 'arm'
-        else
-            throw new IllegalArgumentException("Not a valid `arch` value: ${inputArch}")
+        throw new IllegalArgumentException("Not a valid `arch` value: ${inputArch}")
     }
 
     protected String getSpackArch( Map res ) {
