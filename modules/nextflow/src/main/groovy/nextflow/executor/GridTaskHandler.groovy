@@ -26,7 +26,6 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
-import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -38,7 +37,7 @@ import nextflow.util.Throttle
  * Handles a job execution in the underlying grid platform
  */
 @Slf4j
-class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetryAware {
+class GridTaskHandler extends TaskHandler implements SubmitJobAware {
 
     /** The target executor platform */
     final AbstractGridExecutor executor
@@ -89,58 +88,11 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
         this.sanityCheckInterval = duration
     }
 
-    protected ProcessBuilder createProcessBuilder() {
-
-        // -- log the qsub command
-        final cli = executor.getSubmitCommandLine(task, wrapperFile)
-        log.trace "start process ${task.name} > cli: ${cli}"
-
-        /*
-         * launch 'sub' script wrapper
-         */
-        ProcessBuilder builder = new ProcessBuilder()
-            .command( cli as String[] )
-            .redirectErrorStream(true)
-        if( !fusionEnabled() )
-            builder .directory(task.workDir.toFile())
-
-        return builder
-    }
-
-    protected String processStart(ProcessBuilder builder, String pipeScript) {
-        final process = builder.start()
-
-        try {
-            // -- forward the job launcher script to the command stdin if required
-            if( pipeScript ) {
-                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
-                process.out << pipeScript
-                process.out.close()
-            }
-
-            // -- wait the the process completes
-            final result = process.text
-            final exitStatus = process.waitFor()
-            final cmd = launchCmd0(builder,pipeScript)
-
-            if( exitStatus ) {
-                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, cmd)
-            }
-
-            // -- return the process stdout
-            return result
-        }
-        finally {
-            // make sure to release all resources
-            process.in.closeQuietly()
-            process.out.closeQuietly()
-            process.err.closeQuietly()
-            process.destroy()
-        }
-    }
+    @Override
+    AbstractGridExecutor getExecutor() { executor }
 
     @Override
-    Path prepareLauncher() {
+    void prepareLauncher() {
         // -- create the wrapper script
         createTaskWrapper(task).build()
     }
@@ -174,16 +126,6 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
         return result
     }
 
-    protected String launchCmd0(ProcessBuilder builder, String pipeScript) {
-        def result = CmdLineHelper.toLine(builder.command())
-        if( pipeScript ) {
-            result = "cat << 'LAUNCH_COMMAND_EOF' | ${result}\n"
-            result += pipeScript.trim() + '\n'
-            result += 'LAUNCH_COMMAND_EOF\n'
-        }
-        return result
-    }
-
     /*
      * {@inheritDocs}
      */
@@ -197,7 +139,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask, SubmitRetr
         ProcessBuilder builder = null
         try {
             // -- start the execution and notify the event to the monitor
-            builder = createProcessBuilder()
+            builder = createProcessBuilder(executor.pipeLauncherScript())
             // -- forward the job launcher script to the command stdin if required
             final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy

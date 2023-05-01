@@ -76,12 +76,9 @@ class NqsiiExecutor extends AbstractGridExecutor {
         return result
     }
 
-
-    /*
-     * Prepare the 'qsub' cmdline
-     */
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-        return ['qsub', scriptFile.name]
+    @Override
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+        List.of('qsub', scriptFile.name)
     }
 
     protected String getHeaderToken() { '#PBS' }

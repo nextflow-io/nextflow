@@ -196,7 +196,11 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
      * @param task The task instance descriptor
      * @return A list holding the command line
      */
-    abstract List<String> getSubmitCommandLine(TaskRun task, Path scriptFile)
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
+        getSubmitCommandLine(task, scriptFile, pipeLauncherScript())
+    }
+
+    abstract List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript)
 
     /**
      * Defines how script is run the by the grid-engine.
@@ -417,22 +421,6 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
     }
 
     String getArrayHeaders(int arraySize, TaskRun task) {
-        arrayTaskNotSupported()
-    }
-
-    String getArrayIndexName() {
-        arrayTaskNotSupported()
-    }
-
-    List<String> getArraySubmitCommandLine() {
-        arrayTaskNotSupported()
-    }
-
-    String getArrayTaskId(String jobId, int index) {
-        arrayTaskNotSupported()
-    }
-
-    protected void arrayTaskNotSupported() {
         throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
     }
 }

@@ -88,8 +88,8 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return ['condor_submit', '--terse', CMD_CONDOR]
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+        List.of('condor_submit', '--terse', CMD_CONDOR)
     }
 
     @Override

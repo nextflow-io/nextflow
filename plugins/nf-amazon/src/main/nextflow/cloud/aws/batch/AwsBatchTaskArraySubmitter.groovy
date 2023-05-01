@@ -74,10 +74,11 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
         final workDirs = array
             .collect { handler -> toContainerMount(handler.task.workDir) }
             .join(' ')
+        final arrayIndexName = executor.getArrayIndexName()
 
         final cmd = """
             declare -a array=( ${workDirs} )
-            bash \${array[\$AWS_BATCH_JOB_ARRAY_INDEX]}/${TaskRun.CMD_RUN}
+            bash \${array[\$${arrayIndexName}]}/${TaskRun.CMD_RUN}
             """.stripIndent().trim()
 
         return List.of(FUSION_PATH, 'bash', '-c', cmd.toString())
@@ -87,6 +88,7 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
         final workDirs = array
             .collect { handler -> handler.task.workDir.toUriString() }
             .join(' ')
+        final arrayIndexName = executor.getArrayIndexName()
 
         final opts = getAwsOptions()
         final cli = opts.getAwsCli()
@@ -97,7 +99,7 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
 
         final cmd = """
             declare -a array=( ${workDirs} )
-            task_dir=\${array[\$AWS_BATCH_JOB_ARRAY_INDEX]}
+            task_dir=\${array[\$${arrayIndexName}]}
             trap "{ ret=\$?; ${aws} ${TaskRun.CMD_LOG} \$task_dir/${TaskRun.CMD_LOG}||true; exit \$ret; }" EXIT
             ${aws} \$task_dir/${TaskRun.CMD_RUN} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}
             """.stripIndent().trim()
@@ -117,7 +119,7 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
 
         // -- set the job id, queue, and status of each task
         array.eachWithIndex { handler, i ->
-            ((AwsBatchTaskHandler)handler).jobId = getArrayTaskId(jobId, i)
+            ((AwsBatchTaskHandler)handler).jobId = executor.getArrayTaskId(jobId, i)
             ((AwsBatchTaskHandler)handler).queueName = request.getJobQueue()
             handler.status = TaskStatus.SUBMITTED
         }
@@ -137,10 +139,6 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e
         }
-    }
- 
-    String getArrayTaskId(String jobId, int index) {
-        "${jobId}:${index}"
     }
 
 }

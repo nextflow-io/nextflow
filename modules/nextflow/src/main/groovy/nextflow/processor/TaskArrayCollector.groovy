@@ -35,7 +35,7 @@ import nextflow.executor.Executor
 @CompileStatic
 class TaskArrayCollector {
 
-    private Executor executor
+    private TaskArrayAware executor
 
     private TaskMonitor monitor
 
@@ -51,7 +51,7 @@ class TaskArrayCollector {
         if( executor !instanceof TaskArrayAware )
             throw new IllegalArgumentException("Executor '${executor.name}' does not support array jobs")
 
-        this.executor = executor
+        this.executor = (TaskArrayAware)executor
         this.monitor = executor.monitor
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
@@ -111,7 +111,7 @@ class TaskArrayCollector {
 
     protected void submit0(List<TaskHandler> array) {
         // create submitter for array job
-        ((TaskArrayAware)executor).createArrayTaskSubmitter(array)
+        executor.createArrayTaskSubmitter(array)
 
         // submit each task to the underlying monitor
         for( TaskHandler handler : array )

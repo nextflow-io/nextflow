@@ -94,16 +94,9 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     String getHeaderToken() { '#SBATCH' }
 
-    /**
-     * The command line to submit this job
-     *
-     * @param task The {@link TaskRun} instance to submit for execution to the cluster
-     * @param scriptFile The file containing the job launcher script
-     * @return A list representing the submit command line
-     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-        return pipeLauncherScript()
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+        return pipeLauncherScript
                 ? List.of('sbatch')
                 : List.of('sbatch', scriptFile.getName())
     }
@@ -210,9 +203,6 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     @Override
     String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
-
-    @Override
-    List<String> getArraySubmitCommandLine() { List.of('sbatch') }
 
     @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }

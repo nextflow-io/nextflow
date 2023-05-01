@@ -98,7 +98,7 @@ abstract class TaskHandler {
      * This method is optional. If it is not implemented, the launcher script should
      * be prepared in the submit() method.
      */
-    Path prepareLauncher() { return null }
+    void prepareLauncher() {}
 
     /**
      * Task status attribute setter.

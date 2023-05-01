@@ -221,11 +221,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
         new AwsBatchTaskHandler(task, this)
     }
 
-    @Override
-    TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
-        new AwsBatchTaskArraySubmitter(array, this)
-    }
-
     /**
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
@@ -312,6 +307,17 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
         final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
         ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
     }
+
+    @Override
+    TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+        new AwsBatchTaskArraySubmitter(array, this)
+    }
+
+    @Override
+    String getArrayIndexName() { 'AWS_BATCH_JOB_ARRAY_INDEX' }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) { "${jobId}:${index}" }
 
 }
 

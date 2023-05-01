@@ -129,7 +129,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     @Override
-    Path prepareLauncher() {
+    void prepareLauncher() {
         createTaskWrapper().build()
     }
 

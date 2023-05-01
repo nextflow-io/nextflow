@@ -88,17 +88,13 @@ class PbsExecutor extends AbstractGridExecutor {
         name.size()>15 ? name.substring(0,15) : name
     }
 
-    /**
-     * The command line to submit this job
-     *
-     * @param task The {@link TaskRun} instance to submit for execution to the cluster
-     * @param scriptFile The file containing the job launcher script
-     * @return A list representing the submit command line
-     */
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    @Override
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
         // in some PBS implementation the submit command will fail if the script name starts with a dot eg `.command.run`
         // add the `-N <job name>` to fix this -- see issue #228
-        [ 'qsub', '-N', getJobNameFor(task), scriptFile.getName() ]
+        pipeLauncherScript
+            ? List.of('qsub')
+            : List.of('qsub', '-N', getJobNameFor(task), scriptFile.getName())
     }
 
     protected String getHeaderToken() { '#PBS' }
@@ -183,9 +179,6 @@ class PbsExecutor extends AbstractGridExecutor {
 
     @Override
     String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
-
-    @Override
-    List<String> getArraySubmitCommandLine() { List.of('qsub') }
 
     @Override
     String getArrayTaskId(String jobId, int index) {

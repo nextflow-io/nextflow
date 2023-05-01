@@ -17,21 +17,36 @@
 package nextflow.executor
 
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskRun
 
 /**
  * Interface for executors that support array jobs.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-trait TaskArrayAware {
+interface TaskArrayAware {
+
+    String getName()
+
+    void submit( TaskRun task )
+
+    TaskHandler createTaskHandler(TaskRun task)
 
     /**
      * Create a submitter for an array job.
      *
      * @param array
      */
-    TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
+    default TaskArraySubmitter createArrayTaskSubmitter(List<TaskHandler> array) {
         new TaskArraySubmitter(array)
+    }
+
+    default String getArrayIndexName() {
+        throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
+    }
+
+    default String getArrayTaskId(String jobId, int index) {
+        throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
     }
 
 }

@@ -111,16 +111,10 @@ class LsfExecutor extends AbstractGridExecutor {
         return result
     }
 
-
-    /**
-     * The command line to submit this job
-     *
-     * @param task The {@link TaskRun} instance to submit for execution to the cluster
-     * @param scriptFile The file containing the job launcher script
-     * @return A list representing the submit command line
-     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) { ['bsub'] }
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+        List.of('bsub')
+    }
 
     /**
      * @return {@code true} since BSC grid requires the script to be piped to the {@code bsub} command
@@ -314,9 +308,6 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     String getArrayIndexName() { 'LSB_JOBINDEX' }
-
-    @Override
-    List<String> getArraySubmitCommandLine() { List.of('bsub') }
 
     @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }

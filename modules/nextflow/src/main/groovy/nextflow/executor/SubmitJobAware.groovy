@@ -29,20 +29,84 @@ import groovy.transform.Memoized
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessNonZeroExitStatusException
+import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskRun
+import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 /**
- * Generic retry-able submit implementation for executors.
+ * Implementation of job submission for grid executors.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
-trait SubmitRetryAware {
+trait SubmitJobAware extends FusionAwareTask {
 
-    abstract Executor getExecutor()
+    static private Logger log = LoggerFactory.getLogger(SubmitJobAware)
+
+    abstract AbstractGridExecutor getExecutor()
 
     abstract TaskRun getTask()
+
+    ProcessBuilder createProcessBuilder(boolean pipeLauncherScript) {
+
+        // -- log the submit command line
+        final cli = executor.getSubmitCommandLine(task, task.workDir.resolve(TaskRun.CMD_RUN), pipeLauncherScript)
+        log.trace "start process ${task.name} > cli: ${cli}"
+
+        // -- create the submit process
+        ProcessBuilder builder = new ProcessBuilder()
+            .command( cli as String[] )
+            .redirectErrorStream(true)
+
+        if( !pipeLauncherScript )
+            builder .directory(task.workDir.toFile())
+
+        return builder
+    }
+
+    String processStart(ProcessBuilder builder, String pipeScript) {
+        final process = builder.start()
+
+        try {
+            // -- forward the job launcher script to the command stdin if required
+            if( pipeScript ) {
+                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
+                process.out << pipeScript
+                process.out.close()
+            }
+
+            // -- wait the the process completes
+            final result = process.text
+            final exitStatus = process.waitFor()
+            final cmd = launchCmd0(builder,pipeScript)
+
+            if( exitStatus ) {
+                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, cmd)
+            }
+
+            // -- return the process stdout
+            return result
+        }
+        finally {
+            // make sure to release all resources
+            process.in.closeQuietly()
+            process.out.closeQuietly()
+            process.err.closeQuietly()
+            process.destroy()
+        }
+    }
+
+    private String launchCmd0(ProcessBuilder builder, String pipeScript) {
+        def result = CmdLineHelper.toLine(builder.command())
+        if( pipeScript ) {
+            result = "cat << 'LAUNCH_COMMAND_EOF' | ${result}\n"
+            result += pipeScript.trim() + '\n'
+            result += 'LAUNCH_COMMAND_EOF\n'
+        }
+        return result
+    }
 
     <T> T safeExecute(CheckedSupplier<T> action) {
         Failsafe.with(retryPolicy()).get(action)

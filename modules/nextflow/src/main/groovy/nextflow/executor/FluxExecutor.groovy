@@ -48,15 +48,8 @@ class FluxExecutor extends AbstractGridExecutor {
     // Flux does not require a special token or header
     String getHeaderToken() { null }
 
-    /**
-     * The command line to submit this job
-     *
-     * @param task The {@link TaskRun} instance to submit for execution to the cluster
-     * @param scriptFile The file containing the job launcher script
-     * @return A list representing the submit command line
-     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
 
         List<String> result = ['flux', 'mini', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)

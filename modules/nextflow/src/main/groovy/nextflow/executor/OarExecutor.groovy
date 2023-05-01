@@ -90,18 +90,11 @@ class OarExecutor extends AbstractGridExecutor {
 
     String getHeaderToken() { '#OAR' }
 
-    /**
-     * The command line to submit this job
-     *
-     * @param task The {@link TaskRun} instance to submit for execution to the cluster
-     * @param scriptFile The file containing the job launcher script
-     * @return A list representing the submit command line
-     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
         // Scripts need to be executable
         scriptFile.setPermissions(7,0,0)
-        return ["oarsub", "-S", "./${scriptFile.getName()}"]
+        List.of("oarsub", "-S", "./${scriptFile.getName()}")
     }
 
     /**

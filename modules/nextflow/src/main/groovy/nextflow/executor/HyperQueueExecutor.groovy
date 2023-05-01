@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.ServiceName
-import nextflow.util.TupleHelper
 /**
  * Implements executor for HyperQueue
  *  https://github.com/It4innovations/hyperqueue/
@@ -81,8 +80,8 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return TupleHelper.listOf('hq', '--output-mode=quiet', 'submit', '--directives=file', scriptFile.getName())
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+        return List.of('hq', '--output-mode=quiet', 'submit', '--directives=file', scriptFile.getName())
     }
 
     @Override
@@ -97,7 +96,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> getKillCommand() {
-        return TupleHelper.listOf('hq', 'job', 'cancel')
+        return List.of('hq', 'job', 'cancel')
     }
 
     @Override
@@ -114,7 +113,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        return TupleHelper.listOf('hq', '--output-mode=quiet', 'job', 'list', '--all')
+        return List.of('hq', '--output-mode=quiet', 'job', 'list', '--all')
     }
 
     @Override

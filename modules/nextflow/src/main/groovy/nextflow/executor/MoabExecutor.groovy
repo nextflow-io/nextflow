@@ -75,19 +75,9 @@ class MoabExecutor extends AbstractGridExecutor {
         return result
     }
 
-    /**
-     * The command line to submit this job
-     *
-     * @param task The {@link TaskRun} instance to submit for execution to the cluster
-     * @param scriptFile The file containing the job launcher script
-     * @return A list representing the submit command line
-     */
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-        def cmd = new ArrayList(5)
-        cmd << 'msub'
-        cmd << '--xml'
-        cmd << scriptFile.name
-        return cmd
+    @Override
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+        List.of('msub', '--xml', scriptFile.name)
     }
 
     protected String getHeaderToken() { '#MSUB' }

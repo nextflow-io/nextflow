@@ -79,16 +79,14 @@ class SgeExecutor extends AbstractGridExecutor {
         return result
     }
 
-    /*
-     * Prepare the 'qsub' cmdline
-     */
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+    @Override
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
         // The '-terse' command line control the output of the qsub command line, when
         // used it only return the ID of the submitted job.
         // NOTE: In some SGE implementations the '-terse' only works on the qsub command line
         // and it is ignored when used in the script job as directive, fir this reason it
         // should not be remove from here
-        return pipeLauncherScript()
+        return pipeLauncherScript
                 ? List.of('qsub', '-')
                 : List.of('qsub', '-terse', scriptFile.name)
     }
@@ -194,9 +192,6 @@ class SgeExecutor extends AbstractGridExecutor {
 
     @Override
     String getArrayIndexName() { 'SGE_TASK_ID' }
-
-    @Override
-    List<String> getArraySubmitCommandLine() { List.of('qsub', '-') }
 
     @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }

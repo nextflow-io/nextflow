@@ -85,18 +85,9 @@ class BridgeExecutor extends AbstractGridExecutor {
 
     String getHeaderToken() { '#MSUB' }
 
-    /**
-     * The command line to submit this job
-     *
-     * @param task The {@link TaskRun} instance to submit for execution to the cluster
-     * @param scriptFile The file containing the job launcher script
-     * @return A list representing the submit command line
-     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-
-        ['ccc_msub', scriptFile.getName()]
-
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+        List.of('ccc_msub', scriptFile.getName())
     }
 
     /**
