@@ -234,18 +234,17 @@ class WaveClient {
         return new Gson().fromJson(json, type)
     }
 
-    protected URL defaultFusionUrl() {
-        // MARCO MARCO TO BE FIXED - platform is process specific
-        final isArm = false //config.containerPlatform()?.tokenize('/')?.contains('arm64')
+    protected URL defaultFusionUrl(String platform) {
+        final isArm = platform.tokenize('/')?.contains('arm64')
         return isArm
                 ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
                 : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
     }
 
-    ContainerConfig resolveContainerConfig() {
+    ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
         if( fusion.enabled() ) {
-            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl()
+            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl(platform)
             urls.add(fusionUrl)
         }
         if( !urls )
@@ -398,7 +397,7 @@ class WaveClient {
         final platform = dockerArch
 
         // read the container config and go ahead
-        final containerConfig = this.resolveContainerConfig()
+        final containerConfig = this.resolveContainerConfig(platform)
         return new WaveAssets(
                     containerImage,
                     platform,
