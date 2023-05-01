@@ -737,17 +737,18 @@ CMD [ "/bin/bash" ]
         given:
         def IMAGE = 'foo:latest'
         def BUNDLE = Mock(ResourcesBundle)
+        def ARCH = 'linux/arm64'
         def CONTAINER_CONFIG = new ContainerConfig(entrypoint: ['entry.sh'], layers: [new ContainerLayer(location: 'http://somewhere')])
         and:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) { getConfig() >> [:]; getModuleBundle() >> BUNDLE }
+        def task = Mock(TaskRun) { getConfig() >> [arch:ARCH.toString()]; getModuleBundle() >> BUNDLE }
         and:
         WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
         when:
         def assets = client.resolveAssets(task, IMAGE)
         then:
-        client.resolveContainerConfig() >> CONTAINER_CONFIG
+        client.resolveContainerConfig(ARCH) >> CONTAINER_CONFIG
         and:
         assets.containerImage == IMAGE
         assets.moduleResources == BUNDLE
@@ -1030,8 +1031,9 @@ CMD [ "/bin/bash" ]
         def PROJECT_RES = Mock(ResourcesBundle)
         def CONTAINER_CONFIG = Mock(ContainerConfig)
         def BIN_DIR = Path.of('/something/bin')
+        def ARCH = 'linux/arm64'
         and:
-        def task = Mock(TaskRun) {getModuleBundle() >> MODULE_RES; getConfig() >> [:] }
+        def task = Mock(TaskRun) {getModuleBundle() >> MODULE_RES; getConfig() >> [arch:ARCH.toString()] }
         and:
         def session = Mock(Session) {
             getConfig() >> [wave: [bundleProjectResources: true]]
@@ -1045,7 +1047,7 @@ CMD [ "/bin/bash" ]
         then:
         1 * wave.projectResources(BIN_DIR) >> PROJECT_RES
         and:
-        1 * wave.resolveContainerConfig() >> CONTAINER_CONFIG
+        1 * wave.resolveContainerConfig(ARCH) >> CONTAINER_CONFIG
         and:
         assets.moduleResources == MODULE_RES
         assets.projectResources ==  PROJECT_RES
