@@ -457,6 +457,11 @@ class WaveClient {
 
         def checksumString = config.spackOpts().checksum ? '' : '-n '
         def result = """\
+# Spack
+# https://github.com/spack/spack
+# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Licensed under Apache License, Version 2.0
+
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
 COPY spack.yaml /tmp/spack.yaml
@@ -567,6 +572,11 @@ CMD [ "/bin/bash" ]
 
         def checksumString = config.spackOpts().checksum ? '' : '-n '
         def result = """\
+# Spack
+# https://github.com/spack/spack
+# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Licensed under Apache License, Version 2.0
+
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
 
