@@ -345,7 +345,7 @@ class WaveClient {
         Path condaFile = null
         if( attrs.conda ) {
             if( dockerScript )
-                throw new IllegalArgumentException("Unexpected conda and dockerfile conflict")
+                throw new IllegalArgumentException("Unexpected conda and dockerfile conflict while resolving wave container")
 
             // map the recipe to a dockerfile
             if( isCondaLocalFile(attrs.conda) ) {
@@ -364,7 +364,7 @@ class WaveClient {
         Path spackFile = null
         if( attrs.spack ) {
             if( dockerScript )
-                throw new IllegalArgumentException("Unexpected spack and dockerfile conflict")
+                throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
 
             // map the recipe to a dockerfile
             if( isSpackFile(attrs.spack) ) {
