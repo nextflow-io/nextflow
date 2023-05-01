@@ -5,14 +5,15 @@
 Nextflow supports a variety of container runtimes. Containerization allows you to write self-contained and truly reproducible computational pipelines, by packaging the binary dependencies of a script into a standard and portable format that can be executed on any platform that supports a container runtime. Furthermore, the same pipeline can be transparently executed with any of the supported container runtimes, depending on which runtimes are available in the target compute environment.
 
 :::{note}
-When creating your container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in your image, along with other tools required for collecting metrics (See  {ref}`this section <execution-report-tasks>`). Also, Bash should be available on the path `/bin/bash` and it should be the container entrypoint. 
+When creating your container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in your image, along with other tools required for collecting metrics (See  {ref}`this section <execution-report-tasks>`). Also, Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
 :::
 
 (container-apptainer)=
 
 ## Apptainer
 
-*New in version `22.11.0-edge`*
+:::{versionadded} 22.11.0-edge
+:::
 
 [Apptainer](https://apptainer.org) is an alternative container runtime to Docker and an open source fork of Singularity. The main advantages of Apptainer are that it can be used without root privileges and it doesn't require a separate daemon process. These, along with other features such as support for autofs mounts, makes Apptainer better suited to the requirements of HPC workloads. Apptainer is able to use existing Docker images and can pull from Docker registries.
 
@@ -117,7 +118,9 @@ This feature requires the `apptainer` tool to be installed where the workflow ex
 
 Nextflow caches those images in the `apptainer` directory in the pipeline work directory by default. However it is suggested to provide a centralised cache directory by using either the `NXF_APPTAINER_CACHEDIR` environment variable or the `apptainer.cacheDir` setting in the Nextflow config file.
 
-*New in version `21.09.0-edge`:* when looking for a Apptainer image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using the `NXF_APPTAINER_LIBRARYDIR` environment variable or the `apptainer.libraryDir` configuration setting (the latter overrides the former).
+:::{versionadded} 21.09.0-edge
+When looking for a Apptainer image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used s usual. The library directory can be defined either using the `NXF_APPTAINER_LIBRARYDIR` environment variable or the `apptainer.libraryDir` configuration setting (the latter overrides the former).
+:::
 
 :::{warning}
 When using a compute cluster, the Apptainer cache directory must reside in a shared filesystem accessible to all compute nodes.
@@ -135,13 +138,20 @@ Apptainer advanced configuration settings are described in {ref}`config-apptaine
 
 ## Charliecloud
 
-*New in version `20.12.0-edge`*
+:::{versionadded} 20.12.0-edge
+:::
 
-*Changed in version `21.03.0-edge`: requires Charliecloud 0.22 to 0.27*
+:::{versionchanged} 21.03.0-edge
+Requires Charliecloud 0.22 to 0.27.
+:::
 
-*Changed in version `22.09.0-edge`: requires Charliecloud 0.28 or later*
+:::{versionchanged} 22.09.0-edge
+Requires Charliecloud 0.28 or later.
+:::
 
-*EXPERIMENTAL: not recommended for production environments*
+:::{warning}
+EXPERIMENTAL: not recommended for production environments.
+:::
 
 [Charliecloud](https://hpc.github.io/charliecloud) is an alternative container runtime to Docker, that is better suited for use in HPC environments. Its main advantage is that it can be used without root privileges, making use of user namespaces in the Linux kernel. Charliecloud is able to pull from Docker registries.
 
@@ -321,7 +331,8 @@ Docker advanced configuration settings are described in {ref}`config-docker` sec
 
 ## Podman
 
-*New in version `20.01.0`*
+:::{versionadded} 20.01.0
+:::
 
 *EXPERIMENTAL: not recommended for production environments*
 
@@ -409,7 +420,9 @@ Podman advanced configuration settings are described in {ref}`config-podman` sec
 
 ## Sarus
 
-*New in version `22.12.0-edge`, requires Sarus 1.5.1 or later*
+:::{versionadded} 22.12.0-edge
+Requires Sarus 1.5.1 or later.
+:::
 
 [Sarus](https://sarus.readthedocs.io) is an alternative container runtime to Docker. Sarus works by converting Docker images to a common format that can then be distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image from [Docker Hub](https://hub.docker.com/) and then submit jobs which run entirely within the container.
 
@@ -461,7 +474,9 @@ Read the {ref}`Process scope <config-process>` section to learn more about proce
 
 ## Shifter
 
-*New in version `19.10.0`, requires Shifter 18.03 or later*
+:::{versionadded} 19.10.0
+Requires Shifter 18.03 or later.
+:::
 
 [Shifter](https://docs.nersc.gov/programming/shifter/overview/) is an alternative container runtime to Docker. Shifter works by converting Docker images to a common format that can then be distributed and launched on HPC systems. The user interface to Shifter enables a user to select an image from [Docker Hub](https://hub.docker.com/) and then submit jobs which run entirely within the container.
 
@@ -609,7 +624,11 @@ singularity.enabled = true
 
 You do not need to specify `docker://` to pull from a Docker repository. Nextflow will automatically prepend it to your image name when Singularity is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`.
 
-*New in version `19.04.0`, requires Singularity 3.0.3 or later:* Nextflow supports the [Singularity Library](https://cloud.sylabs.io/library/) repository:
+:::{versionadded} 19.04.0
+Requires Singularity 3.0.3 or later.
+:::
+
+Nextflow supports the [Singularity Library](https://cloud.sylabs.io/library/) repository:
 
 ```groovy
 process.container = 'library://library/default/alpine:3.8'
@@ -619,7 +638,9 @@ The `library://` pseudo-protocol allows you to import Singularity images from a 
 
 Nextflow caches the images in `${NXF_WORK}/singularity` by default. However, it is recommended to define a centralised cache directory using either the `NXF_SINGULARITY_CACHEDIR` environment variable or the `singularity.cacheDir` setting in the Nextflow config file.
 
-*New in version `21.09.0-edge`:* when looking for a Singularity image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using the `NXF_SINGULARITY_LIBRARYDIR` environment variable or the `singularity.libraryDir` configuration setting (the latter overrides the former).
+:::{versionadded} 21.09.0-edge
+When looking for a Singularity image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using the `NXF_SINGULARITY_LIBRARYDIR` environment variable or the `singularity.libraryDir` configuration setting (the latter overrides the former).
+:::
 
 :::{warning}
 When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.

@@ -30,7 +30,8 @@ The Conda environment feature is not supported by executors that use remote obje
 
 ### Enabling Conda environment
 
-*New in version `22.08.0-edge`*
+:::{versionadded} 22.08.0-edge
+:::
 
 The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
 

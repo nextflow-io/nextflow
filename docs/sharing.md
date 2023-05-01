@@ -167,7 +167,9 @@ providers {
 
 In the above template replace `<provider-name>` with one of the "default" servers (i.e. `bitbucket`, `github` or `gitlab`) or a custom identifier representing a private SCM server installation.
 
-*New in version `20.10.0`:* A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable.
+:::{versionadded} 20.10.0
+A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable.
+:::
 
 The following configuration properties are supported for each provider configuration:
 
@@ -247,7 +249,9 @@ providers {
 
 GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs. Learn more about PAT and how to create it at [this link](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
-*New in version `23.01.0-edge`:* Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+:::{versionadded} 23.01.0-edge
+Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+:::
 
 ### GitLab credentials
 
@@ -305,7 +309,8 @@ The Personal access token can be generated in the repository `Clone Repository` 
 
 ### AWS CodeCommit credentials
 
-*New in version `22.06.0-edge`*
+:::{versionadded} 22.06.0-edge
+:::
 
 Nextflow supports [AWS CodeCommit](https://aws.amazon.com/codecommit/) as a Git provider to access and to share pipelines code.
 

@@ -303,7 +303,8 @@ The following table shows the fields that can be included in the execution repor
 : The action applied on errof task failure.
 
 `hostname`
-: *New in version `22.05.0-edge`*
+: :::{versionadded} 22.05.0-edge
+  :::
 : The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
 
 :::{note}
@@ -372,7 +373,11 @@ The DAG produced by Nextflow for the [Unistrap](https://github.com/cbcrg/unistra
 ```{image} images/dag.png
 ```
 
-*New in version `22.04.0`:* Nextflow can render the DAG as a [Mermaid](https://mermaid-js.github.io/) diagram. Mermaid diagrams are particularly useful because they can be embedded in [GitHub Flavored Markdown](https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/) without having to render them yourself. You can customize the diagram with CSS, and you can even add links! Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes) for details.
+:::{versionadded} 22.04.0
+Nextflow can render the DAG as a [Mermaid](https://mermaid-js.github.io/) diagram.
+:::
+
+Mermaid diagrams are particularly useful because they can be embedded in [GitHub Flavored Markdown](https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/) without having to render them yourself. You can customize the diagram with CSS, and you can even add links! Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes) for details.
 
 Here is the Mermaid diagram produced by Nextflow for the above example:
 

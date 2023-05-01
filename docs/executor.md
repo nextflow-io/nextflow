@@ -36,7 +36,8 @@ See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
 
 ## Azure Batch
 
-*New in version `21.04.0`*
+:::{versionadded} 21.04.0
+:::
 
 Nextflow supports the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service that allows job submission in the cloud without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks, which greatly simplifies pipeline deployment.
 
@@ -62,7 +63,8 @@ See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
 
 ## Bridge
 
-*New in version `22.09.1-edge`*
+:::{versionadded} 22.09.1-edge
+:::
 
 [Bridge](https://github.com/cea-hpc/bridge) is an abstraction layer to ease batch system and resource manager usage in heterogeneous HPC environments.
 
@@ -84,7 +86,8 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## Flux Executor
 
-*New in version `22.11.0-edge`*
+:::{versionadded} 22.11.0-edge
+:::
 
 The `flux` executor allows you to run your pipeline script using the [Flux Framework](https://flux-framework.org).
 
@@ -161,7 +164,8 @@ Make sure the TES backend can access the Nextflow work directory when data is ex
 
 ## Google Cloud Batch
 
-*New in version `22.07.1-edge`*
+:::{versionadded} 22.07.1-edge
+:::
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
@@ -189,7 +193,8 @@ See the {ref}`Google Cloud Batch <google-batch>` page for further configuration 
 
 ## Google Life Sciences
 
-*New in version `20.01.0`*
+:::{versionadded} 20.01.0
+:::
 
 [Google Cloud Life Sciences](https://cloud.google.com/life-sciences) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
@@ -240,7 +245,8 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## HyperQueue
 
-*New in version `22.05.0-edge`*
+:::{versionadded} 22.05.0-edge
+:::
 
 *EXPERIMENTAL: may change in a future release*
 
@@ -268,7 +274,9 @@ Resource requests and other job characteristics can be controlled via the follow
 This feature is no longer maintained.
 :::
 
-*Changed in version `22.01.0-edge`:* the `ignite` executor must be enabled via the `nf-ignite` plugin.
+:::{versionchanged} 22.01.0-edge
+The `ignite` executor must be enabled via the `nf-ignite` plugin.
+:::
 
 The `ignite` executor allows you to run a pipeline on an [Apache Ignite](https://ignite.apache.org/) cluster.
 
@@ -339,7 +347,8 @@ See also the [Platform LSF documentation](https://www.ibm.com/support/knowledgec
 
 ## Moab
 
-*New in version `19.07.0`*
+:::{versionadded} 19.07.0
+:::
 
 *EXPERIMENTAL: may change in a future release*
 
@@ -383,7 +392,8 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## OAR
 
-*New in version `19.11.0-edge`*
+:::{versionadded} 19.11.0-edge
+:::
 
 The `oar` executor allows you to run your pipeline script using the [OAR](https://oar.imag.fr) resource manager.
 

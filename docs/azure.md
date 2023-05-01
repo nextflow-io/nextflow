@@ -2,7 +2,8 @@
 
 # Azure Cloud
 
-*New in version `21.04.0`*
+:::{versionadded} 21.04.0
+:::
 
 (azure-blobstorage)=
 
@@ -314,7 +315,8 @@ See the {ref}`Azure configuration <config-azure>` section and the [Azure Batch n
 
 ### Private container registry
 
-*New in version `21.05.0-edge`*
+:::{versionadded} 21.05.0-edge
+:::
 
 A private container registry for Docker images can be specified as follows:
 
@@ -336,7 +338,8 @@ When using containers hosted in a private registry, the registry name must also 
 
 ## Active Directory Authentication
 
-*New in version `22.11.0-edge`*
+:::{versionadded} 22.11.0-edge
+:::
 
 [Service Principal](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts.
 

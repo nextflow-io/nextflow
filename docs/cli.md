@@ -688,19 +688,23 @@ The `kuberun` command supports the following options from [`run`](#run):
 The following new options are also available:
 
 `-head-cpus`
-: *New in version `22.01.0-edge`*
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specify number of CPUs requested for the Nextflow pod.
 
 `-head-image`
-: *New in version `22.07.1-edge`*
+: :::{versionadded} 22.07.1-edge
+  :::
 : Specify the container image for the Nextflow driver pod.
 
 `-head-memory`
-: *New in version `22.01.0-edge`*
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specify amount of memory requested for the Nextflow pod.
 
 `-head-prescript`
-: *New in version `22.05.0-edge`*
+: :::{versionadded} 22.05.0-edge
+  :::
 : Specify script to be run before the Nextflow pod starts.
 
 `-n, -namespace`
@@ -1014,7 +1018,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: *New in version `20.09.1-edge`*
+: :::{versionadded} 20.09.1-edge
+  :::
 : The script file to be executed when launching a project directory or repository.
 
 `-name`
@@ -1030,7 +1035,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Comma separated list of plugin ids to be applied in the pipeline execution.
 
 `-preview`
-: *New in version `22.06.0-edge`*
+: :::{versionadded} 22.06.0-edge
+  :::
 : Run the workflow script skipping the execution of all processes
 
 `-process.<key>=<value>`
@@ -1247,13 +1253,13 @@ The `view` command is used to inspect the pipelines that are already stored in t
 **Options**
 
 `-h, -help`
-: Print the command usage. 
+: Print the command usage.
 
-`-l`       
-: List repository content. 
+`-l`
+: List repository content.
 
-`-q`       
-: Hide header line.        
+`-q`
+: Hide header line.
 
 **Examples**
 

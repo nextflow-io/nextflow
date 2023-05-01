@@ -309,7 +309,9 @@ aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
 
 Replace the path above with the one matching the location where the `aws` tool is installed in your AMI.
 
-*Changed in version `19.07.0`:* the `executor.awscli` config option was replaced by `aws.batch.cliPath`.
+:::{versionchanged} 19.07.0
+The `executor.awscli` config option was replaced by `aws.batch.cliPath`.
+:::
 
 :::{warning}
 The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
@@ -417,7 +419,8 @@ With the above configuration, processes with the `bigTask` {ref}`process-label` 
 
 ### Volume mounts
 
-*New in version `19.07.0`*
+:::{versionadded} 19.07.0
+:::
 
 User provided container volume mounts can be provided as shown below:
 

@@ -2,7 +2,8 @@
 
 # Spack environments
 
-*New in version `23.02.0-edge`*
+:::{versionadded} 23.02.0-edge
+:::
 
 [Spack](https://spack.io/) is a package manager for supercomputers, Linux, and macOS. It makes installing scientific software easy. Spack is not tied to a particular language; you can build a software stack in Python or R, link to libraries written in C, C++, or Fortran, and easily swap compilers or target specific microarchitectures.
 

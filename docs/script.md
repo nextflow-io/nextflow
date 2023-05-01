@@ -228,15 +228,19 @@ In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` swit
 The following variables are implicitly defined in the script global execution scope:
 
 `baseDir`
-: *Deprecated since version `20.04.0`, use `projectDir` instead*
+: :::{deprecated} 20.04.0
+  Use `projectDir` instead
+  :::
 : The directory where the main workflow script is located.
 
 `launchDir`
-: *New in version `20.04.0`*
+: :::{versionadded} 20.04.0
+  :::
 : The directory where the workflow is run.
 
 `moduleDir`
-: *New in version `20.04.0`*
+: :::{versionadded} 20.04.0
+  :::
 : The directory where a module script is located for DSL2 modules or the same as `projectDir` for a non-module script.
 
 `nextflow`
@@ -246,7 +250,8 @@ The following variables are implicitly defined in the script global execution sc
 : Dictionary like object holding workflow parameters specifying in the config file or as command line options.
 
 `projectDir`
-: *New in version `20.04.0`*
+: :::{versionadded} 20.04.0
+  :::
 : The directory where the main script is located.
 
 `workDir`
@@ -260,15 +265,19 @@ The following variables are implicitly defined in the script global execution sc
 The following variables are implicitly defined in the Nextflow configuration file:
 
 `baseDir`
-: *Deprecated since version `20.04.0`, use `projectDir` instead*
+: :::{deprecated} 20.04.0
+  Use `projectDir` instead
+  :::
 : The directory where the main workflow script is located.
 
 `launchDir`
-: *New in version `20.04.0`*
+: :::{versionadded} 20.04.0
+  :::
 : The directory where the workflow is run.
 
 `projectDir`
-: *New in version `20.04.0`*
+: :::{versionadded} 20.04.0
+  :::
 : The directory where the main script is located.
 
 ### Process implicit variables
