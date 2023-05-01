@@ -988,4 +988,5 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
         return this
     }
+
 }

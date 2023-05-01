@@ -720,6 +720,7 @@ class ProcessConfigTest extends Specification {
         process.arch == [name: 'linux/x86_64', target: 'zen3']
     }
 
+
     def 'should get default config path' () {
         given:
         ProviderConfig.env.remove('NXF_SCM_FILE')
