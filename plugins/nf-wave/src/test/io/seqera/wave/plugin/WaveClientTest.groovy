@@ -691,9 +691,9 @@ CMD [ "/bin/bash" ]
 
     def 'should create asset with image and platform' () {
         given:
-        def arch = 'linux/arm64'
+        def ARCH = 'linux/arm64'
         def session = Mock(Session) { getConfig() >> [:] }
-        def task = Mock(TaskRun) { getConfig() >> [arch:arch.toString()] }
+        def task = Mock(TaskRun) { getConfig() >> [arch:ARCH.toString()] }
         def IMAGE = 'foo:latest'
         and:
         def client = new WaveClient(session)
@@ -1266,20 +1266,20 @@ CMD [ "/bin/bash" ]
     @Unroll
     def 'should get fusion default url' () {
         given:
-        def config = CONFIG
-        def sess = Mock(Session) {getConfig() >> config }
+        def sess = Mock(Session) {getConfig() >> [:] }
         and:
         def wave = Spy(new WaveClient(sess))
 
         expect:
-        wave.defaultFusionUrl().toURI().toString() == EXPECTED
+        wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
         
         where:
-        CONFIG                                      | EXPECTED
-        [:]                                         | 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
-        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        ARCH                | EXPECTED
+        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
+        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
+        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
     }
 
     def 'should check is local conda file' () {
