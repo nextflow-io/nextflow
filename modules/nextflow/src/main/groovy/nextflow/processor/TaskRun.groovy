@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 import com.google.common.hash.HashCode
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -54,6 +55,7 @@ import nextflow.spack.SpackCache
  */
 
 @Slf4j
+@CompileStatic
 class TaskRun implements Cloneable {
 
     final private ConcurrentHashMap<String,?> cache0 = new ConcurrentHashMap()
@@ -420,7 +422,7 @@ class TaskRun implements Cloneable {
         getInputFiles()
                 .values()
                 .flatten()
-                .collect { it.stageName }
+                .collect { ((FileHolder)it).stageName }
     }
 
     /**
@@ -445,11 +447,11 @@ class TaskRun implements Cloneable {
      *
      */
     List<String> getOutputFilesNames() {
-        cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
+        (List<String>) cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
     }
 
     private List<String> getOutputFilesNames0() {
-        def result = []
+        List<String> result = []
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
             result.addAll( param.getFilePatterns(context, workDir) )
@@ -586,7 +588,7 @@ class TaskRun implements Cloneable {
     }
 
     Path getCondaEnv() {
-        cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
+        (Path) cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
     }
 
     private Path getCondaEnv0() {
@@ -598,7 +600,7 @@ class TaskRun implements Cloneable {
     }
 
     Path getSpackEnv() {
-        cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
+        (Path) cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
     }
 
     private Path getSpackEnv0() {
@@ -612,7 +614,7 @@ class TaskRun implements Cloneable {
     }
 
     protected ContainerInfo containerInfo() {
-        cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
+        (ContainerInfo) cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
     }
 
     private ContainerInfo containerInfo0() {
@@ -816,7 +818,7 @@ class TaskRun implements Cloneable {
         return engine.result
     }
 
-    protected placeholderChar() {
+    protected char placeholderChar() {
         (config.placeholder ?: '!') as char
     }
 

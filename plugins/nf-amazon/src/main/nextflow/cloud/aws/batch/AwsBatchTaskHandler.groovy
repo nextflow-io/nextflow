@@ -50,6 +50,7 @@ import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -71,8 +72,8 @@ import nextflow.util.CacheHelper
 /**
  * Implements a task handler for AWS Batch jobs
  */
-// note: do not declare this class as `CompileStatic` otherwise the proxy is not get invoked
 @Slf4j
+@CompileStatic
 class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail>, FusionAwareTask {
 
     private final Path exitFile
@@ -169,6 +170,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param jobId The Batch job ID
      * @return The associated {@link JobDetail} object or {@code null} if no information is found
      */
+    @CompileDynamic
     protected JobDetail describeJob(String jobId) {
 
         Collection batchIds
@@ -379,7 +381,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param container The Docker container image name which need to be used to run the job
      * @return The Batch Job Definition name associated with the specified container
      */
-    @CompileStatic
     protected String resolveJobDefinition(String container) {
         final int DEFAULT_BACK_OFF_BASE = 3
         final int DEFAULT_BACK_OFF_DELAY = 250
@@ -642,7 +643,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 : classicSubmitCli()
     }
 
-    protected maxSpotAttempts() {
+    protected int maxSpotAttempts() {
         return executor.awsOptions.maxSpotAttempts
     }
 
@@ -744,7 +745,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The list of environment variables to be defined in the Batch job execution context
      */
     protected List<KeyValuePair> getEnvironmentVars() {
-        def vars = []
+        List<KeyValuePair> vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
         if( this.getAwsOptions().retryMode && this.getAwsOptions().retryMode in AwsOptions.VALID_RETRY_MODES)

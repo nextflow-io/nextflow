@@ -54,13 +54,15 @@ class TaskHandlerTest extends Specification {
                 disk: '100 GB',
                 memory: '4 GB'
         ]
-        def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: config  )
-        task.metaClass.getHashLog = { "5d5d7ds" }
-        task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> new Session()
-        task.processor.getName() >> 'TheProcessName'
-        task.processor.getExecutor() >> Mock(Executor)
-        task.processor.getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo', AWS_SECRET: '12345']
+        def task = Spy(new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: config)) {
+            getHashLog() >> { "5d5d7ds" }
+        }
+        task.processor = Mock(TaskProcessor) {
+            getSession() >> new Session()
+            getName() >> 'TheProcessName'
+            getExecutor() >> Mock(Executor)
+            getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo', AWS_SECRET: '12345']
+        }
         task.context = new TaskContext(Mock(Script), [:], 'none')
 
         def handler = [:] as TaskHandler

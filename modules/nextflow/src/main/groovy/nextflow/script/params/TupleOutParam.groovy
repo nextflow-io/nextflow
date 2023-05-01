@@ -36,6 +36,8 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
 
     String getName() { toString() }
 
+    List<BaseOutParam> getInner() { inner }
+
     TupleOutParam clone() {
         final copy = (TupleOutParam)super.clone()
         copy.inner = new ArrayList<>(10)
