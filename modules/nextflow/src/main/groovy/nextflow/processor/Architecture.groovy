@@ -73,7 +73,7 @@ class Architecture {
             return chunks[0]
     }
 
-    protected String validateArchToDockerArch( Map res ) {
+    private String validateArchToDockerArch( Map res ) {
         def value = getArch(res.name as String)
         def name = res.name as String
         if( value == 'x86_64' || value == 'amd64' )
@@ -85,7 +85,7 @@ class Architecture {
         throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
     }
 
-    protected String validateArchToSpackArch( String value, String inputArch ) {
+    private String validateArchToSpackArch( String value, String inputArch ) {
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
         if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
