@@ -58,7 +58,7 @@ class GridTaskArraySubmitter extends TaskArraySubmitter implements SubmitJobAwar
             builder = createProcessBuilder(true)
 
             // -- submit the array job with a retryable strategy
-            final result = safeExecute( () -> processStart(builder, launcherScript) )
+            final result = safeExecute( () -> launchProcess(builder, launcherScript) )
             final jobId = (String)executor.parseJobId(result)
 
             // -- set the job id and status of each task

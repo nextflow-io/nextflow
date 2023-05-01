@@ -143,7 +143,7 @@ class GridTaskHandler extends TaskHandler implements SubmitJobAware {
             // -- forward the job launcher script to the command stdin if required
             final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
-            final result = safeExecute( () -> processStart(builder, stdinScript) )
+            final result = safeExecute( () -> launchProcess(builder, stdinScript) )
             // -- save the JobId in the
             this.jobId = executor.parseJobId(result)
             this.status = SUBMITTED

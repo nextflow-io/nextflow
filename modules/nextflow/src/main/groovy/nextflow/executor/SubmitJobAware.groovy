@@ -66,7 +66,7 @@ trait SubmitJobAware extends FusionAwareTask {
         return builder
     }
 
-    String processStart(ProcessBuilder builder, String pipeScript) {
+    String launchProcess(ProcessBuilder builder, String pipeScript) {
         final process = builder.start()
 
         try {
@@ -80,7 +80,7 @@ trait SubmitJobAware extends FusionAwareTask {
             // -- wait the the process completes
             final result = process.text
             final exitStatus = process.waitFor()
-            final cmd = launchCmd0(builder,pipeScript)
+            final cmd = getLaunchCommand(builder,pipeScript)
 
             if( exitStatus ) {
                 throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, cmd)
@@ -98,7 +98,7 @@ trait SubmitJobAware extends FusionAwareTask {
         }
     }
 
-    private String launchCmd0(ProcessBuilder builder, String pipeScript) {
+    String getLaunchCommand(ProcessBuilder builder, String pipeScript) {
         def result = CmdLineHelper.toLine(builder.command())
         if( pipeScript ) {
             result = "cat << 'LAUNCH_COMMAND_EOF' | ${result}\n"
