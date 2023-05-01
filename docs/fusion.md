@@ -2,9 +2,12 @@
 
 # Fusion file system
 
-*New in version `22.10.0`*
+:::{versionadded} 22.10.0
+:::
 
-*New in version `23.02.0-edge`: support for Google Cloud Storage*
+:::{versionadded} 23.02.0-edge
+Support for Google Cloud Storage.
+:::
 
 ## Introduction
 

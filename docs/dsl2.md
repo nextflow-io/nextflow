@@ -10,15 +10,21 @@ To enable this feature you need to define the following directive at the beginni
 nextflow.enable.dsl=2
 ```
 
-*Changed in version `22.03.0-edge`:* Nextflow uses DSL2 if no version is specified explicitly. You can restore the previous behavior by setting the following environment variable:
+:::{versionchanged} 22.03.0-edge
+Nextflow uses DSL2 if no version is specified explicitly. You can restore the previous behavior by setting the following environment variable:
 
 ```bash
 export NXF_DEFAULT_DSL=1
 ```
+:::
 
-*Changed in version `22.03.0-edge`:* the DSL version specification (either 1 or 2) can also be specified in the Nextflow configuration file using the same notation shown above.
+:::{versionchanged} 22.03.0-edge
+The DSL version specification (either 1 or 2) can also be specified in the Nextflow configuration file using the same notation shown above.
+:::
 
-*Changed in version `22.11.0-edge`:* support for DSL1 was removed from Nextflow.
+:::{versionchanged} 22.11.0-edge
+Support for DSL1 was removed from Nextflow.
+:::
 
 ## Function
 
@@ -356,7 +362,8 @@ Relative paths must begin with the `./` prefix. Also, the `include` statement mu
 
 ### Module directory
 
-*New in version `22.10.0`*
+:::{versionadded} 22.10.0
+:::
 
 The module can be defined as a directory whose name matches the module name and contains a script named `main.nf`. For example:
 
@@ -539,7 +546,8 @@ baseDir
 
 ### Module binaries
 
-*New in version `22.10.0`*
+:::{versionadded} 22.10.0
+:::
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 

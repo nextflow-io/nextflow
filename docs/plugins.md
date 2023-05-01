@@ -45,7 +45,8 @@ To add a new plugin to the Index, create a pull request including the request pl
 
 ## Import operators from plugin
 
-*New in version `22.04.0`*
+:::{versionadded} 22.04.0
+:::
 
 Nextflow supports the inclusion of custom operators from Nextflow plugins.
 
@@ -68,7 +69,8 @@ The prefix `plugin/` must precede the plugin name in the include `from` statemen
 
 ## Import custom functions from plugin
 
-*New in version `22.09.0-edge`*
+:::{versionadded} 22.09.0-edge
+:::
 
 Nextflow supports the inclusion of custom functions from Nextflow plugins.
 

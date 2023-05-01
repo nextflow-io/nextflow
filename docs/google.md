@@ -39,7 +39,8 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 
 ## Cloud Batch
 
-*New in version `22.07.1-edge`*
+:::{versionadded} 22.07.1-edge
+:::
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
@@ -89,9 +90,11 @@ Read the {ref}`Google configuration<config-google>` section to learn more about 
 
 Processes can be defined as usual and by default the `cpus` and `memory` directives are used to find the cheapest machine type available at current location that fits the requested resources. If `memory` is not specified, 1GB of memory is allocated per cpu.
 
-*New in version `23.02.0-edge`:* the `machineType` directive can be a list of patterns separated by comma. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
+:::{versionadded} 23.02.0-edge
+The `machineType` directive can be a list of patterns separated by comma. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
 
 Alternatively it can also be used to define a specific predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or a custom machine type.
+:::
 
 Examples:
 
@@ -163,7 +166,8 @@ process {
 
 ### Fusion file system
 
-*New in version `23.02.0-edge`*
+:::{versionadded} 23.02.0-edge
+:::
 
 The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
 
@@ -200,7 +204,8 @@ The integration with Google Batch is a developer preview feature. Currently the 
 
 ## Cloud Life Sciences
 
-*New in version `20.01.0-edge`*
+:::{versionadded} 20.01.0-edge
+:::
 
 :::{note}
 In versions of Nextflow prior to `21.04.0`, the following variables must be defined in your system environment:

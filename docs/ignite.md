@@ -6,7 +6,9 @@
 This feature is no longer maintained.
 :::
 
-*Changed in version `22.01.0-edge`:* the `ignite` executor must be enabled via the `nf-ignite` plugin.
+:::{versionchanged} 22.01.0-edge
+The `ignite` executor must be enabled via the `nf-ignite` plugin.
+:::
 
 Nextflow can be deployed in a *cluster* mode by using [Apache Ignite](https://ignite.apache.org/), an in-memory data-grid and clustering platform.
 
