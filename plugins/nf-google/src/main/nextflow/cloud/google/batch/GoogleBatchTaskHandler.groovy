@@ -66,6 +66,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private BatchClient client
 
+    private GoogleBatchLauncherSpec launcher
+
     /**
      * Job Id assigned by Nextflow
      */
@@ -120,22 +122,29 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void submit() {
-        /*
-         * create the task runner script
-         */
+    void prepareLauncher() {
         final launcher = createTaskWrapper()
         launcher.build()
 
+        this.launcher = spec0(launcher)
+    }
+
+    @Override
+    void submit() {
         /*
          * create submit request
          */
-        final req = newSubmitRequest(task, spec0(launcher))
+        final req = newSubmitRequest(task, launcher)
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
         this.status = TaskStatus.SUBMITTED
         log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
+    }
+
+    @Override
+    List<String> getSubmitCommand() {
+        launcher.launchCommand()
     }
 
     protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {

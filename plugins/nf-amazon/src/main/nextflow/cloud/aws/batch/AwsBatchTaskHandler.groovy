@@ -305,11 +305,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     void submit() {
         /*
-         * create task wrapper
-         */
-        buildTaskWrapper()
-
-        /*
          * create submit request
          */
         final req = newSubmitRequest(task)
@@ -333,7 +328,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
     }
 
-    protected void buildTaskWrapper() {
+    @Override
+    void prepareLauncher() {
         createTaskWrapper().build()
     }
 
@@ -635,7 +631,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return ['bash','-o','pipefail','-c', cmd.toString()]
     }
 
-    protected List<String> getSubmitCommand() {
+    @Override
+    List<String> getSubmitCommand() {
         // final launcher command
         return fusionEnabled()
                 ? fusionSubmitCli()

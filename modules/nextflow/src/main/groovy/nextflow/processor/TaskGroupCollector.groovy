@@ -16,12 +16,14 @@
 
 package nextflow.processor
 
+import java.nio.file.FileSystems
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
+import nextflow.util.Escape
 
 /**
  * Collect tasks and submit them as task groups to the underlying
@@ -95,15 +97,43 @@ class TaskGroupCollector {
     }
 
     protected void submit0(List<TaskRun> tasks) {
-        // prepare work directory for each child task
-        for( TaskRun task : tasks )
-            executor.createTaskHandler(task).prepareLauncher()
+        // create wrapper script
+        final script = createWrapperScript(tasks)
 
         // create task group
-        final taskGroup = new TaskGroup(tasks, executor)
+        final taskGroup = new TaskGroup(tasks, executor, script)
 
         // submit task group to the underlying executor
         executor.submit(taskGroup)
+    }
+
+    protected String createWrapperScript(List<TaskRun> tasks) {
+        // prepare work directory for each child task
+        final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
+
+        for( TaskHandler handler : handlers )
+            handler.prepareLauncher()
+
+        // get work directory and launch command for each task
+        def workDirs
+        def cmd
+
+        if( executor.workDir.fileSystem == FileSystems.default ) {
+            workDirs = tasks.collect( t -> Escape.path(t.workDir) )
+            cmd = "cd \${task_dir} ; bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG}"
+        }
+        else {
+            workDirs = tasks.collect( t -> Escape.path(t.workDir.toUriString()) )
+            cmd = Escape.cli(handlers.first().getSubmitCommand().toArray() as String[])
+        }
+
+        // create wrapper script
+        """
+        declare -a array=( ${workDirs.join(' ')} )
+        for task_dir in \${array[@]}; do 
+            ${cmd} || true
+        done
+        """.stripIndent().trim()
     }
 
 }

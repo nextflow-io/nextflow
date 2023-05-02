@@ -94,6 +94,11 @@ abstract class TaskHandler {
     void prepareLauncher() {}
 
     /**
+     * Get the command to execute to launcher script.
+     */
+    List<String> getSubmitCommand() { null }
+
+    /**
      * Task status attribute setter.
      *
      * @param status The sask status as defined by {@link TaskStatus}

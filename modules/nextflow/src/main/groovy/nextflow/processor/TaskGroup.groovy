@@ -22,7 +22,6 @@ import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
-import nextflow.util.Escape
 
 /**
  * Models a task group, which executes a set of tasks sequentially
@@ -35,8 +34,9 @@ class TaskGroup extends TaskRun {
 
     List<TaskRun> children
 
-    TaskGroup(List<TaskRun> tasks, Executor executor) {
+    TaskGroup(List<TaskRun> tasks, Executor executor, String script) {
         this.children = tasks
+        this.script = script
 
         // use first task by default
         final first = tasks.first()
@@ -56,15 +56,6 @@ class TaskGroup extends TaskRun {
 
         this.hash = hash
         this.workDir = workDir
-
-        // concatenate task scripts
-        this.script = """
-            declare -a array=( ${tasks.collect( t -> Escape.path(t.workDir) ).join(' ')} )
-            for task_dir in \${array[@]}; do
-                cd \${task_dir}
-                bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG} || true
-            done
-            """.stripIndent().trim()
     }
 
     void finalize() {
