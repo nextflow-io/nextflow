@@ -63,7 +63,7 @@ class TaskArrayCollector {
      *
      * @param handler
      */
-    void submit(TaskRun task) {
+    void collect(TaskRun task) {
         sync.lock()
 
         try {

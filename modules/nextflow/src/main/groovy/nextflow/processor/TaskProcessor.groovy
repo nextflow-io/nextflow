@@ -2210,7 +2210,7 @@ class TaskProcessor {
 
         // add the task to the collection of running tasks
         if( arrayCollector )
-            arrayCollector.submit(task)
+            arrayCollector.collect(task)
         else
             executor.submit(task)
 

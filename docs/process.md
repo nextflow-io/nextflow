@@ -1291,7 +1291,7 @@ Once an array job is submitted, the "child" tasks are executed in the same way:
 - Each task is executed in its own work directory with its own script.
 - Any tasks that fail (and can be retried) will be retried in another array job without interfering with the tasks that succeeded.
 
-The following directives msut be uniform across all tasks in a process that uses array jobs, because these directives are specified once for the entire array job:
+The following directives must be uniform across all tasks in a process that uses array jobs, because these directives are specified once for the entire array job:
 
 - {ref}`process-accelerator`
 - {ref}`process-clusterOptions`
