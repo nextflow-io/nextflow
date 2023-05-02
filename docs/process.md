@@ -1657,11 +1657,24 @@ process short_task {
 }
 ```
 
-A process using task grouping will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task group.
+A process using task grouping will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task group. Once a task group is submitted, each child task is executed sequentially in its own work directory. Any tasks that fail (and can be retried) will be retried in another task group without interfering with the tasks that succeeded.
 
-A task group executes each task sequentially in the same work directory. If any task in the group fails, the entire task group will fail and, if retry-able, be retried as a group.
+The following directives must be uniform across all tasks in a process that uses array jobs, because these directives are specified once for the entire task group:
 
-Any directives must be uniform across all tasks in a process that uses task grouping, because all tasks in a group share the same job submission and wrapper script. Additionally, input and output files must be unique for each task, since these files are staged into the same directory.
+- {ref}`process-accelerator`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-queue`
+- {ref}`process-resourcelabels`
+- {ref}`process-time`
+
+For cloud-based executors like AWS Batch, the following additional directives must be uniform:
+
+- {ref}`process-container`
+- {ref}`process-containerOptions`
 
 (process-label)=
 

@@ -113,7 +113,7 @@ class TaskGroupCollector {
             declare -a array=( ${tasks.collect( t -> Escape.path(t.workDir) ).join(' ')} )
             for task_dir in \${array[@]}; do
                 cd \${task_dir}
-                bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG}
+                bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG} || true
             done
             """.stripIndent().trim()
 
