@@ -19,12 +19,10 @@ package nextflow.executor
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
-import nextflow.util.CmdLineHelper
 /**
  * Submit tasks as an array job for a grid executor.
  *
@@ -61,18 +59,9 @@ class GridTaskArraySubmitter extends TaskArraySubmitter implements SubmitJobAwar
 
     @Override
     Exception submitError(Exception e, String submitCommand) {
-        // update task exit status and message
-        for( TaskHandler handler : array ) {
-            if( e instanceof ProcessNonZeroExitStatusException ) {
-                handler.task.exitStatus = e.getExitStatus()
-                handler.task.stdout = e.getReason()
-                handler.task.script = e.getCommand()
-            }
-            else {
-                handler.task.script = submitCommand
-            }
-            handler.setStatus(TaskStatus.COMPLETED)
-        }
+        for( TaskHandler handler : array )
+            ((GridTaskHandler)handler).submitError(e, submitCommand)
+
         throw new ProcessFailedException("Error submitting array job for execution", e)
     }
 

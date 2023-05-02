@@ -30,7 +30,6 @@ import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
-import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import nextflow.util.Throttle
 /**
