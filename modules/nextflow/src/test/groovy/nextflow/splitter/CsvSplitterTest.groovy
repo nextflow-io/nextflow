@@ -52,6 +52,15 @@ class CsvSplitterTest extends Specification {
         '''
         .stripIndent().trim()
 
+    def typesTextStrict = '''
+        string,integer,boolean,float
+        gamma,1,true,1.1
+        ,test,1,2
+        mu,3,true,3.3
+        pi,4,false,4.4
+        '''
+        .stripIndent().trim()
+
     def testSplitRows() {
 
         when:
@@ -201,6 +210,24 @@ class CsvSplitterTest extends Specification {
         items[1].string == 'eta' && items[1].string instanceof String
         items[1].integer == 2 && items[1].integer instanceof Integer
         items[1].boolean == false && items[1].boolean instanceof Boolean
+        items[1].float == 2.0.toFloat() && items[1].float instanceof Float
+    }
+
+    def testSplitCsvWithTypesMapStrict() {
+
+        when:
+        def items = new CsvSplitter().target(typesTextStrict).options(header:true,typesStrict:['string':'string','integer':'integer','boolean':'boolean','float':'float']).list()
+        then:
+        items.size() == 4
+
+        items[0].string == 'gamma' && items[0].string instanceof String
+        items[0].integer == 1 && items[0].integer instanceof Integer
+        items[0].boolean == true && items[0].boolean instanceof Boolean
+        items[0].float == 1.1.toFloat() && items[0].float instanceof Float
+
+        items[1].string == null // Empty field, returns null
+        items[1].integer == 'test' && items[1].integer instanceof String // Is not an intereg, defaults to String
+        items[1].boolean == '1' && items[1].boolean instanceof String // Is not a boolean, defaults to String
         items[1].float == 2.0.toFloat() && items[1].float instanceof Float
     }
 

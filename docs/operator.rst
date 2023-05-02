@@ -1421,6 +1421,7 @@ limit       Limits the number of retrieved records for each file to the specifie
 decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 types       List providing the type for each csv column or a map with [columnName:columnType].
+typesStrict List or map providing the types of each csv column (same as ``types`` parameter). Checks if the value is of the desired type, otherwise returns a string.
 =========== ============================
 
 
