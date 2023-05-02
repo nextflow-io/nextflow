@@ -87,6 +87,7 @@ class TraceRecord implements Serializable {
             syscw:      'num',      // -- /proc/$pid/io
             read_bytes: 'mem',      // -- /proc/$pid/io
             write_bytes:'mem',      // -- /proc/$pid/io
+            cpu_model:  'str',      // -- /proc/cpuinfo field 'model name'
             attempt:    'num',
             workdir:    'str',
             script:     'str',
@@ -446,6 +447,10 @@ class TraceRecord implements Serializable {
                     // these fields are provided in KB, so they are normalized to bytes
                     def val = parseLong(value, file, name) * 1024
                     this.put(name, val)
+                    break
+
+                case 'cpu_model':
+                    this.put(name, value)
                     break
 
                 default:
