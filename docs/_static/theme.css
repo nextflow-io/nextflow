@@ -25,7 +25,7 @@ div.deprecated, div.versionadded, div.versionchanged {
     border-left: 0.2rem solid;
     border-radius: 0.25rem;
     box-shadow: 0 0.2rem 0.5rem var(--pst-color-shadow),0 0 0.0625rem var(--pst-color-shadow)!important;
-    margin: 1.5625em auto;
+    margin: 1rem auto;
     overflow: hidden;
     padding: 0.2rem 0.6rem;
     page-break-inside: avoid;
@@ -34,8 +34,8 @@ div.deprecated, div.versionadded, div.versionchanged {
     vertical-align: middle;
 }
 div.deprecated>p, div.versionadded>p, div.versionchanged>p {
-    margin-top: 0.6rem;
-    margin-bottom: 0.6rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 div.deprecated>p:first-child::before, div.versionadded>p:first-child::before, div.versionchanged>p:first-child::before {
     font-family: FontAwesome;
@@ -56,6 +56,3 @@ div.versionchanged                       { border-color: #f0b37e; background-col
 div.versionchanged p:first-child::before { color: #f0b37e; }
 div.deprecated                           { border-color: #f29f97; background-color: #fdf3f2; }
 div.deprecated p:first-child::before     { color: #f29f97; }
-span.versionmodified {
-    font-weight: bold;
-}
