@@ -1286,10 +1286,7 @@ Nextflow currently supports array jobs for the following executors:
 
 A process using array jobs will collect tasks and submit each batch as an array job when it is ready. Any "leftover" tasks will be submitted as a partial array job.
 
-Once an array job is submitted, the "child" tasks are executed in the same way:
-
-- Each task is executed in its own work directory with its own script.
-- Any tasks that fail (and can be retried) will be retried in another array job without interfering with the tasks that succeeded.
+Once an array job is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried in another array job without interfering with the tasks that succeeded.
 
 The following directives must be uniform across all tasks in a process that uses array jobs, because these directives are specified once for the entire array job:
 

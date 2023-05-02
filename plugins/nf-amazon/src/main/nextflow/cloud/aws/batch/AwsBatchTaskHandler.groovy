@@ -98,17 +98,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
 
+    protected String getJobId() { jobId }
+
     @Override
     AWSBatch getClient() { executor.client }
 
+    /**
+     * @return An instance of {@link AwsOptions} holding Batch specific settings
+     */
     @Override
     AwsOptions getAwsOptions() { executor.getAwsOptions() }
-
-    protected Path getWrapperFile() { wrapperFile }
-
-    protected Path getLogFile() { logFile }
-
-    protected String getJobId() { jobId }
 
     /**
      * Set the batch collector object. This has not to be confused AWSBatch.
@@ -124,76 +123,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
-    @Override
-    void prepareLauncher() {
-        createTaskWrapper().build()
-    }
-
-    protected BashWrapperBuilder createTaskWrapper() {
-        return fusionEnabled()
-                ? fusionLauncher()
-                : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
-    }
-
-    @Override
-    List<String> getSubmitCommand() {
-        return fusionEnabled()
-                ? fusionSubmitCli()
-                : classicSubmitCli()
-    }
-
-    protected List<String> classicSubmitCli() {
-        final opts = getAwsOptions()
-        final cli = opts.getAwsCli()
-        final debug = opts.debug ? ' --debug' : ''
-        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
-        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
-        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
-        final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
-    }
-
-    @Override
-    void submit() {
-        if( arraySubmitter ) {
-            arraySubmitter.collect(this)
-            return
-        }
-
-        // -- create the submit request
-        final request = newSubmitRequest(task)
-        log.trace "[AWS BATCH] new job request > $request"
-
-        // -- submit the job
-        // use the real client object because this method
-        // should be invoked by the thread pool
-        final response = submitJobRequest(bypassProxy(client), request)
-        this.jobId = response.jobId
-        this.queueName = request.getJobQueue()
-        this.status = TaskStatus.SUBMITTED
-        log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
-    }
-
-    void setJobId(String jobId) {
-        this.jobId = jobId
-    }
-
-    void setQueueName(String queueName) {
-        this.queueName = queueName
-    }
-
-    @Override
-    boolean checkIfRunning() {
-        if( !jobId || !isSubmitted() )
-            return false
-        final job = describeJob(jobId)
-        final result = job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
-        if( result )
-            this.status = TaskStatus.RUNNING
-        // fetch the task arn
-        if( !taskArn )
-            taskArn = job?.getContainer()?.getTaskArn()
-        return result
+    private String jobIdsToString(Collection items) {
+        final MAX=10
+        final sz = items.size()
+        items.size()<=MAX ? items.join(', ').toString() : items.take(MAX).join(', ').toString() + ", ... other ${sz-MAX} omitted"
     }
 
     /**
@@ -243,14 +176,38 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    private String jobIdsToString(Collection items) {
-        final MAX = 10
-        final sz = items.size()
-        items.size() <= MAX
-            ? items.join(', ').toString()
-            : items.take(MAX).join(', ').toString() + ", ... other ${sz - MAX} omitted"
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean checkIfRunning() {
+        if( !jobId || !isSubmitted() )
+            return false
+        final job = describeJob(jobId)
+        final result = job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
+        if( result )
+            this.status = TaskStatus.RUNNING
+        // fetch the task arn
+        if( !taskArn )
+            taskArn = job?.getContainer()?.getTaskArn()
+        return result
     }
 
+    protected String errReason(JobDetail job){
+        if(!job)
+            return "(unknown)"
+        final result = new ArrayList(2)
+        if( job.statusReason )
+            result.add(job.statusReason)
+        final AttemptContainerDetail container = job.attempts ? job.attempts[-1].container : null
+        if( container?.reason )
+            result.add(container.reason)
+        return result.join(' - ')
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     boolean checkIfCompleted() {
         assert jobId
@@ -289,18 +246,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
-    protected String errReason(JobDetail job){
-        if(!job)
-            return "(unknown)"
-        final result = new ArrayList(2)
-        if( job.statusReason )
-            result.add(job.statusReason)
-        final AttemptContainerDetail container = job.attempts ? job.attempts[-1].container : null
-        if( container?.reason )
-            result.add(container.reason)
-        return result.join(' - ')
-    }
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void kill() {
         assert jobId
@@ -319,12 +267,81 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     @Override
-    TraceRecord getTraceRecord() {
-        def record = super.getTraceRecord()
-        record.put('native_id', jobId)
-        record.machineInfo = getMachineInfo()
-        return record
+    void prepareLauncher() {
+        createTaskWrapper().build()
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    void submit() {
+        if( arraySubmitter ) {
+            arraySubmitter.collect(this)
+            return
+        }
+
+        /*
+         * create submit request
+         */
+        final req = newSubmitRequest(task)
+        log.trace "[AWS BATCH] new job request > $req"
+
+        /*
+         * submit the task execution
+         */
+        // note use the real client object because this method
+        // is supposed to be invoked by the thread pool
+        final resp = submitJobRequest(bypassProxy(client), req)
+        this.jobId = resp.jobId
+        this.status = TaskStatus.SUBMITTED
+        this.queueName = req.getJobQueue()
+        log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
+    }
+
+    void setJobId(String jobId) {
+        this.jobId = jobId
+    }
+
+    void setQueueName(String queueName) {
+        this.queueName = queueName
+    }
+
+    protected BashWrapperBuilder createTaskWrapper() {
+        return fusionEnabled()
+                ? fusionLauncher()
+                : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
+    }
+
+    protected List<String> classicSubmitCli() {
+        // the cmd list to launch it
+        final opts = getAwsOptions()
+        final cli = opts.getAwsCli()
+        final debug = opts.debug ? ' --debug' : ''
+        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
+        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
+        final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        return ['bash','-o','pipefail','-c', cmd.toString()]
+    }
+
+    @Override
+    List<String> getSubmitCommand() {
+        // final launcher command
+        return fusionEnabled()
+                ? fusionSubmitCli()
+                : classicSubmitCli()
+    }
+
+    /**
+     * @return The launcher script file {@link Path}
+     */
+    protected Path getWrapperFile() { wrapperFile }
+
+    /**
+     * @return The launcher log file {@link Path}
+     */
+    protected Path getLogFile() { logFile }
 
     protected CloudMachineInfo getMachineInfo() {
         if( machineInfo )
@@ -334,6 +351,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             log.trace "[AWS BATCH] jobId=$jobId; queue=$queueName; task=$taskArn => machineInfo=$machineInfo"
         }
         return machineInfo
+    }
+
+    @Override
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        result.put('native_id', jobId)
+        result.machineInfo = getMachineInfo()
+        return result
     }
 
 }

@@ -42,8 +42,6 @@ class TaskArraySubmitter {
             handler.arraySubmitter = this
     }
 
-    List<TaskHandler> getArray() { array }
-
     /**
      * Mark a task as ready to be submitted.
      *

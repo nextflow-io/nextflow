@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory
  * Implementation of job submission for grid executors.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
 trait SubmitJobAware extends FusionAwareTask {

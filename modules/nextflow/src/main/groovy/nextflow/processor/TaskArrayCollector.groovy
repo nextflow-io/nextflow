@@ -61,7 +61,7 @@ class TaskArrayCollector {
      * Add a task to the current array, and submit the array when it
      * reaches the desired size.
      *
-     * @param handler
+     * @param task
      */
     void collect(TaskRun task) {
         sync.lock()
@@ -76,10 +76,10 @@ class TaskArrayCollector {
             // create task handler
             final handler = executor.createTaskHandler(task)
 
-            // add task to the array array
+            // add task to the array
             array << handler
 
-            // submit array job when the array is ready
+            // submit array job when it is ready
             if( array.size() == arraySize ) {
                 submit0(array)
                 array = new ArrayList<>(arraySize)
@@ -92,8 +92,6 @@ class TaskArrayCollector {
 
     /**
      * Close the collector, submitting any remaining tasks as a partial array job.
-     *
-     * @param process
      */
     void close() {
         sync.lock()

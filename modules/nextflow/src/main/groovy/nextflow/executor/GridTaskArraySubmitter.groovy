@@ -46,26 +46,6 @@ class GridTaskArraySubmitter extends TaskArraySubmitter implements SubmitJobAwar
     TaskRun getTask() { array.first().getTask() }
 
     @Override
-    void submit() {
-        final jobId = submitJob(true)
-
-        array.eachWithIndex { handler, i ->
-            ((GridTaskHandler)handler).setJobId(executor.getArrayTaskId(jobId, i))
-            handler.setStatus(TaskStatus.SUBMITTED)
-        }
-
-        log.debug "[${executor.name.toUpperCase()}] submitted array job > jobId: ${jobId}"
-    }
-
-    @Override
-    Exception submitError(Exception e, String submitCommand) {
-        for( TaskHandler handler : array )
-            ((GridTaskHandler)handler).submitError(e, submitCommand)
-
-        throw new ProcessFailedException("Error submitting array job for execution", e)
-    }
-
-    @Override
     String stdinLauncherScript() {
         def arrayDirective = executor.getArrayDirective(array.size(), task)
         def directives = executor.getDirectives(task, arrayDirective)
@@ -97,6 +77,26 @@ class GridTaskArraySubmitter extends TaskArraySubmitter implements SubmitJobAwar
             << "${cmd}\n"
 
         return builder.toString()
+    }
+
+    @Override
+    void submit() {
+        final jobId = submitJob(true)
+
+        array.eachWithIndex { handler, i ->
+            ((GridTaskHandler)handler).setJobId(executor.getArrayTaskId(jobId, i))
+            handler.setStatus(TaskStatus.SUBMITTED)
+        }
+
+        log.debug "[${executor.name.toUpperCase()}] submitted array job > jobId: ${jobId}"
+    }
+
+    @Override
+    Exception submitError(Exception e, String submitCommand) {
+        for( TaskHandler handler : array )
+            ((GridTaskHandler)handler).submitError(e, submitCommand)
+
+        throw new ProcessFailedException("Error submitting array job for execution", e)
     }
 
 }
