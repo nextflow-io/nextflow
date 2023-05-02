@@ -1397,10 +1397,10 @@ Available options:
 : Removes leading and trailing blanks from values (default: `false`)
 
 `types`
-: List providing the type for each csv column or a map with [columnName:columnType].
+: List of column types, or map of column names to column types. If a map is provided, columns that aren't specified in the map will remain as a string.
 
-`typesStrict`
-: List or map providing the types of each csv column (same as ``types`` parameter). Checks if the value is of the desired type, otherwise returns a string.
+`strict`
+: Used only with the `types` option. When `true`, checks if the value is of the desired type, otherwise returns a string.
 
 ## splitFasta
 

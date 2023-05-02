@@ -216,7 +216,7 @@ class CsvSplitterTest extends Specification {
     def testSplitCsvWithTypesMapStrict() {
 
         when:
-        def items = new CsvSplitter().target(typesTextStrict).options(header:true,typesStrict:['string':'string','integer':'integer','boolean':'boolean','float':'float']).list()
+        def items = new CsvSplitter().target(typesTextStrict).options(header:true,types:['string':'string','integer':'integer','boolean':'boolean','float':'float'],strict:true).list()
         then:
         items.size() == 4
 
