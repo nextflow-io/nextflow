@@ -42,6 +42,7 @@ import com.amazonaws.services.batch.model.ResourceRequirement
 import com.amazonaws.services.batch.model.ResourceType
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
+import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.Volume
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -523,6 +524,20 @@ trait SubmitJobAware extends FusionAwareTask {
             if( e.statusCode >= 500 )
                 // raise a process exception so that nextflow can try to recover it
                 throw new ProcessSubmitException("Failed to register job definition: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
+            else
+                // status code < 500 are not expected to be recoverable, just throw it again
+                throw e
+        }
+    }
+
+    static SubmitJobResult submitJobRequest(AWSBatch client, SubmitJobRequest request) {
+        try {
+            return client.submitJob(request)
+        }
+        catch( AWSBatchException e ) {
+            if( e.statusCode >= 500 )
+                // raise a process exception so that nextflow can try to recover it
+                throw new ProcessSubmitException("Failed to submit job: ${request.jobName} - Reason: ${e.errorCode}", e)
             else
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e

@@ -49,7 +49,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     @Override
-    protected List<String> getDirectives(TaskRun task, List<String> result) {
+    List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '-J' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
@@ -194,11 +194,8 @@ class SlurmExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    String getArrayHeaders(int arraySize, TaskRun task) {
-        final directives = getDirectives(task)
-            << '--array' << "0-${arraySize - 1}"
-
-        getHeaders(directives)
+    List<String> getArrayDirective(int arraySize, TaskRun task) {
+        ['--array', "0-${arraySize - 1}"]
     }
 
     @Override

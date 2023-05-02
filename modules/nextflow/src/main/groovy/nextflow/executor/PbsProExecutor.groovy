@@ -41,7 +41,7 @@ class PbsProExecutor extends PbsExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     @Override
-    protected List<String> getDirectives(TaskRun task, List<String> result ) {
+    List<String> getDirectives(TaskRun task, List<String> result ) {
         assert result !=null
         
         // when multiple competing directives are provided, only the first one will take effect

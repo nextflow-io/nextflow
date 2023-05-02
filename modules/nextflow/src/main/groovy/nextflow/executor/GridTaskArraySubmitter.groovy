@@ -48,98 +48,66 @@ class GridTaskArraySubmitter extends TaskArraySubmitter implements SubmitJobAwar
     TaskRun getTask() { array.first().getTask() }
 
     @Override
-    protected void submit() {
-        ProcessBuilder builder = null
-        try {
-            // -- create the array job script
-            final launcherScript = getLauncherScript()
+    void submit() {
+        final jobId = submitJob(true)
 
-            // -- create the submit command
-            builder = createProcessBuilder(true)
-
-            // -- submit the array job with a retryable strategy
-            final result = safeExecute( () -> launchProcess(builder, launcherScript) )
-            final jobId = (String)executor.parseJobId(result)
-
-            // -- set the job id and status of each task
-            this.setJobId(jobId)
-            this.setStatus(TaskStatus.SUBMITTED)
-
-            log.debug "[${executor.name.toUpperCase()}] submitted array job > jobId: ${jobId}"
-        }
-        catch( Exception e ) {
-            // update task exit status and message
-            if( e instanceof ProcessNonZeroExitStatusException ) {
-                for( TaskHandler handler : array ) {
-                    handler.task.exitStatus = e.getExitStatus()
-                    handler.task.stdout = e.getReason()
-                    handler.task.script = e.getCommand()
-                }
-            }
-            else {
-                for( TaskHandler handler : array )
-                    handler.task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
-            }
-            this.setStatus(TaskStatus.COMPLETED)
-            throw new ProcessFailedException("Error submitting array job for execution", e)
-        }
-    }
-
-    protected String getLauncherScript() {
-        return fusionEnabled()
-            ? fusionLauncherScript()
-            : classicLauncherScript()
-    }
-
-    protected String fusionLauncherScript() {
-        final remoteLog = task.workDir.resolve(TaskRun.CMD_LOG).toString()
-        final fusionWorkDir = FusionHelper.toContainerMount(task.workDir).toString()
-        final arrayHeaders = executor.getArrayHeaders(array.size(), getTask())
-        final arrayIndexName = executor.getArrayIndexName()
-        final workDirs = array
-            .collect { handler -> FusionHelper.toContainerMount(handler.task.workDir) }
-            .join(' ')
-
-        final cmd = FusionHelper.runWithContainer(
-            fusionLauncher(),
-            task.getContainerConfig(),
-            task.getContainer(),
-            fusionSubmitCli() )
-
-        final builder = new StringBuilder()
-            << '#!/bin/bash\n'
-            << arrayHeaders.replace(remoteLog, '/dev/null')
-            << "declare -a array=( ${workDirs} )\n"
-            << cmd.replace(fusionWorkDir, "\${array[\$${arrayIndexName}]}")
-
-        return builder.toString()
-    }
-
-    protected String classicLauncherScript() {
-        final arrayHeaders = executor.getArrayHeaders(array.size(), getTask())
-        final arrayIndexName = executor.getArrayIndexName()
-        final workDirs = array
-            .collect { handler -> handler.task.workDir }
-            .join(' ')
-
-        final builder = new StringBuilder()
-            << '#!/bin/bash\n'
-            << arrayHeaders
-            << "declare -a array=( ${workDirs} )\n"
-            << "bash \${array[\$${arrayIndexName}]}/${TaskRun.CMD_RUN}\n"
-
-        return builder.toString()
-    }
- 
-    protected void setJobId(String jobId) {
         array.eachWithIndex { handler, i ->
             ((GridTaskHandler)handler).setJobId(executor.getArrayTaskId(jobId, i))
+            handler.setStatus(TaskStatus.SUBMITTED)
         }
+
+        log.debug "[${executor.name.toUpperCase()}] submitted array job > jobId: ${jobId}"
     }
 
-    protected void setStatus(TaskStatus status) {
-        for( TaskHandler handler : array )
-            handler.setStatus(status)
+    @Override
+    Exception submitError(Exception e, String submitCommand) {
+        // update task exit status and message
+        for( TaskHandler handler : array ) {
+            if( e instanceof ProcessNonZeroExitStatusException ) {
+                handler.task.exitStatus = e.getExitStatus()
+                handler.task.stdout = e.getReason()
+                handler.task.script = e.getCommand()
+            }
+            else {
+                handler.task.script = submitCommand
+            }
+            handler.setStatus(TaskStatus.COMPLETED)
+        }
+        throw new ProcessFailedException("Error submitting array job for execution", e)
+    }
+
+    @Override
+    String stdinLauncherScript() {
+        def arrayDirective = executor.getArrayDirective(array.size(), task)
+        def directives = executor.getDirectives(task, arrayDirective)
+        def headers = executor.getHeaders(directives)
+        def arrayIndexName = executor.getArrayIndexName()
+
+        def workDirs
+        def cmd
+
+        if( fusionEnabled() ) {
+            final remoteLog = task.workDir.resolve(TaskRun.CMD_LOG).toString()
+            headers = headers.replaceAll(remoteLog, '/dev/null')
+
+            workDirs = array.collect { h -> FusionHelper.toContainerMount(h.task.workDir).toString() }
+            cmd = FusionHelper
+                .runWithContainer(fusionLauncher(), task.getContainerConfig(), task.getContainer(), fusionSubmitCli())
+                .replaceAll(workDirs.first(), '\\$task_dir')
+        }
+        else {
+            workDirs = array.collect { h -> h.task.workDir.toString() }
+            cmd = "bash \$task_dir/${TaskRun.CMD_RUN}"
+        }
+
+        final builder = new StringBuilder()
+            << '#!/bin/bash\n'
+            << headers
+            << "declare -a array=( ${workDirs.join(' ')} )\n"
+            << "task_dir=\${array[\$${arrayIndexName}]}\n"
+            << "${cmd}\n"
+
+        return builder.toString()
     }
 
 }

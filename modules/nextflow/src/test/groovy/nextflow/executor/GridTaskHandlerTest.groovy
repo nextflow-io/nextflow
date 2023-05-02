@@ -66,7 +66,7 @@ class GridTaskHandlerTest extends Specification {
         exec.pipeLauncherScript() >> false
         and:
         handler.fusionEnabled() >> false
-        handler.createProcessBuilder(false) >> GroovyMock(ProcessBuilder)
+        handler.createProcessBuilder(false) >> new ProcessBuilder().command([])
         and:
         thrown(ProcessFailedException)
         and:

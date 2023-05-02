@@ -103,7 +103,8 @@ class GridTaskHandler extends TaskHandler implements SubmitJobAware {
             : executor.createBashWrapperBuilder(task)
     }
 
-    protected String stdinLauncherScript() {
+    @Override
+    String stdinLauncherScript() {
         return fusionEnabled() ? fusionStdinWrapper() : wrapperFile.text
     }
 
@@ -136,34 +137,25 @@ class GridTaskHandler extends TaskHandler implements SubmitJobAware {
             return
         }
 
-        ProcessBuilder builder = null
-        try {
-            // -- start the execution and notify the event to the monitor
-            builder = createProcessBuilder(executor.pipeLauncherScript())
-            // -- forward the job launcher script to the command stdin if required
-            final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
-            // -- execute with a re-triable strategy
-            final result = safeExecute( () -> launchProcess(builder, stdinScript) )
-            // -- save the JobId in the
-            this.jobId = executor.parseJobId(result)
-            this.status = SUBMITTED
-            log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
+        this.jobId = submitJob(executor.pipeLauncherScript())
+        this.status = SUBMITTED
 
-        }
-        catch( Exception e ) {
-            // update task exit status and message
-            if( e instanceof ProcessNonZeroExitStatusException ) {
-                task.exitStatus = e.getExitStatus()
-                task.stdout = e.getReason()
-                task.script = e.getCommand()
-            }
-            else {
-                task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
-            }
-            status = COMPLETED
-            throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
-        }
+        log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
+    }
 
+    @Override
+    Exception submitError(Exception e, String submitCommand) {
+        // update task exit status and message
+        if( e instanceof ProcessNonZeroExitStatusException ) {
+            task.exitStatus = e.getExitStatus()
+            task.stdout = e.getReason()
+            task.script = e.getCommand()
+        }
+        else {
+            task.script = submitCommand
+        }
+        this.status = COMPLETED
+        return new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
     }
 
     void setJobId(String jobId) {

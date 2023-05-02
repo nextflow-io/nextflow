@@ -49,6 +49,30 @@ trait SubmitJobAware extends FusionAwareTask {
 
     abstract TaskRun getTask()
 
+    String submitJob(boolean pipeLauncherScript) {
+        ProcessBuilder builder = null
+        try {
+            // -- create the stdin launcher script
+            final stdinScript = pipeLauncherScript ? stdinLauncherScript() : null
+
+            // -- create the submit command
+            builder = createProcessBuilder(pipeLauncherScript)
+
+            // -- submit the job with a retryable strategy
+            final result = safeExecute( () -> launchProcess(builder, stdinScript) )
+
+            return (String)executor.parseJobId(result)
+        }
+        catch( Exception e ) {
+            final submitCommand = builder ? CmdLineHelper.toLine(builder.command()) : null
+            throw submitError(e, submitCommand)
+        }
+    }
+
+    abstract String stdinLauncherScript()
+
+    abstract Exception submitError(Exception e, String submitCommand)
+
     ProcessBuilder createProcessBuilder(boolean pipeLauncherScript) {
 
         // -- log the submit command line

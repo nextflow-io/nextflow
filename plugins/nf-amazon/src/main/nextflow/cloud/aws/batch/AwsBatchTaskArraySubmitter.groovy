@@ -20,13 +20,9 @@ import static nextflow.fusion.FusionConfig.FUSION_PATH
 import static nextflow.fusion.FusionHelper.*
 
 import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.batch.model.ArrayProperties
-import com.amazonaws.services.batch.model.SubmitJobRequest
-import com.amazonaws.services.batch.model.SubmitJobResult
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.exception.ProcessSubmitException
 import nextflow.executor.TaskArraySubmitter
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -64,47 +60,32 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
 
     @Override
     List<String> getSubmitCommand() {
-        return fusionEnabled()
-                ? fusionSubmitCli()
-                : classicSubmitCli()
-    }
-
-    @Override
-    List<String> fusionSubmitCli() {
-        final workDirs = array
-            .collect { handler -> toContainerMount(handler.task.workDir) }
-            .join(' ')
+        // create wrapper script
         final arrayIndexName = executor.getArrayIndexName()
+        final workDirs = fusionEnabled()
+            ? array.collect { h -> toContainerMount(h.task.workDir).toString() }
+            : array.collect { h -> h.task.workDir.toUriString() }
 
-        final cmd = """
-            declare -a array=( ${workDirs} )
-            bash \${array[\$${arrayIndexName}]}/${TaskRun.CMD_RUN}
-            """.stripIndent().trim()
+        def cmd = ((AwsBatchTaskHandler)array.first())
+            .getSubmitCommand()
+            .last()
+            .replaceAll(workDirs.first(), '\\$task_dir')
 
-        return List.of(FUSION_PATH, 'bash', '-c', cmd.toString())
-    }
+        if( fusionEnabled() )
+            cmd = "bash ${cmd}"
 
-    protected List<String> classicSubmitCli() {
-        final workDirs = array
-            .collect { handler -> handler.task.workDir.toUriString() }
-            .join(' ')
-        final arrayIndexName = executor.getArrayIndexName()
-
-        final opts = getAwsOptions()
-        final cli = opts.getAwsCli()
-        final debug = opts.debug ? ' --debug' : ''
-        final sse = opts.storageEncryption ? " --sse ${opts.storageEncryption}" : ''
-        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id ${opts.storageKmsKeyId}" : ''
-        final aws = "${cli} s3 cp --only-show-errors${debug}${sse}${kms}"
-
-        final cmd = """
-            declare -a array=( ${workDirs} )
+        cmd = """
+            declare -a array=( ${workDirs.join(' ')} )
             task_dir=\${array[\$${arrayIndexName}]}
-            trap "{ ret=\$?; ${aws} ${TaskRun.CMD_LOG} \$task_dir/${TaskRun.CMD_LOG}||true; exit \$ret; }" EXIT
-            ${aws} \$task_dir/${TaskRun.CMD_RUN} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}
+            ${cmd}
             """.stripIndent().trim()
 
-        return List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
+        // create command line
+        final cli = ['bash', '-o', 'pipefail', '-c', cmd.toString()]
+        if( fusionEnabled() )
+            cli.add(0, FUSION_PATH)
+
+        return cli
     }
 
     @Override
@@ -114,7 +95,7 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
             .withArrayProperties(new ArrayProperties().withSize(array.size()))
 
         // -- submit the array job
-        final response = submitJobRequest0(bypassProxy(client), request)
+        final response = submitJobRequest(bypassProxy(client), request)
         final jobId = response.jobId
 
         // -- set the job id, queue, and status of each task
@@ -125,20 +106,6 @@ class AwsBatchTaskArraySubmitter extends TaskArraySubmitter implements SubmitJob
         }
 
         log.debug "[AWS BATCH] submitted array job > jobId: ${jobId}"
-    }
-
-    static private SubmitJobResult submitJobRequest0(AWSBatch client, SubmitJobRequest request) {
-        try {
-            return client.submitJob(request)
-        }
-        catch( AWSBatchException e ) {
-            if( e.statusCode >= 500 )
-                // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed to submit job: ${request.jobName} - Reason: ${e.errorCode}", e)
-            else
-                // status code < 500 are not expected to be recoverable, just throw it again
-                throw e
-        }
     }
 
 }

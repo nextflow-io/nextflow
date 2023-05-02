@@ -19,19 +19,15 @@ package nextflow.cloud.aws.batch
 import java.nio.file.Path
 
 import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.batch.model.AttemptContainerDetail
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
 import com.amazonaws.services.batch.model.JobDetail
-import com.amazonaws.services.batch.model.SubmitJobRequest
-import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
-import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.BatchContext
@@ -154,7 +150,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
         final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return ['bash','-o','pipefail','-c', cmd.toString()]
+        return List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
     }
 
     @Override
@@ -171,25 +167,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // -- submit the job
         // use the real client object because this method
         // should be invoked by the thread pool
-        final response = submitJobRequest0(bypassProxy(client), request)
+        final response = submitJobRequest(bypassProxy(client), request)
         this.jobId = response.jobId
         this.queueName = request.getJobQueue()
         this.status = TaskStatus.SUBMITTED
         log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
-    }
-
-    static private SubmitJobResult submitJobRequest0(AWSBatch client, SubmitJobRequest request) {
-        try {
-            return client.submitJob(request)
-        }
-        catch( AWSBatchException e ) {
-            if( e.statusCode >= 500 )
-                // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed to submit job: ${request.jobName} - Reason: ${e.errorCode}", e)
-            else
-                // status code < 500 are not expected to be recoverable, just throw it again
-                throw e
-        }
     }
 
     void setJobId(String jobId) {

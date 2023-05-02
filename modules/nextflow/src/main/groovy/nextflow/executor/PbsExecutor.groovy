@@ -38,7 +38,7 @@ class PbsExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    protected List<String> getDirectives( TaskRun task, List<String> result ) {
+    List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
         result << '-N' << getJobNameFor(task)
@@ -170,11 +170,8 @@ class PbsExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    String getArrayHeaders(int arraySize, TaskRun task) {
-        final directives = getDirectives(task)
-            << '-J' << "0-${arraySize - 1}"
-
-        getHeaders(directives)
+    List<String> getArrayDirective(int arraySize, TaskRun task) {
+        ['-J', "0-${arraySize - 1}"]
     }
 
     @Override

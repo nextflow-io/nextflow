@@ -38,7 +38,7 @@ class OarExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    protected List<String> getDirectives(TaskRun task, List<String> result) {
+    List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '-d' << quote(task.workDir)
         result << '-n' << getJobNameFor(task)

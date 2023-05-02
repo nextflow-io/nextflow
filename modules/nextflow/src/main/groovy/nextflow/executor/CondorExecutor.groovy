@@ -49,7 +49,7 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected List<String> getDirectives(TaskRun task, List<String> result) {
+    List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << "universe = vanilla"
         result << "executable = ${TaskRun.CMD_RUN}"

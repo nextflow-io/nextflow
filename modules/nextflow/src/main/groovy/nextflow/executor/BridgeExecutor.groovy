@@ -44,7 +44,7 @@ class BridgeExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    protected List<String> getDirectives(TaskRun task, List<String> result) {
+    List<String> getDirectives(TaskRun task, List<String> result) {
 
         String job_name = ""
         // parenthesis are not compatible with bridge submission commands

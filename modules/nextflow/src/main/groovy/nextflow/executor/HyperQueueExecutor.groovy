@@ -56,7 +56,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected List<String> getDirectives(TaskRun task, List<String> result) {
+    List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '--name' << getJobNameFor(task)
         result << '--log' << quote(task.workDir.resolve(TaskRun.CMD_LOG))

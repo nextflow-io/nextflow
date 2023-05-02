@@ -136,7 +136,7 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
      * @param initial An initial list of directives
      * @return A list of directives for this task used for the job submission
      */
-    abstract protected List<String> getDirectives(TaskRun task, List<String> initial)
+    abstract List<String> getDirectives(TaskRun task, List<String> initial)
 
     /**
      * Given a task returns a *clean* name used to submit the job to the grid engine.
@@ -420,7 +420,7 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
         new GridTaskArraySubmitter(array, this)
     }
 
-    String getArrayHeaders(int arraySize, TaskRun task) {
+    List<String> getArrayDirective(int arraySize, TaskRun task) {
         throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
     }
 }

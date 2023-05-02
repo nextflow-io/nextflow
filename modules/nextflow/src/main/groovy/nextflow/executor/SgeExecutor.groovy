@@ -33,7 +33,7 @@ class SgeExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    protected List<String> getDirectives(TaskRun task, List<String> result) {
+    List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -183,11 +183,8 @@ class SgeExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    String getArrayHeaders(int arraySize, TaskRun task) {
-        final directives = getDirectives(task)
-            << '-t' << "0-${arraySize - 1}"
-
-        getHeaders(directives)
+    List<String> getArrayDirective(int arraySize, TaskRun task) {
+        ['-t', "0-${arraySize - 1}"]
     }
 
     @Override
