@@ -891,10 +891,6 @@ The following settings are available:
 `k8s.storageSubPath`
 : The path in the persistent volume to be mounted (default: `/`).
 
-`k8s.volumeClaims`
-: :::{deprecated} x
-  :::
-
 `k8s.workDir`
 : Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default: `<user-dir>/work`).
 
@@ -1539,11 +1535,6 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_EXECUTOR`
 : Defines the default process executor e.g. `sge`
-
-`NXF_GRAB`
-: :::{deprecated} x
-  :::
-: Provides extra runtime dependencies downloaded from a Maven repository service
 
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).

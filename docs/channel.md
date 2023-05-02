@@ -80,7 +80,7 @@ See also: {ref}`operator-ifempty`.
 
 ### from
 
-:::{deprecated} x
+:::{deprecated} 19.09.0-edge
 Use [of](#of) or [fromList](#fromlist) instead.
 :::
 

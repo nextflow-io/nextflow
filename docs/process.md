@@ -637,7 +637,7 @@ hello
 
 ### Input type `set`
 
-:::{deprecated} x
+:::{deprecated} 19.08.1-edge
 Use `tuple` instead.
 :::
 
@@ -1053,7 +1053,7 @@ workflow {
 
 ### Output type `set`
 
-:::{deprecated} x
+:::{deprecated} 19.08.1-edge
 Use `tuple` instead.
 :::
 
@@ -1467,7 +1467,7 @@ See also: [cpus](#cpus), [memory](#memory) [time](#time), [queue](#queue) and [D
 
 ### echo
 
-:::{deprecated} `22.04.0`
+:::{deprecated} 22.04.0
 Use `debug` instead
 :::
 
