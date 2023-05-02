@@ -2243,15 +2243,10 @@ class TaskProcessor {
     @PackageScope
     final finalizeTask( TaskRun task ) {
         // finalize each child if task is a group
-        if( task.children != null ) {
-            for( TaskRun t : task.children ) {
-                // TODO: move to TaskGroup subclass
-                t.exitStatus = task.exitStatus
-                t.error = task.error
-                t.stdout = t.workDir.resolve(TaskRun.CMD_OUTFILE)
-                t.stderr = t.workDir.resolve(TaskRun.CMD_ERRFILE)
+        if( task instanceof TaskGroup ) {
+            task.finalize()
+            for( TaskRun t : task.children )
                 finalizeTask(t)
-            }
             return
         }
 

@@ -16,16 +16,12 @@
 
 package nextflow.processor
 
-import java.nio.file.Files
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
-import nextflow.file.FileHelper
-import nextflow.util.CacheHelper
-import nextflow.util.Escape
 
 /**
  * Collect tasks and submit them as task groups to the underlying
@@ -99,46 +95,12 @@ class TaskGroupCollector {
     }
 
     protected void submit0(List<TaskRun> tasks) {
-        // use config from first task by default
-        final first = tasks.first()
-
-        // compute hash and work directory
-        final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
-        final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
-
-        Files.createDirectories(workDir)
-
-        // concatenate task scripts
-        final script = """
-            declare -a array=( ${tasks.collect( t -> Escape.path(t.workDir) ).join(' ')} )
-            for task_dir in \${array[@]}; do
-                cd \${task_dir}
-                bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG} || true
-            done
-            """.stripIndent().trim()
-
-        // create task group
-        final taskGroup = new TaskRun(
-            id: first.id,
-            index: first.index,
-            processor: first.processor,
-            type: first.type,
-            config: first.config,
-            context: first.context,
-            code: first.code,
-            body: first.body,
-            source: first.source,
-            template: first.template,
-            templateVars: first.templateVars,
-            hash: hash,
-            workDir: workDir,
-            script: script,
-            children: tasks
-        )
-
         // prepare work directory for each child task
         for( TaskRun task : tasks )
             executor.createTaskHandler(task).prepareLauncher()
+
+        // create task group
+        final taskGroup = new TaskGroup(tasks, executor)
 
         // submit task group to the underlying executor
         executor.submit(taskGroup)
