@@ -16,6 +16,8 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
+
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 
@@ -28,23 +30,25 @@ interface TaskArrayAware {
 
     String getName()
 
+    Path getWorkDir()
+
     void submit( TaskRun task )
 
     TaskHandler createTaskHandler(TaskRun task)
 
     /**
-     * Create a submitter for an array job.
-     *
-     * @param array
+     * Get the environment variable name that provides the array index of a task.
      */
-    default TaskArraySubmitter createTaskArraySubmitter(List<TaskHandler> array) {
-        new TaskArraySubmitter(array)
-    }
-
     default String getArrayIndexName() {
         throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
     }
 
+    /**
+     * Get the job ID of an array task based on its index in the array.
+     *
+     * @param jobId
+     * @param index
+     */
     default String getArrayTaskId(String jobId, int index) {
         throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
     }

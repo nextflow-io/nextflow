@@ -49,7 +49,7 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << "universe = vanilla"
         result << "executable = ${TaskRun.CMD_RUN}"
@@ -88,8 +88,8 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
-        List.of('condor_submit', '--terse', CMD_CONDOR)
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
+        return ['condor_submit', '--terse', CMD_CONDOR]
     }
 
     @Override

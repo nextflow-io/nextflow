@@ -18,6 +18,7 @@ package nextflow.executor
 import java.nio.file.Path
 
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -33,7 +34,12 @@ class SgeExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
+
+        if( task instanceof TaskArray ) {
+            final arraySize = ((TaskArray)task).children.size()
+            result << '-t' << "0-${arraySize - 1}"
+        }
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -79,14 +85,16 @@ class SgeExecutor extends AbstractGridExecutor {
         return result
     }
 
-    @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+    /*
+     * Prepare the 'qsub' cmdline
+     */
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
         // The '-terse' command line control the output of the qsub command line, when
         // used it only return the ID of the submitted job.
         // NOTE: In some SGE implementations the '-terse' only works on the qsub command line
         // and it is ignored when used in the script job as directive, fir this reason it
         // should not be remove from here
-        return pipeLauncherScript
+        return pipeLauncherScript()
                 ? List.of('qsub', '-')
                 : List.of('qsub', '-terse', scriptFile.name)
     }
@@ -183,13 +191,9 @@ class SgeExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getArrayDirective(int arraySize, TaskRun task) {
-        ['-t', "0-${arraySize - 1}"]
-    }
-
-    @Override
     String getArrayIndexName() { 'SGE_TASK_ID' }
 
     @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
+
 }

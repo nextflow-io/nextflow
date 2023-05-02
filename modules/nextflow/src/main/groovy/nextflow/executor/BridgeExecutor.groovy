@@ -44,7 +44,7 @@ class BridgeExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         String job_name = ""
         // parenthesis are not compatible with bridge submission commands
@@ -85,9 +85,18 @@ class BridgeExecutor extends AbstractGridExecutor {
 
     String getHeaderToken() { '#MSUB' }
 
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
-        List.of('ccc_msub', scriptFile.getName())
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+
+        ['ccc_msub', scriptFile.getName()]
+
     }
 
     /**

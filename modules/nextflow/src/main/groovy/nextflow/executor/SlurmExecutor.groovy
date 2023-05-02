@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Processor for SLURM resource manager
@@ -48,8 +49,12 @@ class SlurmExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    @Override
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
+
+        if( task instanceof TaskArray ) {
+            final arraySize = ((TaskArray)task).children.size()
+            result << '--array' << "0-${arraySize - 1}"
+        }
 
         result << '-J' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
@@ -91,12 +96,18 @@ class SlurmExecutor extends AbstractGridExecutor {
         return result
     }
 
-    @Override
     String getHeaderToken() { '#SBATCH' }
 
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
-        return pipeLauncherScript
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+        return pipeLauncherScript()
                 ? List.of('sbatch')
                 : List.of('sbatch', scriptFile.getName())
     }
@@ -194,13 +205,9 @@ class SlurmExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getArrayDirective(int arraySize, TaskRun task) {
-        ['--array', "0-${arraySize - 1}"]
-    }
-
-    @Override
     String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
 
     @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
+
 }

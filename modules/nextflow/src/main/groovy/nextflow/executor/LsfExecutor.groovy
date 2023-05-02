@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -67,7 +68,12 @@ class LsfExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
+
+        if( task instanceof TaskArray ) {
+            final arraySize = ((TaskArray)task).children.size()
+            result << '-J' << "nf-array-${taskArrayCount.getAndIncrement()}[0-${arraySize - 1}]"
+        }
 
         result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
 
@@ -113,10 +119,16 @@ class LsfExecutor extends AbstractGridExecutor {
         return result
     }
 
+
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
-        List.of('bsub')
-    }
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) { ['bsub'] }
 
     /**
      * @return {@code true} since BSC grid requires the script to be piped to the {@code bsub} command
@@ -299,13 +311,9 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getArrayDirective(int arraySize, TaskRun task) {
-        ['-J', "nf-array-${taskArrayCount.getAndIncrement()}[0-${arraySize - 1}]"]
-    }
-
-    @Override
     String getArrayIndexName() { 'LSB_JOBINDEX' }
 
     @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }
+
 }

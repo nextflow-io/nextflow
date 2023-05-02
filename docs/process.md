@@ -1277,7 +1277,6 @@ process cpu_task {
 Nextflow currently supports array jobs for the following executors:
 
 - {ref}`awsbatch-executor`
-- {ref}`local-executor`
 - {ref}`lsf-executor`
 - {ref}`pbs-executor`
 - {ref}`pbspro-executor`

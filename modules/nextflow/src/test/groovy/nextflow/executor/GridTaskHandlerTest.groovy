@@ -66,7 +66,7 @@ class GridTaskHandlerTest extends Specification {
         exec.pipeLauncherScript() >> false
         and:
         handler.fusionEnabled() >> false
-        handler.createProcessBuilder(false) >> new ProcessBuilder().command([])
+        handler.createProcessBuilder() >> GroovyMock(ProcessBuilder)
         and:
         thrown(ProcessFailedException)
         and:
@@ -132,9 +132,9 @@ class GridTaskHandlerTest extends Specification {
         def exec = Spy(GridTaskHandler)
 
         expect:
-        exec.getLaunchCommand(new ProcessBuilder().command(['qsub', '/some/file']), null) == 'qsub /some/file'
+        exec.launchCmd0(new ProcessBuilder().command(['qsub', '/some/file']), null) == 'qsub /some/file'
         and:
-        exec.getLaunchCommand(new ProcessBuilder().command(['qsub']), 'docker run /some/file') ==
+        exec.launchCmd0(new ProcessBuilder().command(['qsub']), 'docker run /some/file') ==
                 '''\
                 cat << 'LAUNCH_COMMAND_EOF' | qsub
                 docker run /some/file

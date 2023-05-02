@@ -309,11 +309,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
     }
 
     @Override
-    TaskArraySubmitter createTaskArraySubmitter(List<TaskHandler> array) {
-        new AwsBatchTaskArraySubmitter(array, this)
-    }
-
-    @Override
     String getArrayIndexName() { 'AWS_BATCH_JOB_ARRAY_INDEX' }
 
     @Override

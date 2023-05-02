@@ -16,14 +16,14 @@
 
 package nextflow.processor
 
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.executor.TaskArrayAware
 import nextflow.executor.Executor
+import nextflow.executor.TaskArrayAware
+import nextflow.executor.TaskArraySubmitter
 
 /**
  * Task monitor that batches tasks and submits them as array jobs
@@ -109,11 +109,14 @@ class TaskArrayCollector {
 
     protected void submit0(List<TaskHandler> array) {
         // create submitter for array job
-        executor.createTaskArraySubmitter(array)
+        final arraySubmitter = new TaskArraySubmitter(array, executor)
 
         // submit each task to the underlying monitor
-        for( TaskHandler handler : array )
+        // each task will defer to the array job during submission
+        for( TaskHandler handler : array ) {
+            handler.arraySubmitter = arraySubmitter
             monitor.schedule(handler)
+        }
     }
 
 }

@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Implements a executor for PBS/Torque cluster
@@ -38,8 +39,13 @@ class PbsExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    List<String> getDirectives( TaskRun task, List<String> result ) {
+    protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
+
+        if( task instanceof TaskArray ) {
+            final arraySize = ((TaskArray)task).children.size()
+            result << '-J' << "0-${arraySize - 1}"
+        }
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -88,13 +94,17 @@ class PbsExecutor extends AbstractGridExecutor {
         name.size()>15 ? name.substring(0,15) : name
     }
 
-    @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
         // in some PBS implementation the submit command will fail if the script name starts with a dot eg `.command.run`
         // add the `-N <job name>` to fix this -- see issue #228
-        pipeLauncherScript
-            ? List.of('qsub')
-            : List.of('qsub', '-N', getJobNameFor(task), scriptFile.getName())
+        [ 'qsub', '-N', getJobNameFor(task), scriptFile.getName() ]
     }
 
     protected String getHeaderToken() { '#PBS' }
@@ -170,15 +180,11 @@ class PbsExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getArrayDirective(int arraySize, TaskRun task) {
-        ['-J', "0-${arraySize - 1}"]
-    }
-
-    @Override
     String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
 
     @Override
     String getArrayTaskId(String jobId, int index) {
         jobId.replace('[]', "[$index]")
     }
+
 }

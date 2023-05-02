@@ -38,7 +38,7 @@ class NqsiiExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -76,9 +76,12 @@ class NqsiiExecutor extends AbstractGridExecutor {
         return result
     }
 
-    @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
-        List.of('qsub', scriptFile.name)
+
+    /*
+     * Prepare the 'qsub' cmdline
+     */
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+        return ['qsub', scriptFile.name]
     }
 
     protected String getHeaderToken() { '#PBS' }

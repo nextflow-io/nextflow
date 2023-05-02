@@ -56,7 +56,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '--name' << getJobNameFor(task)
         result << '--log' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -81,7 +81,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
         return TupleHelper.listOf('hq', '--output-mode=quiet', 'submit', '--directives=file', scriptFile.getName())
     }
 

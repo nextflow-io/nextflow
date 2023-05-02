@@ -94,17 +94,15 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
      * @return A multi-line string containing the job directives
      */
     String getHeaders( TaskRun task ) {
-        getHeaders(getDirectives(task))
-    }
 
-    String getHeaders( List<String> directives ) {
         final token = getHeaderToken()
         def result = new StringBuilder()
         def header = new ArrayList(2)
-        def len = directives.size()-1
-        for( int i = 0; i < len; i += 2 ) {
-            def opt = directives[i]
-            def val = directives[i+1]
+        def dir = getDirectives(task)
+        def len = dir.size()-1
+        for( int i=0; i<len; i+=2) {
+            def opt = dir[i]
+            def val = dir[i+1]
             if( opt ) header.add(opt)
             if( val ) header.add(wrapHeader(val))
 
@@ -136,7 +134,7 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
      * @param initial An initial list of directives
      * @return A list of directives for this task used for the job submission
      */
-    abstract List<String> getDirectives(TaskRun task, List<String> initial)
+    abstract protected List<String> getDirectives(TaskRun task, List<String> initial)
 
     /**
      * Given a task returns a *clean* name used to submit the job to the grid engine.
@@ -196,11 +194,7 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
      * @param task The task instance descriptor
      * @return A list holding the command line
      */
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        getSubmitCommandLine(task, scriptFile, pipeLauncherScript())
-    }
-
-    abstract List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript)
+    abstract List<String> getSubmitCommandLine(TaskRun task, Path scriptFile)
 
     /**
      * Defines how script is run the by the grid-engine.
@@ -413,15 +407,6 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
         // because the command wrapper script should not manage the container execution.
         // Instead, it is the command wrapper script that is launched run within a container process.
         return isFusionEnabled()
-    }
-
-    @Override
-    TaskArraySubmitter createTaskArraySubmitter(List<TaskHandler> array) {
-        new GridTaskArraySubmitter(array, this)
-    }
-
-    List<String> getArrayDirective(int arraySize, TaskRun task) {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
     }
 }
 

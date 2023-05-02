@@ -41,15 +41,22 @@ class FluxExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    List<String> getDirectives(TaskRun task, List<String> result) {
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
         return result
     }
 
     // Flux does not require a special token or header
     String getHeaderToken() { null }
 
+    /**
+     * The command line to submit this job
+     *
+     * @param task The {@link TaskRun} instance to submit for execution to the cluster
+     * @param scriptFile The file containing the job launcher script
+     * @return A list representing the submit command line
+     */
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile, boolean pipeLauncherScript) {
+    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
         List<String> result = ['flux', 'mini', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
