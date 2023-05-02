@@ -2015,7 +2015,7 @@ Available options:
 `contentType`
 : :::{versionadded} 22.10.0
   :::
-: *EXPERIMENTAL: currently only supported for S3*
+: *Experimental: currently only supported for S3.*
 : Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (default: `false`).
 
 `enabled`
@@ -2049,13 +2049,13 @@ Available options:
 `storageClass`
 : :::{versionadded} 22.12.0-edge
   :::
-: *EXPERIMENTAL: currently only supported for S3*
+: *Experimental: currently only supported for S3.*
 : Allow specifying the storage class to be used for the published file.
 
 `tags`
 : :::{versionadded} 21.12.0-edge
   :::
-: *EXPERIMENTAL: currently only supported for S3*
+: *Experimental: currently only supported for S3.*
 : Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
 
 (process-queue)=

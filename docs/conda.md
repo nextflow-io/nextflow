@@ -122,7 +122,8 @@ process foo {
 
 ### Use Mamba to resolve packages
 
-*EXPERIMENTAL: may change in a future release*
+:::{warning} *Experimental: may change in a future release.*
+:::
 
 It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
 

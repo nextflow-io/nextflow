@@ -215,19 +215,19 @@ The following settings are available:
 `aws.client.glacierAutoRetrieval`
 : :::{versionadded} 22.12.0-edge
   :::
-: *EXPERIMENTAL: may change in a future release*
+: *Experimental: may change in a future release.*
 : Enable auto retrieval of S3 objects stored with Glacier class store (default: `false`).
 
 `aws.client.glacierExpirationDays`
 : :::{versionadded} 22.12.0-edge
   :::
-: *EXPERIMENTAL: may change in a future release*
+: *Experimental: may change in a future release.*
 : The time, in days, between when an object is restored to the bucket and when it expires (default: `7`).
 
 `aws.client.glacierRetrievalTier`
 : :::{versionadded} 23.03.0-edge
   :::
-: *EXPERIMENTAL: may change in a future release*
+: *Experimental: may change in a future release.*
 : The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
 `aws.client.maxConnections`
@@ -1689,6 +1689,6 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 : :::{versionadded} 21.11.0-edge
   :::
 
-: *EXPERIMENTAL: may change in a future release*
+: *Experimental: may change in a future release.*
 
 : When `true`, enables process and workflow recursion. See [this GitHub discussion](https://github.com/nextflow-io/nextflow/discussions/2521) for more information.

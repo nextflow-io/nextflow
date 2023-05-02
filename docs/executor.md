@@ -114,7 +114,8 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 
 ## GA4GH TES
 
-*EXPERIMENTAL: may change in a future release*
+:::{warning} *Experimental: may change in a future release.*
+:::
 
 The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to define a standardized schema and API for describing batch execution tasks in a portable manner.
 
@@ -219,7 +220,8 @@ See the {ref}`Google Life Sciences <google-lifesciences>` page for further confi
 
 ## HTCondor
 
-*EXPERIMENTAL: may change in a future release*
+:::{warning} *Experimental: may change in a future release.*
+:::
 
 The `condor` executor allows you to run your pipeline script by using the [HTCondor](https://research.cs.wisc.edu/htcondor/) resource manager.
 
@@ -248,7 +250,8 @@ Resource requests and other job characteristics can be controlled via the follow
 :::{versionadded} 22.05.0-edge
 :::
 
-*EXPERIMENTAL: may change in a future release*
+:::{warning} *Experimental: may change in a future release.*
+:::
 
 The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
 
@@ -350,7 +353,8 @@ See also the [Platform LSF documentation](https://www.ibm.com/support/knowledgec
 :::{versionadded} 19.07.0
 :::
 
-*EXPERIMENTAL: may change in a future release*
+:::{warning} *Experimental: may change in a future release.*
+:::
 
 The `moab` executor allows you to run your pipeline script using the [Moab](https://en.wikipedia.org/wiki/Moab_Cluster_Suite) resource manager by [Adaptive Computing](http://www.adaptivecomputing.com/).
 

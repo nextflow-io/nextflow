@@ -116,7 +116,8 @@ The `-c` option is used to append a new configuration to the default configurati
 
 ### Docker driven execution
 
-*EXPERIMENTAL: not recommended for production environments*
+:::{warning} *Experimental: not recommended for production environments.*
+:::
 
 Launch Nextflow via Docker.
 

@@ -149,8 +149,7 @@ Requires Charliecloud 0.22 to 0.27.
 Requires Charliecloud 0.28 or later.
 :::
 
-:::{warning}
-EXPERIMENTAL: not recommended for production environments.
+:::{warning} *Experimental: not recommended for production environments.*
 :::
 
 [Charliecloud](https://hpc.github.io/charliecloud) is an alternative container runtime to Docker, that is better suited for use in HPC environments. Its main advantage is that it can be used without root privileges, making use of user namespaces in the Linux kernel. Charliecloud is able to pull from Docker registries.
@@ -334,7 +333,8 @@ Docker advanced configuration settings are described in {ref}`config-docker` sec
 :::{versionadded} 20.01.0
 :::
 
-*EXPERIMENTAL: not recommended for production environments*
+:::{warning} *Experimental: not recommended for production environments.*
+:::
 
 [Podman](http://www.podman.io) is a drop-in replacement for Docker that can run containers with or without root privileges.
 
