@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
+import nextflow.util.Escape
 
 /**
  * Collect tasks and submit them as task groups to the underlying
@@ -108,11 +109,13 @@ class TaskGroupCollector {
         Files.createDirectories(workDir)
 
         // concatenate task scripts
-        final script = tasks.collect( t -> t.getScript().trim() ).join('\n')
-
-        // merge inputs and outputs
-        final inputs = first.inputs
-        final outputs = first.outputs
+        final script = """
+            declare -a array=( ${tasks.collect( t -> Escape.path(t.workDir) ).join(' ')} )
+            for task_dir in \${array[@]}; do
+                cd \${task_dir}
+                bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG}
+            done
+            """.stripIndent().trim()
 
         // create task group
         final taskGroup = new TaskRun(
@@ -129,12 +132,15 @@ class TaskGroupCollector {
             templateVars: first.templateVars,
             hash: hash,
             workDir: workDir,
-            inputs: inputs,
-            outputs: outputs,
             script: script,
             children: tasks
         )
 
+        // prepare work directory for each child task
+        for( TaskRun task : tasks )
+            executor.createTaskHandler(task).prepareLauncher()
+
+        // submit task group to the underlying executor
         executor.submit(taskGroup)
     }
 

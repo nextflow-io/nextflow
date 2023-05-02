@@ -94,6 +94,7 @@ class TaskRun implements Cloneable {
     Map<OutParam,Object> outputs = [:]
 
     // TODO: move to TaskGroup subclass
+    // TODO: implement getTraceRecord() for task group
     List<TaskRun> children
 
     void setInput( InParam param, Object value = null ) {

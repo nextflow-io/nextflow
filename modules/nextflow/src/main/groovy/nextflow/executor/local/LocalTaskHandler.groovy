@@ -94,9 +94,6 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     void submit() {
-        // create the wrapper script
-        buildTaskWrapper()
-
         // create the process builder to run the task in the local computer
         final builder = createLaunchProcessBuilder()
         final logFile = builder.redirectOutput().file()
@@ -122,7 +119,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         status = TaskStatus.SUBMITTED
     }
 
-    protected void buildTaskWrapper() {
+    @Override
+    void prepareLauncher() {
         final wrapper = fusionEnabled()
                 ? fusionLauncher()
                 : new BashWrapperBuilder(task.toTaskBean())
