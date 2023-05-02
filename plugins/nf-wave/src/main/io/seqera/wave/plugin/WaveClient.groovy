@@ -478,9 +478,7 @@ RUN mkdir -p /opt/spack-env \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-""" //.stripIndent()
 
-        result += """
 # Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
@@ -594,9 +592,7 @@ RUN mkdir -p /opt/spack-env \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
-""" //.stripIndent()
 
-        result += """
 # Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
