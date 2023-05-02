@@ -253,6 +253,8 @@ class TaskProcessor {
 
     private Boolean isFair0
 
+    private TaskGroupCollector groupCollector
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -307,6 +309,9 @@ class TaskProcessor {
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+
+        final groupSize = config.getGroup()
+        this.groupCollector = groupSize > 0 ? new TaskGroupCollector(executor, groupSize) : null
     }
 
     /**
@@ -2204,7 +2209,10 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task)
+        if( groupCollector )
+            groupCollector.collect(task)
+        else
+            executor.submit(task)
 
     }
 
@@ -2286,6 +2294,13 @@ class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
+        // finalize each child if task is a group
+        if( task.children != null ) {
+            for( TaskRun t : task.children )
+                finalizeTask0(t)
+            return
+        }
+
         log.trace "Finalize process > ${safeTaskName(task)}"
 
         // -- bind output (files)
@@ -2296,6 +2311,10 @@ class TaskProcessor {
 
         // increment the number of processes executed
         state.update { StateObj it -> it.incCompleted() }
+    }
+
+    protected void closeProcess() {
+        groupCollector?.close()
     }
 
     protected void terminateProcess() {
@@ -2440,6 +2459,7 @@ class TaskProcessor {
         @Override
         void afterStop(final DataflowProcessor processor) {
             log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**

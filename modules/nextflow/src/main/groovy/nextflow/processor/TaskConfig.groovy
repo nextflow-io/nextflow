@@ -197,6 +197,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('cleanup')
     }
 
+    int getGroup() {
+        get('group') as Integer ?: 0
+    }
+
     String getStageInMode() {
         return get('stageInMode')
     }

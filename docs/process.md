@@ -1631,6 +1631,38 @@ The above example produces:
 [4, D]
 ```
 
+(process-group)=
+
+## group
+
+:::{note}
+This feature requires Nextflow version `23.05.0-edge` or later.
+:::
+
+:::{warning}
+This feature is experimental and may change in a future release.
+:::
+
+The `group` directive allows you to execute tasks in groups. A *task group* is a collection of tasks (with the same resource requirements) that runs each task sequentially on the same node. For processes that generate many short-running tasks, task grouping can greatly reduce the overhead of setting up and tearing down VMs (in the cloud) or waiting in a scheduler queue (for grid exceutors).
+
+It should be specified with a given group size. For example:
+
+```groovy
+process short_task {
+    group 100
+
+    '''
+    your_command --here
+    '''
+}
+```
+
+A process using task grouping will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task group.
+
+A task group executes each task sequentially in the same work directory. If any task in the group fails, the entire task group will fail and, if retry-able, be retried as a group.
+
+Any directives must be uniform across all tasks in a process that uses task grouping, because all tasks in a group share the same job submission and wrapper script. Additionally, input and output files must be unique for each task, since these files are staged into the same directory.
+
 (process-label)=
 
 ### label
