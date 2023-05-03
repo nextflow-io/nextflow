@@ -116,7 +116,7 @@ class TaskArraySubmitter {
         else {
             workDirs = tasks.collect( t -> Escape.path(t.workDir.toUriString()) )
             cmd = Escape.cli(array.first().getSubmitCommand().toArray() as String[])
-            cmd = cmd.replace(tasks.first().workDir.toUriString(), '\\${task_dir}')
+            cmd = cmd.replaceAll(tasks.first().workDir.toUriString(), '\\${task_dir}')
         }
 
         // create wrapper script
@@ -124,7 +124,7 @@ class TaskArraySubmitter {
 
         """
         declare -a array=( ${workDirs.join(' ')} )
-        task_dir=\${array[\$${arrayIndexName}]}
+        export task_dir=\${array[\$${arrayIndexName}]}
         ${cmd}
         """.stripIndent().trim()
     }
