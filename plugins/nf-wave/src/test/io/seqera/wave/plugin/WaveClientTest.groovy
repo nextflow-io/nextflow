@@ -360,11 +360,6 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.spackRecipeToDockerFile(RECIPE, ARCH) == '''\
-# Spack
-# https://github.com/spack/spack
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
-# Licensed under Apache License, Version 2.0
-
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.2 as builder
 
@@ -495,11 +490,6 @@ CMD [ "/bin/bash" ]
         def client = new WaveClient(session)
         then:
         client.spackRecipeToDockerFile(RECIPE, ARCH) == '''\
-# Spack
-# https://github.com/spack/spack
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
-# Licensed under Apache License, Version 2.0
-
 # Builder image
 FROM spack/foo:1 as builder
 
@@ -601,11 +591,6 @@ CMD [ "/bin/bash" ]
         def client = new WaveClient(session)
         then:
         client.spackFileToDockerFile(ARCH)== '''\
-# Spack
-# https://github.com/spack/spack
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
-# Licensed under Apache License, Version 2.0
-
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.2 as builder
 COPY spack.yaml /tmp/spack.yaml
@@ -828,11 +813,6 @@ CMD [ "/bin/bash" ]
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-# Spack
-# https://github.com/spack/spack
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
-# Licensed under Apache License, Version 2.0
-
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.2 as builder
 
@@ -948,11 +928,6 @@ CMD [ "/bin/bash" ]
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-# Spack
-# https://github.com/spack/spack
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
-# Licensed under Apache License, Version 2.0
-
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.2 as builder
 COPY spack.yaml /tmp/spack.yaml

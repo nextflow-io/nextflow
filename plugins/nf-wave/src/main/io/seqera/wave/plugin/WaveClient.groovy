@@ -42,6 +42,8 @@ import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
+import nextflow.executor.BashTemplateEngine
+import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
@@ -464,12 +466,12 @@ class WaveClient {
             'runner_image': config.spackOpts().runnerImage,
             'os_packages': config.spackOpts().osPackages
         ]
+        //def template = BashWrapperBuilder.class.getResourceAsStream('/dockerfile-spack-file.txt').newReader()
         def template = """\
-# Spack
-# https://github.com/spack/spack
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
-# Licensed under Apache License, Version 2.0
-
+##  Spack
+##  https://github.com/spack/spack
+##  Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
+##  Licensed under Apache License, Version 2.0
 # Builder image
 FROM {{builder_image}} as builder
 COPY spack.yaml /tmp/spack.yaml
@@ -535,7 +537,7 @@ ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
 
-        final result = new MustacheTemplateEngine().render(template, binding)
+        final result = new BashTemplateEngine().render(template, binding)
         return result
     }
 
@@ -589,11 +591,10 @@ CMD [ "/bin/bash" ]
             'os_packages': config.spackOpts().osPackages
         ]
         def template = """\
-# Spack
-# https://github.com/spack/spack
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
-# Licensed under Apache License, Version 2.0
-
+##  Spack
+##  https://github.com/spack/spack
+##  Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
+##  Licensed under Apache License, Version 2.0
 # Builder image
 FROM {{builder_image}} as builder
 
@@ -660,7 +661,7 @@ ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
 
-        final result = new MustacheTemplateEngine().render(template, binding)
+        final result = new BashTemplateEngine().render(template, binding)
         return result
     }
 
