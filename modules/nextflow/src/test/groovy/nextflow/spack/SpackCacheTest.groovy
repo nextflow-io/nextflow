@@ -125,7 +125,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> null
         result == PREFIX
 
     }
@@ -144,7 +144,25 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack config add concretizer:reuse:false ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> null
+        result == PREFIX
+    }
+
+    def 'should create spack env with options, checksum true' () {
+        given:
+        def ENV = 'bwa@1.1.1'
+        def PREFIX = Paths.get('/foo/bar')
+        def ARCH = 'foo_arch'
+        and:
+        def cache = Spy(new SpackCache([parallelBuilds: 2, checksum: true]))
+
+        when:
+        def result = cache.createLocalSpackEnv0(ENV,PREFIX,ARCH)
+
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -j 2 -y ; spack env deactivate" ) >> null
         result == PREFIX
     }
 
@@ -161,7 +179,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "spack env create -d $PREFIX /usr/base/$ENV ; spack env activate $PREFIX ; spack env view enable ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX /usr/base/$ENV ; spack env activate $PREFIX ; spack env view enable ; spack config add concretizer:unify:true ; spack config add concretizer:reuse:false ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> null
         result == PREFIX
 
     }

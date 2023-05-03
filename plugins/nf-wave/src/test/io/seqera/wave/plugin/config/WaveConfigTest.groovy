@@ -56,15 +56,6 @@ class WaveConfigTest extends Specification {
         opts.endpoint() == 'http://localhost'
     }
 
-    def 'should config containerPlatform' () {
-        when:
-        // config options have priority over sys env
-        def opts = new WaveConfig([enabled:true, containerPlatform: 'linux/arm64'], [:])
-        then:
-        opts.enabled()
-        opts.containerPlatform() == 'linux/arm64'
-    }
-
     def 'should remove ending slash' () {
         when:
         def opts = new WaveConfig([enabled:true, endpoint: 'http://localhost/v1//'])
@@ -106,6 +97,33 @@ class WaveConfigTest extends Specification {
         
     }
 
+    def 'should get spack config' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.spackOpts().checksum == true
+        opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.19.2'
+        opts.spackOpts().runnerImage == 'ubuntu:22.04'
+        opts.spackOpts().osPackages == ''
+        opts.spackOpts().cFlags == '-O3'
+        opts.spackOpts().cxxFlags == '-O3'
+        opts.spackOpts().fFlags == '-O3'
+        opts.spackOpts().commands == null
+
+        when:
+        opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', commands:['USER hola'] ]]])
+        then:
+        opts.spackOpts().checksum == false
+        opts.spackOpts().builderImage == 'spack/foo:1'
+        opts.spackOpts().runnerImage == 'ubuntu/foo'
+        opts.spackOpts().osPackages == 'libfoo'
+        opts.spackOpts().cFlags == '-foo'
+        opts.spackOpts().cxxFlags == '-foo2'
+        opts.spackOpts().fFlags == '-foo3'
+        opts.spackOpts().commands == ['USER hola']
+        
+    }
+
     def 'should get build and cache repos' () {
         when:
         def opts = new WaveConfig([:])
@@ -125,7 +143,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == ['container','dockerfile','conda']
+        opts.strategy() == ['container','dockerfile','conda','spack']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -134,12 +152,13 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | ['container','dockerfile','conda']
+        null                    | ['container','dockerfile','conda','spack']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']
         ['conda','container']   | ['conda','container']
         [' conda',' container'] | ['conda','container']
+        'spack'                 | ['spack']
     }
 
     def 'should fail to set strategy' () {

@@ -93,6 +93,34 @@ wave.strategy = ['conda']
 
 The above setting instructs Wave to use the `conda` directive to provision the pipeline containers and ignore the `container` directive and any Dockerfile(s).
 
+### Build Spack based containers
+
+:::{warning}
+Spack based Wave containers are currently in beta testing. Functionality is still sub-optimal, due to long build times that may result in backend time-out and subsequent task failure.
+:::
+
+Wave allows the provisioning of containers based on the {ref}`process-spack` directive used by the processes in your
+pipeline. This is an alternative to building Spack packages in the local computer.
+Moreover, this enables to run optimised builds with almost no user intervention.
+
+Having Wave enabled in your pipeline, there's nothing else to do other than define the `spack` requirements in
+the pipeline processes provided the same process does not also specify a `container` or `conda` directive or a Dockerfile.
+
+In the latter case, add the following setting to your pipeline configuration:
+
+```groovy
+wave.strategy = ['spack']
+```
+
+The above setting instructs Wave to only use the `spack` directive to provision the pipeline containers, ignoring the use of
+the `container` directive and any Dockerfile(s).
+
+In order to request the build of containers that are optimised for a specific CPU microarchitecture, the latter can be specified by means of the {ref}`process-arch` directive. The architecture must always be specified for processes that run on an ARM system. Otherwise, by default, Wave will build containers for the generic `x86_64` architecture family.
+
+:::{note}
+If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
+:::
+
 ### Push to a private repository
 
 Containers built by Wave are uploaded to the Wave default repository hosted on AWS ECR at `195996028523.dkr.ecr.eu-west-1.amazonaws.com/wave/build`. The images in this repository are automatically deleted 1 week after the date of their push.
@@ -122,10 +150,10 @@ See the {ref}`Fusion documentation <fusion-page>` for more details.
 The following configuration options are available:
 
 `wave.enabled`
-: Enable/disable the execution of Wave containers
+: Enable/disable the execution of Wave containers.
 
 `wave.endpoint`
-: The Wave service endpoint (default: `https://wave.seqera.io`)
+: The Wave service endpoint (default: `https://wave.seqera.io`).
 
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
@@ -133,17 +161,41 @@ The following configuration options are available:
 `wave.build.cacheRepositor`
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
-`wave.conda.mambaImage`
+`wave.build.conda.mambaImage`
 : The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
 
-`wave.conda.commands`
-: One or more commands to be added to the Dockerfile used by build a Conda based image.
+`wave.build.conda.commands`
+: One or more commands to be added to the Dockerfile used to build a Conda based image.
 
-`wave.conda.basePackages`
-: One or more Conda packages that should always added in the resulting container e.g. `conda-forge::procps-ng`.
+`wave.build.conda.basePackages`
+: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
+
+`wave.build.spack.checksum`
+: Enable checksum verification for source tarballs (recommended). Disable only when requesting a package version not yet encoded in the corresponding Spack recipe (default: `true`).
+
+`wave.build.spack.builderImage`
+: The Spack container image is used to build Spack based container. This is expected to be one of the [Spack-provided](https://spack.readthedocs.io/en/latest/containers.html) images.
+
+`wave.build.spack.runnerImage`
+: The OS container image is used for the production container. This is expected to match the OS of the `builderImage` above.
+
+`wave.build.spack.osPackages`
+: Additional OS packages to be installed in the production container. Note that package names may vary depending on the OS of the `runnerImage` above.
+
+`wave.build.spack.cFlags`
+: C compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
+
+`wave.build.spack.cxxFlags`
+: C++ compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
+
+`wave.build.spack.fFlags`
+: Fortran compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
+
+`wave.build.spack.commands`
+: One or more commands to be added to the Dockerfile used to build a Spack based image.
 
 `wave.strategy`
-: The strategy to be used when resolving ambiguous Wave container requirement (default: `'container,dockerfile,conda'`)
+: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
 ### More examples
 
