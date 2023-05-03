@@ -43,7 +43,6 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
 import nextflow.executor.BashTemplateEngine
-import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
@@ -444,6 +443,7 @@ class WaveClient {
             micromamba clean -a -y
         """.stripIndent(true)
         final image = config.condaOpts().mambaImage
+
         final basePackage =  config.condaOpts().basePackages ? "micromamba install -y -n base ${config.condaOpts().basePackages} && \\".toString() : null
         final binding = ['base_image': image, 'base_packages': basePackage]
         final result = new MustacheTemplateEngine().render(template, binding)
@@ -468,10 +468,11 @@ class WaveClient {
             'os_packages': config.spackOpts().osPackages,
             'add_commands': addCommands(cmd_template),
         ]
-        def template = BashWrapperBuilder.class.getResource('/dockerfile-spack-file.txt').newReader()
-
-        final result = new BashTemplateEngine().render(template, binding)
-        return result
+        final template = WaveClient.class.getResource('/dockerfile-spack-file.txt')
+        try(final reader = template.newReader()) {
+            final result = new BashTemplateEngine().render(reader, binding)
+            return result
+        }
     }
 
     protected String addCommands(String result) {
@@ -525,10 +526,12 @@ class WaveClient {
             'os_packages': config.spackOpts().osPackages,
             'add_commands': addCommands(cmd_template),
         ]
-        def template = BashWrapperBuilder.class.getResource('/dockerfile-spack-recipe.txt').newReader()
+        final template = WaveClient.class.getResource('/dockerfile-spack-recipe.txt')
 
-        final result = new BashTemplateEngine().render(template, binding)
-        return result
+        try(final reader = template.newReader()) {
+            final result = new BashTemplateEngine().render(reader, binding)
+            return result
+        }
     }
 
     static protected boolean isCondaLocalFile(String value) {
