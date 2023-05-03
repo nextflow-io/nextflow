@@ -6,7 +6,7 @@
 This feature requires Nextflow  `23.02.0-edge` or later.
 :::
 
-[Spack](https://spack.io/) is a package manager for supercomputers, Linux, and macOS. It makes installing scientific software easy. Spack is not tied to a particular language; you can build a software stack in Python or R, link to libraries written in C, C++, or Fortran, and easily swap compilers or target specific microarchitectures.
+[Spack](https://spack.io/) is a package manager for supercomputers, Linux, and macOS. It makes installing scientific software easy. Spack is not tied to a particular language; you can build a software stack in Python or R, link to libraries written in C, C++, or Fortran, and easily swap compilers or target specific CPU microarchitectures.
 
 Nextflow has built-in support for Spack that allows the configuration of workflow dependencies using Spack recipes and environment files.
 
@@ -84,7 +84,7 @@ Here, the `concretizer` option is a sensible default for Spack environments.
 When creating a Spack environment, Nextflow always enables the corresponding Spack view. This is required by Nextflow to locate executables at pipeline runtime.
 :::
 
-As mentioned above, Spack is able to guess the target microarchitecture and optimize the build accordingly. If you really need to customize this option, we advise to use the {ref}`process-arch` directive rather than the available options for the Spack environment file.
+As mentioned above, Spack is able to guess the target CPU microarchitecture and optimize the build accordingly. If you really need to customize this option, we advise to use the {ref}`process-arch` directive rather than the available options for the Spack environment file.
 
 Read the Spack documentation for more details about how to create [environment files](https://spack.readthedocs.io/en/latest/environments.html).
 

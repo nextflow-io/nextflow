@@ -34,11 +34,11 @@ class WaveConfig {
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
     final private CondaOpts condaOpts
+    final private SpackOpts spackOpts
     final private List<String> strategy
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
-    final private String containerPlatform
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -46,11 +46,11 @@ class WaveConfig {
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
+        this.spackOpts = opts.navigate('build.spack', Collections.emptyMap()) as SpackOpts
         this.buildRepository = opts.navigate('build.repository') as String
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        this.containerPlatform = opts.containerPlatform
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
@@ -61,6 +61,8 @@ class WaveConfig {
 
     CondaOpts condaOpts() { this.condaOpts }
 
+    SpackOpts spackOpts() { this.spackOpts }
+
     List<String> strategy() { this.strategy }
 
     boolean bundleProjectResources() { bundleProjectResources }
@@ -70,8 +72,8 @@ class WaveConfig {
     String cacheRepository() { cacheRepository }
 
     protected List<String> parseStrategy(value) {
+        final defaultStrategy = List.of('container','dockerfile','conda', 'spack')
         if( !value ) {
-            final defaultStrategy = List.of('container','dockerfile','conda')
             log.debug "Wave strategy not specified - using default: $defaultStrategy"
             return defaultStrategy
         }
@@ -83,7 +85,7 @@ class WaveConfig {
         else
             throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
         for( String it : result ) {
-            if( it !in ['conda','dockerfile','container'])
+            if( it !in defaultStrategy)
                 throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
         }
         return result
@@ -118,9 +120,5 @@ class WaveConfig {
 
     Duration tokensCacheMaxDuration() { 
         return tokensCacheMaxDuration 
-    }
-
-    String containerPlatform() {
-        return containerPlatform
     }
 }
