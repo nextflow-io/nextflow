@@ -454,27 +454,36 @@ class WaveClient {
     // LICENSE APACHE 2.0
     protected String spackFileToDockerFile(String spackArch) {
 
-        def checksumString = config.spackOpts().checksum ? '' : '-n '
-        def result = """\
+        final binding = [
+            'builder_image': config.spackOpts().builderImage,
+            'c_flags': config.spackOpts().cFlags,
+            'cxx_flags': config.spackOpts().cxxFlags,
+            'f_flags': config.spackOpts().fFlags,
+            'spack_arch': spackArch,
+            'checksum_string': config.spackOpts().checksum ? '' : '-n ',
+            'runner_image': config.spackOpts().runnerImage,
+            'os_packages': config.spackOpts().osPackages
+        ]
+        def template = """\
 # Spack
 # https://github.com/spack/spack
 # Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
 # Licensed under Apache License, Version 2.0
 
 # Builder image
-FROM ${config.spackOpts().builderImage} as builder
+FROM {{builder_image}} as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: {{c_flags}}\\n      cxxflags: {{cxx_flags}}\\n      fflags: {{f_flags}};' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[${spackArch}] \\
+&& spack config add packages:all:target:[{{spack_arch}}] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
@@ -482,7 +491,7 @@ RUN mkdir -p /opt/spack-env \\
 # Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast ${checksumString}&& spack gc -y \\
+&& spack install --fail-fast {{checksum_string}}&& spack gc -y \\
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
@@ -498,17 +507,17 @@ RUN cd /opt/spack-env && \\
     rm -rf /opt/view
 
 # Runner image
-FROM ${config.spackOpts().runnerImage}
+FROM {{runner_image}}
 
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1 ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1 ${config.spackOpts().osPackages} && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1 {{os_packages}} && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp {{os_packages}} && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 {{os_packages}} && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash {{os_packages}} && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
 RUN mkdir -p /.singularity.d/env && \
@@ -518,14 +527,15 @@ RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z
     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
 """ //.stripIndent()
 
-        result = addCommands(result)
+        template = addCommands(template)
 
-        result += """\
+        template += """\
 
 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
 
+        final result = new MustacheTemplateEngine().render(template, binding)
         return result
     }
 
@@ -567,28 +577,38 @@ CMD [ "/bin/bash" ]
     // LICENSE APACHE 2.0
     protected String spackRecipeToDockerFile(String recipe, String spackArch) {
 
-        def checksumString = config.spackOpts().checksum ? '' : '-n '
-        def result = """\
+        final binding = [
+            'recipe': recipe,
+            'builder_image': config.spackOpts().builderImage,
+            'c_flags': config.spackOpts().cFlags,
+            'cxx_flags': config.spackOpts().cxxFlags,
+            'f_flags': config.spackOpts().fFlags,
+            'spack_arch': spackArch,
+            'checksum_string': config.spackOpts().checksum ? '' : '-n ',
+            'runner_image': config.spackOpts().runnerImage,
+            'os_packages': config.spackOpts().osPackages
+        ]
+        def template = """\
 # Spack
 # https://github.com/spack/spack
 # Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
 # Licensed under Apache License, Version 2.0
 
 # Builder image
-FROM ${config.spackOpts().builderImage} as builder
+FROM {{builder_image}} as builder
 
 RUN mkdir -p /opt/spack-env \\
 &&  spack env create -d /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: {{c_flags}}\\n      cxxflags: {{cxx_flags}}\\n      fflags: {{f_flags}};' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
-&& spack add ${recipe} \\
+&& spack add {{recipe}} \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[${spackArch}] \\
+&& spack config add packages:all:target:[{{spack_arch}}] \\
 && echo -e "\\
   view: /opt/view \\n\\
 " >> /opt/spack-env/spack.yaml
@@ -596,7 +616,7 @@ RUN mkdir -p /opt/spack-env \\
 # Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env && spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast ${checksumString}&& spack gc -y \\
+&& spack install --fail-fast {{checksum_string}}&& spack gc -y \\
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
@@ -612,17 +632,17 @@ RUN cd /opt/spack-env && \\
     rm -rf /opt/view
 
 # Runner image
-FROM ${config.spackOpts().runnerImage}
+FROM {{runner_image}}
 
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1 ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1 ${config.spackOpts().osPackages} && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1 {{os_packages}} && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp {{os_packages}} && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 {{os_packages}} && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash {{os_packages}} && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
 RUN mkdir -p /.singularity.d/env && \
@@ -632,14 +652,15 @@ RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z
     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
 """ //.stripIndent()
 
-        result = addCommands(result)
+        template = addCommands(template)
 
-        result += """\
+        template += """\
 
 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
 
+        final result = new MustacheTemplateEngine().render(template, binding)
         return result
     }
 
