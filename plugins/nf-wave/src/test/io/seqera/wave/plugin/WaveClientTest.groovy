@@ -411,11 +411,12 @@ RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/li
     ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \
+RUN mkdir -p /.singularity.d/env && \\
     cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
 # Entrypoint for Docker
 RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+
 
 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
@@ -541,11 +542,12 @@ RUN ( apt update -y && apt install -y procps libgomp1 libfoo && rm -rf /var/lib/
     ( apk update && apk add --no-cache procps libgomp bash libfoo && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \
+RUN mkdir -p /.singularity.d/env && \\
     cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
 # Entrypoint for Docker
 RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+
 USER hola
 
 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
@@ -641,11 +643,12 @@ RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/li
     ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \
+RUN mkdir -p /.singularity.d/env && \\
     cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
 # Entrypoint for Docker
 RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+
 
 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
@@ -864,11 +867,12 @@ RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/li
     ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \
+RUN mkdir -p /.singularity.d/env && \\
     cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
 # Entrypoint for Docker
 RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+
 
 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
@@ -978,11 +982,12 @@ RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/li
     ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \
+RUN mkdir -p /.singularity.d/env && \\
     cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
 # Entrypoint for Docker
 RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+
 
 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
 CMD [ "/bin/bash" ]
