@@ -36,6 +36,8 @@ interface TaskArrayAware {
 
     TaskHandler createTaskHandler(TaskRun task)
 
+    boolean isFusionEnabled()
+
     /**
      * Get the environment variable name that provides the array index of a task.
      */

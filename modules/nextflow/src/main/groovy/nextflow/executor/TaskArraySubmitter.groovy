@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskArray
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskHandler
@@ -110,20 +111,22 @@ class TaskArraySubmitter {
         def cmd
 
         if( executor.workDir.fileSystem == FileSystems.default ) {
-            workDirs = tasks.collect( t -> Escape.path(t.workDir) )
+            workDirs = tasks.collect( t -> t.workDir.toString() )
             cmd = "cd \${task_dir} ; bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG}"
         }
         else {
-            workDirs = tasks.collect( t -> Escape.path(t.workDir.toUriString()) )
+            workDirs = executor.isFusionEnabled()
+                ? tasks.collect( t -> FusionHelper.toContainerMount(t.workDir).toString() )
+                : tasks.collect( t -> t.workDir.toUriString() )
             cmd = Escape.cli(array.first().getSubmitCommand().toArray() as String[])
-            cmd = cmd.replaceAll(tasks.first().workDir.toUriString(), '\\${task_dir}')
+            cmd = cmd.replaceAll(workDirs.first(), '\\${task_dir}')
         }
 
         // create wrapper script
         final arrayIndexName = executor.getArrayIndexName()
 
         """
-        declare -a array=( ${workDirs.join(' ')} )
+        declare -a array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
         export task_dir=\${array[\$${arrayIndexName}]}
         ${cmd}
         """.stripIndent().trim()
