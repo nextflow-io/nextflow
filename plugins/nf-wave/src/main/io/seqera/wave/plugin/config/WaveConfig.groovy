@@ -29,6 +29,7 @@ import nextflow.util.Duration
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
+    final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda', 'spack')
     final private Boolean enabled
     final private String endpoint
     final private List<URL> containerConfigUrl
@@ -72,10 +73,9 @@ class WaveConfig {
     String cacheRepository() { cacheRepository }
 
     protected List<String> parseStrategy(value) {
-        final defaultStrategy = List.of('container','dockerfile','conda', 'spack')
         if( !value ) {
-            log.debug "Wave strategy not specified - using default: $defaultStrategy"
-            return defaultStrategy
+            log.debug "Wave strategy not specified - using default: $DEF_STRATEGIES"
+            return DEF_STRATEGIES
         }
         List<String> result
         if( value instanceof CharSequence )
@@ -85,7 +85,7 @@ class WaveConfig {
         else
             throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
         for( String it : result ) {
-            if( it !in defaultStrategy)
+            if( it !in DEF_STRATEGIES)
                 throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
         }
         return result

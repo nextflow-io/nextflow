@@ -468,7 +468,7 @@ class WaveClient {
             'os_packages': config.spackOpts().osPackages,
             'add_commands': addCommands(cmd_template),
         ]
-        final template = WaveClient.class.getResource('/dockerfile-spack-file.txt')
+        final template = WaveClient.class.getResource('/templates/spack/dockerfile-spack-file.txt')
         try(final reader = template.newReader()) {
             final result = new BashTemplateEngine().render(reader, binding)
             return result
@@ -526,7 +526,7 @@ class WaveClient {
             'os_packages': config.spackOpts().osPackages,
             'add_commands': addCommands(cmd_template),
         ]
-        final template = WaveClient.class.getResource('/dockerfile-spack-recipe.txt')
+        final template = WaveClient.class.getResource('/templates/spack/dockerfile-spack-recipe.txt')
 
         try(final reader = template.newReader()) {
             final result = new BashTemplateEngine().render(reader, binding)
