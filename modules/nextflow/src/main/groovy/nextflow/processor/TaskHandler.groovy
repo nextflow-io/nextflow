@@ -21,7 +21,6 @@ import static nextflow.processor.TaskStatus.*
 import java.nio.file.NoSuchFileException
 
 import groovy.util.logging.Slf4j
-import nextflow.executor.TaskArraySubmitter
 import nextflow.trace.TraceRecord
 /**
  * Actions to handle the underlying job running the user task.
@@ -51,11 +50,6 @@ abstract class TaskHandler {
      * The task managed by this handler
      */
     TaskRun getTask() { task }
-
-    /**
-     * Submitter for array jobs
-     */
-    TaskArraySubmitter arraySubmitter
 
     /**
      * Task current status

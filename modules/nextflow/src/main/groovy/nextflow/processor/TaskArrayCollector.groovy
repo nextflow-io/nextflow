@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -23,7 +25,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayAware
-import nextflow.executor.TaskArraySubmitter
+import nextflow.file.FileHelper
+import nextflow.fusion.FusionHelper
+import nextflow.util.CacheHelper
+import nextflow.util.Escape
 
 /**
  * Task monitor that batches tasks and submits them as array jobs
@@ -36,8 +41,6 @@ import nextflow.executor.TaskArraySubmitter
 class TaskArrayCollector {
 
     private TaskArrayAware executor
-
-    private TaskMonitor monitor
 
     private int arraySize
 
@@ -52,7 +55,6 @@ class TaskArrayCollector {
             throw new IllegalArgumentException("Executor '${executor.name}' does not support array jobs")
 
         this.executor = (TaskArrayAware)executor
-        this.monitor = executor.monitor
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
     }
@@ -108,15 +110,72 @@ class TaskArrayCollector {
     }
 
     protected void submit0(List<TaskHandler> array) {
-        // create submitter for array job
-        final arraySubmitter = new TaskArraySubmitter(array, executor)
+        executor.submit(createTaskArray(array))
+    }
 
-        // submit each task to the underlying monitor
-        // each task will defer to the array job during submission
-        for( TaskHandler handler : array ) {
-            handler.arraySubmitter = arraySubmitter
-            monitor.schedule(handler)
+    /**
+     * Create the task run for an array job.
+     *
+     * @param array
+     */
+    protected TaskRun createTaskArray(List<TaskHandler> array) {
+        final tasks = array.collect( h -> h.task )
+        final first = tasks.first()
+
+        // create work directory
+        final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
+        final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
+
+        Files.createDirectories(workDir)
+
+        // create wrapper script
+        final script = createTaskArrayScript(tasks)
+
+        // create task handler
+        return new TaskArray(
+            id: first.id,
+            index: first.index,
+            processor: first.processor,
+            type: first.type,
+            config: first.processor.config.createTaskConfig(),
+            context: new TaskContext(first.processor),
+            hash: hash,
+            workDir: workDir,
+            script: script,
+            children: array
+        )
+    }
+
+    /**
+     * Create the wrapper script for an array job.
+     *
+     * @param tasks
+     */
+    protected String createTaskArrayScript(List<TaskRun> tasks) {
+        // get work directory and launch command for each task
+        def workDirs
+        def cmd
+
+        if( executor.workDir.fileSystem == FileSystems.default ) {
+            workDirs = tasks.collect( t -> t.workDir.toString() )
+            cmd = "cd \${task_dir} ; bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG}"
         }
+        else {
+            workDirs = executor.isFusionEnabled()
+                ? tasks.collect( t -> FusionHelper.toContainerMount(t.workDir).toString() )
+                : tasks.collect( t -> t.workDir.toUriString() )
+            cmd = Escape.cli(array.first().getSubmitCommand().toArray() as String[])
+            cmd = cmd.replaceAll(workDirs.first(), '\\${task_dir}')
+        }
+
+        // create wrapper script
+        final arrayIndexName = executor.getArrayIndexName()
+
+        """
+        declare -a array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
+        export task_dir=\${array[\$${arrayIndexName}]}
+        ${cmd}
+        """.stripIndent().trim()
     }
 
 }

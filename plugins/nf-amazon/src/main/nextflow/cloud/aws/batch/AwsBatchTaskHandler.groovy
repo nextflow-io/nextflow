@@ -311,11 +311,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     @Override
     void submit() {
-        if( arraySubmitter ) {
-            arraySubmitter.collect(this)
-            return
-        }
-
         /*
          * create submit request
          */

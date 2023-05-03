@@ -33,7 +33,6 @@ import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.TaskArrayAware
-import nextflow.executor.TaskArraySubmitter
 import nextflow.executor.Executor
 import nextflow.fusion.FusionHelper
 import nextflow.extension.FilesEx
