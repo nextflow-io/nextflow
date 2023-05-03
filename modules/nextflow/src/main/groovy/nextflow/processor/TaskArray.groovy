@@ -31,4 +31,8 @@ class TaskArray extends TaskRun {
 
     List<TaskHandler> children
 
+    int getArraySize() {
+        children.size()
+    }
+
 }

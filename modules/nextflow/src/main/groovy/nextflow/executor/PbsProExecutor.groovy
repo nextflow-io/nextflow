@@ -46,7 +46,7 @@ class PbsProExecutor extends PbsExecutor {
         assert result !=null
 
         if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).children.size()
+            final arraySize = ((TaskArray)task).getArraySize()
             result << '-J' << "0-${arraySize - 1}"
         }
 

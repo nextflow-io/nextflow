@@ -52,7 +52,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).children.size()
+            final arraySize = ((TaskArray)task).getArraySize()
             result << '--array' << "0-${arraySize - 1}"
         }
 

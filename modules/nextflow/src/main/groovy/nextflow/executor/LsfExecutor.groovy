@@ -71,7 +71,7 @@ class LsfExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).children.size()
+            final arraySize = ((TaskArray)task).getArraySize()
             result << '-J' << "nf-array-${taskArrayCount.getAndIncrement()}[0-${arraySize - 1}]"
         }
 

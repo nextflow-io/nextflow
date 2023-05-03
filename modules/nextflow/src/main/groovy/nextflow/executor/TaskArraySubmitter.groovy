@@ -97,6 +97,8 @@ class TaskArraySubmitter {
         // submit array job
         arrayHandler.prepareLauncher()
         arrayHandler.submit()
+
+        log.trace "Submitted array job ${arrayTask.name} > workDir: ${arrayTask.workDir}"
     }
 
     /**
