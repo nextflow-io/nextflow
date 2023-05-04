@@ -2338,6 +2338,26 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 
 See also: [cpus](#cpus), [memory](#memory), [queue](#queue) and [Dynamic computing resources](#dynamic-computing-resources).
 
+(process-waveDockerfile)=
+
+### waveDockerfile
+
+The `waveDockerfile` directive allows you to execute the process script in a [Docker](http://docker.io) container, through the specification of the file path for the corresponding Dockerfile recipe.
+
+This directive can only be used in conjunction with the {ref}`wave-page` service, which requires a Docker daemon to be running in machine where the pipeline is executed.
+
+For example:
+
+```groovy
+process runThisInWaveContainer {
+  waveDockerfile 'Dockerfile'
+
+  """
+  <your holy Dockerfile recipe here>
+  """
+}
+```
+
 ### Dynamic directives
 
 A directive can be assigned *dynamically*, during the process execution, so that its actual value can be evaluated based on the process inputs.

@@ -61,13 +61,15 @@ tower {
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <dsl2-module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
+To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <dsl2-module-directory>` where the pipeline process is defined. In alternative, if you want to specify a custom file path for your Dockerfile, you can do so by means of the process {ref}`process-waveDockefile` directive.
+
+When Wave is enabled, it automatically uses the provided Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
 
 :::{tip}
 Make sure the process does not declare a `container` directive, otherwise it will take precedence over the Dockerfile definition.
 :::
 
-If a process uses a `container` directive and you still want to build the container using the Dockerfile provided in the module directory, add the following setting to the pipeline config file:
+If a process uses a `container` directive and you still want to build the container using the provided Dockerfile, add the following setting to the pipeline config file:
 
 ```groovy
 wave.strategy = ['dockerfile','container']
