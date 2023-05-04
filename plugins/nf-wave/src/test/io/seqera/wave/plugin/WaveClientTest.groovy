@@ -211,6 +211,26 @@ class WaveClientTest extends Specification {
         !req.containerConfig.layers
     }
 
+    def 'should create request object with dockerfile in process specific location' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def DOCKERFILE = folder.resolve('Dockerfile'); DOCKERFILE.text = 'from foo:latest'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(new WaveAssets(null, null, null, null, DOCKERFILE.text, null, null))
+        then:
+        !req.containerImage
+        new String(req.containerFile.decodeBase64()) == DOCKERFILE.text
+        !req.containerConfig.layers
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should create request object with build and cache repos' () {
         given:
         def session = Mock(Session) { getConfig() >> [wave:[build:[repository:'some/repo',cacheRepository:'some/cache']]]}
@@ -771,6 +791,35 @@ CMD [ "/bin/bash" ]
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
+        !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create asset with dockerfile in process specific location' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def dockerfile = folder.resolve('Dockerfile'); dockerfile.text = 'from foo:latest'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def task = Mock(TaskRun) {getConfig() >> [waveDockerfile:dockerfile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null)
+        then:
+        assets.dockerFileContent == '''\
+                from foo:latest'''.stripIndent()
+        and:
+        assets.dockerFileContent == dockerfile.text
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.condaFile
         !assets.projectResources
 
         cleanup:
