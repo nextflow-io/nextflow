@@ -79,6 +79,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'storeDir',
             'tag',
             'time',
+            'waveDockerfile',
             // input-output qualifiers
             'file',
             'set',

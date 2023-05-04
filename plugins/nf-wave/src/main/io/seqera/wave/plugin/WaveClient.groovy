@@ -319,9 +319,10 @@ class WaveClient {
         attrs.container = containerImage
         attrs.conda = task.config.conda as String
         attrs.spack = task.config.spack as String
-        if( bundle!=null && bundle.dockerfile ) {
+        if( task.config.getDockerfile() != null )
+            attrs.dockerfile = task.config.getDockerfile().text
+        else if( bundle!=null && bundle.dockerfile )
             attrs.dockerfile = bundle.dockerfile.text
-        }
 
         // validate request attributes
         if( config().strategy() )

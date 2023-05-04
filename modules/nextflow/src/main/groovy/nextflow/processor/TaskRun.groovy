@@ -611,6 +611,10 @@ class TaskRun implements Cloneable {
         cache.getCachePathFor(config.spack as String, arch)
     }
 
+    Path getDockerfile() {
+        return config.getDockerfile()
+    }
+
     protected ContainerInfo containerInfo() {
         cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
     }

@@ -377,6 +377,14 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('container')
     }
 
+    Path getDockerfile() {
+        path = get('waveDockerfile')
+        if( !path )
+            return null
+
+        return (path as Path)
+    }
+
     Architecture getArchitecture() {
         final value = get('arch')
         if( value instanceof CharSequence )

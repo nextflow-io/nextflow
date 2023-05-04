@@ -49,6 +49,8 @@ class TaskBean implements Serializable, Cloneable {
 
     Path spackEnv
 
+    Path dockerfile
+
     List<String> moduleNames
 
     Path workDir
@@ -126,6 +128,7 @@ class TaskBean implements Serializable, Cloneable {
 
         this.condaEnv = task.getCondaEnv()
         this.spackEnv = task.getSpackEnv()
+        this.dockerfile = task.getDockerfile()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()
