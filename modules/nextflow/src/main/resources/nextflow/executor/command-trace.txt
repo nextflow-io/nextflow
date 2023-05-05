@@ -127,6 +127,7 @@ nxf_write_trace() {
     echo "nextflow.trace/v2"           > $trace_file
     echo "realtime=$wall_time"         >> $trace_file
     echo "%cpu=$ucpu"                  >> $trace_file
+    echo "cpu_model=$cpu_model"        >> $trace_file
     echo "rchar=${io_stat1[0]}"        >> $trace_file
     echo "wchar=${io_stat1[1]}"        >> $trace_file
     echo "syscr=${io_stat1[2]}"        >> $trace_file
@@ -144,6 +145,7 @@ nxf_trace_mac() {
     local end_millis=$(nxf_date)
     local wall_time=$((end_millis-start_millis))
     local ucpu=''
+    local cpu_model=''
     local io_stat1=('' '' '' '' '' '')
     nxf_write_trace
 }
