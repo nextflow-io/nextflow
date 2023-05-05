@@ -117,7 +117,7 @@ class ApptainerBuilderTest extends Specification {
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} APPTAINERENV_X=1 APPTAINERENV_ALPHA="aaa" APPTAINERENV_BETA="bbb" apptainer exec --pid busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} APPTAINERENV_X="1" APPTAINERENV_ALPHA="aaa" APPTAINERENV_BETA="bbb" apptainer exec --pid busybox'
 
         new ApptainerBuilder('busybox')
                 .addEnv('CUDA_VISIBLE_DEVICES')
@@ -156,12 +156,12 @@ class ApptainerBuilderTest extends Specification {
 
         where:
         ENV                         | RESULT
-        'X=1'                       | 'APPTAINERENV_X=1'
+        'X=1'                       | 'APPTAINERENV_X="1"'
         'BAR'                       | '${BAR:+APPTAINERENV_BAR="$BAR"}'
         [VAR_X:1, VAR_Y: 2]         | 'APPTAINERENV_VAR_X="1" APPTAINERENV_VAR_Y="2"'
         [APPTAINER_BIND: 'foo', APPTAINERENV_FOO: 'x', BAR: 'y'] | 'APPTAINER_BIND="foo" APPTAINERENV_FOO="x" APPTAINERENV_BAR="y"'
         'APPTAINER_FOO'          | '${APPTAINER_FOO:+APPTAINER_FOO="$APPTAINER_FOO"}'
         'APPTAINERENV_FOO'       | '${APPTAINERENV_FOO:+APPTAINERENV_FOO="$APPTAINERENV_FOO"}'
-        'APPTAINERENV_X=1'       | 'APPTAINERENV_X=1'
+        'APPTAINERENV_X=1'       | 'APPTAINERENV_X="1"'
     }
 }

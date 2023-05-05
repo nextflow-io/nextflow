@@ -118,7 +118,7 @@ class SingularityBuilderTest extends Specification {
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} SINGULARITYENV_X=1 SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec --pid busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} SINGULARITYENV_X="1" SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec --pid busybox'
 
         new SingularityBuilder('busybox')
                 .addEnv('CUDA_VISIBLE_DEVICES')
@@ -157,12 +157,33 @@ class SingularityBuilderTest extends Specification {
 
         where:
         ENV                         | RESULT
-        'X=1'                       | 'SINGULARITYENV_X=1'
+        'X=1'                       | 'SINGULARITYENV_X="1"'
         'BAR'                       | '${BAR:+SINGULARITYENV_BAR="$BAR"}'
         [VAR_X:1, VAR_Y: 2]         | 'SINGULARITYENV_VAR_X="1" SINGULARITYENV_VAR_Y="2"'
         [SINGULARITY_BIND: 'foo', SINGULARITYENV_FOO: 'x', BAR: 'y'] | 'SINGULARITY_BIND="foo" SINGULARITYENV_FOO="x" SINGULARITYENV_BAR="y"'
         'SINGULARITY_FOO'          | '${SINGULARITY_FOO:+SINGULARITY_FOO="$SINGULARITY_FOO"}'
         'SINGULARITYENV_FOO'       | '${SINGULARITYENV_FOO:+SINGULARITYENV_FOO="$SINGULARITYENV_FOO"}'
-        'SINGULARITYENV_X=1'       | 'SINGULARITYENV_X=1'
+        'SINGULARITYENV_X=1'       | 'SINGULARITYENV_X="1"'
+    }
+
+    @Unroll
+    def 'should quote env value' () {
+        given:
+        def builder = Spy(SingularityBuilder)
+
+        expect:
+        builder.quoteValue(STR) == EXPECTED
+
+        where:
+        STR             | EXPECTED
+        null            | null
+        ''              | ''
+        'foo'           | '"foo"'
+        '"foo"'         | '"foo"'
+        "'foo'"         | "'foo'"
+        and:
+        'X=foo'         | 'X="foo"'
+        'X="foo"'       | 'X="foo"'
+        'X='            | 'X='
     }
 }

@@ -132,6 +132,23 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         return PREFIX+'ENV_'+key
     }
 
+    protected String quoteValue(String env) {
+        if( !env )
+            return env
+        final p=env.indexOf('=')
+        return p==-1 ? quoteValue0(env) : env.substring(0,p) + '=' + quoteValue0(env.substring(p+1))
+    }
+
+    private String quoteValue0(String value) {
+        if( !value )
+            return value
+        if( value.startsWith('"') && value.endsWith('"') )
+            return value
+        if( value.startsWith("'") && value.endsWith("'") )
+            return value
+        return '"'  + value + '"'
+    }
+
     @Override
     protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
@@ -143,7 +160,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << prefixEnv(env)
+            result << prefixEnv(quoteValue(env))
         }
         else if( env instanceof String ) {
             result << "\${$env:+${prefixEnv(env)}=\"\$$env\"}"
