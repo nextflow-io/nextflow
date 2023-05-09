@@ -12,20 +12,33 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.k8s.model
+package nextflow.k8s.client
+
+import java.nio.file.Path
+
+import nextflow.k8s.client.K8sRequestDelegate
+import nextflow.k8s.client.K8sResponseJson
 
 /**
- * Model the resource type to be used to run nextflow tasks
+ * Models the API operations for a K8s compute resource (Pod, Job, etc).
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-enum ResourceType {
-    Pod, Job;
+interface ResourceProvider {
 
-    String lower() {
-        return this.name().toLowerCase()
-    }
+    ResourceProvider withDelegate(K8sRequestDelegate delegate)
+
+    K8sResponseJson create(Map spec, Path saveYamlPath)
+
+    K8sResponseJson delete(String name)
+
+    K8sResponseJson list(boolean allNamespaces)
+
+    InputStream fetchLog(Map params, String name)
+
+    Map getState(String name)
+
 }
+

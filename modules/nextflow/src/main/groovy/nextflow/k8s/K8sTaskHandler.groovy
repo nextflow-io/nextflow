@@ -32,10 +32,12 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
+import nextflow.k8s.model.JobSpecBuilder
+import nextflow.k8s.model.MPIJobSpecBuilder
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
-import nextflow.k8s.model.ResourceType
+import nextflow.k8s.model.ResourceSpecBuilder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -51,6 +53,15 @@ import nextflow.util.PathTrie
 @CompileStatic
 class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
+    static private Map<String,Class<ResourceSpecBuilder>> specBuilders = [:]
+
+    static {
+        // initialize the list of default spec builders
+        registerSpecBuilder('Pod', PodSpecBuilder.class)
+        registerSpecBuilder('Job', JobSpecBuilder.class)
+        registerSpecBuilder('MPIJob', MPIJobSpecBuilder.class)
+    }
+
     @Lazy
     static private final String OWNER = {
         if( System.getenv('NXF_OWNER') ) {
@@ -64,11 +75,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     } ()
 
-    private ResourceType resourceType = ResourceType.Pod
-
     private K8sClient client
 
-    private String podName
+    private String resourceType = 'Pod'
+
+    private String resourceName
 
     private BashWrapperBuilder builder
 
@@ -84,7 +95,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private K8sExecutor executor
 
-    private String runsOnNode = null
+    private String hostname = null
 
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
@@ -93,12 +104,30 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
-        this.resourceType = executor.k8sConfig.useJobResource() ? ResourceType.Job : ResourceType.Pod
     }
 
     /** only for testing -- do not use */
     protected K8sTaskHandler() {
 
+    }
+
+    /**
+     * Register a spec builder for a custom K8s resource.
+     *
+     * @param name
+     * @param clazz
+     */
+    static void registerSpecBuilder(String name, Class<? extends ResourceSpecBuilder> clazz) {
+        specBuilders.put(name, clazz)
+    }
+
+    /**
+     * Get a new instance of a spec builder.
+     *
+     * @param name
+     */
+    static ResourceSpecBuilder createSpecBuilder(String name) {
+        specBuilders.get(name).newInstance()
     }
 
     /**
@@ -108,13 +137,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         executor.session.runName
     }
 
-    protected String getPodName() {
-        return podName
+    protected String getResourceName() {
+        return resourceName
     }
 
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
-
-    protected boolean useJobResource() { resourceType==ResourceType.Job }
 
     protected List<String> getContainerMounts() {
 
@@ -157,7 +184,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 : classicSubmitCli(task)
     }
 
-    protected String getSyntheticPodName(TaskRun task) {
+    protected String getSyntheticName(TaskRun task) {
         "nf-${task.hash}"
     }
 
@@ -183,7 +210,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             newSubmitRequest0(task, imageName)
         }
         catch( Throwable e ) {
-            throw  new ProcessSubmitException("Failed to submit K8s ${resourceType.lower()} -- Cause: ${e.message ?: e}", e)
+            throw new ProcessSubmitException("Failed to submit K8s ${resourceType} -- Cause: ${e.message ?: e}", e)
         }
     }
 
@@ -197,14 +224,18 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         final taskCfg = task.getConfig()
 
         final clientConfig = client.config
-        final builder = new PodSpecBuilder()
+
+        final podOptions = getPodOptions()
+        resourceType = podOptions.resourceType ?: 'Pod'
+
+        final builder = createSpecBuilder(resourceType)
             .withImageName(imageName)
-            .withPodName(getSyntheticPodName(task))
+            .withName(getSyntheticName(task))
             .withNamespace(clientConfig.namespace)
             .withServiceAccount(clientConfig.serviceAccount)
             .withLabels(getLabels(task))
             .withAnnotations(getAnnotations())
-            .withPodOptions(getPodOptions())
+            .withPodOptions(podOptions)
 
         // when `entrypointOverride` is false the launcher is run via `args` instead of `command`
         // to not override the container entrypoint
@@ -255,9 +286,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 builder.withEnv(PodEnv.value(it.key, it.value))
         }
 
-        return useJobResource()
-            ? builder.buildAsJob()
-            : builder.build()
+        return builder.build()
     }
 
     protected PodOptions getPodOptions() {
@@ -302,13 +331,12 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         builder.build()
 
         final req = newSubmitRequest(task)
-        final resp = useJobResource()
-                ? client.jobCreate(req, yamlDebugPath())
-                : client.podCreate(req, yamlDebugPath())
+        final resp = client.create(resourceType, req, yamlDebugPath())
 
         if( !resp.metadata?.name )
-            throw new K8sResponseException("Missing created ${resourceType.lower()} name", resp)
-        this.podName = resp.metadata.name
+            throw new K8sResponseException("Missing created ${resourceType} name", resp)
+
+        this.resourceName = resp.metadata.name
         this.status = TaskStatus.SUBMITTED
     }
 
@@ -326,11 +354,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             final delta =  now - timestamp;
             if( !state || delta >= 1_000) {
-                def newState = useJobResource()
-                        ? client.jobState(podName)
-                        : client.podState(podName)
+                def newState = client.getState(resourceType, resourceName)
                 if( newState ) {
-                   log.trace "[K8s] Get ${resourceType.lower()}=$podName state=$newState"
+                   log.trace "[K8s] Get ${resourceType}=${resourceName} state=${newState}"
                    state = newState
                    timestamp = now
                 }
@@ -352,13 +378,13 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfRunning() {
-        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name -- cannot check if running")
+        if( !resourceName ) throw new IllegalStateException("Missing K8s ${resourceType} name -- cannot check if running")
         if(isSubmitted()) {
             def state = getState()
             // include `terminated` state to allow the handler status to progress
             if (state && (state.running != null || state.terminated)) {
                 status = TaskStatus.RUNNING
-                determineNode()
+                getHostname()
                 return true
             }
         }
@@ -397,7 +423,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
-        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name - cannot check if complete")
+        if( !resourceName ) throw new IllegalStateException("Missing K8s ${resourceType} name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
             if( state.nodeTermination instanceof NodeTerminationException ) {
@@ -416,7 +442,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             savePodLogOnError(task)
             deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
-            determineNode()
+            getHostname()
             return true
         }
 
@@ -435,13 +461,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             return
 
         try {
-            final stream = useJobResource()
-                    ? client.jobLog(podName)
-                    : client.podLog(podName)
+            final stream = client.fetchLog(resourceType, resourceName)
             Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
         }
         catch( Exception e ) {
-            log.warn "Failed to copy log for ${resourceType.lower()} $podName", e
+            log.warn "Failed to copy log for ${resourceType} ${resourceName}", e
         }
     }
 
@@ -463,12 +487,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( cleanupDisabled() )
             return
         
-        if( podName ) {
-            log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
-            if ( useJobResource() )
-                client.jobDelete(podName)
-            else
-                client.podDelete(podName)
+        if( resourceName ) {
+            log.trace "[K8s] deleting ${resourceType} name=${resourceName}"
+            client.delete(resourceType, resourceName)
         }
         else {
             log.debug "[K8s] Oops.. invalid delete action"
@@ -480,7 +501,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected void deletePodIfSuccessful(TaskRun task) {
-        if( !podName )
+        if( !resourceName )
             return
 
         if( cleanupDisabled() )
@@ -492,29 +513,26 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         try {
-            if ( useJobResource() )
-                client.jobDelete(podName)
-            else
-                client.podDelete(podName)
+            client.delete(resourceType, resourceName)
         }
         catch( Exception e ) {
-            log.warn "Unable to cleanup ${resourceType.lower()}: $podName -- see the log file for details", e
+            log.warn "Unable to cleanup ${resourceType}: ${resourceName} -- see the log file for details", e
         }
     }
 
-    private void determineNode(){
+    private void getHostname(){
         try {
-            if ( k8sConfig.fetchNodeName() && !runsOnNode )
-                runsOnNode = client.getNodeOfPod( podName )
-        } catch ( Exception e ){
-            log.warn ("Unable to get the node name of pod $podName -- see the log file for details", e)
+            if ( k8sConfig.fetchNodeName() && !hostname )
+                hostname = client.podHostname( resourceName )
+        } catch( Exception e ) {
+            log.warn ("Unable to get the node name of pod ${resourceName} -- see the log file for details", e)
         }
     }
 
     TraceRecord getTraceRecord() {
         final result = super.getTraceRecord()
-        result.put('native_id', podName)
-        result.put( 'hostname', runsOnNode )
+        result.put('native_id', resourceName)
+        result.put('hostname', hostname)
         return result
     }
 

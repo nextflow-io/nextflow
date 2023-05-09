@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
+import groovy.util.logging.Slf4j
 
 /**
  * Model K8s pod options such as environment variables,
@@ -30,6 +31,7 @@ import groovy.transform.ToString
 @CompileStatic
 @ToString(includeNames = true)
 @EqualsAndHashCode(includeFields = true)
+@Slf4j
 class PodOptions {
 
     private String imagePullPolicy
@@ -65,7 +67,11 @@ class PodOptions {
     private List<Map> tolerations
 
     private Boolean privileged
-    
+
+    private String resourceType
+
+    private Map unmatched = [:]
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -150,8 +156,13 @@ class PodOptions {
         else if( entry.privileged instanceof Boolean ) {
             this.privileged = entry.privileged as Boolean
         }
-        else
-            throw new IllegalArgumentException("Unknown pod options: $entry")
+        else if( entry.resourceType ) {
+            this.resourceType = entry.resourceType as String
+        }
+        else {
+            log.debug "Unmatched pod option: $entry"
+            this.unmatched.putAll(entry)
+        }
     }
 
 
@@ -213,7 +224,16 @@ class PodOptions {
     List<Map> getTolerations() { tolerations }
 
     Boolean getPrivileged() { privileged }
-    
+
+    String getResourceType() { resourceType }
+
+    PodOptions setResourceType( String resourceType ) {
+        this.resourceType = resourceType
+        return this
+    }
+
+    Map getUnmatched() { unmatched }
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -284,6 +304,12 @@ class PodOptions {
 
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
+
+        // resource type
+        result.resourceType = other.resourceType ?: this.resourceType
+
+        // unmatched options
+        result.unmatched = other.unmatched ?: this.unmatched
 
         return result
     }

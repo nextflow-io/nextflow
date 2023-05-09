@@ -30,7 +30,6 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
-import nextflow.k8s.model.ResourceType
 import nextflow.util.Duration
 
 /**
@@ -70,6 +69,13 @@ class K8sConfig implements Map<String,Object> {
             podOptions.securityContext = new PodSecurityContext(target.runAsUser)
         else if( target.securityContext instanceof Map )
             podOptions.securityContext = new PodSecurityContext(target.securityContext as Map)
+
+        // -- shortcut to resource type
+        if( !podOptions.resourceType && target.computeResourceType ) {
+            log.warn 'Config option `k8s.computeResourceType` has been deprecated, use `resourceType` in `k8s.pod` instead'
+            podOptions.resourceType = target.computeResourceType
+            target.computeResourceType = null
+        }
     }
 
     private PodOptions createPodOptions( value ) {
@@ -161,7 +167,7 @@ class K8sConfig implements Map<String,Object> {
 
     String getNamespace() { target.namespace }
 
-    boolean useJobResource() { ResourceType.Job.name() == target.computeResourceType?.toString() }
+    String getResourceType() { podOptions.resourceType ?: 'Pod' }
 
     String getServiceAccount() { target.serviceAccount }
 

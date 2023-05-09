@@ -800,6 +800,7 @@ The following settings are available:
 
 `k8s.computeResourceType`
 : *Requires version `22.05.0-edge` or later*
+: *DEPRECATED since version `23.05.0-edge`, use `resourceType` in `k8s.pod` instead*
 : Define whether use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
 
 `k8s.context`

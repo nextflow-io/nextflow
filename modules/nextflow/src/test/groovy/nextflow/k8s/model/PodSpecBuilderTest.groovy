@@ -34,7 +34,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/some/work/dir')
                 .withCommand(['echo', 'hello'])
@@ -62,7 +62,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/some/work/dir')
                 .withArgs(['echo', 'hello'])
@@ -90,7 +90,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/some/work/dir')
                 .withArgs('echo foo')
@@ -118,7 +118,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand('echo foo')
                 .withPrivileged(true)
@@ -146,7 +146,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand('echo foo')
                 .withDevices(['/dev/fuse'])
@@ -176,7 +176,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/some/work/dir')
                 .withCommand(['sh', '-c', 'echo hello'])
@@ -222,7 +222,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/some/work/dir')
                 .withCommand(['sh', '-c', 'echo hello'])
@@ -272,7 +272,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand('echo hello')
                 .withWorkDir('/some/work/dir')
@@ -313,7 +313,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                    .withPodName('foo')
+                    .withName('foo')
                     .withImageName('busybox')
                     .withWorkDir('/path')
                     .withCommand(['echo'])
@@ -351,7 +351,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/path')
                 .withCommand(['echo'])
@@ -390,7 +390,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/path')
                 .withCommand(['echo'])
@@ -425,7 +425,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/path')
                 .withCommand(['echo'])
@@ -458,7 +458,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/path')
                 .withCommand(['echo'])
@@ -494,7 +494,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo'])
                 .withEnv( PodEnv.value('FOO','abc'))
@@ -526,7 +526,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo'])
                 .withEnv( PodEnv.value('FOO','abc'))
@@ -558,7 +558,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo'])
                 .withSecret(new PodMountSecret(secret: 'alpha', mountPath: '/this/and/that'))
@@ -599,7 +599,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/path')
                 .withCommand(['echo'])
@@ -716,7 +716,7 @@ class PodSpecBuilderTest extends Specification {
         given:
         def opts = Mock(PodOptions)
         def builder = new PodSpecBuilder([
-            podName: 'foo',
+            name: 'foo',
             imageName: 'image',
             command: ['echo'],
             labels: [runName: 'crazy_john'],
@@ -994,11 +994,11 @@ class PodSpecBuilderTest extends Specification {
     def 'should create job spec' () {
 
         when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
+        def spec = new JobSpecBuilder()
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo', 'hello'])
-                .buildAsJob()
+                .build()
 
         then:
         spec ==  [ apiVersion: 'batch/v1',
@@ -1024,8 +1024,8 @@ class PodSpecBuilderTest extends Specification {
     def 'should set labels and annotations for job' () {
 
         when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
+        def spec = new JobSpecBuilder()
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo', 'hello'])
                 .withLabel('app','someApp')
@@ -1033,7 +1033,7 @@ class PodSpecBuilderTest extends Specification {
                 .withLabel('version','3.8.1')
                 .withAnnotation("anno1", "val1")
                 .withAnnotations([anno2: "val2", anno3: "val3"])
-                .buildAsJob()
+                .build()
 
         then:
         spec ==  [ apiVersion: 'batch/v1',
@@ -1073,7 +1073,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withWorkDir('/some/work/dir')
                 .withCommand(['echo', 'hello'])
@@ -1097,38 +1097,6 @@ class PodSpecBuilderTest extends Specification {
                    ]
         ]
 
-    }
-
-    def 'should create job spec with activeDeadlineSeconds' () {
-
-        when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withCommand(['echo', 'hello'])
-                .withActiveDeadline(100)
-                .buildAsJob()
-
-        then:
-        spec ==  [ apiVersion: 'batch/v1',
-                   kind: 'Job',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           backoffLimit: 0,
-                           template: [
-                                   spec: [
-                                           restartPolicy:'Never',
-                                           activeDeadlineSeconds: 100,
-                                           containers:[
-                                                   [name:'foo',
-                                                    image:'busybox',
-                                                    command:['echo', 'hello'],
-                                                   ]
-                                           ]
-                                   ]
-                           ]
-                   ]
-        ]
     }
 
 }

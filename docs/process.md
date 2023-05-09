@@ -1927,7 +1927,11 @@ The `pod` directive supports the following options:
 : Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.
 
 `privileged: <B>`
-: Whether the process task should run as a *privileged* container (default: `false`)
+: Whether the process task should run as a *privileged* container (default: `false`).
+
+`resourceType: <V>`
+: *Requires version `23.05.0-edge` or later*
+: Specifies the resource type to be used for tasks, can be `'Pod'` or `'Job'` (default: `'Pod'`).
 
 `runAsUser: <UID>`
 : Specifies the user ID to be used to run the container. Shortcut for the `securityContext` option.
@@ -1946,6 +1950,10 @@ The `pod` directive supports the following options:
 `volumeClaim: <V>, mountPath: </absolute/path>`
 : *Can be specified multiple times*
 : Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with name `V` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
+
+`*: <V>`
+: *New in version `23.05.0-edge`*
+: Any unmatched options will be saved internally. They can be inspected by plugins that support custom pod options.
 
 (process-publishdir)=
 
