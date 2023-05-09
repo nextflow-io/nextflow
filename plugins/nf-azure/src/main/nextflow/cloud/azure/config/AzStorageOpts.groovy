@@ -16,11 +16,10 @@
 
 package nextflow.cloud.azure.config
 
-
 import groovy.transform.CompileStatic
+import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.util.Duration
-
 /**
  * Parse Azure settings from nextflow config file
  *
@@ -63,5 +62,11 @@ class AzStorageOpts {
             result[entry.key] = new AzFileShareOpts(entry.value)
         }
         return result
+    }
+
+    synchronized String getOrCreateSasToken() {
+        if( !sasToken )
+            sasToken = AzHelper.generateAccountSas(accountName, accountKey, tokenDuration)
+        return sasToken
     }
 }
