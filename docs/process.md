@@ -1233,15 +1233,18 @@ process cpu_task {
 }
 ```
 
-The example above declares that the CPU architecture is `x86_64` (X86 64 bit), and more specifically that the microarchitecture is `cascadelake` (a specific generation of Intel CPUs).
+The example above declares that the CPU generic architecture is `linux/x86_64` (X86 64 bit), and more specifically that the microarchitecture is `cascadelake` (a specific generation of Intel CPUs).
 
-This directive is currently used only by the Spack package manager, by means of the [spack](#spack) directive, to build architecture-optimised applications.
+This directive is currently used by the following Nextflow functionalities:
 
-Allowed values for the `arch` directive are as follows, grouped by equivalent meaning (choices available for the sake of compatibility):
+- by the [spack](#spack) directive, to build microarchitecture-optimised applications;
+- by the {ref}`wave-page` service, to build containers for one of the generic families of CPU architectures (see below);
+- by the `spack` strategy within {ref}`wave-page`, to optimise the container builds for specific CPU microarchitectures.
+
+Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
 - X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
 - ARM 64 bit: `linux/aarch64`, `aarch64`, `linux/arm64`, `arm64`, `linux/arm64/v8`
 - ARM 64 bit, older generation: `linux/arm64/v7`
-- ARM 32 bit: `linux/arm`, `arm`, `linux/arm/v7`, `linux/arm/7`, `linux/arm/v5`, `linux/arm/5`
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
