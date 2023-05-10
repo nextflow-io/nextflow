@@ -142,7 +142,7 @@ aws {
 ```
 
 :::{tip}
-This scope can also be used to configure access to S3-compatible storage outside of AWS.
+This scope can also be used to configure access to S3-compatible storage outside of AWS, such as [Ceph](https://ceph.com/en/) and [MinIO](https://min.io/).
 :::
 
 Read the {ref}`aws-page` and {ref}`amazons3-page` pages for more information.
