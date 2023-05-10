@@ -141,6 +141,10 @@ aws {
 }
 ```
 
+:::{tip}
+This scope can also be used for non-Amazon S3 methods such as Ceph (often used with Openstack clouds)
+:::
+
 Read the {ref}`aws-page` and {ref}`amazons3-page` pages for more information.
 
 The following settings are available:
