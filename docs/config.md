@@ -395,10 +395,10 @@ The following settings are available:
 : Jitter value when retrying failed API requests (default: `0.25`).
 
 `azure.retryPolicy.maxAttempts`
-: Max attempts when retrying failed API requests (default: `10`).
+: Max attempts when retrying failed API requests (default: `20`).
 
 `azure.retryPolicy.maxDelay`
-: Max delay when retrying failed API requests (default: `60s`).
+: Max delay when retrying failed API requests (default: `300s`).
 
 `azure.storage.accountName`
 : The blob storage account name
