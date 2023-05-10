@@ -1,8 +1,8 @@
 (amazons3-page)=
 
-# Amazon S3 storage
+# S3 storage
 
-Nextflow includes support for Amazon S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
+Nextflow includes support for S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system. The following sections focus on Amazon S3 storage, however the same concepts apply to any S3 compatible storage such as Ceph or MinIO storage.
 
 ## S3 path
 
@@ -24,14 +24,23 @@ See the {ref}`script-file-io` section to learn more about available file operati
 
 ## Security credentials
 
-Amazon access credentials can be provided in two ways:
+Access credentials can be provided in two ways:
 
-1. Using AWS access and secret keys in your pipeline configuration.
+1. Using access and secret keys in your pipeline configuration.
 2. Using IAM roles to grant access to S3 storage on Amazon EC2 instances.
 
-### AWS access and secret keys
+### Access and secret keys
 
-The AWS access and secret keys can be specified by using the `aws` section in the `nextflow.config` configuration file as shown below:
+Access and secret keys for authentication can be specified by using the `aws` section in the `nextflow.config` configuration file as shown below:
+
+```groovy
+aws {
+    accessKey = '<Your access key>'
+    secretKey = '<Your secret key>'
+}
+```
+
+For AWS you will also need to specify your region:
 
 ```groovy
 aws {
@@ -41,7 +50,7 @@ aws {
 }
 ```
 
-If the access credentials are not found in the above file, Nextflow looks for AWS credentials in the following order:
+For AWS storage, if the access credentials are not found in the above file, Nextflow looks for credentials in the following order:
 
 1. The `nextflow.config` file in the pipeline execution directory
 2. The environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
@@ -69,6 +78,20 @@ aws.client.endpoint = "https://s3.cn-north-1.amazonaws.com.cn"
 ```
 
 Read more about AWS API endpoints in the [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/s3.html)
+
+## Non-AWS storage
+
+For non-AWS S3 storage such as Ceph or MinIO you will need to additionally specify the endpoint URL:
+
+```groovy
+aws {
+    accessKey = '<Your access key>'
+    secretKey = '<Your secret key>'
+    region = '<Your storage endpoint>'
+}
+```
+
+Other additional settings will depend on the particular storage provider. In such cases you may need to compare the providers documentation with :ref:`Advanced configuration` for relevant options.
 
 ## Advanced configuration
 
