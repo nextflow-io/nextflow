@@ -40,6 +40,8 @@ aws {
 }
 ```
 
+The use of the `aws` configuration scope applies to both AWS and non-AWS S3 storage.
+
 For AWS you will also need to specify your region:
 
 ```groovy
