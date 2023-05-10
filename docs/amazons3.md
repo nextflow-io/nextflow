@@ -2,7 +2,7 @@
 
 # S3 storage
 
-Nextflow includes support for S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system. The following sections focus on Amazon S3 storage, however the same concepts apply to any S3 compatible storage such as Ceph or MinIO storage.
+Nextflow includes support for S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system. The following sections focus on Amazon S3 storage, however the same concepts apply to any S3 compatible platforms such as Ceph or MinIO storage.
 
 ## S3 path
 
