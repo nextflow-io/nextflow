@@ -142,7 +142,7 @@ aws {
 ```
 
 :::{tip}
-This scope can also be used for non-Amazon S3 methods such as Ceph (often used with Openstack clouds)
+This scope can also be used to configure access to S3-compatible storage outside of AWS.
 :::
 
 Read the {ref}`aws-page` and {ref}`amazons3-page` pages for more information.
