@@ -395,7 +395,7 @@ The following settings are available:
 : Jitter value when retrying failed API requests (default: `0.25`).
 
 `azure.retryPolicy.maxAttempts`
-: Max attempts when retrying failed API requests (default: `20`).
+: Max attempts when retrying failed API requests (default: `10`).
 
 `azure.retryPolicy.maxDelay`
 : Max delay when retrying failed API requests (default: `300s`).
