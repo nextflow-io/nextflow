@@ -86,7 +86,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.1'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.2'
         opts.condaOpts().commands == null
 
         when:
