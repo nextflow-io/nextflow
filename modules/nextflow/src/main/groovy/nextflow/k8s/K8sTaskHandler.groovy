@@ -27,6 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.container.DockerBuilder
 import nextflow.exception.NodeTerminationException
+import nextflow.k8s.client.PodUnschedulableException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
@@ -337,9 +338,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             return state
         } 
-        catch (NodeTerminationException e) {
+        catch (NodeTerminationException | PodUnschedulableException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
-            // attribute to return the NodeTerminationException error to the caller method
+            // attribute to return the error to the caller method
             final instant = Instant.now()
             final result = new HashMap(10)
             result.terminated = [startedAt:instant.toString(), finishedAt:instant.toString()]
@@ -400,9 +401,10 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
-            if( state.nodeTermination instanceof NodeTerminationException ) {
-                // kee track of the node termination error
-                task.error = (NodeTerminationException) state.nodeTermination
+            if( state.nodeTermination instanceof NodeTerminationException ||
+                state.nodeTermination instanceof PodUnschedulableException ) {
+                // keep track of the node termination error
+                task.error = (Throwable) state.nodeTermination
                 // mark the task as ABORTED since thr failure is caused by a node failure
                 task.aborted = true
             }

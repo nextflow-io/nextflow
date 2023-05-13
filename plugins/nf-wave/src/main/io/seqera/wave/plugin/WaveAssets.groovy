@@ -38,6 +38,7 @@ class WaveAssets {
     final ContainerConfig containerConfig
     final String dockerFileContent
     final Path condaFile
+    final Path spackFile
     final ResourcesBundle projectResources
 
     static fromImage(String containerImage,String containerPlatform=null) {
@@ -60,6 +61,12 @@ class WaveAssets {
                 : null
     }
 
+    String spackFileEncoded() {
+        return spackFile
+                ? spackFile.text.bytes.encodeBase64()
+                : null
+    }
+
     @Memoized
     String fingerprint() {
         final allMeta = new ArrayList(10)
@@ -68,6 +75,7 @@ class WaveAssets {
         allMeta.add( this.containerConfig?.fingerprint() )
         allMeta.add( this.dockerFileContent )
         allMeta.add( this.condaFile )
+        allMeta.add( this.spackFile )
         allMeta.add( this.projectResources?.fingerprint() )
         allMeta.add( this.containerPlatform )
         return CacheHelper.hasher(allMeta).hash().toString()
