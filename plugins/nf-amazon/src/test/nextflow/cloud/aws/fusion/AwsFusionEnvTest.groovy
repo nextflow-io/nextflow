@@ -62,4 +62,19 @@ class AwsFusionEnvTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should return env environment with SSE config' () {
+        given:
+        Global.config = [aws:[client: [storageEncryption:'aws:kms', storageKmsKeyId: 'xyz']]]
+        and:
+
+        when:
+        def config = Mock(FusionConfig)
+        def env = new AwsFusionEnv().getEnvironment('s3', Mock(FusionConfig))
+        then:
+        env == [FUSION_AWS_SERVER_SIDE_ENCRYPTION:'aws:kms', FUSION_AWS_SSEKMS_KEY_ID:'xyz']
+
+        cleanup:
+        Global.config = null
+    }
 }
