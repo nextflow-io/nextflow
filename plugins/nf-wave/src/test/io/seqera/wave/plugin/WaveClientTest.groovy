@@ -1255,11 +1255,11 @@ CMD [ "/bin/bash" ]
         
         where:
         ARCH                | EXPECTED
-        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
-        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
-        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
-        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
-        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
+        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
+        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
+        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
+        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
     }
 
     def 'should check is local conda file' () {
