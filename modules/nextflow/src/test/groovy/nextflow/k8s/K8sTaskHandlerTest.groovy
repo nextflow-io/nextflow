@@ -29,6 +29,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
+import nextflow.k8s.client.PodUnschedulableException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodMountSecret
@@ -802,6 +803,24 @@ class K8sTaskHandlerTest extends Specification {
         and:
         state.nodeTermination instanceof NodeTerminationException
         state.nodeTermination.message == "Node shutdown happened"
+    }
+
+    def 'should return other nodeTermination state' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> { throw new PodUnschedulableException("Pod failed for unknown reason", new Exception("cause")) }
+        then:
+        state.terminated.startedAt
+        state.terminated.finishedAt
+        and:
+        state.nodeTermination instanceof PodUnschedulableException
+        state.nodeTermination.message == "Pod failed for unknown reason"
     }
 
     def 'should return container mounts' () {
