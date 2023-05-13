@@ -454,7 +454,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * client.describeJobDefinitions(req) >> res
         1 * res.getJobDefinitions() >> [job]
         1 * job.getStatus() >> 'ACTIVE'
-        _ * job.getParameters() >> ['nf-token': JOB_ID]
+        1 * job.getParameters() >> ['nf-token': JOB_ID]
         1 * job.getRevision() >> 3
         result == "$JOB_NAME:3"
 
@@ -464,7 +464,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * client.describeJobDefinitions(req) >> res
         1 * res.getJobDefinitions() >> [job]
         1 * job.getStatus() >> 'ACTIVE'
-        _ * job.getParameters() >> [:]
+        1 * job.getParameters() >> [:]
         result == null
 
         when:

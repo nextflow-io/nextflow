@@ -167,7 +167,7 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
     // https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_command_ref/bjobs.zz4category.description.1.html
-    private static Map DECODE_STATUS = [
+    private static Map<String,QueueStatus> DECODE_STATUS = [
             'PEND': QueueStatus.PENDING,
             'RUN': QueueStatus.RUNNING,
             'PSUSP': QueueStatus.HOLD,
@@ -182,7 +182,7 @@ class LsfExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final Map<String, QueueStatus> result = new LinkedHashMap<>()
         def col1 = -1
         def col2 = -1
         for( String line : text.readLines() ) {
@@ -195,8 +195,8 @@ class LsfExecutor extends AbstractGridExecutor {
                 continue
             }
 
-            def jobId = line.tokenize(' ')[col1]
-            def status = line.tokenize(' ')[col2]
+            final jobId = line.tokenize(' ')[col1]
+            final status = line.tokenize(' ')[col2]
             if( jobId )
                 result[jobId] = DECODE_STATUS.get(status)
         }
@@ -234,7 +234,7 @@ class LsfExecutor extends AbstractGridExecutor {
      * -- see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
      */
     protected Map<String,String> parseLsfConfig() {
-        Map<String,String> result = [:]
+        final Map<String,String> result = new LinkedHashMap<>(20)
 
         // check environment variable exists
         def envDir = getEnv0('LSF_ENVDIR')

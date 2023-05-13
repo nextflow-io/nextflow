@@ -20,6 +20,7 @@ import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
@@ -157,46 +158,47 @@ abstract class TaskHandler {
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */
+    @CompileDynamic
     TraceRecord getTraceRecord() {
         def record = new TraceRecord()
-        record.put('task_id', task.id)
-        record.put('status', getStatusString())
-        record.put('hash', task.hashLog)
-        record.put('name', task.name)
-        record.put('exit', task.exitStatus)
-        record.put('submit', this.submitTimeMillis)
-        record.put('start', this.startTimeMillis)
-        record.put('process', task.processor.getName())
-        record.put('tag', task.config.tag)
-        record.put('module', task.config.module)
-        record.put('container', task.getContainer())
-        record.put('attempt', task.config.attempt)
+        record.task_id = task.id
+        record.status = getStatusString()
+        record.hash = task.hashLog
+        record.name = task.name
+        record.exit = task.exitStatus
+        record.submit = this.submitTimeMillis
+        record.start = this.startTimeMillis
+        record.process = task.processor.getName()
+        record.tag = task.config.tag
+        record.module = task.config.module
+        record.container = task.getContainer()
+        record.attempt = task.config.attempt
 
-        record.put('script', task.getTraceScript())
-        record.put('scratch', task.getScratch())
-        record.put('workdir', task.getWorkDirStr())
-        record.put('queue', task.config.queue)
-        record.put('cpus', task.config.getCpus())
-        record.put('memory', task.config.getMemory()?.toBytes())
-        record.put('disk', task.config.getDisk()?.toBytes())
-        record.put('time', task.config.getTime()?.toMillis())
-        record.put('env', task.getEnvironmentStr())
+        record.script = task.getTraceScript()
+        record.scratch = task.getScratch()
+        record.workdir = task.getWorkDirStr()
+        record.queue = task.config.queue
+        record.cpus = task.config.getCpus()
+        record.memory = task.config.getMemory()?.toBytes()
+        record.disk = task.config.getDisk()?.toBytes()
+        record.time = task.config.getTime()?.toMillis()
+        record.env = task.getEnvironmentStr()
         record.executorName = task.processor.executor.getName()
 
         if( isCompleted() ) {
-            record.put('error_action', task.errorAction?.toString())
+            record.error_action = task.errorAction?.toString()
 
             if( completeTimeMillis ) {
                 // completion timestamp
-                record.put('complete', completeTimeMillis)
+                record.complete = completeTimeMillis
                 // elapsed time since submit until completion
                 if( submitTimeMillis )
-                    record.put('duration', completeTimeMillis - submitTimeMillis)
+                    record.duration = completeTimeMillis - submitTimeMillis
                 // elapsed time since start of the job until completion
                 // note: this may be override run time provided by the trace file (3rd line)
                 if( startTimeMillis ) {
-                    record.put('realtime', completeTimeMillis - startTimeMillis)
-                    log.trace "task stats: ${task.name}; start: ${startTimeMillis}; complete: ${completeTimeMillis}; realtime: ${completeTimeMillis - startTimeMillis} [${record.get('realtime')}]; "
+                    record.realtime = completeTimeMillis - startTimeMillis
+                    log.trace "task stats: ${task.name}; start: ${startTimeMillis}; complete: ${completeTimeMillis}; realtime: ${completeTimeMillis - startTimeMillis} [${record.realtime}]; "
                 }
             }
 

@@ -22,7 +22,6 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 import com.google.common.hash.HashCode
-import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -55,7 +54,6 @@ import nextflow.spack.SpackCache
  */
 
 @Slf4j
-@CompileStatic
 class TaskRun implements Cloneable {
 
     final private ConcurrentHashMap<String,?> cache0 = new ConcurrentHashMap()
@@ -422,7 +420,7 @@ class TaskRun implements Cloneable {
         getInputFiles()
                 .values()
                 .flatten()
-                .collect { ((FileHolder)it).stageName }
+                .collect { it.stageName }
     }
 
     /**
@@ -447,11 +445,11 @@ class TaskRun implements Cloneable {
      *
      */
     List<String> getOutputFilesNames() {
-        (List<String>) cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
+        cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
     }
 
     private List<String> getOutputFilesNames0() {
-        List<String> result = []
+        def result = []
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
             result.addAll( param.getFilePatterns(context, workDir) )
@@ -588,7 +586,7 @@ class TaskRun implements Cloneable {
     }
 
     Path getCondaEnv() {
-        (Path) cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
+        cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
     }
 
     private Path getCondaEnv0() {
@@ -600,7 +598,7 @@ class TaskRun implements Cloneable {
     }
 
     Path getSpackEnv() {
-        (Path) cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
+        cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
     }
 
     private Path getSpackEnv0() {
@@ -614,7 +612,7 @@ class TaskRun implements Cloneable {
     }
 
     protected ContainerInfo containerInfo() {
-        (ContainerInfo) cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
+        cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
     }
 
     private ContainerInfo containerInfo0() {
