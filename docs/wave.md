@@ -197,6 +197,3 @@ The following configuration options are available:
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
-### More examples
-
-See the [Wave showcase repository](https://github.com/seqeralabs/wave-showcase) for more Wave containers configuration examples.

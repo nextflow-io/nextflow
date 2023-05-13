@@ -66,7 +66,7 @@ docker {
 
 fusion {
     enabled = true
-    exportAwsAccessKeys = true
+    exportStorageCredentials = true
 }
 
 wave {
@@ -172,6 +172,29 @@ aws.batch.volumes = '/path/to/ec2/nvme:/tmp'
 process.scratch = false
 ```
 
-## More examples
+## Advanced settings
 
-Check out the [Wave showcase repository](https://github.com/seqeralabs/wave-showcase) for more examples on how to use Fusion file system.
+The following configuration options are available:
+
+`fusion.enabled`
+: Enable/disable the use of Fusion file system.
+
+`fusion.exportStorageCredentials`
+: When `true` the access credentials required by the underlying object storage are exported the pipeline jobs execution environment
+(requires version `23.05.0-edge` or later).
+
+`fusion.containerConfigUrl`
+: The URL from where the container layer provisioning the Fusion client is downloaded. 
+
+`fusion.logLevel`
+: The level of logging emitted by the Fusion client.
+
+`fusion.logOutput`
+: Where the logging output is written. 
+
+`tagsEnabled`
+: Enable/disable the tagging of files created in the underlying object storage via the Fusion client (default: `true`).
+
+`tagsPattern`
+: The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
+

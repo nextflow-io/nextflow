@@ -52,7 +52,7 @@ class AwsFusionEnvTest extends Specification {
         env == [AWS_S3_ENDPOINT:'http://my-host.com']
 
         when:
-        config = Mock(FusionConfig) { exportAwsAccessKeys() >> true }
+        config = Mock(FusionConfig) { exportStorageCredentials() >> true }
         env = new AwsFusionEnv().getEnvironment('s3', config)
         then:
         env == [AWS_ACCESS_KEY_ID: 'x1',
