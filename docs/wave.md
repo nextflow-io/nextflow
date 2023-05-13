@@ -2,13 +2,12 @@
 
 # Wave containers
 
+:::{versionadded} 22.10.0
+:::
+
 [Wave](https://seqera.io/wave/) is a container provisioning service integrated with Nextflow. With Wave, you can build, upload, and manage the container images required by your data analysis workflows automatically and on-demand during pipeline execution.
 
 ## Getting started
-
-:::{note}
-This feature requires Nextflow `22.10.0` or later.
-:::
 
 ### Nextflow installation
 

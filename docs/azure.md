@@ -2,9 +2,8 @@
 
 # Azure Cloud
 
-## Requirements
-
-The support for Azure Cloud requires Nextflow version `21.04.0` or later.
+:::{versionadded} 21.04.0
+:::
 
 (azure-blobstorage)=
 
@@ -37,7 +36,9 @@ Once the Blob Storage credentials are set, you can access the files in the blob 
 
 ## Azure File Shares
 
-As of version `nf-azure@0.11.0`, Nextflow has built-in support also for [Azure Files](https://azure.microsoft.com/en-us/services/storage/files/). Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline. These files become immediately available in the file system and can be referred as local files within the processes. This is especially useful when a task needs to access large amounts of data (such as genome indexes) during its execution. An arbitrary number of File shares can be mounted on each pool node.
+*New in `nf-azure` version `0.11.0`*
+
+Nextflow has built-in support also for [Azure Files](https://azure.microsoft.com/en-us/services/storage/files/). Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline. These files become immediately available in the file system and can be referred as local files within the processes. This is especially useful when a task needs to access large amounts of data (such as genome indexes) during its execution. An arbitrary number of File shares can be mounted on each pool node.
 
 The Azure File share must exist in the storage account configured for Blob Storage. The name of the source Azure File share and mount path (the destination path where the files are mounted) must be provided. Additional mount options (see the Azure Files documentation) can be set as well for further customisation of the mounting process.
 
@@ -314,7 +315,10 @@ See the {ref}`Azure configuration <config-azure>` section and the [Azure Batch n
 
 ### Private container registry
 
-As of version `21.05.0-edge`, a private container registry for Docker images can be specified as follows:
+:::{versionadded} 21.05.0-edge
+:::
+
+A private container registry for Docker images can be specified as follows:
 
 ```groovy
 azure {
@@ -334,7 +338,10 @@ When using containers hosted in a private registry, the registry name must also 
 
 ## Active Directory Authentication
 
-As of version ``22.11.0-edge``, [Service Principal](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts.
+:::{versionadded} 22.11.0-edge
+:::
+
+[Service Principal](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts.
 
 The Service Principal should have the at least the following role assignments:
 

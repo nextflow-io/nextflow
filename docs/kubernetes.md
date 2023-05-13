@@ -79,6 +79,9 @@ The pod is automatically destroyed once the shell session terminates. Do not use
 
 ### Launch with Fusion
 
+:::{versionadded} 22.10.0
+:::
+
 The use of {ref}`fusion-page` allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
 
 This also makes unnecessary the use of the special `kuberun` command for the pipeline execution.

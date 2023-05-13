@@ -18,8 +18,7 @@ This page is a comprehensive reference for all Nextflow operators. However, if y
 
 ## branch
 
-:::{note}
-Requires Nextflow version `19.08.0-edge` or later.
+:::{versionadded} 19.08.0-edge
 :::
 
 *Returns: map of queue channels*
@@ -600,7 +599,7 @@ An optional `tag` parameter allows you to select which channel to dump. For exam
 Channel
     .of(1,2,3)
     .map { it+1 }
-    .dump(tag:'foo')
+    .dump(tag: 'foo')
 
 Channel
     .of(1,2,3)
@@ -610,13 +609,15 @@ Channel
 
 Then you will be able to specify the tag `foo` or `bar` as an argument of the `-dump-channels` option to print either the content of the first or the second channel. Multiple tag names can be specified separating them with a `,` character.
 
-The output can be formatted using the optional `pretty` boolean option:
+:::{versionadded} 22.10.0
+The output can be formatted by enabling the `pretty` option:
 
 ```groovy
 Channel
     .fromSRA('SRP043510')
-    .dump(tag:'foo', pretty: true)
+    .dump(tag: 'foo', pretty: true)
 ```
+:::
 
 ## filter
 
@@ -1175,8 +1176,7 @@ The items emitted by the resulting mixed channel may appear in any order, regard
 
 ## multiMap
 
-:::{note}
-Requires Nextflow version `19.11.0-edge` or later.
+:::{versionadded} 19.11.0-edge
 :::
 
 *Returns: map of queue channels*

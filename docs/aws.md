@@ -196,7 +196,10 @@ Different queues bound to the same or different Compute Environments can be conf
 
 ## Container Options
 
-As of version `21.12.1-edge`, the {ref}`process-containerOptions` directive can be used to control the properties of the container execution associated with each Batch job.
+:::{versionadded} 21.12.1-edge
+:::
+
+The {ref}`process-containerOptions` directive can be used to control the properties of the container execution associated with each Batch job.
 
 The following container options are currently supported:
 
@@ -306,12 +309,12 @@ aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
 
 Replace the path above with the one matching the location where the `aws` tool is installed in your AMI.
 
-:::{warning}
-The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
+:::{versionchanged} 19.07.0
+The `executor.awscli` config option was replaced by `aws.batch.cliPath`.
 :::
 
-:::{note}
-In versions of Nextflow prior to 19.07.x, the `executor.awscli` config option should be used instead of `aws.batch.cliPath`.
+:::{warning}
+The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
 :::
 
 ### Docker installation
@@ -416,6 +419,9 @@ With the above configuration, processes with the `bigTask` {ref}`process-label` 
 
 ### Volume mounts
 
+:::{versionadded} 19.07.0
+:::
+
 User provided container volume mounts can be provided as shown below:
 
 ```groovy
@@ -439,10 +445,6 @@ aws {
 ```
 
 The above snippet defines two volume mounts for the jobs executed in your pipeline. The first volume mounts the host path `/tmp` to the same path in the container, with the *read-write* access mode. The second volume mounts the host path `/host/path` to `/mnt/path` in the container, with the *read-only* access mode.
-
-:::{note}
-This feature requires Nextflow version 19.07.x or later.
-:::
 
 ### Troubleshooting
 

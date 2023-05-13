@@ -152,7 +152,7 @@ nextflow drop nextflow-io/hello
 
 ## SCM configuration file
 
-The file `$HOME/.nextflow/scm` allows you to centralise the security credentials required to access private project repositories on Bitbucket, GitHub and GitLab source code management (`SCM`) platforms or to manage the configuration properties of private server installations (of the same platforms).
+The file `$HOME/.nextflow/scm` allows you to centralise the security credentials required to access private project repositories on Bitbucket, GitHub and GitLab source code management (SCM) platforms or to manage the configuration properties of private server installations (of the same platforms).
 
 The configuration properties for each SCM platform are defined inside the `providers` section, properties for the same provider are grouped together with a common name and delimited with curly brackets as in this example:
 
@@ -166,6 +166,10 @@ providers {
 ```
 
 In the above template replace `<provider-name>` with one of the "default" servers (i.e. `bitbucket`, `github` or `gitlab`) or a custom identifier representing a private SCM server installation.
+
+:::{versionadded} 20.10.0
+A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable.
+:::
 
 The following configuration properties are supported for each provider configuration:
 
@@ -190,10 +194,6 @@ The following configuration properties are supported for each provider configura
 `providers.<provider>.endpoint`
 : *Required only for private SCM servers*
 : SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
-
-:::{tip}
-A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable (requires version `20.10.0` or later).
-:::
 
 ### BitBucket credentials
 
@@ -247,12 +247,10 @@ providers {
 }
 ```
 
-:::{note}
 GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs. Learn more about PAT and how to create it at [this link](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token).
-:::
 
-:::{tip}
-As of version `23.01.0-edge`, Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+:::{versionadded} 23.01.0-edge
+Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
 :::
 
 ### GitLab credentials
@@ -311,7 +309,10 @@ The Personal access token can be generated in the repository `Clone Repository` 
 
 ### AWS CodeCommit credentials
 
-As of version `22.06.0-edge`, Nextflow supports [AWS CodeCommit](https://aws.amazon.com/codecommit/) as a Git provider to access and to share pipelines code.
+:::{versionadded} 22.06.0-edge
+:::
+
+Nextflow supports [AWS CodeCommit](https://aws.amazon.com/codecommit/) as a Git provider to access and to share pipelines code.
 
 To access your project hosted on AWS CodeCommit with Nextflow provide the repository credentials using the configuration snippet shown below:
 
