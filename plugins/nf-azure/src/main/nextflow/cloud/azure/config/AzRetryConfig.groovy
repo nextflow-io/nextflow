@@ -31,9 +31,9 @@ import nextflow.util.Duration
 @EqualsAndHashCode
 @CompileStatic
 class AzRetryConfig {
-    Duration delay = Duration.of('50ms')
-    Duration maxDelay = Duration.of('30s')
-    int maxAttempts = 5
+    Duration delay = Duration.of('150ms')
+    Duration maxDelay = Duration.of('90s')
+    int maxAttempts = 10
     double jitter = 0.25
 
     AzRetryConfig() {
