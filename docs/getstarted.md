@@ -77,7 +77,7 @@ NXF_VER=20.04.0 nextflow run hello
 ```
 :::
 
-## Stable & Edge releases
+## Stable and Edge releases
 
 A *stable* version of Nextflow is released on a six-months basic schedule, in the 1st and 3rd quarter of every year.
 
@@ -124,8 +124,8 @@ workflow {
 }
 ```
 
-:::{note} 
-This script requires Nextflow `22.10.0` or later. For older versions of Nextflow, you must add the `-dsl2` command-line option.
+:::{note}
+For versions of Nextflow prior to `22.10.0`, you must explicitly enable DSL2 by adding `nextflow.enable.dsl=2` to the top of the script or by using the `-dsl2` command-line option.
 :::
 
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix `chunk_`, and the second receives these files and transforms their contents to uppercase letters. The resulting strings are emitted on the `result` channel and the final output is printed by the `view` operator.
@@ -228,6 +228,6 @@ edno
 uojnoB
 ```
 
-:::{tip}
-As of version 20.11.0-edge, any `.` (dot) character in a parameter name is interpreted as the delimiter of a nested scope. For example, `--foo.bar Hello` will be interpreted as `params.foo.bar`. If you want to have a parameter name that contains a `.` (dot) character, escape it using the back-slash character, e.g. `--foo\.bar Hello`.
+:::{versionchanged} 20.11.0-edge
+Any `.` (dot) character in a parameter name is interpreted as the delimiter of a nested scope. For example, `--foo.bar Hello` will be interpreted as `params.foo.bar`. If you want to have a parameter name that contains a `.` (dot) character, escape it using the back-slash character, e.g. `--foo\.bar Hello`.
 :::
