@@ -34,7 +34,8 @@ class FusionConfig {
 
     final private Boolean enabled
     final private String containerConfigUrl
-    final private Boolean exportAwsAccessKeys
+    @Deprecated final private Boolean exportAwsAccessKeys
+    final private Boolean exportStorageCredentials
     final private String logOutput
     final private String logLevel
     final private boolean tagsEnabled
@@ -42,7 +43,13 @@ class FusionConfig {
 
     boolean enabled() { enabled }
 
-    boolean exportAwsAccessKeys() { exportAwsAccessKeys }
+    @Deprecated boolean exportAwsAccessKeys() { exportAwsAccessKeys }
+
+    boolean exportStorageCredentials() {
+        return exportStorageCredentials!=null
+            ? exportStorageCredentials
+            : exportAwsAccessKeys
+    }
 
     String logLevel() { logLevel }
 
@@ -59,6 +66,7 @@ class FusionConfig {
     FusionConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.exportAwsAccessKeys = opts.exportAwsAccessKeys
+        this.exportStorageCredentials = opts.exportStorageCredentials
         this.containerConfigUrl = opts.containerConfigUrl?.toString() ?: env.get('FUSION_CONTAINER_CONFIG_URL')
         this.logLevel = opts.logLevel
         this.logOutput = opts.logOutput
