@@ -64,6 +64,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -835,7 +836,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
 		if( anonymous ) {
 			log.debug("Creating AWS S3 client with anonymous credentials");
-			client = new S3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
+			client = new S3Client(new AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
 		}
 		else {
 			final boolean global = bucketName!=null;
