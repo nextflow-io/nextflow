@@ -46,6 +46,10 @@ class AwsFusionEnv implements FusionEnv {
         }
         if( endpoint )
             result.AWS_S3_ENDPOINT = endpoint
+        if( awsConfig.s3Config.storageEncryption )
+            result.FUSION_AWS_SERVER_SIDE_ENCRYPTION = awsConfig.s3Config.storageEncryption
+        if( awsConfig.s3Config.storageKmsKeyId )
+            result.FUSION_AWS_SSEKMS_KEY_ID = awsConfig.s3Config.storageKmsKeyId
         return result
     }
 
