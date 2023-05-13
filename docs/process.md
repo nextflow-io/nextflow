@@ -280,11 +280,10 @@ Hello Mr. c
 
 ## Stub
 
-:::{warning}
-This feature is experimental. It may change in future versions.
+:::{versionadded} 20.11.0-edge
 :::
 
-As of version 20.11.0-edge, you can define a command **stub**, which replaces the actual process command when the `-stub-run` or `-stub` command line option:
+You can define a command *stub*, which replaces the actual process command when the `-stub-run` or `-stub` command-line option is enabled:
 
 ```groovy
 process INDEX {
@@ -309,11 +308,9 @@ process INDEX {
 }
 ```
 
-This feature makes it easier to quickly prototype the workflow logic without using the real commands. The developer can use it to provide a dummy script that mimics the execution of the real one in a quicker manner. In other words, it is a way to perform a dry-run.
-
-:::{tip}
 The `stub` block can be defined before or after the `script` block. When the pipeline is executed with the `-stub-run` option and a process's `stub` is not defined, the `script` block is executed.
-:::
+
+This feature makes it easier to quickly prototype the workflow logic without using the real commands. The developer can use it to provide a dummy script that mimics the execution of the real one in a quicker manner. In other words, it is a way to perform a dry-run.
 
 (process-input)=
 
@@ -640,8 +637,8 @@ hello
 
 ### Input type `set`
 
-:::{warning}
-The `set` input type has been deprecated. Use `tuple` instead.
+:::{deprecated} 19.08.1-edge
+Use `tuple` instead.
 :::
 
 (process-input-tuple)=
@@ -1056,8 +1053,8 @@ workflow {
 
 ### Output type `set`
 
-:::{warning}
-The `set` output type has been deprecated. Use `tuple` instead.
+:::{deprecated} 19.08.1-edge
+Use `tuple` instead.
 :::
 
 (process-out-tuple)=
@@ -1178,6 +1175,9 @@ Some directives are generally available to all processes, while others depend on
 (process-accelerator)=
 
 ### accelerator
+
+:::{versionadded} 19.09.0-edge
+:::
 
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
@@ -1470,7 +1470,9 @@ See also: [cpus](#cpus), [memory](#memory) [time](#time), [queue](#queue) and [D
 
 ### echo
 
-As of version 22.04.0, `echo` has been deprecated and replaced by `debug`.
+:::{deprecated} 22.04.0
+Use `debug` instead
+:::
 
 (process-error-strategy)=
 
@@ -1603,6 +1605,9 @@ process.ext.version = '2.5.3'
 
 ### fair
 
+:::{versionadded} 22.12.0-edge
+:::
+
 The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received. For example:
 
 ```groovy
@@ -1664,8 +1669,7 @@ See also: [resourceLabels](#resourcelabels)
 
 ### machineType
 
-:::{note}
-This feature requires Nextflow 19.07.0 or later.
+:::{versionadded} 19.07.0
 :::
 
 The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the {ref}`Google Life Sciences <google-lifesciences-executor>` executor.
@@ -1871,6 +1875,8 @@ process {
 The `pod` directive supports the following options:
 
 `affinity: <V>`
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specifies affinity for which nodes the process should run on. See [Kubernetes affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for details.
 
 `annotation: <K>, value: <V>`
@@ -1878,6 +1884,8 @@ The `pod` directive supports the following options:
 : Defines a pod annotation with key `K` and value `V`.
 
 `automountServiceAccountToken: <V>`
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) into process pods. If `V` is true, service account token is automounted into task pods (default).
 
 `config: <C/K>, mountPath: </absolute/path>`
@@ -1885,12 +1893,14 @@ The `pod` directive supports the following options:
 : Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.
 
 `csi: <V>, mountPath: </absolute/path>`
-: *Requires `22.11.0-edge` or later*
+: :::{versionadded} 22.11.0-edge
+  :::
 : *Can be specified multiple times*
 : Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with config `V`to the path `/absolute/path`.
 
 `emptyDir: <V>, mountPath: </absolute/path>`
-: *Requires `22.11.0-edge` or later*
+: :::{versionadded} 22.11.0-edge
+  :::
 : *Can be specified multiple times*
 : Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with configuration `V` to the path `/absolute/path`.
 
@@ -1899,6 +1909,8 @@ The `pod` directive supports the following options:
 : Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C`.
 
 `env: <E>, fieldPath: <V>`
+: :::{versionadded} 21.09.1-edge
+  :::
 : *Can be specified multiple times*
 : Defines an environment variable with name `E` and whose value is given by the `V` [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/).
 
@@ -1924,9 +1936,13 @@ The `pod` directive supports the following options:
 : Specifies which node the process will run on. See [Kubernetes nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) for details.
 
 `priorityClassName: <V>`
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.
 
 `privileged: <B>`
+: :::{versionadded} 22.05.0-edge
+  :::
 : Whether the process task should run as a *privileged* container (default: `false`)
 
 `runAsUser: <UID>`
@@ -1940,6 +1956,8 @@ The `pod` directive supports the following options:
 : Specifies the pod security context. See [Kubernetes security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.
 
 `toleration: <V>`
+: :::{versionadded} 22.04.0
+  :::
 : *Can be specified multiple times*
 : Specifies a toleration for a node taint. See [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for details.
 
@@ -1998,8 +2016,9 @@ Files are copied into the specified directory in an *asynchronous* manner, so th
 Available options:
 
 `contentType`
-: *Requires version `22.10.0` or later*
-: *EXPERIMENTAL. Currently only supported for S3*
+: :::{versionadded} 22.10.0
+  :::
+: *Experimental: currently only supported for S3.*
 : Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (default: `false`).
 
 `enabled`
@@ -2031,13 +2050,15 @@ Available options:
 : A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them.
 
 `storageClass`
-: *Requires version `22.12.0-edge` or later*
-: *EXPERIMENTAL. Currently only supported for S3*
+: :::{versionadded} 22.12.0-edge
+  :::
+: *Experimental: currently only supported for S3.*
 : Allow specifying the storage class to be used for the published file.
 
 `tags`
-: *Requires version `21.12.0-edge` or later*
-: *EXPERIMENTAL. Currently only supported for S3*
+: :::{versionadded} 21.12.0-edge
+  :::
+: *Experimental: currently only supported for S3.*
 : Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
 
 (process-queue)=
@@ -2077,6 +2098,9 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 (process-resourcelabels)=
 
 ### resourceLabels
+
+:::{versionadded} 22.09.1-edge
+:::
 
 The `resourceLabels` directive allows you to specify custom name-value pairs that Nextflow applies to the computing resource used to carry out the process execution. Resource labels can be specified using the syntax shown below:
 
@@ -2142,7 +2166,6 @@ The following values are supported:
 : Create a scratch directory in the specified directory.
 
 `'ram-disk'`
-: *EXPERIMENTAL*
 : Create a scratch directory in the RAM disk `/dev/shm/`.
 
 (process-directive-shell)=
@@ -2217,14 +2240,16 @@ The `stageOutMode` directive defines how output files are staged out from the sc
 : Output files are copied from the scratch directory to the work directory.
 
 `'fcp'`
-: *Requires version `23.02.0-edge` or later*
+: :::{versionadded} 23.02.0-edge
+  :::
 : Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
 
 `'move'`
 : Output files are moved from the scratch directory to the work directory.
 
 `'rclone'`
-: *Requires version `23.01.0-edge` or later*
+: :::{versionadded} 23.01.0-edge
+  :::
 : Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
 
 `'rsync'`

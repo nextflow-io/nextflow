@@ -39,28 +39,14 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 
 ## Cloud Batch
 
+:::{versionadded} 22.07.1-edge
+:::
+
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
 Nextflow provides built-in support for Google Cloud Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded to the Cloud Batch service.
 
 Read the {ref}`Google Cloud Batch executor <google-batch-executor>` section to learn more about the `google-batch` executor in Nextflow.
-
-### Requirements
-
-The support for Google Batch requires Nextflow version `22.07.1-edge` or later. If you have already Nextflow installed make sure to update to the latest edge release using these commands:
-
-```bash
-export NXF_EDGE=1
-nextflow self-update
-```
-
-If you don't have Nextflow, install it with command below:
-
-```bash
-curl get.nextflow.io | bash
-```
-
-when done, make sure to use the latest edge release running the snippet in the previous paragraph.
 
 (google-batch-config)=
 
@@ -104,9 +90,11 @@ Read the {ref}`Google configuration<config-google>` section to learn more about 
 
 Processes can be defined as usual and by default the `cpus` and `memory` directives are used to find the cheapest machine type available at current location that fits the requested resources. If `memory` is not specified, 1GB of memory is allocated per cpu.
 
-As of version `23.02.0-edge`, the process `machineType` directive can be a list of patterns separated by comma. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
+:::{versionadded} 23.02.0-edge
+The `machineType` directive can be a list of patterns separated by comma. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
 
 Alternatively it can also be used to define a specific predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or a custom machine type.
+:::
 
 Examples:
 
@@ -178,9 +166,10 @@ process {
 
 ### Fusion file system
 
-As of version `23.02.0-edge`, the Google Batch executor supports the use of {ref}`fusion-page`.
+:::{versionadded} 23.02.0-edge
+:::
 
-Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
+The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
 
 To enable the use of Fusion file system in your pipeline, add the following snippet to your Nextflow configuration file:
 
@@ -215,9 +204,8 @@ The integration with Google Batch is a developer preview feature. Currently, the
 
 ## Cloud Life Sciences
 
-### Requirements
-
-The support for Google Cloud requires Nextflow version `20.01.0-edge` or later.
+:::{versionadded} 20.01.0-edge
+:::
 
 :::{note}
 In versions of Nextflow prior to `21.04.0`, the following variables must be defined in your system environment:
