@@ -39,7 +39,7 @@ class AwsFusionEnv implements FusionEnv {
         final result = new HashMap<String,String>()
         final awsConfig = AwsConfig.config()
         final endpoint = awsConfig.s3Config.endpoint
-        final creds = config.exportAwsAccessKeys() ? awsCreds(awsConfig) : List.<String>of()
+        final creds = config.exportStorageCredentials() ? awsCreds(awsConfig) : List.<String>of()
         if( creds ) {
             result.AWS_ACCESS_KEY_ID = creds[0]
             result.AWS_SECRET_ACCESS_KEY = creds[1]
