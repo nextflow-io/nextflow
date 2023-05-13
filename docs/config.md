@@ -402,7 +402,7 @@ The following settings are available:
 : Max attempts when retrying failed API requests (default: `10`).
 
 `azure.retryPolicy.maxDelay`
-: Max delay when retrying failed API requests (default: `60s`).
+: Max delay when retrying failed API requests (default: `90s`).
 
 `azure.storage.accountName`
 : The blob storage account name
