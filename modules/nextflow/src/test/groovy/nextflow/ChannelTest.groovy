@@ -771,12 +771,12 @@ class ChannelTest extends Specification {
         SysEnv.push(NXF_FILE_ROOT: folder.toString())
 
         when:
-        def pairs = Channel.fromFilePairs("*_{1,2}.*")
+        def pairs = Channel .fromFilePairs("*_{1,2}.*") .toList(). getVal() .sort { it[0] }
         then:
-        pairs.val == ['aa', [a1, a2]]
-        pairs.val == ['xx', [x1, x2]]
-        pairs.val == ['zz', [z1, z2]]
-        pairs.val == Channel.STOP
+        pairs == [
+                ['aa', [a1, a2]],
+                ['xx', [x1, x2]],
+                ['zz', [z1, z2]] ]
 
         cleanup:
         SysEnv.pop()
