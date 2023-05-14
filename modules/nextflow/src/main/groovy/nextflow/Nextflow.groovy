@@ -110,7 +110,7 @@ class Nextflow {
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
-            return checkIfExists(toCanonicalPath(path), options)
+            return checkIfExists(path, options)
         }
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
@@ -118,7 +118,7 @@ class Nextflow {
         final splitter = FilePatternSplitter.glob().parse(strPattern)
         if( !splitter.isPattern() ) {
             final normalised = splitter.strip(strPattern)
-            return checkIfExists(toCanonicalPath(normalised), options)
+            return checkIfExists(asPath(normalised), options)
         }
 
         // revolve the glob pattern returning all matches

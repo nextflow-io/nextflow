@@ -258,7 +258,8 @@ class FileHelper {
 
         Path base
         if( !result.isAbsolute() && (base=fileRootDir()) ) {
-            result = base.resolve(result.toString())
+            final rel = result.toString()
+            result = rel!='.' ? base.resolve(rel) : base
         }
 
         return result.toAbsolutePath().normalize()
@@ -1043,7 +1044,7 @@ class FileHelper {
 
     static Path checkIfExists(Path path, Map opts) throws NoSuchFileException {
 
-        final result = FilesEx.complete(path)
+        final result = toCanonicalPath(path)
         final checkIfExists = opts?.checkIfExists as boolean
         final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
         if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
