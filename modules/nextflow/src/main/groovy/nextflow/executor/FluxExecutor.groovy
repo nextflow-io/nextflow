@@ -18,6 +18,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -30,6 +31,7 @@ import nextflow.processor.TaskRun
  * @author Vanessa Sochat <sochat1@llnl.gov>
  */
 @Slf4j
+@CompileStatic
 class FluxExecutor extends AbstractGridExecutor {
 
     static final private Pattern SUBMIT_REGEX = ~/(ƒ.+)/
@@ -68,12 +70,12 @@ class FluxExecutor extends AbstractGridExecutor {
             result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '--cores-per-task=' + task.config.cpus.toString()
+        if( task.config.getCpus() > 1 ) {
+            result << '--cores-per-task=' + task.config.getCpus().toString()
         }
 
         // Time limit in minutes when no units provided
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             result << '--time-limit=' + task.config.getTime().format('mm')
         }
 

@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -28,6 +29,7 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 @EqualsAndHashCode
 @PackageScope
 class StateObj implements Serializable, Cloneable {

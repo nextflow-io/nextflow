@@ -17,6 +17,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
@@ -24,6 +25,7 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class SgeExecutor extends AbstractGridExecutor {
 
     /**
@@ -53,22 +55,22 @@ class SgeExecutor extends AbstractGridExecutor {
 
         //number of cpus for multiprocessing/multi-threading
         if ( task.config.penv ) {
-            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+            result << "-pe" << "${task.config.penv} ${task.config.getCpus()}".toString()
         }
-        else if( task.config.cpus>1 ) {
-            result << "-l" << "slots=${task.config.cpus}"
+        else if( task.config.getCpus()>1 ) {
+            result << "-l" << "slots=${task.config.getCpus()}".toString()
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final time = task.config.getTime()
-            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
+            result << "-l" << "h_rt=${time.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
-        if( task.config.memory ) {
-            final mem = "${task.config.getMemory().mega}M"
-            result << "-l" << "h_rss=$mem,mem_free=$mem"
+        if( task.config.getMemory() ) {
+            final mem = "${task.config.getMemory().mega}M".toString()
+            result << "-l" << "h_rss=$mem,mem_free=$mem".toString()
         }
 
         // -- at the end append the command script wrapped file name

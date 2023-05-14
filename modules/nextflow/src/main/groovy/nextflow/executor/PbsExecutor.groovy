@@ -19,6 +19,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -27,6 +28,7 @@ import nextflow.processor.TaskRun
  * See http://www.pbsworks.com
  */
 @Slf4j
+@CompileStatic
 class PbsExecutor extends AbstractGridExecutor {
 
     private static Pattern OPTS_REGEX = ~/(?:^|\s)-l.+/
@@ -51,25 +53,25 @@ class PbsExecutor extends AbstractGridExecutor {
         }
 
         // task cpus
-        if( task.config.cpus > 1 ) {
+        if( task.config.getCpus() > 1 ) {
             if( matchOptions(task.config.clusterOptions?.toString()) ) {
                 log.warn1 'cpus directive is ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }'
             }
             else {
-                result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+                result << '-l' << "nodes=1:ppn=${task.config.getCpus()}".toString()
             }
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final duration = task.config.getTime()
-            result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
+            result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
-        if( task.config.memory ) {
+        if( task.config.getMemory() ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
-            result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+            result << "-l" << "mem=${task.config.getMemory().toString().replaceAll(/[\s]/,'').toLowerCase()}".toString()
         }
 
         // -- at the end append the command script wrapped file name
@@ -130,7 +132,7 @@ class PbsExecutor extends AbstractGridExecutor {
         return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
     }
 
-    static private Map DECODE_STATUS = [
+    static private Map<String,QueueStatus> DECODE_STATUS = [
             'C': QueueStatus.DONE,
             'R': QueueStatus.RUNNING,
             'Q': QueueStatus.PENDING,

@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
@@ -34,6 +35,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class LsfExecutor extends AbstractGridExecutor {
 
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
@@ -74,12 +76,12 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( task.config.cpus > 1 ) {
-            result << "-n" << task.config.cpus.toString()
+        if( task.config.getCpus() > 1 ) {
+            result << "-n" << task.config.getCpus().toString()
             result << "-R" << "span[hosts=1]"
         }
 
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             result << '-W' << task.config.getTime().format('HH:mm')
         }
 
@@ -89,8 +91,8 @@ class LsfExecutor extends AbstractGridExecutor {
             // depending a system configuration setting -- see https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
             // When per-process is used (default) the amount of requested memory
             // is divided by the number of used cpus (processes)
-            def mem1 = ( task.config.cpus > 1 && !perJobMemLimit ) ? mem.div(task.config.cpus as int) : mem
-            def mem2 = ( task.config.cpus > 1 && perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
+            def mem1 = ( task.config.getCpus() > 1 && !perJobMemLimit ) ? mem.div(task.config.getCpus() as int) : mem
+            def mem2 = ( task.config.getCpus() > 1 && perTaskReserve ) ? mem.div(task.config.getCpus() as int) : mem
 
             result << '-M' << String.valueOf(mem1.toUnit(memUnit))
             result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
@@ -165,7 +167,7 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
     // https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_command_ref/bjobs.zz4category.description.1.html
-    private static Map DECODE_STATUS = [
+    private static Map<String,QueueStatus> DECODE_STATUS = [
             'PEND': QueueStatus.PENDING,
             'RUN': QueueStatus.RUNNING,
             'PSUSP': QueueStatus.HOLD,
@@ -180,7 +182,7 @@ class LsfExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final Map<String, QueueStatus> result = new LinkedHashMap<>()
         def col1 = -1
         def col2 = -1
         for( String line : text.readLines() ) {
@@ -193,8 +195,8 @@ class LsfExecutor extends AbstractGridExecutor {
                 continue
             }
 
-            def jobId = line.tokenize(' ')[col1]
-            def status = line.tokenize(' ')[col2]
+            final jobId = line.tokenize(' ')[col1]
+            final status = line.tokenize(' ')[col2]
             if( jobId )
                 result[jobId] = DECODE_STATUS.get(status)
         }
@@ -222,7 +224,7 @@ class LsfExecutor extends AbstractGridExecutor {
         return needWrap ? "\"$str\"" : str
     }
 
-    protected getEnv0(String name) {
+    protected String getEnv0(String name) {
         System.getenv(name)
     }
 
@@ -232,23 +234,25 @@ class LsfExecutor extends AbstractGridExecutor {
      * -- see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
      */
     protected Map<String,String> parseLsfConfig() {
-        def result = new LinkedHashMap<>(20)
+        final Map<String,String> result = new LinkedHashMap<>(20)
 
         // check environment variable exists
         def envDir = getEnv0('LSF_ENVDIR')
-        if ( !envDir )
-            return result
-        def envFile = Paths.get(envDir).resolve("lsf.conf")
-        if ( !envFile.exists() )
+        if( !envDir )
             return result
 
-        for (def line : envFile.readLines() ){
+        def envFile = Paths.get(envDir).resolve("lsf.conf")
+        if( !envFile.exists() )
+            return result
+
+        for( def line : envFile.readLines() ) {
             if( !KEY_REGEX.matcher(line).matches() )
                 continue
             def entry = line.tokenize('=')
             if( entry.size() != 2 )
                 continue
-            def (String key,String value) = entry
+            def key = entry[0]
+            def value = entry[1]
             def matcher = QUOTED_STRING_REGEX.matcher(value)
             if( matcher.matches() ) {
                 value = matcher.group(1)
