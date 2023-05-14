@@ -18,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the NQSII cluster
@@ -29,6 +30,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Till Bayer <till.bayer@gmail.com>
  */
+@CompileStatic
 class NqsiiExecutor extends AbstractGridExecutor {
 
     /**
@@ -51,21 +53,21 @@ class NqsiiExecutor extends AbstractGridExecutor {
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( task.config.cpus>1 ) {
-            result << "-l" << "cpunum_job=${task.config.cpus}"
+        if( task.config.getCpus()>1 ) {
+            result << "-l" << "cpunum_job=${task.config.getCpus()}".toString()
         } else {
             result << "-l" << "cpunum_job=1"
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final time = task.config.getTime()
-            result << "-l" << "elapstim_req=${time.format('HH:mm:ss')}"
+            result << "-l" << "elapstim_req=${time.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
-        if( task.config.memory ) {
-            result << "-l" << "memsz_job=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+        if( task.config.getMemory() ) {
+            result << "-l" << "memsz_job=${task.config.getMemory().toString().replaceAll(/[\s]/,'').toLowerCase()}".toString()
         }
 
         // -- at the end append the command script wrapped file name
@@ -99,8 +101,8 @@ class NqsiiExecutor extends AbstractGridExecutor {
      */
     @Override
     def parseJobId( String text ) {
-    def pattern = ~/Request (\d+).+ submitted to queue.+/
-    for( String line : text.readLines() ) {
+        def pattern = ~/Request (\d+).+ submitted to queue.+/
+        for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.find() ) {
                 return m.group(1)
