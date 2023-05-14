@@ -57,7 +57,7 @@ class NextflowTest extends Specification {
 
     def 'should resolve rel paths against env base' () {
         given:
-        SysEnv.push(NXF_FILE_BASE_DIR: '/some/base/dir')
+        SysEnv.push(NXF_FILE_ROOT: '/some/base/dir')
 
         expect:
         Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')

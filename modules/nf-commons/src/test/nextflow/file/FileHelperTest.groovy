@@ -1024,9 +1024,9 @@ class FileHelperTest extends Specification {
     @Unroll
     def 'should return file base dir'() {
         given:
-        SysEnv.push(NXF_FILE_BASE_DIR: BASE_DIR)
+        SysEnv.push(NXF_FILE_ROOT: BASE_DIR)
         expect:
-        FileHelper.fileBaseDir() == EXPECTED
+        FileHelper.fileRootDir() == EXPECTED
         cleanup:
         SysEnv.pop()
 
@@ -1057,7 +1057,7 @@ class FileHelperTest extends Specification {
 
     def 'should convert to canonical path with base' () {
         given:
-        SysEnv.push(NXF_FILE_BASE_DIR: 'http://host.com')
+        SysEnv.push(NXF_FILE_ROOT: 'http://host.com')
 
         expect:
         FileHelper.toCanonicalPath(VALUE) == EXPECTED

@@ -257,7 +257,7 @@ class FileHelper {
         }
 
         Path base
-        if( !result.isAbsolute() && (base=fileBaseDir()) ) {
+        if( !result.isAbsolute() && (base=fileRootDir()) ) {
             result = base.resolve(result.toString())
         }
 
@@ -1087,15 +1087,15 @@ class FileHelper {
         return m.matches() ? m.group(1) : null
     }
 
-    static Path fileBaseDir() {
-        if( !SysEnv.get('NXF_FILE_BASE_DIR') )
+    static Path fileRootDir() {
+        if( !SysEnv.get('NXF_FILE_ROOT') )
             return null
-        final base = SysEnv.get('NXF_FILE_BASE_DIR')
+        final base = SysEnv.get('NXF_FILE_ROOT')
         if( base.startsWith('/') )
             return Paths.get(base)
         final scheme = getUrlProtocol(base)
         if( !scheme )
-            throw new IllegalArgumentException("Invalid NXF_FILE_BASE_DIR environment value - It must be an absolute path or a valid path URI - Offending value: '$base'")
+            throw new IllegalArgumentException("Invalid NXF_FILE_ROOT environment value - It must be an absolute path or a valid path URI - Offending value: '$base'")
         return asPath0(base)
     }
 

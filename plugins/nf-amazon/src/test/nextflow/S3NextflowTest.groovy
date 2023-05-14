@@ -35,7 +35,7 @@ class S3NextflowTest extends Specification {
 
     def 'should resolve rel paths against env base' () {
         given:
-        SysEnv.push(NXF_FILE_BASE_DIR: 's3://some/base/dir')
+        SysEnv.push(NXF_FILE_ROOT: 's3://some/base/dir')
 
         expect:
         Nextflow.file( 's3://abs/path/file.txt' ) == Paths.get(new URI('s3:///abs/path/file.txt'))
