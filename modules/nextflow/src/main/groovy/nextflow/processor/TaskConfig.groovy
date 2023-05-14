@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +42,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static public final EXIT_ZERO = 0
+    static public final int EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -376,6 +375,17 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     def getContainer() {
         return get('container')
+    }
+
+    Architecture getArchitecture() {
+        final value = get('arch')
+        if( value instanceof CharSequence )
+            return new Architecture(value.toString())
+        if( value instanceof Map )
+            return new Architecture(value)
+        if( value != null )
+            throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
+        return null
     }
 
     /**

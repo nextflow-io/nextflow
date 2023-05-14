@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +17,6 @@
 package nextflow.container
 
 import java.nio.file.FileSystems
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -31,7 +29,6 @@ import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.Duration
-import nextflow.util.Escape
 /**
  * Handle caching of remote Charliecloud images
  *
@@ -222,7 +219,7 @@ class CharliecloudCache {
         log.trace """Charliecloud pull
                      command: $cmd
                      timeout: $pullTimeout
-                     folder : $storePath""".stripIndent()
+                     folder : $storePath""".stripIndent(true)
 
         final max = pullTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])

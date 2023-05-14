@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -998,7 +997,7 @@ class OperatorImpl {
      * For example:
      *
      * <pre>
-     *     Channel.from(...)
+     *     Channel.of(...)
      *            .tap { newChannelName }
      *            .map { ... }
      *  </pre>
@@ -1013,6 +1012,7 @@ class OperatorImpl {
         return tap.result
     }
 
+    @DeprecatedDsl2
     DataflowWriteChannel tap( final DataflowReadChannel source, final DataflowWriteChannel target ) {
         def tap = new TapOp(source, target).apply()
         return tap.result
@@ -1157,6 +1157,11 @@ class OperatorImpl {
         return result
     }
 
+    DataflowWriteChannel splitJson(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitJson', opts ).apply()
+        return result
+    }
+    
     DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {
         final splitter = new TextSplitter()
         final result = countOverChannel( source, splitter, opts )
@@ -1171,6 +1176,12 @@ class OperatorImpl {
 
     DataflowWriteChannel countFastq(DataflowReadChannel source, Map opts=null) {
         final splitter = new FastqSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        return result
+    }
+
+    DataflowWriteChannel countJson(DataflowReadChannel source, Map opts=null) {
+        final splitter = new JsonSplitter()
         final result = countOverChannel( source, splitter, opts )
         return result
     }

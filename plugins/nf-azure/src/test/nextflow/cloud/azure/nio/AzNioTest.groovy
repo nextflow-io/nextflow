@@ -23,10 +23,13 @@ import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Timeout
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(30)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('AZURE_STORAGE_ACCOUNT_NAME') && System.getenv('AZURE_STORAGE_ACCOUNT_KEY')})
 class AzNioTest extends Specification implements AzBaseSpec {
@@ -912,7 +915,7 @@ class AzNioTest extends Specification implements AzBaseSpec {
         TraceHelper.newFileWriter(path, false, 'Test')
         then:
         def e = thrown(AbortOperationException)
-        e.message == "Test file already exists: ${path.toUriString()}"
+        e.message == "Test file already exists: ${path.toUriString()} -- enable the 'test.overwrite' option in your config file to overwrite existing files"
 
         cleanup:
         deleteBucket(bucket1)

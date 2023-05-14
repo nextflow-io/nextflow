@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Pawsey Supercomputing Research Centre
+ * Copyright 2022-2023, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
         def run = super.getRunCommand()
         def result = """\
         sarus pull $image 1>&2
-        """.stripIndent()
+        """.stripIndent(true)
         result += run
         return result
     }

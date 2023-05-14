@@ -37,6 +37,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
@@ -111,7 +112,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     protected GoogleBatchTaskHandler() {}
 
     protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
-        if( launcher instanceof GoogleBatchScriptLauncher )
+        if( launcher instanceof GoogleBatchLauncherSpec )
             return launcher
         if( launcher instanceof FusionScriptLauncher )
             return new GoogleBatchFusionAdapter(this, launcher)
@@ -158,6 +159,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             computeResource.setBootDiskMib( disk.getMega() )
 
         // container
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
+
         final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
             .setImageUri( task.container )

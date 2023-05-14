@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +30,7 @@ import nextflow.Session
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
+import nextflow.util.Threads
 import nextflow.util.Throttle
 /**
  * Monitors the queued tasks waiting for their termination
@@ -288,7 +288,7 @@ class TaskPollingMonitor implements TaskMonitor {
         session.onShutdown { this.cleanup() }
 
         // launch the thread polling the queue
-        Thread.start('Task monitor') {
+        Threads.start('Task monitor') {
             try {
                 pollLoop()
             }
@@ -299,7 +299,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // launch daemon that submits tasks for execution
-        Thread.startDaemon('Task submitter', this.&submitLoop)
+        Threads.start('Task submitter', this.&submitLoop)
 
         return this
     }

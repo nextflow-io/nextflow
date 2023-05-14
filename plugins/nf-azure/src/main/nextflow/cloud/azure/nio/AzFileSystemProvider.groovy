@@ -15,8 +15,6 @@
  */
 package nextflow.cloud.azure.nio
 
-import com.azure.identity.ClientSecretCredentialBuilder
-
 import static java.nio.file.StandardCopyOption.*
 import static java.nio.file.StandardOpenOption.*
 
@@ -40,13 +38,14 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
+import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.blob.models.BlobStorageException
-import com.azure.storage.common.StorageSharedKeyCredential
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.cloud.azure.batch.AzHelper
 /**
  * Implements NIO File system provider for Azure Blob Storage
  *
@@ -111,34 +110,12 @@ class AzFileSystemProvider extends FileSystemProvider {
         return uri.authority.toLowerCase()
     }
 
-    @Memoized
     protected BlobServiceClient createBlobServiceWithKey(String accountName, String accountKey) {
-        log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
-
-        final credential = new StorageSharedKeyCredential(accountName, accountKey);
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
-
-        return new BlobServiceClientBuilder()
-                .endpoint(endpoint)
-                .credential(credential)
-                .buildClient()
+        AzHelper.getOrCreateBlobServiceWithKey(accountName, accountKey)
     }
 
-    @Memoized
     protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken) {
-        if( !sasToken )
-            throw new IllegalArgumentException("Missing Azure blob SAS token")
-        if( sasToken.length()<100 )
-            throw new IllegalArgumentException("Invalid Azure blob SAS token -- offending value: $sasToken")
-            
-        log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
-
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
-
-        return new BlobServiceClientBuilder()
-                .endpoint(endpoint)
-                .sasToken(sasToken)
-                .buildClient()
+        AzHelper.getOrCreateBlobServiceWithToken(accountName, sasToken)
     }
 
     @Memoized

@@ -117,6 +117,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     void shutdown() {
         client.shutdown()
+        logging.close()
     }
 
     @Override

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,14 +37,14 @@ class BufferOpTest extends Specification {
     def testBufferClose() {
 
         when:
-        def r1 = Channel.from(1,2,3,1,2,3).buffer({ it == 2 })
+        def r1 = Channel.of(1,2,3,1,2,3).buffer({ it == 2 })
         then:
         r1.val == [1,2]
         r1.val == [3,1,2]
         r1.val == Channel.STOP
 
         when:
-        def r2 = Channel.from('a','b','c','a','b','z').buffer(~/b/)
+        def r2 = Channel.of('a','b','c','a','b','z').buffer(~/b/)
         then:
         r2.val == ['a','b']
         r2.val == ['c','a','b']
@@ -56,7 +55,7 @@ class BufferOpTest extends Specification {
     def testBufferWithCount() {
 
         when:
-        def r1 = Channel.from(1,2,3,1,2,3,1).buffer( size:2 )
+        def r1 = Channel.of(1,2,3,1,2,3,1).buffer( size:2 )
         then:
         r1.val == [1,2]
         r1.val == [3,1]
@@ -64,7 +63,7 @@ class BufferOpTest extends Specification {
         r1.val == Channel.STOP
 
         when:
-        r1 = Channel.from(1,2,3,1,2,3,1).buffer( size:2, remainder: true )
+        r1 = Channel.of(1,2,3,1,2,3,1).buffer( size:2, remainder: true )
         then:
         r1.val == [1,2]
         r1.val == [3,1]
@@ -74,14 +73,14 @@ class BufferOpTest extends Specification {
 
 
         when:
-        def r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2 )
+        def r2 = Channel.of(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2 )
         then:
         r2.val == [3,4,5]
         r2.val == [3,4,5]
         r2.val == Channel.STOP
 
         when:
-        r2 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2, remainder: true )
+        r2 = Channel.of(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2, remainder: true )
         then:
         r2.val == [3,4,5]
         r2.val == [3,4,5]
@@ -104,14 +103,14 @@ class BufferOpTest extends Specification {
     def testBufferOpenClose() {
 
         when:
-        def r1 = Channel.from(1,2,3,4,5,1,2,3,4,5,1,2).buffer( 2, 4 )
+        def r1 = Channel.of(1,2,3,4,5,1,2,3,4,5,1,2).buffer( 2, 4 )
         then:
         r1.val == [2,3,4]
         r1.val == [2,3,4]
         r1.val == Channel.STOP
 
         when:
-        def r2 = Channel.from('a','b','c','a','b','z').buffer(~/a/,~/b/)
+        def r2 = Channel.of('a','b','c','a','b','z').buffer(~/a/,~/b/)
         then:
         r2.val == ['a','b']
         r2.val == ['a','b']
@@ -123,7 +122,7 @@ class BufferOpTest extends Specification {
 
         when:
         def sum = 0
-        def r1 = Channel.from(1,2,3,1,2,3).buffer(remainder: true, { sum+=it; sum==7 })
+        def r1 = Channel.of(1,2,3,1,2,3).buffer(remainder: true, { sum+=it; sum==7 })
         then:
         r1.val == [1,2,3,1]
         r1.val == [2,3]

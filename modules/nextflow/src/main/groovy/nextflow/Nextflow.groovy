@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +22,11 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.ast.OpXform
 import nextflow.ast.OpXformImpl
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
-import nextflow.extension.CH
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
 import nextflow.extension.OperatorImpl
 import nextflow.file.FileHelper
@@ -221,7 +217,7 @@ class Nextflow {
      * @param message An optional error message
      */
     static void error( String message = null ) {
-        throw message ? new ProcessUnrecoverableException(message) : new ProcessUnrecoverableException()
+        throw message ? new WorkflowScriptErrorException(message) : new WorkflowScriptErrorException()
     }
 
     /**

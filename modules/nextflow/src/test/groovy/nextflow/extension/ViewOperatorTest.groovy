@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +42,7 @@ class ViewOperatorTest extends Specification{
     def 'should print channel items'() {
 
         when:
-        def result = Channel.from(1,2,3).view()
+        def result = Channel.of(1,2,3).view()
         then:
         result.val == 1
         result.val == 2
@@ -56,7 +55,7 @@ class ViewOperatorTest extends Specification{
     def 'should print channel items applying the closure formatting rule'() {
 
         when:
-        def result = Channel.from(1,2,3).view { "~ $it " }
+        def result = Channel.of(1,2,3).view { "~ $it " }
         then:
         result.val == 1
         result.val == 2
@@ -70,7 +69,7 @@ class ViewOperatorTest extends Specification{
     def 'should print channel items without appending the newline character'() {
 
         when:
-        def result = Channel.from(1,2,3).view(newLine:false) { " ~ $it" }
+        def result = Channel.of(1,2,3).view(newLine:false) { " ~ $it" }
         then:
         result.val == 1
         result.val == 2

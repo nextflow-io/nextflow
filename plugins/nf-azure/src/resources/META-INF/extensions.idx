@@ -17,3 +17,4 @@
 nextflow.cloud.azure.batch.AzBatchExecutor
 nextflow.cloud.azure.file.AzPathFactory
 nextflow.cloud.azure.file.AzPathSerializer
+nextflow.cloud.azure.fusion.AzFusionEnv
