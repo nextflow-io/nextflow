@@ -460,6 +460,59 @@ class ChannelTest extends Specification {
 
     }
 
+    def testFromRelativePathWithGlob() {
+        given:
+        def folder = tempDir.root
+        def file1 = Files.createFile(folder.resolve('file1.txt'))
+        def file2 = Files.createFile(folder.resolve('file2.txt'))
+        def file3 = Files.createFile(folder.resolve('file3.log'))
+        and:
+        SysEnv.push(NXF_FILE_ROOT: folder.toString())
+        
+        when:
+        List<Path> result = Channel
+                .fromPath( '*.txt' )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file1.toString(), file2.toString() ]
+
+        when:
+        result = Channel
+                .fromPath( '*.txt', relative: true )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file1.name, file2.name ]
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def testFromRelativePathWithFileName() {
+        given:
+        def folder = tempDir.root
+        def file1 = Files.createFile(folder.resolve('file1.txt'))
+        def file2 = Files.createFile(folder.resolve('file2.txt'))
+        def file3 = Files.createFile(folder.resolve('file3.log'))
+        and:
+        SysEnv.push(NXF_FILE_ROOT: folder.toString())
+
+        when:
+        List<Path> result = Channel
+                .fromPath( 'file3.log' )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file3.toString() ]
+
+        when:
+        result = Channel
+                .fromPath( 'file3.log', relative: true )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file3.name ]
+
+        cleanup:
+        SysEnv.pop()
+    }
 
     def testFromPathWithLinks() {
 
@@ -702,6 +755,31 @@ class ChannelTest extends Specification {
         pairs.val == ['beta', b1, b2]
         pairs.val == ['delta', d1, d2]
         pairs.val == Channel.STOP
+    }
+
+    def 'should group files with the same prefix and root path' () {
+
+        setup:
+        def folder = tempDir.root.toAbsolutePath()
+        def a1 = Files.createFile(folder.resolve('aa_1.fa'))
+        def a2 = Files.createFile(folder.resolve('aa_2.fa'))
+        def x1 = Files.createFile(folder.resolve('xx_1.fa'))
+        def x2 = Files.createFile(folder.resolve('xx_2.fa'))
+        def z1 = Files.createFile(folder.resolve('zz_1.fa'))
+        def z2 = Files.createFile(folder.resolve('zz_2.fa'))
+        and:
+        SysEnv.push(NXF_FILE_ROOT: folder.toString())
+
+        when:
+        def pairs = Channel .fromFilePairs("*_{1,2}.*") .toList(). getVal() .sort { it[0] }
+        then:
+        pairs == [
+                ['aa', [a1, a2]],
+                ['xx', [x1, x2]],
+                ['zz', [z1, z2]] ]
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should group files with the same prefix using a custom grouping' () {

@@ -23,7 +23,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelTest extends Specification {
+class S3ChannelTest extends Specification {
 
     def testFromPathS3() {
 

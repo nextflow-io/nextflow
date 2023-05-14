@@ -116,7 +116,7 @@ class PathVisitor {
         final path = filePattern.toString()
         final splitter = FilePatternSplitter.glob().parse(path)
 
-        if( !splitter.isPattern()  ) {
+        if( !splitter.isPattern() ) {
             final result = fs.getPath( splitter.strip(path) )
             emit0(checkIfExists(result, opts))
             close0()
@@ -146,7 +146,7 @@ class PathVisitor {
         log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${opts}"
 
         // now apply glob file search
-        final path = fs.getPath(folder).complete()
+        final path = toCanonicalPath(fs.getPath(folder))
 
         if( opts == null )
             opts = [:]

@@ -1601,6 +1601,11 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_WORK`
 : Directory where working files are stored (usually your *scratch* directory)
 
+`NXF_FILE_ROOT`
+: The file storage path against which relative file paths are resolved. For example, having define the variable `NXF_FILE_ROOT=/some/root/path`
+the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the 
+usual protocol prefix e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+
 `JAVA_HOME`
 : Defines the path location of the Java VM installation used to run Nextflow.
 
