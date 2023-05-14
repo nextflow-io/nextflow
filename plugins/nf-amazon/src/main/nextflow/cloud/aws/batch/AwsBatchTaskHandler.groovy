@@ -642,7 +642,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 : classicSubmitCli()
     }
 
-    protected maxSpotAttempts() {
+    protected int maxSpotAttempts() {
         return executor.awsOptions.maxSpotAttempts
     }
 
@@ -744,7 +744,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The list of environment variables to be defined in the Batch job execution context
      */
     protected List<KeyValuePair> getEnvironmentVars() {
-        def vars = []
+        List<KeyValuePair> vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
         if( this.getAwsOptions().retryMode && this.getAwsOptions().retryMode in AwsOptions.VALID_RETRY_MODES)
