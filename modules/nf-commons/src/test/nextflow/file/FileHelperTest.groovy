@@ -30,6 +30,7 @@ import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -980,7 +981,7 @@ class FileHelperTest extends Specification {
         'file:/'             | 'file:/foo/bar'
         'file:///'           | 'file:///'
         'file:///'           | 'file:///foo/bar/baz/'
-        'file://foo'         | 'file://foo/bar/baz/'
+        'file://foo'         | 'file://foo/bar/baz/'    // <-- `foo` in this case is considered the host name
         and:
         'ftp://foo.com:80'   | 'ftp://foo.com:80'
         'ftp://foo.com:80'   | 'ftp://foo.com:80/abc'
@@ -991,6 +992,7 @@ class FileHelperTest extends Specification {
         'dx://project-123:'  | 'dx://project-123:/abc'
         and:
         null                 | 'blah'
+        null                 | '/blah'
         null                 | 'file:'
         null                 | 'file://'
         null                 | 'http:/xyz.com'
@@ -1022,12 +1024,11 @@ class FileHelperTest extends Specification {
     @Unroll
     def 'should return file base dir'() {
         given:
-        FileHelper.env = [NXF_FILE_BASE_DIR: BASE_DIR]
+        SysEnv.push(NXF_FILE_BASE_DIR: BASE_DIR)
         expect:
         FileHelper.fileBaseDir() == EXPECTED
-
         cleanup:
-        FileHelper.env = null
+        SysEnv.pop()
 
         where:
         BASE_DIR            | EXPECTED
@@ -1056,13 +1057,13 @@ class FileHelperTest extends Specification {
 
     def 'should convert to canonical path with base' () {
         given:
-        FileHelper.env = [NXF_FILE_BASE_DIR: 'http://host.com']
+        SysEnv.push(NXF_FILE_BASE_DIR: 'http://host.com')
 
         expect:
         FileHelper.toCanonicalPath(VALUE) == EXPECTED
 
         cleanup:
-        FileHelper.env = System.getenv()
+        SysEnv.pop()
 
         where:
         VALUE                       | EXPECTED

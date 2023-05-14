@@ -43,6 +43,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
@@ -56,9 +57,6 @@ import nextflow.util.Escape
 @Slf4j
 @CompileStatic
 class FileHelper {
-
-    @PackageScope
-    static Map<String,String> env = System.getenv()
 
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
 
@@ -254,7 +252,7 @@ class FileHelper {
         }
 
         if( result.fileSystem != FileSystems.default ) {
-            // remove file paths are expected to be absolute by de
+            // remote file paths are expected to be absolute by definition
             return result
         }
 
@@ -310,7 +308,7 @@ class FileHelper {
         return asPath(toPathURI(str))
     }
 
-    static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
 
     static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
 
@@ -1090,9 +1088,9 @@ class FileHelper {
     }
 
     static Path fileBaseDir() {
-        if( env==null || !env.NXF_FILE_BASE_DIR )
+        if( !SysEnv.get('NXF_FILE_BASE_DIR') )
             return null
-        final base = env.NXF_FILE_BASE_DIR
+        final base = SysEnv.get('NXF_FILE_BASE_DIR')
         if( base.startsWith('/') )
             return Paths.get(base)
         final scheme = getUrlProtocol(base)

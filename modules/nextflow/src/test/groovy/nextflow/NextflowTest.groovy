@@ -15,11 +15,11 @@
  */
 
 package nextflow
+
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Paths
 
-import nextflow.file.FileHelper
 import nextflow.util.ArrayTuple
 import spock.lang.Requires
 import spock.lang.Specification
@@ -57,7 +57,7 @@ class NextflowTest extends Specification {
 
     def 'should resolve rel paths against env base' () {
         given:
-        FileHelper.env = [NXF_FILE_BASE_DIR: '/some/base/dir']
+        SysEnv.push(NXF_FILE_BASE_DIR: '/some/base/dir')
 
         expect:
         Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
@@ -65,7 +65,7 @@ class NextflowTest extends Specification {
         Nextflow.file( 'file.txt' ) == Paths.get('/some/base/dir/file.txt')
 
         cleanup:
-        FileHelper.env = System.getenv()
+        SysEnv.pop()
     }
 
     def testFile3() {

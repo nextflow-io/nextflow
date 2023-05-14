@@ -19,7 +19,6 @@ package nextflow
 
 import java.nio.file.Paths
 
-import nextflow.file.FileHelper
 import spock.lang.Specification
 /**
  *
@@ -36,7 +35,7 @@ class S3NextflowTest extends Specification {
 
     def 'should resolve rel paths against env base' () {
         given:
-        FileHelper.env = [NXF_FILE_BASE_DIR: 's3://some/base/dir']
+        SysEnv.push(NXF_FILE_BASE_DIR: 's3://some/base/dir')
 
         expect:
         Nextflow.file( 's3://abs/path/file.txt' ) == Paths.get(new URI('s3:///abs/path/file.txt'))
@@ -44,7 +43,7 @@ class S3NextflowTest extends Specification {
         Nextflow.file( 'file.txt' ) == Paths.get(new URI('s3:///some/base/dir/file.txt'))
 
         cleanup:
-        FileHelper.env = System.getenv()
+        SysEnv.pop()
     }
 
 }
