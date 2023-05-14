@@ -47,6 +47,7 @@ class AzBatchOpts implements CloudTransferOptions {
     String location
     Boolean autoPoolMode
     Boolean allowPoolCreation
+    Boolean terminateJobsOnCompletion
     Boolean deleteJobsOnCompletion
     Boolean deletePoolsOnCompletion
     CopyToolInstallMode copyToolInstallMode
@@ -62,6 +63,7 @@ class AzBatchOpts implements CloudTransferOptions {
         location = config.location
         autoPoolMode = config.autoPoolMode
         allowPoolCreation = config.allowPoolCreation
+        terminateJobsOnCompletion = config.terminateJobsOnCompletion
         deleteJobsOnCompletion = config.deleteJobsOnCompletion
         deletePoolsOnCompletion = config.deletePoolsOnCompletion
         pools = parsePools(config.pools instanceof Map ? config.pools as Map<String,Map> : Collections.<String,Map>emptyMap())

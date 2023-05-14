@@ -38,8 +38,10 @@ import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
+import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
+import com.microsoft.azure.batch.protocol.models.OnAllTasksComplete
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -783,14 +785,37 @@ class AzBatchService implements Closeable {
         apply(() -> client.taskOperations().deleteTask(key.jobId, key.taskId))
     }
 
+    protected void terminateJobs() {
+        /* 
+        We set the job to terminate when all tasks are complete rather than directly terminating, this allows Azure Batch to handle the termination for us.
+        */
+
+        for( Map.Entry<TaskProcessor,String> entry : allJobIds ) {
+            final proc = entry.key
+            final jobId = entry.value
+
+            try {
+                log.trace "Terminating Azure job ${jobId}"
+
+                CloudJob job = apply(() -> client.jobOperations().getJob(jobId))
+                final poolInfo = job.poolInfo()
+
+                JobUpdateParameter jobParameter = new JobUpdateParameter()
+                        .withOnAllTasksComplete(OnAllTasksComplete.TERMINATE_JOB)
+                        .withPoolInfo(poolInfo)
+
+                apply(() -> client.jobOperations().updateJob(jobId, jobParameter))
+            }
+            catch (Exception e) {
+                log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+            }
+        }
+    }
+
     protected void cleanupJobs() {
         for( Map.Entry<TaskProcessor,String> entry : allJobIds ) {
             final proc = entry.key
             final jobId = entry.value
-            if( proc.hasErrors() ) {
-                log.debug "Preserving Azure job with error: ${jobId}"
-                continue
-            }
 
             try {
                 log.trace "Deleting Azure job ${jobId}"
@@ -826,6 +851,11 @@ class AzBatchService implements Closeable {
     }
     @Override
     void close() {
+        // Terminate existing jobs to prevent them occupying quota
+        if( config.batch().terminateJobsOnCompletion!=Boolean.FALSE ) {
+            terminateJobs()
+        }
+
         // cleanup app successful jobs
         if( config.batch().deleteJobsOnCompletion!=Boolean.FALSE ) {
             cleanupJobs()
