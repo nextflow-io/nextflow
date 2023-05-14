@@ -164,7 +164,7 @@ class OarExecutor extends AbstractGridExecutor {
 
         final JOB_ID = 'Job_Id:'
         final JOB_STATUS = 'state ='
-        final result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         String id = null
         String status = null

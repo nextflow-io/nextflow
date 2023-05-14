@@ -149,7 +149,7 @@ class PbsExecutor extends AbstractGridExecutor {
 
         final JOB_ID = 'Job Id:'
         final JOB_STATUS = 'job_state ='
-        final result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         String id = null
         String status = null

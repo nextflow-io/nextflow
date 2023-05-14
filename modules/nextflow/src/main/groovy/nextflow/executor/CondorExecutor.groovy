@@ -110,7 +110,7 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
 
-    static protected Map DECODE_STATUS = [
+    static protected Map<String,QueueStatus> DECODE_STATUS = [
             'U': QueueStatus.PENDING,   // Unexpanded
             'I': QueueStatus.PENDING,   // Idle
             'R': QueueStatus.RUNNING,   // Running
@@ -123,7 +123,7 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         if( !text ) return result
 
         boolean started = false
