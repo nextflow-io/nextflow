@@ -133,7 +133,7 @@ class SgeExecutor extends AbstractGridExecutor {
         return result
     }
 
-    static protected Map DECODE_STATUS = [
+    static protected Map<String,QueueStatus> DECODE_STATUS = [
         't': QueueStatus.RUNNING,
         'r': QueueStatus.RUNNING,
         'R': QueueStatus.RUNNING,
@@ -155,7 +155,7 @@ class SgeExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         text?.eachLine{ String row, int index ->
             if( index< 2 ) return
             def cols = row.trim().split(/\s+/)

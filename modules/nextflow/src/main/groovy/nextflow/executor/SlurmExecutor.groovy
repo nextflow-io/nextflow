@@ -156,7 +156,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      *  Maps SLURM job status to nextflow status
      *  see http://slurm.schedmd.com/squeue.html#SECTION_JOB-STATE-CODES
      */
-    static private Map STATUS_MAP = [
+    static private Map<String,QueueStatus> STATUS_MAP = [
             'PD': QueueStatus.PENDING,  // (pending)
             'R': QueueStatus.RUNNING,   // (running)
             'CA': QueueStatus.ERROR,    // (cancelled)
@@ -175,7 +175,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         text.eachLine { String line ->
             def cols = line.split(/\s+/)

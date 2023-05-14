@@ -155,7 +155,7 @@ class FluxExecutor extends AbstractGridExecutor {
      *  Maps Flux job status to nextflow status
      *  see https://flux-framework.readthedocs.io/projects/flux-core/en/latest/man1/flux-jobs.html#job-status
      */
-    static private Map STATUS_MAP = [
+    static private Map<String,QueueStatus> STATUS_MAP = [
             'D': QueueStatus.HOLD,      // (depend)
             'R': QueueStatus.RUNNING,   // (running)
             'S': QueueStatus.PENDING,   // (scheduled)
@@ -166,7 +166,7 @@ class FluxExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         text.eachLine { String line ->
             def cols = line.split(/\s+/)
