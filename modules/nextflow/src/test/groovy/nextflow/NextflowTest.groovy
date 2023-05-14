@@ -15,6 +15,7 @@
  */
 
 package nextflow
+
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Paths
@@ -35,12 +36,10 @@ class NextflowTest extends Specification {
     }
 
     def testFile() {
-
         expect:
         Nextflow.file('file.log').toFile() == new File('file.log').canonicalFile
         Nextflow.file('relative/file.test').toFile() == new File( new File('.').canonicalFile, 'relative/file.test')
         Nextflow.file('/user/home/file.log').toFile() == new File('/user/home/file.log')
-
     }
 
     def testFile2() {
@@ -54,6 +53,19 @@ class NextflowTest extends Specification {
         Nextflow.file( Paths.get('some/path') ).toString() == current + '/some/path'
         Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
 
+    }
+
+    def 'should resolve rel paths against env base' () {
+        given:
+        SysEnv.push(NXF_FILE_ROOT: '/some/base/dir')
+
+        expect:
+        Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
+        and:
+        Nextflow.file( 'file.txt' ) == Paths.get('/some/base/dir/file.txt')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def testFile3() {
