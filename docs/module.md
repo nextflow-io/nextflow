@@ -36,8 +36,7 @@ Module includes are subject to the following rules:
 
 ## Module directory
 
-:::{note}
-This feature requires Nextflow version `22.10.0` or later.
+:::{versionadded} 22.10.0
 :::
 
 A module can be defined as a directory with the same name as the module and with a script named `main.nf`. For example:
@@ -241,8 +240,7 @@ baseDir
 
 ## Module binaries
 
-:::{note}
-This feature requires Nextflow version `22.10.0` or later.
+:::{versionadded} 22.10.0
 :::
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.

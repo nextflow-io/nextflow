@@ -18,7 +18,6 @@ Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with doub
 
 Available options:
 
-
 `-C`
 : Use the specified configuration file(s) overriding any defaults.
 
@@ -117,8 +116,7 @@ The `-c` option is used to append a new configuration to the default configurati
 
 ### Docker driven execution
 
-:::{warning}
-This feature is experimental.
+:::{warning} *Experimental: not recommended for production environments.*
 :::
 
 Launch Nextflow via Docker.
@@ -647,90 +645,70 @@ The `kuberun` command builds upon the `run` command and offers a deep integratio
 
 **Options**
 
+The `kuberun` command supports the following options from [`run`](#run):
 
-`-E`
-: Exports all current system environment.
+- `-cache`
+- `-disable-jobs-cancellation`
+- `-dsl1`
+- `-dsl2`
+- `-dump-channels`
+- `-dump-hashes`
+- `-e.<key>=<value>`
+- `-entry`
+- `-h, -help`
+- `-hub`
+- `-latest`
+- `-main-script`
+- `-name`
+- `-offline`
+- `-params-file`
+- `-plugins`
+- `-preview`
+- `-process.<key>=<value>`
+- `-profile`
+- `-qs, -queue-size`
+- `-resume`
+- `-r, -revision`
+- `-stub, -stub-run`
+- `-user`
+- `-with-conda`
+- `-with-dag`
+- `-N, -with-notification`
+- `-with-report`
+- `-with-spack`
+- `-with-timeline`
+- `-with-tower`
+- `-with-trace`
+- `-with-wave`
+- `-with-weblog`
+- `-without-spack`
+- `-without-wave`
+- `-w, -work-dir`
 
-`-ansi-log`
-: Enable/disable ANSI console logging.
-
-`-bucket-dir`
-: Remote bucket where intermediate result files are stored.
-
-`-cache`
-: Enable/disable processes caching.
-
-`-disable-jobs-cancellation`
-: Prevent the cancellation of child jobs on execution termination.
-
-`-dsl1`
-: Execute the workflow using DSL1 syntax.
-
-`-dsl2`
-: Execute the workflow using DSL2 syntax.
-
-`-dump-channels`
-: Dump channels for debugging purpose.
-
-`-dump-hashes`
-: Dump task hash keys for debugging purpose.
-
-`-e.<key>=<value>`
-: Add the specified variable to execution environment.
-
-`-entry`
-: Entry workflow name to be executed.
+The following new options are also available:
 
 `-head-cpus`
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specify number of CPUs requested for the Nextflow pod.
 
 `-head-image`
+: :::{versionadded} 22.07.1-edge
+  :::
 : Specify the container image for the Nextflow driver pod.
 
 `-head-memory`
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specify amount of memory requested for the Nextflow pod.
 
-`-h, -help`
-: Print the command usage.
-
-`-hub` (`github`)
-: Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
-
-`-latest`
-: Pull latest changes before run.
-
-`-lib`
-: Library extension path.
-
-`-main-script`
-: The script file to be executed when launching a project directory or repository.
-
-`-name`
-: Assign a mnemonic name to the a pipeline run.
+`-head-prescript`
+: :::{versionadded} 22.05.0-edge
+  :::
+: Specify script to be run before the Nextflow pod starts.
 
 `-n, -namespace`
 : Specify the K8s namespace to use.
-
-`-offline`
-: Do not check for remote project updates.
-
-`-params-file`
-: Load script parameters from a JSON/YAML file.
-
-`-plugins`
-: Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower
-
-`-preview`
-: Run the workflow script skipping the execution of all processes
-
-`-process.<key>=<value>`
-: Set process configuration options.
-
-`-profile`
-: Choose a configuration profile. Multiple profiles can be specified as a comma-separated list.
-
-`-qs, -queue-size`
-: Max number of processes that can be executed in parallel by each executor.
 
 `-remoteConfig`
 : Add the specified file from the K8s cluster to configuration set.
@@ -738,84 +716,8 @@ The `kuberun` command builds upon the `run` command and offers a deep integratio
 `-remoteProfile`
 : Choose a configuration profile in the remoteConfig.
 
-`-resume`
-: Execute the script using the cached results, useful to continue executions that was stopped by an error.
-
-`-r, -revision`
-: Revision of the project to run (either a git branch, tag, or commit hash).
-: When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
-
-`-stub, -stub-run`
-: Execute the workflow replacing process scripts with command stubs.
-
-`-test`
-: Test a script function with the name specified.
-
-`-user`
-: Private repository user name.
-
 `-v, -volume-mount`
 : Volume claim mounts, e.g. `my-pvc:/mnt/path`.
-
-`-with-charliecloud`
-: Enable process execution with the Charliecloud container runtime.
-
-`-with-conda`
-: Use the specified Conda environment package or file (must end with `.yml` or `.yaml`).
-
-`-with-dag` (`dag.dot`)
-: Create pipeline DAG file.
-
-`-with-docker`
-: Enable process execution in a Docker container.
-
-`-N, -with-notification`
-: Send a notification email on workflow completion to the specified recipients.
-
-`-with-podman`
-: Enable process execution in a Podman container.
-
-`-with-report` (`report.html`)
-: Create workflow execution HTML report.
-
-`-with-singularity`
-: Enable process execution in a Singularity container.
-
-`-with-spack`
-: Use the specified Spack environment package or file (must end with `.yaml`).
-
-`-with-timeline` (`timeline.html`)
-: Create workflow execution timeline.
-
-`-with-tower`
-: Monitor workflow execution with [Tower](https://cloud.tower.nf/).
-
-`-with-trace` (`trace.txt`)
-: Create workflow execution trace file.
-
-`-with-wave`
-: Enable the use of Wave containers.
-
-`-with-weblog`
-: Send workflow status messages via HTTP to target URL.
-
-`-without-conda`
-: Disable process execution with Conda.
-
-`-without-docker`
-: Disable process execution with Docker.
-
-`-without-podman`
-: Disable process execution in a Podman container.
-
-`-without-spack`
-: Disable process execution with Spack.
-
-`-without-wave`
-: Disable the use of Wave containers.
-
-`-w, -work-dir` (`work`)
-: Directory where intermediate result files are stored.
 
 **Examples**
 
@@ -1066,7 +968,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 **Options**
 
-
 `-E`
 : Exports all current system environment.
 
@@ -1116,7 +1017,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: *Requires version `20.09.1-edge` or later.*
+: :::{versionadded} 20.09.1-edge
+  :::
 : The script file to be executed when launching a project directory or repository.
 
 `-name`
@@ -1131,8 +1033,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-plugins`
 : Comma separated list of plugin ids to be applied in the pipeline execution.
 
+`-preview`
+: :::{versionadded} 22.06.0-edge
+  :::
+: Run the workflow script skipping the execution of all processes
+
 `-process.<key>=<value>`
-: Set process options.
+: Set process config options.
 
 `-profile`
 : Choose a configuration profile.
@@ -1156,8 +1063,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-user`
 : Private repository user name.
 
+`-with-apptainer`
+: Enable process execution in an Apptainer container.
+
 `-with-charliecloud`
-: Enable process execution in a Charliecloud container runtime
+: Enable process execution in a Charliecloud container.
 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
@@ -1192,8 +1102,14 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-trace` (`trace.txt`)
 : Create workflow execution trace file.
 
+`-with-wave`
+: Enable the use of Wave containers.
+
 `-with-weblog`
 : Send workflow status messages via HTTP to target URL.
+
+`-without-conda`
+: Disable process execution with Conda.
 
 `-without-docker`
 : Disable process execution with Docker.
@@ -1204,12 +1120,15 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-without-spack`
 : Disable process execution with Spack.
 
+`-without-wave`
+: Disable the use of Wave containers.
+
 `-w, -work-dir` (`work`)
 : Directory where intermediate result files are stored.
 
 **Examples**
 
-- Run a specific revision of a downloaded pipeline.
+- Run a specific revision of a remote pipeline.
 
   ```console
   $ nextflow run nextflow-io/hello -r v1.1
@@ -1224,13 +1143,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -profile docker
   ```
 
-- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
+- Execute a pipeline and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
 
   ```console
   $ nextflow run main.nf -with-report
   ```
 
-- Invoke the nextflow pipeline execution with a custom queue size. By default, the queue size is the number of available CPUs.
+- Execute a pipeline with a custom queue size. By default, the queue size is the number of available CPUs.
 
   ```console
   $ nextflow run nextflow-io/hello -qs 4
@@ -1242,13 +1161,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -entry workflow_A
   ```
 
-- Invoke the nextflow pipeline execution with the integrated monitoring in [Tower](https://cloud.tower.nf).
+- Execute a pipeline with integrated monitoring in [Tower](https://cloud.tower.nf).
 
   ```console
   $ nextflow run nextflow-io/hello -with-tower
   ```
 
-- Invoke the nextflow pipeline execution with a custom parameters file (YAML or JSON).
+- Execute a pipeline with a custom parameters file (YAML or JSON).
 
   ```console
   $ nextflow run main.nf -params-file pipeline_params.yml
@@ -1327,13 +1246,13 @@ The `view` command is used to inspect the pipelines that are already stored in t
 **Options**
 
 `-h, -help`
-: Print the command usage. 
+: Print the command usage.
 
-`-l`       
-: List repository content. 
+`-l`
+: List repository content.
 
-`-q`       
-: Hide header line.        
+`-q`
+: Hide header line.
 
 **Examples**
 

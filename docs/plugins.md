@@ -45,7 +45,10 @@ To add a new plugin to the Index, create a pull request including the request pl
 
 ## Import operators from plugin
 
-As of version `22.04.x`, Nextflow allows the inclusion of extension operators from Nextflow plugins.
+:::{versionadded} 22.04.0
+:::
+
+Nextflow supports the inclusion of custom operators from Nextflow plugins.
 
 For example:
 
@@ -66,7 +69,10 @@ The prefix `plugin/` must precede the plugin name in the include `from` statemen
 
 ## Import custom functions from plugin
 
-In the same way, as of version `22.09.x`, a plugin can export custom functions.
+:::{versionadded} 22.09.0-edge
+:::
+
+Nextflow supports the inclusion of custom functions from Nextflow plugins.
 
 For example, a plugin can export a util function to reverse a String:
 

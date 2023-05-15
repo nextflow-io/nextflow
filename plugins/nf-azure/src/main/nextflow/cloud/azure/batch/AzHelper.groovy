@@ -15,21 +15,24 @@
  */
 package nextflow.cloud.azure.batch
 
-import com.azure.storage.blob.BlobServiceClient
-import com.azure.storage.blob.models.UserDelegationKey
-import com.azure.storage.common.sas.AccountSasPermission
-import com.azure.storage.common.sas.AccountSasResourceType
-import com.azure.storage.common.sas.AccountSasService
-import com.azure.storage.common.sas.AccountSasSignatureValues
-
 import java.nio.file.Path
 import java.time.OffsetDateTime
 
 import com.azure.storage.blob.BlobContainerClient
+import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.BlobServiceClientBuilder
+import com.azure.storage.blob.models.UserDelegationKey
 import com.azure.storage.blob.sas.BlobContainerSasPermission
 import com.azure.storage.blob.sas.BlobSasPermission
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
+import com.azure.storage.common.StorageSharedKeyCredential
+import com.azure.storage.common.sas.AccountSasPermission
+import com.azure.storage.common.sas.AccountSasResourceType
+import com.azure.storage.common.sas.AccountSasService
+import com.azure.storage.common.sas.AccountSasSignatureValues
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.util.Duration
 /**
@@ -37,6 +40,7 @@ import nextflow.util.Duration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AzHelper {
 
@@ -126,7 +130,7 @@ class AzHelper {
         return delegationKey
     }
 
-    static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
+        static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
        
         final startTime = OffsetDateTime.now()
         final indicatedExpiryTime = startTime.plusHours(duration.toHours())
@@ -158,4 +162,40 @@ class AzHelper {
 
         return client.generateAccountSas(signature)
     }
+
+    static String generateAccountSas(String accountName, String accountKey, Duration duration) {
+        final client = getOrCreateBlobServiceWithKey(accountName, accountKey)
+        return generateAccountSas(client, duration)
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithKey(String accountName, String accountKey) {
+        log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
+
+        final credential = new StorageSharedKeyCredential(accountName, accountKey);
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+
+        return new BlobServiceClientBuilder()
+                .endpoint(endpoint)
+                .credential(credential)
+                .buildClient()
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithToken(String accountName, String sasToken) {
+        if( !sasToken )
+            throw new IllegalArgumentException("Missing Azure blob SAS token")
+        if( sasToken.length()<100 )
+            throw new IllegalArgumentException("Invalid Azure blob SAS token -- offending value: $sasToken")
+
+        log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+
+        return new BlobServiceClientBuilder()
+                .endpoint(endpoint)
+                .sasToken(sasToken)
+                .buildClient()
+    }
+
 }

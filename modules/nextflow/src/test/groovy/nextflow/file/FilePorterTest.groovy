@@ -19,6 +19,7 @@ package nextflow.file
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.Semaphore
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -135,12 +136,12 @@ class FilePorterTest extends Specification {
     static class ErrorStage extends FilePorter.FileTransfer {
 
         ErrorStage(Path path, Path stagePath, int maxRetries) {
-            super(path, stagePath, maxRetries)
+            super(path, stagePath, maxRetries, new Semaphore(100))
         }
 
         @Override
         void run() throws Exception {
-            throw new ProcessStageException('Cannot stage gile')
+            throw new ProcessStageException('Cannot stage file')
         }
     }
 
@@ -286,7 +287,7 @@ class FilePorterTest extends Specification {
         def local1 = folder.resolve('hola.text')
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1)
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
 
         when:
         porter.stageForeignFile(foreign1, local1)
@@ -314,7 +315,7 @@ class FilePorterTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def local1 = folder.resolve('hola.text'); local1.text = CONTENT
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1)
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
 
         when:
         def equals = porter.checkPathIntegrity(foreign1, local1)
