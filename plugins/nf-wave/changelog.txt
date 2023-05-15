@@ -1,5 +1,12 @@
 nf-wave changelog
 ==================
+0.9.0 - 15 Apr 2023
+- Add support for the Spack recipes to Wave build (#3636) [b03cbe70]
+- Update logging libraries [d7eae86e]
+- Bump micromamba:1.4.2 [334df1e0]
+- Bump fusion 2.2 [f1ebe29a]
+- Bump groovy 3.0.17 [cfe4ba56]
+
 0.8.2 - 15 Apr 2023
 - Security fixes [83e8fd6a]
 
