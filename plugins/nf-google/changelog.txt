@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.7.4 - 15 May 2023
+- Update logging libraries [d7eae86e]
+- Improve task out redirect remove the use of mkfifo (#3863) [efedec74]
+- Bump groovy 3.0.17 [cfe4ba56]
+
 1.7.3 - 15 Apr 2023
 - Bump gson:2.10.1 [83ca1e32]
 
