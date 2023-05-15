@@ -371,7 +371,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         catch (Exception e) {
             log.debug "[GOOGLE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
-            null
+            // return MAX_VALUE to signal it was unable to retrieve the exit code
+            return Integer.MAX_VALUE
         }
     }
 
