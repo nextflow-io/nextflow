@@ -1,5 +1,17 @@
 nf-amazon changelog
 ===================
+2.0.0 - 15 May 2023
+- Add fusion.exportStorageCredentials option [ci fast] [acb6aedf]
+- Fix AWS SSE env propagation to Fusion [e24608c3]
+- Fix string comparison in S3 client (#3875) [ci fast] [9344d294]
+- Preview support for virtual threads (#3871) [5c429046]
+- Refactor the AWS configuration  (#3498) [a74e42d9]
+- Rename AmazonS3Client to S3Client [cc59596a]
+- Rename com.upplication.s3fs package to nextflow.cloud.aws.nio [a2f3bb24]
+- Security fixes [973b7bea]
+- Update logging libraries [d7eae86e]
+- Bump groovy 3.0.17 [cfe4ba56]
+
 1.16.2 - 15 Apr 2023
 - Update plugin deps [83e8fd6a]
 
