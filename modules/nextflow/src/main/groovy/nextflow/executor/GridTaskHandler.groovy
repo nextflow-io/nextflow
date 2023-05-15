@@ -314,7 +314,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        def exitAttrs = null
+        BasicFileAttributes exitAttrs = null
         if( !exitFile || !(exitAttrs=FileHelper.readAttributes(exitFile)) || !exitAttrs.lastModifiedTime()?.toMillis() ) {
             if( log.isTraceEnabled() ) {
                 if( !exitFile )
@@ -447,7 +447,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     boolean checkIfCompleted() {
 
         // verify the exit file exists
-        def exit
+        Integer exit
         if( isRunning() && (exit = readExitStatus()) != null ) {
             // finalize the task
             task.exitStatus = exit
