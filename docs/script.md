@@ -544,9 +544,6 @@ The following functions are available in Nextflow scripts:
 `sendMail( params )`
 : Send an email. See {ref}`mail-page`.
 
-`stop()`
-: Interrupts the iteration when using split operators.
-
 `tuple( collection )`
 : Create a tuple object from the given collection.
 
