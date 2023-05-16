@@ -554,21 +554,7 @@ The following functions are available in Nextflow scripts:
 
 ## Implicit classes
 
-The following classes are available in Nextflow scripts:
-
-`Channel`
-: Provides channel factory methods. See {ref}`channel-factory`.
-
-`Duration`
-: Represents a duration. See the {ref}`process-time` process directive.
-
-`MemoryUnit`
-: Represents a quantity of bytes. See the {ref}`process-memory` process directive.
-
-`ValueObject`
-: An AST transformation for classes and enums, which simply combines [AutoClone](http://docs.groovy-lang.org/latest/html/gapi/groovy/transform/AutoClone.html) and [Immutable](https://docs.groovy-lang.org/latest/html/gapi/groovy/transform/Immutable.html).
-
-Additionally, the following classes are imported from standard libraries:
+The following classes are imported by default in Nextflow scripts:
 
 - `java.lang.*`
 - `java.util.*`
@@ -581,6 +567,138 @@ Additionally, the following classes are imported from standard libraries:
 - `java.nio.file.Path`
 - `groovy.transform.Field`
 - `org.apache.commons.lang.StringUtils`
+
+Additionally, Nextflow imports several new classes which are described below.
+
+### Channel
+
+The `Channel` class provides the channel factory methods. See {ref}`channel-factory` for more information.
+
+(implicit-classes-duration)=
+
+### Duration
+
+A `Duration` represents some duration of time.
+
+You can create a duration by adding a time unit suffix to an integer, e.g. `1.h`. The following suffixes are available:
+
+| Unit                            | Description  |
+| ------------------------------- | ------------ |
+| `ms`, `milli`, `millis`         | Milliseconds |
+| `s`, `sec`, `second`, `seconds` | Seconds      |
+| `m`, `min`, `minute`, `minutes` | Minutes      |
+| `h`, `hour`, `hours`            | Hours        |
+| `d`, `day`, `days`              | Days         |
+
+You can also create a duration with `Duration.of()`:
+
+```groovy
+// integer value (milliseconds)
+oneSecond = Duration.of(1000)
+
+// simple string value
+oneHour = Duration.of('1h')
+
+// complex string value
+complexDuration = Duration.of('1day 6hours 3minutes 30seconds')
+```
+
+Durations can be compared like numbers, and they support basic arithmetic operations:
+
+```groovy
+a = 1.h
+b = 2.h
+
+assert a < b
+assert a + a == b
+assert b - a == a
+assert a * 2 == b
+assert b / 2 == a
+```
+
+The following methods are available for a `Duration` object:
+
+`getDays()`, `toDays()`
+: Get the duration value in days (rounded down).
+
+`getHours()`, `toHours()`
+: Get the duration value in hours (rounded down).
+
+`getMillis()`, `toMillis()`
+: Get the duration value in milliseconds.
+
+`getMinutes()`, `toMinutes()`
+: Get the duration value in minutes (rounded down).
+
+`getSeconds()`, `toSeconds()`
+: Get the duration value in seconds (rounded down).
+
+(implicit-classes-memoryunit)=
+
+### MemoryUnit
+
+A `MemoryUnit` represents a quantity of bytes.
+
+You can create a memory unit by adding a unit suffix to an integer, e.g. `1.GB`. The following suffixes are available:
+
+| Unit | Description |
+| ---- | ----------- |
+| `B`  | Bytes       |
+| `KB` | Kilobytes   |
+| `MB` | Megabytes   |
+| `GB` | Gigabytes   |
+| `TB` | Terabytes   |
+| `PB` | Petabytes   |
+| `EB` | Exabytes    |
+| `ZB` | Zettabytes  |
+
+:::{note}
+Technically speaking, a kilobyte is equal to 1000 bytes, whereas 1024 bytes is called a "kibibyte" and abbreviated as "KiB", and so on for the other units. In practice, however, kilobyte is commonly understood to mean 1024 bytes, and Nextflow follows this convention in its implementation as well as this documentation.
+:::
+
+You can also create a memory unit with `MemoryUnit.of()`:
+
+```groovy
+// integer value (bytes)
+oneKilobyte = MemoryUnit.of(1024)
+
+// string value
+oneGigabyte = MemoryUnit.of('1 GB')
+```
+
+Memory units can be compared like numbers, and they support basic arithmetic operations:
+
+```groovy
+a = 1.GB
+b = 2.GB
+
+assert a < b
+assert a + a == b
+assert b - a == a
+assert a * 2 == b
+assert b / 2 == a
+```
+
+The following methods are available for a `MemoryUnit` object:
+
+`getBytes()`, `toBytes()`
+: Get the memory value in bytes (B).
+
+`getGiga()`, `toGiga()`
+: Get the memory value in gigabytes (rounded down), where 1 GB = 1024 MB.
+
+`getKilo()`, `toKilo()`
+: Get the memory value in kilobytes (rounded down), where 1 KB = 1024 B.
+
+`getMega()`, `toMega()`
+: Get the memory value in megabytes (rounded down), where 1 MB = 1024 KB.
+
+`toUnit( unit )`
+: Get the memory value in terms of a given unit (rounded down). The unit can be one of: `'B'`, `'KB'`, `'MB'`, `'GB'`, `'TB'`, `'PB'`, `'EB'`, `'ZB'`.
+
+### ValueObject
+
+`ValueObject` is an AST transformation for classes and enums, which simply combines [AutoClone](http://docs.groovy-lang.org/latest/html/gapi/groovy/transform/AutoClone.html) and [Immutable](https://docs.groovy-lang.org/latest/html/gapi/groovy/transform/Immutable.html). It is useful for defining custom "record" types.
 
 (script-file-io)=
 
