@@ -27,25 +27,12 @@ The `branch` operator allows you to forward the items emitted by a source channe
 
 The selection criteria is defined by specifying a {ref}`closure <script-closure>` that provides one or more boolean expression, each of which is identified by a unique label. On the first expression that evaluates to a *true* value, the current item is bound to a named channel as the label identifier. For example:
 
-```groovy
-Channel
-    .of(1, 2, 3, 40, 50)
-    .branch {
-        small: it < 10
-        large: it > 10
-    }
-    .set { result }
-
- result.small.view { "$it is small" }
- result.large.view { "$it is large" }
+```{literalinclude} snippets/branch.nf
+:language: groovy
 ```
 
-```
-1 is small
-2 is small
-3 is small
-40 is large
-50 is large
+```{literalinclude} snippets/branch.out
+:language: console
 ```
 
 :::{note}
@@ -54,31 +41,14 @@ The above *small* and *large* strings may be printed in any order due to the asy
 
 A default fallback condition can be specified using `true` as the last branch condition:
 
-```groovy
-Channel
-    .from(1, 2, 3, 40, 50)
-    .branch {
-        small: it < 10
-        large: it < 50
-        other: true
-    }
+```{literalinclude} snippets/branch-fallback.nf
+:language: groovy
 ```
 
 The value returned by each branch condition can be customised by specifying an optional expression statement(s) just after the condition expression. For example:
 
-```groovy
-Channel
-    .from(1, 2, 3, 40, 50)
-    .branch {
-        foo: it < 10
-            return it+2
-
-        bar: it < 50
-            return it-2
-
-        other: true
-            return 0
-    }
+```{literalinclude} snippets/branch-return.nf
+:language: groovy
 ```
 
 :::{tip}
@@ -87,14 +57,8 @@ When the `return` keyword is omitted, the value of the last expression statement
 
 To create a branch criteria as variable that can be passed as an argument to more than one `branch` operator use the `branchCriteria` built-in method as shown below:
 
-```groovy
-def criteria = branchCriteria {
-    small: it < 10
-    large: it > 10
-}
-
-Channel.of(1, 2, 30).branch(criteria).set { ch1 }
-Channel.of(10, 20, 1).branch(criteria).set { ch2 }
+```{literalinclude} snippets/branch-criteria.nf
+:language: groovy
 ```
 
 ## buffer
@@ -107,70 +71,52 @@ There are a number of ways you can regulate how `buffer` gathers the items from 
 
 - `buffer( closingCondition )`: starts to collect the items emitted by the channel into a subset until the `closingCondition` is verified. After that the subset is emitted to the resulting channel and new items are gathered into a new subset. The process is repeated until the last value in the source channel is sent. The `closingCondition` can be specified either as a {ref}`regular expression <script-regexp>`, a Java class, a literal value, or a boolean predicate that has to be satisfied. For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 1, 2, 3 )
-      .buffer { it == 2 }
-      .view()
+  ```{literalinclude} snippets/buffer-closing.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [1,2]
-  [3,1,2]
+  ```{literalinclude} snippets/buffer-closing.out
+  :language: console
   ```
 
 - `buffer( openingCondition, closingCondition )`: starts to gather the items emitted by the channel as soon as one of the them verify the `openingCondition` and it continues until there is one item which verify the `closingCondition`. After that the subset is emitted and it continues applying the described logic until the last channel item is emitted. Both conditions can be defined either as a {ref}`regular expression <script-regexp>`, a literal value, a Java class, or a boolean predicate that need to be satisfied. For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
-      .buffer( 2, 4 )
-      .view()
+  ```{literalinclude} snippets/buffer-opening-closing.nf
+  :language: groovy
+  ```
 
-  // emits bundles starting with '2' and ending with'4'
-  [2,3,4]
-  [2,3,4]
+  ```{literalinclude} snippets/buffer-opening-closing.out
+  :language: console
   ```
 
 - `buffer( size: n )`: transform the source channel in such a way that it emits tuples made up of `n` elements. An incomplete tuple is discarded. For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 1, 2, 3, 1 )
-      .buffer( size: 2 )
-      .view()
+  ```{literalinclude} snippets/buffer-size.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [1, 2]
-  [3, 1]
-  [2, 3]
+  ```{literalinclude} snippets/buffer-size.out
+  :language: console
   ```
 
   If you want to emit the last items in a tuple containing less than `n` elements, simply add the parameter `remainder` specifying `true`, for example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 1, 2, 3, 1 )
-      .buffer( size: 2, remainder: true )
-      .view()
+  ```{literalinclude} snippets/buffer-size-remainder.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [1, 2]
-  [3, 1]
-  [2, 3]
-  [1]
+  ```{literalinclude} snippets/buffer-size-remainder.out
+  :language: console
   ```
 
 - `buffer( size: n, skip: m )`: as in the previous example, it emits tuples containing `n` elements, but skips `m` values before starting to collect the values for the next tuple (including the first emission). For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
-      .buffer( size:3, skip:2 )
-      .view()
+  ```{literalinclude} snippets/buffer-size-skip.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [3, 4, 5]
-  [3, 4, 5]
+  ```{literalinclude} snippets/buffer-size-skip.out
+  :language: console
   ```
 
   If you want to emit the remaining items in a tuple containing less than `n` elements, simply add the parameter `remainder` specifying `true`, as shown in the previous example.
@@ -183,47 +129,32 @@ See also: [collate](#collate) operator.
 
 The `collate` operator transforms a channel in such a way that the emitted values are grouped in tuples containing `n` items. For example:
 
-```groovy
-Channel
-    .of(1,2,3,1,2,3,1)
-    .collate( 3 )
-    .view()
+```{literalinclude} snippets/collate.nf
+:language: groovy
 ```
 
-```
-[1, 2, 3]
-[1, 2, 3]
-[1]
+```{literalinclude} snippets/collate.out
+:language: console
 ```
 
 As shown in the above example the last tuple may be incomplete e.g. contain fewer elements than the specified size. If you want to avoid this, specify `false` as the second parameter. For example:
 
-```groovy
-Channel
-    .of(1,2,3,1,2,3,1)
-    .collate( 3, false )
-    .view()
+```{literalinclude} snippets/collate-no-remainder.nf
+:language: groovy
 ```
 
-```
-[1, 2, 3]
-[1, 2, 3]
+```{literalinclude} snippets/collate-no-remainder.out
+:language: console
 ```
 
 A second version of the `collate` operator allows you to specify, after the `size`, the `step` by which elements are collected in tuples. For example:
 
-```groovy
-Channel
-    .of(1,2,3,4)
-    .collate( 3, 1 )
-    .view()
+```{literalinclude} snippets/collate-step.nf
+:language: groovy
 ```
 
-```
-[1, 2, 3]
-[2, 3, 4]
-[3, 4]
-[4]
+```{literalinclude} snippets/collate-step.out
+:language: console
 ```
 
 As before, if you don't want to emit the last items which do not complete a tuple, specify `false` as the third parameter.
@@ -1550,35 +1481,26 @@ The `splitJson` operator allows you to split a JSON document from a source chann
 
 An example with a JSON array:
 
-```groovy
-Channel.of('[1,null,["A",{}],true]')
-    .splitJson()
-    .view{"Item: ${it}"}
+```{literalinclude} snippets/split-json-array.nf
+:language: groovy
 ```
 
 Produces the following output:
 
-```
-Item: 1
-Item: null
-Item: [A, [:]]
-Item: true
+```{literalinclude} snippets/split-json-array.out
+:language: console
 ```
 
 An example with a JSON object:
 
-```groovy
-Channel.of('{"A":1,"B":[1,2,3],"C":{"D":null}}')
-    .splitJson()
-    .view{"Item: ${it}"}
+```{literalinclude} snippets/split-json-object.nf
+:language: groovy
 ```
 
 Produces the following output:
 
-```
-Item: [value:1, key:A]
-Item: [value:[1, 2, 3], key:B]
-Item: [value:[D:null], key:C]
+```{literalinclude} snippets/split-json-object.out
+:language: console
 ```
 
 You can optionally query a section of the JSON document to parse and split, using the `path` option:

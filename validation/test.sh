@@ -32,7 +32,7 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     #
     git clone https://github.com/nextflow-io/hello
     (
-      cd hello;
+      cd hello
       $NXF_CMD run .
       $NXF_CMD run . -resume
     )
@@ -46,6 +46,19 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 
     exit 0
+fi
+
+#
+# Documentation tests
+#
+if [[ $TEST_MODE == 'test_docs' ]]; then
+
+    (
+      echo "Documentation tests"
+      cd ../docs/snippets/
+      bash test.sh
+    )
+
 fi
 
 if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
@@ -91,6 +104,9 @@ if [[ $TEST_MODE == 'test_google' ]]; then
     fi
 fi
 
+#
+# Wave
+#
 if [[ $TEST_MODE == 'test_wave' ]]; then
       echo "Wave tests"
       bash wave.sh
