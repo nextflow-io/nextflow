@@ -73,7 +73,7 @@ class JsonSplitter extends AbstractTextSplitter {
         return [
             autoClose: baseOptions.autoClose,
             into: baseOptions.into,
-            limit: baseOptions.limit
+            limit: baseOptions.limit,
             path: String,
         ]
     }
