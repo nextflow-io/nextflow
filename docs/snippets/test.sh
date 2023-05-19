@@ -17,6 +17,8 @@ for pipeline in $NXF_FILES ; do
         sort $outfile > a.out
         sort .out > b.out
         diff a.out b.out
+    else
+        echo "> $outfile not found, skipping"
     fi
 
 done

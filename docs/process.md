@@ -1856,7 +1856,7 @@ process your_task {
 
 The above snippet defines an environment variable named `FOO` which value is `bar`.
 
-When defined in the Nextflow configuration file, a pod setting can be defined using the canonical associative array syntax. For example:
+When defined in the Nextflow configuration file, a pod setting can be defined as a map:
 
 ```groovy
 process {
@@ -1864,11 +1864,14 @@ process {
 }
 ```
 
-When more than one setting needs to be provides they must be enclosed in a list definition as shown below:
+Or as a list of maps:
 
 ```groovy
 process {
-  pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
+  pod = [
+    [env: 'FOO', value: 'bar'],
+    [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
+  ]
 }
 ```
 
