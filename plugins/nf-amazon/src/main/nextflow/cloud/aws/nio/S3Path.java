@@ -306,7 +306,15 @@ public class S3Path implements Path, TagAwareFile {
 
 	@Override
 	public Path normalize() {
-		return this;
+		if( parts==null || parts.size()==0 )
+			return this;
+
+		return new S3Path(fileSystem, bucket, normalize0(parts));
+	}
+
+	private Iterable<String> normalize0(List<String> parts) {
+		final String s0 = Path.of(String.join(PATH_SEPARATOR, parts)).normalize().toString();
+		return Lists.newArrayList(Splitter.on(PATH_SEPARATOR).split(s0));
 	}
 
 	@Override

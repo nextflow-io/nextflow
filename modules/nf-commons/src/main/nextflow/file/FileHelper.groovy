@@ -258,8 +258,7 @@ class FileHelper {
 
         Path base
         if( !result.isAbsolute() && (base=fileRootDir()) ) {
-            final rel = result.toString()
-            result = rel!='.' ? base.resolve(rel) : base
+            result = base.resolve(result.toString())
         }
 
         return result.toAbsolutePath().normalize()

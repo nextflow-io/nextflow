@@ -1055,9 +1055,10 @@ class FileHelperTest extends Specification {
 
     }
 
+    @Unroll
     def 'should convert to canonical path with base' () {
         given:
-        SysEnv.push(NXF_FILE_ROOT: 'http://host.com')
+        SysEnv.push(NXF_FILE_ROOT: 'http://host.com/work')
 
         expect:
         FileHelper.toCanonicalPath(VALUE) == EXPECTED
@@ -1068,8 +1069,13 @@ class FileHelperTest extends Specification {
         where:
         VALUE                       | EXPECTED
         null                        | null
-        'file.txt'                  | Paths.get(new URI('http://host.com/file.txt'))
-        Paths.get('file.txt')       |  Paths.get(new URI('http://host.com/file.txt'))
+        'file.txt'                  | Paths.get(new URI('http://host.com/work/file.txt'))
+        Paths.get('file.txt')       |  Paths.get(new URI('http://host.com/work/file.txt'))
+        and:
+        './file.txt'                | Paths.get(new URI('http://host.com/work/file.txt'))
+        '.'                         | Paths.get(new URI('http://host.com/work'))
+        './'                        | Paths.get(new URI('http://host.com/work'))
+        '../file.txt'               | Paths.get(new URI('http://host.com/file.txt'))
         and:
         '/file.txt'                 | Paths.get('/file.txt')
         Paths.get('/file.txt')      | Paths.get('/file.txt')
