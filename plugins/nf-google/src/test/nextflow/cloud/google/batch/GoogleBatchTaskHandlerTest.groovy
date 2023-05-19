@@ -293,4 +293,37 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         taskGroup.getTaskSpec().getVolumesList().size()==0
     }
+
+    def 'should not set wildcard expressions as machine type'() {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> Mock(BatchConfig)
+        }
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [:]
+                getMachineType() >> "n1-*,n2-*"
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def env = [FUSION_WORK: '/xyz']
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [], [], env)
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_) >> null
+        and:
+        req.getAllocationPolicy().getInstances(0).policy.getMachineType() == ""
+
+    }
 }
