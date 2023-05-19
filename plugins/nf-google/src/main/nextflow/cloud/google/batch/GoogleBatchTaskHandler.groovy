@@ -406,13 +406,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
         final spot = executor.config.spot ?: executor.config.preemptible
-        final useSSD = fusionEnabled()
         final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
             return new CloudMachineInfo(
-                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, fusionEnabled(), families),
                     zone: location,
                     priceModel: priceModel
             )
