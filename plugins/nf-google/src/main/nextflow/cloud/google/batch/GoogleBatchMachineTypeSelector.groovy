@@ -83,7 +83,7 @@ class GoogleBatchMachineTypeSelector {
         int memPerVm
     }
 
-    String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean useFusion, List<String> families) {
+    String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean fusionEnabled, List<String> families) {
         final machineTypes = getAvailableMachineTypes(region)
         if (families == null)
             families = Collections.<String>emptyList()
@@ -101,7 +101,7 @@ class GoogleBatchMachineTypeSelector {
         final memoryGB = Math.ceil(memoryMB / 1024.0 as float) as int
 
         if (!families ) {
-            families = useFusion
+            families = fusionEnabled
                     ? DEFAULT_FAMILIES_FOR_FUSION
                     : DEFAULT_FAMILIES
         }
