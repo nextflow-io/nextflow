@@ -22,6 +22,8 @@ import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.TaskBean
@@ -159,7 +161,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_) >> new CloudMachineInfo(type: MACHINE_TYPE, zone: "location", priceModel: PriceModel.spot)
 
         and:
         def taskGroup = req.getTaskGroups(0)
