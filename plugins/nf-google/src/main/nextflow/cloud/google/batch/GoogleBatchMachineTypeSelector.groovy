@@ -69,7 +69,9 @@ class GoogleBatchMachineTypeSelector {
      * https://cloud.google.com/compute/docs/disks#local_ssd_machine_type_restrictions
      * LAST UPDATE 2023-02-17
      */
-    private static final List<String> DEFAULT_FAMILIES_WITH_SSD = ['n1-*', 'n2-*', 'n2d-*', 'c2-*', 'c2d-*', 'm3-*']
+    private static final List<String> DEFAULT_FAMILIES_FOR_FUSION = ['n1-*', 'n2-*', 'n2d-*', 'c2-*', 'c2d-*', 'm3-*']
+
+    private static final List<String> DEFAULT_FAMILIES = ['n1-*', 'n2-*', 'n2d-*', 'c2-*', 'c2d-*', 'm1-*', 'm2-*', 'm3-*', 'e2-*']
 
     @Immutable
     static class MachineType {
@@ -81,10 +83,10 @@ class GoogleBatchMachineTypeSelector {
         int memPerVm
     }
 
-    String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean localSSD, List<String> families) {
+    String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean fusionEnabled, List<String> families) {
         final machineTypes = getAvailableMachineTypes(region)
         if (families == null)
-            families = []
+            families = Collections.<String>emptyList()
 
         // Check if a specific machine type was defined
         if (families.size() == 1) {
@@ -98,12 +100,14 @@ class GoogleBatchMachineTypeSelector {
 
         final memoryGB = Math.ceil(memoryMB / 1024.0 as float) as int
 
-        // Use only families that can have a local SSD
-        if (!families && localSSD)
-            families = DEFAULT_FAMILIES_WITH_SSD
+        if (!families ) {
+            families = fusionEnabled
+                    ? DEFAULT_FAMILIES_FOR_FUSION
+                    : DEFAULT_FAMILIES
+        }
 
         // All types are valid if no families are defined, otherwise at least it has to start with one of the given values
-        final matchMachineType = {String t -> !families || families.find { matchType(it, t) }}
+        final matchMachineType = {String type -> !families || families.find { matchType(it, type) }}
 
         // find machines with enough resources and SSD local disk
         final validMachineTypes = machineTypes.findAll {

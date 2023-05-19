@@ -24,10 +24,10 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
             getAvailableMachineTypes(REGION) >> MACHINE_TYPES
         }
         expect:
-        selector.bestMachineType(CPUS, MEM, REGION, SPOT, SSD, FAMILIES) == EXPECTED
+        selector.bestMachineType(CPUS, MEM, REGION, SPOT, FUSION, FAMILIES) == EXPECTED
 
         where:
-        CPUS | MEM  | REGION | SPOT  | SSD   | FAMILIES                   | EXPECTED
+        CPUS | MEM  | REGION | SPOT  | FUSION | FAMILIES                  | EXPECTED
         1    | 1000 | 'reg'  | true  | false | null                       | 'e2-type01'
         1    | 1000 | 'reg'  | false | true  | null                       | 'n1-type02'
         4    | 4000 | 'reg'  | false | false | []                         | 'e2-type03'
