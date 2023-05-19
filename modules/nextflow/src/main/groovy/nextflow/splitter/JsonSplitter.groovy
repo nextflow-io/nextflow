@@ -69,7 +69,7 @@ class JsonSplitter extends AbstractTextSplitter {
      */
     @Override
     protected Map<String,?> validOptions() {
-        def baseOptions = super.validOptions()
+        final baseOptions = super.validOptions()
         return [
             autoClose: baseOptions.autoClose,
             into: baseOptions.into,
