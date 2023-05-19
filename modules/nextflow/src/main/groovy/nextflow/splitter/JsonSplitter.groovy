@@ -217,9 +217,9 @@ class JsonSplitter extends AbstractTextSplitter {
                 break
             }
 
-            final map = Map.of(
-                 OBJECT_KEY, reader.nextName(),
-                 OBJECT_VALUE, fromJson(reader))
+            def map = new LinkedHashMap<>(1)
+            map[OBJECT_KEY] = reader.nextName()
+            map[OBJECT_VALUE] = fromJson(reader)
 
             // -- apply the splitting logic for the fetched record
             result = processChunk( map )
