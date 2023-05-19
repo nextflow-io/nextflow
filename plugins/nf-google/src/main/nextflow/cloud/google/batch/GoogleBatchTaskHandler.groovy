@@ -228,9 +228,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
-        if( task.config.getMachineType() )
-            instancePolicy.setMachineType( task.config.getMachineType() )
-
         machineInfo = findBestMachineType(task.config)
         if( machineInfo )
             instancePolicy.setMachineType(machineInfo.type)
