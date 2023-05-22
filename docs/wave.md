@@ -196,3 +196,8 @@ The following configuration options are available:
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
+`wave.report.enabled` (preview)
+: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`, requires version `23.06.0-edge` or later).
+
+`wave.report.file` (preview)
+: The name of the containers report file (default: `containers-<timestamp>.config` requires version `23.06.0-edge` or later).
