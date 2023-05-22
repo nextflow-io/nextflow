@@ -43,6 +43,10 @@ class WaveFactory implements TraceObserverFactory {
             wave.bundleProjectResources = true
             session.disableRemoteBinDir = true
         }
-        return Collections.emptyList()
+
+        final observer = new WaveObserver(session)
+        return wave?.enabled && observer.reportOpts().enabled()
+                ? List.<TraceObserver>of(observer)
+                : List.<TraceObserver>of()
     }
 }
