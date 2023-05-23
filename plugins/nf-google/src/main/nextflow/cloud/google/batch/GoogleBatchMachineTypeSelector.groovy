@@ -16,14 +16,14 @@
  */
 package nextflow.cloud.google.batch
 
+import java.math.RoundingMode
+
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.Memoized
 import nextflow.cloud.types.PriceModel
 import nextflow.util.MemoryUnit
-
-import java.math.RoundingMode
 
 /**
  * Choose best machine type that fits the requested resources and

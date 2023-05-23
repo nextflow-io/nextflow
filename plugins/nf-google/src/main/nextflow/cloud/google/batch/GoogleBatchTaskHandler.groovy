@@ -17,11 +17,6 @@
 
 package nextflow.cloud.google.batch
 
-import nextflow.cloud.types.CloudMachineInfo
-import nextflow.cloud.types.PriceModel
-import nextflow.processor.TaskConfig
-import nextflow.util.MemoryUnit
-
 import java.math.RoundingMode
 import java.nio.file.Path
 
@@ -40,16 +35,18 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
-
 
 /**
  * Implements a task handler for Google Batch executor
@@ -250,26 +247,25 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // When using local SSD not all the disk sizes are valid and depends on the machine type
         if( disk?.type == 'local-ssd' && machineType ) {
             final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
-            if( validSize != disk.request ) {
+            if( validSize != disk.request )
                 disk = new DiskResource(request: validSize, type: 'local-ssd')
-            }
         }
 
         if( disk?.type ) {
             instancePolicy.addDisks(
-                    AllocationPolicy.AttachedDisk.newBuilder()
-                            .setNewDisk(
-                                    AllocationPolicy.Disk.newBuilder()
-                                            .setType(disk.type)
-                                            .setSizeGb(disk.request.toGiga())
-                            )
-                            .setDeviceName('scratch')
+                AllocationPolicy.AttachedDisk.newBuilder()
+                    .setNewDisk(
+                        AllocationPolicy.Disk.newBuilder()
+                            .setType(disk.type)
+                            .setSizeGb(disk.request.toGiga())
+                    )
+                    .setDeviceName('scratch')
             )
 
             taskSpec.addVolumes(
-                    Volume.newBuilder()
-                            .setDeviceName('scratch')
-                            .setMountPath('/tmp')
+                Volume.newBuilder()
+                    .setDeviceName('scratch')
+                    .setMountPath('/tmp')
             )
         }
 

@@ -129,7 +129,10 @@ process predefined_resources_task {
 }
 ```
 
-As of version `23.05.0-edge`, the `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
+:::{versionadded} 23.06.0-edge
+:::
+
+The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
 
 Examples:
 
@@ -199,9 +202,12 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 
 The [Tower](https://cloud.tower.nf) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
 
-By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the task scheduling will fail.
+By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
 
-As of version `23.05.0-edge`, you can use the `disk` directive to override the disk requested by Fusion. See the {ref}`Process definition <google-batch-process>` section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
+:::{versionadded} 23.06.0-edge
+:::
+
+The `disk` directive can be used to override the disk requested by Fusion. See the {ref}`Process definition <google-batch-process>` section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
 
 ### Supported directives
 
