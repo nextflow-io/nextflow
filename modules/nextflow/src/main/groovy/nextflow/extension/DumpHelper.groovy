@@ -19,7 +19,6 @@ package nextflow.extension
 
 import java.nio.file.Path
 
-import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.extension.FilesEx
@@ -32,51 +31,34 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class DumpHelper {
 
-    static def deepReplaceToString(root, replaceNullWith = "") {
-        if (root instanceof List) {
-            root.collect {
-                if (it instanceof Map) {
-                    deepReplaceToString(it, replaceNullWith)
-                } else if (it instanceof List) {
-                    deepReplaceToString(it, replaceNullWith)
-                } else if (it == null) {
-                    replaceNullWith
-                } else if (it instanceof Path) {
-                    FilesEx.toUriString(it)
-                } else {
-                    it.toString()
-                }
+    static def deepConvertToString(value, nullValue = '') {
+        if( value instanceof List )
+            value.collect { it -> deepConvertToString(it) }
+
+        else if( value instanceof Map )
+            value.inject([:]) { accum, it ->
+                accum[it.key] = deepConvertToString(it.value)
+                accum
             }
-        }
-        else if (root instanceof Map) {
-            root.each {
-                if (it.value instanceof Map) {
-                    deepReplaceToString(it.value, replaceNullWith)
-                } else if (it.value instanceof List) {
-                    it.value = deepReplaceToString(it.value, replaceNullWith)
-                } else if (it.value == null) {
-                    it.value = replaceNullWith
-                } else if (it.value instanceof Path) {
-                    it.value = FilesEx.toUriString((Path)it.value)
-                } else {
-                    it.value = it.value.toString()
-                }
-            }
-        }
+
+        else if( value instanceof Path )
+            FilesEx.toUriString((Path)value)
+
+        else if( value == null )
+            nullValue
+
+        else
+            value.toString()
     }
 
-    static String prettyPrint(input){
-        if (input instanceof Map) {
-            def converted =  deepReplaceToString(input)
-            return JsonOutput.prettyPrint(JsonOutput.toJson(converted))
-        } else if (input instanceof List) {
-            def converted = deepReplaceToString(input)
-            return new JsonBuilder(converted).toPrettyString()
-        } else if (input instanceof Path) {
-            return FilesEx.toUriString(input)
-        } else {
-            return InvokerHelper.inspect(input)
+    static String prettyPrint(value) {
+        if( value instanceof List || value instanceof Map || value instanceof Path ) {
+            def converted = deepConvertToString(value)
+            JsonOutput.prettyPrint(JsonOutput.toJson(converted))
         }
+
+        else
+            InvokerHelper.inspect(value)
     }
 
 }
