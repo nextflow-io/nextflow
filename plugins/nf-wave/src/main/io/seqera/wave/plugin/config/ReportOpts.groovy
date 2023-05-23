@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,36 @@
  *
  */
 
-package nextflow
+package io.seqera.wave.plugin.config
 
-import spock.lang.Specification
+import groovy.transform.CompileStatic
+import nextflow.trace.TraceHelper
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelTest extends Specification {
+@CompileStatic
+class ReportOpts {
 
-    def testFromPathS3() {
+    final private Boolean enabled
 
-        when:
-        Channel.fromPath('s3://bucket/some/data.txt')
-        then:
-        noExceptionThrown()
+    final private String file
+
+    ReportOpts(Map opts) {
+        this.enabled = opts.enabled as Boolean
+        this.file = opts.file
     }
 
+    boolean enabled() {
+        enabled || file != null
+    }
+
+    String file() {
+        if( file )
+            return file
+        return enabled
+            ? "containers-${TraceHelper.launchTimestampFmt()}.config"
+            : null
+    }
 }

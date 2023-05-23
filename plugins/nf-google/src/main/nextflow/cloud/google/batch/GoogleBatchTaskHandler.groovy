@@ -253,9 +253,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
-        if( task.config.getMachineType() )
-            instancePolicy.setMachineType( task.config.getMachineType() )
-
         machineInfo = findBestMachineType(task.config, disk?.type == 'local-ssd')
         if( machineInfo )
             instancePolicy.setMachineType(machineInfo.type)
@@ -385,7 +382,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         catch (Exception e) {
             log.debug "[GOOGLE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
-            null
+            // return MAX_VALUE to signal it was unable to retrieve the exit code
+            return Integer.MAX_VALUE
         }
     }
 
