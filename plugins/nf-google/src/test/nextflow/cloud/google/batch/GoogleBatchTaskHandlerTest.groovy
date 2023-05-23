@@ -163,7 +163,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_, false) >> new CloudMachineInfo(type: MACHINE_TYPE, zone: "location", priceModel: PriceModel.spot)
+        handler.findBestMachineType(_, false) >> new GoogleBatchMachineTypeSelector.MachineType(type: MACHINE_TYPE, location: "location", priceModel: PriceModel.spot)
 
         and:
         def taskGroup = req.getTaskGroups(0)
