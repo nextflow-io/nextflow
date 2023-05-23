@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -306,7 +305,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def ENV = [FOO: 'hola', BAR:'world', PATH:'xxx']
         def bean = Mock(TaskBean)
         def opts = Mock(AwsOptions)
-        def copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
+        AwsBatchFileCopyStrategy copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
 
         when:
         def script = copy.getEnvScript(ENV,false)
@@ -315,8 +314,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         opts.getRemoteBinDir() >> null
         opts.getCliPath() >> null
         script == '''
-            export BAR="world"
             export FOO="hola"
+            export BAR="world"
             '''.stripIndent().leftTrim()
 
         when:
@@ -328,8 +327,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
-            export BAR="world"
             export FOO="hola"
+            export BAR="world"
             '''.stripIndent().leftTrim()
 
         when:
@@ -341,8 +340,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
-            export BAR="world"
             export FOO="hola"
+            export BAR="world"
             '''.stripIndent().leftTrim()
 
         when:
@@ -355,8 +354,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
-            export BAR="world"
             export FOO="hola"
+            export BAR="world"
             '''.stripIndent().leftTrim()
 
     }

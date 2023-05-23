@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +29,7 @@ class SetOpTest extends Dsl2Spec {
     def 'should set a channel in the global context' () {
         when:
         def result = dsl_eval(/
-            Channel.from(1,2,3) | set { foo }
+            Channel.of(1,2,3) | set { foo }
             foo | map { it *2 }
         /)
         then:
@@ -50,7 +49,7 @@ class SetOpTest extends Dsl2Spec {
     def 'should invoke set with dot notation' () {
         when:
         def result = dsl_eval(/
-            Channel.from(1,2,3).set { foo } 
+            Channel.of(1,2,3).set { foo } 
             foo.map { it *2 }
         /)
         then:

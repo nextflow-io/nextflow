@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +35,8 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
     protected List<BaseOutParam> inner = new ArrayList<>(10)
 
     String getName() { toString() }
+
+    List<BaseOutParam> getInner() { inner }
 
     TupleOutParam clone() {
         final copy = (TupleOutParam)super.clone()

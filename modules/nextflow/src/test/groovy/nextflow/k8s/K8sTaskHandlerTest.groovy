@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +29,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
+import nextflow.k8s.client.PodUnschedulableException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodMountSecret
@@ -805,6 +805,24 @@ class K8sTaskHandlerTest extends Specification {
         state.nodeTermination.message == "Node shutdown happened"
     }
 
+    def 'should return other nodeTermination state' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> { throw new PodUnschedulableException("Pod failed for unknown reason", new Exception("cause")) }
+        then:
+        state.terminated.startedAt
+        state.terminated.finishedAt
+        and:
+        state.nodeTermination instanceof PodUnschedulableException
+        state.nodeTermination.message == "Pod failed for unknown reason"
+    }
+
     def 'should return container mounts' () {
 
         given:
@@ -1081,6 +1099,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
         launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
         and:
         handler.getTask() >> task
         handler.fusionEnabled() >> true

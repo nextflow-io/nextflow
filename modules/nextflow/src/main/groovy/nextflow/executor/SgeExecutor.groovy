@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +17,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
@@ -25,6 +25,7 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class SgeExecutor extends AbstractGridExecutor {
 
     /**
@@ -54,22 +55,22 @@ class SgeExecutor extends AbstractGridExecutor {
 
         //number of cpus for multiprocessing/multi-threading
         if ( task.config.penv ) {
-            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+            result << "-pe" << "${task.config.penv} ${task.config.getCpus()}".toString()
         }
-        else if( task.config.cpus>1 ) {
-            result << "-l" << "slots=${task.config.cpus}"
+        else if( task.config.getCpus()>1 ) {
+            result << "-l" << "slots=${task.config.getCpus()}".toString()
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final time = task.config.getTime()
-            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
+            result << "-l" << "h_rt=${time.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
-        if( task.config.memory ) {
-            final mem = "${task.config.getMemory().mega}M"
-            result << "-l" << "h_rss=$mem,mem_free=$mem"
+        if( task.config.getMemory() ) {
+            final mem = "${task.config.getMemory().mega}M".toString()
+            result << "-l" << "h_rss=$mem,mem_free=$mem".toString()
         }
 
         // -- at the end append the command script wrapped file name
@@ -132,7 +133,7 @@ class SgeExecutor extends AbstractGridExecutor {
         return result
     }
 
-    static protected Map DECODE_STATUS = [
+    static protected Map<String,QueueStatus> DECODE_STATUS = [
         't': QueueStatus.RUNNING,
         'r': QueueStatus.RUNNING,
         'R': QueueStatus.RUNNING,
@@ -154,7 +155,7 @@ class SgeExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         text?.eachLine{ String row, int index ->
             if( index< 2 ) return
             def cols = row.trim().split(/\s+/)

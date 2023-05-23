@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,13 +196,8 @@ class ScriptParser {
 
     ScriptParser parse(Path scriptPath) {
         this.scriptPath = scriptPath
-        parse(scriptPath.text)
-    }
-
-    ScriptParser runScript(Path scriptPath) {
-        this.scriptPath = scriptPath
         try {
-            runScript(scriptPath.text)
+            parse(scriptPath.text)
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
@@ -213,6 +207,12 @@ class ScriptParser {
 
     ScriptParser runScript(String scriptText) {
         parse(scriptText)
+        runScript()
+        return this
+    }
+
+    ScriptParser runScript(Path scriptPath) {
+        parse(scriptPath)
         runScript()
         return this
     }

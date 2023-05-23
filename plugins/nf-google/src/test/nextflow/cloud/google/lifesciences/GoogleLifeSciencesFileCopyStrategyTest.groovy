@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -221,8 +220,8 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         envScript == '''\
                 chmod +x /work/xx/yy/nextflow-bin/* || true
                 export PATH=/work/xx/yy/nextflow-bin:$PATH
-                export BAR="2"
                 export FOO="1"
+                export BAR="2"
                 '''.stripIndent()
 
         when:

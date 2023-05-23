@@ -1,8 +1,26 @@
+/*
+ * Copyright 2013-2023, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package nextflow.cloud.aws.util
 
 import java.nio.file.Path
 
-import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.nio.S3Path
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.aws.batch.AwsBatchFileCopyStrategy
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
@@ -11,6 +29,8 @@ import nextflow.file.FileSystemPathFactory
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@CompileStatic
 class S3PathFactory extends FileSystemPathFactory {
 
     @Override
@@ -21,6 +41,11 @@ class S3PathFactory extends FileSystemPathFactory {
             return create(path)
         }
         return null
+    }
+
+    static private Map config() {
+        final result = Global.config?.get('aws') as Map
+        return result != null ? result : Collections.emptyMap()
     }
 
     @Override
@@ -56,6 +81,6 @@ class S3PathFactory extends FileSystemPathFactory {
         if( !path.startsWith('s3:///') ) throw new IllegalArgumentException("S3 path must start with s3:/// prefix -- offending value '$path'")
         // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
         final uri = new URI(null,null, path,null,null)
-        return (S3Path)FileHelper.getOrCreateFileSystemFor(uri).provider().getPath(uri)
+        return (S3Path)FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
     }
 }

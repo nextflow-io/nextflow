@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,16 +29,17 @@ import nextflow.util.Duration
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
+    final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda', 'spack')
     final private Boolean enabled
     final private String endpoint
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
     final private CondaOpts condaOpts
+    final private SpackOpts spackOpts
     final private List<String> strategy
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
-    final private String containerPlatform
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -46,11 +47,11 @@ class WaveConfig {
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
+        this.spackOpts = opts.navigate('build.spack', Collections.emptyMap()) as SpackOpts
         this.buildRepository = opts.navigate('build.repository') as String
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        this.containerPlatform = opts.containerPlatform
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
@@ -60,6 +61,8 @@ class WaveConfig {
     String endpoint() { this.endpoint }
 
     CondaOpts condaOpts() { this.condaOpts }
+
+    SpackOpts spackOpts() { this.spackOpts }
 
     List<String> strategy() { this.strategy }
 
@@ -71,9 +74,8 @@ class WaveConfig {
 
     protected List<String> parseStrategy(value) {
         if( !value ) {
-            final defaultStrategy = List.of('container','dockerfile','conda')
-            log.debug "Wave strategy not specified - using default: $defaultStrategy"
-            return defaultStrategy
+            log.debug "Wave strategy not specified - using default: $DEF_STRATEGIES"
+            return DEF_STRATEGIES
         }
         List<String> result
         if( value instanceof CharSequence )
@@ -83,7 +85,7 @@ class WaveConfig {
         else
             throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
         for( String it : result ) {
-            if( it !in ['conda','dockerfile','container'])
+            if( it !in DEF_STRATEGIES)
                 throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
         }
         return result
@@ -118,9 +120,5 @@ class WaveConfig {
 
     Duration tokensCacheMaxDuration() { 
         return tokensCacheMaxDuration 
-    }
-
-    String containerPlatform() {
-        return containerPlatform
     }
 }

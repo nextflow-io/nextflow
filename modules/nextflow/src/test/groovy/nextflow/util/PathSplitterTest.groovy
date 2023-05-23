@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,12 @@ class PathSplitterTest extends Specification {
         '/foo/bar/baz'  | new PathSplitter('/foo', ['bar','baz'])
         'foo/bar/baz/'  | new PathSplitter('foo', ['bar','baz'])
         '/foo/bar/baz/' | new PathSplitter('/foo', ['bar','baz'])
+        '/foo/x/y/z'    | new PathSplitter('/foo', ['x','y','z'])
+        and:
+        'file:/foo'                     | new PathSplitter('file:/foo', null)
+        'file:/foo/x/y/z'               | new PathSplitter('file:/foo', ['x','y','z'])
+        'file:///foo'                   | new PathSplitter('file:///foo', null)
+        'file:///foo/x/y/z'             | new PathSplitter('file:///foo', ['x','y','z'])
         and:
         's3://my-bucket'                | new PathSplitter('s3://my-bucket')
         's3://my-bucket/'               | new PathSplitter('s3://my-bucket/')

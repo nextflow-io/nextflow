@@ -35,6 +35,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
@@ -110,7 +111,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     protected GoogleBatchTaskHandler() {}
 
     protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
-        if( launcher instanceof GoogleBatchScriptLauncher )
+        if( launcher instanceof GoogleBatchLauncherSpec )
             return launcher
         if( launcher instanceof FusionScriptLauncher )
             return new GoogleBatchFusionAdapter(this, launcher)
@@ -157,6 +158,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             computeResource.setBootDiskMib( disk.getMega() )
 
         // container
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
+
         final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
             .setImageUri( task.container )
@@ -386,7 +390,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         catch (Exception e) {
             log.debug "[GOOGLE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
-            null
+            // return MAX_VALUE to signal it was unable to retrieve the exit code
+            return Integer.MAX_VALUE
         }
     }
 
