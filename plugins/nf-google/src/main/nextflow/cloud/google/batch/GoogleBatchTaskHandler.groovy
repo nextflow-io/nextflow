@@ -20,7 +20,9 @@ package nextflow.cloud.google.batch
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.processor.TaskConfig
+import nextflow.util.MemoryUnit
 
+import java.math.RoundingMode
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
@@ -232,30 +234,44 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( fusionEnabled() && !disk )
             disk = new DiskResource(request: '375 GB', type: 'local-ssd')
 
-        if( disk?.type ) {
-            instancePolicy.addDisks(
-                AllocationPolicy.AttachedDisk.newBuilder()
-                    .setNewDisk(
-                        AllocationPolicy.Disk.newBuilder()
-                            .setType(disk.type)
-                            .setSizeGb(disk.request.toGiga())
-                    )
-                    .setDeviceName('scratch')
-            )
-
-            taskSpec.addVolumes(
-                Volume.newBuilder()
-                    .setDeviceName('scratch')
-                    .setMountPath('/tmp')
-            )
-        }
-
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
-        machineInfo = findBestMachineType(task.config, disk?.type == 'local-ssd')
-        if( machineInfo )
-            instancePolicy.setMachineType(machineInfo.type)
+        final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
+        if( machineType ) {
+            instancePolicy.setMachineType(machineType.type)
+            machineInfo = new CloudMachineInfo(
+                    type: machineType.type,
+                    zone: machineType.location,
+                    priceModel: machineType.priceModel
+            )
+        }
+
+        // When using local SSD not all the disk sizes are valid and depends on the machine type
+        if( disk?.type == 'local-ssd' && machineType ) {
+            final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
+            if( validSize != disk.request ) {
+                disk = new DiskResource(request: validSize, type: 'local-ssd')
+            }
+        }
+
+        if( disk?.type ) {
+            instancePolicy.addDisks(
+                    AllocationPolicy.AttachedDisk.newBuilder()
+                            .setNewDisk(
+                                    AllocationPolicy.Disk.newBuilder()
+                                            .setType(disk.type)
+                                            .setSizeGb(disk.request.toGiga())
+                            )
+                            .setDeviceName('scratch')
+            )
+
+            taskSpec.addVolumes(
+                    Volume.newBuilder()
+                            .setDeviceName('scratch')
+                            .setMountPath('/tmp')
+            )
+        }
 
         if( executor.config.serviceAccountEmail )
             allocationPolicy.setServiceAccount(
@@ -412,7 +428,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    protected CloudMachineInfo findBestMachineType(TaskConfig config, boolean localSSD) {
+    protected GoogleBatchMachineTypeSelector.MachineType findBestMachineType(TaskConfig config, boolean localSSD) {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
@@ -421,20 +437,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
-            return new CloudMachineInfo(
-                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, localSSD, families),
-                    zone: location,
-                    priceModel: priceModel
-            )
+            return GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, localSSD, families)
         }
         catch (Exception e) {
             log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `$task.name` | ${e.message}"
 
             // Check if a specific machine type was provided by the user
             if( config.getMachineType() && !config.getMachineType().contains(',') && !config.getMachineType().contains('*') )
-                return new CloudMachineInfo(
+                return new GoogleBatchMachineTypeSelector.MachineType(
                         type: config.getMachineType(),
-                        zone: location,
+                        location: location,
                         priceModel: priceModel
                 )
 

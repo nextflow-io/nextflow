@@ -1,6 +1,7 @@
 package nextflow.cloud.google.batch
 
 import nextflow.cloud.google.batch.GoogleBatchMachineTypeSelector.MachineType
+import nextflow.cloud.types.PriceModel
 import spock.lang.Specification
 
 class GoogleBatchMachineTypeSelectorTest extends Specification {
@@ -21,10 +22,10 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
     def 'should select best machine type'() {
         given:
         final selector = Spy(GoogleBatchMachineTypeSelector) {
-            getAvailableMachineTypes(REGION) >> MACHINE_TYPES
+            getAvailableMachineTypes(REGION, SPOT) >> MACHINE_TYPES
         }
         expect:
-        selector.bestMachineType(CPUS, MEM, REGION, SPOT, FUSION, FAMILIES) == EXPECTED
+        selector.bestMachineType(CPUS, MEM, REGION, SPOT, FUSION, FAMILIES).type == EXPECTED
 
         where:
         CPUS | MEM  | REGION | SPOT  | FUSION | FAMILIES                  | EXPECTED
@@ -46,7 +47,7 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
     def 'should not select a machine type'() {
         given:
         final selector = Spy(GoogleBatchMachineTypeSelector) {
-            getAvailableMachineTypes(REGION) >> MACHINE_TYPES
+            getAvailableMachineTypes(REGION, SPOT) >> MACHINE_TYPES
         }
         when:
         selector.bestMachineType(CPUS, MEM, REGION, SPOT, SSD, FAMILIES)
@@ -63,7 +64,7 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
 
     def 'should parse Seqera cloud info API'() {
         when:
-        GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2")
+        GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2", true)
 
         then:
         noExceptionThrown()
