@@ -68,6 +68,10 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+
+import static nextflow.fusion.FusionConfig.FUSION_PATH
+import static nextflow.fusion.FusionHelper.toContainerMount
+
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -623,6 +627,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return "nf-" + result
     }
 
+    protected List<String> sharedStorageSubmitCli() {
+        // the cmd list to launch it
+        return ['bash', '-euo', 'pipefail', getWrapperFile().toString()]
+    }
+
     protected List<String> classicSubmitCli() {
         // the cmd list to launch it
         final opts = getAwsOptions()
@@ -639,7 +648,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // final launcher command
         return fusionEnabled()
                 ? fusionSubmitCli()
-                : classicSubmitCli()
+                : task.workDir.scheme == 's3'
+                    ? classicSubmitCli()
+                    : sharedStorageSubmitCli()
     }
 
     protected int maxSpotAttempts() {

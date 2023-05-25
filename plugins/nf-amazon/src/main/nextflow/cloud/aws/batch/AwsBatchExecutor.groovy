@@ -110,16 +110,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         session.bucketDir ?: session.workDir
     }
 
-    protected void validateWorkDir() {
-        /*
-         * make sure the work dir is a S3 bucket
-         */
-        if( !(workDir instanceof S3Path) ) {
-            session.abort()
-            throw new AbortOperationException("When using `$name` executor an S3 bucket must be provided as working directory using either the `-bucket-dir` or `-work-dir` command line option")
-        }
-    }
-
     protected void validatePathDir() {
         def path = session.config.navigate('env.PATH')
         if( path ) {
@@ -160,7 +150,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     protected void register() {
         super.register()
-        validateWorkDir()
         validatePathDir()
         uploadBinDir()
         createAwsClient()

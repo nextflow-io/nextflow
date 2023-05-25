@@ -18,6 +18,8 @@ package nextflow.cloud.aws.batch
 
 import groovy.transform.CompileStatic
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.ScriptFileCopyStrategy
+import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 
@@ -27,8 +29,12 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
+    static protected ScriptFileCopyStrategy getFileCopyStrategy(TaskBean bean, AwsOptions opts ) {
+        return bean.workDir.scheme == 's3' ? new AwsBatchFileCopyStrategy(bean,opts) : new SimpleFileCopyStrategy(bean)
+    }
+
     AwsBatchScriptLauncher(TaskBean bean, AwsOptions opts ) {
-        super(bean, new AwsBatchFileCopyStrategy(bean,opts))
+        super(bean, getFileCopyStrategy(bean,opts))
         // enable the copying of output file to the S3 work dir
         if( scratch==null )
             scratch = true
