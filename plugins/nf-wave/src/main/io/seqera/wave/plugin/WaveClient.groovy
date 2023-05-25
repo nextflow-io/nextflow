@@ -22,18 +22,22 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
 import java.time.Duration
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.wave.plugin.adapter.InstantAdapter
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -58,6 +62,8 @@ import org.slf4j.LoggerFactory
 class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
+
+    private static final Pattern CONTAINER_PATH = ~/(\S+)\/wt\/([a-z0-9]+)\/\S+/
 
     private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
 
@@ -89,6 +95,8 @@ class WaveClient {
 
     private List<String> condaChannels
 
+    final private String waveRegistry
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
@@ -98,6 +106,7 @@ class WaveClient {
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave server endpoint: ${endpoint}"
         this.packer = new Packer()
+        this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
         cache = CacheBuilder<String, SubmitContainerTokenResponse>
             .newBuilder()
@@ -594,4 +603,61 @@ class WaveClient {
         return null
     }
 
+    String resolveSourceContainer(String container) {
+        final token = getWaveToken(container)
+        if( !token )
+            return container
+        final resp = fetchContainerInfo(token)
+        final describe = jsonToDescribeContainerResponse(resp)
+        return describe.source.digest==describe.wave.digest
+                ? digestImage(describe.source)      // when the digest are equals, return the source because it's a stable name
+                : digestImage(describe.wave)        // otherwise returns the wave container name
+    }
+
+    protected String digestImage(DescribeContainerResponse.ContainerInfo info) {
+        if( !info.digest )
+            return info.image
+        final p = info.image.lastIndexOf(':')
+        return p!=-1
+            ? info.image.substring(0,p) + '@' + info.digest
+            : info.image + '@' + info.digest
+    }
+
+    protected String getWaveToken(String name) {
+        if( !name )
+            return null
+        final matcher = CONTAINER_PATH.matcher(name)
+        if( !matcher.find() )
+            return null
+        return matcher.group(1)==waveRegistry
+                ? matcher.group(2)
+                : null
+    }
+
+    @Memoized
+    protected String fetchContainerInfo(String token) {
+        final uri = new URI("$endpoint/container-token/$token")
+        log.trace "Wave request container info: $uri"
+        final req = HttpRequest.newBuilder()
+                .uri(uri)
+                .headers('Content-Type','application/json')
+                .GET()
+                .build()
+
+        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container config info: [$code] ${resp.body()}"
+            return resp.body()
+        }
+        throw new BadResponseException("Unexpected response for \'$uri\': [${resp.statusCode()}] ${resp.body()}")
+    }
+
+    protected DescribeContainerResponse jsonToDescribeContainerResponse(String json) {
+        final gson = new GsonBuilder()
+                .registerTypeAdapter(Instant.class, new InstantAdapter())
+                .create();
+        final type = new TypeToken<DescribeContainerResponse>(){}.getType()
+        return gson.fromJson(json, type)
+    }
 }
