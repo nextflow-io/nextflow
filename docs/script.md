@@ -511,23 +511,14 @@ The following functions are available in Nextflow scripts:
 `branchCriteria( closure )`
 : Create a branch criteria to use with the {ref}`operator-branch` operator.
 
-`cacheableDir( key )`
-: Create a unique folder for the given key. The same folder name is always returned for the same key.
-
-`cacheableFile( key, name = null )`
-: Create a unique file name for the given key. The same file name is always returned for the same key. If `name` is not specified, it will be generated from the key.
-
 `error( message = null )`
 : Throw a script runtime error with an optional error message.
 
 `exit( exitCode = 0, message = null )`
+: :::{deprecated} 22.06.0-edge
+  Use `error()` instead
+  :::
 : Stop the pipeline execution and return an exit code and optional error message.
-
-`fasta( obj )`
-: Create a FASTA splitter for an object.
-
-`fastq( obj )`
-: Create a FASTQ splitter for an object.
 
 `file( filePattern, options = [:] )`
 : Get one or more files from a path or glob pattern. Returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) or list of Paths if there are multiple files. See [Files and I/O](#files-and-io).
