@@ -1,5 +1,16 @@
 nf-azure changelog
 ===================
+1.1.0 - 15 May 2023
+- Add support for `time` directive in Azure Batch (#3869) [ci fast] [5c11a0d4]
+- Increase Azure default maxRetries to 10 [a017139f]
+- Fix Azure jobs correctly deleted after completion (#3927) [b173a983]
+- Fix missing SAS token fusion env for Azure [43015029]
+- Fix failing tests [06337962]
+- Fix Azure pool creation when using scaling formula (#3868) [79984a87]
+- Security fixes [973b7bea]
+- Update logging libraries [d7eae86e]
+- Bump groovy 3.0.17 [cfe4ba56]
+
 1.0.1 - 15 Apr 2023
 - Security fixes [83e8fd6a]
 - Fix Azure pool creation when using scaling formula (#3868) [84a808a5]

@@ -18,8 +18,7 @@ This page is a comprehensive reference for all Nextflow operators. However, if y
 
 ## branch
 
-:::{note}
-Requires Nextflow version `19.08.0-edge` or later.
+:::{versionadded} 19.08.0-edge
 :::
 
 *Returns: map of queue channels*
@@ -600,7 +599,7 @@ An optional `tag` parameter allows you to select which channel to dump. For exam
 Channel
     .of(1,2,3)
     .map { it+1 }
-    .dump(tag:'foo')
+    .dump(tag: 'foo')
 
 Channel
     .of(1,2,3)
@@ -610,13 +609,15 @@ Channel
 
 Then you will be able to specify the tag `foo` or `bar` as an argument of the `-dump-channels` option to print either the content of the first or the second channel. Multiple tag names can be specified separating them with a `,` character.
 
-The output can be formatted using the optional `pretty` boolean option:
+:::{versionadded} 22.10.0
+The output can be formatted by enabling the `pretty` option:
 
 ```groovy
 Channel
     .fromSRA('SRP043510')
-    .dump(tag:'foo', pretty: true)
+    .dump(tag: 'foo', pretty: true)
 ```
+:::
 
 ## filter
 
@@ -821,6 +822,28 @@ Channel
 [[3], D]
 ```
 
+By default, if you don't specify a size, the `groupTuple` operator will not emit any groups until *all* inputs have been received. If possible, you should always try to specify the number of expected elements in each group using the `size` option, so that each group can be emitted as soon as it's ready. In cases where the size of each group varies based on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key with an associated size:
+
+```groovy
+chr_frequency = [ "chr1": 2, "chr2": 3 ]
+
+Channel.of(
+        [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
+        [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
+        [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
+        [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
+        [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ]
+    )
+    .map { region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf ) }
+    .groupTuple()
+    .view()
+```
+
+```
+[chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
+[chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
+```
+
 Available options:
 
 `by`
@@ -840,41 +863,6 @@ Available options:
   - `hash`: Order the grouped items by the hash number associated to each entry.
   - `deep`: Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.
   - A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
-
-:::{tip}
-You should always specify the number of expected elements in each tuple with the `size` attribute, so that the `groupTuple` operator can stream each collected value as soon as possible. In cases where the size of each tuple may vary depending on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key object with an associated size.
-
-Here are some examples:
-
-```groovy
-Channel
-    .from([ 'A', ['foo', 'bar']], ['B', ['lorem', 'ipsum', 'dolor', 'sit']])
-    .map { key, words -> tuple( groupKey(key, words.size()), words ) }
-    .view()
-```
-
-```groovy
-chr_frequency = [ "chr1": 2, "chr2": 3 ]
-
-data_ch = Channel.of(
-    [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
-    [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
-    [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
-    [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
-    [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ] )
-
-data_ch
-    .map { region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf ) }
-    .groupTuple()
-    .view()
-```
-
-The last example will output:
-```
-[chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
-[chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
-```
-:::
 
 (operator-ifempty)=
 
@@ -1175,8 +1163,7 @@ The items emitted by the resulting mixed channel may appear in any order, regard
 
 ## multiMap
 
-:::{note}
-Requires Nextflow version `19.11.0-edge` or later.
+:::{versionadded} 19.11.0-edge
 :::
 
 *Returns: map of queue channels*

@@ -17,6 +17,7 @@
 
 package nextflow.executor
 
+import groovy.transform.CompileStatic
 import nextflow.cloud.CloudTransferOptions
 import nextflow.util.Duration
 
@@ -25,6 +26,7 @@ import nextflow.util.Duration
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class BashFunLib<V extends BashFunLib> {
 
     protected int maxParallelTransfers = CloudTransferOptions.MAX_TRANSFER

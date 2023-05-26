@@ -64,8 +64,8 @@ See also: {ref}`process-multiple-input-channels`.
 
 Channels may be created explicitly using the following channel factory methods.
 
-:::{note}
-As of version 20.07.0, `channel` has been introduced as an alias of `Channel`, therefore factory methods can be specified either as `channel.of()` or `Channel.of()`, and so on.
+:::{versionadded} 20.07.0
+`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or `Channel.of()`, and so on.
 :::
 
 (channel-empty)=
@@ -80,8 +80,8 @@ See also: {ref}`operator-ifempty`.
 
 ### from
 
-:::{warning}
-This method is deprecated. Use [of](#of) or [fromList](#fromlist) instead.
+:::{deprecated} 19.09.0-edge
+Use [of](#of) or [fromList](#fromlist) instead.
 :::
 
 The `from` method allows you to create a channel emitting any sequence of values that are specified as the method argument, for example:
@@ -128,8 +128,7 @@ Channel.from( [1, 2], [5,6], [7,9] )
 
 ### fromList
 
-:::{note}
-This feature requires Nextflow version 19.10.0 or later.
+:::{versionadded} 19.10.0
 :::
 
 The `fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
@@ -311,8 +310,7 @@ Available options:
 
 ### fromSRA
 
-:::{note}
-This feature requires Nextflow version 19.04.0 or later.
+:::{versionadded} 19.04.0
 :::
 
 The `fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
@@ -386,8 +384,7 @@ Available options:
 
 ### of
 
-:::{note}
-This feature requires Nextflow version 19.10.0 of later.
+:::{versionadded} 19.10.0
 :::
 
 The `of` method allows you to create a channel that emits the arguments provided to it, for example:

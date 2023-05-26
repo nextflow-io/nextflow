@@ -261,9 +261,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
-        if( task.config.getMachineType() )
-            instancePolicy.setMachineType( task.config.getMachineType() )
-
         machineInfo = findBestMachineType(task.config)
         if( machineInfo )
             instancePolicy.setMachineType(machineInfo.type)
@@ -414,7 +411,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         catch (Exception e) {
             log.debug "[GOOGLE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
-            null
+            // return MAX_VALUE to signal it was unable to retrieve the exit code
+            return Integer.MAX_VALUE
         }
     }
 
@@ -447,13 +445,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
         final spot = executor.config.spot ?: executor.config.preemptible
-        final useSSD = fusionEnabled()
         final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
             return new CloudMachineInfo(
-                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, fusionEnabled(), families),
                     zone: location,
                     priceModel: priceModel
             )
