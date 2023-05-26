@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NXF_CMD=${NXF_CMD:-nextflow}
-NXF_FILES=${@:-'*.nf'}
+NXF_FILES=${*:-'*.nf'}
 
 for pipeline in $NXF_FILES ; do
 
