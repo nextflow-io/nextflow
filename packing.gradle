@@ -9,13 +9,14 @@ configurations {
     azure.extendsFrom defaultCfg
     legacy.extendsFrom defaultCfg
     tower.extendsFrom defaultCfg
+    wave.extendsFrom defaultCfg
 }
 
 dependencies {
     api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.5.1"
-    // default cfg = runtime + httpfs + amazon + tower client
+    // default cfg = runtime + httpfs + amazon + tower client + wave client
     defaultCfg project(':nf-httpfs')
     // Capsule manages the fat jar building process
     capsule 'io.nextflow:capsule:1.1.1'
@@ -26,6 +27,7 @@ dependencies {
     amazon  project(':plugins:nf-amazon')
     azure   project(':plugins:nf-azure')
     tower   project(':plugins:nf-tower')
+    wave    project(':plugins:nf-wave')
 }
 
 
@@ -134,7 +136,7 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.amazon + configurations.google + configurations.tower)
+    from (configurations.amazon + configurations.google + configurations.tower + configurations.wave)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
