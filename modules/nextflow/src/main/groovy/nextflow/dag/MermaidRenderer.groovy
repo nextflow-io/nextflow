@@ -15,7 +15,10 @@
  */
 
 package nextflow.dag
+
 import java.nio.file.Path
+
+import groovy.transform.CompileStatic
 
 /**
  * Render the DAG using the Mermaid format to the specified file.
@@ -23,6 +26,7 @@ import java.nio.file.Path
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@CompileStatic
 class MermaidRenderer implements DagRenderer {
 
     @Override
@@ -86,7 +90,7 @@ class MermaidRenderer implements DagRenderer {
             // render task vertex
             lines << "    ${vertex.getSlug()}[\"${vertex.label}\"]"
 
-            vertex.inputs.each { path ->
+            vertex.inputs.each { name, path ->
                 // render task input from predecessor task
                 final pred = dag.getProducerVertex(path)
                 if( pred != null ) {

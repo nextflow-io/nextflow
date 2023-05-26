@@ -77,13 +77,13 @@ class MermaidRendererTest extends Specification {
         def v1 = new TaskDAG.Vertex(
             index: 1,
             label: 'foo',
-            inputs: [ Paths.get('/inputs/data.txt') ],
+            inputs: [ 'data.txt': Paths.get('/inputs/data.txt') ],
             outputs: [ output1 ]
         )
         def v2 = new TaskDAG.Vertex(
             index: 2,
             label: 'bar',
-            inputs: [ output1 ],
+            inputs: [ 'data.foo': output1 ],
             outputs: [ Paths.get('/work/abcdef/data.bar') ]
         )
         def dag = Mock(TaskDAG) {

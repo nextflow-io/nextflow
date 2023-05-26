@@ -53,7 +53,7 @@ class TaskDAG {
     void addTask(TaskRun task) {
         final hash = task.hash.toString()
         final label = "[${hash.substring(0,2)}/${hash.substring(2,8)}] ${task.name}"
-        final inputs = task.getInputFilesMap().values() as Set<Path>
+        final inputs = task.getInputFilesMap()
 
         sync.lock()
         try {
@@ -95,7 +95,9 @@ class TaskDAG {
      *
      * @param path
      */
-    Vertex getProducerVertex(Path path) { vertices[taskLookup[path]] }
+    Vertex getProducerVertex(Path path) {
+        vertices[taskLookup[path]]
+    }
 
     /**
      * Write the metadata JSON file for a task.
@@ -105,7 +107,7 @@ class TaskDAG {
     void writeMetaFile(TaskRun task) {
         final record = [
             hash: task.hash.toString(),
-            inputs: task.getInputFilesMap().collect { name, path ->
+            inputs: vertices[task].inputs.collect { name, path ->
                 [
                     name: name,
                     path: path.toUriString(),
@@ -129,7 +131,7 @@ class TaskDAG {
     static class Vertex {
         int index
         String label
-        Set<Path> inputs
+        Map<String,Path> inputs
         Set<Path> outputs
 
         String getSlug() { "t${index}" }

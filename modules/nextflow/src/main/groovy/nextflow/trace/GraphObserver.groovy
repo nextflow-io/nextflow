@@ -18,6 +18,7 @@ package nextflow.trace
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -40,6 +41,7 @@ import nextflow.processor.TaskProcessor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class GraphObserver implements TraceObserver {
 
     static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.dot"
@@ -91,6 +93,7 @@ class GraphObserver implements TraceObserver {
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         taskDag.addTaskOutputs(handler.task)
+        taskDag.writeMetaFile(handler.task)
     }
 
     @Override

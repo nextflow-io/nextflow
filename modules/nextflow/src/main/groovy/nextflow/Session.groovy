@@ -1016,9 +1016,6 @@ class Session implements ISession {
         final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
-        // save the task meta file to the task directory
-        taskDag.writeMetaFile(handler.task)
-
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)

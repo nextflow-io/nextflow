@@ -61,25 +61,23 @@ class TaskDAGTest extends Specification {
         v1.index == 0
         v1.label == '[00/112233] foo'
         v1.inputs.size() == 1
-        v1.inputs[0] == Paths.get('/inputs/data.txt')
+        v1.inputs['data.txt'] == Paths.get('/inputs/data.txt')
         and:
         v2.index == 1
         v2.label == '[aa/bbccdd] bar'
         v2.inputs.size() == 1
-        v2.inputs[0] == Paths.get('/work/00112233/data.foo')
+        v2.inputs['data.foo'] == Paths.get('/work/00112233/data.foo')
 
         when:
         dag.addTaskOutputs( task1 )
         dag.addTaskOutputs( task2 )
         then:
-        v1.outputs.size() == 1
-        v1.outputs[0] == Paths.get('/work/00112233/data.foo')
+        v1.outputs == [ Paths.get('/work/00112233/data.foo') ] as Set
         and:
-        v2.outputs.size() == 1
-        v2.outputs[0] == Paths.get('/work/aabbccdd/data.bar')
+        v2.outputs == [ Paths.get('/work/aabbccdd/data.bar') ] as Set
         and:
-        dag.getProducerVertex(v1.inputs[0]) == null
-        dag.getProducerVertex(v2.inputs[0]) == v1
+        dag.getProducerVertex(v1.inputs['data.txt']) == null
+        dag.getProducerVertex(v2.inputs['data.foo']) == v1
     }
 
     def 'should write meta file' () {
