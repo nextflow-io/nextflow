@@ -46,7 +46,7 @@ class PbsExecutor extends AbstractGridExecutor {
 
         if( task instanceof TaskArray ) {
             final arraySize = ((TaskArray)task).getArraySize()
-            result << '-J' << "0-${arraySize - 1}"
+            result << '-J' << "0-${arraySize - 1}".toString()
         }
 
         result << '-N' << getJobNameFor(task)

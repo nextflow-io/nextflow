@@ -111,7 +111,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     List<String> getSubmitCommand() {
         final cmd = fusionEnabled()
-            ? fusionSubmitCommand()
+            ? fusionSubmitCommand(task)
             : "cd ${task.workDir} ; bash ${TaskRun.CMD_RUN} | tee ${TaskRun.CMD_LOG}"
 
         List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
@@ -289,7 +289,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
             // -- save the JobId in the
-            final jobId = executor.parseJobId(result)
+            final jobId = (String)executor.parseJobId(result)
             this.onSubmit(jobId)
             log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
 

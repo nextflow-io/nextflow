@@ -40,7 +40,7 @@ class SgeExecutor extends AbstractGridExecutor {
 
         if( task instanceof TaskArray ) {
             final arraySize = ((TaskArray)task).getArraySize()
-            result << '-t' << "0-${arraySize - 1}"
+            result << '-t' << "0-${arraySize - 1}".toString()
         }
 
         result << '-N' << getJobNameFor(task)

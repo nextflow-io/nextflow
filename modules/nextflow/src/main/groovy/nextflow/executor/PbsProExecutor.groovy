@@ -48,7 +48,7 @@ class PbsProExecutor extends PbsExecutor {
 
         if( task instanceof TaskArray ) {
             final arraySize = ((TaskArray)task).getArraySize()
-            result << '-J' << "0-${arraySize - 1}"
+            result << '-J' << "0-${arraySize - 1}".toString()
         }
 
         // when multiple competing directives are provided, only the first one will take effect

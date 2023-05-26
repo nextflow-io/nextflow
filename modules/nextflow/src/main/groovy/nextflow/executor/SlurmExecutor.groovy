@@ -55,7 +55,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         if( task instanceof TaskArray ) {
             final arraySize = ((TaskArray)task).getArraySize()
-            result << '--array' << "0-${arraySize - 1}"
+            result << '--array' << "0-${arraySize - 1}".toString()
         }
 
         result << '-J' << getJobNameFor(task)

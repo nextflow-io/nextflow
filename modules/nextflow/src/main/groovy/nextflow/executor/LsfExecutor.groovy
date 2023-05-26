@@ -74,7 +74,7 @@ class LsfExecutor extends AbstractGridExecutor {
 
         if( task instanceof TaskArray ) {
             final arraySize = ((TaskArray)task).getArraySize()
-            result << '-J' << "nf-array-${taskArrayCount.getAndIncrement()}[0-${arraySize - 1}]"
+            result << '-J' << "nf-array-${taskArrayCount.getAndIncrement()}[0-${arraySize - 1}]".toString()
         }
 
         result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
