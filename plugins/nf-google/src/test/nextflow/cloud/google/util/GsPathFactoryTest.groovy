@@ -16,6 +16,7 @@
 
 package nextflow.cloud.google.util
 
+import com.google.cloud.storage.HttpStorageOptions
 import nextflow.Global
 import nextflow.Session
 import spock.lang.Specification
@@ -74,5 +75,28 @@ class GsPathFactoryTest extends Specification {
 
         then:
         storageConfig.userProject() == null
+    }
+
+    def 'should apply http timeout settings from config' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[httpConnectTimeout: CONNECT, httpReadTimeout: READ]]
+        }
+        def storageOptions = GsPathFactory.getStorageOptions()
+        and:
+        def transportOptions = HttpStorageOptions.defaults().getDefaultTransportOptions().toBuilder()
+        if( CONNECT ) transportOptions.setConnectTimeout( CONNECT_MILLIS )
+        if( READ ) transportOptions.setReadTimeout( READ_MILLIS )
+
+        expect:
+        storageOptions == HttpStorageOptions.getDefaultInstance().toBuilder()
+            .setTransportOptions(transportOptions.build())
+            .build()
+
+        where:
+        CONNECT | CONNECT_MILLIS | READ  | READ_MILLIS
+        null    | 20000          | null  | 20000
+        '20s'   | 20000          | '20s' | 20000
+        '60s'   | 60000          | '60s' | 60000
     }
 }

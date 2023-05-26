@@ -25,6 +25,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.util.Duration
 /**
  * Model Google config options
  *
@@ -43,6 +44,8 @@ class GoogleOpts {
     private String location
     private File credsFile
     private boolean enableRequesterPaysBuckets
+    private Duration httpConnectTimeout
+    private Duration httpReadTimeout
 
     String getProjectId() { projectId }
     File getCredsFile() { credsFile }
@@ -65,6 +68,14 @@ class GoogleOpts {
         result.projectId = config.navigate("google.project") as String
         result.location = config.navigate("google.location") as String
         result.enableRequesterPaysBuckets = config.navigate('google.enableRequesterPaysBuckets') as boolean
+
+        final httpConnectTimeout = config.navigate('google.httpConnectTimeout')
+        if( httpConnectTimeout )
+            result.httpConnectTimeout = httpConnectTimeout as Duration
+
+        final httpReadTimeout = config.navigate('google.httpReadTimeout')
+        if( httpReadTimeout )
+            result.httpReadTimeout = httpReadTimeout as Duration
 
         if( result.enableRequesterPaysBuckets && !result.projectId )
             throw new IllegalArgumentException("Config option 'google.enableRequesterPaysBuckets' cannot be honoured because the Google project Id has not been specified - Provide it by adding the option 'google.project' in the nextflow.config file")

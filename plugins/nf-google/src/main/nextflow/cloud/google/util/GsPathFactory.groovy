@@ -18,6 +18,7 @@ package nextflow.cloud.google.util
 
 import java.nio.file.Path
 
+import com.google.cloud.storage.HttpStorageOptions
 import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
@@ -40,17 +41,39 @@ class GsPathFactory extends FileSystemPathFactory {
         return getCloudStorageConfig()
     } ()
 
-    static private CloudStorageConfiguration getCloudStorageConfig() {
+    @Lazy
+    private HttpStorageOptions storageOptions = {
+        return getStorageOptions()
+    } ()
+
+    static private GoogleOpts getGoogleConfig() {
         final session = (Session) Global.getSession()
-        if (!session)
+        if( !session )
             throw new IllegalStateException("Cannot initialize GsPathFactory: missing session")
 
-        final config = GoogleOpts.fromSession(session)
+        return GoogleOpts.fromSession(session)
+    }
+
+    static private CloudStorageConfiguration getCloudStorageConfig() {
+        final config = getGoogleConfig()
         final builder = CloudStorageConfiguration.builder()
-        if (config.enableRequesterPaysBuckets) {
+        if( config.enableRequesterPaysBuckets )
             builder.userProject(config.getProjectId())
-        }
+
         return builder.build()
+    }
+
+    static private HttpStorageOptions getStorageOptions() {
+        final config = getGoogleConfig()
+        final transportOptions = HttpStorageOptions.defaults().getDefaultTransportOptions().toBuilder()
+        if( config.httpConnectTimeout )
+            transportOptions.setConnectTimeout( (int)config.httpConnectTimeout.toMillis() )
+        if( config.httpReadTimeout )
+            transportOptions.setReadTimeout( (int)config.httpReadTimeout.toMillis() )
+
+        return HttpStorageOptions.getDefaultInstance().toBuilder()
+            .setTransportOptions(transportOptions.build())
+            .build()
     }
 
     @Override
@@ -59,9 +82,9 @@ class GsPathFactory extends FileSystemPathFactory {
             return null
         final str = uri.substring(5)
         final p = str.indexOf('/')
-        return ( p==-1
-                ? CloudStorageFileSystem.forBucket(str, storageConfig).getPath('')
-                : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig).getPath(str.substring(p)) )
+        return p == -1
+            ? CloudStorageFileSystem.forBucket(str, storageConfig, storageOptions).getPath('')
+            : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig, storageOptions).getPath(str.substring(p))
     }
 
     @Override
