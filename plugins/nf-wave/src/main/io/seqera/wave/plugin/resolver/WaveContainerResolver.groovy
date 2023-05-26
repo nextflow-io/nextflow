@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
 import nextflow.processor.TaskRun
+import nextflow.util.StringUtils
+
 /**
  * Implement Wave container resolve logic
  *
@@ -58,9 +60,9 @@ class WaveContainerResolver implements ContainerResolver {
             return defaultResolver.resolveImage(task, imageName)
 
         if( !imageName ) {
-            // when no image name is provider the module bundle should include a
-            // Dockerfile or a Conda recipe to build an image on-fly with an
-            // automatically assigned name
+            // when no image name is provided the module bundle should include a
+            // Dockerfile or a Conda recipe or a Spack recipe to build
+            // an image on-fly with an automatically assigned name
             return waveContainer(task, null)
         }
 
@@ -95,12 +97,13 @@ class WaveContainerResolver implements ContainerResolver {
      *      An instance of {@link TaskRun} task representing the current task
      * @param container
      *      The container image name specified by the task. Can be {@code null} if the task
-     *      provides a Dockerfile or a Conda recipe
+     *      provides a Dockerfile or a Conda recipe or a Spack recipe
      * @return
      *      The container image name returned by the Wave backend or {@code null}
      *      when the task does not request any container or dockerfile to build
      */
     protected ContainerInfo waveContainer(TaskRun task, String container) {
+        validateContainerRepo(container)
         final assets = client().resolveAssets(task, container)
         if( assets ) {
             return client().fetchContainerImage(assets)
@@ -108,6 +111,14 @@ class WaveContainerResolver implements ContainerResolver {
         // no container and no dockerfile, wave cannot do anything
         log.trace "No container image or build recipe defined for task ${task.processor.name}"
         return null
+    }
+
+    static protected void validateContainerRepo(String name) {
+        if( !name )
+            return 
+        final scheme = StringUtils.getUrlProtocol(name)
+        if( scheme )
+            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
     }
 
 }

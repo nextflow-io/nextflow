@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +46,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     static final public List<String> DIRECTIVES = [
             'accelerator',
             'afterScript',
+            'arch',
             'beforeScript',
             'cache',
             'conda',
@@ -929,6 +929,27 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    ProcessConfig arch( Map params, value )  {
+        if( value instanceof String ) {
+            if( params.name==null )
+                params.name=value
+        }
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
+        arch(params)
+        return this
+    }
+
+    ProcessConfig arch( value ) {
+        if( value instanceof String )
+            configProperties.put('arch', [name: value])
+        else if( value instanceof Map )
+            configProperties.put('arch', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
         return this
     }
 

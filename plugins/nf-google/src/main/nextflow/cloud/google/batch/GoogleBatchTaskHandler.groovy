@@ -37,6 +37,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
@@ -111,7 +112,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     protected GoogleBatchTaskHandler() {}
 
     protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
-        if( launcher instanceof GoogleBatchScriptLauncher )
+        if( launcher instanceof GoogleBatchLauncherSpec )
             return launcher
         if( launcher instanceof FusionScriptLauncher )
             return new GoogleBatchFusionAdapter(this, launcher)
@@ -158,6 +159,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             computeResource.setBootDiskMib( disk.getMega() )
 
         // container
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
+
         final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
             .setImageUri( task.container )
@@ -223,9 +227,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
-
-        if( task.config.getMachineType() )
-            instancePolicy.setMachineType( task.config.getMachineType() )
 
         machineInfo = findBestMachineType(task.config)
         if( machineInfo )
@@ -367,7 +368,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         catch (Exception e) {
             log.debug "[GOOGLE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
-            null
+            // return MAX_VALUE to signal it was unable to retrieve the exit code
+            return Integer.MAX_VALUE
         }
     }
 
@@ -401,13 +403,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
         final spot = executor.config.spot ?: executor.config.preemptible
-        final useSSD = fusionEnabled()
         final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
             return new CloudMachineInfo(
-                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, fusionEnabled(), families),
                     zone: location,
                     priceModel: priceModel
             )

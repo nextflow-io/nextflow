@@ -23,6 +23,8 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import nextflow.cloud.CloudTransferOptions
 import nextflow.util.Duration
+import nextflow.util.StringUtils
+
 /**
  * Model Azure Batch pool config settings
  *
@@ -45,6 +47,7 @@ class AzBatchOpts implements CloudTransferOptions {
     String location
     Boolean autoPoolMode
     Boolean allowPoolCreation
+    Boolean terminateJobsOnCompletion
     Boolean deleteJobsOnCompletion
     Boolean deletePoolsOnCompletion
     CopyToolInstallMode copyToolInstallMode
@@ -60,6 +63,7 @@ class AzBatchOpts implements CloudTransferOptions {
         location = config.location
         autoPoolMode = config.autoPoolMode
         allowPoolCreation = config.allowPoolCreation
+        terminateJobsOnCompletion = config.terminateJobsOnCompletion
         deleteJobsOnCompletion = config.deleteJobsOnCompletion
         deletePoolsOnCompletion = config.deletePoolsOnCompletion
         pools = parsePools(config.pools instanceof Map ? config.pools as Map<String,Map> : Collections.<String,Map>emptyMap())
@@ -88,7 +92,7 @@ class AzBatchOpts implements CloudTransferOptions {
     }
 
     String toString() {
-        "endpoint=$endpoint; account-name=$accountName; account-key=${accountKey?.redact()}"
+        "endpoint=$endpoint; account-name=$accountName; account-key=${StringUtils.redact(accountKey)}"
     }
 
     private List<String> endpointParts() {

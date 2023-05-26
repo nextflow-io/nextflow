@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ class FusionConfigTest extends Specification {
     @Unroll
     def 'should get export aws key' () {
         expect:
-        new FusionConfig(OPTS).exportAwsAccessKeys() == EXPECTED
+        new FusionConfig(OPTS).exportStorageCredentials() == EXPECTED
 
         where:
         OPTS                            | EXPECTED
@@ -70,4 +70,35 @@ class FusionConfigTest extends Specification {
         [exportAwsAccessKeys: true]     | true
     }
 
+    @Unroll
+    def 'should configure log level and output' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.logLevel() == LEVEL
+        opts.logOutput() == OUTPUT
+
+        where:
+        OPTS                            | LEVEL     | OUTPUT
+        [:]                             | null      | null
+        [logLevel: 'trace']             | 'trace'   | null
+        [logOutput: 'stdout']           | null      | 'stdout'
+    }
+
+    @Unroll
+    def 'should configure tags' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.tagsEnabled() == ENABLED
+        opts.tagsPattern() == PATTERN
+
+        where:
+        OPTS                    | ENABLED   | PATTERN
+        [:]                     | true      | FusionConfig.DEFAULT_TAGS
+        [tags:true]             | true      | FusionConfig.DEFAULT_TAGS
+        [tags:false]            | false     | null
+        [tags:'[*.txt](x=1)']   | true      | '[*.txt](x=1)'
+
+    }
 }
