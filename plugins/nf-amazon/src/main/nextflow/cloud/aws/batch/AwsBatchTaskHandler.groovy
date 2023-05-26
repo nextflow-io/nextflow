@@ -49,7 +49,6 @@ import com.amazonaws.services.batch.model.ResourceType
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
-import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -288,17 +287,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     void kill() {
         assert jobId
         log.trace "[AWS BATCH] killing job=$jobId"
-        final req = new TerminateJobRequest().withJobId(jobId).withReason('Job killed by NF')
-        terminateJob(req)
-    }
 
-    protected void terminateJob(TerminateJobRequest req) {
-
-        final batch = bypassProxy(client)
-        executor.reaper.submit({
-            final resp = batch.terminateJob(req)
-            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
-        })
+        executor.killTask(jobId)
     }
 
     @Override

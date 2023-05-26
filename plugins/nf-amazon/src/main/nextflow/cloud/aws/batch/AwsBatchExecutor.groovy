@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.ecs.model.AccessDeniedException
 import com.amazonaws.services.logs.model.ResourceNotFoundException
 import nextflow.cloud.aws.nio.S3Path
@@ -82,6 +83,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
     private Path remoteBinDir = null
 
     private AwsOptions awsOptions
+
+    private Set<String> deletedJobs = [] as Set
 
     AwsOptions getAwsOptions() {  awsOptions  }
 
@@ -264,6 +267,26 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
     @PackageScope
     ThrottlingExecutor getReaper() { reaper }
 
+    synchronized void killTask(String jobId) {
+        // extract array job id
+        if( jobId.contains(':') )
+            jobId = jobId.split(':')[0]
+
+        // prevent duplicate delete requests on the same job
+        if( jobId in deletedJobs )
+            return
+        else
+            deletedJobs.add(jobId)
+
+        // submit terminate request
+        reaper.submit({
+            final req = new TerminateJobRequest()
+                .withJobId(jobId)
+                .withReason('Job killed by NF')
+            final resp = client.terminateJob(req)
+            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
+        })
+    }
 
     CloudMachineInfo getMachineInfoByQueueAndTaskArn(String queue, String taskArn) {
         try {
