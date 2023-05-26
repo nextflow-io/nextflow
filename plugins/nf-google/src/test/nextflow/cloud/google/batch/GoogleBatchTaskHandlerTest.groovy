@@ -22,6 +22,8 @@ import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.TaskBean
@@ -159,7 +161,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_) >> new CloudMachineInfo(type: MACHINE_TYPE, zone: "location", priceModel: PriceModel.spot)
 
         and:
         def taskGroup = req.getTaskGroups(0)
@@ -292,5 +294,38 @@ class GoogleBatchTaskHandlerTest extends Specification {
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
         and:
         taskGroup.getTaskSpec().getVolumesList().size()==0
+    }
+
+    def 'should not set wildcard expressions as machine type'() {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> Mock(BatchConfig)
+        }
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [:]
+                getMachineType() >> "n1-*,n2-*"
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def env = [FUSION_WORK: '/xyz']
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [], [], env)
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_) >> null
+        and:
+        req.getAllocationPolicy().getInstances(0).policy.getMachineType() == ""
+
     }
 }

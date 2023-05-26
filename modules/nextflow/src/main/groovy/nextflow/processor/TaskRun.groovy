@@ -817,7 +817,7 @@ class TaskRun implements Cloneable {
         return engine.result
     }
 
-    protected placeholderChar() {
+    protected char placeholderChar() {
         (config.placeholder ?: '!') as char
     }
 

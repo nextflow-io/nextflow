@@ -30,7 +30,10 @@ The Conda environment feature is not supported by executors that use remote obje
 
 ### Enabling Conda environment
 
-As of version `22.08.0-edge`, the use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
+:::{versionadded} 22.08.0-edge
+:::
+
+The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
 
 ```groovy
 conda.enabled = true
@@ -119,11 +122,10 @@ process foo {
 
 ### Use Mamba to resolve packages
 
-It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
-
-:::{warning}
-This feature is experimental and may change in a future release.
+:::{warning} *Experimental: may change in a future release.*
 :::
+
+It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
 
 ## Best practices
 

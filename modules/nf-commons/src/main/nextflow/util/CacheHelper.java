@@ -134,10 +134,10 @@ public class CacheHelper {
         if( value instanceof Short )
             return hasher.putShort((Short) value);
 
-         if( value instanceof Integer)
+        if( value instanceof Integer)
             return hasher.putInt((Integer) value);
 
-         if( value instanceof Long )
+        if( value instanceof Long )
             return hasher.putLong((Long) value);
 
         if( value instanceof Float )
@@ -215,6 +215,10 @@ public class CacheHelper {
 
         if( value instanceof CacheFunnel ) {
             return ((CacheFunnel) value).funnel(hasher,mode);
+        }
+
+        if( value instanceof Enum ) {
+            return hasher.putUnencodedChars( value.getClass().getName() + "." + value );
         }
 
         Bolts.debug1(log, FIRST_ONLY, "[WARN] Unknown hashing type: "+value.getClass());

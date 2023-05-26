@@ -49,6 +49,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.util.Threads
 import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
@@ -515,7 +516,9 @@ class Session implements ISession {
         registerSignalHandlers()
 
         // create tasks executor
-        execService = Executors.newFixedThreadPool(poolSize)
+        execService = Threads.useVirtual()
+                ? Executors.newVirtualThreadPerTaskExecutor()
+                : Executors.newFixedThreadPool(poolSize)
 
         // signal start to trace observers
         notifyFlowCreate()
