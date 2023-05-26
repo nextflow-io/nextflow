@@ -330,7 +330,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     void onSubmit(String jobId, String queueName) {
         if( task instanceof TaskArray ) {
             ((TaskArray)task).children.eachWithIndex { handler, i ->
-                final arrayTaskId = executor.getArrayTaskId(jobId, i)
+                final arrayTaskId = "${jobId}:${i}"
                 ((AwsBatchTaskHandler)handler).onSubmit(arrayTaskId, queueName)
             }
         }
@@ -655,6 +655,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return fusionEnabled()
                 ? fusionSubmitCli()
                 : classicSubmitCli()
+    }
+
+    @Override
+    String getWorkDir() {
+        fusionEnabled()
+            ? FusionHelper.toContainerMount(task.workDir).toString()
+            : task.workDir.toUriString()
     }
 
     protected maxSpotAttempts() {

@@ -408,5 +408,10 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
         // Instead, it is the command wrapper script that is launched run within a container process.
         return isFusionEnabled()
     }
+
+    String getArrayTaskId(String jobId, int index) {
+        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+    }
+
 }
 

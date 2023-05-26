@@ -16,7 +16,6 @@
 
 package nextflow.processor
 
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -26,7 +25,6 @@ import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayAware
 import nextflow.file.FileHelper
-import nextflow.fusion.FusionHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
 
@@ -110,6 +108,11 @@ class TaskArrayCollector {
     }
 
     protected void submit0(List<TaskHandler> array) {
+        // prepare child job launcher scripts
+        for( TaskHandler handler : array )
+            handler.prepareLauncher()
+
+        // submit array job
         executor.submit(createTaskArray(array))
     }
 
@@ -129,7 +132,7 @@ class TaskArrayCollector {
         Files.createDirectories(workDir)
 
         // create wrapper script
-        final script = createTaskArrayScript(tasks)
+        final script = createTaskArrayScript(array)
 
         // create task handler
         return new TaskArray(
@@ -149,33 +152,21 @@ class TaskArrayCollector {
     /**
      * Create the wrapper script for an array job.
      *
-     * @param tasks
+     * @param array
      */
-    protected String createTaskArrayScript(List<TaskRun> tasks) {
+    protected String createTaskArrayScript(List<TaskHandler> array) {
         // get work directory and launch command for each task
-        def workDirs
-        def cmd
-
-        if( executor.workDir.fileSystem == FileSystems.default ) {
-            workDirs = tasks.collect( t -> t.workDir.toString() )
-            cmd = "cd \${task_dir} ; bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG}"
-        }
-        else {
-            workDirs = executor.isFusionEnabled()
-                ? tasks.collect( t -> FusionHelper.toContainerMount(t.workDir).toString() )
-                : tasks.collect( t -> t.workDir.toUriString() )
-            cmd = Escape.cli(array.first().getSubmitCommand().toArray() as String[])
-            cmd = cmd.replaceAll(workDirs.first(), '\\${task_dir}')
-        }
+        final workDirs = array.collect( handler -> handler.getWorkDir() )
+        final args = array.first().getSubmitCommand().toArray() as String[]
+        final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${task_dir}')
 
         // create wrapper script
         final arrayIndexName = executor.getArrayIndexName()
-
-        """
-        declare -a array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
-        export task_dir=\${array[\$${arrayIndexName}]}
-        ${cmd}
-        """.stripIndent().trim()
+        final builder = new StringBuilder()
+            << "array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )\n"
+            << "export task_dir=\${array[${arrayIndexName}]}\n"
+            << cmd << '\n'
+        return builder.toString()
     }
 
 }

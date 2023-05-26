@@ -42,7 +42,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should create submit request with minimal spec' () {
         given:
         def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch/01/23456789abcdef')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig)
@@ -105,7 +105,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with maximal spec' () {
         given:
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch/01/23456789abcdef')
         and:
         def ACCELERATOR = new AcceleratorResource(request: 1, type: 'nvidia-tesla-v100')
         def BOOT_DISK = MemoryUnit.of('10 GB')
@@ -220,6 +220,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def handler = Spy(GoogleBatchTaskHandler)
         handler.task = task
         handler.@jobId = 'xyz-123'
+        handler.@taskId = '0'
         handler.@uid = '789'
 
         when:
@@ -227,14 +228,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.isCompleted() >> false
         and:
-        trace.native_id == 'xyz-123/789'
+        trace.native_id == 'xyz-123/0/789'
         trace.executorName == 'google-batch'
     }
 
     def 'should create submit request with fusion enabled' () {
         given:
         def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch/01/23456789abcdef')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig)

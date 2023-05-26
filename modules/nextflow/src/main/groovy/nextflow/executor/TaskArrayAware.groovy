@@ -45,14 +45,4 @@ interface TaskArrayAware {
         throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
     }
 
-    /**
-     * Get the job ID of an array task based on its index in the array.
-     *
-     * @param jobId
-     * @param index
-     */
-    default String getArrayTaskId(String jobId, int index) {
-        throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
-    }
-
 }

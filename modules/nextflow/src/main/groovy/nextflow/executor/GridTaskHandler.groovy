@@ -99,6 +99,22 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.sanityCheckInterval = duration
     }
 
+    @Override
+    String getWorkDir() {
+        fusionEnabled()
+            ? FusionHelper.toContainerMount(task.workDir).toString()
+            : task.workDir.toString()
+    }
+
+    @Override
+    List<String> getSubmitCommand() {
+        final cmd = fusionEnabled()
+            ? fusionSubmitCommand()
+            : "cd ${task.workDir} ; bash ${TaskRun.CMD_RUN} | tee ${TaskRun.CMD_LOG}"
+
+        List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
+    }
+
     protected ProcessBuilder createProcessBuilder() {
 
         // -- log the qsub command
@@ -216,15 +232,14 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected String fusionStdinWrapper() {
-        final submit = fusionSubmitCli()
-        final launcher = fusionLauncher()
-        final config = task.getContainerConfig()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
-        // create an inline script to launch the job execution
-        return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+        final builder = new StringBuilder()
+            << '#!/bin/bash\n'
+            << fusionSubmitDirective(task)
+            << fusionSubmitCommand(task) << '\n'
+        return builder.toString()
     }
 
-    protected String submitDirective(TaskRun task) {
+    protected String fusionSubmitDirective(TaskRun task) {
         final remoteLog = task.workDir.resolve(TaskRun.CMD_LOG).toString()
         // replaces the log file with a null file because the cluster submit tool
         // cannot write to a file hosted in a remote object storage
@@ -232,6 +247,13 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 .getHeaders(task)
                 .replaceAll(remoteLog, '/dev/null')
         return result
+    }
+
+    protected String fusionSubmitCommand(TaskRun task) {
+        final launcher = fusionLauncher()
+        final config = task.getContainerConfig()
+        final submit = fusionSubmitCli()
+        return FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
     }
 
     protected String launchCmd0(ProcessBuilder builder, String pipeScript) {

@@ -17,6 +17,8 @@
 
 package nextflow.cloud.google.batch
 
+import java.nio.file.Path
+
 import com.google.cloud.batch.v1.Volume
 import groovy.transform.Canonical
 
@@ -31,6 +33,9 @@ class GoogleBatchLauncherSpecMock implements GoogleBatchLauncherSpec {
     List<String> containerMounts = List.of()
     List<Volume> volumes = List.of()
     Map<String,String> environment = Map.of()
+
+    @Override
+    Path toContainerMount(Path path) { path }
 
     @Override
     List<String> getContainerMounts() {

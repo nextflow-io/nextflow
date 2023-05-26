@@ -193,15 +193,11 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected void submit(TaskHandler handler) {
         if( handler.task instanceof TaskArray ) {
-            // prepare launcher for each child task
-            final children = ((TaskArray)handler.task).children
-            for( TaskHandler h0 : children )
-                h0.prepareLauncher()
             // submit task array
             handler.prepareLauncher()
             handler.submit()
             // add each child task to the running queue
-            for( TaskHandler h0 : children ) {
+            for( TaskHandler h0 : ((TaskArray)handler.task).children ) {
                 runningQueue.add(h0)
                 session.notifyTaskSubmit(h0)
             }

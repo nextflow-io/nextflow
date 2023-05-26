@@ -32,8 +32,8 @@ import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
-import nextflow.executor.TaskArrayAware
 import nextflow.executor.Executor
+import nextflow.executor.TaskArrayAware
 import nextflow.fusion.FusionHelper
 import nextflow.extension.FilesEx
 import nextflow.processor.ParallelPollingMonitor
@@ -309,9 +309,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
 
     @Override
     String getArrayIndexName() { 'AWS_BATCH_JOB_ARRAY_INDEX' }
-
-    @Override
-    String getArrayTaskId(String jobId, int index) { "${jobId}:${index}" }
 
 }
 

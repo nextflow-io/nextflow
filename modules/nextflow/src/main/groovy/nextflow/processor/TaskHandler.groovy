@@ -94,6 +94,11 @@ abstract class TaskHandler {
     void prepareLauncher() {}
 
     /**
+     * Get the work directory as it will be seen from the launcher script.
+     */
+    String getWorkDir() { null }
+
+    /**
      * Get the command to execute the launcher script.
      */
     List<String> getSubmitCommand() { null }
