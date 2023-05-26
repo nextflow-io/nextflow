@@ -605,8 +605,10 @@ class TaskRun implements Cloneable {
         if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
             return null
 
+        final String arch = config.getArchitecture()?.spackArch
+
         final cache = new SpackCache(processor.session.getSpackConfig())
-        cache.getCachePathFor(config.spack as String)
+        cache.getCachePathFor(config.spack as String, arch)
     }
 
     protected ContainerInfo containerInfo() {
@@ -814,7 +816,7 @@ class TaskRun implements Cloneable {
         return engine.result
     }
 
-    protected placeholderChar() {
+    protected char placeholderChar() {
         (config.placeholder ?: '!') as char
     }
 

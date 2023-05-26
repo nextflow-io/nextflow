@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+0.1.5 - 15 May 2023
+- Update logging libraries [d7eae86e]
+
 0.1.4 - 15 Apr 2023
 - Bump aws-java-sdk-s3:1.12.429 [b71ee0a3]
 

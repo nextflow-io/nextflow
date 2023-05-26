@@ -42,7 +42,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static public final EXIT_ZERO = 0
+    static public final int EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -375,6 +375,17 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     def getContainer() {
         return get('container')
+    }
+
+    Architecture getArchitecture() {
+        final value = get('arch')
+        if( value instanceof CharSequence )
+            return new Architecture(value.toString())
+        if( value instanceof Map )
+            return new Architecture(value)
+        if( value != null )
+            throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
+        return null
     }
 
     /**
