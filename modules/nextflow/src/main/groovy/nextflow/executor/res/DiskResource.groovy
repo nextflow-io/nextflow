@@ -45,7 +45,7 @@ class DiskResource {
             this.type = opts.type as String
     }
 
-    MemoryUnit toMemoryUnit( value ) {
+    private static MemoryUnit toMemoryUnit( value ) {
         if( value instanceof MemoryUnit )
             return (MemoryUnit)value
 

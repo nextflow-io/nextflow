@@ -946,7 +946,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig disk( Map opts, value )  {
         opts.request = value
-        disk(opts)
+        return disk(opts)
     }
 
     /**
