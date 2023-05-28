@@ -1450,7 +1450,17 @@ process big_job {
 }
 ```
 
-The disk value can be a `MemoryUnit` or an equivalent string value. See {ref}`implicit-classes-memoryunit` for more information.
+The following memory unit suffix can be used when specifying the disk value:
+
+| Unit | Description |
+| ---- | ----------- |
+| B    | Bytes       |
+| KB   | Kilobytes   |
+| MB   | Megabytes   |
+| GB   | Gigabytes   |
+| TB   | Terabytes   |
+
+See {ref}`implicit-classes-memoryunit` for more information.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
@@ -1761,7 +1771,17 @@ process big_job {
 }
 ```
 
-The memory value can be a `MemoryUnit` or an equivalent string value. See {ref}`implicit-classes-memoryunit` for more information.
+The following memory unit suffix can be used when specifying the memory value:
+
+| Unit | Description |
+| ---- | ----------- |
+| B    | Bytes       |
+| KB   | Kilobytes   |
+| MB   | Megabytes   |
+| GB   | Gigabytes   |
+| TB   | Terabytes   |
+
+See {ref}`implicit-classes-memoryunit` for more information.
 
 See also: [cpus](#cpus), [time](#time), [queue](#queue) and [Dynamic computing resources](#dynamic-computing-resources).
 
@@ -2329,7 +2349,19 @@ process big_job {
 }
 ```
 
-The duration itself can be a `Duration` or an equivalent string value. See {ref}`implicit-classes-duration` for more information.
+The following time unit suffixes can be used when specifying the duration value:
+
+| Unit                            | Description  |
+| ------------------------------- | ------------ |
+| `ms`, `milli`, `millis`         | Milliseconds |
+| `s`, `sec`, `second`, `seconds` | Seconds      |
+| `m`, `min`, `minute`, `minutes` | Minutes      |
+| `h`, `hour`, `hours`            | Hours        |
+| `d`, `day`, `days`              | Days         |
+
+Multiple units can be used in a single declaration, for example: `'1day 6hours 3minutes 30seconds'`
+
+See {ref}`implicit-classes-duration` for more information.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.

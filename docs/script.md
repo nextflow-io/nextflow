@@ -556,8 +556,6 @@ The following classes are imported by default in Nextflow scripts:
 - `java.math.BigInteger`
 - `java.math.BigDecimal`
 - `java.nio.file.Path`
-- `groovy.transform.Field`
-- `org.apache.commons.lang.StringUtils`
 
 Additionally, Nextflow imports several new classes which are described below.
 
