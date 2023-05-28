@@ -657,7 +657,7 @@ CMD [ "/bin/bash" ]
     def 'should create asset with image' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) { getConfig() >> [:] }
+        def task = Mock(TaskRun) { getConfig() >> [arch:'amd64'] }
         def IMAGE = 'foo:latest'
         and:
         def client = new WaveClient(session)
@@ -806,7 +806,7 @@ CMD [ "/bin/bash" ]
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3'] }
+        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3', arch:'amd64'] }
         and:
         def client = new WaveClient(session)
 
@@ -922,7 +922,7 @@ CMD [ "/bin/bash" ]
         def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
         and:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString(), arch: 'amd64'] }
         and:
         def client = new WaveClient(session)
 

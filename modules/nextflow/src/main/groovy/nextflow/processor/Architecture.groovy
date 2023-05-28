@@ -53,16 +53,16 @@ class Architecture {
     final String arch
     final String target
 
-    protected String getPlatform( String value ) {
+    static protected String getPlatform( String value ) {
         // return value.minus(~'/.*') // keeping for reference
-        def chunks = value.tokenize('/')
+        final chunks = value.tokenize('/')
         if( chunks.size() > 1 )
             return chunks[0]
         else
             return null
     }
 
-    protected String getArch( String value ) {
+    static protected String getArch( String value ) {
         // return value.minus(~'.*/') // keeping for reference
         def chunks = value.tokenize('/')
         if( chunks.size() == 3 )
@@ -73,7 +73,7 @@ class Architecture {
             return chunks[0]
     }
 
-    private String validateArchToDockerArch( Map res ) {
+    static private String validateArchToDockerArch( Map res ) {
         def value = getArch(res.name as String)
         def name = res.name as String
         if( value == 'x86_64' || value == 'amd64' )
@@ -85,7 +85,7 @@ class Architecture {
         throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
     }
 
-    private String validateArchToSpackArch( String value, String inputArch ) {
+    static private String validateArchToSpackArch( String value, String inputArch ) {
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
         if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
@@ -95,7 +95,7 @@ class Architecture {
         throw new IllegalArgumentException("Not a valid `arch` value: ${inputArch}")
     }
 
-    protected String getSpackArch( Map res ) {
+    static protected String getSpackArch( Map res ) {
         if( res.target != null )
             return res.target as String
         else if( res.name != null )
@@ -105,15 +105,17 @@ class Architecture {
     }
 
     Architecture( String value ) {
-        this(name: value)
+        this(Map.of('name', value))
     }
 
     Architecture( Map res ) {
-        if( res.name != null ) {
-            this.dockerArch = validateArchToDockerArch(res)
-            this.platform = getPlatform(res.name as String)
-            this.arch = getArch(res.name as String)
-        }
+        if( !res.name )
+            throw new IllegalArgumentException("Missing architecture `name` attribute")
+
+        this.dockerArch = validateArchToDockerArch(res)
+        this.platform = getPlatform(res.name as String)
+        this.arch = getArch(res.name as String)
+
         if( res.target != null )
             this.target = res.target as String
         if( res.name!=null || res.target!=null )

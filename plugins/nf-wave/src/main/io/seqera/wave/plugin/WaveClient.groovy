@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -48,9 +49,11 @@ import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
 import nextflow.executor.BashTemplateEngine
 import nextflow.fusion.FusionConfig
+import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.MustacheTemplateEngine
+import nextflow.util.SysHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -316,13 +319,24 @@ class WaveClient {
         return result
     }
 
+    static Architecture defaultArch() {
+        try {
+            return new Architecture(SysHelper.getArch())
+        }
+        catch (Exception e) {
+            log.debug "Unable to detect system arch", e
+            return null
+        }
+    }
+
     @Memoized
     WaveAssets resolveAssets(TaskRun task, String containerImage) {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the Spack architecture
-        String spackArch = task.config.getArchitecture()?.spackArch ?: DEFAULT_SPACK_ARCH
-        String dockerArch = task.config.getArchitecture()?.dockerArch ?: DEFAULT_DOCKER_PLATFORM
+        final arch = task.config.getArchitecture() ?: defaultArch()
+        final spackArch = arch ? arch.spackArch : DEFAULT_SPACK_ARCH
+        final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
