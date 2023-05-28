@@ -225,7 +225,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
         
         // add computing resources
-        final cpus = taskCfg.getCpus()
+        final cpus = taskCfg.getCpuUnits()
         final mem = taskCfg.getMemory()
         final disk = taskCfg.getDisk()
         final acc = taskCfg.getAccelerator()

@@ -25,6 +25,7 @@ import nextflow.ast.NextflowXform
 import nextflow.exception.ConfigParseException
 import nextflow.extension.Bolts
 import nextflow.file.FileHelper
+import nextflow.util.CpuUnit
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -175,6 +176,7 @@ class ConfigParser {
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         //  add implicit types
         def importCustomizer = new ImportCustomizer()
+        importCustomizer.addImports( CpuUnit.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
         config.addCompilationCustomizers(importCustomizer)

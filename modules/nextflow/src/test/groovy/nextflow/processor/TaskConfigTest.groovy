@@ -25,6 +25,7 @@ import nextflow.script.TaskClosure
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -272,6 +273,7 @@ class TaskConfigTest extends Specification {
 
     }
 
+    @Unroll
     def testGetCpus() {
 
         when:
@@ -289,7 +291,56 @@ class TaskConfigTest extends Specification {
         1            | true     | 1
         8            | true     | 8
         10           | true     | { ten ?: 0  }
+        and:
+        1            | true     | 0.1
+        2            | true     | 1.5
+        3            | true     | '2100m'
+    }
 
+    @Unroll
+    def testGetCpuDecimal() {
+
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.cpus = value
+
+        then:
+        config.getCpuUnits().toDecimal() == expected
+        config.hasCpus() == defined
+
+        where:
+        expected     | defined  | value
+        1            | false    | null
+        1            | true     | 1
+        8            | true     | 8
+        10           | true     | { ten ?: 0  }
+        and:
+        0.1          | true     | 0.1
+        1.5          | true     | 1.5
+        2.1          | true     | '2100m'
+    }
+
+    @Unroll
+    def testGetCpuMillis() {
+
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.cpus = VALUE
+
+        then:
+        config.getCpuUnits().toMillis() == EXPECTED
+        config.hasCpus() == DEFINED
+
+        where:
+        EXPECTED    | DEFINED  | VALUE
+        1000        | false    | null
+        1000        | true     | 1
+        8000        | true     | 8
+        10000       | true     | { ten ?: 0  }
+        and:
+        100         | true     | 0.1
+        1500        | true     | 1.5
+        2100        | true     | '2100m'
     }
 
     def testGetStore() {

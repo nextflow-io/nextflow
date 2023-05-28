@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import groovy.transform.CompileStatic;
 import groovy.transform.PackageScope;
 import nextflow.processor.TaskPath;
+import nextflow.util.CpuUnit;
 import nextflow.util.Duration;
 import nextflow.util.PathEscapeAware;
 import nextflow.util.MemoryUnit;
@@ -78,6 +79,15 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)==0;
         }
+        // -- compare cpu unit
+        if( left instanceof CpuUnit ) {
+            if( right == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)left, right)==0;
+        }
+        if( right instanceof CpuUnit ) {
+            if( left == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)right, left)==0;
+        }
         // -- compare duration
         if( left instanceof Duration) {
             if( right == null ) return false;
@@ -120,6 +130,15 @@ class LangHelpers {
         if( right instanceof MemoryUnit ) {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)>0;
+        }
+        // -- compare cpu unit
+        if( left instanceof CpuUnit ) {
+            if( right == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)left, right)<0;
+        }
+        if( right instanceof CpuUnit ) {
+            if( left == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)right, left)>0;
         }
         // -- compare duration
         if( left instanceof Duration ) {
@@ -164,6 +183,15 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)>=0;
         }
+        // -- compare cpu unit
+        if( left instanceof CpuUnit ) {
+            if( right == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)left, right)<=0;
+        }
+        if( right instanceof CpuUnit ) {
+            if( left == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)right, left)>=0;
+        }
         // -- compare duration
         if( left instanceof Duration ) {
             if( right == null ) return false;
@@ -207,6 +235,15 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)<0;
         }
+        // -- compare cpu unit
+        if( left instanceof CpuUnit ) {
+            if( right == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)left, right)>0;
+        }
+        if( right instanceof CpuUnit ) {
+            if( left == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)right, left)<0;
+        }
         // -- compare duration
         if( left instanceof Duration ) {
             if( right == null ) return false;
@@ -248,6 +285,15 @@ class LangHelpers {
         else if( right instanceof MemoryUnit ) {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)<=0;
+        }
+        // -- compare cpu unit
+        if( left instanceof CpuUnit ) {
+            if( right == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)left, right)>=0;
+        }
+        else if( right instanceof CpuUnit ) {
+            if( left == null ) return false;
+            return CpuUnit.compareTo((CpuUnit)right, left)<=0;
         }
         // -- compare duration
         if( left instanceof Duration ) {

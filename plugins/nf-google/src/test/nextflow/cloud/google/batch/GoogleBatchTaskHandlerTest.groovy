@@ -32,6 +32,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
+import nextflow.util.CpuUnit
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -57,7 +58,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpus() >> 2
+                getCpuUnits() >> CpuUnit.of(2)
                 getResourceLabels() >> [:]
             }
         }
@@ -114,7 +115,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def CONTAINER_OPTS = '--this --that'
         def CPU_PLATFORM = 'Intel Skylake'
-        def CPUS = 4
+        def CPUS = CpuUnit.of(4)
         def DISK = MemoryUnit.of('50 GB')
         def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
@@ -142,7 +143,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getConfig() >> Mock(TaskConfig) {
                 getAccelerator() >> ACCELERATOR
                 getContainerOptions() >> CONTAINER_OPTS
-                getCpus() >> CPUS
+                getCpuUnits() >> CPUS
                 getDisk() >> DISK
                 getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
@@ -171,7 +172,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def networkInterface = allocationPolicy.getNetwork().getNetworkInterfaces(0)
         and:
         taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == DISK.toMega()
-        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
+        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS.toMillis()
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
         and:
@@ -249,7 +250,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpus() >> 2
+                getCpuUnits() >> CpuUnit.of(2)
                 getResourceLabels() >> [:]
             }
         }

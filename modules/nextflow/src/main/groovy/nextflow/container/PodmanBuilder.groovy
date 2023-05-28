@@ -130,7 +130,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
             result << '--cap-add ' << capAdd << ' '
 
         if( cpus ) {
-            result << "--cpu-shares ${cpus * 1024} "
+            result << "--cpu-shares ${(Integer) (cpus.toDecimal() * 1024)} "
         }
 
         if( memory ) {

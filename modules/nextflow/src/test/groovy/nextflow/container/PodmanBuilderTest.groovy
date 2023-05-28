@@ -16,6 +16,7 @@
 
 package nextflow.container
 
+import nextflow.util.CpuUnit
 import nextflow.util.MemoryUnit
 
 import java.nio.file.Paths
@@ -234,10 +235,10 @@ class PodmanBuilderTest extends Specification {
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --memory 100m fedora'
 
         new PodmanBuilder('fedora')
-                .setCpus(1)
+                .setCpus(1.4)
                 .setMemory(new MemoryUnit('400m'))
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 1024 --memory 400m fedora'
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 1433 --memory 400m fedora'
 
     }
 }

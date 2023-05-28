@@ -50,7 +50,7 @@ class CmdKubeRun extends CmdRun {
     String podImage
 
     @Parameter(names = '-head-cpus', description = 'Specify number of CPUs requested for the Nextflow driver pod')
-    int headCpus
+    String headCpus
 
     @Parameter(names = '-head-memory', description = 'Specify amount of memory requested for the Nextflow driver pod')
     String headMemory

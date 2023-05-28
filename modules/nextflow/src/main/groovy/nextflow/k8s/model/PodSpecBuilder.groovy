@@ -22,9 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import nextflow.executor.res.AcceleratorResource
-import nextflow.util.MemoryUnit
 import groovy.util.logging.Slf4j
+import nextflow.executor.res.AcceleratorResource
+import nextflow.util.CpuUnit
+import nextflow.util.MemoryUnit
 
 /**
  * Object build for a K8s pod specification
@@ -74,7 +75,7 @@ class PodSpecBuilder {
 
     String workDir
 
-    Integer cpus
+    CpuUnit cpus
 
     String memory
 
@@ -172,7 +173,15 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withCpus( Integer cpus ) {
+    PodSpecBuilder withCpus(Number cpus) {
+        withCpus(CpuUnit.of(cpus))
+    }
+
+    PodSpecBuilder withCpus(String cpus) {
+        withCpus(CpuUnit.of(cpus))
+    }
+
+    PodSpecBuilder withCpus(CpuUnit cpus) {
         this.cpus = cpus
         return this
     }
@@ -479,7 +488,7 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        if( this.cpus ) {
+        if( this.cpus?.toMillis() ) {
             container.resources = addCpuResources(this.cpus, container.resources as Map)
         }
 
@@ -591,12 +600,12 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    Map addCpuResources(Integer cpus, Map res) {
+    Map addCpuResources(CpuUnit cpus, Map res) {
         if( res == null )
             res = [:]
 
         final req = res.requests as Map ?: new LinkedHashMap<>(10)
-        req.cpu = cpus
+        req.cpu = cpus.toString()
         res.requests = req
 
         return res

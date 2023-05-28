@@ -278,7 +278,7 @@ class PodSpecBuilderTest extends Specification {
                 .withWorkDir('/some/work/dir')
                 .withEnv(PodEnv.value('ALPHA','hello'))
                 .withEnv(PodEnv.value('DELTA', 'world'))
-                .withCpus(8)
+                .withCpus(0.8)
                 .withAccelerator( new AcceleratorResource(request: 5, limit:10, type: 'foo.org') )
                 .withMemory('100Gi')
                 .withDisk('10Gi')
@@ -300,7 +300,7 @@ class PodSpecBuilderTest extends Specification {
                                             [name:'DELTA', value:'world']
                                     ],
                                     resources:[
-                                            requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi', 'ephemeral-storage':'10Gi'],
+                                            requests: ['foo.org/gpu':5, cpu:'800m', memory:'100Gi', 'ephemeral-storage':'10Gi'],
                                             limits: ['foo.org/gpu':10, memory:'100Gi', 'ephemeral-storage':'10Gi']
                                     ]
                                    ]

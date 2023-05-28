@@ -19,6 +19,7 @@ package nextflow.container
 import java.nio.file.Path
 
 import nextflow.executor.BashWrapperBuilder
+import nextflow.util.CpuUnit
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.PathTrie
@@ -61,7 +62,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected List<String> engineOptions = []
 
-    protected Integer cpus
+    protected CpuUnit cpus
 
     protected String cpuset
 
@@ -98,7 +99,15 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
-    V setCpus(Integer value) {
+    V setCpus(Number value) {
+        setCpus(CpuUnit.of(value))
+    }
+
+    V setCpus(String value) {
+        setCpus(CpuUnit.of(value))
+    }
+
+    V setCpus(CpuUnit value) {
         this.cpus = value
         return (V)this
     }

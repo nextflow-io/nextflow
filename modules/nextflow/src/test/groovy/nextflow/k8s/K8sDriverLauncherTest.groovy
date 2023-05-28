@@ -114,6 +114,8 @@ class K8sDriverLauncherTest extends Specification {
         new CmdKubeRun(dumpChannels: 'lala')            | 'nextflow run foo -dump-channels lala'
         new CmdKubeRun(env: [XX:'hello', YY: 'world'])  | 'nextflow run foo -e.XX hello -e.YY world'
         new CmdKubeRun(process: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
+        new CmdKubeRun(process: [cpus:'800m'])          | 'nextflow run foo -process.cpus 800m'
+        new CmdKubeRun(process: [cpus:'0.8'])           | 'nextflow run foo -process.cpus 0.8'
         new CmdKubeRun(params: [alpha:'x', beta:'y'])   | 'nextflow run foo --alpha x --beta y'
         new CmdKubeRun(params: [alpha: '/path/*.txt'])  | 'nextflow run foo --alpha /path/\\*.txt'
         new CmdKubeRun(entryName: 'lala')               | 'nextflow run foo -entry lala'
@@ -334,7 +336,7 @@ class K8sDriverLauncherTest extends Specification {
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
         driver.@headImage = 'foo/bar'
-        driver.@headCpus = 2
+        driver.@headCpus = '2'
         driver.@headMemory = '200Mi'
 
         when:
@@ -360,7 +362,7 @@ class K8sDriverLauncherTest extends Specification {
                             [name:'NXF_ANSI_LOG', value: 'false']
                         ],
                         resources: [
-                            requests: [cpu: 2, memory: '200Mi'],
+                            requests: [cpu: '2000m', memory: '200Mi'],
                             limits: [memory: '200Mi']
                         ],
                         volumeMounts: [

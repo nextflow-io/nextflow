@@ -32,6 +32,7 @@ import nextflow.executor.res.AcceleratorResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
+import nextflow.util.CpuUnit
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -293,9 +294,13 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('cpus') != null
     }
 
-    int getCpus() {
+    CpuUnit getCpuUnits() {
         final value = get('cpus')
-        value ? value as int : 1  // note: always return at least 1 cpus
+        value ? CpuUnit.of(value) : CpuUnit.ONE_CORE  // note: always return at least 1 cpus
+    }
+
+    int getCpus() {
+        getCpuUnits().toCores()
     }
 
     int getMaxRetries() {

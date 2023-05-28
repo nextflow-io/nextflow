@@ -18,6 +18,7 @@ package nextflow.container
 
 import java.nio.file.Paths
 
+import nextflow.util.CpuUnit
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -142,9 +143,9 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i --cpu-shares 2048 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(1)
+                .setCpus(1.4)
                 .build()
-                .runCommand == 'docker run -i --cpu-shares 1024 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 1433 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
                 .setCpus(8)

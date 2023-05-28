@@ -40,6 +40,7 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.util.CpuUnit
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -76,7 +77,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 0
+        1 * config.getCpuUnits() >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -110,7 +111,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 1
+        1 * config.getCpuUnits() >> CpuUnit.ONE_CORE
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -122,7 +123,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1] ],
+                                     resources:[ requests: [cpu:'1000m'] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -144,7 +145,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'user/alpine:1.0'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 4
+        1 * config.getCpuUnits() >> CpuUnit.of(0.4)
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         result == [ apiVersion: 'v1',
@@ -156,7 +157,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:'400m', memory:'16384Mi'], limits:[memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -188,7 +189,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 0
+        1 * config.getCpuUnits() >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -224,7 +225,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 1
+        1 * config.getCpuUnits() >> CpuUnit.ONE_CORE
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -236,7 +237,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1] ],
+                                     resources:[ requests: [cpu:'1000m'] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -257,7 +258,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'user/alpine:1.0'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 4
+        1 * config.getCpuUnits() >> CpuUnit.of(0.4)
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         result == [ apiVersion: 'v1',
@@ -269,7 +270,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:'400m', memory:'16384Mi'], limits:[memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -303,7 +304,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 0
+        1 * config.getCpuUnits() >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -366,7 +367,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-123',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[requests:[cpu:1]]
+                                     resources:[requests:[cpu:'1000m']]
                                     ]
                             ]
                     ]
@@ -464,7 +465,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 0
+        1 * config.getCpuUnits() >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
@@ -508,7 +509,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 0
+        1 * config.getCpuUnits() >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
 
@@ -1117,7 +1118,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         and:
-        1 * config.getCpus() >> 0
+        1 * config.getCpuUnits() >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',

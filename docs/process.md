@@ -1393,7 +1393,7 @@ This feature is not supported by the {ref}`k8s-executor` and {ref}`google-lifesc
 
 ### cpus
 
-The `cpus` directive allows you to define the number of (logical) CPU required by the process' task. For example:
+The `cpus` directive allows you to define the number of (logical) CPUs required by the process' task. For example:
 
 ```groovy
 process big_job {
@@ -1407,6 +1407,21 @@ process big_job {
 ```
 
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
+
+Since Nextflow version `23.05.0-edge`, the `cpus` directive can be specified as a floating-point value or millis, for example:
+
+```groovy
+process tiny_job {
+  cpus 0.5    // decimal number
+  cpus '500m' // millis
+
+  """
+  echo "${task.cpus}"
+  """
+}
+```
+
+Fractional CPU requests are only used in the *task submission* by executors that support it (currently {ref}`local-executor`, {ref}`k8s-executor`, and {ref}`google-batch-executor`). For other executors, as well as the `task.cpus` process variable and the `cpus` trace field, the CPUs value is rounded up to the next integer. In the above example, `task.cpus` is rounded up to `1`.
 
 See also: [penv](#penv), [memory](#memory), [time](#time), [queue](#queue), [maxForks](#maxforks)
 

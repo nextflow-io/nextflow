@@ -143,7 +143,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final taskSpec = TaskSpec.newBuilder()
         final computeResource = ComputeResource.newBuilder()
 
-        computeResource.setCpuMilli( task.config.getCpus() * 1000 )
+        computeResource.setCpuMilli( task.config.getCpuUnits().toMillis() )
 
         if( task.config.getMemory() )
             computeResource.setMemoryMib( task.config.getMemory().getMega() )

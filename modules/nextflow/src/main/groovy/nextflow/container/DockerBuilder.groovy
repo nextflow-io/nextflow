@@ -129,7 +129,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         result << 'run -i '
 
         if( cpus && !legacy )
-            result << "--cpu-shares ${cpus * 1024} "
+            result << "--cpu-shares ${(Integer) (cpus.toDecimal() * 1024)} "
 
         if( cpuset ) {
             if( legacy )
