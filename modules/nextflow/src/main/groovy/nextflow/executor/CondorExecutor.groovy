@@ -17,6 +17,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import nextflow.processor.TaskRun
 /**
@@ -26,6 +27,7 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class CondorExecutor extends AbstractGridExecutor {
 
     static final public String CMD_CONDOR = '.command.condor'
@@ -52,25 +54,25 @@ class CondorExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << "universe = vanilla"
-        result << "executable = ${TaskRun.CMD_RUN}"
-        result << "log = ${TaskRun.CMD_LOG}"
+        result << "executable = ${TaskRun.CMD_RUN}".toString()
+        result << "log = ${TaskRun.CMD_LOG}".toString()
         result << "getenv = true"
 
         if( task.config.getCpus()>1 ) {
-            result << "request_cpus = ${task.config.getCpus()}"
+            result << "request_cpus = ${task.config.getCpus()}".toString()
             result << "machine_count = 1"
         }
 
         if( task.config.getMemory() ) {
-            result << "request_memory = ${task.config.getMemory()}"
+            result << "request_memory = ${task.config.getMemory()}".toString()
         }
 
         if( task.config.getDisk() ) {
-            result << "request_disk = ${task.config.getDisk()}"
+            result << "request_disk = ${task.config.getDisk()}".toString()
         }
 
         if( task.config.getTime() ) {
-            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}"
+            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}".toString()
         }
 
         if( task.config.clusterOptions ) {
@@ -108,7 +110,7 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
 
-    static protected Map DECODE_STATUS = [
+    static protected Map<String,QueueStatus> DECODE_STATUS = [
             'U': QueueStatus.PENDING,   // Unexpanded
             'I': QueueStatus.PENDING,   // Idle
             'R': QueueStatus.RUNNING,   // Running
@@ -121,7 +123,7 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         if( !text ) return result
 
         boolean started = false
