@@ -213,6 +213,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
 
+        // with custom disk type
         when:
         req = handler.newSubmitRequest(task, launcher)
         then:
@@ -259,7 +260,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, false) >> null
 
         and:
         def taskGroup = req.getTaskGroups(0)

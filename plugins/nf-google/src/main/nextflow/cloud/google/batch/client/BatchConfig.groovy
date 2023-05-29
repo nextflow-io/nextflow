@@ -38,7 +38,6 @@ class BatchConfig {
     private MemoryUnit bootDiskSize
     private String cpuPlatform
     private boolean installGpuDrivers
-    private String instanceTemplate
     private boolean spot
     private boolean preemptible
     private boolean usePrivateAddress
@@ -52,7 +51,6 @@ class BatchConfig {
     MemoryUnit getBootDiskSize() { bootDiskSize }
     String getCpuPlatform() { cpuPlatform }
     boolean getInstallGpuDrivers() { installGpuDrivers }
-    String getInstanceTemplate() { instanceTemplate }
     boolean getPreemptible() { preemptible }
     boolean getSpot() { spot }
     boolean getUsePrivateAddress() { usePrivateAddress }
@@ -68,7 +66,6 @@ class BatchConfig {
         result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
         result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
         result.installGpuDrivers = session.config.navigate('google.batch.installGpuDrivers',false)
-        result.instanceTemplate = session.config.navigate('google.batch.instanceTemplate')
         result.spot = session.config.navigate('google.batch.spot',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)
         result.usePrivateAddress = session.config.navigate('google.batch.usePrivateAddress',false)

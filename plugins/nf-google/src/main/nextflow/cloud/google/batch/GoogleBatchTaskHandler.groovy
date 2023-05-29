@@ -17,6 +17,7 @@
 
 package nextflow.cloud.google.batch
 
+
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
@@ -261,9 +262,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 instancePolicyOrTemplate.setInstallGpuDrivers(true)
             }
 
-            if( executor.config.cpuPlatform )
-                instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
-
             if( fusionEnabled() && !disk ) {
                 disk = new DiskResource(request: '375 GB', type: 'local-ssd')
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
@@ -279,7 +277,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 )
             }
 
-            // when using local SSD, make sure the requested size is valid based on the machine type
+            // When using local SSD not all the disk sizes are valid and depends on the machine type
             if( disk?.type == 'local-ssd' && machineType ) {
                 final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
                 if( validSize != disk.request ) {
@@ -306,6 +304,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                         .setMountPath('/tmp')
                 )
             }
+
+            if( executor.config.cpuPlatform )
+                instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
             if( executor.config.preemptible )
                 instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
