@@ -121,7 +121,7 @@ class AnsiLogObserver implements TraceObserver {
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
-        
+
         if( !started || !statsObserver.hasProgressRecords() ) {
             println message
         }
@@ -179,7 +179,7 @@ class AnsiLogObserver implements TraceObserver {
                 wait(200)
             }
         }
-        // 
+        //
         final stats = statsObserver.getStats()
         renderProgress(stats)
         renderSummary(stats)
@@ -225,7 +225,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String getExecutorName(String key) {
         session.getExecutorFactory().getDisplayName(key)
     }
-    
+
     protected void renderExecutors(Ansi term) {
         int count=0
         def line = ''
@@ -264,7 +264,7 @@ class AnsiLogObserver implements TraceObserver {
 
         // render line
         for( ProgressRecord entry : processes ) {
-            term.a(line(entry))
+            term = line(entry, term)
             term.newline()
         }
         rendered = true
@@ -320,7 +320,7 @@ class AnsiLogObserver implements TraceObserver {
             return
         if( enableSummary == null && delta <= 60*1_000 )
             return
-        
+
         if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
             report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
@@ -348,13 +348,13 @@ class AnsiLogObserver implements TraceObserver {
         if( color ) fmt = fmt.fg(Color.DEFAULT)
         AnsiConsole.out.println(fmt.eraseLine())
     }
-    
+
     protected void printAnsiLines(String lines) {
         final text = lines
                 .replace('\r','')
                 .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
         AnsiConsole.out.print(text)
-    } 
+    }
 
     protected String fmtWidth(String name, int width, int cols) {
         assert name.size() <= width
@@ -372,31 +372,73 @@ class AnsiLogObserver implements TraceObserver {
         return cols>3 ? str[0..(cols-3-1)] + '...' : str[0..cols-1]
     }
 
-    protected String line(ProgressRecord stats) {
+    protected String line(ProgressRecord stats, term) {
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
+        term.a(Attribute.FAINT)
+        term.a("[")
+        term.a(Attribute.DEFAULT)
+        term.fg(Color.BLUE)
+        term.a(hh)
+        term.fg(Color.DEFAULT)
+        term.a(Attribute.FAINT)
+        term.a("] process > ")
+        term.a(Attribute.DEFAULT)
+        term.a(label)
         if( tot == 0  )
-            return "[$hh] process > $label -"
+            term.a(Attribute.FAINT)
+            term.a(" -")
+            term.a(Attribute.DEFAULT)
+            return term
 
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
-        final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
+        final pct = "${String.valueOf(x).padLeft(3)}%".toString()
+        term.a(Attribute.FAINT)
+        term.a(" [")
+        term.a(Attribute.DEFAULT)
+        term.fg(com == tot ? Color.GREEN : Color.BLUE)
+        term.a(pct)
+        term.fg(Color.DEFAULT)
+        term.a(Attribute.FAINT)
+        term.a("] ")
+        term.a(Attribute.DEFAULT)
 
-        final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "[${hh}] process > $label $pct $numbs"
+        term.a("${(int)com} of ${(int)tot}".toString())
         if( stats.cached )
-            result += ", cached: $stats.cached"
+            term.a(", ")
+            term.a(Attribute.FAINT)
+            term.a("cached: $stats.cached")
+            term.a(Attribute.DEFAULT)
         if( stats.stored )
-            result += ", stored: $stats.stored"
+            term.a(", ")
+            term.a(Attribute.FAINT)
+            term.a("stored: $stats.stored")
+            term.a(Attribute.DEFAULT)
         if( stats.failed )
-            result += ", failed: $stats.failed"
+            term.a(", ")
+            term.fg(Color.RED)
+            term.a("failed: $stats.failed")
+            term.fg(Color.DEFAULT)
         if( stats.retries )
-            result += ", retries: $stats.retries"
+            term.a(", ")
+            term.fg(Color.YELLOW)
+            term.a("retries: $stats.retries")
+            term.fg(Color.DEFAULT)
+
         if( stats.terminated && tot )
-            result += stats.errored ? ' \u2718' : ' \u2714'
-        return fmtChop(result, cols)
+            if(stats.errored)
+                term.fg(Color.RED)
+                term.a(' \u2718')
+                term.fg(Color.DEFAULT)
+            else
+                term.fg(Color.GREEN)
+                term.a(' \u2714')
+                term.fg(Color.DEFAULT)
+
+        return term
     }
 
     @Override
