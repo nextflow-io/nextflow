@@ -53,12 +53,7 @@ class GoogleBatchFusionAdapter implements GoogleBatchLauncherSpec {
 
     @Override
     List<Volume> getVolumes() {
-        return [
-                Volume.newBuilder()
-                        .setDeviceName('fusion')
-                        .setMountPath('/tmp')
-                        .build()
-        ]
+        return List.of()
     }
 
     @Override

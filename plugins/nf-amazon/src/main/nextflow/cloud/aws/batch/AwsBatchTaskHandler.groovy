@@ -275,7 +275,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.debug "[AWS BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
+            log.debug "[AWS BATCH] Cannot read exit status for task: `${task.lazyName()}` | ${e.message}"
             return Integer.MAX_VALUE
         }
     }
@@ -286,7 +286,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     void kill() {
         assert jobId
-        log.trace "[AWS BATCH] killing job=$jobId"
+        log.trace "[AWS BATCH] Process `${task.lazyName()}` - killing job=$jobId"
 
         executor.killTask(jobId)
     }
@@ -314,7 +314,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // is supposed to be invoked by the thread pool
         final resp = submit0(bypassProxy(client), req)
         this.onSubmit(resp.jobId, req.getJobQueue())
-        log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
+        log.debug "[AWS BATCH] Process `${task.lazyName()}` submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
     }
 
     void onSubmit(String jobId, String queueName) {
