@@ -17,7 +17,7 @@
 
 package nextflow.cloud.google.batch
 
-import java.math.RoundingMode
+
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
@@ -47,7 +47,6 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
-
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -136,7 +135,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
         this.status = TaskStatus.SUBMITTED
-        log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
+        log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
     protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
@@ -228,11 +227,14 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             instancePolicyOrTemplate.setInstallGpuDrivers(true)
         }
 
-        if( fusionEnabled() && !disk )
+        if( fusionEnabled() && !disk ) {
             disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
+        }
 
-        if( executor.config.cpuPlatform )
+        if( executor.config.cpuPlatform )  {
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
+        }
 
         final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
         if( machineType ) {
@@ -247,8 +249,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // When using local SSD not all the disk sizes are valid and depends on the machine type
         if( disk?.type == 'local-ssd' && machineType ) {
             final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
-            if( validSize != disk.request )
+            if( validSize != disk.request ) {
                 disk = new DiskResource(request: validSize, type: 'local-ssd')
+                log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adjusting local disk size to: $validSize"
+            }
         }
 
         if( disk?.type ) {
@@ -370,7 +374,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     boolean checkIfCompleted() {
         final state = getJobState()
         if( state in TERMINATED ) {
-            log.debug "[GOOGLE BATCH] Terminated job=$jobId; state=$state"
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; state=$state"
             // finalize the task
             task.exitStatus = readExitFile()
             if( state == 'FAILED' ) {
@@ -393,7 +397,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             exitFile.text as Integer
         }
         catch (Exception e) {
-            log.debug "[GOOGLE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
+            log.debug "[GOOGLE BATCH] Cannot read exit status for task: `${task.lazyName()}` - ${e.message}"
             // return MAX_VALUE to signal it was unable to retrieve the exit code
             return Integer.MAX_VALUE
         }
@@ -402,11 +406,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void kill() {
         if( isSubmitted() ) {
-            log.trace "[GOOGLE BATCH] deleting job name=$jobId"
+            log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
             client.deleteJob(jobId)
         }
         else {
-            log.debug "[GOOGLE BATCH] Oops.. invalid delete action"
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"
         }
     }
 
@@ -436,7 +440,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             return GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, localSSD, families)
         }
         catch (Exception e) {
-            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `$task.name` | ${e.message}"
+            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `${task.lazyName()}` - ${e.message}"
 
             // Check if a specific machine type was provided by the user
             if( config.getMachineType() && !config.getMachineType().contains(',') && !config.getMachineType().contains('*') )
