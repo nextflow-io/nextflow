@@ -449,6 +449,38 @@ Counts the total number of records in a channel of JSON files, equivalent to `sp
 
 Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
 
+(operator-countfasta)=
+
+## countFasta
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTA files, equivalent to `splitFasta | count`. See [splitFasta](#splitfasta) for the list of available options.
+
+(operator-countfastq)=
+
+## countFastq
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTQ files, equivalent to `splitFastq | count`. See [splitFastq](#splitfastq) for the list of available options.
+
+(operator-countjson)=
+
+## countJson
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of JSON files, equivalent to `splitJson | count`. See [splitJson](#splitjson) for the list of available options.
+
+(operator-countlines)=
+
+## countLines
+
+*Returns: value channel*
+
+Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
+
 (operator-cross)=
 
 ## cross
