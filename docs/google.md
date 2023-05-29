@@ -86,6 +86,8 @@ Notes:
 
 Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
 
+(google-batch-process)=
+
 ### Process definition
 
 Processes can be defined as usual. By default, the `cpus` and `memory` directives are used to find the cheapest machine type that is available at the current location and that fits the requested resources. If `memory` is not specified, 1GB of memory is allocated per CPU.
@@ -97,7 +99,7 @@ The `machineType` directive can also be a comma-separated list of patterns. The 
 :::
 
 :::{versionadded} 23.06.0-edge
-The `machineType` directive can also be an [instance template](https://cloud.google.com/compute/docs/instance-templates), specified as `template://<instance-template>`. Using an instance template will overwrite the `accelerator` directive, as well as the following Google Batch options: `cpuPlatform`, `preemptible`, and `spot`. To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
+The `machineType` directive can also be an [instance template](https://cloud.google.com/compute/docs/instance-templates), specified as `template://<instance-template>`. Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch options: `cpuPlatform`, `preemptible`, and `spot`. To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
 
 To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
 :::
@@ -131,6 +133,24 @@ process predefined_resources_task {
     <Your script here>
     """
 }
+```
+
+:::{versionadded} 23.06.0-edge
+:::
+
+The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
+
+Examples:
+
+```groovy
+// set the boot disk size
+disk 100.GB
+
+// mount a persistent disk at '/tmp'
+disk 100.GB, type: 'pd-standard'
+
+// mount a local SSD disk at '/tmp' (should be a multiple of 375 GB)
+disk 375.GB, type: 'local-ssd'
 ```
 
 ### Pipeline execution
@@ -188,9 +208,12 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 
 The [Tower](https://cloud.tower.nf) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
 
-:::{tip}
-When Fusion is enabled, by default, only machine types that can attach local SSD disks will be used. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
+By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
+
+:::{versionadded} 23.06.0-edge
 :::
+
+The `disk` directive can be used to override the disk requested by Fusion. See the {ref}`Process definition <google-batch-process>` section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
 
 ### Supported directives
 

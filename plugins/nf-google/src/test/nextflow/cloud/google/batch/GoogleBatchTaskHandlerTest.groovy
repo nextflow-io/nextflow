@@ -26,6 +26,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
+import nextflow.executor.res.DiskResource
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -73,7 +74,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, false) >> null
 
         and:
         def taskGroup = req.getTaskGroups(0)
@@ -95,6 +96,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         !instancePolicyOrTemplate.getInstanceTemplate()
         and:
         instancePolicy.getAcceleratorsCount() == 0
+        instancePolicy.getDisksCount() == 0
         !instancePolicy.getMachineType()
         !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
@@ -118,7 +120,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_OPTS = '--this --that'
         def CPU_PLATFORM = 'Intel Skylake'
         def CPUS = 4
-        def DISK = MemoryUnit.of('50 GB')
+        def DISK = new DiskResource(request: '100 GB', type: 'pd-standard')
         def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
@@ -146,7 +148,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getAccelerator() >> ACCELERATOR
                 getContainerOptions() >> CONTAINER_OPTS
                 getCpus() >> CPUS
-                getDisk() >> DISK
+                getDiskResource() >> DISK
+                getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
                 getResourceLabels() >> [foo: 'bar']
@@ -163,7 +166,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> new CloudMachineInfo(type: MACHINE_TYPE, zone: "location", priceModel: PriceModel.spot)
+        handler.findBestMachineType(_, false) >> new GoogleBatchMachineTypeSelector.MachineType(type: MACHINE_TYPE, location: "location", priceModel: PriceModel.spot)
 
         and:
         def taskGroup = req.getTaskGroups(0)
@@ -172,10 +175,11 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         def networkInterface = allocationPolicy.getNetwork().getNetworkInterfaces(0)
         and:
-        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == DISK.toMega()
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
+        taskGroup.getTaskSpec().getVolumes(0).getMountPath() == '/tmp'
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
@@ -197,6 +201,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
+        instancePolicy.getDisks(0).getNewDisk().getSizeGb() == DISK.request.toGiga()
+        instancePolicy.getDisks(0).getNewDisk().getType() == DISK.type
         instancePolicy.getMachineType() == MACHINE_TYPE
         instancePolicy.getMinCpuPlatform() == CPU_PLATFORM
         instancePolicy.getProvisioningModel().toString() == 'SPOT'
@@ -206,6 +212,15 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNoExternalIpAddress() == true
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+
+        when:
+        req = handler.newSubmitRequest(task, launcher)
+        then:
+        task.getConfig().getDiskResource() >> new DiskResource(request: '100 GB')
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> null
+        and:
+        req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
     }
 
     def 'should use instance template' () {
@@ -298,7 +313,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with fusion enabled' () {
         given:
-        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
@@ -327,26 +341,26 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> true
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, true) >> null
         and:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         and:
-        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
-        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
-        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
+        taskGroup.getTaskSpec().getVolumes(0).getMountPath() == '/tmp'
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == '--privileged'
-        runnable.getContainer().getVolumesList() == []
+        runnable.getContainer().getVolumesCount() == 0
         and:
         runnable.getEnvironment().getVariablesMap() == env
         and:
         instancePolicy.getAcceleratorsCount() == 0
+        instancePolicy.getDisks(0).getNewDisk().getSizeGb() == 375
+        instancePolicy.getDisks(0).getNewDisk().getType() == 'local-ssd'
         !instancePolicy.getMachineType()
         !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
@@ -355,8 +369,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
-        and:
-        taskGroup.getTaskSpec().getVolumesList().size()==0
     }
 
     def 'should not set wildcard expressions as machine type'() {
@@ -386,7 +398,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, _) >> null
         and:
         req.getAllocationPolicy().getInstances(0).policy.getMachineType() == ""
 
