@@ -18,7 +18,7 @@ package nextflow.cloud.google.util
 
 import java.nio.file.Path
 
-import com.google.cloud.storage.HttpStorageOptions
+import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
@@ -42,7 +42,7 @@ class GsPathFactory extends FileSystemPathFactory {
     } ()
 
     @Lazy
-    private HttpStorageOptions storageOptions = {
+    private StorageOptions storageOptions = {
         return getStorageOptions()
     } ()
 
@@ -63,15 +63,15 @@ class GsPathFactory extends FileSystemPathFactory {
         return builder.build()
     }
 
-    static private HttpStorageOptions getStorageOptions() {
+    static private StorageOptions getStorageOptions() {
         final config = getGoogleConfig()
-        final transportOptions = HttpStorageOptions.defaults().getDefaultTransportOptions().toBuilder()
+        final transportOptions = StorageOptions.getDefaultHttpTransportOptions().toBuilder()
         if( config.httpConnectTimeout )
             transportOptions.setConnectTimeout( (int)config.httpConnectTimeout.toMillis() )
         if( config.httpReadTimeout )
             transportOptions.setReadTimeout( (int)config.httpReadTimeout.toMillis() )
 
-        return HttpStorageOptions.getDefaultInstance().toBuilder()
+        return StorageOptions.getDefaultInstance().toBuilder()
             .setTransportOptions(transportOptions.build())
             .build()
     }
