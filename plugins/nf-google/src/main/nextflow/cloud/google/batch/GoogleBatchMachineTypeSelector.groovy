@@ -16,10 +16,14 @@
  */
 package nextflow.cloud.google.batch
 
+import java.math.RoundingMode
+
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.Memoized
+import nextflow.cloud.types.PriceModel
+import nextflow.util.MemoryUnit
 
 /**
  * Choose best machine type that fits the requested resources and
@@ -77,14 +81,16 @@ class GoogleBatchMachineTypeSelector {
     static class MachineType {
         String type
         String family
+        String location
         float spotPrice
         float onDemandPrice
         int cpusPerVm
         int memPerVm
+        PriceModel priceModel
     }
 
-    String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean fusionEnabled, List<String> families) {
-        final machineTypes = getAvailableMachineTypes(region)
+    MachineType bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean fusionEnabled, List<String> families) {
+        final machineTypes = getAvailableMachineTypes(region, spot)
         if (families == null)
             families = Collections.<String>emptyList()
 
@@ -92,10 +98,11 @@ class GoogleBatchMachineTypeSelector {
         if (families.size() == 1) {
             final familyOrType = families.get(0)
             if (familyOrType.contains("custom-"))
-                return familyOrType
+                return new MachineType(type: familyOrType, family: 'custom', cpusPerVm: cpus, memPerVm: memoryMB, location: region, priceModel: spot ? PriceModel.spot : PriceModel.standard)
 
-            if (machineTypes.find { it.type == familyOrType })
-                return familyOrType
+            final machineType = machineTypes.find { it.type == familyOrType }
+            if( machineType )
+                return machineType
         }
 
         final memoryGB = Math.ceil(memoryMB / 1024.0 as float) as int
@@ -120,7 +127,7 @@ class GoogleBatchMachineTypeSelector {
             (it.cpusPerVm > 2 || it.memPerVm > 2 ? FAMILY_COST_CORRECTION.get(it.family, 1.0) : 1.0) * (spot ? it.spotPrice : it.onDemandPrice)
         }
 
-        return sortedByCost.first().type
+        return sortedByCost.first()
     }
 
     protected boolean matchType(String family, String vmType) {
@@ -135,7 +142,8 @@ class GoogleBatchMachineTypeSelector {
     }
 
     @Memoized
-    protected List<MachineType> getAvailableMachineTypes(String region) {
+    protected List<MachineType> getAvailableMachineTypes(String region, boolean spot) {
+        final priceModel = spot ? PriceModel.spot : PriceModel.standard
         final json = "${CLOUD_INFO_API}/providers/google/services/compute/regions/${region}/products".toURL().text
         final data = new JsonSlurper().parseText(json)
         final products = data['products'] as List<Map>
@@ -148,8 +156,98 @@ class GoogleBatchMachineTypeSelector {
                     spotPrice: averageSpotPrice(it.spotPrice as List<Map>),
                     onDemandPrice: it.onDemandPrice as float,
                     cpusPerVm: it.cpusPerVm as int,
-                    memPerVm: it.memPerVm as int
+                    memPerVm: it.memPerVm as int,
+                    location: region,
+                    priceModel: priceModel
             )
         }
     }
+
+    /**
+     * Find valid local SSD size. See: https://cloud.google.com/compute/docs/disks#local_ssd_machine_type_restrictions
+     *
+     * @param requested Amount of disk requested
+     * @param machineType Machine type
+     * @return Next greater multiple of 375 GB that is a valid size for the given machine type
+     */
+    protected MemoryUnit findValidLocalSSDSize(MemoryUnit requested, MachineType machineType) {
+
+        if( machineType.family == "n1" )
+            return findFirstValidSize(requested, [1,2,3,4,5,6,7,8,16,24])
+
+        if( machineType.family == "n2" ) {
+            if( machineType.cpusPerVm < 12 )
+                return findFirstValidSize(requested, [1,2,4,8,16,24])
+            if( machineType.cpusPerVm < 22 )
+                return findFirstValidSize(requested, [2,4,8,16,24])
+            if( machineType.cpusPerVm < 42 )
+                return findFirstValidSize(requested, [4,8,16,24])
+            if( machineType.cpusPerVm < 82 )
+                return findFirstValidSize(requested, [8,16,24])
+            return findFirstValidSize(requested, [16,24])
+        }
+
+        if( machineType.family == "n2d" ) {
+            if( machineType.cpusPerVm < 32 )
+                return findFirstValidSize(requested, [1,2,4,8,16,24])
+            if( machineType.cpusPerVm < 64 )
+                return findFirstValidSize(requested, [2,4,8,16,24])
+            if( machineType.cpusPerVm < 96 )
+                return findFirstValidSize(requested, [4,8,16,24])
+            return findFirstValidSize(requested, [8,16,24])
+        }
+
+        if( machineType.family == "c2" ) {
+            if( machineType.cpusPerVm < 16 )
+                return findFirstValidSize(requested, [1,2,4,8])
+            if( machineType.cpusPerVm < 30 )
+                return findFirstValidSize(requested, [2,4,8])
+            if( machineType.cpusPerVm < 60 )
+                return findFirstValidSize(requested, [4,8])
+            return findFirstValidSize(requested, [8])
+        }
+
+        if( machineType.family == "c2d" ) {
+            if( machineType.cpusPerVm < 32 )
+                return findFirstValidSize(requested, [1,2,4,8])
+            if( machineType.cpusPerVm < 56 )
+                return findFirstValidSize(requested, [2,4,8])
+            if( machineType.cpusPerVm < 112 )
+                return findFirstValidSize(requested, [4,8])
+            return findFirstValidSize(requested, [8])
+        }
+
+        if( machineType.family == "m3" ) {
+            if ( machineType.type == 'm3-megamem-128' || machineType.type == 'm3-ultramem-128' )
+                return findFirstValidSize(requested, [8])
+            return findFirstValidSize(requested, [4,8])
+        }
+
+        // other special families the user must provide a valid size
+        return requested
+    }
+
+    /**
+     * Find first valid disk size given the possible mounted partition
+     *
+     * @param requested Requested disk size
+     * @param allowedPartitions Valid number of disks of 375.GB.
+     * @return
+     */
+    protected MemoryUnit findFirstValidSize(MemoryUnit requested, List<Integer> allowedPartitions) {
+
+        // Sort the possible number of disks
+        allowedPartitions.sort()
+
+        // Minimum number of 375.GB disks to fulfill the requested size
+        final disks = (requested.toGiga() / 375).setScale(0, RoundingMode.UP).toInteger()
+
+        // Find first valid number of disks
+        def numberOfDisks = allowedPartitions.find { it >= disks}
+        if( !numberOfDisks )
+            numberOfDisks = allowedPartitions.last()
+
+        return new MemoryUnit( numberOfDisks * 375L * (1<<30) )
+    }
+
 }
