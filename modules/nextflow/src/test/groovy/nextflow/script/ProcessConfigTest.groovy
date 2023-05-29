@@ -678,6 +678,27 @@ class ProcessConfigTest extends Specification {
         process.accelerator == [request: 1, limit:5]
     }
 
+    def 'should apply disk config' () {
+
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.disk '100 GB'
+        then:
+        process.disk == [request: '100 GB']
+
+        when:
+        process.disk '375 GB', type: 'local-ssd'
+        then:
+        process.disk == [request: '375 GB', type: 'local-ssd']
+
+        when:
+        process.disk request: '375 GB', type: 'local-ssd'
+        then:
+        process.disk == [request: '375 GB', type: 'local-ssd']
+    }
+
     def 'should apply architecture config' () {
 
         given:

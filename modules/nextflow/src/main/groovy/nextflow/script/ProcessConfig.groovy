@@ -932,6 +932,42 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    /**
+     * Allow user to specify `disk` directive as a value with a list of options, eg:
+     *
+     *     disk 375.GB, type: 'local-ssd'
+     *
+     * @param opts
+     *      A map representing the disk options
+     * @param value
+     *      The default disk value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( Map opts, value )  {
+        opts.request = value
+        return disk(opts)
+    }
+
+    /**
+     * Allow user to specify `disk` directive as a value or a list of options, eg:
+     *
+     *     disk 100.GB
+     *     disk request: 375.GB, type: 'local-ssd'
+     *
+     * @param value
+     *      The default disk value or map of options
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( value ) {
+        if( value instanceof Map || value instanceof Closure )
+            configProperties.put('disk', value)
+        else
+            configProperties.put('disk', [request: value])
+        return this
+    }
+
     ProcessConfig arch( Map params, value )  {
         if( value instanceof String ) {
             if( params.name==null )

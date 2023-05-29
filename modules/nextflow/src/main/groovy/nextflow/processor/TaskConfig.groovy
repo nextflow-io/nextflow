@@ -29,6 +29,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
+import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
@@ -252,21 +253,20 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
-    MemoryUnit getDisk() {
+    DiskResource getDiskResource() {
         def value = get('disk')
 
-        if( !value )
-            return null
+        if( value instanceof Map )
+            return new DiskResource((Map)value)
 
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
+        if( value != null )
+            return new DiskResource(value)
 
-        try {
-            new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
-        }
+        return null
+    }
+
+    MemoryUnit getDisk() {
+        getDiskResource()?.getRequest()
     }
 
     Duration getTime() {
