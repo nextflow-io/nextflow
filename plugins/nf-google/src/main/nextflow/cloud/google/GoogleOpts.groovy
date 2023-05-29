@@ -68,14 +68,8 @@ class GoogleOpts {
         result.projectId = config.navigate("google.project") as String
         result.location = config.navigate("google.location") as String
         result.enableRequesterPaysBuckets = config.navigate('google.enableRequesterPaysBuckets') as boolean
-
-        final httpConnectTimeout = config.navigate('google.httpConnectTimeout')
-        if( httpConnectTimeout )
-            result.httpConnectTimeout = httpConnectTimeout as Duration
-
-        final httpReadTimeout = config.navigate('google.httpReadTimeout')
-        if( httpReadTimeout )
-            result.httpReadTimeout = httpReadTimeout as Duration
+        result.httpConnectTimeout = config.navigate('google.httpConnectTimeout', '60s') as Duration
+        result.httpReadTimeout = config.navigate('google.httpReadTimeout', '60s') as Duration
 
         if( result.enableRequesterPaysBuckets && !result.projectId )
             throw new IllegalArgumentException("Config option 'google.enableRequesterPaysBuckets' cannot be honoured because the Google project Id has not been specified - Provide it by adding the option 'google.project' in the nextflow.config file")

@@ -95,8 +95,8 @@ class GsPathFactoryTest extends Specification {
 
         where:
         CONNECT | CONNECT_MILLIS | READ  | READ_MILLIS
-        null    | 20000          | null  | 20000
-        '20s'   | 20000          | '20s' | 20000
+        null    | 60000          | null  | 60000
+        '30s'   | 30000          | '30s' | 30000
         '60s'   | 60000          | '60s' | 60000
     }
 }

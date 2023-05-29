@@ -718,12 +718,12 @@ The following settings are available:
 `google.httpConnectTimeout`
 : :::{versionadded} 23.06.0-edge
   :::
-: Defines the HTTP connection timeout for Cloud Storage API requests (default: `'20s'`).
+: Defines the HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
 
 `google.httpReadTimeout`
 : :::{versionadded} 23.06.0-edge
   :::
-: Defines the HTTP read timeout for Cloud Storage API requests (default: `'20s'`).
+: Defines the HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
 
 `google.location`
 : The Google Cloud location where jobs are executed (default: `us-central1`).
