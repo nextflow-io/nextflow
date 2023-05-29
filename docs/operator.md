@@ -417,6 +417,38 @@ An optional filter can be provided to select which items to count. The selection
 :language: console
 ```
 
+(operator-countfasta)=
+
+## countFasta
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTA files, equivalent to `splitFasta | count`. See [splitFasta](#splitfasta) for the list of available options.
+
+(operator-countfastq)=
+
+## countFastq
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTQ files, equivalent to `splitFastq | count`. See [splitFastq](#splitfastq) for the list of available options.
+
+(operator-countjson)=
+
+## countJson
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of JSON files, equivalent to `splitJson | count`. See [splitJson](#splitjson) for the list of available options.
+
+(operator-countlines)=
+
+## countLines
+
+*Returns: value channel*
+
+Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
+
 (operator-cross)=
 
 ## cross
@@ -1016,6 +1048,8 @@ my_channel = Channel.of(10, 20, 30)
 
 See also: [tap](#tap)
 
+(operator-splitcsv)=
+
 ## splitCsv
 
 *Returns: queue channel*
@@ -1086,6 +1120,8 @@ Available options:
 `strip`
 : Removes leading and trailing blanks from values (default: `false`).
 
+(operator-splitfasta)=
+
 ## splitFasta
 
 *Returns: queue channel*
@@ -1154,9 +1190,9 @@ Available options:
 `size`
 : Defines the size of the expected chunks as a memory unit, e.g. `1.MB`.
 
-:::{tip}
-You can also use `countFasta` to count the number of entries in the FASTA file(s).
-:::
+See also: [countFasta](#countfasta)
+
+(operator-splitfastq)=
 
 ## splitFastq
 
@@ -1237,9 +1273,9 @@ Available options:
   - `qualityHeader`: Base quality header (it may be empty)
   - `qualityString`: Quality values for the sequence
 
-:::{tip}
-You can also use `countFastq` to count the number of entries in the FASTQ file(s).
-:::
+See also: [countFastq](#countfastq)
+
+(operator-splitjson)=
 
 ## splitJson
 
@@ -1281,9 +1317,9 @@ Available options:
 `path`
 : Defines a query for a section of the JSON document to parse and split. The expression should be a path similar to [JSONPath](https://goessner.net/articles/JsonPath/). The empty string is the document root (default). An integer in brackets is a zero-based index in a JSON array. A string preceded by a dot `.` is a key in a JSON object.
 
-:::{tip}
-You can also use `countJson` to count the number of elements in a JSON array or object.
-:::
+See also: [countJson](#countjson)
+
+(operator-splittext)=
 
 ## splitText
 
@@ -1351,9 +1387,7 @@ Available options:
 `limit`
 : Limits the number of lines to retrieve for each item from the input channel (default: no limit).
 
-:::{tip}
-You can also use `countLines` to count the number of lines in the text file(s).
-:::
+See also: [countLines](#countlines)
 
 (operator-subscribe)=
 
