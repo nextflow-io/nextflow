@@ -155,8 +155,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             )
 
         def disk = task.config.getDiskResource()
+        // apply disk directive to boot disk if type is not specified
         if( disk && !disk.type )
             computeResource.setBootDiskMib( disk.request.getMega() )
+        // otherwise use config setting
         else if( executor.config.bootDiskSize )
             computeResource.setBootDiskMib( executor.config.bootDiskSize.getMega() )
 
@@ -232,7 +234,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
         }
 
-        if( executor.config.cpuPlatform )  {
+        if( executor.config.cpuPlatform ) {
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
         }
 
@@ -255,6 +257,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             }
         }
 
+        // use disk directive for an attached disk if type is specified
         if( disk?.type ) {
             instancePolicy.addDisks(
                 AllocationPolicy.AttachedDisk.newBuilder()
