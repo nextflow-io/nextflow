@@ -794,19 +794,17 @@ class AwsBatchTaskHandlerTest extends Specification {
     def 'should kill a job' () {
         given:
         def JOB_ID = '54321'
+        def executor = Mock(AwsBatchExecutor)
         def task = Mock(TaskRun)
         def handler = Spy(AwsBatchTaskHandler)
+        handler.@executor = executor
         handler.task = task
         handler.@jobId = JOB_ID
-
-        def req = Mock(TerminateJobRequest)
-        req.getJobId() >> JOB_ID
-        req.getReason() >> 'Job killed by NF'
 
         when:
         handler.kill()
         then:
-        1 * handler.terminateJob(req) >> null
+        1 * executor.killTask(JOB_ID)
 
     }
 

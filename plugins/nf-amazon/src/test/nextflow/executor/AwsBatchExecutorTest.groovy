@@ -10,6 +10,7 @@ package nextflow.executor
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.aws.batch.AwsBatchExecutor
+import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
 
 /**
@@ -41,6 +42,27 @@ class AwsBatchExecutorTest extends Specification {
         [:]                         | [FUSION_ENABLED:'true']   | true
         [:]                         | [FUSION_ENABLED:'false']  | false
 
+    }
+
+    def 'should kill tasks' () {
+        given:
+        def reaper = Mock(ThrottlingExecutor) {
+            submit(_) >> { args -> args[0]() }
+        }
+        def executor = Spy(AwsBatchExecutor)
+        executor.@reaper = reaper
+
+        when:
+        executor.killTask('job-id')
+        executor.killTask('job-id')
+        then:
+        1 * executor.killTask0('job-id') >> null
+
+        when:
+        executor.killTask('array-job-id:0')
+        executor.killTask('array-job-id:1')
+        then:
+        1 * executor.killTask0('array-job-id') >> null
     }
 
 }

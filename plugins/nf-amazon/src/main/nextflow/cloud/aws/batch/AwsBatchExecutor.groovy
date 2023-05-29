@@ -279,13 +279,15 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
             deletedJobs.add(jobId)
 
         // submit terminate request
-        reaper.submit({
-            final req = new TerminateJobRequest()
-                .withJobId(jobId)
-                .withReason('Job killed by NF')
-            final resp = client.terminateJob(req)
-            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
-        })
+        reaper.submit({ killTask0(jobId) })
+    }
+
+    protected void killTask0(String jobId) {
+        final req = new TerminateJobRequest()
+            .withJobId(jobId)
+            .withReason('Job killed by NF')
+        final resp = client.terminateJob(req)
+        log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
     }
 
     CloudMachineInfo getMachineInfoByQueueAndTaskArn(String queue, String taskArn) {
