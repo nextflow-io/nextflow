@@ -39,6 +39,7 @@ class WaveConfig {
     final private String buildRepository
     final private String cacheRepository
     final private String containerPlatform
+    final private RetryOpts retryOpts
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -51,6 +52,7 @@ class WaveConfig {
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
         this.containerPlatform = opts.containerPlatform
+        this.retryOpts = new RetryOpts(opts.retry as Map ?: Map.of())
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
@@ -60,6 +62,8 @@ class WaveConfig {
     String endpoint() { this.endpoint }
 
     CondaOpts condaOpts() { this.condaOpts }
+
+    RetryOpts retryOpts() { this.retryOpts }
 
     List<String> strategy() { this.strategy }
 
