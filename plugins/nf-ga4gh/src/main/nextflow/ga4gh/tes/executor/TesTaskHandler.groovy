@@ -148,7 +148,8 @@ class TesTaskHandler extends TaskHandler {
     void submit() {
 
         // create task wrapper
-        final bash = new TesBashBuilder(task)
+        String remoteBinDir = executor.getRemoteBinDir()
+        final bash = new TesBashBuilder(task, remoteBinDir)
         bash.build()
 
         final body = newTesTask()
@@ -194,6 +195,8 @@ class TesTaskHandler extends TaskHandler {
         task.outputFilesNames?.each { fileName ->
             body.addOutputsItem(outItem(fileName))
         }
+
+        body.setName(task.getName())
 
         // add the executor
         body.executors = [exec]
