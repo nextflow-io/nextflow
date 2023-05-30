@@ -25,8 +25,10 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 import java.util.regex.Pattern
 
 import com.google.common.cache.Cache
@@ -35,6 +37,11 @@ import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -214,7 +221,7 @@ class WaveClient {
                 .build()
 
         try {
-            final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+            final resp = httpSend(req)
             log.debug "Wave response: statusCode=${resp.statusCode()}; body=${resp.body()}"
             if( resp.statusCode()==200 )
                 return jsonToSubmitResponse(resp.body())
@@ -232,7 +239,7 @@ class WaveClient {
             else
                 throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
         }
-        catch (ConnectException e) {
+        catch (IOException e) {
             throw new IllegalStateException("Unable to connect Wave service: $endpoint")
         }
     }
@@ -279,7 +286,7 @@ class WaveClient {
                 .GET()
                 .build()
 
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        final resp = httpSend(req)
         final code = resp.statusCode()
         if( code>=200 && code<400 ) {
             log.debug "Wave container config response: [$code] ${resp.body()}"
@@ -580,7 +587,7 @@ class WaveClient {
                 .POST(HttpRequest.BodyPublishers.ofString("grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}"))
                 .build()
 
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        final resp = httpSend(req)
         log.debug "Refresh cookie response: [${resp.statusCode()}] ${resp.body()}"
         if( resp.statusCode() != 200 )
             return false
@@ -673,5 +680,32 @@ class WaveClient {
                 .create();
         final type = new TypeToken<DescribeContainerResponse>(){}.getType()
         return gson.fromJson(json, type)
+    }
+
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        final cfg = config.retryOpts()
+        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}", event.lastFailure)
+            }
+        }
+        return RetryPolicy.<T>builder()
+                .handleIf(cond)
+                .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(cfg.maxAttempts)
+                .withJitter(cfg.jitter)
+                .onRetry(listener)
+                .build()
+    }
+
+    protected <T> T safeApply(CheckedSupplier<T> action) {
+        final cond = (e -> e instanceof IOException)  as Predicate<? extends Throwable>
+        final policy = retryPolicy(cond)
+        return Failsafe.with(policy).get(action)
+    }
+
+    protected HttpResponse<String> httpSend(HttpRequest req)  {
+        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
     }
 }
