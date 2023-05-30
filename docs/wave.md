@@ -201,3 +201,15 @@ The following configuration options are available:
 
 `wave.report.file` (preview)
 : The name of the containers report file (default: `containers-<timestamp>.config` requires version `23.06.0-edge` or later).
+
+`wave.retry.delay` 
+: The initial delay when a failing HTTP request is retried (default: `150ms`). 
+
+`wave.retry.maxDelay`
+: The max delay when a failing HTTP request is retried (default: `90 seconds`).
+
+`wave.retry.maxAttempts`
+: The max number of attempts a failing HTTP request is retried (default: `5`).
+
+`wave.retry.jitter`
+: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).
