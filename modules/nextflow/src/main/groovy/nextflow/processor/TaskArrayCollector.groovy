@@ -68,7 +68,8 @@ class TaskArrayCollector {
 
         try {
             // submit task directly if the collector is closed
-            if( closed ) {
+            // or if the task is retried (since it might have dynamic resources)
+            if( closed || task.config.getAttempt() > 1 ) {
                 executor.submit(task)
                 return
             }
