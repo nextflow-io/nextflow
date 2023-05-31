@@ -16,8 +16,6 @@
 
 package nextflow.cloud.google.batch
 
-import java.nio.file.Path
-
 import com.google.cloud.batch.v1.Volume
 
 /**
@@ -26,11 +24,6 @@ import com.google.cloud.batch.v1.Volume
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface GoogleBatchLauncherSpec {
-
-    /**
-     * @return The equvalent container mount for a remote path.
-     */
-    Path toContainerMount(Path path)
 
     /**
      * @return

@@ -17,7 +17,6 @@
 
 package nextflow.cloud.google.batch
 
-import java.nio.file.Path
 
 import com.google.cloud.batch.v1.Volume
 import groovy.transform.CompileStatic
@@ -39,11 +38,6 @@ class GoogleBatchFusionAdapter implements GoogleBatchLauncherSpec {
     GoogleBatchFusionAdapter(FusionAwareTask task, FusionScriptLauncher launcher) {
         this.task = task
         this.launcher = launcher
-    }
-
-    @Override
-    Path toContainerMount(Path path) {
-        return launcher.toContainerMount(path)
     }
 
     @Override

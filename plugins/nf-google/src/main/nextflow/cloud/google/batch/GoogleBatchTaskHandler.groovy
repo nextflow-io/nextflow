@@ -136,7 +136,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     String getWorkDir() {
-        spec0(launcher).toContainerMount(task.workDir).toString()
+        launcher.workDir.toString()
     }
 
     @Override
@@ -463,7 +463,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     void kill() {
         if( isSubmitted() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
-            client.deleteJob(jobId)
+            executor.killTask(jobId)
         }
         else {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"

@@ -86,7 +86,7 @@ class GridTaskHandlerTest extends Specification {
         def handler = Spy(new GridTaskHandler(task, exec))
 
         when:
-        def result = handler.fusionSubmitDirective(task)
+        def result = handler.submitDirective(task)
         
         then:
         1 * exec.getHeaders(task) >> "#FOO this\n#BAR that\n#OUT file=${WORK_DIR}/.command.log\n"

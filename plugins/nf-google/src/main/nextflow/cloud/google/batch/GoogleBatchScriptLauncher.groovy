@@ -96,7 +96,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return result
     }
 
-    Path toContainerMount(Path path, boolean parent=false) {
+    protected Path toContainerMount(Path path, boolean parent=false) {
         if( path instanceof CloudStoragePath ) {
             buckets.add(path.bucket())
             pathTrie.add( (parent ? "/${path.bucket()}${path.parent}" : "/${path.bucket()}${path}").toString() )

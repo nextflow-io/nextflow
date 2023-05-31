@@ -99,15 +99,7 @@ class BatchClient {
         return batchServiceClient.getTask(name)
     }
 
-    static private Set<String> deletedJobs = [] as Set
-
     void deleteJob(String jobId) {
-        // prevent duplicate delete requests on the same job
-        if( jobId in deletedJobs )
-            return
-        else
-            deletedJobs.add(jobId)
-
         final name = JobName.of(projectId, location, jobId).toString()
 
         batchServiceClient.deleteJobAsync(name)

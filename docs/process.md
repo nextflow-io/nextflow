@@ -1252,19 +1252,17 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 ## array
 
-:::{note}
-This feature requires Nextflow version `23.05.0-edge` or later.
+:::{versionadded} 23.06.0-edge
 :::
 
-:::{warning}
-This feature is experimental and may change in a future release.
+:::{warning} *Experimental: may change in a future release.*
 :::
 
 The `array` directive allows you to submit tasks as *array jobs* for executors that support it.
 
 An array job is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Array jobs incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
 
-It should be specified with a given array size, as well as an executor that supports array jobs. For example:
+The directive should be specified with a given array size, along with an executor that supports array jobs. For example:
 
 ```groovy
 process cpu_task {
@@ -1303,7 +1301,7 @@ The following directives must be uniform across all tasks in a process that uses
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
-For cloud-based executors like AWS Batch, the following additional directives must be uniform:
+For cloud-based executors like AWS Batch, or when using Fusion with any executor, the following additional directives must be uniform:
 
 - {ref}`process-container`
 - {ref}`process-containerOptions`

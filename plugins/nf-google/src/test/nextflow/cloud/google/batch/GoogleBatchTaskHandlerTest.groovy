@@ -45,7 +45,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should create submit request with minimal spec' () {
         given:
         def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch/01/23456789abcdef')
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig)
@@ -109,7 +109,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with maximal spec' () {
         given:
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch/01/23456789abcdef')
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         and:
         def ACCELERATOR = new AcceleratorResource(request: 1, type: 'nvidia-tesla-v100')
         def BOOT_DISK = MemoryUnit.of('10 GB')
@@ -250,7 +250,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with fusion enabled' () {
         given:
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch/01/23456789abcdef')
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig)

@@ -51,6 +51,8 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayA
     private Path remoteBinDir
     private BatchLogging logging
 
+    private Set<String> deletedJobs = [] as Set
+
     BatchClient getClient() { return client }
     BatchConfig getConfig() { return config }
     Path getRemoteBinDir() { return remoteBinDir }
@@ -124,6 +126,17 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayA
     @Override
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
+    }
+
+    void killTask(String jobId) {
+        // prevent duplicate delete requests on the same job
+        if( jobId in deletedJobs )
+            return
+        else
+            deletedJobs.add(jobId)
+
+        // delete job
+        client.deleteJob(jobId)
     }
 
     @Override
