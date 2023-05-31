@@ -640,7 +640,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     @Override
-    List<String> getSubmitCommand() {
+    List<String> getLaunchCommand() {
         // final launcher command
         return fusionEnabled()
                 ? fusionSubmitCli()
@@ -714,7 +714,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
         def container = new ContainerOverrides()
-        container.command = getSubmitCommand()
+        container.command = getLaunchCommand()
         // set the task memory
         if( task.config.getMemory() ) {
             final mega = (int)task.config.getMemory().toMega()

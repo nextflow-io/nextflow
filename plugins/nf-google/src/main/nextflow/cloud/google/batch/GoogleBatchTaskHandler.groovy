@@ -140,7 +140,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    List<String> getSubmitCommand() {
+    List<String> getLaunchCommand() {
         spec0(launcher).launchCommand()
     }
 

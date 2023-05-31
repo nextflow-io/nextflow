@@ -104,7 +104,7 @@ abstract class TaskHandler {
     /**
      * Get the command to execute the launcher script.
      */
-    List<String> getSubmitCommand() { null }
+    List<String> getLaunchCommand() { null }
 
     /**
      * Task status attribute setter.

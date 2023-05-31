@@ -109,9 +109,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    List<String> getSubmitCommand() {
+    List<String> getLaunchCommand() {
         final cmd = fusionEnabled()
-            ? fusionSubmitCommand(task)
+            ? fusionLaunchCommand(task)
             : "cd ${task.workDir} ; bash ${TaskRun.CMD_RUN} | tee ${TaskRun.CMD_LOG}"
 
         List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
@@ -238,7 +238,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final builder = new StringBuilder()
             << '#!/bin/bash\n'
             << fusionSubmitDirective(task)
-            << fusionSubmitCommand(task) << '\n'
+            << fusionLaunchCommand(task) << '\n'
         return builder.toString()
     }
 
@@ -252,7 +252,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    protected String fusionSubmitCommand(TaskRun task) {
+    protected String fusionLaunchCommand(TaskRun task) {
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
         final submit = fusionSubmitCli()
