@@ -59,8 +59,6 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
         // map bean work and target dirs to container mount
         // this is needed to create the command launcher using container local file paths
-        toContainerMount(bean.workDir.parent.parent)
-
         bean.workDir = toContainerMount(bean.workDir)
         bean.targetDir = toContainerMount(bean.targetDir)
 

@@ -17,6 +17,7 @@
 
 package nextflow.cloud.google.batch
 
+
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
@@ -143,6 +144,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         spec0(launcher).launchCommand()
     }
 
+    List<String> getContainerMounts() {
+        spec0(launcher).getContainerMounts()
+    }
+
     @Override
     void submit() {
         /*
@@ -224,6 +229,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( containerOptions )
             container.setOptions( containerOptions )
+
+        // add child container mounts if task is an array
+        if( task instanceof TaskArray )
+            for( TaskHandler handler : ((TaskArray)task).children )
+                container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
         // task spec
         final env = Environment
