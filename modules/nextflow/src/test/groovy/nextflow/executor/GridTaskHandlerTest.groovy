@@ -127,18 +127,18 @@ class GridTaskHandlerTest extends Specification {
                 '''.stripIndent(true)
     }
 
-    def 'should create launch command' () {
+    def 'should get submit command' () {
         given:
-        def exec = Spy(GridTaskHandler)
+        def handler = Spy(GridTaskHandler)
 
         expect:
-        exec.launchCmd0(new ProcessBuilder().command(['qsub', '/some/file']), null) == 'qsub /some/file'
+        handler.submitCmd0(new ProcessBuilder().command(['qsub', '/some/file']), null) == 'qsub /some/file'
         and:
-        exec.launchCmd0(new ProcessBuilder().command(['qsub']), 'docker run /some/file') ==
+        handler.submitCmd0(new ProcessBuilder().command(['qsub']), 'docker run /some/file') ==
                 '''\
-                cat << 'LAUNCH_COMMAND_EOF' | qsub
+                cat << 'SUBMIT_COMMAND_EOF' | qsub
                 docker run /some/file
-                LAUNCH_COMMAND_EOF
+                SUBMIT_COMMAND_EOF
                 '''.stripIndent()
     }
 }

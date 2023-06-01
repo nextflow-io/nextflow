@@ -47,7 +47,7 @@ class AwsBatchExecutorTest extends Specification {
     def 'should kill tasks' () {
         given:
         def reaper = Mock(ThrottlingExecutor) {
-            submit(_) >> { args -> args[0]() }
+            submit(_) >> { Closure cl -> cl() }
         }
         def executor = Spy(AwsBatchExecutor)
         executor.@reaper = reaper

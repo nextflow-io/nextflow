@@ -157,7 +157,7 @@ class TaskArrayCollector {
      */
     protected String createTaskArrayScript(List<TaskHandler> array) {
         // get work directory and launch command for each task
-        final workDirs = array.collect( handler -> handler.getWorkDir() )
+        final workDirs = array.collect( h -> h.getWorkDir() )
         final args = array.first().getLaunchCommand().toArray() as String[]
         final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${task_dir}')
 
