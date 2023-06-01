@@ -55,14 +55,8 @@ class TesExecutor extends Executor implements ExtensionPoint {
 
     @Override
     protected void register() {
-        if( session.binDir && !session.binDir.empty() && !session.workDir ) {
-            session.abort()
-            throw new AbortOperationException("ERROR: TES executor does not allow the use of custom scripts in the `bin` folder without a workdir")
-        } else {
-            uploadBinDir()
-        }
-
         super.register()
+        uploadBinDir()
 
         client = new TaskServiceApi( new ApiClient(basePath: getEndPoint()) )
     }
