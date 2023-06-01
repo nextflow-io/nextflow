@@ -18,9 +18,11 @@ package nextflow.cloud.aws
 
 import com.amazonaws.AmazonClientException
 import com.amazonaws.ClientConfiguration
+import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
@@ -254,7 +256,24 @@ class AwsClientFactory {
         else
             builder.withRegion(region)
 
-        final credentials = getCredentialsProvider0()
+        final credentials = new AWSCredentialsProvider() {
+
+            private AWSCredentialsProvider chain = getCredentialsProvider0()
+
+            @Override
+            AWSCredentials getCredentials() {
+                try {
+                    chain.getCredentials()
+                }
+                catch( AmazonClientException e ) {
+                    new AnonymousAWSCredentials()
+                }
+            }
+
+            @Override
+            void refresh() {}
+        }
+
         if( credentials )
             builder.withCredentials(credentials)
 
