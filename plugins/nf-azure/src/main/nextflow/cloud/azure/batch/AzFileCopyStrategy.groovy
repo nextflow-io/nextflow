@@ -112,7 +112,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir, List<String> inputFiles) {
         final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
         log.trace "[AZURE BATCH] Unstaging file path: $patterns"

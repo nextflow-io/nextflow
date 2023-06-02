@@ -167,7 +167,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * to the shared working directory
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir, List<String> inputFiles) {
         final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $patterns"
@@ -182,7 +182,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
         return """\
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            for name in \$(eval "find . -maxdepth 1 \\( ${escape.collect {"-name '$it'"}.join(" -o ") } \\) ${inputFiles.collect {"! -name '$it'"}.join(" ") }" | sort | uniq); do
                 ${stageOutCommand('$name', targetDir, mode)} || true
             done
             unset IFS""".stripIndent(true)

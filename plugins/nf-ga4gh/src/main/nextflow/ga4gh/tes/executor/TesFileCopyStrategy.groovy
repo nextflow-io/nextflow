@@ -51,7 +51,7 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir, List<String> inputFiles) {
         return null
     }
 

@@ -104,7 +104,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir, List<String> inputFiles) {
 
         final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
@@ -120,7 +120,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         return """\
             uploads=()
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            for name in \$(eval "find . -maxdepth 1 \\( ${escape.collect {"-name '$it'"}.join(" -o ") } \\) ${inputFiles.collect {"! -name '$it'"}.join(" ") }" | sort | uniq); do
                 uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}")
             done
             unset IFS
