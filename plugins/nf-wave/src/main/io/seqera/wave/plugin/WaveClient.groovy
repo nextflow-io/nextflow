@@ -687,7 +687,7 @@ class WaveClient {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}", event.lastFailure)
+                log.debug("Wave connection failure - attempt: ${event.attemptCount}", event.lastFailure)
             }
         }
         return RetryPolicy.<T>builder()
