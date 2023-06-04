@@ -23,7 +23,13 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AnonymousAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 /**
+ * AWS credentials provider that delegates the credentials to the
+ * specified provider class and fallback to the {@link AnonymousAWSCredentials}
+ * when no credentials are available.
+ *
+ * See also {@link com.amazonaws.services.s3.S3CredentialsProviderChain}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
