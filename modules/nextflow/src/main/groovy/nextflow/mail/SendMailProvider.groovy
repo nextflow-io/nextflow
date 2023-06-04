@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2020-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,36 +15,22 @@
  *
  */
 
-package io.seqera.wave.plugin.config
-
-import groovy.transform.CompileStatic
-import nextflow.trace.TraceHelper
+package nextflow.mail
 
 /**
+ * Send a mail using the `sendmail` sys tool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class ReportOpts {
+class SendMailProvider extends BaseMailProvider {
 
-    final private Boolean enabled
-
-    final private String file
-
-    ReportOpts(Map opts) {
-        this.enabled = opts.enabled as Boolean
-        this.file = opts.file
+    @Override
+    String name() {
+        return 'sendmail'
     }
 
-    boolean enabled() {
-        enabled || file != null
-    }
-
-    String file() {
-        if( file )
-            return file
-        return enabled
-            ? "containers-${TraceHelper.launchTimestampFmt()}.config"
-            : null
+    @Override
+    boolean textOnly() {
+        return false
     }
 }

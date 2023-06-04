@@ -15,31 +15,27 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package io.seqera.wave.config;
 
-import nextflow.util.Duration
-import spock.lang.Specification
+import java.util.List;
+import java.util.Map;
 
 /**
+ * Conda build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class RetryOptsTest extends Specification {
+public class CondaOpts {
+    final public static String DEFAULT_MAMBA_IMAGE = "mambaorg/micromamba:1.4.2";
 
-    def 'should create retry config' () {
+    final public String mambaImage;
+    final public List<String> commands;
+    final public String basePackages;
 
-        expect:
-        new RetryOpts().delay == Duration.of('150ms')
-        new RetryOpts().maxDelay == Duration.of('90s')
-        new RetryOpts().maxAttempts == 5
-        new RetryOpts().jitter == 0.25d
-
-        and:
-        new RetryOpts([maxAttempts: 20]).maxAttempts == 20
-        new RetryOpts([delay: '1s']).delay == Duration.of('1s')
-        new RetryOpts([maxDelay: '1m']).maxDelay == Duration.of('1m')
-        new RetryOpts([jitter: '0.5']).jitter == 0.5d
-
+    public CondaOpts(Map<String,?> opts) {
+        this.mambaImage = opts.containsKey("mambaImage") ? opts.get("mambaImage").toString(): DEFAULT_MAMBA_IMAGE;
+        this.commands = opts.containsKey("commands") ? (List<String>)opts.get("commands") : null;
+        this.basePackages = (String)opts.get("basePackages");
     }
 
 }

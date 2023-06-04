@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2020-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,36 +15,23 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package nextflow.mail
 
-import groovy.transform.CompileStatic
-import nextflow.trace.TraceHelper
+import javax.mail.internet.MimeMessage
+
+import org.pf4j.ExtensionPoint
 
 /**
+ * Define a generic interface to send an email modelled as a Mime message object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class ReportOpts {
+interface MailProvider extends ExtensionPoint {
 
-    final private Boolean enabled
+    void send(MimeMessage message, Mailer mailer)
 
-    final private String file
+    String name()
 
-    ReportOpts(Map opts) {
-        this.enabled = opts.enabled as Boolean
-        this.file = opts.file
-    }
+    boolean textOnly()
 
-    boolean enabled() {
-        enabled || file != null
-    }
-
-    String file() {
-        if( file )
-            return file
-        return enabled
-            ? "containers-${TraceHelper.launchTimestampFmt()}.config"
-            : null
-    }
 }
