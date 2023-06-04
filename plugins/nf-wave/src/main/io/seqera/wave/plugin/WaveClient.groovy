@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+import static io.seqera.wave.util.DockerHelper.*
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -54,12 +55,10 @@ import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
-import nextflow.executor.BashTemplateEngine
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.util.MustacheTemplateEngine
 import nextflow.util.SysHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -380,10 +379,11 @@ class WaveClient {
             // map the recipe to a dockerfile
             if( isCondaLocalFile(attrs.conda) ) {
                 condaFile = Path.of(attrs.conda)
-                dockerScript = condaFileToDockerFile()
+                dockerScript = condaFileToDockerFile(config.condaOpts())
             }
+            // 'conda' attributes is resolved as the conda packages to be used
             else {
-                dockerScript = condaRecipeToDockerFile(attrs.conda)
+                dockerScript = condaPackagesToDockerFile(attrs.conda, condaChannels, config.condaOpts())
             }
         }
 
@@ -399,10 +399,10 @@ class WaveClient {
             // map the recipe to a dockerfile
             if( isSpackFile(attrs.spack) ) {
                 spackFile = Path.of(attrs.spack)
-                dockerScript = spackFileToDockerFile(spackArch)
+                dockerScript = spackFileToDockerFile(spackArch, config.spackOpts())
             }
             else {
-                dockerScript = spackRecipeToDockerFile(attrs.spack, spackArch)
+                dockerScript = spackPackagesToDockerFile(attrs.spack, spackArch, config.spackOpts())
             }
         }
 
@@ -464,105 +464,7 @@ class WaveClient {
         }
     }
 
-    protected String condaFileToDockerFile() {
-        final template = """\
-        FROM {{base_image}}
-        COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
-        RUN micromamba install -y -n base -f /tmp/conda.yml && \\
-            {{base_packages}}
-            micromamba clean -a -y
-        """.stripIndent(true)
-        final image = config.condaOpts().mambaImage
 
-        final basePackage =  config.condaOpts().basePackages ? "micromamba install -y -n base ${config.condaOpts().basePackages} && \\".toString() : null
-        final binding = ['base_image': image, 'base_packages': basePackage]
-        final result = new MustacheTemplateEngine().render(template, binding)
-
-        return addCommands(result)
-    }
-
-    // Dockerfile template adpated from the Spack package manager
-    // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
-    // LICENSE APACHE 2.0
-    protected String spackFileToDockerFile(String spackArch) {
-
-        String cmd_template = ''
-        final binding = [
-            'builder_image': config.spackOpts().builderImage,
-            'c_flags': config.spackOpts().cFlags,
-            'cxx_flags': config.spackOpts().cxxFlags,
-            'f_flags': config.spackOpts().fFlags,
-            'spack_arch': spackArch,
-            'checksum_string': config.spackOpts().checksum ? '' : '-n ',
-            'runner_image': config.spackOpts().runnerImage,
-            'os_packages': config.spackOpts().osPackages,
-            'add_commands': addCommands(cmd_template),
-        ]
-        final template = WaveClient.class.getResource('/templates/spack/dockerfile-spack-file.txt')
-        try(final reader = template.newReader()) {
-            final result = new BashTemplateEngine().render(reader, binding)
-            return result
-        }
-    }
-
-    protected String addCommands(String result) {
-        if( config.condaOpts().commands )
-            for( String cmd : config.condaOpts().commands ) {
-                result += cmd + "\n"
-            }
-        if( config.spackOpts().commands )
-            for( String cmd : config.spackOpts().commands ) {
-                result += cmd + "\n"
-        }
-        return result
-    }
-
-    protected String condaRecipeToDockerFile(String recipe) {
-        final template = """\
-        FROM {{base_image}}
-        RUN \\
-            micromamba install -y -n base {{channel_opts}} \\
-            {{target}} \\
-            {{base_packages}}
-            && micromamba clean -a -y
-        """.stripIndent(true)
-
-        final channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
-        final image = config.condaOpts().mambaImage
-        final target = recipe.startsWith('http://') || recipe.startsWith('https://')
-                ? "-f $recipe".toString()
-                : recipe
-        final basePackage =  config.condaOpts().basePackages ? "&& micromamba install -y -n base ${config.condaOpts().basePackages} \\".toString() : null
-        final binding = [base_image: image, channel_opts: channelsOpts, target:target, base_packages: basePackage]
-        final result = new MustacheTemplateEngine().render(template, binding)
-        return addCommands(result)
-    }
-
-    // Dockerfile template adpated from the Spack package manager
-    // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
-    // LICENSE APACHE 2.0
-    protected String spackRecipeToDockerFile(String recipe, String spackArch) {
-
-        String cmd_template = ''
-        final binding = [
-            'recipe': recipe,
-            'builder_image': config.spackOpts().builderImage,
-            'c_flags': config.spackOpts().cFlags,
-            'cxx_flags': config.spackOpts().cxxFlags,
-            'f_flags': config.spackOpts().fFlags,
-            'spack_arch': spackArch,
-            'checksum_string': config.spackOpts().checksum ? '' : '-n ',
-            'runner_image': config.spackOpts().runnerImage,
-            'os_packages': config.spackOpts().osPackages,
-            'add_commands': addCommands(cmd_template),
-        ]
-        final template = WaveClient.class.getResource('/templates/spack/dockerfile-spack-recipe.txt')
-
-        try(final reader = template.newReader()) {
-            final result = new BashTemplateEngine().render(reader, binding)
-            return result
-        }
-    }
 
     static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )

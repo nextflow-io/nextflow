@@ -19,6 +19,8 @@ package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.wave.config.CondaOpts
+import io.seqera.wave.config.SpackOpts
 import nextflow.util.Duration
 /**
  * Model Wave client configuration

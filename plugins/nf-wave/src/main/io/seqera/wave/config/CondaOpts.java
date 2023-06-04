@@ -15,25 +15,27 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package io.seqera.wave.config;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Conda build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOpts {
+public class CondaOpts {
+    final public static String DEFAULT_MAMBA_IMAGE = "mambaorg/micromamba:1.4.2";
 
-    final public static String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.4.2'
+    final public String mambaImage;
+    final public List<String> commands;
+    final public String basePackages;
 
-    final String mambaImage
-    final List<String> commands
-    final String basePackages
-
-    CondaOpts(Map opts) {
-        this.mambaImage = opts.mambaImage ?: DEFAULT_MAMBA_IMAGE
-        this.commands = opts.commands as List<String>
-        this.basePackages = opts.basePackages
+    public CondaOpts(Map<String,?> opts) {
+        this.mambaImage = opts.containsKey("mambaImage") ? opts.get("mambaImage").toString(): DEFAULT_MAMBA_IMAGE;
+        this.commands = opts.containsKey("commands") ? (List<String>)opts.get("commands") : null;
+        this.basePackages = (String)opts.get("basePackages");
     }
 
 }
