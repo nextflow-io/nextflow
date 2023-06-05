@@ -35,11 +35,11 @@ import groovy.util.logging.Slf4j
  */
 @Slf4j
 @CompileStatic
-class S3CredentialsChain implements AWSCredentialsProvider {
+class S3CredentialsProvider implements AWSCredentialsProvider {
 
     private AWSCredentialsProvider target
 
-    S3CredentialsChain(AWSCredentialsProvider target) {
+    S3CredentialsProvider(AWSCredentialsProvider target) {
         this.target = target
     }
 
