@@ -20,14 +20,21 @@ package io.seqera.wave.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.io.File;
 
 import io.seqera.wave.config.CondaOpts;
 import io.seqera.wave.config.SpackOpts;
 import org.apache.commons.lang3.StringUtils;
+import org.yaml.snakeyaml.Yaml;
 
 /**
  * Helper class to create Dockerfile for Conda and Spack package managers
@@ -36,6 +43,65 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class DockerHelper {
 
+    static public List<String> spackPackagesToList(String packages) {
+        if( packages==null || packages.isEmpty() )
+            return null;
+        final List<String> entries = Arrays.asList(packages.split(" "));
+        final List<String> result = new ArrayList<>();
+        List<String> current = new ArrayList<>();
+        for( String it : entries ) {
+            if( it==null || it.isEmpty() || it.isBlank() )
+                continue;
+            if( !Character.isLetterOrDigit(it.charAt(0)) || it.contains("=") ) {
+              current.add(it);
+            }
+            else {
+                if( current.size()>0 )
+                    result.add(String.join(" ",current));
+                current = new ArrayList<>();
+                current.add(it);
+            }
+        }
+        // remaining entries
+        if( current.size()>0 )
+            result.add(String.join(" ",current));
+        return result;
+    }
+
+    static public String spackPackagesToSpackYaml(String packages) {
+        final List<String> specs = spackPackagesToList(packages);
+
+        final Map<String,Object> concretizer = new LinkedHashMap<>();
+        concretizer.put("unify", true);
+        concretizer.put("reuse", false);
+
+        final Map<String,Object> spack = new LinkedHashMap<>();
+        spack.put("specs", specs);
+        spack.put("concretizer", concretizer);
+
+        final Map<String,Object> root = new LinkedHashMap<>();
+        root.put("spack", spack);
+
+        return new Yaml().dump(root);
+    }
+
+    static public Path spackPackagesToSpackFile(String packages) {
+        final String yaml = spackPackagesToSpackYaml(packages);
+        if( yaml==null || yaml.length()==0 )
+            return null;
+        try {
+            final File tempFile = File.createTempFile("nf-spack", ".yaml");
+            tempFile.deleteOnExit();
+            final Path result = tempFile.toPath();
+            Files.write(result, yaml.getBytes());
+            return result;
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Unable to write temporary Spack environment file - Reason: " + e.getMessage(), e);
+        }
+    }
+
+    @Deprecated
     static public String spackPackagesToDockerFile(String packages, String spackArch, SpackOpts opts) {
         // create bindings
         final Map<String,String> binding = spackBinding(spackArch, opts);

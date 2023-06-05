@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public class SpackOpts {
 
-    final static public String DEFAULT_SPACK_BUILDER_IMAGE = "spack/ubuntu-jammy:v0.19.2";
+    final static public String DEFAULT_SPACK_BUILDER_IMAGE = "spack/ubuntu-jammy:v0.20.0";
     final static public String DEFAULT_SPACK_RUNNER_IMAGE = "ubuntu:22.04";
     final static public String DEFAULT_SPACK_OSPACKAGES = "";
     final static public String DEFAULT_SPACK_FLAGS = "-O3";

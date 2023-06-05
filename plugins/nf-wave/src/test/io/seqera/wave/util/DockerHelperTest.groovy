@@ -350,4 +350,43 @@ CMD [ "/bin/bash" ]
 
     }
 
+    def 'should convert a list of packages to a spack yaml' () {
+        when:
+        def result = DockerHelper.spackPackagesToSpackYaml('foo x=one bar')
+        then:
+        result == '''\
+            spack:
+              specs: [foo x=one, bar]
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+    }
+
+    def 'should convert a list of packages to a spack file' () {
+        when:
+        def result = DockerHelper.spackPackagesToSpackFile('foo x=one bar')
+        then:
+        result.text == '''\
+            spack:
+              specs: [foo x=one, bar]
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+    }
+
+    def 'should parse a spack packages string' () {
+        expect:
+        DockerHelper.spackPackagesToList(PACKAGES) == EXPECTED
+
+        where:
+        PACKAGES            | EXPECTED
+         null               | null
+        'alpha'             | ['alpha']
+        'alpha delta'       | ['alpha', 'delta']
+        'alpha delta gamma' | ['alpha', 'delta', 'gamma']
+        'alpha 1aa'         | ['alpha', '1aa']
+        and:
+        'alpha x=1'         | ['alpha x=1']
+        'alpha x=1 delta'   | ['alpha x=1', 'delta']
+        'alpha ^foo delta'  | ['alpha ^foo', 'delta']
+
+    }
 }

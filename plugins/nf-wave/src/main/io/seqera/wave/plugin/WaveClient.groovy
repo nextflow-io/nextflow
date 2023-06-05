@@ -399,11 +399,12 @@ class WaveClient {
             // map the recipe to a dockerfile
             if( isSpackFile(attrs.spack) ) {
                 spackFile = Path.of(attrs.spack)
-                dockerScript = spackFileToDockerFile(spackArch, config.spackOpts())
             }
             else {
-                dockerScript = spackPackagesToDockerFile(attrs.spack, spackArch, config.spackOpts())
+                // create a wave spack
+                spackFile = spackPackagesToSpackFile(attrs.spack)
             }
+            dockerScript = spackFileToDockerFile(spackArch, config.spackOpts())
         }
 
         /*
