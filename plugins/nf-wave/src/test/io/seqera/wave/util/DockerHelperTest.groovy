@@ -387,6 +387,8 @@ CMD [ "/bin/bash" ]
         'alpha x=1'         | ['alpha x=1']
         'alpha x=1 delta'   | ['alpha x=1', 'delta']
         'alpha ^foo delta'  | ['alpha ^foo', 'delta']
+        and:
+        '^alpha ~beta foo'  | ['^alpha ~beta', 'foo']   // <-- this should not be valid
 
     }
 }
