@@ -36,50 +36,54 @@ import nextflow.file.FileSystemPathFactory
 @CompileStatic
 class GsPathFactory extends FileSystemPathFactory {
 
-    @Lazy
-    private CloudStorageConfiguration storageConfig = {
-        return getCloudStorageConfig()
-    } ()
+    private GoogleOpts googleOpts;
 
-    @Lazy
-    private StorageOptions storageOptions = {
-        return getStorageOptions()
-    } ()
+    private CloudStorageConfiguration storageConfig
 
-    static private GoogleOpts getGoogleConfig() {
+    private StorageOptions storageOptions
+
+    static private GoogleOpts getGoogleOpts() {
         final session = (Session) Global.getSession()
-        if( !session )
+        if (!session)
             throw new IllegalStateException("Cannot initialize GsPathFactory: missing session")
-
         return GoogleOpts.fromSession(session)
     }
 
-    static private CloudStorageConfiguration getCloudStorageConfig() {
-        final config = getGoogleConfig()
+    static protected CloudStorageConfiguration getCloudStorageConfig(GoogleOpts googleOpts) {
         final builder = CloudStorageConfiguration.builder()
-        if( config.enableRequesterPaysBuckets )
-            builder.userProject(config.getProjectId())
-
+        if (googleOpts.enableRequesterPaysBuckets) {
+            builder.userProject(googleOpts.getProjectId())
+        }
         return builder.build()
     }
 
-    static private StorageOptions getStorageOptions() {
-        final config = getGoogleConfig()
+    static protected StorageOptions getCloudStorageOptions(GoogleOpts googleOpts) {
         final transportOptions = StorageOptions.getDefaultHttpTransportOptions().toBuilder()
-        if( config.httpConnectTimeout )
-            transportOptions.setConnectTimeout( (int)config.httpConnectTimeout.toMillis() )
-        if( config.httpReadTimeout )
-            transportOptions.setReadTimeout( (int)config.httpReadTimeout.toMillis() )
+        if( googleOpts.httpConnectTimeout )
+            transportOptions.setConnectTimeout( (int)googleOpts.httpConnectTimeout.toMillis() )
+        if( googleOpts.httpReadTimeout )
+            transportOptions.setReadTimeout( (int)googleOpts.httpReadTimeout.toMillis() )
 
         return StorageOptions.getDefaultInstance().toBuilder()
             .setTransportOptions(transportOptions.build())
             .build()
     }
 
+    private void init() {
+        synchronized (this) {
+            if( googleOpts!=null )
+                return
+            this.googleOpts = getGoogleOpts()
+            this.storageConfig = getCloudStorageConfig(googleOpts)
+            this.storageOptions = getCloudStorageOptions(googleOpts)
+        }
+    }
+
     @Override
     protected Path parseUri(String uri) {
         if( !uri.startsWith('gs://') )
             return null
+        init()
         final str = uri.substring(5)
         final p = str.indexOf('/')
         return p == -1

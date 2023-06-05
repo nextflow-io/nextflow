@@ -51,6 +51,8 @@ class GoogleOpts {
     File getCredsFile() { credsFile }
     String getLocation() { location ?: DEFAULT_LOCATION }
     boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
+    Duration getHttpConnectTimeout() { httpConnectTimeout }
+    Duration getHttpReadTimeout() { httpReadTimeout }
 
     @Memoized
     static GoogleOpts fromSession(Session session) {
