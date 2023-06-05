@@ -53,6 +53,7 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.ConfigParser
+import nextflow.cloud.aws.util.S3CredentialsProvider
 import nextflow.exception.AbortOperationException
 /**
  * Implement a factory class for AWS client objects
@@ -254,7 +255,7 @@ class AwsClientFactory {
         else
             builder.withRegion(region)
 
-        final credentials = getCredentialsProvider0()
+        final credentials = new S3CredentialsProvider(getCredentialsProvider0())
         if( credentials )
             builder.withCredentials(credentials)
 
