@@ -476,16 +476,15 @@ class WaveClientTest extends Specification {
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
+FROM spack/ubuntu-jammy:v0.20.0 as builder
+COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
-&&  spack env create -d /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
-&& spack add salmon@1.2.3 \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
@@ -541,7 +540,7 @@ CMD [ "/bin/bash" ]
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
-        !assets.spackFile
+        assets.spackFile
         !assets.projectResources
     }
 
@@ -592,7 +591,7 @@ CMD [ "/bin/bash" ]
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
+FROM spack/ubuntu-jammy:v0.20.0 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\

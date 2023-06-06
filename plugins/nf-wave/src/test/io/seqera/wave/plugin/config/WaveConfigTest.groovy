@@ -102,7 +102,7 @@ class WaveConfigTest extends Specification {
         def opts = new WaveConfig([:])
         then:
         opts.spackOpts().checksum == true
-        opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.19.2'
+        opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.20.0'
         opts.spackOpts().runnerImage == 'ubuntu:22.04'
         opts.spackOpts().osPackages == ''
         opts.spackOpts().cFlags == '-O3'

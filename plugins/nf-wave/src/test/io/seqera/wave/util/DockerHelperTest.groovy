@@ -146,7 +146,7 @@ class DockerHelperTest extends Specification {
         expect:
         DockerHelper.spackPackagesToDockerFile(PACKAGES, ARCH, new SpackOpts([:])) == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
+FROM spack/ubuntu-jammy:v0.20.0 as builder
 
 RUN mkdir -p /opt/spack-env \\
 &&  spack env create -d /opt/spack-env \\
@@ -288,7 +288,7 @@ CMD [ "/bin/bash" ]
         expect:
         DockerHelper.spackFileToDockerFile(ARCH, new SpackOpts())== '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
+FROM spack/ubuntu-jammy:v0.20.0 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
@@ -352,22 +352,22 @@ CMD [ "/bin/bash" ]
 
     def 'should convert a list of packages to a spack yaml' () {
         when:
-        def result = DockerHelper.spackPackagesToSpackYaml('foo x=one bar')
+        def result = DockerHelper.spackPackagesToSpackYaml('foo@1.2.3 x=one bar @2')
         then:
         result == '''\
             spack:
-              specs: [foo x=one, bar]
+              specs: [foo@1.2.3 x=one, bar @2]
               concretizer: {unify: true, reuse: false}
             '''.stripIndent(true)
     }
 
     def 'should convert a list of packages to a spack file' () {
         when:
-        def result = DockerHelper.spackPackagesToSpackFile('foo x=one bar')
+        def result = DockerHelper.spackPackagesToSpackFile('foo@1.2.3 x=one bar @2')
         then:
         result.text == '''\
             spack:
-              specs: [foo x=one, bar]
+              specs: [foo@1.2.3 x=one, bar @2]
               concretizer: {unify: true, reuse: false}
             '''.stripIndent(true)
     }
