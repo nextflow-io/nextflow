@@ -101,15 +101,6 @@ public class DockerHelper {
         }
     }
 
-    @Deprecated
-    static public String spackPackagesToDockerFile(String packages, String spackArch, SpackOpts opts) {
-        // create bindings
-        final Map<String,String> binding = spackBinding(spackArch, opts);
-        binding.put("packages", packages);
-        // render the template
-        return renderTemplate0("/templates/spack/dockerfile-spack-packages.txt", binding);
-    }
-
     static public String spackFileToDockerFile(String spackArch, SpackOpts opts) {
         // create bindings
         final Map<String,String> binding = spackBinding(spackArch, opts);
