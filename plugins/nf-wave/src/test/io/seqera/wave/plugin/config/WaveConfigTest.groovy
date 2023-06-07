@@ -105,21 +105,15 @@ class WaveConfigTest extends Specification {
         opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.20.0'
         opts.spackOpts().runnerImage == 'ubuntu:22.04'
         opts.spackOpts().osPackages == ''
-        opts.spackOpts().cFlags == '-O3'
-        opts.spackOpts().cxxFlags == '-O3'
-        opts.spackOpts().fFlags == '-O3'
         opts.spackOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', commands:['USER hola'] ]]])
+        opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', commands:['USER hola'] ]]])
         then:
         opts.spackOpts().checksum == false
         opts.spackOpts().builderImage == 'spack/foo:1'
         opts.spackOpts().runnerImage == 'ubuntu/foo'
         opts.spackOpts().osPackages == 'libfoo'
-        opts.spackOpts().cFlags == '-foo'
-        opts.spackOpts().cxxFlags == '-foo2'
-        opts.spackOpts().fFlags == '-foo3'
         opts.spackOpts().commands == ['USER hola']
         
     }

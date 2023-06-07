@@ -8,7 +8,7 @@ COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \
 &&  sed -e 's;compilers:;compilers::;' \
-         -e 's;^ *flags: *{};    flags:\n      cflags: {{c_flags}}\n      cxxflags: {{cxx_flags}}\n      fflags: {{f_flags}};' \
+         -e 's;^ *flags: *{};    flags:\n      cflags: -O3\n      cxxflags: -O3\n      fflags: -O3;' \
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \
 &&  sed '/^spack:/a\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \
 && cd /opt/spack-env && spack env activate . \

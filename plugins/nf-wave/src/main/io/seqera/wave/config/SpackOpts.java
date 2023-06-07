@@ -30,15 +30,11 @@ public class SpackOpts {
     final static public String DEFAULT_SPACK_BUILDER_IMAGE = "spack/ubuntu-jammy:v0.20.0";
     final static public String DEFAULT_SPACK_RUNNER_IMAGE = "ubuntu:22.04";
     final static public String DEFAULT_SPACK_OSPACKAGES = "";
-    final static public String DEFAULT_SPACK_FLAGS = "-O3";
 
     public final Boolean checksum;
     public final String builderImage;
     public final String runnerImage;
     public final String osPackages;
-    public final String cFlags;
-    public final String cxxFlags;
-    public final String fFlags;
     public final List<String> commands;
 
     public SpackOpts() {
@@ -49,9 +45,6 @@ public class SpackOpts {
         this.builderImage = opts.containsKey("builderImage") ? opts.get("builderImage").toString() : DEFAULT_SPACK_BUILDER_IMAGE;
         this.runnerImage = opts.containsKey("runnerImage") ? opts.get("runnerImage").toString() : DEFAULT_SPACK_RUNNER_IMAGE;
         this.osPackages = opts.containsKey("osPackages") ? opts.get("osPackages").toString() : DEFAULT_SPACK_OSPACKAGES;
-        this.cFlags = opts.containsKey("cFlags") ? opts.get("cFlags").toString() : DEFAULT_SPACK_FLAGS;
-        this.cxxFlags = opts.containsKey("cxxFlags") ? opts.get("cxxFlags").toString() : DEFAULT_SPACK_FLAGS;
-        this.fFlags = opts.containsKey("fFlags") ? opts.get("fFlags").toString() : DEFAULT_SPACK_FLAGS;
         this.commands = opts.containsKey("commands") ? (List<String>)opts.get("commands") : null;
     }
 

@@ -111,9 +111,6 @@ public class DockerHelper {
     static private Map<String,String> spackBinding(String spackArch, SpackOpts opts) {
         final Map<String,String> binding = new HashMap<>();
         binding.put("builder_image", opts.builderImage);
-        binding.put("f_flags", opts.fFlags);
-        binding.put("c_flags", opts.cFlags);
-        binding.put("cxx_flags", opts.cxxFlags);
         binding.put("spack_arch", spackArch);
         binding.put("checksum_string", opts.checksum ? "" : "-n ");
         binding.put("runner_image", opts.runnerImage);

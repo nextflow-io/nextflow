@@ -214,7 +214,7 @@ CMD [ "/bin/bash" ]
 
     def 'should create dockerfile content with custom spack config' () {
         given:
-        def SPACK_OPTS = [ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', commands:['USER hola'] ]
+        def SPACK_OPTS = [ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', commands:['USER hola'] ]
         def PACKAGES = 'bwa@0.7.15 salmon@1.1.1'
         def ARCH = 'nextcpu'
 
@@ -231,7 +231,7 @@ COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -foo\\n      cxxflags: -foo2\\n      fflags: -foo3;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
 &&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 && cd /opt/spack-env && spack env activate . \\
