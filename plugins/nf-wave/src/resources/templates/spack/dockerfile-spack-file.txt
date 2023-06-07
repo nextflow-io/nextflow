@@ -4,13 +4,12 @@
 ##  Licensed under Apache License, Version 2.0
 # Builder image
 FROM {{builder_image}} as builder
-COPY spack.yaml /tmp/spack.yaml
+COPY spack.yaml /opt/spack-env/spack.yaml
 
 RUN mkdir -p /opt/spack-env \
-&&  sed -e 's;compilers:;compilers::;' \
+&&  sed -i -e 's;compilers:;compilers::;' \
          -e 's;^ *flags: *{};    flags:\n      cflags: -O3\n      cxxflags: -O3\n      fflags: -O3;' \
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \
-&&  sed '/^spack:/a\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \
+         /root/.spack/linux/compilers.yaml \
 && cd /opt/spack-env && spack env activate . \
 && spack config add config:install_tree:/opt/software \
 && spack config add concretizer:unify:true \

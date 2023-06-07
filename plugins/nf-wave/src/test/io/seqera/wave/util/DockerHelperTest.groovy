@@ -152,14 +152,13 @@ spack:
         DockerHelper.spackFileToDockerFile(ARCH, new SpackOpts())== '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.20.0 as builder
-COPY spack.yaml /tmp/spack.yaml
+COPY spack.yaml /opt/spack-env/spack.yaml
 
-RUN mkdir -p /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
+RUN mkdir -p /opt/spack-env \
+&&  sed -i -e 's;compilers:;compilers::;' \
+         -e 's;^ *flags: *{};    flags:\n      cflags: -O3\n      cxxflags: -O3\n      fflags: -O3;' \
+         /root/.spack/linux/compilers.yaml \
+&& cd /opt/spack-env && spack env activate . \
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
@@ -227,14 +226,13 @@ spack:
         DockerHelper.spackFileToDockerFile(ARCH, new SpackOpts(SPACK_OPTS))== '''\
 # Builder image
 FROM spack/foo:1 as builder
-COPY spack.yaml /tmp/spack.yaml
+COPY spack.yaml /opt/spack-env/spack.yaml
 
-RUN mkdir -p /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
+RUN mkdir -p /opt/spack-env \
+&&  sed -i -e 's;compilers:;compilers::;' \
+         -e 's;^ *flags: *{};    flags:\n      cflags: -O3\n      cxxflags: -O3\n      fflags: -O3;' \
+         /root/.spack/linux/compilers.yaml \
+&& cd /opt/spack-env && spack env activate . \
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
@@ -297,14 +295,13 @@ CMD [ "/bin/bash" ]
         DockerHelper.spackFileToDockerFile(ARCH, new SpackOpts())== '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.20.0 as builder
-COPY spack.yaml /tmp/spack.yaml
+COPY spack.yaml /opt/spack-env/spack.yaml
 
-RUN mkdir -p /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
+RUN mkdir -p /opt/spack-env \
+&&  sed -i -e 's;compilers:;compilers::;' \
+         -e 's;^ *flags: *{};    flags:\n      cflags: -O3\n      cxxflags: -O3\n      fflags: -O3;' \
+         /root/.spack/linux/compilers.yaml \
+&& cd /opt/spack-env && spack env activate . \
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
