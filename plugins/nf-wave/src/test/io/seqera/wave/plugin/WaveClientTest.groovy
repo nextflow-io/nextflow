@@ -479,11 +479,11 @@ class WaveClientTest extends Specification {
 FROM spack/ubuntu-jammy:v0.20.0 as builder
 COPY spack.yaml /opt/spack-env/spack.yaml
 
-RUN mkdir -p /opt/spack-env \
-&&  sed -i -e 's;compilers:;compilers::;' \
-         -e 's;^ *flags: *{};    flags:\n      cflags: -O3\n      cxxflags: -O3\n      fflags: -O3;' \
-         /root/.spack/linux/compilers.yaml \
-&& cd /opt/spack-env && spack env activate . \
+RUN mkdir -p /opt/spack-env \\
+&&  sed -i -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
+         /root/.spack/linux/compilers.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
@@ -593,11 +593,11 @@ CMD [ "/bin/bash" ]
 FROM spack/ubuntu-jammy:v0.20.0 as builder
 COPY spack.yaml /opt/spack-env/spack.yaml
 
-RUN mkdir -p /opt/spack-env \
-&&  sed -i -e 's;compilers:;compilers::;' \
-         -e 's;^ *flags: *{};    flags:\n      cflags: -O3\n      cxxflags: -O3\n      fflags: -O3;' \
-         /root/.spack/linux/compilers.yaml \
-&& cd /opt/spack-env && spack env activate . \
+RUN mkdir -p /opt/spack-env \\
+&&  sed -i -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
+         /root/.spack/linux/compilers.yaml \\
+&& cd /opt/spack-env && spack env activate . \\
 && spack config add config:install_tree:/opt/software \\
 && spack config add concretizer:unify:true \\
 && spack config add concretizer:reuse:false \\
