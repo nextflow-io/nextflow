@@ -157,7 +157,7 @@ The following configuration options are available:
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
-`wave.build.cacheRepositor`
+`wave.build.cacheRepository`
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
 `wave.build.conda.mambaImage`
@@ -172,23 +172,8 @@ The following configuration options are available:
 `wave.build.spack.checksum`
 : Enable checksum verification for source tarballs (recommended). Disable only when requesting a package version not yet encoded in the corresponding Spack recipe (default: `true`).
 
-`wave.build.spack.builderImage`
-: The Spack container image is used to build Spack based container. This is expected to be one of the [Spack-provided](https://spack.readthedocs.io/en/latest/containers.html) images.
-
-`wave.build.spack.runnerImage`
-: The OS container image is used for the production container. This is expected to match the OS of the `builderImage` above.
-
 `wave.build.spack.osPackages`
 : Additional OS packages to be installed in the production container. Note that package names may vary depending on the OS of the `runnerImage` above.
-
-`wave.build.spack.cFlags`
-: C compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
-
-`wave.build.spack.cxxFlags`
-: C++ compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
-
-`wave.build.spack.fFlags`
-: Fortran compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
 
 `wave.build.spack.commands`
 : One or more commands to be added to the Dockerfile used to build a Spack based image.
