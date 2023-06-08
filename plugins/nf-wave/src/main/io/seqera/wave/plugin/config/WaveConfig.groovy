@@ -57,7 +57,7 @@ class WaveConfig {
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
         this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
-        this.retryOpts = new RetryOpts(opts.retry as Map ?: Map.of())
+        this.retryOpts = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }

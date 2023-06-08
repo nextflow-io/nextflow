@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin.config
 
-
+import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -167,5 +167,21 @@ class WaveConfigTest extends Specification {
         then:
         def e = thrown(IllegalArgumentException)
         e.message == "Invalid value for 'wave.strategy' configuration attribute - offending value: foo"
+    }
+
+    def 'should get retry policy' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.retryOpts().maxAttempts == 5
+        opts.retryOpts().maxDelay == Duration.of('90s')
+
+        when:
+        opts = new WaveConfig([retryPolicy:[ maxAttempts: 20, jitter: 1.0, delay: '1s', maxDelay: '10s' ]])
+        then:
+        opts.retryOpts().maxAttempts == 20
+        opts.retryOpts().jitter == 1.0d
+        opts.retryOpts().delay == Duration.of('1s')
+        opts.retryOpts().maxDelay == Duration.of('10s')
     }
 }
