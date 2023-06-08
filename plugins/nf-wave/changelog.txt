@@ -1,5 +1,10 @@
 nf-wave changelog
 ==================
+0.8.3 - 8 Jun 2023
+- Fix non-deterministic null container engine error [f93221ab]
+- Add retry policy to Wave client [2f1532f6]
+- Fix wave build docs [34a73022]
+
 0.8.2 - 15 Apr 2023
 - Security fixes [83e8fd6a]
 
