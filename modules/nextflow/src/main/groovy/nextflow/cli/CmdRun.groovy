@@ -55,7 +55,7 @@ import org.yaml.snakeyaml.Yaml
 @Parameters(commandDescription = "Execute a pipeline project")
 class CmdRun extends CmdBase implements HubOptions {
 
-    static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
+    static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z\d](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
 
     static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
 
