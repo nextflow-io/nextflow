@@ -18,12 +18,14 @@
 package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 import nextflow.trace.TraceHelper
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class ReportOpts {
 
