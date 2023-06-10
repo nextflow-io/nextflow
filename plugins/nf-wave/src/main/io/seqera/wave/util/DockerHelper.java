@@ -113,8 +113,10 @@ public class DockerHelper {
     static public String spackFileToDockerFile(String spackArch, SpackOpts opts) {
         // create bindings
         final Map<String,String> binding = spackBinding(spackArch, opts);
+        // those var are resolved on backend side
+        final List<String> ignore = List.of("spack_cache_dir","spack_key_file");
         //  return the template
-        return renderTemplate0("/templates/spack/dockerfile-spack-file.txt", binding);
+        return renderTemplate0("/templates/spack/dockerfile-spack-file.txt", binding, ignore);
     }
 
     static private Map<String,String> spackBinding(String spackArch, SpackOpts opts) {
@@ -154,12 +156,18 @@ public class DockerHelper {
     }
 
     static private String renderTemplate0(String templatePath, Map<String,String> binding) {
+        return renderTemplate0(templatePath, binding, List.of());
+    }
+
+    static private String renderTemplate0(String templatePath, Map<String,String> binding, List<String> ignore) {
         final URL template = DockerHelper.class.getResource(templatePath);
         if( template==null )
             throw new IllegalStateException(String.format("Unable to load template '%s' from classpath", templatePath));
         try {
             final InputStream reader = template.openStream();
-            return TemplateRenderer.render(reader, binding);
+            return new TemplateRenderer()
+                    .withIgnore(ignore)
+                    .render(reader, binding);
         }
         catch (IOException e) {
             throw new IllegalStateException(String.format("Unable to read classpath template '%s'", templatePath), e);

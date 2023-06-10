@@ -169,13 +169,13 @@ RUN mkdir -p /opt/spack-env \\
 
 # Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env \\
-&& spack gpg trust /var/seqera/spack/key \\
-&& spack mirror add seqera-spack /var/seqera/spack/cache \\
+&& spack gpg trust {{spack_key_file}} \\
+&& spack mirror add seqera-spack {{spack_cache_dir}} \\
 && spack buildcache keys --install --trust \\
 && spack env activate . \\
 && spack concretize -f \\
 && spack install --fail-fast \\
-&& spack buildcache push -a --update-index /var/seqera/spack/cache \\
+&& spack buildcache push -a --update-index {{spack_cache_dir}} \\
 && spack gc -y \\
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
@@ -243,13 +243,13 @@ RUN mkdir -p /opt/spack-env \\
 
 # Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env \\
-&& spack gpg trust /var/seqera/spack/key \\
-&& spack mirror add seqera-spack /var/seqera/spack/cache \\
+&& spack gpg trust {{spack_key_file}} \\
+&& spack mirror add seqera-spack {{spack_cache_dir}} \\
 && spack buildcache keys --install --trust \\
 && spack env activate . \\
 && spack concretize -f \\
 && spack install --fail-fast \\
-&& spack buildcache push -a --update-index /var/seqera/spack/cache \\
+&& spack buildcache push -a --update-index {{spack_cache_dir}} \\
 && spack gc -y \\
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
@@ -312,13 +312,13 @@ RUN mkdir -p /opt/spack-env \\
 
 # Install packages, clean afterwards, finally strip binaries
 RUN cd /opt/spack-env \\
-&& spack gpg trust /var/seqera/spack/key \\
-&& spack mirror add seqera-spack /var/seqera/spack/cache \\
+&& spack gpg trust {{spack_key_file}} \\
+&& spack mirror add seqera-spack {{spack_cache_dir}} \\
 && spack buildcache keys --install --trust \\
 && spack env activate . \\
 && spack concretize -f \\
 && spack install --fail-fast \\
-&& spack buildcache push -a --update-index /var/seqera/spack/cache \\
+&& spack buildcache push -a --update-index {{spack_cache_dir}} \\
 && spack gc -y \\
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
