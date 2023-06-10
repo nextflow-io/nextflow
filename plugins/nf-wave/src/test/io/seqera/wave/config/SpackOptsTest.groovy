@@ -29,29 +29,22 @@ class SpackOptsTest extends Specification {
         given:
         def opts = new SpackOpts()
         expect:
-        opts.checksum
         opts.builderImage == SpackOpts.DEFAULT_SPACK_BUILDER_IMAGE
         opts.runnerImage == SpackOpts.DEFAULT_SPACK_RUNNER_IMAGE
-        opts.osPackages == SpackOpts.DEFAULT_SPACK_OSPACKAGES
         opts.commands == null
     }
 
     def 'check spack custom opts' () {
         given:
         def opts = new SpackOpts([
-                checksum:false,
                 builderImage: 'my/builder:image',
                 runnerImage: 'my/runner:image',
-                osPackages:  'my-os-packages',
                 commands: ['run','--this','--that']
         ])
 
         expect:
-        !opts.checksum
-        and:
         opts.builderImage == 'my/builder:image'
         opts.runnerImage == 'my/runner:image'
-        opts.osPackages == 'my-os-packages'
         and:
         opts.commands == ['run','--this','--that']
     }

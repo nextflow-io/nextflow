@@ -29,22 +29,17 @@ public class SpackOpts {
 
     final static public String DEFAULT_SPACK_BUILDER_IMAGE = "spack/ubuntu-jammy:v0.20.0";
     final static public String DEFAULT_SPACK_RUNNER_IMAGE = "ubuntu:22.04";
-    final static public String DEFAULT_SPACK_OSPACKAGES = "";
 
-    public final Boolean checksum;
     public final String builderImage;
     public final String runnerImage;
-    public final String osPackages;
     public final List<String> commands;
 
     public SpackOpts() {
         this(Map.of());
     }
     public SpackOpts(Map<String,?> opts) {
-        this.checksum = opts.get("checksum") == null || Boolean.parseBoolean(opts.get("checksum").toString());
         this.builderImage = opts.containsKey("builderImage") ? opts.get("builderImage").toString() : DEFAULT_SPACK_BUILDER_IMAGE;
         this.runnerImage = opts.containsKey("runnerImage") ? opts.get("runnerImage").toString() : DEFAULT_SPACK_RUNNER_IMAGE;
-        this.osPackages = opts.containsKey("osPackages") ? opts.get("osPackages").toString() : DEFAULT_SPACK_OSPACKAGES;
         this.commands = opts.containsKey("commands") ? (List<String>)opts.get("commands") : null;
     }
 

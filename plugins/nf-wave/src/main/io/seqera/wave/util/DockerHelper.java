@@ -112,9 +112,7 @@ public class DockerHelper {
         final Map<String,String> binding = new HashMap<>();
         binding.put("builder_image", opts.builderImage);
         binding.put("spack_arch", spackArch);
-        binding.put("checksum_string", opts.checksum ? "" : "-n ");
         binding.put("runner_image", opts.runnerImage);
-        binding.put("os_packages", opts.osPackages);
         binding.put("add_commands", joinCommands(opts.commands));
         return binding;
     }

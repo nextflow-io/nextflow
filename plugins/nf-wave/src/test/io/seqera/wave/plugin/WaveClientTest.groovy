@@ -493,9 +493,15 @@ RUN mkdir -p /opt/spack-env \\
 " >> /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
+RUN cd /opt/spack-env \\
+&& spack gpg trust /var/seqera/spack/key \\
+&& spack mirror add seqera-spack /var/seqera/spack/cache \\
+&& spack buildcache keys --install --trust \\
+&& spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
+&& spack install --fail-fast \\
+&& spack buildcache push -a --update-index /var/seqera/spack/cache \\
+&& spack gc -y \\
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
@@ -516,12 +522,6 @@ FROM ubuntu:22.04
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
 RUN mkdir -p /.singularity.d/env && \\
@@ -607,9 +607,15 @@ RUN mkdir -p /opt/spack-env \\
 " >> /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
+RUN cd /opt/spack-env \\
+&& spack gpg trust /var/seqera/spack/key \\
+&& spack mirror add seqera-spack /var/seqera/spack/cache \\
+&& spack buildcache keys --install --trust \\
+&& spack env activate . \\
 && spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
+&& spack install --fail-fast \\
+&& spack buildcache push -a --update-index /var/seqera/spack/cache \\
+&& spack gc -y \\
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     xargs file -i | \\
     grep 'charset=binary' | \\
@@ -630,12 +636,6 @@ FROM ubuntu:22.04
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 # Entrypoint for Singularity
 RUN mkdir -p /.singularity.d/env && \\

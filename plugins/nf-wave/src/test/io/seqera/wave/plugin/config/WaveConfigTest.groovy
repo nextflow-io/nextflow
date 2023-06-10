@@ -101,19 +101,15 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.spackOpts().checksum == true
         opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.20.0'
         opts.spackOpts().runnerImage == 'ubuntu:22.04'
-        opts.spackOpts().osPackages == ''
         opts.spackOpts().commands == null
 
         when:
         opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', commands:['USER hola'] ]]])
         then:
-        opts.spackOpts().checksum == false
         opts.spackOpts().builderImage == 'spack/foo:1'
         opts.spackOpts().runnerImage == 'ubuntu/foo'
-        opts.spackOpts().osPackages == 'libfoo'
         opts.spackOpts().commands == ['USER hola']
         
     }
