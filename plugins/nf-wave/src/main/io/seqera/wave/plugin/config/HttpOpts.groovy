@@ -19,34 +19,24 @@ package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
-import nextflow.trace.TraceHelper
-
+import nextflow.util.Duration
 /**
+ * Model the HTTP client settings to connect the Wave service
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class ReportOpts {
+class HttpOpts {
 
-    final private Boolean enabled
+    final private Duration connectTimeout
 
-    final private String file
-
-    ReportOpts(Map opts) {
-        this.enabled = opts.enabled as Boolean
-        this.file = opts.file
+    HttpOpts(Map opts) {
+        connectTimeout = opts.connectTimeout as Duration ?: Duration.of('30s')
     }
 
-    boolean enabled() {
-        enabled || file != null
+    java.time.Duration connectTimeout() {
+        return java.time.Duration.ofMillis(connectTimeout.toMillis())
     }
 
-    String file() {
-        if( file )
-            return file
-        return enabled
-            ? "containers-${TraceHelper.launchTimestampFmt()}.config"
-            : null
-    }
 }

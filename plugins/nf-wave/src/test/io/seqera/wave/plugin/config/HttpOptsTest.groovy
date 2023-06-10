@@ -17,36 +17,25 @@
 
 package io.seqera.wave.plugin.config
 
-import groovy.transform.CompileStatic
-import groovy.transform.ToString
-import nextflow.trace.TraceHelper
+import java.time.Duration
 
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@ToString(includeNames = true, includePackage = false)
-@CompileStatic
-class ReportOpts {
+class HttpOptsTest extends Specification {
 
-    final private Boolean enabled
+    def 'should get http options' () {
+        when:
+        def opts = new HttpOpts([:])
+        then:
+        opts.connectTimeout() == Duration.ofSeconds(30)
 
-    final private String file
+        when:
+        opts = new HttpOpts([connectTimeout:'50s'])
+        then:
+        opts.connectTimeout() == Duration.ofSeconds(50)
 
-    ReportOpts(Map opts) {
-        this.enabled = opts.enabled as Boolean
-        this.file = opts.file
-    }
-
-    boolean enabled() {
-        enabled || file != null
-    }
-
-    String file() {
-        if( file )
-            return file
-        return enabled
-            ? "containers-${TraceHelper.launchTimestampFmt()}.config"
-            : null
     }
 }
