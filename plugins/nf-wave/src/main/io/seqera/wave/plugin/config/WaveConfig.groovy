@@ -44,6 +44,7 @@ class WaveConfig {
     final private String cacheRepository
     final private ReportOpts reportOpts
     final private RetryOpts retryOpts
+    final private HttpOpts httpClientOpts
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -58,6 +59,7 @@ class WaveConfig {
         this.bundleProjectResources = opts.bundleProjectResources
         this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
         this.retryOpts = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
@@ -71,6 +73,8 @@ class WaveConfig {
     SpackOpts spackOpts() { this.spackOpts }
 
     RetryOpts retryOpts() { this.retryOpts }
+
+    HttpOpts httpOpts() { this.httpClientOpts }
 
     List<String> strategy() { this.strategy }
 

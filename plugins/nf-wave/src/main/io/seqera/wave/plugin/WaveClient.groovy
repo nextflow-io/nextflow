@@ -23,7 +23,6 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
-import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
@@ -128,7 +127,7 @@ class WaveClient {
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .cookieHandler(cookieManager)
-                .connectTimeout(Duration.ofSeconds(10))
+                .connectTimeout(config.httpOpts().connectTimeout())
                 .build()
     }
 

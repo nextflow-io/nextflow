@@ -184,4 +184,16 @@ class WaveConfigTest extends Specification {
         opts.retryOpts().delay == Duration.of('1s')
         opts.retryOpts().maxDelay == Duration.of('10s')
     }
+
+    def 'should get http config options' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
+
+        when:
+        opts = new WaveConfig([httpClient: [connectTimeout: '90s']])
+        then:
+        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(90)
+    }
 }
