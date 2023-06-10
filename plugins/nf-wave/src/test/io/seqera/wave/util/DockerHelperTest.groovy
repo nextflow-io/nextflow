@@ -144,7 +144,7 @@ class DockerHelperTest extends Specification {
         def ARCH = 'x86_64'
 
         expect:
-        DockerHelper.spackPackagesToSpackFile(PACKAGES).text == '''\
+        DockerHelper.spackPackagesToSpackFile(PACKAGES, Mock(SpackOpts)).text == '''\
 spack:
   specs: [bwa@0.7.15, salmon@1.1.1]
   concretizer: {unify: true, reuse: false}
@@ -218,7 +218,7 @@ CMD [ "/bin/bash" ]
         def ARCH = 'nextcpu'
 
         expect:
-        DockerHelper.spackPackagesToSpackFile(PACKAGES).text == '''\
+        DockerHelper.spackPackagesToSpackFile(PACKAGES, Mock(SpackOpts)).text == '''\
 spack:
   specs: [bwa@0.7.15, salmon@1.1.1]
   concretizer: {unify: true, reuse: false}
@@ -355,9 +355,16 @@ CMD [ "/bin/bash" ]
 
     }
 
+    def 'should return empty packages' () {
+        when:
+        def result = DockerHelper.spackPackagesToSpackYaml(null, new SpackOpts())
+        then:
+        result == null
+    }
+
     def 'should convert a list of packages to a spack yaml' () {
         when:
-        def result = DockerHelper.spackPackagesToSpackYaml('foo@1.2.3 x=one bar @2')
+        def result = DockerHelper.spackPackagesToSpackYaml('foo@1.2.3 x=one bar @2', new SpackOpts())
         then:
         result == '''\
             spack:
@@ -366,9 +373,30 @@ CMD [ "/bin/bash" ]
             '''.stripIndent(true)
     }
 
+
+    def 'should add base packages' () {
+        when:
+        def result = DockerHelper.spackPackagesToSpackYaml(null, new SpackOpts(basePackages: 'foo bar'))
+        then:
+        result == '''\
+            spack:
+              specs: [foo, bar]
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+
+        when:
+        result = DockerHelper.spackPackagesToSpackYaml('this that @2', new SpackOpts(basePackages: 'foo bar @1'))
+        then:
+        result == '''\
+            spack:
+              specs: [foo, bar @1, this, that @2]
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+    }
+
     def 'should convert a list of packages to a spack file' () {
         when:
-        def result = DockerHelper.spackPackagesToSpackFile('foo@1.2.3 x=one bar @2')
+        def result = DockerHelper.spackPackagesToSpackFile('foo@1.2.3 x=one bar @2', new SpackOpts())
         then:
         result.text == '''\
             spack:

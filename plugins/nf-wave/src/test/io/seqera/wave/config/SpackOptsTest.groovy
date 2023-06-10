@@ -32,12 +32,14 @@ class SpackOptsTest extends Specification {
         opts.builderImage == SpackOpts.DEFAULT_SPACK_BUILDER_IMAGE
         opts.runnerImage == SpackOpts.DEFAULT_SPACK_RUNNER_IMAGE
         opts.commands == null
+        opts.basePackages == null
     }
 
     def 'check spack custom opts' () {
         given:
         def opts = new SpackOpts([
                 builderImage: 'my/builder:image',
+                basePackages: 'foo bar',
                 runnerImage: 'my/runner:image',
                 commands: ['run','--this','--that']
         ])
@@ -47,5 +49,7 @@ class SpackOptsTest extends Specification {
         opts.runnerImage == 'my/runner:image'
         and:
         opts.commands == ['run','--this','--that']
+        and:
+        opts.basePackages == 'foo bar'
     }
 }

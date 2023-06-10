@@ -34,6 +34,8 @@ public class SpackOpts {
     public final String runnerImage;
     public final List<String> commands;
 
+    public final String basePackages;
+
     public SpackOpts() {
         this(Map.of());
     }
@@ -41,6 +43,7 @@ public class SpackOpts {
         this.builderImage = opts.containsKey("builderImage") ? opts.get("builderImage").toString() : DEFAULT_SPACK_BUILDER_IMAGE;
         this.runnerImage = opts.containsKey("runnerImage") ? opts.get("runnerImage").toString() : DEFAULT_SPACK_RUNNER_IMAGE;
         this.commands = opts.containsKey("commands") ? (List<String>)opts.get("commands") : null;
+        this.basePackages = opts.containsKey("basePackages") ? opts.get("basePackages").toString() : null;
     }
 
 }

@@ -68,8 +68,17 @@ public class DockerHelper {
         return result;
     }
 
-    static public String spackPackagesToSpackYaml(String packages) {
-        final List<String> specs = spackPackagesToList(packages);
+    static public String spackPackagesToSpackYaml(String packages, SpackOpts opts) {
+        final List<String> base = spackPackagesToList(opts.basePackages);
+        final List<String> custom = spackPackagesToList(packages);
+        if( base==null && custom==null )
+            return null;
+
+        final List<String> specs = new ArrayList<>();
+        if( base!=null )
+            specs.addAll(base);
+        if( custom!=null )
+            specs.addAll(custom);
 
         final Map<String,Object> concretizer = new LinkedHashMap<>();
         concretizer.put("unify", true);
@@ -85,8 +94,8 @@ public class DockerHelper {
         return new Yaml().dump(root);
     }
 
-    static public Path spackPackagesToSpackFile(String packages) {
-        final String yaml = spackPackagesToSpackYaml(packages);
+    static public Path spackPackagesToSpackFile(String packages, SpackOpts opts) {
+        final String yaml = spackPackagesToSpackYaml(packages, opts);
         if( yaml==null || yaml.length()==0 )
             return null;
         try {

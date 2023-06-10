@@ -401,7 +401,7 @@ class WaveClient {
             }
             else {
                 // create a minimal spack file with package spec from user input
-                spackFile = spackPackagesToSpackFile(attrs.spack)
+                spackFile = spackPackagesToSpackFile(attrs.spack, config.spackOpts())
             }
             dockerScript = spackFileToDockerFile(spackArch, config.spackOpts())
         }

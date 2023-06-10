@@ -160,22 +160,23 @@ The following configuration options are available:
 `wave.build.cacheRepository`
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
-`wave.build.conda.mambaImage`
-: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
+`wave.build.conda.basePackages`
+: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
 
 `wave.build.conda.commands`
 : One or more commands to be added to the Dockerfile used to build a Conda based image.
 
-`wave.build.conda.basePackages`
-: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
+`wave.build.conda.mambaImage`
+: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
 
-`wave.build.spack.checksum`
-: Enable checksum verification for source tarballs (recommended). Disable only when requesting a package version not yet encoded in the corresponding Spack recipe (default: `true`).
-
-`wave.build.spack.osPackages`
-: Additional OS packages to be installed in the production container. Note that package names may vary depending on the OS of the `runnerImage` above.
+`wave.build.spack.basePackages`
+: :::{versionadded} 22.06.0-edge
+:::
+: One or more Spack packages to be always added in the resulting container.
 
 `wave.build.spack.commands`
+: :::{versionadded} 22.06.0-edge
+:::
 : One or more commands to be added to the Dockerfile used to build a Spack based image.
 
 `wave.httpClient.connectTime`
