@@ -463,18 +463,26 @@ class FileHelperTest extends Specification {
         Files.createSymbolicLink(
                 folder.resolve('file4.fa'),
                 folder.resolve('file3.bam'))
+        and:
+        folder.resolve('subdir_real').mkdirs()
+        folder.resolve('subdir_real/file5.fa').text = 'file 5'
+        and:
+        Files.createSymbolicLink(
+                folder.resolve('subdir_link'),
+                folder.resolve('subdir_real'))
 
         when:
         def result = []
-        FileHelper.visitFiles(folder, '*.fa', relative: true) { result << it.toString() }
+        FileHelper.visitFiles(folder, '**.fa', relative: true) { result << it.toString() }
         then:
-        result.sort() == ['file2.fa','file4.fa']
+        result.sort() == ['file2.fa','file4.fa','subdir_link/file5.fa', 'subdir_real/file5.fa']
 
         when:
         result = []
-        FileHelper.visitFiles(folder, '*.fa', relative: true, followLinks: false) { result << it.toString() }
+        FileHelper.visitFiles(folder, '**.fa', relative: true, followLinks: false) { result << it.toString() }
         then:
-        result.sort() == ['file2.fa']
+        // note: "file4.fa" is included in the result because it matches the name of the symlink file
+        result.sort() == ['file2.fa','file4.fa','subdir_real/file5.fa']
 
         cleanup:
         folder?.deleteDir()

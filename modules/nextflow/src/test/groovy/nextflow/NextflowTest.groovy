@@ -204,7 +204,7 @@ class NextflowTest extends Specification {
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, followLinks: false)
         then:
-        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'file2.fa']
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'file2.fa', 'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, maxDepth: 1)
@@ -227,8 +227,10 @@ class NextflowTest extends Specification {
         then:
         result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa',
                                                      'dir1/file3.txt',
+                                                     'dir_link',
                                                      'file1.txt',
-                                                     'file2.fa']
+                                                     'file2.fa',
+                                                     'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**", relative: true, type:'dir')
@@ -252,8 +254,10 @@ class NextflowTest extends Specification {
                                                      'dir1/dir2',
                                                      'dir1/dir2/file4.fa',
                                                      'dir1/file3.txt',
+                                                     'dir_link',
                                                      'file1.txt',
-                                                     'file2.fa']
+                                                     'file2.fa',
+                                                     'file_link.fa']
 
         cleanup:
         folder?.deleteDir()
