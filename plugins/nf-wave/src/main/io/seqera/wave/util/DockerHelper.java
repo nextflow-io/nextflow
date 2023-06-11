@@ -17,6 +17,8 @@
 
 package io.seqera.wave.util;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -98,6 +100,10 @@ public class DockerHelper {
         final String yaml = spackPackagesToSpackYaml(packages, opts);
         if( yaml==null || yaml.length()==0 )
             return null;
+        return toYamlFile(yaml);
+    }
+
+    static private Path toYamlFile(String yaml) {
         try {
             final File tempFile = File.createTempFile("nf-spack", ".yaml");
             tempFile.deleteOnExit();
@@ -198,5 +204,55 @@ public class DockerHelper {
             result.append(cmd);
         }
         return result.toString();
+    }
+
+    public static Path addPackagesToSpackFile(String spackFile, SpackOpts opts) {
+        // Case A - both empty, nothing to do
+        if( StringUtils.isEmpty(spackFile) && StringUtils.isEmpty(opts.basePackages) )
+            return null;
+
+        // Case B - the spack file is empty, but some base package are given
+        // create a spack file with those packages
+        if( StringUtils.isEmpty(spackFile) ) {
+            return spackPackagesToSpackFile(null, opts);
+        }
+
+        final Path spackEnvPath = Path.of(spackFile);
+
+        // make sure the file exists
+        if( !Files.exists(spackEnvPath) ) {
+            throw new IllegalArgumentException("The specific Spack environment file cannot be found: " + spackFile);
+        }
+
+        // Case C - if not base packages are given just return the spack file as a path
+        if( StringUtils.isEmpty(opts.basePackages) ) {
+            return spackEnvPath;
+        }
+
+        // Case D - last case, both spack file and base packages are specified
+        // => parse the spack file yaml, add the base packages to it
+        final Yaml yaml = new Yaml();
+        try {
+            // 1. parse the file
+            Map<String,Object> data = yaml.load(new FileReader(spackFile));
+            // 2. parse the base packages
+            final List<String> base = spackPackagesToList(opts.basePackages);
+            // 3. append to the specs
+            Map<String,Object> spack = (Map<String,Object>) data.get("spack");
+            if( spack==null ) {
+                throw new IllegalArgumentException("The specified Spack environment file does not contain a root entry 'spack:' - offending file path: " + spackFile);
+            }
+            List<String> specs = (List<String>)spack.get("specs");
+            if( specs==null ) {
+                specs = new ArrayList<>();
+                spack.put("specs", specs);
+            }
+            specs.addAll(base);
+            // 5. return it as a new temp file
+            return toYamlFile( yaml.dump(data) );
+        }
+        catch (FileNotFoundException e) {
+            throw new IllegalArgumentException("The specific Spack environment file cannot be found: " + spackFile, e);
+        }
     }
 }

@@ -395,9 +395,9 @@ class WaveClient {
             if( dockerScript )
                 throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
 
-            // map the recipe to a dockerfile
             if( isSpackFile(attrs.spack) ) {
-                spackFile = Path.of(attrs.spack)
+                // parse the attribute as a spack file path *and* append the base packages if any
+                spackFile = addPackagesToSpackFile(attrs.spack, config.spackOpts())
             }
             else {
                 // create a minimal spack file with package spec from user input

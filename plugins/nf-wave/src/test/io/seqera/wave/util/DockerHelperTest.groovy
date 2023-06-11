@@ -17,6 +17,8 @@
 
 package io.seqera.wave.util
 
+import java.nio.file.Files
+
 import spock.lang.Specification
 
 import io.seqera.wave.config.CondaOpts
@@ -424,4 +426,76 @@ CMD [ "/bin/bash" ]
         '^alpha ~beta foo'  | ['^alpha ~beta', 'foo']   // <-- this should not be valid
 
     }
+
+    def 'should merge spack file and base package' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def SPACK_FILE1 = folder.resolve('spack1.yaml')
+        SPACK_FILE1.text = '''\
+            spack:
+              specs: [foo@1.2.3 x=one, bar @2]
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+        and:
+        def SPACK_FILE2 = folder.resolve('spack2.yaml')
+        SPACK_FILE2.text = '''\
+            spack:
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+        and:
+        def SPACK_FILE3 = folder.resolve('spack3.yaml')
+        SPACK_FILE3.text = '''\
+            foo:
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+
+        when:
+        def result = DockerHelper.addPackagesToSpackFile(null, new SpackOpts())
+        then:
+        result == null
+
+        when:
+        result = DockerHelper.addPackagesToSpackFile(SPACK_FILE1.toString(), new SpackOpts())
+        then:
+        result.toString() == SPACK_FILE1.toString()
+
+        when:
+        result = DockerHelper.addPackagesToSpackFile(SPACK_FILE1.toString(), new SpackOpts(basePackages: 'alpha delta'))
+        then:
+        result.text == '''\
+            spack:
+              specs: [foo@1.2.3 x=one, bar @2, alpha, delta]
+              concretizer: {unify: true, reuse: false}
+            '''.stripIndent(true)
+
+
+        when:
+        result = DockerHelper.addPackagesToSpackFile(SPACK_FILE2.toString(), new SpackOpts(basePackages: 'alpha delta'))
+        then:
+        result.text == '''\
+            spack:
+              concretizer: {unify: true, reuse: false}
+              specs: [alpha, delta]
+            '''.stripIndent(true)
+
+        when:
+        DockerHelper.addPackagesToSpackFile(SPACK_FILE3.toString(), new SpackOpts(basePackages: 'foo'))
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        DockerHelper.addPackagesToSpackFile('missing file', new SpackOpts(basePackages: 'foo'))
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        DockerHelper.addPackagesToSpackFile('missing file', new SpackOpts())
+        then:
+        thrown(IllegalArgumentException)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
