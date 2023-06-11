@@ -476,7 +476,7 @@ class WaveClientTest extends Specification {
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.20.0 as builder
+FROM {{builder_image}} as builder
 COPY spack.yaml /opt/spack-env/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
@@ -590,7 +590,7 @@ CMD [ "/bin/bash" ]
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.20.0 as builder
+FROM {{builder_image}} as builder
 COPY spack.yaml /opt/spack-env/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\

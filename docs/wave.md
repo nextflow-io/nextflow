@@ -174,6 +174,11 @@ The following configuration options are available:
 :::
 : One or more Spack packages to be always added in the resulting container.
 
+`wave.build.spack.baseImage`
+: :::{versionadded} 22.06.0-edge
+:::
+: The container image from which the resulting container is build (default: `ubuntu:22.04`).
+
 `wave.build.spack.commands`
 : :::{versionadded} 22.06.0-edge
 :::

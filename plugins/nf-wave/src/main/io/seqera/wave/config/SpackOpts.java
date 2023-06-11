@@ -27,21 +27,31 @@ import java.util.Map;
  */
 public class SpackOpts {
 
-    final static public String DEFAULT_SPACK_BUILDER_IMAGE = "spack/ubuntu-jammy:v0.20.0";
-    final static public String DEFAULT_SPACK_RUNNER_IMAGE = "ubuntu:22.04";
+    /**
+     * The default base image from which the resulting container is created
+     */
+    final static public String DEFAULT_SPACK_BASE_IMAGE = "ubuntu:22.04";
 
-    public final String builderImage;
-    public final String runnerImage;
+    /**
+     * The container image from which the resulting container is created
+     */
+    public final String baseImage;
+
+    /**
+     * Custom Dockerfile `RUN` commands that can be used to customise the target container
+     */
     public final List<String> commands;
 
+    /**
+     * Spack packages that should be added to any Spack environment requested via Wave
+     */
     public final String basePackages;
 
     public SpackOpts() {
         this(Map.of());
     }
     public SpackOpts(Map<String,?> opts) {
-        this.builderImage = opts.containsKey("builderImage") ? opts.get("builderImage").toString() : DEFAULT_SPACK_BUILDER_IMAGE;
-        this.runnerImage = opts.containsKey("runnerImage") ? opts.get("runnerImage").toString() : DEFAULT_SPACK_RUNNER_IMAGE;
+        this.baseImage = opts.containsKey("baseImage") ? opts.get("baseImage").toString() : DEFAULT_SPACK_BASE_IMAGE;
         this.commands = opts.containsKey("commands") ? (List<String>)opts.get("commands") : null;
         this.basePackages = opts.containsKey("basePackages") ? opts.get("basePackages").toString() : null;
     }

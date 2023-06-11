@@ -151,7 +151,7 @@ spack:
 '''//.stripIndent(true)
         DockerHelper.spackFileToDockerFile(ARCH, new SpackOpts())== '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.20.0 as builder
+FROM {{builder_image}} as builder
 COPY spack.yaml /opt/spack-env/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
@@ -213,7 +213,7 @@ CMD [ "/bin/bash" ]
 
     def 'should create dockerfile content with custom spack config' () {
         given:
-        def SPACK_OPTS = [ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', commands:['USER hola'] ]
+        def SPACK_OPTS = [ checksum:false, baseImage:'ubuntu/foo', osPackages:'libfoo', commands:['USER hola'] ]
         def PACKAGES = 'bwa@0.7.15 salmon@1.1.1'
         def ARCH = 'nextcpu'
 
@@ -225,7 +225,7 @@ spack:
 '''//.stripIndent(true)
         DockerHelper.spackFileToDockerFile(ARCH, new SpackOpts(SPACK_OPTS))== '''\
 # Builder image
-FROM spack/foo:1 as builder
+FROM {{builder_image}} as builder
 COPY spack.yaml /opt/spack-env/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
@@ -294,7 +294,7 @@ CMD [ "/bin/bash" ]
         expect:
         DockerHelper.spackFileToDockerFile(ARCH, new SpackOpts())== '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.20.0 as builder
+FROM {{builder_image}} as builder
 COPY spack.yaml /opt/spack-env/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\

@@ -114,16 +114,15 @@ public class DockerHelper {
         // create bindings
         final Map<String,String> binding = spackBinding(spackArch, opts);
         // those var are resolved on backend side
-        final List<String> ignore = List.of("spack_cache_dir","spack_key_file");
+        final List<String> ignore = List.of("spack_cache_dir","spack_key_file","builder_image");
         //  return the template
         return renderTemplate0("/templates/spack/dockerfile-spack-file.txt", binding, ignore);
     }
 
     static private Map<String,String> spackBinding(String spackArch, SpackOpts opts) {
         final Map<String,String> binding = new HashMap<>();
-        binding.put("builder_image", opts.builderImage);
         binding.put("spack_arch", spackArch);
-        binding.put("runner_image", opts.runnerImage);
+        binding.put("runner_image", opts.baseImage);
         binding.put("add_commands", joinCommands(opts.commands));
         return binding;
     }
