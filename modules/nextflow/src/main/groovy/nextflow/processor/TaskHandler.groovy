@@ -20,6 +20,8 @@ import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
 /**
@@ -32,6 +34,7 @@ import nextflow.trace.TraceRecord
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 abstract class TaskHandler {
 
     protected TaskHandler(TaskRun task) {
@@ -155,6 +158,7 @@ abstract class TaskHandler {
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */
+    @CompileDynamic
     TraceRecord getTraceRecord() {
         def record = new TraceRecord()
         record.task_id = task.id

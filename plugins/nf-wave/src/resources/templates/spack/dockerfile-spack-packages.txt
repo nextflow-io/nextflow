@@ -1,0 +1,65 @@
+##  Spack
+##  https://github.com/spack/spack
+##  Copyright 2013-2023 Lawrence Livermore National Security, LLC and other Spack Project Developers. See the top-level COPYRIGHT file for details.
+##  Licensed under Apache License, Version 2.0
+# Builder image
+FROM {{builder_image}} as builder
+
+RUN mkdir -p /opt/spack-env \
+&&  spack env create -d /opt/spack-env \
+&&  sed -e 's;compilers:;compilers::;' \
+         -e 's;^ *flags: *{};    flags:\n      cflags: {{c_flags}}\n      cxxflags: {{cxx_flags}}\n      fflags: {{f_flags}};' \
+         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \
+&&  sed -i '/^spack:/a\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \
+&& cd /opt/spack-env && spack env activate . \
+&& spack add {{packages}} \
+&& spack config add config:install_tree:/opt/software \
+&& spack config add concretizer:unify:true \
+&& spack config add concretizer:reuse:false \
+&& spack config add packages:all:target:[{{spack_arch}}] \
+&& echo -e "\
+  view: /opt/view \n\
+" >> /opt/spack-env/spack.yaml
+
+# Install packages, clean afterwards, finally strip binaries
+RUN cd /opt/spack-env && spack env activate . \
+&& spack concretize -f \
+&& spack install --fail-fast {{checksum_string}}&& spack gc -y \
+&& find -L /opt/._view/* -type f -exec readlink -f '{}' \; | \
+    xargs file -i | \
+    grep 'charset=binary' | \
+    grep 'x-executable\|x-archive\|x-sharedlib' | \
+    awk -F: '{print $1}' | xargs strip -s
+
+RUN cd /opt/spack-env && \
+    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \
+    original_view=$( cd /opt ; ls -1d ._view/* ) && \
+    sed -i "s;/view/;/$original_view/;" /opt/spack-env/z10_spack_environment.sh && \
+    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \
+    echo "export PERL5LIB=$(eval ls -d /opt/._view/*/lib/5.*):$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \
+    rm -rf /opt/view
+
+# Runner image
+FROM {{runner_image}}
+
+COPY --from=builder /opt/spack-env /opt/spack-env
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/._view /opt/._view
+
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps libgomp1 {{os_packages}} && rm -rf /var/lib/apt/lists/* ) || \
+    ( yum install -y procps libgomp {{os_packages}} && yum clean all && rm -rf /var/cache/yum ) || \
+    ( zypper ref && zypper install -y procps libgomp1 {{os_packages}} && zypper clean -a ) || \
+    ( apk update && apk add --no-cache procps libgomp bash {{os_packages}} && rm -rf /var/cache/apk )
+
+# Entrypoint for Singularity
+RUN mkdir -p /.singularity.d/env && \
+    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+# Entrypoint for Docker
+RUN echo "#!/usr/bin/env bash\n\nset -ef -o pipefail\nsource /opt/spack-env/z10_spack_environment.sh\nexec \"\$@\"" \
+    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+
+{{add_commands}}
+
+ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
+CMD [ "/bin/bash" ]
