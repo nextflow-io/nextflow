@@ -52,7 +52,11 @@ class BashFunLibTest extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x)
+                      if [[ -e /proc/$x ]]; then
+                        copy+=($x)   # process still exists, remember it
+                      else
+                        wait $x      # process exited, wait on it
+                      fi
                     done
                     pid=("${copy[@]}")
             
@@ -88,8 +92,8 @@ class BashFunLibTest extends Specification {
 
         """
         cmds=()
-        cmds+=("true")
         cmds+=("false")
+        cmds+=("true")
         nxf_parallel "\${cmds[@]}"
         """.stripIndent()
 
