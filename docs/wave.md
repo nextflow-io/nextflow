@@ -193,6 +193,11 @@ The following configuration options are available:
 `wave.build.spack.commands`
 : One or more commands to be added to the Dockerfile used to build a Spack based image.
 
+`wave.httpClient.connectTime`
+: :::{versionadded} 22.06.0-edge
+:::
+: Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
+
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
@@ -201,3 +206,23 @@ The following configuration options are available:
 
 `wave.report.file` (preview)
 : The name of the containers report file (default: `containers-<timestamp>.config` requires version `23.06.0-edge` or later).
+
+`wave.retryPolicy.delay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The initial delay when a failing HTTP request is retried (default: `150ms`). 
+
+`wave.retryPolicy.maxDelay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max delay when a failing HTTP request is retried (default: `90 seconds`).
+
+`wave.retryPolicy.maxAttempts`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max number of attempts a failing HTTP request is retried (default: `5`).
+
+`wave.retryPolicy.jitter`
+: :::{versionadded} 22.06.0-edge
+  :::
+: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).

@@ -1,6 +1,8 @@
 package nextflow.cloud.google.batch
 
 import nextflow.cloud.google.batch.GoogleBatchMachineTypeSelector.MachineType
+import nextflow.cloud.types.PriceModel
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 
 class GoogleBatchMachineTypeSelectorTest extends Specification {
@@ -21,24 +23,24 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
     def 'should select best machine type'() {
         given:
         final selector = Spy(GoogleBatchMachineTypeSelector) {
-            getAvailableMachineTypes(REGION) >> MACHINE_TYPES
+            getAvailableMachineTypes(REGION, SPOT) >> MACHINE_TYPES
         }
         expect:
-        selector.bestMachineType(CPUS, MEM, REGION, SPOT, FUSION, FAMILIES) == EXPECTED
+        selector.bestMachineType(CPUS, MEM, REGION, SPOT, FUSION, FAMILIES).type == EXPECTED
 
         where:
-        CPUS | MEM  | REGION | SPOT  | FUSION | FAMILIES                  | EXPECTED
-        1    | 1000 | 'reg'  | true  | false | null                       | 'e2-type01'
-        1    | 1000 | 'reg'  | false | true  | null                       | 'n1-type02'
-        4    | 4000 | 'reg'  | false | false | []                         | 'e2-type03'
-        4    | 4000 | 'reg'  | true  | false | []                         | 'n2-type04'
-        4    | 4000 | 'reg'  | false | true  | []                         | 'n2-type04'
-        6    | 6000 | 'reg'  | true  | false | null                       | 'e2-type05'
-        6    | 6000 | 'reg'  | true  | true  | null                       | 'n1-type06'
-        6    | 6000 | 'reg'  | true  | false | ['n1-*', 'm1-*']           | 'n1-type06'
-        8    | 8000 | 'reg'  | true  | false | null                       | 'm1-type07'
-        8    | 8000 | 'reg'  | false | false | ['m?-*', 'c2-*']           | 'm2-type08'
-        8    | 8000 | 'reg'  | false | false | ['m1-type07', 'm2-type66'] | 'm1-type07'
+        CPUS | MEM  | REGION | SPOT  | FUSION | FAMILIES                   | EXPECTED
+        1    | 1000 | 'reg'  | true  | false  | null                       | 'e2-type01'
+        1    | 1000 | 'reg'  | false | true   | null                       | 'n1-type02'
+        4    | 4000 | 'reg'  | false | false  | []                         | 'e2-type03'
+        4    | 4000 | 'reg'  | true  | false  | []                         | 'n2-type04'
+        4    | 4000 | 'reg'  | false | true   | []                         | 'n2-type04'
+        6    | 6000 | 'reg'  | true  | false  | null                       | 'e2-type05'
+        6    | 6000 | 'reg'  | true  | true   | null                       | 'n1-type06'
+        6    | 6000 | 'reg'  | true  | false  | ['n1-*', 'm1-*']           | 'n1-type06'
+        8    | 8000 | 'reg'  | true  | false  | null                       | 'm1-type07'
+        8    | 8000 | 'reg'  | false | false  | ['m?-*', 'c2-*']           | 'm2-type08'
+        8    | 8000 | 'reg'  | false | false  | ['m1-type07', 'm2-type66'] | 'm1-type07'
 
 
     }
@@ -46,7 +48,7 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
     def 'should not select a machine type'() {
         given:
         final selector = Spy(GoogleBatchMachineTypeSelector) {
-            getAvailableMachineTypes(REGION) >> MACHINE_TYPES
+            getAvailableMachineTypes(REGION, SPOT) >> MACHINE_TYPES
         }
         when:
         selector.bestMachineType(CPUS, MEM, REGION, SPOT, SSD, FAMILIES)
@@ -63,9 +65,36 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
 
     def 'should parse Seqera cloud info API'() {
         when:
-        GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2")
+        GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2", true)
 
         then:
         noExceptionThrown()
+    }
+
+    def 'should find first valid disk size'() {
+        expect:
+        GoogleBatchMachineTypeSelector.INSTANCE.findFirstValidSize(MemoryUnit.of(REQUESTED), ALLOWED) == MemoryUnit.of(EXPECTED)
+
+        where:
+        REQUESTED | ALLOWED   | EXPECTED
+        '100 GB'  | [2, 4, 8] | '750 GB'
+        '100 GB'  | [1, 2, 4] | '375 GB'
+        '500 GB'  | [1, 2]    | '750 GB'
+        '1 TB'    | [1, 2]    | '750 GB'
+    }
+
+    def 'should find valid local disk size given the machine type'() {
+        expect:
+        final machineType = new MachineType(type: TYPE, family: FAMILY, cpusPerVm: CPUS)
+        GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(MemoryUnit.of(REQUESTED), machineType) == MemoryUnit.of(EXPECTED)
+
+        where:
+        REQUESTED | TYPE              | FAMILY | CPUS | EXPECTED
+        '100 GB'  | 'n1-highmem-8'    | 'n1'   | 8    | '375 GB'
+        '375 GB'  | 'n2-highcpu-16'   | 'n2'   | 16   | '750 GB'
+        '780 GB'  | 'n2d-standard-48' | 'n2d'  | 48   | '1500 GB'
+        '200 GB'  | 'c2-standard-4'   | 'c2'   | 4    | '375 GB'
+        '50 GB'   | 'c2d-highmem-56'  | 'c2d'  | 56   | '1500 GB'
+        '750 GB'  | 'm3-megamem-64'   | 'm3'   | 64   | '1500 GB'
     }
 }

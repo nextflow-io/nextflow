@@ -12,7 +12,7 @@ RUN mkdir -p /opt/spack-env \
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \
 &&  sed -i '/^spack:/a\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \
 && cd /opt/spack-env && spack env activate . \
-&& spack add {{recipe}} \
+&& spack add {{packages}} \
 && spack config add config:install_tree:/opt/software \
 && spack config add concretizer:unify:true \
 && spack config add concretizer:reuse:false \

@@ -715,6 +715,16 @@ The following settings are available:
 `google.enableRequesterPaysBuckets`
 : When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
 
+`google.httpConnectTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+
+`google.httpReadTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
+
 `google.location`
 : The Google Cloud location where jobs are executed (default: `us-central1`).
 
@@ -1602,9 +1612,10 @@ The following environment variables control the configuration of the Nextflow ru
 : Directory where working files are stored (usually your *scratch* directory)
 
 `NXF_FILE_ROOT`
-: The file storage path against which relative file paths are resolved. For example, having define the variable `NXF_FILE_ROOT=/some/root/path`
-the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the 
-usual protocol prefix e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+: :::{versionadded} 23.05.0-edge
+  :::
+: The file storage path against which relative file paths are resolved.
+: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
 
 `JAVA_HOME`
 : Defines the path location of the Java VM installation used to run Nextflow.
