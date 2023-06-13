@@ -45,4 +45,11 @@ interface TaskArrayAware {
         throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
     }
 
+    /**
+     * Get the start of the array job index range.
+     */
+    default int getArrayIndexStart() {
+        return 0
+    }
+
 }

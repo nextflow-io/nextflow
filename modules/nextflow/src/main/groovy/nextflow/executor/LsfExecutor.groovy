@@ -18,7 +18,6 @@ package nextflow.executor
 
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
@@ -43,8 +42,6 @@ class LsfExecutor extends AbstractGridExecutor {
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
 
     static private Pattern QUOTED_STRING_REGEX = ~/"((?:[^"\\]|\\.)*)"(\s*#.*)?/
-
-    static private AtomicInteger taskArrayCount = new AtomicInteger()
 
     private boolean perJobMemLimit
 
@@ -71,11 +68,6 @@ class LsfExecutor extends AbstractGridExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
-
-        if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).getArraySize()
-            result << '-J' << "nf-array-${taskArrayCount.getAndIncrement()}[0-${arraySize - 1}]".toString()
-        }
 
         result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
 
@@ -113,7 +105,13 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << getJobNameFor(task)
+        if( task instanceof TaskArray ) {
+            final arraySize = ((TaskArray)task).getArraySize()
+            result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
+        }
+        else {
+            result << '-J' << getJobNameFor(task)
+        }
 
         // -- at the end append the command script wrapped file name
         result.addAll( task.config.getClusterOptionsAsList() )
@@ -318,6 +316,9 @@ class LsfExecutor extends AbstractGridExecutor {
     String getArrayIndexName() { 'LSB_JOBINDEX' }
 
     @Override
-    String getArrayTaskId(String jobId, int index) { "${jobId}[${index}]" }
+    int getArrayIndexStart() { 1 }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) { "${jobId}[${index + 1}]" }
 
 }

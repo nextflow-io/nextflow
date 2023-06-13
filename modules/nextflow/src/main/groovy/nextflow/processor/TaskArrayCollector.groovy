@@ -162,10 +162,15 @@ class TaskArrayCollector {
         final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${task_dir}')
 
         // create wrapper script
-        final arrayIndexName = executor.getArrayIndexName()
+        final indexName = executor.getArrayIndexName()
+        final indexStart = executor.getArrayIndexStart()
+        final arrayIndex = indexStart > 0
+            ? "${indexName} + ${indexStart}"
+            : "${indexName}"
+
         final builder = new StringBuilder()
             << "array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )\n"
-            << "export task_dir=\${array[${arrayIndexName}]}\n"
+            << "export task_dir=\${array[${arrayIndex}]}\n"
             << cmd << '\n'
         return builder.toString()
     }
