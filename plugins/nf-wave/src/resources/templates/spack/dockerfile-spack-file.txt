@@ -23,11 +23,11 @@ RUN mkdir -p /opt/spack-env \
 RUN cd /opt/spack-env \
 && spack gpg trust {{spack_key_file}} \
 && spack mirror add seqera-spack {{spack_cache_dir}} \
+&& spack mirror add binary_mirror  https://binaries.spack.io/releases/v0.20 \
 && spack buildcache keys --install --trust \
 && spack env activate . \
 && spack concretize -f \
 && spack install --fail-fast \
-&& spack buildcache push -a --update-index {{spack_cache_dir}} \
 && spack gc -y \
 && find -L /opt/._view/* -type f -exec readlink -f '{}' \; | \
     xargs file -i | \
