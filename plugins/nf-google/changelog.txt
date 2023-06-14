@@ -1,5 +1,13 @@
 nf-google changelog
 ===================
+1.8.0 - 14 Jun 2023
+- Add httpConnectTimeout and httpReadTimeout to Google options (#3974) [49fa15f7]
+- Add disk resource with type option for Google Batch (#3861) [166b3638]
+- Prevent null exit code when Google batch is unable to access exit status [f68a39ec]
+- Fix S3 path normalization [b75ec444]
+- Fix invalid machine type setting when no valid machine type is found (#3961) [5eb93971]
+- Fix Google Batch default instance family types (#3960) [ci fast] [b5257cd7]
+
 1.7.4 - 15 May 2023
 - Update logging libraries [d7eae86e]
 - Improve task out redirect remove the use of mkfifo (#3863) [efedec74]
