@@ -475,73 +475,31 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-# Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
+                # Runner image
+                FROM {{spack_runner_image}}
+                
+                COPY --from=builder /opt/spack-env /opt/spack-env
+                COPY --from=builder /opt/software /opt/software
+                COPY --from=builder /opt/._view /opt/._view
+                
+                # Entrypoint for Singularity
+                RUN mkdir -p /.singularity.d/env && \\
+                    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                # Entrypoint for Docker
+                RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
+                    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+                
+                
+                ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
+                CMD [ "/bin/bash" ]
+                '''.stripIndent()
 
-RUN mkdir -p /opt/spack-env \\
-&&  spack env create -d /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
-&& spack add salmon@1.2.3 \\
-&& spack config add config:install_tree:/opt/software \\
-&& spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[x86_64] \\
-&& echo -e "\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
-
-# Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
-&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
-    xargs file -i | \\
-    grep 'charset=binary' | \\
-    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
-    awk -F: '{print \$1}' | xargs strip -s
-
-RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
-    rm -rf /opt/view
-
-# Runner image
-FROM ubuntu:22.04
-
-COPY --from=builder /opt/spack-env /opt/spack-env
-COPY --from=builder /opt/software /opt/software
-COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
-
-# Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \\
-    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-# Entrypoint for Docker
-RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-
-
-ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-CMD [ "/bin/bash" ]
-'''//.stripIndent()
         and:
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
-        !assets.spackFile
+        assets.spackFile
         !assets.projectResources
     }
 
@@ -591,66 +549,24 @@ CMD [ "/bin/bash" ]
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-# Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
-COPY spack.yaml /tmp/spack.yaml
-
-RUN mkdir -p /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
-&& spack config add config:install_tree:/opt/software \\
-&& spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[x86_64] \\
-&& echo -e "\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
-
-# Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
-&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
-    xargs file -i | \\
-    grep 'charset=binary' | \\
-    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
-    awk -F: '{print \$1}' | xargs strip -s
-
-RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
-    rm -rf /opt/view
-
-# Runner image
-FROM ubuntu:22.04
-
-COPY --from=builder /opt/spack-env /opt/spack-env
-COPY --from=builder /opt/software /opt/software
-COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
-
-# Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \\
-    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-# Entrypoint for Docker
-RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-
-
-ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-CMD [ "/bin/bash" ]
-'''//.stripIndent()
+                # Runner image
+                FROM {{spack_runner_image}}
+                
+                COPY --from=builder /opt/spack-env /opt/spack-env
+                COPY --from=builder /opt/software /opt/software
+                COPY --from=builder /opt/._view /opt/._view
+                
+                # Entrypoint for Singularity
+                RUN mkdir -p /.singularity.d/env && \\
+                    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                # Entrypoint for Docker
+                RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
+                    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+                
+                
+                ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
+                CMD [ "/bin/bash" ]
+                '''.stripIndent()
         and:
         assets.spackFile == spackFile
         and:
