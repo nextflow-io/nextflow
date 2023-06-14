@@ -42,7 +42,10 @@ class SlurmExecutor extends AbstractGridExecutor {
         return opts ? opts.contains('--signal ') || opts.contains('--signal=') : false
     }
 
+
     private boolean memPerCpu
+
+    memPerCpu = session.getExecConfigProp(name, 'memPerCpu', memPerCpu)
 
     protected boolean memPerCpu() { memPerCpu }
     
@@ -203,6 +206,8 @@ class SlurmExecutor extends AbstractGridExecutor {
     protected boolean pipeLauncherScript() {
         return isFusionEnabled()
     }
+
+
 
     @Override
     boolean isFusionEnabled() {
