@@ -37,18 +37,14 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
+    private boolean memPerCpu
+
     private boolean hasSignalOpt(Map config) {
         def opts = config.clusterOptions?.toString()
         return opts ? opts.contains('--signal ') || opts.contains('--signal=') : false
     }
 
 
-    private boolean memPerCpu
-
-    memPerCpu = session.getExecConfigProp(name, 'memPerCpu', memPerCpu)
-
-    protected boolean memPerCpu() { memPerCpu }
-    
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *
@@ -82,13 +78,8 @@ class SlurmExecutor extends AbstractGridExecutor {
             // be stored, just collected). In both cases memory use is based upon the job's
             // Resident Set Size (RSS). A task may exceed the memory limit until the next periodic
             // accounting sample. -- https://slurm.schedmd.com/sbatch.html
-            
-            if( memPerCpu ) {
-                result << '--mem-per-cpu' << task.config.getMemory().toMega().toString() + 'M'
-            else {
-                result << '--mem' << task.config.getMemory().toMega().toString() + 'M'
-            }
-            
+            final memOption = memPerCpu ? '--mem-per-cpu' : '--mem'
+            result << memOption << task.config.getMemory().toMega().toString() + 'M'
         }
 
         // the requested partition (a.k.a queue) name
@@ -203,11 +194,14 @@ class SlurmExecutor extends AbstractGridExecutor {
     }
 
     @Override
+    void register() {
+        memPerCpu = session.getExecConfigProp(name, 'memPerCpu', memPerCpu)
+    }
+
+    @Override
     protected boolean pipeLauncherScript() {
         return isFusionEnabled()
     }
-
-
 
     @Override
     boolean isFusionEnabled() {

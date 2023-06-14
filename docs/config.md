@@ -605,6 +605,11 @@ The following settings are available:
 `executor.memory`
 : The maximum amount of memory made available by the underlying system. Used only by the `local` executor.
 
+`executor.memPerCpu`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Used only by SLURM. Use `--mem-per-cpu` instead of `--mem` to specify memory allocations for SLURM jobs. See {ref}`slurm-executor`.
+
 `executor.name`
 : The name of the executor to be used (default: `local`).
 
@@ -613,9 +618,6 @@ The following settings are available:
 
 `executor.perTaskReserve`
 : Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
-
-`executor.memPerCpu`
-: Specific to Slurm. Uses `--mem-per-cpu`instead of `--mem` to specify memory allocation for `sbatch` as required by some clusters. See {ref}`slurm-executor`.
 
 `executor.pollInterval`
 : Determines how often to check for process termination. Default varies for each executor (see below).
