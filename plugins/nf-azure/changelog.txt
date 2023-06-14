@@ -1,5 +1,10 @@
 nf-azure changelog
 ===================
+1.1.1 - 14 Jun 2023
+- Add retry policy on Az blob operations [295bc1ff]
+- Bump azure-storage-blob:12.22.1 [2a36fa77]
+- Fix S3 path normalization [b75ec444]
+
 1.1.0 - 15 May 2023
 - Add support for `time` directive in Azure Batch (#3869) [ci fast] [5c11a0d4]
 - Increase Azure default maxRetries to 10 [a017139f]
