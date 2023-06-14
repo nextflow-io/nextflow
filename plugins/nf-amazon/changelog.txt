@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+2.0.1 - 14 Jun 2023
+- Add support for AWS SES as mail sending provider [df85d443]
+- Fix access to public S3 bucket when no creds are provided (#3992) [cf8ba466]
+- Fix S3 path normalization [b75ec444]
+
 2.0.0 - 15 May 2023
 - Add fusion.exportStorageCredentials option [ci fast] [acb6aedf]
 - Fix AWS SSE env propagation to Fusion [e24608c3]
