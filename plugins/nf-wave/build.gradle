@@ -35,6 +35,7 @@ dependencies {
     api 'org.apache.commons:commons-compress:1.21'
     api 'org.apache.commons:commons-lang3:3.12.0'
     api 'com.google.code.gson:gson:2.10.1'
+    api 'org.yaml:snakeyaml:2.0'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.codehaus.groovy:groovy:3.0.17"
