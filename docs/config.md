@@ -614,6 +614,9 @@ The following settings are available:
 `executor.perTaskReserve`
 : Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
 
+`executor.memPerCpu`
+: Specific to Slurm. Uses `--mem-per-cpu`instead of `--mem` to specify memory allocation for `sbatch` as required by some clusters. See {ref}`slurm-executor`.
+
 `executor.pollInterval`
 : Determines how often to check for process termination. Default varies for each executor (see below).
 

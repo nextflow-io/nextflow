@@ -507,6 +507,13 @@ Resource requests and other job characteristics can be controlled via the follow
 SLURM partitions can be specified with the `queue` directive.
 :::
 
+:::{note}
+Some SLURM clusters require memory allocation to be specified with `--mem-per-cpu` instead by `--mem`. 
+Specify `executor.memPerCpu = true` in the config to activate with behaviour.
+:::
+
+
+
 :::{tip}
 Nextflow does not provide direct support for SLURM multi-clusters. If you need to submit workflow executions to a cluster other than the current one, specify it with the `SLURM_CLUSTERS` variable in the launch environment.
 :::
