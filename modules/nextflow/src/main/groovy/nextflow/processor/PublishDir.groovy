@@ -128,6 +128,10 @@ class PublishDir {
             nullPathWarn = checkNull(resolved.toString())
         this.path = FileHelper.toCanonicalPath(resolved)
     }
+    
+    void setMode(Closure value) {
+        setMode(value.call())
+    }
 
     void setMode( String str ) {
         this.mode = str == 'copyNoFollow' ? Mode.COPY_NO_FOLLOW : str.toUpperCase() as Mode
