@@ -42,7 +42,10 @@ class SlurmExecutor extends AbstractGridExecutor {
         return opts ? opts.contains('--signal ') || opts.contains('--signal=') : false
     }
 
+    private boolean memPerCpu
 
+    protected boolean memPerCpu() { memPerCpu }
+    
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *
@@ -76,7 +79,13 @@ class SlurmExecutor extends AbstractGridExecutor {
             // be stored, just collected). In both cases memory use is based upon the job's
             // Resident Set Size (RSS). A task may exceed the memory limit until the next periodic
             // accounting sample. -- https://slurm.schedmd.com/sbatch.html
-            result << '--mem' << task.config.getMemory().toMega().toString() + 'M'
+            
+            if( memPerCpu ) {
+                result << '--mem-per-cpu' << task.config.getMemory().toMega().toString() + 'M'
+            else {
+                result << '--mem' << task.config.getMemory().toMega().toString() + 'M'
+            }
+            
         }
 
         // the requested partition (a.k.a queue) name
