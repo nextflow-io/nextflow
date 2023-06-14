@@ -19,6 +19,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import com.google.common.hash.HashCode
+import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayAware
 import nextflow.script.BodyDef
@@ -113,6 +114,8 @@ class TaskArrayCollectorTest extends Specification {
         def task = Mock(TaskRun) {
             processor >> Mock(TaskProcessor) {
                 config >> Mock(ProcessConfig)
+                getExecutor() >> executor
+                getSession() >> Mock(Session)
                 getTaskBody() >> { new BodyDef(null, 'source') }
             }
             getHash() >> HashCode.fromString('0123456789abcdef')
@@ -133,6 +136,9 @@ class TaskArrayCollectorTest extends Specification {
             export task_dir=${array[ARRAY_JOB_INDEX]}
             bash -o pipefail -c 'bash ${task_dir}/.command.run 2>&1 | tee ${task_dir}/.command.log'
             '''.stripIndent().leftTrim()
+        and:
+        taskArray.getArraySize() == 3
+        taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]
     }
 
 }
