@@ -275,7 +275,8 @@ class AwsClientFactory {
             return new ProfileCredentialsProvider(configFile(), profile)
         }
 
-        return new AWSCredentialsProviderChain(List.of(new EnvironmentVariableCredentialsProvider(),
+        return new AWSCredentialsProviderChain(List.of(
+                new EnvironmentVariableCredentialsProvider(),
                 new SystemPropertiesCredentialsProvider(),
                 WebIdentityTokenCredentialsProvider.create(),
                 new ProfileCredentialsProvider(configFile(), null),
