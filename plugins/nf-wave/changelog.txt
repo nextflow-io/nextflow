@@ -1,5 +1,16 @@
 nf-wave changelog
 ==================
+0.10.0 - 14 Jun 2023
+- Add retry policy to Wave http client [1daebeef]
+- Add support for arch auto-detection to Wave [7b5fdaf0]
+- Add Wave containers reports (preview) [9d9e2758]
+- Add wave.httpClient.connectTimeout config option [dd999a3c]
+- Consolidate Wave retryPolicy options [7d7464fe]
+- Enhanced support for Spack + Wave (#3998) [63ac03b3]
+- Refactor Conda and Spack support for Wave to Java [36b9e226]
+- Minor change in Wave config [4da0442a]
+- Fix log typo [ci fast] [f6e4b9ba]
+
 0.9.0 - 15 Apr 2023
 - Add support for the Spack recipes to Wave build (#3636) [b03cbe70]
 - Update logging libraries [d7eae86e]
