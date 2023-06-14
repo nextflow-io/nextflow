@@ -18,6 +18,7 @@
 package io.seqera.wave.util;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -35,13 +36,25 @@ public class TemplateRenderer {
     private static final Pattern VAR1 = Pattern.compile("(\\s*)\\{\\{([\\d\\w_-]+)}}(\\s*$)");
     private static final Pattern VAR2 = Pattern.compile("(?<!\\$)\\{\\{([\\d\\w_-]+)}}");
 
+    private List<String> ignoreNames = List.<String>of();
 
-    public static String render(InputStream template, Map<String, String> binding) {
+    public TemplateRenderer withIgnore(String... names) {
+        return withIgnore(List.of(names));
+    }
+
+    public TemplateRenderer withIgnore(List<String> names) {
+        if( names!=null ) {
+            ignoreNames = List.copyOf(names);
+        }
+        return this;
+    }
+
+    public String render(InputStream template, Map<String, String> binding) {
         String str = new Scanner(template).useDelimiter("\\A").next();
         return render(str, binding);
     }
 
-    public static String render(String template, Map<String, String> binding) {
+    public String render(String template, Map<String, String> binding) {
         final String[] lines = template.split("(?<=\n)");
         final StringBuilder result = new StringBuilder();
         for( String it : lines ) {
@@ -62,7 +75,7 @@ public class TemplateRenderer {
      * @param binding The binding {@link Map}
      * @return The templated having the variables replaced with the corresponding value
      */
-     static String replace1(CharSequence template, Map<String, ?> binding) {
+     String replace1(CharSequence template, Map<String, ?> binding) {
         Matcher matcher = PATTERN.matcher(template);
 
         // Loop through each matched variable placeholder
@@ -78,7 +91,7 @@ public class TemplateRenderer {
                 isNull |= value==null;
                 matcher.appendReplacement(builder, str);
             }
-            else {
+            else if( !ignoreNames.contains(variable) ) {
                 throw new IllegalArgumentException(String.format("Unable to resolve template variable: {{%s}}", variable));
             }
         }
@@ -88,13 +101,15 @@ public class TemplateRenderer {
         return !isNull || !result.isBlank() ? result : null;
     }
 
-    static String replace0(String line, Map<String,String> binding) {
+    String replace0(String line, Map<String,String> binding) {
         if( line==null || line.length()==0 )
             return line;
 
         Matcher matcher = VAR1.matcher(line);
         if( matcher.matches() ) {
             final String name = matcher.group(2);
+            if( ignoreNames.contains(name) )
+                return line;
             if( !binding.containsKey(name) )
                 throw new IllegalArgumentException("Missing template key: "+name);
             final String prefix = matcher.group(1);
@@ -114,10 +129,13 @@ public class TemplateRenderer {
 
         final StringBuilder result = new StringBuilder();
         while( (matcher=VAR2.matcher(line)).find() ) {
-            String name = matcher.group(1);
-            if( !binding.containsKey(name))
+            final String name = matcher.group(1);
+            if( !binding.containsKey(name) && !ignoreNames.contains(name)) {
                 throw new IllegalArgumentException("Missing template key: "+name);
-            final String value = binding.get(name)!=null ? binding.get(name) : "";
+            }
+            final String value = !ignoreNames.contains(name)
+                    ? (binding.get(name)!=null ? binding.get(name) : "")
+                    : "{{"+name+"}}";
             final int p = matcher.start(1);
             final int q = matcher.end(1);
 

@@ -28,39 +28,52 @@ class TemplateRendererTest extends Specification {
     def 'should replace vars' () {
         given:
         def binding = [foo: 'Hello', bar: 'world']
-
+        def render = new TemplateRenderer()
         expect:
-        TemplateRenderer.replace0('{{foo}}', binding) == 'Hello'
-        TemplateRenderer.replace0('{{foo}} ', binding) == 'Hello '
-        TemplateRenderer.replace0('{{foo}}\n', binding) == 'Hello\n'
-        TemplateRenderer.replace0('  {{foo}}', binding) == '  Hello'
-        TemplateRenderer.replace0('  {{foo}}\n', binding) == '  Hello\n'
-        TemplateRenderer.replace0('  ${foo}', binding)  == '  ${foo}'
-        TemplateRenderer.replace0('  ${{foo}}', binding) == '  ${{foo}}'
-        TemplateRenderer.replace0('{{foo}}', [foo:'']) == ''
-        TemplateRenderer.replace0('{{foo}}', [foo:null]) == null
-        TemplateRenderer.replace0('  {{foo}}\n', [foo:null]) == null
-        TemplateRenderer.replace0('', binding) == ''
-        TemplateRenderer.replace0(null, binding) == null
+        render.replace0('{{foo}}', binding) == 'Hello'
+        render.replace0('{{foo}} ', binding) == 'Hello '
+        render.replace0('{{foo}}\n', binding) == 'Hello\n'
+        render.replace0('  {{foo}}', binding) == '  Hello'
+        render.replace0('  {{foo}}\n', binding) == '  Hello\n'
+        render.replace0('  ${foo}', binding)  == '  ${foo}'
+        render.replace0('  ${{foo}}', binding) == '  ${{foo}}'
+        render.replace0('{{foo}}', [foo:'']) == ''
+        render.replace0('{{foo}}', [foo:null]) == null
+        render.replace0('  {{foo}}\n', [foo:null]) == null
+        render.replace0('', binding) == ''
+        render.replace0(null, binding) == null
 
-        TemplateRenderer.replace0('{{foo}} {{bar}}!', binding) == 'Hello world!'
-        TemplateRenderer.replace0('abc {{foo}} pq {{bar}} xyz', binding) == 'abc Hello pq world xyz'
-        TemplateRenderer.replace0('{{foo}} 123 {{bar}} xyz {{foo}}', binding) == 'Hello 123 world xyz Hello'
-        TemplateRenderer.replace0('1{{foo}}2{{foo}}3', [foo:'']) == '123'
-        TemplateRenderer.replace0('1{{foo}}2{{foo}}3', [foo:null]) == '123'
+        render.replace0('{{foo}} {{bar}}!', binding) == 'Hello world!'
+        render.replace0('abc {{foo}} pq {{bar}} xyz', binding) == 'abc Hello pq world xyz'
+        render.replace0('{{foo}} 123 {{bar}} xyz {{foo}}', binding) == 'Hello 123 world xyz Hello'
+        render.replace0('1{{foo}}2{{foo}}3', [foo:'']) == '123'
+        render.replace0('1{{foo}}2{{foo}}3', [foo:null]) == '123'
+    }
 
+    def 'should throw an exception when missing variables' () {
         when:
-        TemplateRenderer.replace0('{{x1}}', binding)
+        new TemplateRenderer().replace0('{{x1}}', [:])
         then:
         def e = thrown(IllegalArgumentException)
         e.message == 'Missing template key: x1'
 
         when:
-        TemplateRenderer.replace0('{{foo}} {{x2}}', binding)
+        new TemplateRenderer().replace0('{{foo}} {{x2}}', [foo:'ciao'])
         then:
         e = thrown(IllegalArgumentException)
         e.message == 'Missing template key: x2'
+    }
 
+    def 'should not throw an exception when missing variables' () {
+        when:
+        def result = new TemplateRenderer().withIgnore("x1").replace0('{{x1}}', [x1:'one'])
+        then:
+        result == '{{x1}}'
+
+        when:
+        result = new TemplateRenderer().withIgnore('x1','x2').replace0('{{x1}} {{x2}}', [x1:'one'])
+        then:
+        result == '{{x1}} {{x2}}'
     }
 
     def 'should render template' () {
@@ -74,7 +87,9 @@ class TemplateRendererTest extends Specification {
         binding.put("weather", "sunny");
 
         when:
-        def result = TemplateRenderer.render(template, binding);
+        def renderer = new TemplateRenderer()
+        and:
+        def result = renderer.render(template, binding);
 
         then:
         result == 'Hello, John!\nToday is Monday and the weather is sunny.'
@@ -96,7 +111,9 @@ class TemplateRendererTest extends Specification {
         binding.put("gamma", "three");
 
         when:
-        def result = TemplateRenderer.render(new ByteArrayInputStream(template.bytes), binding);
+        def renderer = new TemplateRenderer()
+        and:
+        def result = renderer.render(new ByteArrayInputStream(template.bytes), binding);
 
         then:
         result == """\
@@ -125,7 +142,9 @@ class TemplateRendererTest extends Specification {
         ]
 
         when:
-        def result = TemplateRenderer.render(new ByteArrayInputStream(template.bytes), binding);
+        def renderer = new TemplateRenderer()
+        and:
+        def result = renderer.render(new ByteArrayInputStream(template.bytes), binding);
 
         then:
         result == """\
@@ -141,7 +160,9 @@ class TemplateRendererTest extends Specification {
         def binding = [foo: 'Hello', bar: 'world']
 
         when:
-        def result = TemplateRenderer.render('{{foo}}\n{{bar}}', binding)
+        def renderer = new TemplateRenderer()
+        and:
+        def result = renderer.render('{{foo}}\n{{bar}}', binding)
         then:
         result == 'Hello\nworld'
 
@@ -150,7 +171,7 @@ class TemplateRendererTest extends Specification {
               {{foo}}
             {{bar}}
             '''.stripIndent()
-        result = TemplateRenderer.render(template, [foo:'11\n22\n33', bar:'Hello world'])
+        result = renderer.render(template, [foo:'11\n22\n33', bar:'Hello world'])
         then:
         result == '''\
               11
@@ -166,7 +187,7 @@ class TemplateRendererTest extends Specification {
             {{x2}}
             {{x3}}
             '''.stripIndent()
-        result = TemplateRenderer.render(template, [x1:'aa\nbb\n', x2:null, x3:'pp\nqq'])
+        result = renderer.render(template, [x1:'aa\nbb\n', x2:null, x3:'pp\nqq'])
         then:
         result == '''\
             aa
