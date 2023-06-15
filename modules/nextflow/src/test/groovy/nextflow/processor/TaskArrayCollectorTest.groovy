@@ -139,6 +139,7 @@ class TaskArrayCollectorTest extends Specification {
         and:
         taskArray.getArraySize() == 3
         taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]
+        taskArray.isContainerEnabled() == false
     }
 
 }

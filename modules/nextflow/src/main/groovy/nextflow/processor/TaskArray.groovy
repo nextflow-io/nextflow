@@ -47,4 +47,9 @@ class TaskArray extends TaskRun {
         return config
     }
 
+    @Override
+    boolean isContainerEnabled() {
+        return false
+    }
+
 }
