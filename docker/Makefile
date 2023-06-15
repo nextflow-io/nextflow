@@ -21,7 +21,7 @@ build: dist/docker/amd64
 
 build-arm: dist/docker/arm64
 	cp ../nextflow .
-	docker buildx build --platform linux/arm64 --output=type=docker --progress=plain --tag nextflow/nextflow:${version} .
+	docker buildx build --platform linux/arm64 --output=type=docker --progress=plain --tag nextflow/nextflow:${version} --build-arg TARGETPLATFORM=linux/arm64 .
 
 release: build
 	docker tag nextflow/nextflow:${version} nextflow/nextflow:latest
