@@ -195,6 +195,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     @Override
     void register() {
+        super.register()
         memPerCpu = session.getExecConfigProp(name, 'memPerCpu', memPerCpu)
     }
 
