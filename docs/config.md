@@ -606,7 +606,7 @@ The following settings are available:
 : The maximum amount of memory made available by the underlying system. Used only by the `local` executor.
 
 `executor.memPerCpu`
-: :::{versionadded} 23.06.0-edge
+: :::{versionadded} 23.07.0-edge
   :::
 : Used only by SLURM. Use `--mem-per-cpu` instead of `--mem` to specify memory allocations for SLURM jobs. See {ref}`slurm-executor`.
 
