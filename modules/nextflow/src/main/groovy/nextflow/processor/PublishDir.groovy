@@ -137,6 +137,10 @@ class PublishDir {
         this.mode = mode
     }
 
+    void setMode( Closure value )  {
+        setMode(value.call() as String)
+    }
+
     static @PackageScope Map<String,String> resolveTags( tags ) {
         def result = tags instanceof Closure
                 ? tags.call()
