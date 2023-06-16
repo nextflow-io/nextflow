@@ -608,7 +608,8 @@ The following settings are available:
 `executor.memPerCpu`
 : :::{versionadded} 23.07.0-edge
   :::
-: Used only by SLURM. Use `--mem-per-cpu` instead of `--mem` to specify memory allocations for SLURM jobs. See {ref}`slurm-executor`.
+: *Used only by the {ref}`slurm-executor` executor.*
+: When `true`, specifies memory allocations for SLURM jobs as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
 
 `executor.name`
 : The name of the executor to be used (default: `local`).

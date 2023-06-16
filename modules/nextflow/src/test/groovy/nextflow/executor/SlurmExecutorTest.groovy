@@ -192,8 +192,7 @@ class SlurmExecutorTest extends Specification {
         executor.@memPerCpu = true
         task.config = new TaskConfig()
         task.config.cpus = 8
-        task.config.time = '2d 3h'
-        task.config.memory = '3 G'
+        task.config.memory = '24 GB'
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -J nf-the_task_name
@@ -201,7 +200,6 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --no-requeue
                 #SBATCH --signal B:USR2@30
                 #SBATCH -c 8
-                #SBATCH -t 51:00:00
                 #SBATCH --mem-per-cpu 3072M
                 '''
                 .stripIndent().leftTrim()

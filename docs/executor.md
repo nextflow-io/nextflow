@@ -512,5 +512,5 @@ Nextflow does not provide direct support for SLURM multi-clusters. If you need t
 :::
 
 :::{versionadded} 23.07.0-edge
-Some SLURM clusters require memory allocation to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.memPerCpu = true` in the Nextflow configuration to enable this behavior.
+Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.memPerCpu = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::

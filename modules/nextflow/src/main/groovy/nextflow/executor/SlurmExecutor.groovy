@@ -78,8 +78,11 @@ class SlurmExecutor extends AbstractGridExecutor {
             // be stored, just collected). In both cases memory use is based upon the job's
             // Resident Set Size (RSS). A task may exceed the memory limit until the next periodic
             // accounting sample. -- https://slurm.schedmd.com/sbatch.html
-            final memOption = memPerCpu ? '--mem-per-cpu' : '--mem'
-            result << memOption << task.config.getMemory().toMega().toString() + 'M'
+            final mem = task.config.getMemory().toMega()
+            if( memPerCpu )
+                result << '--mem-per-cpu' << mem.intdiv(task.config.getCpus()).toString() + 'M'
+            else
+                result << '--mem' << mem.toString() + 'M'
         }
 
         // the requested partition (a.k.a queue) name
