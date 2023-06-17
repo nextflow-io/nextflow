@@ -543,8 +543,7 @@ class AzFileSystem extends FileSystem {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof IOException)  as Predicate<? extends Throwable>
-        final policy = retryPolicy(cond)
+        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException)
         return Failsafe.with(policy).get(action)
     }
 }
