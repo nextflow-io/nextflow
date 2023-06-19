@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.1.3 - 19 Jum 2023
+- Increase Azure min retry delay to 250ms [2e77e5e4]
+- Fix AzFileSystem retry policy (2) [c2f3cc96]
+
 1.1.2 - 19 Jun 2023
 - Fix AzFileSystem retry policy [ba9b6d18]
 - Improve Azure retry logging [de58697a]
