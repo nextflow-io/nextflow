@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.1.2 - 19 Jun 2023
+- Fix AzFileSystem retry policy [ba9b6d18]
+- Improve Azure retry logging [de58697a]
+
 1.1.1 - 14 Jun 2023
 - Add retry policy on Az blob operations [295bc1ff]
 - Bump azure-storage-blob:12.22.1 [2a36fa77]

@@ -1,5 +1,5 @@
 nf-amazon@2.0.1
-nf-azure@1.1.1
+nf-azure@1.1.2
 nf-codecommit@0.1.5
 nf-console@1.0.6
 nf-ga4gh@1.0.6
