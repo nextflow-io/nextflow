@@ -256,7 +256,11 @@ class AzFileSystem extends FileSystem {
      * @param filter A {@link java.nio.file.DirectoryStream.Filter} object to select which files to include in the file traversal
      * @return A {@link DirectoryStream} object to traverse the associated objects
      */
-    private DirectoryStream<Path> listFiles(AzPath dir, DirectoryStream.Filter<? super Path> filter ) {
+    private DirectoryStream<Path> listFiles(AzPath dir, DirectoryStream.Filter<? super Path> filter) {
+        return apply(()-> listFiles0(dir,filter))
+    }
+
+    private DirectoryStream<Path> listFiles0(AzPath dir, DirectoryStream.Filter<? super Path> filter) {
 
         // -- create the list operation options
         def prefix = dir.blobName()
@@ -290,6 +294,10 @@ class AzFileSystem extends FileSystem {
      * @return A {@link DirectoryStream} object to traverse the associated objects
      */
     private DirectoryStream<Path> listContainers(AzPath path, DirectoryStream.Filter<? super Path> filter ) {
+        return apply(()-> listContainers0(path, filter))
+    }
+
+    private DirectoryStream<Path> listContainers0(AzPath path, DirectoryStream.Filter<? super Path> filter) {
 
         Iterator<BlobContainerItem> containers = storageClient.listBlobContainers().iterator()
 
@@ -345,8 +353,9 @@ class AzFileSystem extends FileSystem {
     private void checkContainerExistsOrEmpty(AzPath path) {
         try {
             final container = path.containerClient()
-            final blobs = container.listBlobs(new ListBlobsOptions().setMaxResultsPerPage(10), null)
-            if( blobs.iterator().hasNext() ) {
+            final opts = new ListBlobsOptions().setMaxResultsPerPage(10)
+            final blobs = apply(()-> container.listBlobs(opts, null))
+            if( apply(()-> blobs.iterator().hasNext()) ) {
                 throw new DirectoryNotEmptyException(path.toUriString())
             }
         }
@@ -411,12 +420,12 @@ class AzFileSystem extends FileSystem {
 
     private void deleteFile(AzPath path) {
         checkPathExistOrEmpty(path)
-        path.blobClient().delete()
+        apply(()-> path.blobClient().delete())
     }
 
     private void deleteBucket(AzPath path) {
         checkContainerExistsOrEmpty(path)
-        path.containerClient().delete()
+        apply(()-> path.containerClient().delete())
     }
 
     @PackageScope
@@ -478,7 +487,7 @@ class AzFileSystem extends FileSystem {
 
     private AzFileAttributes readContainerAttrs0(AzPath path) {
         try {
-            new AzFileAttributes(path.containerClient())
+            return new AzFileAttributes(path.containerClient())
         }
         catch (BlobStorageException e) {
             if( e.statusCode==404 )
