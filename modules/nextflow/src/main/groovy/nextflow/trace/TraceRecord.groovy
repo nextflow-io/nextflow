@@ -87,7 +87,6 @@ class TraceRecord implements Serializable {
             syscw:      'num',      // -- /proc/$pid/io
             read_bytes: 'mem',      // -- /proc/$pid/io
             write_bytes:'mem',      // -- /proc/$pid/io
-            cpu_model:  'str',      // -- /proc/cpuinfo field 'model name'
             attempt:    'num',
             workdir:    'str',
             script:     'str',
@@ -101,7 +100,8 @@ class TraceRecord implements Serializable {
             error_action:'str',
             vol_ctxt: 'num',
             inv_ctxt: 'num',
-            hostname: 'str'
+            hostname: 'str',
+            cpu_model:  'str',      // -- /proc/cpuinfo field 'model name'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
