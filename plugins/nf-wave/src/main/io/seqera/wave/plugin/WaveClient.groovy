@@ -339,7 +339,7 @@ class WaveClient {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the Spack architecture
-        final arch = task.config.getArchitecture() ?: defaultArch()
+        final arch = task.config.getArchitecture()
         final spackArch = arch ? arch.spackArch : DEFAULT_SPACK_ARCH
         final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
