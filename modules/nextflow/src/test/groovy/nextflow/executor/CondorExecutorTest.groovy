@@ -34,7 +34,9 @@ class CondorExecutorTest extends Specification {
     def 'should return valid directives' () {
         given:
         def executor = [:] as CondorExecutor
-        def task = new TaskRun()
+        def task = Spy(TaskRun) {
+            isContainerEnabled() >> false
+        }
 
         when:
         task.config = new TaskConfig()
@@ -127,6 +129,24 @@ class CondorExecutorTest extends Specification {
                                 queue
                                 '''
                 .stripIndent().trim()
+
+        when:
+        task = Spy(TaskRun) {
+            isContainerEnabled() >> true
+            getContainer() >> 'ubuntu'
+        }
+        task.config = new TaskConfig()
+        then:
+        executor.getDirectives(task)
+                .join('\n') ==  '''
+                                universe = docker
+                                docker_image = ubuntu
+                                executable = .command.run
+                                log = .command.log
+                                getenv = true
+                                queue
+                                '''
+                                .stripIndent().trim()
 
     }
 

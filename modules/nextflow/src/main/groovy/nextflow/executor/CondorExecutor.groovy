@@ -53,7 +53,14 @@ class CondorExecutor extends AbstractGridExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << "universe = vanilla"
+        if( task.isContainerEnabled() ) {
+            result << "universe = docker"
+            result << "docker_image = ${task.getContainer()}".toString()
+        }
+        else {
+            result << "universe = vanilla"
+        }
+
         result << "executable = ${TaskRun.CMD_RUN}".toString()
         result << "log = ${TaskRun.CMD_LOG}".toString()
         result << "getenv = true"
@@ -85,7 +92,7 @@ class CondorExecutor extends AbstractGridExecutor {
             }
         }
 
-        result<< "queue"
+        result << "queue"
 
     }
 
