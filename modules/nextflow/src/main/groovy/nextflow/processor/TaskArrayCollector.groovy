@@ -165,7 +165,7 @@ class TaskArrayCollector {
         final indexName = executor.getArrayIndexName()
         final indexStart = executor.getArrayIndexStart()
         final arrayIndex = indexStart > 0
-            ? "${indexName} + ${indexStart}"
+            ? "${indexName} - ${indexStart}"
             : "${indexName}"
 
         final builder = new StringBuilder()
