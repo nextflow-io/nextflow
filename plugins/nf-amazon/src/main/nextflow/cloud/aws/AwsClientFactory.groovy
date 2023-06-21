@@ -54,6 +54,7 @@ import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.ConfigParser
 import nextflow.cloud.aws.util.S3CredentialsProvider
+import nextflow.cloud.aws.util.SsoCredentialsProviderV1
 import nextflow.exception.AbortOperationException
 /**
  * Implement a factory class for AWS client objects
@@ -280,6 +281,7 @@ class AwsClientFactory {
                 new SystemPropertiesCredentialsProvider(),
                 WebIdentityTokenCredentialsProvider.create(),
                 new ProfileCredentialsProvider(configFile(), null),
+                new SsoCredentialsProviderV1(region),
                 new EC2ContainerCredentialsProviderWrapper()))
     }
 
