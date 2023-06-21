@@ -1201,9 +1201,10 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::{note}
 The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
 
-- [AWS](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_)
 - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
 - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+
+The accelerator `type` option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 :::
 
 (process-afterscript)=
