@@ -715,8 +715,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( task.config.getCpus() > 1 )
             resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
-        if( task.config.getAccelerator() )
-            resources << createGpuResource(task.config.getAccelerator())
+        final accelerator = task.config.getAccelerator()
+        if( accelerator ) {
+            if( accelerator.type )
+                log.warn1 "Ignoring task ${task.lazyName()} accelerator type: ${accelerator.type} -- AWS Batch doesn't support accelerator type in job definition"
+            resources << new ResourceRequirement().withType(ResourceType.GPU).withValue(accelerator.request.toString())
+        }
 
         if( resources )
             container.withResourceRequirements(resources)
@@ -729,15 +733,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setContainerOverrides(container)
 
         return result
-    }
-
-    protected ResourceRequirement createGpuResource(AcceleratorResource acc) {
-        final res = new ResourceRequirement()
-        final type = acc.type ?: 'GPU'
-        final count = acc.request?.toString() ?: '1'
-        res.setType(type.toUpperCase())
-        res.setValue(count)
-        return res
     }
 
     /**
