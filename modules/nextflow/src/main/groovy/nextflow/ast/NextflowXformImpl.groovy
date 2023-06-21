@@ -93,25 +93,28 @@ class NextflowXformImpl implements ASTTransformation {
                 def left = binary.getLeftExpression()
                 def right = binary.getRightExpression()
 
-                if( '=='.equals(binary.operation.text) )
-                    return call('compareEqual',left,right)
+                switch ( binary.operation.text ) {
+                    case '==':
+                        return call('compareEqual', left, right)
 
-                if( '!='.equals(binary.operation.text) )
-                    return new NotExpression(call('compareEqual',left,right))
+                    case '!=':
+                        return new NotExpression(call('compareEqual', left, right))
 
-                if( '<'.equals(binary.operation.text) )
-                    return call('compareLessThan', left,right)
+                    case '<':
+                        return call('compareLessThan', left, right)
 
-                if( '<='.equals(binary.operation.text) )
-                    return call('compareLessThanEqual', left,right)
+                    case '<=':
+                        return call('compareLessThanEqual', left, right)
 
-                if( '>'.equals(binary.operation.text) )
-                    return call('compareGreaterThan', left,right)
+                    case '>':
+                        return call('compareGreaterThan', left, right)
 
-                if( '>='.equals(binary.operation.text) )
-                    return call('compareGreaterThanEqual', left,right)
+                    case '>=':
+                        return call('compareGreaterThanEqual', left, right)
 
-                return null
+                    default:
+                        return null
+                }
             }
 
 

@@ -68,19 +68,19 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+
 /**
- * Implement some syntax sugars of Nextflow DSL scripting.
+ * Implement the AST transformations for the Nextflow DSL.
+ *
+ * Includes transforms for functions, imports, processes, and workflows.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-
 @Slf4j
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
-    @Deprecated final static private String WORKFLOW_GET = 'get'
-    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
@@ -100,7 +100,6 @@ class NextflowDSLImpl implements ASTTransformation {
         for( def method : BaseScript.getMethods() ) {
             RESERVED_NAMES.add(method.name)
         }
-
     }
 
     @Override
@@ -108,9 +107,6 @@ class NextflowDSLImpl implements ASTTransformation {
         createVisitor(unit).visitClass((ClassNode)astNodes[1])
     }
 
-    /*
-     * create the code visitor
-     */
     protected ClassCodeVisitorSupport createVisitor( SourceUnit unit ) {
         new DslCodeVisitor(unit)
     }
@@ -118,14 +114,7 @@ class NextflowDSLImpl implements ASTTransformation {
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
-
         final private SourceUnit unit
-
-        private String currentTaskName
-
-        private String currentLabel
-
-        private String bodyLabel
 
         private Set<String> processNames = []
 
@@ -137,273 +126,220 @@ class NextflowDSLImpl implements ASTTransformation {
 
         protected SourceUnit getSourceUnit() { unit }
 
-
         DslCodeVisitor(SourceUnit unit) {
             this.unit = unit
         }
 
+        /**
+         * Intercept method declarations to register them as function names.
+         *
+         * @param method
+         */
         @Override
-        void visitMethod(MethodNode node) {
-            if( node.public && !node.static && !node.synthetic && !node.metaDataMap?.'org.codehaus.groovy.ast.MethodNode.isScriptBody') {
-                if( !isIllegalName(node.name, node))
-                    functionNames.add(node.name)
+        void visitMethod(MethodNode method) {
+            if( method.public && !method.static && !method.synthetic && !method.metaDataMap?.'org.codehaus.groovy.ast.MethodNode.isScriptBody' ) {
+                if( !isIllegalName(method.name, method) )
+                    functionNames.add(method.name)
             }
-            super.visitMethod(node)
-        }
-
-        protected Statement makeSetProcessNamesStm() {
-            final names = new ListExpression()
-            for( String it: processNames ) {
-                names.addExpression(new ConstantExpression(it.toString()))
-            }
-
-            // the method list argument
-            final args = new ArgumentListExpression()
-            args.addExpression(names)
-
-            // some magic code
-            // this generates the invocation of the method:
-            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
-            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
-            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
-            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
-            final call = new MethodCallExpression( meta, 'setDsl1ProcessNames', args)
-            final stm = new ExpressionStatement(call)
-            return stm
+            super.visitMethod(method)
         }
 
         /**
-         * Add to constructor a method call to inject parsed metadata.
-         * Only needed by DSL1.
+         * Intercept top-level method calls to 'process' and 'workflow' and
+         * transform them into process and workflow definitions.
          *
-         * @param node The node representing the class to be invoked
+         * @param methodCall
          */
-        protected void injectMetadata(ClassNode node) {
-            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
-                def code = constructor.getCode()
-                if( code instanceof BlockStatement ) {
-                    code.addStatement(makeSetProcessNamesStm())
-                }
-                else if( code instanceof ExpressionStatement ) {
-                    def expr = code
-                    def block = new BlockStatement()
-                    block.addStatement(expr)
-                    block.addStatement(makeSetProcessNamesStm())
-                    constructor.setCode(block)
-                }
-                else
-                    throw new IllegalStateException("Invalid constructor expression: $code")
-            }
-        }
-
-        /**
-         * Only needed by DSL1 to inject process names declared in the script
-         *
-         * @param node The node representing the class to be invoked
-         */
-        @Override
-        protected void visitObjectInitializerStatements(ClassNode node) {
-            if( node.getSuperClass().getName() == BaseScript.getName() )
-                injectMetadata(node)
-            super.visitObjectInitializerStatements(node)
-        }
-
         @Override
         void visitMethodCallExpression(MethodCallExpression methodCall) {
-            // pre-condition to be verified to apply the transformation
-            final preCondition = methodCall.objectExpression?.getText() == 'this'
+            // determine whether the method call is in the top-level scope
+            final isTopLevel = methodCall.objectExpression?.getText() == 'this'
             final methodName = methodCall.getMethodAsString()
 
-            /*
-             * intercept the *process* method in order to transform the script closure
-             */
-            if( methodName == 'process' && preCondition ) {
-
-                // clear block label
-                bodyLabel = null
-                currentLabel = null
-                currentTaskName = methodName
-                try {
-                    convertProcessDef(methodCall,sourceUnit)
-                    super.visitMethodCallExpression(methodCall)
-                }
-                finally {
-                    currentTaskName = null
-                }
+            // transform 'process' method call into process definition
+            if( methodName == 'process' && isTopLevel ) {
+                convertProcessDef(methodCall,sourceUnit)
             }
-            else if( methodName == 'workflow' && preCondition ) {
+
+            // transform 'workflow' method call into workflow definition
+            else if( methodName == 'workflow' && isTopLevel ) {
                 convertWorkflowDef(methodCall,sourceUnit)
-                super.visitMethodCallExpression(methodCall)
             }
 
-            // just apply the default behavior
-            else {
-                super.visitMethodCallExpression(methodCall)
-            }
-
+            super.visitMethodCallExpression(methodCall)
         }
 
+        /**
+         * Intercept top-level method calls to 'include' as module imports.
+         *
+         * For example, the following module import:
+         *
+         *   include { foo; foo as bar } from './some/module' addParams(foo: 'Ciao')
+         *
+         * is parsed by Groovy into:
+         *
+         *   this.include({ foo; foo as bar }).from('./some/module').addParams([foo: 'Ciao'])
+         *
+         * and then transformed into:
+         *
+         *   this.include( IncludeDef([ Module('foo'), Module('foo', 'bar') ]) )
+         *       .from('./some/module')
+         *       .addParams([foo: 'Ciao'])
+         *       .load0(params)
+         *
+         * @param stm
+         */
         @Override
         void visitExpressionStatement(ExpressionStatement stm) {
             if( stm.text.startsWith('this.include(') && stm.getExpression() instanceof MethodCallExpression )  {
+                // transform method call into module import
                 final methodCall = (MethodCallExpression)stm.getExpression()
                 convertIncludeDef(methodCall)
-                // this is necessary to invoke the `load` method on the include definition
+                // invoke load0() (from IncludeDef) on method call expression
                 final loadCall = new MethodCallExpression(methodCall, 'load0', new ArgumentListExpression(new VariableExpression('params')))
                 stm.setExpression(loadCall)
             }
             super.visitExpressionStatement(stm)
         }
 
+        /**
+         * Transform an 'include' method call into a module import.
+         *
+         * @param call
+         */
         protected void convertIncludeDef(MethodCallExpression call) {
             if( call.methodAsString=='include' && call.arguments instanceof ArgumentListExpression ) {
+                // make sure there is a single closure argument
                 final allArgs = (ArgumentListExpression)call.arguments
-                if( allArgs.size() != 1 ) {
-                    syntaxError(call, "Not a valid include definition -- it must specify the module path")
+                if( allArgs.size() != 1 || allArgs[0] !instanceof ClosureExpression ) {
+                    syntaxError(call, "Not a valid include definition -- it must specify a single closure argument")
                     return
                 }
 
-                final arg = allArgs[0]
-                final newArgs = new ArgumentListExpression()
-                if( arg instanceof ConstantExpression ) {
-                    newArgs.addExpression( createX(IncludeDef, arg) )
-                }
-                else if( arg instanceof VariableExpression ) {
-                    // the name of the component i.e. process, workflow, etc to import
-                    final component = arg.getName()
-                    // wrap the name in a `TokenVar` type
-                    final token = createX(TokenVar, new ConstantExpression(component))
-                    // create a new `IncludeDef` object
-                    newArgs.addExpression(createX(IncludeDef, token))
-                }
-                else if( arg instanceof CastExpression && arg.getExpression() instanceof VariableExpression) {
-                    def cast = (CastExpression)arg
-                    // the name of the component i.e. process, workflow, etc to import
-                    final component = (cast.expression as VariableExpression).getName()
-                    // wrap the name in a `TokenVar` type
-                    final token = createX(TokenVar, new ConstantExpression(component))
-                    // the alias to give it
-                    final alias = constX(cast.type.name)
-                    newArgs.addExpression( createX(IncludeDef, token, alias) )
-                }
-                else if( arg instanceof ClosureExpression ) {
-                    // multiple modules inclusion 
-                    final block = (BlockStatement)arg.getCode()
-                    final modulesList = new ListExpression()
-                    for( Statement stm : block.statements ) {
-                        if( stm instanceof ExpressionStatement ) {
-                            CastExpression castX
-                            VariableExpression varX
-                            Expression moduleX
-                            if( (varX=isVariableX(stm.expression)) ) {
-                                def name = constX(varX.name)
-                                moduleX = createX(IncludeDef.Module, name)
-                            }
-                            else if( (castX=isCastX(stm.expression)) && (varX=isVariableX(castX.expression)) ) {
-                                def name = constX(varX.name)
-                                final alias = constX(castX.type.name)
-                                moduleX = createX(IncludeDef.Module, name, alias)
-                            }
-                            else {
-                                syntaxError(call, "Not a valid include module name")
-                                return
-                            }
-                            modulesList.addExpression(moduleX)
+                // extract module arguments from closure
+                final arg = (ClosureExpression)allArgs[0]
+                final block = (BlockStatement)arg.getCode()
+                final modulesList = new ListExpression()
+                for( Statement stm : block.statements ) {
+                    if( stm instanceof ExpressionStatement ) {
+                        CastExpression castX
+                        VariableExpression varX
+                        Expression moduleX
+                        // extract module name, e.g. `foo`
+                        if( (varX=isVariableX(stm.expression)) ) {
+                            def name = constX(varX.name)
+                            moduleX = createX(IncludeDef.Module, name)
                         }
+                        // extract module name with alias, e.g. `foo as bar`
+                        else if( (castX=isCastX(stm.expression)) && (varX=isVariableX(castX.expression)) ) {
+                            def name = constX(varX.name)
+                            final alias = constX(castX.type.name)
+                            moduleX = createX(IncludeDef.Module, name, alias)
+                        }
+                        // otherwise return an error
                         else {
                             syntaxError(call, "Not a valid include module name")
                             return
                         }
-
+                        modulesList.addExpression(moduleX)
                     }
-                    newArgs.addExpression( createX(IncludeDef, modulesList) )
+                    else {
+                        syntaxError(call, "Not a valid include module name")
+                        return
+                    }
                 }
-                else {
-                    syntaxError(call, "Not a valid include definition -- it must specify the module path as a string")
-                    return
-                }
-                call.setArguments(newArgs)
+
+                // replace include() argument with IncludeDef instance
+                call.setArguments(new ArgumentListExpression( createX(IncludeDef, modulesList) ))
             }
             else if( call.objectExpression instanceof MethodCallExpression ) {
                 convertIncludeDef((MethodCallExpression)call.objectExpression)
             }
         }
 
-        /*
-         * this method transforms the DSL definition
+        /**
+         * Transform a 'workflow' method call into a workflow definition.
          *
-         *   workflow foo {
-         *     code
-         *   }
+         * For example, the following Nextflow code:
          *
-         * into a method invocation as
+         *   workflow foo { code }
          *
-         *   workflow('foo', { -> code })
+         * is parsed by Groovy into:
          *
+         *   this.workflow( foo({ code }) )
+         *
+         * and then transformed into:
+         *
+         *   this.workflow( 'foo', { new BodyDef({ code }, 'code') } )
+         *
+         * @param methodCall
+         * @param unit
          */
         protected void convertWorkflowDef(MethodCallExpression methodCall, SourceUnit unit) {
             log.trace "Convert 'workflow' ${methodCall.arguments}"
 
             assert methodCall.arguments instanceof ArgumentListExpression
             def args = (ArgumentListExpression)methodCall.arguments
-            def len = args.size()
 
-            // anonymous workflow definition
-            if( len == 1 && args[0] instanceof ClosureExpression ) {
+            // create anonymous workflow definition if there is a single closure argument
+            if( args.size() == 1 && args[0] instanceof ClosureExpression ) {
+                // make sure there is only one anonymous workflow
                 if( anonymousWorkflow++ > 0 ) {
-                    unit.addError( new SyntaxException("Duplicate entry workflow definition", methodCall.lineNumber, methodCall.columnNumber+8))
+                    unit.addError( new SyntaxException("Duplicate anonymous workflow definition", methodCall.lineNumber, methodCall.columnNumber+8) )
                     return
                 }
 
-                def newArgs = new ArgumentListExpression()
+                // extract the workflow body
                 def body = (ClosureExpression)args[0]
-                newArgs.addExpression( makeWorkflowDefWrapper(body,true) )
-                methodCall.setArguments( newArgs )
+                methodCall.setArguments(
+                    new ArgumentListExpression( makeWorkflowBodyDefWrapper(body,true) )
+                )
                 return 
             }
 
-            // extract the first argument which has to be a method-call expression
-            // the name of this method represent the *workflow* name
-            if( len != 1 || !args[0].class.isAssignableFrom(MethodCallExpression) ) {
+            // otherwise, make sure there is a single argument, which is a method call expression
+            if( args.size() != 1 || !args[0].class.isAssignableFrom(MethodCallExpression) ) {
                 log.debug "Missing name in workflow definition at line: ${methodCall.lineNumber}"
                 unit.addError( new SyntaxException("Workflow definition syntax error -- A string identifier must be provided after the `workflow` keyword", methodCall.lineNumber, methodCall.columnNumber+8))
                 return
             }
 
+            // the nested method name is the workflow name
             final nested = args[0] as MethodCallExpression
             final name = nested.getMethodAsString()
-            // check the process name is not defined yet
+
+            // make sure the name is not reserved or already defined
             if( isIllegalName(name, methodCall) ) {
                 return
             }
+
+            // register the workflow name
             workflowNames.add(name)
 
-            // the nested method arguments are the arguments to be passed
-            // to the process definition, plus adding the process *name*
-            // as an extra item in the arguments list
+            // make sure there is a single nested argument, which is a closure
             args = (ArgumentListExpression)nested.getArguments()
-            len = args.size()
             log.trace "Workflow name: $name with args: $args"
 
-            // make sure to add the 'name' after the map item
-            // (which represent the named parameter attributes)
-            def newArgs = new ArgumentListExpression()
-
-            // add the workflow body def
-            if( len != 1 || !(args[0] instanceof ClosureExpression)) {
+            if( args.size() != 1 || args[0] !instanceof ClosureExpression ) {
                 syntaxError(methodCall, "Invalid workflow definition")
                 return
             }
 
+            // extract the workflow body
             final body = (ClosureExpression)args[0]
-            newArgs.addExpression( constX(name) )
-            newArgs.addExpression( makeWorkflowDefWrapper(body,false) )
-
-            // set the new list as the new arguments
-            methodCall.setArguments( newArgs )
+            methodCall.setArguments(
+                new ArgumentListExpression( constX(name), makeWorkflowBodyDefWrapper(body,false) )
+            )
         }
 
-
+        /**
+         * TODO: normalize workflow params (take and emit)
+         *
+         * @param stat
+         * @param type
+         * @param uniqueNames
+         * @param body
+         */
         protected Statement normWorkflowParam(ExpressionStatement stat, String type, Set<String> uniqueNames, List<Statement> body) {
             MethodCallExpression callx
             VariableExpression varx
@@ -426,6 +362,14 @@ class NextflowDSLImpl implements ASTTransformation {
             return stat
         }
 
+        /**
+         * TODO: create assignment expression
+         *
+         * @param stat
+         * @param body
+         * @param type
+         * @param uniqueNames
+         */
         protected Statement createAssignX(ExpressionStatement stat, List<Statement> body, String type, Set<String> uniqueNames) {
             BinaryExpression binx
             MethodCallExpression callx
@@ -482,340 +426,351 @@ class NextflowDSLImpl implements ASTTransformation {
             return result
         }
 
-        protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
+        /**
+         * Create a BodyDef closure from a workflow body (closure expression).
+         *
+         * @param closure
+         * @param anonymous
+         */
+        protected Expression makeWorkflowBodyDefWrapper( ClosureExpression closure, boolean anonymous ) {
 
             final codeBlock = (BlockStatement) closure.code
             final codeStms = codeBlock.statements
             final scope = codeBlock.variableScope
 
-            final visited = new HashMap<String,Boolean>(5);
             final emitNames = new LinkedHashSet<String>(codeStms.size())
             final wrap = new ArrayList<Statement>(codeStms.size())
             final body = new ArrayList<Statement>(codeStms.size())
-            final source = new StringBuilder()
-            String context = null
-            String previous = null
+
+            String currLabel = null
+            String prevLabel = null
+            final visited = new HashMap<String,Boolean>(5)
             for( Statement stm : codeStms ) {
-                previous = context
-                context = stm.statementLabel ?: context
-                // check for changing context
-                if( context && context != previous ) {
-                    if( visited[context] && visited[previous] ) {
-                        syntaxError(stm, "Unexpected workflow `${context}` context here")
+                // update the current and previous label
+                prevLabel = currLabel
+                currLabel = stm.statementLabel ?: currLabel
+
+                // return an error if a label is repeated after a different label
+                if( currLabel && currLabel != prevLabel ) {
+                    if( visited[currLabel] && visited[prevLabel] ) {
+                        syntaxError(stm, "Unexpected workflow label `${currLabel}:` here")
                         break
                     }
                 }
-                visited[context] = true
+                visited[currLabel] = true
 
-                switch (context) {
-                    case WORKFLOW_GET:
-                        syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
-
-                    case WORKFLOW_PUBLISH:
-                        syntaxError(stm, "Workflow 'publish' is not supported anymore use process 'publishDir' instead")
-
+                switch (currLabel) {
+                    // add statements after 'take:' and 'emit:' to the workflow inputs and outputs
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
                             syntaxError(stm, "Workflow malformed parameter definition")
                             break
                         }
-                        wrap.add(normWorkflowParam(stm as ExpressionStatement, context, emitNames, body))
+                        wrap.add(normWorkflowParam(stm as ExpressionStatement, currLabel, emitNames, body))
                     break
 
+                    // add statements after 'main:' to the workflow body
                     case WORKFLOW_MAIN:
                         body.add(stm)
                         break
 
+                    // add unlabeled statements to the workflow body
                     default:
-                        if( context ) {
-                            def opts = SCOPES.closest(context)
-                            def msg = "Unknown execution scope '$context:'"
+                        if( currLabel ) {
+                            def opts = SCOPES.closest(currLabel)
+                            def msg = "Unknown workflow label `${currLabel}:`"
                             if( opts ) msg += " -- Did you mean ${opts.collect{"'$it'"}.join(', ')}"
                             syntaxError(stm, msg)
                         }
                         body.add(stm)
                 }
             }
-            // read the closure source
+
+            // read the closure source into a string
+            final source = new StringBuilder()
             readSource(closure, source, unit, true)
 
+            // return new closure expression with extracted body
             final bodyClosure = closureX(null, block(scope, body))
-            final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
+            final invokeBody = makeBodyDefWrapper(bodyClosure, source.toString(), 'workflow', unit)
             wrap.add( stmt(invokeBody) )
 
             closureX(null, block(scope, wrap))
         }
 
+        /**
+         * Append a syntax error at the given AST node.
+         *
+         * @param node
+         * @param message
+         */
         protected void syntaxError(ASTNode node, String message) {
             int line = node.lineNumber
             int coln = node.columnNumber
-            unit.addError( new SyntaxException(message,line,coln))
+            unit.addError( new SyntaxException(message,line,coln) )
         }
 
         /**
-         * Transform a DSL `process` definition into a proper method invocation
+         * Transform a process body into a {@code BodyDef} closure.
          *
-         * @param methodCall
-         * @param unit
+         * @param body
          */
-        protected void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
-            log.trace "Apply task closure transformation to method call: $methodCall"
+        protected void convertProcessBody( BlockStatement body ) {
 
-            final args = methodCall.arguments as ArgumentListExpression
-            final lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null
-            final isClosure = lastArg instanceof ClosureExpression
+            List<Statement> execStatements = []
+            def execSource = new StringBuilder()
 
-            if( isClosure ) {
-                // the block holding all the statements defined in the process (closure) definition
-                final block = (lastArg as ClosureExpression).code as BlockStatement
+            List<Statement> whenStatements = []
+            def whenSource = new StringBuilder()
 
-                /*
-                 * iterate over the list of statements to:
-                 * - converts the method after the 'input:' label as input parameters
-                 * - converts the method after the 'output:' label as output parameters
-                 * - collect all the statement after the 'exec:' label
-                 */
-                def source = new StringBuilder()
-                List<Statement> execStatements = []
+            List<Statement> stubStatements = []
+            def stubSource = new StringBuilder()
 
-                List<Statement> whenStatements = []
-                def whenSource = new StringBuilder()
+            def iterator = body.getStatements().iterator()
+            String currLabel = null
+            String bodyLabel = null
 
-                List<Statement> stubStatements = []
-                def stubSource = new StringBuilder()
+            // iterate through each statement in the body closure
+            while( iterator.hasNext() ) {
 
+                // get next statement
+                Statement stm = iterator.next()
 
-                def iterator = block.getStatements().iterator()
-                while( iterator.hasNext() ) {
+                // update the current label
+                currLabel = stm.statementLabel ?: currLabel
 
-                    // get next statement
-                    Statement stm = iterator.next()
+                switch(currLabel) {
+                    // transform statements after the 'input:' label into input parameters
+                    case 'input':
+                        if( stm instanceof ExpressionStatement ) {
+                            fixLazyGString( stm )
+                            fixStdinStdout( stm )
+                            convertInputMethod( stm.getExpression() )
+                        }
+                        break
 
-                    // keep track of current block label
-                    currentLabel = stm.statementLabel ?: currentLabel
+                    // transform statements after the 'output:' label into output parameters
+                    case 'output':
+                        if( stm instanceof ExpressionStatement ) {
+                            fixLazyGString( stm )
+                            fixStdinStdout( stm )
+                            convertOutputMethod( stm.getExpression() )
+                        }
+                        break
 
-                    switch(currentLabel) {
-                        case 'input':
-                            if( stm instanceof ExpressionStatement ) {
-                                fixLazyGString( stm )
-                                fixStdinStdout( stm )
-                                convertInputMethod( stm.getExpression() )
-                            }
-                            break
+                    // collect all statements after the 'exec:', 'script:', and 'shell:' labels
+                    // and remove them from the process body
+                    case 'exec':
+                    case 'script':
+                    case 'shell':
+                        bodyLabel = currLabel
+                        iterator.remove()
+                        execStatements << stm
+                        readSource(stm,execSource,unit)
+                        break
 
-                        case 'output':
-                            if( stm instanceof ExpressionStatement ) {
-                                fixLazyGString( stm )
-                                fixStdinStdout( stm )
-                                convertOutputMethod( stm.getExpression() )
-                            }
-                            break
+                    // collect all statements after the 'stub:' label
+                    // and remove them from the process body
+                    case PROCESS_STUB:
+                        iterator.remove()
+                        stubStatements << stm
+                        readSource(stm,stubSource,unit)
+                        break
 
-                        case 'exec':
-                            bodyLabel = currentLabel
+                    // collect all statements after a 'when:' label
+                    // and remove them from the process body
+                    case PROCESS_WHEN:
+                        if( iterator.hasNext() ) {
                             iterator.remove()
-                            execStatements << stm
-                            readSource(stm,source,unit)
+                            whenStatements << stm
+                            readSource(stm,whenSource,unit)
+                            break
+                        }
+
+                        // return a syntax error if a when statement is the last statement
+                        // in the process body (should be the task command)
+                        else if( !whenStatements ) {
+                            int line = body.lineNumber
+                            int coln = body.columnNumber
+                            unit.addError(new SyntaxException("Invalid process definition -- Empty `when` or missing `script` statement", line, coln))
+                            return
+                        }
+
+                        // otherwise, handle the next statement as the task command
+                        else
                             break
 
-                        case 'script':
-                        case 'shell':
-                            bodyLabel = currentLabel
-                            iterator.remove()
-                            execStatements << stm
-                            readSource(stm,source,unit)
-                            break
+                    // leave all other statements in the process body
+                    default:
+                        if( currLabel ) {
+                            def line = stm.getLineNumber()
+                            def coln = stm.getColumnNumber()
+                            unit.addError(new SyntaxException("Invalid process definition -- Unknown label `$currLabel`",line,coln))
+                            return
+                        }
+                        fixLazyGString(stm)
+                        fixDirectiveWithNegativeValue(stm)
+                }
+            }
 
-                        case PROCESS_STUB:
-                            iterator.remove()
-                            stubStatements << stm
-                            readSource(stm,stubSource,unit)
-                            break
+            // add the `when` block if found
+            if( whenStatements ) {
+                addNamedBlock(PROCESS_WHEN, whenStatements, whenSource, body)
+            }
 
-                        // capture the statements in a when guard and remove from the current block
-                        case PROCESS_WHEN:
-                            if( iterator.hasNext() ) {
-                                iterator.remove()
-                                whenStatements << stm
-                                readSource(stm,whenSource,unit)
-                                break
-                            }
-                            // when entering in this branch means that this is the last statement,
-                            // which is supposed to be the task command
-                            // hence if no previous `when` statement has been processed, a syntax error is returned
-                            else if( !whenStatements ) {
-                                int line = methodCall.lineNumber
-                                int coln = methodCall.columnNumber
-                                unit.addError(new SyntaxException("Invalid process definition -- Empty `when` or missing `script` statement", line, coln))
-                                return
-                            }
-                            else
-                                break
+            // add the `stub` block if found
+            if( stubStatements ) {
+                final stubBlock = addNamedBlock(PROCESS_STUB, stubStatements, stubSource, body)
+                stubBlock.visit(new TaskCmdXformVisitor(unit))
+            }
 
-                        default:
-                            if(currentLabel) {
-                                def line = stm.getLineNumber()
-                                def coln = stm.getColumnNumber()
-                                unit.addError(new SyntaxException("Invalid process definition -- Unknown keyword `$currentLabel`",line,coln))
-                                return
-                            }
+            // attempt to create a BodyDef wrapper with the task command
+            boolean done = false
+            final len = body.statements.size()
 
-                            fixLazyGString(stm)
-                            fixDirectiveWithNegativeValue(stm)  // Fixes #180
-                    }
+            // use the `exec` block if found
+            if( execStatements ) {
+                // wrap the exec statements in a BodyDef closure
+                def execClosure = closureX(
+                    null,
+                    block(body.variableScope, execStatements)
+                )
+                final wrap = makeBodyDefWrapper(execClosure, execSource, bodyLabel, unit)
+
+                // append the BodyDef closure to the process body
+                body.addStatement( new ExpressionStatement(wrap) )
+                // set the 'script' flag parameter
+                if( bodyLabel == 'script' )
+                    body.visit(new TaskCmdXformVisitor(unit))
+                done = true
+            }
+
+            // otherwise, add an empty command when only the `stub` block is defined
+            else if ( !bodyLabel && stubStatements ) {
+                // wrap an empty statement in a BodyDef closure
+                final cmd = 'true'
+                final dummyClosure = closureX(
+                    null,
+                    block(body.variableScope, [ new ExpressionStatement(constX(cmd)) ] as List<Statement>)
+                )
+                final wrap = makeBodyDefWrapper(dummyClosure, cmd, 'script', unit)
+
+                // append the new block to the process body
+                body.addStatement( new ExpressionStatement(wrap) )
+                done = true
+            }
+
+            // otherwise, add the last statement as the task command if it exists
+            // (it can be specified without the `script` label)
+            else if( len ) {
+                // get the last statement
+                def stm = body.getStatements().get(len-1)
+                readSource(stm,execSource,unit)
+
+                // attempt to wrap the last statement in a BodyDef closure
+                if ( stm instanceof ReturnStatement ) {
+                    done = wrapLastStatementWithBodyDef(body, stm.getExpression(), len, execSource, unit)
                 }
 
-                /*
-                 * add the `when` block if found
-                 */
-                if( whenStatements ) {
-                    addWhenGuardCall(whenStatements, whenSource, block)
+                else if ( stm instanceof ExpressionStatement ) {
+                    done = wrapLastStatementWithBodyDef(body, stm.getExpression(), len, execSource, unit)
                 }
 
-                /*
-                 * add try `stub` block if found
-                 */
-                if( stubStatements ) {
-                    final newBLock = addStubCall(stubStatements, stubSource, block)
-                    newBLock.visit(new TaskCmdXformVisitor(unit))
-                }
+                // apply command variables escape
+                stm.visit(new TaskCmdXformVisitor(unit))
+            }
 
-                /*
-                 * wrap all the statements after the 'exec:'  label by a new closure containing them (in a new block)
-                 */
-                final len = block.statements.size()
-                boolean done = false
-                if( execStatements ) {
-                    // create a new Closure
-                    def execBlock = new BlockStatement(execStatements, new VariableScope(block.variableScope))
-                    def execClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, execBlock )
-
-                    // append the new block to the
-                    // set the 'script' flag parameter
-                    def wrap = makeScriptWrapper(execClosure, source, bodyLabel, unit)
-                    block.addStatement( new ExpressionStatement(wrap) )
-                    if( bodyLabel == 'script' )
-                        block.visit(new TaskCmdXformVisitor(unit))
-                    done = true
-
-                }
-                // when only the `stub` block is defined add an empty command
-                else if ( !bodyLabel && stubStatements ) {
-                    final cmd = 'true'
-                    final list = new ArrayList<Statement>(1);
-                    list.add( new ExpressionStatement(constX(cmd)) )
-                    final dummyBlock = new BlockStatement( list, new VariableScope(block.variableScope))
-                    final dummyClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, dummyBlock )
-
-                    // append the new block to the
-                    // set the 'script' flag parameter
-                    final wrap = makeScriptWrapper(dummyClosure, cmd, 'script', unit)
-                    block.addStatement( new ExpressionStatement(wrap) )
-                    done = true
-                }
-
-                /*
-                 * when the last statement is a string script, the 'script:' label can be omitted
-                 */
-                else if( len ) {
-                    def stm = block.getStatements().get(len-1)
-                    readSource(stm,source,unit)
-
-                    if ( stm instanceof ReturnStatement  ){
-                        done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
-                    }
-
-                    else if ( stm instanceof ExpressionStatement )  {
-                        done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
-                    }
-
-                    // apply command variables escape
-                    stm.visit(new TaskCmdXformVisitor(unit))
-                }
-
-                if (!done) {
-                    log.trace "Invalid 'process' definition -- Process must terminate with string expression"
-                    int line = methodCall.lineNumber
-                    int coln = methodCall.columnNumber
-                    unit.addError( new SyntaxException("Invalid process definition -- Make sure the process ends with a script wrapped by quote characters",line,coln))
-                }
+            // return a syntax error if the task closure could not be created
+            if ( !done ) {
+                log.trace "Invalid 'process' definition -- Process must terminate with string expression"
+                int line = body.lineNumber
+                int coln = body.columnNumber
+                unit.addError( new SyntaxException("Invalid process definition -- Make sure the process ends with a script wrapped by quote characters",line,coln) )
             }
         }
 
         /**
-         * Converts a `when` block into a when method call expression. The when code is converted into a
-         * closure expression and set a `when` directive in the process configuration properties.
+         * Transform a named block (e.g. `when`, `stub`) into a method call on {@code ProcessConfig}
+         * and append it to the parent block.
+         *
+         * For example, the following code:
+         *
+         *   when: params.foo
+         *   stub: 'true'
+         *
+         * is transformed into:
+         *
+         *   this.when( new TaskClosure({ params.foo }, 'params.foo') )
+         *   this.stub( new TaskClosure({ 'true' }, 'true') )
          *
          * See {@link nextflow.script.ProcessConfig#configProperties}
          * See {@link nextflow.processor.TaskConfig#getGuard(java.lang.String)}
+         *
+         * @param blockName
+         * @param statements
+         * @param source
+         * @param parent
          */
-        protected BlockStatement addWhenGuardCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
-            createBlock0(PROCESS_WHEN, statements, source, parent)
-        }
-
-        protected BlockStatement addStubCall(List<Statement> statements, StringBuilder source, BlockStatement parent ) {
-            createBlock0(PROCESS_STUB, statements, source, parent)
-        }
-
-        protected BlockStatement createBlock0( String blockName, List<Statement> statements, StringBuilder source, BlockStatement parent ) {
-            // wrap the code block into a closure expression
+        protected BlockStatement addNamedBlock( String blockName, List<Statement> statements, StringBuilder source, BlockStatement parent ) {
+            // wrap the statements in a closure expression
             def block = new BlockStatement(statements, new VariableScope(parent.variableScope))
-            def closure = new ClosureExpression( Parameter.EMPTY_ARRAY, block )
+            def closure = closureX( null, block )
 
-            // the closure expression is wrapped itself into a TaskClosure object
-            // in order to capture the closure source other than the closure code
-            List<Expression> newArgs = []
-            newArgs << closure
-            newArgs << new ConstantExpression(source.toString())
-            def whenObj = createX( TaskClosure, newArgs )
+            // wrap the closure in a {@code TaskClosure} in order to capture the closure source
+            def taskClosure = createX( TaskClosure, [
+                closure,
+                new ConstantExpression(source.toString())
+            ] )
 
             // creates a method call expression for the method `when`
-            def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, blockName, whenObj)
-            parent.getStatements().add(0, new ExpressionStatement(method))
+            def methodCall = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, blockName, taskClosure)
+
+            // append the method call to the parent block
+            parent.getStatements().add(0, new ExpressionStatement(methodCall))
 
             return block
         }
 
         /**
-         * Wrap the user provided piece of code, either a script or a closure with a {@code BodyDef} object
+         * Create a {@code BodyDef} expression from a closure expression and source string.
          *
          * @param closure
          * @param source
-         * @param scriptOrNative
+         * @param section
          * @param unit
-         * @return a {@code BodyDef} object
          */
-        private Expression makeScriptWrapper( ClosureExpression closure, CharSequence source, String section, SourceUnit unit ) {
+        private Expression makeBodyDefWrapper( ClosureExpression closure, CharSequence source, String section, SourceUnit unit ) {
 
-            final List<Expression> newArgs = []
-            newArgs << (closure)
-            newArgs << ( new ConstantExpression(source.toString()) )
-            newArgs << ( new ConstantExpression(section) )
-
-            // collect all variable tokens and pass them as single list argument
+            // collect all variable tokens into a single list argument
             final variables = fetchVariables(closure,unit)
             final listArg = new ArrayList(variables.size())
-            for( TokenValRef var: variables ) {
-                def pName = new ConstantExpression(var.name)
-                def pLine = new ConstantExpression(var.lineNum)
-                def pCol = new ConstantExpression(var.colNum)
-                listArg << createX( TokenValRef, pName, pLine, pCol )
+            for( TokenValRef var : variables ) {
+                listArg << createX( TokenValRef, [
+                    new ConstantExpression(var.name),
+                    new ConstantExpression(var.lineNum),
+                    new ConstantExpression(var.colNum)
+                ] as List<Expression> )
             }
-            newArgs << ( new ListExpression(listArg) )
 
-            // invokes the BodyDef constructor
-            createX( BodyDef, newArgs )
+            // create the BodyDef constructor call
+            createX( BodyDef, [
+                closure,
+                new ConstantExpression(source.toString()),
+                new ConstantExpression(section),
+                new ListExpression(listArg)
+            ] )
         }
 
         /**
-         * Read the user provided script source string
+         * Read the source code of an AST node into a string buffer.
          *
          * @param node
          * @param buffer
          * @param unit
+         * @param stripBrackets
          */
-        private void readSource( ASTNode node, StringBuilder buffer, SourceUnit unit, stripBrackets=false ) {
+        private void readSource( ASTNode node, StringBuilder buffer, SourceUnit unit, boolean stripBrackets=false ) {
             final colx = node.getColumnNumber()
             final colz = node.getLastColumnNumber()
             final first = node.getLineNumber()
@@ -840,152 +795,160 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
+        /**
+         * Transform any GStrings in a method call into lazy GStrings.
+         *
+         * @param stm
+         */
         protected void fixLazyGString( Statement stm ) {
             if( stm instanceof ExpressionStatement && stm.getExpression() instanceof MethodCallExpression ) {
                 new GStringToLazyVisitor(unit).visitExpressionStatement(stm)
             }
         }
 
+        /**
+         * Correct process directives with negative values by converting them
+         * from binary expressions (as they are so parsed by Groovy) to method calls.
+         *
+         * For example, the following Nextflow code:
+         *
+         *   maxErrors -1
+         *
+         * is parsed by Groovy as a binary expression:
+         *
+         *   maxErrors - 1
+         *
+         * and then corrected to:
+         *
+         *   maxErrors(-1)
+         *
+         * Fixes #180
+         *
+         * @param stm
+         */
         protected void fixDirectiveWithNegativeValue( Statement stm ) {
             if( stm instanceof ExpressionStatement && stm.getExpression() instanceof BinaryExpression ) {
                 def binary = (BinaryExpression)stm.getExpression()
-                if(!(binary.leftExpression instanceof VariableExpression))
+                if( binary.leftExpression !instanceof VariableExpression )
                     return
                 if( binary.operation.type != Types.MINUS )
                     return
 
-                // -- transform the binary expression into a method call expression
-                //    where the left expression represents the method name to invoke
+                // -- extract the method name from the left-hand value
                 def methodName = ((VariableExpression)binary.leftExpression).name
 
-                // -- wrap the value into a minus operator
+                // -- wrap the right-hand value in a minus expression
                 def value = (Expression)new UnaryMinusExpression( binary.rightExpression )
-                def args = new ArgumentListExpression( [value] )
 
-                // -- create the method call expression and replace it to the binary expression
-                def call = new MethodCallExpression(new VariableExpression('this'), methodName, args)
+                // -- replace the binary expression with a method call expression
+                def call = new MethodCallExpression(
+                    new VariableExpression('this'),
+                    methodName,
+                    new ArgumentListExpression( value )
+                )
+
                 stm.setExpression(call)
-
             }
         }
 
+        /**
+         * Transform process `stdin` and `stdout` declarations into method calls
+         * on {@code ProcessConfig}.
+         *
+         * For example, the following Nextflow code:
+         *
+         *   input: stdin
+         *   output: stdout
+         *
+         * is transformed into:
+         *
+         *   this._in_stdin()
+         *   this._out_stdout()
+         *
+         * @param stm
+         */
         protected void fixStdinStdout( ExpressionStatement stm ) {
-
-            // transform the following syntax:
-            //      `stdin from x`  --> stdin() from (x)
-            //      `stdout into x` --> `stdout() into (x)`
-            VariableExpression varX
-            if( stm.expression instanceof PropertyExpression ) {
-                def expr = (PropertyExpression)stm.expression
-                def obj = expr.objectExpression
-                def prop = expr.property as ConstantExpression
-                def target = new VariableExpression(prop.text)
-
-                if( obj instanceof MethodCallExpression ) {
-                    def methodCall = obj as MethodCallExpression
-                    if( 'stdout' == methodCall.getMethodAsString() ) {
-                        def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
-                        def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(target))
-                        // remove replace the old one with the new one
-                        stm.setExpression( into )
-                    }
-                    else if( 'stdin' == methodCall.getMethodAsString() ) {
-                        def stdin = new MethodCallExpression( new VariableExpression('this'), 'stdin', new ArgumentListExpression()  )
-                        def from = new MethodCallExpression(stdin, 'from', new ArgumentListExpression(target))
-                        // remove replace the old one with the new one
-                        stm.setExpression( from )
-                    }
-                }
-            }
-            // transform the following syntax:
-            //      `stdout into (x,y,..)` --> `stdout() into (x,y,..)`
-            else if( stm.expression instanceof MethodCallExpression ) {
-                def methodCall = (MethodCallExpression)stm.expression
-                if( 'stdout' == methodCall.getMethodAsString() ) {
-                    def args = methodCall.getArguments()
-                    if( args instanceof ArgumentListExpression && args.getExpressions() && args.getExpression(0) instanceof MethodCallExpression ) {
-                        def methodCall2 = (MethodCallExpression)args.getExpression(0)
-                        def args2 = methodCall2.getArguments()
-                        if( args2 instanceof ArgumentListExpression && methodCall2.methodAsString == 'into') {
-                            def vars = args2.getExpressions()
-                            def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
-                            def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(vars))
-                            // remove replace the old one with the new one
-                            stm.setExpression( into )
-                        }
-                    }
-                }
-            }
-            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2() ) {
-                final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
-                final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
-                // remove replace the old one with the new one
+            VariableExpression varX = isVariableX(stm.expression)
+            if( varX && (varX.name == 'stdin' || varX.name == 'stdout') ) {
+                final name = varX.name == 'stdin' ? '_in_stdin' : '_out_stdout'
+                final call = new MethodCallExpression(
+                    new VariableExpression('this'),
+                    name,
+                    new ArgumentListExpression()
+                )
                 stm.setExpression(call)
             }
         }
 
-        /*
-         * handle *input* parameters
+        /**
+         * Transform process input declarations into method calls on {@code ProcessConfig}.
+         *
+         * For example, the following Nextflow code:
+         *
+         *   val v
+         *   path 'p'
+         *   tuple val(tv), path(tp)
+         *   stdin
+         *
+         * is parsed by Groovy as:
+         *
+         *   val(v)
+         *   path('p')
+         *   tuple(val(tv), path(tp))
+         *   stdin
+         *
+         * and then transformed into:
+         *
+         *   this._in_val( new TokenVar('v') )
+         *   this._in_path( new TokenVar('p') )
+         *   this._in_tuple( new TokenValCall(new TokenVar('tv')), new TokenPathCall(new TokenVar('tp')) )
+         *   this._in_stdin()
+         *
+         * @param expression
          */
         protected void convertInputMethod( Expression expression ) {
             log.trace "convert > input expression: $expression"
 
             if( expression instanceof MethodCallExpression ) {
-
-                def methodCall = expression as MethodCallExpression
+                def methodCall = (MethodCallExpression) expression
                 def methodName = methodCall.getMethodAsString()
                 def nested = methodCall.objectExpression instanceof MethodCallExpression
+
                 log.trace "convert > input method: $methodName"
 
                 if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
-                    //this methods require a special prefix
+                    // convert type qualifier to the corresponding {@code ProcessConfig} method name
                     if( !nested )
                         methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
 
+                    // wrap variable declarations in corresponding constructor calls
                     fixMethodCall(methodCall)
                 }
 
-                /*
-                 * Handles a GString a file name, like this:
-                 *
-                 *      input:
-                 *        file x name "$var_name" from q
-                 *
-                 */
-                else if( methodName == 'name' && isWithinMethod(expression, 'file') ) {
-                    varToConstX(methodCall.getArguments())
-                }
-
-                // invoke on the next method call
+                // traverse nested method calls
                 if( expression.objectExpression instanceof MethodCallExpression ) {
                     convertInputMethod(methodCall.objectExpression)
                 }
             }
 
             else if( expression instanceof PropertyExpression ) {
-                // invoke on the next method call
+                // traverse nested method calls
                 if( expression.objectExpression instanceof MethodCallExpression ) {
                     convertInputMethod(expression.objectExpression)
                 }
             }
-
-        }
-
-        protected boolean isWithinMethod(MethodCallExpression method, String name) {
-            if( method.objectExpression instanceof MethodCallExpression ) {
-                return isWithinMethod(method.objectExpression as MethodCallExpression, name)
-            }
-
-            return method.getMethodAsString() == name
         }
 
         /**
-         * Transform a map entry `emit: something` into `emit: 'something'
-         * (ie. as a constant) in a map expression passed as argument to
-         * a method call. This allow the syntax
+         * Wrap the `emit` option of an output declaration in a string literal.
          *
-         *   output:
-         *   path 'foo', emit: bar
+         * For example, the following code:
+         *
+         *   output: path 'foo', emit: bar
+         *
+         * is transformed into:
+         *
+         *   output: path 'foo', emit: 'bar'
          *
          * @param call
          */
@@ -1005,34 +968,60 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
+        /**
+         * Transform process output declarations into method calls on {@code ProcessConfig}.
+         *
+         * For example, the following Nextflow code:
+         *
+         *   val v
+         *   path 'p'
+         *   tuple val(tv), path(tp)
+         *   stdout
+         *
+         * is parsed by Groovy as:
+         *
+         *   val(v)
+         *   path('p')
+         *   tuple(val(tv), path(tp))
+         *   stdout
+         *
+         * and then transformed into:
+         *
+         *   this._out_val( new TokenVar('v') )
+         *   this._out_path( new TokenVar('p') )
+         *   this._out_tuple( new TokenValCall(new TokenVar('tv')), new TokenPathCall(new TokenVar('tp')) )
+         *   this._out_stdout()
+         *
+         * @param expression
+         */
         protected void convertOutputMethod( Expression expression ) {
             log.trace "convert > output expression: $expression"
 
-            if( !(expression instanceof MethodCallExpression) ) {
+            if( expression !instanceof MethodCallExpression ) {
                 return
             }
 
-            def methodCall = expression as MethodCallExpression
+            def methodCall = (MethodCallExpression) expression
             def methodName = methodCall.getMethodAsString()
             def nested = methodCall.objectExpression instanceof MethodCallExpression
+
             log.trace "convert > output method: $methodName"
 
             if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
-                // prefix the method name with the string '_out_'
+                // convert type qualifier to the corresponding {@code ProcessConfig} method name
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
+
+                // wrap variable declarations in corresponding constructor calls
                 fixMethodCall(methodCall)
+
+                // wrap emit value in string literal
                 fixOutEmitOption(methodCall)
             }
 
-            else if( methodName in ['into','mode'] ) {
-                fixMethodCall(methodCall)
-            }
-
-            // continue to traverse
+            // traverse nested method calls
             if( methodCall.objectExpression instanceof MethodCallExpression ) {
                 convertOutputMethod(methodCall.objectExpression)
             }
-
         }
 
         private boolean withinTupleMethod
@@ -1040,13 +1029,23 @@ class NextflowDSLImpl implements ASTTransformation {
         private boolean withinEachMethod
 
         /**
-         * This method converts the a method call argument from a Variable to a Constant value
-         * so that it is possible to reference variable that not yet exist
+         * Transform a process input/output declaration by wrapping the name
+         * in a {@code TokenVar} or a closure, in order to make it possible to
+         * reference variables before they exist.
          *
-         * @param methodCall The method object for which it is required to change args definition
-         * @param flagVariable Whenever append a flag specified if the variable replacement has been applied
-         * @param index The index of the argument to modify
-         * @return
+         * For example, the following code:
+         *
+         *   this._in_val( foo )
+         *   this._out_val( bar )
+         *   this._out_val( obj.prop )
+         *
+         * is transformed into:
+         *
+         *   this._in_val( new TokenVar('foo') )
+         *   this._out_val( new TokenVar('bar') )
+         *   this._out_val({ obj.prop })
+         *
+         * @param methodCall
          */
         protected void fixMethodCall( MethodCallExpression methodCall ) {
             final name = methodCall.methodAsString
@@ -1055,17 +1054,15 @@ class NextflowDSLImpl implements ASTTransformation {
             withinEachMethod = name == '_in_each'
 
             try {
-                if( isOutputWithPropertyExpression(methodCall) ) {
-                    // transform an output value declaration such
-                    //   output: val( obj.foo )
-                    // to
-                    //   output: val({ obj.foo })
+                // wrap the name in a closure (if it is an output with a property expression)
+                if( isOutputWithPropertyExpression(methodCall) )
                     wrapPropertyToClosure((ArgumentListExpression)methodCall.getArguments())
-                }
+
+                // otherwise wrap the name in a TokenVar
                 else
                     varToConstX(methodCall.getArguments())
-
-            } finally {
+            }
+            finally {
                 withinTupleMethod = false
                 withinEachMethod = false
             }
@@ -1073,87 +1070,121 @@ class NextflowDSLImpl implements ASTTransformation {
 
         static final private List<String> OUT_PROPERTY_VALID_TYPES = ['_out_val', '_out_env', '_out_file', '_out_path']
 
+        /**
+         * Determine whether a method call is a process output declaration
+         * with a property expression.
+         *
+         * @param methodCall
+         */
         protected boolean isOutputWithPropertyExpression(MethodCallExpression methodCall) {
-            if( methodCall.methodAsString !in OUT_PROPERTY_VALID_TYPES  )
+            if( methodCall.methodAsString !in OUT_PROPERTY_VALID_TYPES )
                 return false
-            if( methodCall.getArguments() instanceof ArgumentListExpression ) {
-                def args = (ArgumentListExpression)methodCall.getArguments()
-                if( args.size()==0 || args.size()>2 )
-                    return false
 
-                return args.last() instanceof PropertyExpression
-            }
+            if( methodCall.getArguments() !instanceof ArgumentListExpression )
+                return false
 
-            return false
+            def args = (ArgumentListExpression)methodCall.getArguments()
+
+            return args.size() > 0
+                && args.size() <= 2
+                && args.last() instanceof PropertyExpression
         }
 
-        protected void wrapPropertyToClosure(ArgumentListExpression expr) {
-            final args = expr as ArgumentListExpression
+        /**
+         * Wrap the last argument in an argument list in a closure.
+         *
+         * @param args
+         */
+        protected void wrapPropertyToClosure(ArgumentListExpression args) {
             final property = (PropertyExpression) args.last()
             final closure = wrapPropertyToClosure(property)
             args.getExpressions().set(args.size()-1, closure)
         }
 
+        /**
+         * Wrap a property expression in a closure.
+         *
+         * @param property
+         */
         protected ClosureExpression wrapPropertyToClosure(PropertyExpression property)  {
             def block = new BlockStatement()
             block.addStatement( new ExpressionStatement(property) )
 
-            def closure = new ClosureExpression( Parameter.EMPTY_ARRAY, block )
+            def closure = closureX( null, block )
             closure.variableScope = new VariableScope(block.variableScope)
 
             return closure
         }
 
-
+        /**
+         * Wrap an expression in an appropriate constructor call.
+         *
+         * For example, the following code:
+         *
+         *   val v
+         *   tuple val( obj.foo )
+         *
+         * is transformed into:
+         *
+         *   val( new TokenVar('v') )
+         *   tuple val({ obj.foo })
+         *
+         * @param expr
+         */
         protected Expression varToStrX( Expression expr ) {
+            // wrap variable expressions with {@code TokenVar}
             if( expr instanceof VariableExpression ) {
                 def name = ((VariableExpression) expr).getName()
                 return createX( TokenVar, new ConstantExpression(name) )
             }
-            else if( expr instanceof PropertyExpression ) {
-                // transform an output declaration such
-                // output: tuple val( obj.foo )
-                //  to
-                // output: tuple val({ obj.foo })
+
+            // wrap property expressions in a closure
+            if( expr instanceof PropertyExpression ) {
                 return wrapPropertyToClosure(expr)
             }
 
-            if( expr instanceof TupleExpression )  {
+            // recursively traverse tuple expressions
+            if( expr instanceof TupleExpression ) {
                 def i = 0
-                def list = expr.getExpressions()
-                for( Expression item : list ) {
-                    list[i++] = varToStrX(item)
+                def args = expr.getExpressions()
+                for( Expression item : args ) {
+                    args[i++] = varToStrX(item)
                 }
 
                 return expr
             }
 
+            // otherwise, return the input
             return expr
         }
 
+        /**
+         * Wrap a variable declaration in the appopriate constructor call.
+         *
+         * For example, the following code:
+         *
+         *   tuple( path(p), stdin )
+         *
+         * is transformed into:
+         *
+         *   tuple( new TokenPathCall(new TokenVar('p')), new TokenStdinCall() )
+         *
+         * @param expr
+         */
         protected Expression varToConstX( Expression expr ) {
 
             if( expr instanceof VariableExpression ) {
-                // when it is a variable expression, replace it with a constant representing
-                // the variable name
                 def name = ((VariableExpression) expr).getName()
 
-                /*
-                 * the 'stdin' is used as placeholder for the standard input in the tuple definition. For example:
-                 *
-                 * input:
-                 *    tuple( stdin, .. ) from q
-                 */
+                // for `stdin` within a `tuple`, wrap with {@code TokenStdinCall}
                 if( name == 'stdin' && withinTupleMethod )
                     return createX( TokenStdinCall )
 
-                /*
-                 * input:
-                 *    tuple( stdout, .. )
-                 */
+                // for `stdout` within a `tuple`, wrap with {@code TokenStdoutCall}
                 else if ( name == 'stdout' && withinTupleMethod )
                     return createX( TokenStdoutCall )
 
+                // otherwise, wrap with {@code TokenVar}
                 else
                     return createX( TokenVar, new ConstantExpression(name) )
             }
@@ -1161,47 +1192,37 @@ class NextflowDSLImpl implements ASTTransformation {
             if( expr instanceof MethodCallExpression ) {
                 def methodCall = expr as MethodCallExpression
 
-                /*
-                 * replace 'file' method call in the tuple definition, for example:
-                 *
-                 * input:
-                 *   tuple( file(fasta:'*.fa'), .. ) from q
-                 */
+                // for `file` within a `tuple` or `each`, wrap with {@code TokenFileCall}
                 if( methodCall.methodAsString == 'file' && (withinTupleMethod || withinEachMethod) ) {
                     def args = (TupleExpression) varToConstX(methodCall.arguments)
                     return createX( TokenFileCall, args )
                 }
-                else if( methodCall.methodAsString == 'path' && (withinTupleMethod || withinEachMethod) ) {
+
+                // for `path` within a `tuple` or `each`, wrap with {@code TokenPathCall}
+                if( methodCall.methodAsString == 'path' && (withinTupleMethod || withinEachMethod) ) {
                     def args = (TupleExpression) varToConstX(methodCall.arguments)
                     return createX( TokenPathCall, args )
                 }
 
-                /*
-                 * input:
-                 *  tuple( env(VAR_NAME) ) from q
-                 */
+                // for `env` within a `tuple`, wrap with {@code TokenEnvCall}
                 if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
                     return createX( TokenEnvCall, args )
                 }
 
-                /*
-                 * input:
-                 *   tuple val(x), .. from q
-                 */
+                // for `val` within a `tuple`, wrap with {@code TokenValCall}
                 if( methodCall.methodAsString == 'val' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
                     return createX( TokenValCall, args )
                 }
-
             }
 
-            // -- TupleExpression or ArgumentListExpression
+            // recursively traverse tuple or argument list expressions
             if( expr instanceof TupleExpression )  {
                 def i = 0
-                def list = expr.getExpressions()
-                for( Expression item : list )  {
-                    list[i++] = varToConstX(item)
+                def args = expr.getExpressions()
+                for( Expression item : args )  {
+                    args[i++] = varToConstX(item)
                 }
                 return expr
             }
@@ -1210,122 +1231,130 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         /**
-         * Wrap a generic expression with in a closure expression
+         * Wrap a statment with a BodyDef and append it to a block. The statement must be
+         * a GString or constant expression, or it must already be a closure. Returns true
+         * if the statement is valid.
          *
          * @param block The block to which the resulting closure has to be appended
          * @param expr The expression to the wrapped in a closure
          * @param len
-         * @return A tuple in which:
-         *      <li>1st item: {@code true} if successful or {@code false} otherwise
-         *      <li>2nd item: on error condition the line containing the error in the source script, zero otherwise
-         *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
-         *
+         * @param source
+         * @param unit
          */
-        protected boolean wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {
+        protected boolean wrapLastStatementWithBodyDef( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {
+            // wrap statement in BodyDef if it is a GString or constant
             if( expr instanceof GStringExpression || expr instanceof ConstantExpression ) {
-                // remove the last expression
+                // remove the last statement
                 block.statements.remove(len-1)
 
                 // and replace it by a wrapping closure
                 def closureExp = new ClosureExpression( Parameter.EMPTY_ARRAY, new ExpressionStatement(expr) )
                 closureExp.variableScope = new VariableScope(block.variableScope)
 
-                // append to the list of statement
-                //def wrap = newObj(BodyDef, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
-                def wrap = makeScriptWrapper(closureExp, source, 'script', unit )
+                // append to the block statement
+                def wrap = makeBodyDefWrapper(closureExp, source, 'script', unit)
                 block.statements.add( new ExpressionStatement(wrap) )
 
                 return true
             }
+
+            // do nothing if the statement is already a closure
             else if( expr instanceof ClosureExpression ) {
-                // do not touch it
                 return true
             }
-            else {
-                log.trace "Invalid process result expression: ${expr} -- Only constant or string expression can be used"
-            }
 
+            log.trace "Invalid process result expression: ${expr} -- Only constant or string expression can be used"
             return false
         }
 
+        /**
+         * Determine whether a name is reserved, or already defined as a
+         * workflow or process, or contains a colon ':' character.
+         *
+         * @param name
+         * @param node
+         */
         protected boolean isIllegalName(String name, ASTNode node) {
             if( name in RESERVED_NAMES ) {
-                unit.addError( new SyntaxException("Identifier `$name` is reserved for internal use", node.lineNumber, node.columnNumber+8) )
+                unit.addError( new SyntaxException("Identifier `$name` is reserved for internal use", node.lineNumber, node.columnNumber + 8) )
                 return true
             }
             if( name in workflowNames || name in processNames ) {
-                unit.addError( new SyntaxException("Identifier `$name` is already used by another definition", node.lineNumber, node.columnNumber+8) )
+                unit.addError( new SyntaxException("Identifier `$name` is already used by another definition", node.lineNumber, node.columnNumber + 8) )
                 return true
             }
             if( name.contains(SCOPE_SEP) ) {
-                def offset =  8+2+ name.indexOf(SCOPE_SEP)
-                unit.addError( new SyntaxException("Process and workflow names cannot contain colon character", node.lineNumber, node.columnNumber+offset) )
+                def offset = 8 + 2 + name.indexOf(SCOPE_SEP)
+                unit.addError( new SyntaxException("Process and workflow names cannot contain colon character", node.lineNumber, node.columnNumber + offset) )
                 return true
             }
             return false
         }
 
         /**
-         * This method handle the process definition, so that it transform the user entered syntax
-         *    process myName ( named: args, ..  ) { code .. }
+         * Transform a 'process' method call into a process definition.
          *
-         * into
-         *    process ( [named:args,..], String myName )  { }
+         * For example, the following Nextflow code:
+         *
+         *   process foo { code }
+         *
+         * is parsed by Groovy into:
+         *
+         *   this.process( foo({ code }) )
+         *
+         * and then transformed into:
+         *
+         *   this.process( 'foo', { new BodyDef({ code }, 'code') } )
          *
          * @param methodCall
          * @param unit
          */
         protected void convertProcessDef( MethodCallExpression methodCall, SourceUnit unit ) {
-            log.trace "Converts 'process' ${methodCall.arguments}"
+            log.trace "Convert 'process' ${methodCall.arguments}"
 
             assert methodCall.arguments instanceof ArgumentListExpression
-            def list = (methodCall.arguments as ArgumentListExpression).getExpressions()
+            def args = (methodCall.arguments as ArgumentListExpression).getExpressions()
 
-            // extract the first argument which has to be a method-call expression
-            // the name of this method represent the *process* name
-            if( list.size() != 1 || !list[0].class.isAssignableFrom(MethodCallExpression) ) {
+            // make sure there is a single argument, which is a method call expression
+            if( args.size() != 1 || !args[0].class.isAssignableFrom(MethodCallExpression) ) {
                 log.debug "Missing name in process definition at line: ${methodCall.lineNumber}"
-                unit.addError( new SyntaxException("Process definition syntax error -- A string identifier must be provided after the `process` keyword", methodCall.lineNumber, methodCall.columnNumber+7))
+                unit.addError( new SyntaxException("Process definition syntax error -- A string identifier must be provided after the `process` keyword", methodCall.lineNumber, methodCall.columnNumber+7) )
                 return
             }
 
-            def nested = list[0] as MethodCallExpression
+            // the nested method name is the process name
+            def nested = args[0] as MethodCallExpression
             def name = nested.getMethodAsString()
-            // check the process name is not defined yet
+
+            // make sure the name is not reserved or already defined
             if( isIllegalName(name, methodCall) ) {
                 return
             }
+
+            // register the process name
             processNames.add(name)
 
-            // the nested method arguments are the arguments to be passed
-            // to the process definition, plus adding the process *name*
-            // as an extra item in the arguments list
-            def args = nested.getArguments() as ArgumentListExpression
-            log.trace "Process name: $name with args: $args"
+            // make sure there is a single nested argument, which is a closure
+            def nestedArgs = (ArgumentListExpression)nested.getArguments()
+            log.trace "Process name: $name with args: $nestedArgs"
 
-            // make sure to add the 'name' after the map item
-            // (which represent the named parameter attributes)
-            list = args.getExpressions()
-            if( list.size()>0 && list[0] instanceof MapExpression ) {
-                list.add(1, new ConstantExpression(name))
-            }
-            else {
-                list.add(0, new ConstantExpression(name))
+            if( nestedArgs.size() != 1 || nestedArgs[0] !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid process definition")
+                return
             }
 
-            // set the new list as the new arguments
-            methodCall.setArguments( args )
-
-            // now continue as before !
-            convertProcessBlock(methodCall, unit)
+            // transform the process body
+            final body = (BlockStatement) ((ClosureExpression) nestedArgs[0]).code
+            convertProcessBody(body)
         }
 
         /**
-         * Fetch all the variable references in a closure expression.
+         * Fetch all variable references in a closure expression.
+         *
+         * NOTE: includes property expressions, e.g. `object.propertyName`
          *
          * @param closure
          * @param unit
-         * @return The set of variable names referenced in the script. NOTE: it includes properties in the form {@code object.propertyName}
          */
         protected Set<TokenValRef> fetchVariables( ClosureExpression closure, SourceUnit unit ) {
             def visitor = new VariableVisitor(unit)

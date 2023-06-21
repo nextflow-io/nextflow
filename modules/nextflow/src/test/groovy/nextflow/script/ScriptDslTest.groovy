@@ -196,7 +196,7 @@ class ScriptDslTest extends Dsl2Spec {
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
-    def 'should not allow duplicate workflow keyword' () {
+    def 'should not allow duplicate anonymous workflow definitions' () {
         when:
         dsl_eval(
                 """ 
@@ -211,7 +211,7 @@ class ScriptDslTest extends Dsl2Spec {
         )
         then:
         def err = thrown(ScriptCompilationException)
-        err.message.contains('Duplicate entry workflow definition')
+        err.message.contains('Duplicate anonymous workflow definition')
     }
 
     def 'should apply operator to process result' () {

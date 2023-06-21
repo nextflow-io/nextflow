@@ -20,23 +20,23 @@ class NextflowDSLImplTest extends BaseSpec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-            def foo() { 
-                return 0 
-            }
-            
-            def bar() { 
-                return 1 
-            }
-            
-            private baz() { 
-                return 2 
-            }
-            
-            process alpha {
-              /hello/
+            def foo() {
+                return 0
             }
 
-        '''
+            def bar() {
+                return 1
+            }
+
+            private baz() {
+                return 2
+            }
+
+            process alpha {
+                /hello/
+            }
+            '''
+
         when:
         new GroovyShell(config).parse(SCRIPT)
         then:
@@ -50,16 +50,14 @@ class NextflowDSLImplTest extends BaseSpec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
             process alpha {
-              /hello/
-            }
-        
-            process alpha {
-              /world/
+                /hello/
             }
 
-        '''
+            process alpha {
+                /world/
+            }
+            '''
 
         when:
         new GroovyShell(config).parse(SCRIPT)
@@ -69,23 +67,21 @@ class NextflowDSLImplTest extends BaseSpec {
     }
 
 
-    def 'should not allow duplicate workflow' () {
+    def 'should not allow duplicate workflows' () {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
             workflow alpha {
-              /hello/
-            }
-        
-            workflow alpha {
-              /world/
+                /hello/
             }
 
-        '''
+            workflow alpha {
+                /world/
+            }
+            '''
 
         when:
         new GroovyShell(config).parse(SCRIPT)
@@ -104,10 +100,9 @@ class NextflowDSLImplTest extends BaseSpec {
         when:
         def SCRIPT = '''
             workflow 'foo:bar' {
-              /hello/
+                /hello/
             }
-
-        '''
+            '''
         new GroovyShell(config).parse(SCRIPT)
         then:
         def e = thrown(MultipleCompilationErrorsException)
@@ -117,10 +112,9 @@ class NextflowDSLImplTest extends BaseSpec {
         when:
         SCRIPT = '''
             process 'foo:bar' {
-              /hello/
+                /hello/
             }
-
-        '''
+            '''
         new GroovyShell(config).parse(SCRIPT)
         then:
         e = thrown(MultipleCompilationErrorsException)
@@ -134,16 +128,14 @@ class NextflowDSLImplTest extends BaseSpec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
             process alpha {
-              /hello/
-            }
-        
-            process beta {
-              /world/
+                /hello/
             }
 
-        '''
+            process beta {
+                /world/
+            }
+            '''
 
         when:
         def script = new GroovyShell(config).parse(SCRIPT)
