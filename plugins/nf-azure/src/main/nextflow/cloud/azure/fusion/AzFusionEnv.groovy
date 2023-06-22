@@ -22,7 +22,6 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
-
 /**
  * Implement environment provider for Azure specific variables
  * 
@@ -41,11 +40,11 @@ class AzFusionEnv implements FusionEnv {
         final result = new LinkedHashMap(10)
         if( !cfg.accountName )
             throw new IllegalArgumentException("Missing Azure storage account name")
-        if( !cfg.sasToken )
+        if( !cfg.sasToken && !cfg.accountKey )
             throw new IllegalArgumentException("Missing Azure storage SAS token")
         
         result.AZURE_STORAGE_ACCOUNT = cfg.accountName
-        result.AZURE_STORAGE_SAS_TOKEN = cfg.sasToken
+        result.AZURE_STORAGE_SAS_TOKEN = cfg.getOrCreateSasToken()
         return result
     }
 }

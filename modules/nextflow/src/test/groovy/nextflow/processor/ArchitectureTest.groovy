@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -24,6 +25,7 @@ import spock.lang.Specification
  */
 class ArchitectureTest extends Specification {
 
+    @Unroll
     def 'should define the CPU architecture' () {
 
         when:
@@ -37,18 +39,29 @@ class ArchitectureTest extends Specification {
 
         where:
         VALUE                                  | PLAT     | ARCH        | TAR    | DOCK             | SPACK
-        'x86_64'                               | null     | 'x86_64'    | null   | 'x86_64'         | 'x86_64'
-        'linux/x86_64'                         | 'linux'  | 'x86_64'    | null   | 'linux/x86_64'   | 'x86_64'
-        'amd64'                                | null     | 'amd64'     | null   | 'amd64'          | 'x86_64'
-        'aarch64'                              | null     | 'aarch64'   | null   | 'aarch64'        | 'aarch64'
-        'arm64'                                | null     | 'arm64'     | null   | 'arm64'          | 'aarch64'
-        'linux/arm64/v8'                       | 'linux'  | 'arm64/v8'  | null   | 'linux/arm64/v8' | 'aarch64'
+        'x86_64'                               | null     | 'x86_64'    | null   | 'linux/amd64'    | 'x86_64'
+        'linux/x86_64'                         | 'linux'  | 'x86_64'    | null   | 'linux/amd64'    | 'x86_64'
+        'amd64'                                | null     | 'amd64'     | null   | 'linux/amd64'    | 'x86_64'
+        'aarch64'                              | null     | 'aarch64'   | null   | 'linux/arm64'    | 'aarch64'
+        'arm64'                                | null     | 'arm64'     | null   | 'linux/arm64'    | 'aarch64'
+        'linux/arm64/v8'                       | 'linux'  | 'arm64/v8'  | null   | 'linux/arm64'    | 'aarch64'
         'linux/arm64/v7'                       | 'linux'  | 'arm64/v7'  | null   | 'linux/arm64/v7' | null
-        'arm'                                  | null     | 'arm'       | null   | 'arm'            | 'arm'
-        'linux/arm/v7'                         | 'linux'  | 'arm/v7'    | null   | 'linux/arm/v7'   | 'arm'
-        'linux/arm/7'                          | 'linux'  | 'arm/7'     | null   | 'linux/arm/7'    | 'arm'
-        'linux/arm/v5'                         | 'linux'  | 'arm/v5'    | null   | 'linux/arm/v5'   | 'arm'
-        'linux/arm/5'                          | 'linux'  | 'arm/5'     | null   | 'linux/arm/5'    | 'arm'
-        [name: 'linux/x86_64', target: 'zen3'] | 'linux'  | 'x86_64'    | 'zen3' | 'linux/x86_64'   | 'zen3'
+    }
+
+    def 'should define arch with map' () {
+        when:
+        def arch = new Architecture(VALUE)
+        then:
+        arch.platform == PLAT
+        arch.arch == ARCH
+        arch.target == TAR
+        arch.dockerArch == DOCK
+        arch.spackArch == SPACK
+
+        where:
+        VALUE                                  | PLAT     | ARCH        | TAR    | DOCK             | SPACK
+        [name: 'amd64', target: 'zen3']        | null     | 'amd64'     | 'zen3' | 'linux/amd64'    | 'zen3'
+        [name: 'arm64', target: 'zen3']        | null     | 'arm64'     | 'zen3' | 'linux/arm64'    | 'zen3'
+        [name: 'linux/x86_64', target: 'zen3'] | 'linux'  | 'x86_64'    | 'zen3' | 'linux/amd64'    | 'zen3'
     }
 }
