@@ -196,6 +196,9 @@ class SgeExecutor extends AbstractGridExecutor {
     String getArrayIndexName() { 'SGE_TASK_ID' }
 
     @Override
+    int getArrayIndexStart() { 1 }
+
+    @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
 
 }
