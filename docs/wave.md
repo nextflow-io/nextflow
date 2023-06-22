@@ -38,7 +38,7 @@ tower {
 ```
 
 :::{note}
-The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/registry_credentials/) in Tower.
+The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/overview) in Tower.
 :::
 
 ## Use cases
