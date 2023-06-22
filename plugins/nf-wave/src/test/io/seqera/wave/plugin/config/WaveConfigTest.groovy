@@ -171,6 +171,15 @@ class WaveConfigTest extends Specification {
         opts.retryOpts().jitter == 1.0d
         opts.retryOpts().delay == Duration.of('1s')
         opts.retryOpts().maxDelay == Duration.of('10s')
+
+        // legacy
+        when:
+        opts = new WaveConfig([retry:[ maxAttempts: 10, jitter: 2.0, delay: '3s', maxDelay: '40s' ]])
+        then:
+        opts.retryOpts().maxAttempts == 10
+        opts.retryOpts().jitter == 2.0d
+        opts.retryOpts().delay == Duration.of('3s')
+        opts.retryOpts().maxDelay == Duration.of('40s')
     }
 
     def 'should get http config options' () {
