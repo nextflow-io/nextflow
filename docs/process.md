@@ -1645,15 +1645,13 @@ The above example produces:
 
 ## group
 
-:::{note}
-This feature requires Nextflow version `23.05.0-edge` or later.
+:::{versionadded} 23.07.0-edge
 :::
 
-:::{warning}
-This feature is experimental and may change in a future release.
+:::{warning} *Experimental: may change in a future release.*
 :::
 
-The `group` directive allows you to execute tasks in groups. A *task group* is a collection of tasks (with the same resource requirements) that runs each task sequentially on the same node. For processes that generate many short-running tasks, task grouping can greatly reduce the overhead of setting up and tearing down VMs (in the cloud) or waiting in a scheduler queue (for grid exceutors).
+The `group` directive allows you to execute tasks in groups. A *task group* is a collection of tasks (with the same resource requirements) that runs each task sequentially on the same node. For processes that generate many short-running tasks, task grouping can greatly reduce the overhead of setting up and tearing down VMs (in the cloud) or waiting in a scheduler queue (for grid executors).
 
 It should be specified with a given group size. For example:
 
@@ -1669,7 +1667,7 @@ process short_task {
 
 A process using task grouping will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task group. Once a task group is submitted, each child task is executed sequentially in its own work directory. Any tasks that fail (and can be retried) will be retried in another task group without interfering with the tasks that succeeded.
 
-The following directives must be uniform across all tasks in a process that uses array jobs, because these directives are specified once for the entire task group:
+The following directives must be uniform across all tasks in a process that uses task groups, because these directives are specified once for the entire task group:
 
 - {ref}`process-accelerator`
 - {ref}`process-clusterOptions`

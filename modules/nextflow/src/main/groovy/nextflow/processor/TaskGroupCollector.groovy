@@ -17,12 +17,15 @@
 package nextflow.processor
 
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
+import nextflow.file.FileHelper
+import nextflow.util.CacheHelper
 import nextflow.util.Escape
 
 /**
@@ -41,7 +44,7 @@ class TaskGroupCollector {
 
     private Lock sync = new ReentrantLock()
 
-    private List<TaskRun> group
+    private List<TaskHandler> group
 
     private boolean closed = false
 
@@ -62,11 +65,17 @@ class TaskGroupCollector {
 
         try {
             // submit task directly if the collector is closed
-            if( closed )
+            // or if the task is retried (since it might have dynamic resources)
+            if( closed || task.config.getAttempt() > 1 ) {
                 executor.submit(task)
+                return
+            }
+
+            // create task handler
+            final handler = executor.createTaskHandler(task)
 
             // add task to the group
-            group << task
+            group << handler
 
             // submit task group when it is ready
             if( group.size() == groupSize ) {
@@ -96,44 +105,67 @@ class TaskGroupCollector {
         }
     }
 
-    protected void submit0(List<TaskRun> tasks) {
-        // create wrapper script
-        final script = createWrapperScript(tasks)
-
-        // create task group
-        final taskGroup = new TaskGroup(tasks, executor, script)
-
-        // submit task group to the underlying executor
-        executor.submit(taskGroup)
-    }
-
-    protected String createWrapperScript(List<TaskRun> tasks) {
-        // prepare work directory for each child task
-        final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
-
-        for( TaskHandler handler : handlers )
+    protected void submit0(List<TaskHandler> group) {
+        // prepare child job launcher scripts
+        for( TaskHandler handler : group )
             handler.prepareLauncher()
 
-        // get work directory and launch command for each task
-        def workDirs
-        def cmd
+        // submit task group to the underlying executor
+        executor.submit(createTaskGroup(group))
+    }
 
-        if( executor.workDir.fileSystem == FileSystems.default ) {
-            workDirs = tasks.collect( t -> Escape.path(t.workDir) )
-            cmd = "cd \${task_dir} ; bash ${TaskRun.CMD_RUN} &> ${TaskRun.CMD_LOG}"
-        }
-        else {
-            workDirs = tasks.collect( t -> Escape.path(t.workDir.toUriString()) )
-            cmd = Escape.cli(handlers.first().getSubmitCommand().toArray() as String[])
-        }
+    /**
+     * Create the task run for a task group.
+     *
+     * @param group
+     */
+    protected TaskRun createTaskGroup(List<TaskHandler> group) {
+        final tasks = group.collect( h -> h.task )
+        final first = tasks.first()
+
+        // compute hash and work directory
+        final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
+        final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
+
+        Files.createDirectories(workDir)
+
+        // create wrapper script
+        final script = createTaskGroupScript(group)
+
+        // create task group
+        return new TaskGroup(
+            id: first.id,
+            index: first.index,
+            processor: first.processor,
+            type: first.type,
+            config: first.processor.config.createTaskConfig(),
+            context: new TaskContext(first.processor),
+            hash: hash,
+            workDir: workDir,
+            script: script,
+            children: group
+        )
+    }
+
+    /**
+     * Create the wrapper script for a task group.
+     *
+     * @param group
+     */
+    protected String createTaskGroupScript(List<TaskHandler> group) {
+        // get work directory and launch command for each task
+        final workDirs = group.collect( h -> h.getWorkDir() )
+        final args = group.first().getLaunchCommand().toArray() as String[]
+        final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${task_dir}')
 
         // create wrapper script
         """
-        declare -a array=( ${workDirs.join(' ')} )
-        for task_dir in \${array[@]}; do 
+        array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
+        for task_dir in \${array[@]}; do
+            export task_dir
             ${cmd} || true
         done
-        """.stripIndent().trim()
+        """.stripIndent().leftTrim()
     }
 
 }

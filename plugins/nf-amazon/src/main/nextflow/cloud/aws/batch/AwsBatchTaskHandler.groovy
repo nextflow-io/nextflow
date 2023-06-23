@@ -61,6 +61,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskHandler
@@ -299,6 +300,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         })
     }
 
+    @Override
+    void prepareLauncher() {
+        createTaskWrapper().build()
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -326,11 +332,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return fusionEnabled()
                 ? fusionLauncher()
                 : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
-    }
-
-    @Override
-    void prepareLauncher() {
-        createTaskWrapper().build()
     }
 
     protected AWSBatch bypassProxy(AWSBatch batch) {
@@ -632,11 +633,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     @Override
-    List<String> getSubmitCommand() {
+    List<String> getLaunchCommand() {
         // final launcher command
         return fusionEnabled()
                 ? fusionSubmitCli()
                 : classicSubmitCli()
+    }
+
+    @Override
+    String getWorkDir() {
+        fusionEnabled()
+            ? FusionHelper.toContainerMount(task.workDir).toString()
+            : task.workDir.toUriString()
     }
 
     protected int maxSpotAttempts() {
@@ -699,7 +707,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
         def container = new ContainerOverrides()
-        container.command = getSubmitCommand()
+        container.command = getLaunchCommand()
         // set the task memory
         if( task.config.getMemory() ) {
             final mega = (int)task.config.getMemory().toMega()

@@ -16,12 +16,8 @@
 
 package nextflow.processor
 
-import java.nio.file.Files
-
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.executor.Executor
-import nextflow.file.FileHelper
-import nextflow.util.CacheHelper
 
 /**
  * Models a task group, which executes a set of tasks sequentially
@@ -30,36 +26,19 @@ import nextflow.util.CacheHelper
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class TaskGroup extends TaskRun {
 
-    List<TaskRun> children
+    List<TaskHandler> children
 
-    TaskGroup(List<TaskRun> tasks, Executor executor, String script) {
-        this.children = tasks
-        this.script = script
-
-        // use first task by default
-        final first = tasks.first()
-
-        this.id = first.id
-        this.index = first.index
-        this.processor = first.processor
-        this.type = first.type
-        this.config = processor.config.createTaskConfig()
-        this.context = new TaskContext(processor)
-
-        // compute hash and work directory
-        final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
-        final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
-
-        Files.createDirectories(workDir)
-
-        this.hash = hash
-        this.workDir = workDir
+    @Override
+    boolean isContainerEnabled() {
+        return false
     }
 
     void finalize() {
-        for( TaskRun task : children ) {
+        for( TaskHandler handler : children ) {
+            final task = handler.task
             task.exitStatus = exitStatus
             task.error = error
             task.stdout = task.workDir.resolve(TaskRun.CMD_OUTFILE)

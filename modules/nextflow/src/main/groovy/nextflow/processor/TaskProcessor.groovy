@@ -2245,8 +2245,8 @@ class TaskProcessor {
         // finalize each child if task is a group
         if( task instanceof TaskGroup ) {
             task.finalize()
-            for( TaskRun t : task.children )
-                finalizeTask(t)
+            for( TaskHandler handler : task.children )
+                finalizeTask(handler.task)
             return
         }
 

@@ -35,6 +35,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.Escape
 import nextflow.util.ProcessHelper
 /**
  * A process wrapper adding the ability to access to the Posix PID
@@ -93,6 +94,30 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
+    void prepareLauncher() {
+        final wrapper = fusionEnabled()
+                ? fusionLauncher()
+                : new BashWrapperBuilder(task.toTaskBean())
+        // create the bash command wrapper and store in the task work dir
+        wrapper.build()
+    }
+
+    @Override
+    String getWorkDir() {
+        fusionEnabled()
+            ? FusionHelper.toContainerMount(task.workDir).toString()
+            : task.workDir.toString()
+    }
+
+    @Override
+    List<String> getLaunchCommand() {
+        final workDir = Escape.path(getWorkDir())
+        final cmd = "cd ${workDir} ; bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+
+        List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
+    }
+
+    @Override
     void submit() {
         // create the process builder to run the task in the local computer
         final builder = createLaunchProcessBuilder()
@@ -117,15 +142,6 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // mark as submitted -- transition to STARTED has to be managed by the scheduler
         status = TaskStatus.SUBMITTED
-    }
-
-    @Override
-    void prepareLauncher() {
-        final wrapper = fusionEnabled()
-                ? fusionLauncher()
-                : new BashWrapperBuilder(task.toTaskBean())
-        // create the bash command wrapper and store in the task work dir
-        wrapper.build()
     }
 
     protected ProcessBuilder localProcessBuilder() {
