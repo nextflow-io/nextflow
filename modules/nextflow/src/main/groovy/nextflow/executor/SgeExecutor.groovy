@@ -39,7 +39,7 @@ class SgeExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).getArraySize()
+            final arraySize = task.getArraySize()
             result << '-t' << "0-${arraySize - 1}".toString()
         }
 

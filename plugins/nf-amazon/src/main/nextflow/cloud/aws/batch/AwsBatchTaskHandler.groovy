@@ -319,7 +319,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     void onSubmit(String jobId, String queueName) {
         if( task instanceof TaskArray ) {
-            ((TaskArray)task).children.eachWithIndex { handler, i ->
+            task.children.eachWithIndex { handler, i ->
                 final arrayTaskId = "${jobId}:${i}"
                 ((AwsBatchTaskHandler)handler).onSubmit(arrayTaskId, queueName)
             }
@@ -742,7 +742,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // set the array properties
         if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).getArraySize()
+            final arraySize = task.getArraySize()
 
             if( arraySize > 10_000 )
                 throw new IllegalArgumentException("Array jobs on AWS Batch may not have more than 10,000 tasks")

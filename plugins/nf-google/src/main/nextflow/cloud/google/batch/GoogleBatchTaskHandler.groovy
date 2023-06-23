@@ -163,7 +163,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     void onSubmit(String jobId, String taskId, String uid) {
         if( task instanceof TaskArray ) {
-            ((TaskArray)task).children.eachWithIndex { handler, i ->
+            task.children.eachWithIndex { handler, i ->
                 final arrayTaskId = i.toString()
                 ((GoogleBatchTaskHandler)handler).onSubmit(jobId, arrayTaskId, uid)
             }
@@ -232,7 +232,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // add child container mounts if task is an array
         if( task instanceof TaskArray )
-            for( TaskHandler handler : ((TaskArray)task).children )
+            for( TaskHandler handler : task.children )
                 container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
         // task spec
@@ -366,7 +366,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .setTaskSpec(taskSpec)
 
         if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).getArraySize()
+            final arraySize = task.getArraySize()
             taskGroup.setTaskCount(arraySize)
         }
 

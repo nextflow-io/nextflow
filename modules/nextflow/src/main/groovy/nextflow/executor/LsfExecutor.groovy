@@ -106,7 +106,7 @@ class LsfExecutor extends AbstractGridExecutor {
 
         // -- the job name
         if( task instanceof TaskArray ) {
-            final arraySize = ((TaskArray)task).getArraySize()
+            final arraySize = task.getArraySize()
             result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
         }
         else {

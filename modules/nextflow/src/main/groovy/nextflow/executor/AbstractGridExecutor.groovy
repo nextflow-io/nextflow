@@ -21,7 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor

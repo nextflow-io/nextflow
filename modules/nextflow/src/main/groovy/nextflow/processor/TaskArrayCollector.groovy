@@ -168,11 +168,11 @@ class TaskArrayCollector {
             ? "${indexName} - ${indexStart}"
             : "${indexName}"
 
-        final builder = new StringBuilder()
-            << "array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )\n"
-            << "export task_dir=\${array[${arrayIndex}]}\n"
-            << cmd << '\n'
-        return builder.toString()
+        """
+        array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
+        export task_dir=\${array[${arrayIndex}]}
+        ${cmd}
+        """.stripIndent().leftTrim()
     }
 
 }

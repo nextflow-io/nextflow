@@ -1252,7 +1252,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 ## array
 
-:::{versionadded} 23.06.0-edge
+:::{versionadded} 23.07.0-edge
 :::
 
 :::{warning} *Experimental: may change in a future release.*

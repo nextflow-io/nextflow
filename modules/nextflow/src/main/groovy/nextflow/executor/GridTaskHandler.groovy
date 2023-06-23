@@ -103,6 +103,12 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
+    void prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
+    }
+
+    @Override
     String getWorkDir() {
         fusionEnabled()
             ? FusionHelper.toContainerMount(task.workDir).toString()
@@ -263,12 +269,6 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    @Override
-    void prepareLauncher() {
-        // -- create the wrapper script
-        createTaskWrapper(task).build()
-    }
-
     /*
      * {@inheritDocs}
      */
@@ -282,7 +282,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
-            // -- save the JobId in the
+            // -- save the job id
             final jobId = (String)executor.parseJobId(result)
             this.onSubmit(jobId)
             log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
@@ -306,7 +306,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     void onSubmit(String jobId) {
         if( task instanceof TaskArray ) {
-            ((TaskArray)task).children.eachWithIndex { handler, i ->
+            task.children.eachWithIndex { handler, i ->
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
                 ((GridTaskHandler)handler).onSubmit(arrayTaskId)
             }
