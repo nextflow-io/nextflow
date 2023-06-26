@@ -523,7 +523,7 @@ The following functions are available in Nextflow scripts:
 `file( filePattern, options = [:] )`
 : Get one or more files from a path or glob pattern. Returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) or list of Paths if there are multiple files. See [Files and I/O](#files-and-io).
 
-`files( filePatten, options = [:] )`
+`files( filePattern, options = [:] )`
 : Convenience method for `file()` that always returns a list.
 
 `groupKey( key, size )`

@@ -164,7 +164,7 @@ nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
 
 ## NVMe storage
 
-The Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files in parallel to and from object storage into a container-local temporary folder. This means that the performance of the temporary folder inside the container (`/tmp` in a default setup) is key to acheiving maximum performance.
+The Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files in parallel to and from object storage into a container-local temporary folder. This means that the performance of the temporary folder inside the container (`/tmp` in a default setup) is key to achieving maximum performance.
 
 The temporary folder is used only as a temporary cache, so the size of the volume can be much lower than the actual needs of your pipeline processes. Fusion has a built-in garbage collector that constantly monitors remaining disk space on the temporary folder and immediately evicts old cached entries when necessary.
 
