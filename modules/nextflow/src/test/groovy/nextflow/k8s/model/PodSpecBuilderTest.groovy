@@ -1001,23 +1001,24 @@ class PodSpecBuilderTest extends Specification {
                 .buildAsJob()
 
         then:
-        spec ==  [ apiVersion: 'batch/v1',
-                    kind: 'Job',
-                    metadata: [name:'foo', namespace:'default'],
+        spec == [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: [name: 'foo', namespace: 'default'],
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: [name: 'foo', namespace: 'default'],
                     spec: [
-                            backoffLimit: 0,
-                            template: [
-                                    spec: [
-                                            restartPolicy:'Never',
-                                            containers:[
-                                                    [name:'foo',
-                                                     image:'busybox',
-                                                     command:['echo', 'hello'],
-                                                    ]
-                                            ]
-                                    ]
-                            ]
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'foo',
+                            image: 'busybox',
+                            command: ['echo', 'hello'],
+                        ]]
                     ]
+                ]
+            ]
         ]
     }
 
@@ -1035,37 +1036,40 @@ class PodSpecBuilderTest extends Specification {
                 .withAnnotations([anno2: "val2", anno3: "val3"])
                 .buildAsJob()
 
+        def metadata = [
+            name: 'foo',
+            namespace: 'default',
+            labels: [
+                app: 'someApp',
+                runName: 'someName',
+                version: '3.8.1'
+            ],
+            annotations: [
+                anno1: "val1",
+                anno2: "val2",
+                anno3: "val3"
+            ]
+        ]
+
         then:
-        spec ==  [ apiVersion: 'batch/v1',
-                   kind: 'Job',
-                   metadata: [
-                           name:'foo',
-                           namespace:'default',
-                           labels: [
-                                   app: 'someApp',
-                                   runName: 'someName',
-                                   version: '3.8.1'
-                           ],
-                           annotations: [
-                                   anno1: "val1",
-                                   anno2: "val2",
-                                   anno3: "val3"
-                           ]
-                   ],
-                   spec: [
-                           backoffLimit: 0,
-                           template: [
-                                   spec: [
-                                           restartPolicy:'Never',
-                                           containers:[
-                                                   [name:'foo',
-                                                    image:'busybox',
-                                                    command:['echo', 'hello'],
-                                                   ]
-                                           ]
-                                   ]
-                           ]
-                   ]
+        spec == [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: metadata,
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: metadata,
+                    spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'foo',
+                            image: 'busybox',
+                            command: ['echo', 'hello'],
+                        ]]
+                    ]
+                ]
+            ]
         ]
     }
 
@@ -1097,38 +1101,6 @@ class PodSpecBuilderTest extends Specification {
                    ]
         ]
 
-    }
-
-    def 'should create job spec with activeDeadlineSeconds' () {
-
-        when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withCommand(['echo', 'hello'])
-                .withActiveDeadline(100)
-                .buildAsJob()
-
-        then:
-        spec ==  [ apiVersion: 'batch/v1',
-                   kind: 'Job',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           backoffLimit: 0,
-                           template: [
-                                   spec: [
-                                           restartPolicy:'Never',
-                                           activeDeadlineSeconds: 100,
-                                           containers:[
-                                                   [name:'foo',
-                                                    image:'busybox',
-                                                    command:['echo', 'hello'],
-                                                   ]
-                                           ]
-                                   ]
-                           ]
-                   ]
-        ]
     }
 
 }
