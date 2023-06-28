@@ -273,7 +273,9 @@ class AwsClientFactory {
         }
 
         if( profile ) {
-            return new ProfileCredentialsProvider(configFile(), profile)
+            return new AWSCredentialsProviderChain(List.of(
+                    new ProfileCredentialsProvider(configFile(), profile),
+                    new SsoCredentialsProviderV1(profile)))
         }
 
         return new AWSCredentialsProviderChain(List.of(
@@ -281,7 +283,7 @@ class AwsClientFactory {
                 new SystemPropertiesCredentialsProvider(),
                 WebIdentityTokenCredentialsProvider.create(),
                 new ProfileCredentialsProvider(configFile(), null),
-                new SsoCredentialsProviderV1(region),
+                new SsoCredentialsProviderV1(),
                 new EC2ContainerCredentialsProviderWrapper()))
     }
 

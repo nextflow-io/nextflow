@@ -24,9 +24,7 @@ import com.amazonaws.auth.BasicSessionCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.sso.SsoClient
-import software.amazon.awssdk.services.sso.auth.SsoCredentialsProvider
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 
 /**
  * Adapter for the SSO credentials provider from the SDK v2.
@@ -37,29 +35,26 @@ import software.amazon.awssdk.services.sso.auth.SsoCredentialsProvider
 @CompileStatic
 class SsoCredentialsProviderV1 implements AWSCredentialsProvider {
 
-    private SsoCredentialsProvider delegate
+    private ProfileCredentialsProvider delegate
 
-    SsoCredentialsProviderV1(String region) {
-        final ssoClient = SsoClient.builder()
-                .region( Region.of(region) )
-                .build()
+    SsoCredentialsProviderV1() {
+        this.delegate = ProfileCredentialsProvider.create()
+    }
 
-        this.delegate = SsoCredentialsProvider.builder()
-                .ssoClient( ssoClient )
-                .build()
+    SsoCredentialsProviderV1(String profile) {
+        this.delegate = ProfileCredentialsProvider.create(profile)
     }
 
     @Override
     AWSCredentials getCredentials() {
         final credentials = delegate.resolveCredentials()
 
-        if( credentials instanceof AwsSessionCredentials ) {
-            final sessionCredentials = (AwsSessionCredentials) credentials
+        if( credentials instanceof AwsSessionCredentials )
             new BasicSessionCredentials(
-                    sessionCredentials.accessKeyId(),
-                    sessionCredentials.secretAccessKey(),
-                    sessionCredentials.sessionToken())
-        }
+                    credentials.accessKeyId(),
+                    credentials.secretAccessKey(),
+                    credentials.sessionToken())
+
         else
             new BasicAWSCredentials(
                     credentials.accessKeyId(),
@@ -67,5 +62,7 @@ class SsoCredentialsProviderV1 implements AWSCredentialsProvider {
     }
 
     @Override
-    void refresh() {}
+    void refresh() {
+        throw new UnsupportedOperationException()
+    }
 }
