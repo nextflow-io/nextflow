@@ -440,7 +440,7 @@ To use Nextflow plugins in an offline environment:
 
 2. Download any additional plugins by running `nextflow plugin install <pluginId,..>`. Alternatively, simply run your pipeline once and Nextflow will download all of the plugins that it needs.
 
-3. Copy the `nextlow` binary and `$HOME/.nextflow` folder to your offline environment.
+3. Copy the `nextflow` binary and `$HOME/.nextflow` folder to your offline environment.
 
 4. In your Nextflow configuration file, specify each plugin that you downloaded, both name and version, including default plugins. This will prevent Nextflow from trying to download newer versions of plugins.
 
