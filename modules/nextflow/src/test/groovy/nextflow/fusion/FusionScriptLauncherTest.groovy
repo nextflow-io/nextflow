@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.executor.fusion
+package nextflow.fusion
 
 import java.nio.file.Path
 
@@ -58,14 +58,18 @@ class FusionScriptLauncherTest extends Specification {
         given:
         Global.config = [:]
         and:
+        def bean = Mock(TaskBean) {
+            outputFiles >> [ 'foo.txt', '*.bar', '**/baz' ]
+        }
         def fusion = new FusionScriptLauncher(
-                scheme: 'http',
-                remoteWorkDir: XPath.get('http://foo/work'))
+                bean,
+                'http',
+                XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [
                 FUSION_WORK: '/fusion/http/foo/work',
-                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[foo.txt|*.bar|**/baz](nextflow.io/output=true),[*](nextflow.io/temporary=true)"
         ]
     }
 
@@ -74,8 +78,9 @@ class FusionScriptLauncherTest extends Specification {
         Global.config = [fusion: [logLevel:'debug', logOutput:'stdout', tags: false]]
         and:
         def fusion = new FusionScriptLauncher(
-                scheme: 'http',
-                remoteWorkDir: XPath.get('http://foo/work'))
+                new TaskBean(),
+                'http',
+                XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [
@@ -90,8 +95,9 @@ class FusionScriptLauncherTest extends Specification {
         Global.config = [fusion: [tags: 'custom-tags-pattern-here']]
         and:
         def fusion = new FusionScriptLauncher(
-                scheme: 'http',
-                remoteWorkDir: XPath.get('http://foo/work'))
+                new TaskBean(),
+                'http',
+                XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [

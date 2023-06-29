@@ -21,6 +21,7 @@ package nextflow.fusion
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.plugin.Plugins
+import nextflow.processor.TaskBean
 /**
  * Provider strategy for {@link FusionEnv}
  *
@@ -28,7 +29,7 @@ import nextflow.plugin.Plugins
  */
 class FusionEnvProvider {
 
-    Map<String,String> getEnvironment(String scheme) {
+    Map<String,String> getEnvironment(TaskBean bean, String scheme) {
         final config = new FusionConfig(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         final list = Plugins.getExtensions(FusionEnv)
         final result = new HashMap<String,String>()
@@ -37,8 +38,11 @@ class FusionEnvProvider {
             if( env ) result.putAll(env)
         }
         // tags setting
-        if( config.tagsEnabled() )
-            result.FUSION_TAGS = config.tagsPattern()
+        if( config.tagsEnabled() ) {
+            result.FUSION_TAGS = config
+                    .tagsPattern()
+                    .replace('[*]', "[${bean.outputFiles.join('|')}](nextflow.io/output=true),[*]")
+        }
         // logs setting
         if( config.logOutput() )
             result.FUSION_LOG_OUTPUT = config.logOutput()
