@@ -59,16 +59,16 @@ Here it is after being parsed and de-sugared by Groovy:
 ```groovy
 params.str = 'Hello world!'
 
-process(splitLetters, {
+process( splitLetters( {
   output:
     path('chunk_*')
 
   """
   printf '${params.str}' | split -b 6 - chunk_
   """
-})
+} ))
 
-process(convertToUpper, {
+process( convertToUpper( {
   input:
     path(x)
   output:
@@ -77,7 +77,7 @@ process(convertToUpper, {
   """
   cat $x | tr '[a-z]' '[A-Z]'
   """
-})
+} ))
 
 workflow({
   splitLetters | flatten | convertToUpper | view { it.trim() }

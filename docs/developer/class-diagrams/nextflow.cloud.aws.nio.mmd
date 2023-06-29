@@ -1,16 +1,16 @@
 classDiagram
     %%
-    %% com.upplication.s3fs
+    %% nextflow.cloud.aws.nio
     %%
     S3FileSystemProvider --> S3FileSystem : newFileSystem
 
     class S3FileSystem {
-        client : AmazonS3Client
+        client : S3Client
         endpoint : String
     }
-    S3FileSystem --* AmazonS3Client
+    S3FileSystem --* S3Client
 
-    class AmazonS3Client {
+    class S3Client {
         client : AmazonS3
         cannedAcl : CannedAccessControlList
         kmsKeyId : String

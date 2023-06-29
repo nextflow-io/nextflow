@@ -35,8 +35,8 @@ nav:
     - 'nextflow.script': 'nextflow.script.md'
     - 'nextflow.trace': 'nextflow.trace.md'
   - 'nf-amazon':
-    - 'com.upplication.s3fs': 'com.upplication.s3fs.md'
     - 'nextflow.cloud.aws': 'nextflow.cloud.aws.md'
+    - 'nextflow.cloud.aws.nio': 'nextflow.cloud.aws.nio.md'
   - 'nf-azure':
     - 'nextflow.cloud.azure': 'nextflow.cloud.azure.md'
   - 'nf-google':
