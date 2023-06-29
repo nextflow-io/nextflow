@@ -1,4 +1,4 @@
-# Developer Documentation
+# Overview
 
 This is intended to explain the Nextflow codebase at a high level for users who want to understand or contribute to it. Rather than a comprehensive API documentation, these docs simply provide a "conceptual map" to help you understand the key concepts of the Nextflow implementation, and to find any specific code sections that you want to inspect in further detail.
 
@@ -45,8 +45,9 @@ Links between classes denote one of the following relationships:
 - Composition: `A` contains `B`
 - Instantiation: `A` creates instance(s) of `B` at runtime via `A::f()`
 
-!!! warning
-    Class diagrams are manually curated, so they might not always reflect the latest version of the source code.
+```{warning}
+Class diagrams are manually curated, so they might not always reflect the latest version of the source code.
+```
 
 ## Building and Testing
 

@@ -1,16 +1,16 @@
 
-# Package `nextflow.trace`
+# `nextflow.trace`
 
 The `nextflow.trace` package defines the trace observer interface and implements several built-in trace observers.
 
 ## Class Diagram
 
-```mermaid
---8<-- "class-diagrams/nextflow.trace.mmd"
+```{mermaid} diagrams/nextflow.trace.mmd
 ```
 
-!!! note
-    Some classes may be excluded from the above diagram for brevity.
+```{note}
+Some classes may be excluded from the above diagram for brevity.
+```
 
 ## Notes
 

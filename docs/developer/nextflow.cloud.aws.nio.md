@@ -1,16 +1,16 @@
 
-# Package `nextflow.cloud.aws.nio`
+# `nextflow.cloud.aws.nio`
 
 The `nextflow.cloud.aws.nio` package implements the S3 filesystem.
 
 ## Class Diagram
 
-```mermaid
---8<-- "class-diagrams/nextflow.cloud.aws.nio.mmd"
+```{mermaid} diagrams/nextflow.cloud.aws.nio.mmd
 ```
 
-!!! note
-    Some classes may be excluded from the above diagrams for brevity.
+```{note}
+Some classes may be excluded from the above diagrams for brevity.
+```
 
 ## Notes
 

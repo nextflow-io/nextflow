@@ -1,16 +1,16 @@
 
-# Package `nextflow.executor`
+# `nextflow.executor`
 
 The `nextflow.executor` package defines the executor interface and implements several built-in executors.
 
 ## Class Diagram
 
-```mermaid
---8<-- "class-diagrams/nextflow.executor.mmd"
+```{mermaid} diagrams/nextflow.executor.mmd
 ```
 
-!!! note
-    Some classes may be excluded from the above diagram for brevity.
+```{note}
+Some classes may be excluded from the above diagram for brevity.
+```
 
 ## Notes
 

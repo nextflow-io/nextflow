@@ -1,16 +1,16 @@
 
-# Package `nextflow.processor`
+# `nextflow.processor`
 
 The `nextflow.processor` package implements the execution and monitoring of tasks.
 
 ## Class Diagram
 
-```mermaid
---8<-- "class-diagrams/nextflow.processor.mmd"
+```{mermaid} diagrams/nextflow.processor.mmd
 ```
 
-!!! note
-    Some classes may be excluded from the above diagram for brevity.
+```{note}
+Some classes may be excluded from the above diagram for brevity.
+```
 
 ## Notes
 
@@ -19,11 +19,3 @@ While the [`executor`](nextflow.executor.md) package defines how tasks are submi
 The `TaskProcessor` is by far the largest and most complex class in this package. It implements both the dataflow operator for a given process and the task execution. In other words, it defines the mapping from an abstract process definition with concrete channel inputs into concrete task executions.
 
 A `TaskRun` represents a particular task execution. There is also `TaskBean`, which is a serializable representation of a task. Legends say that `TaskBean` was originally created to support a "daemon" mode in which Nextflow would run on both the head node and the worker nodes, so the Nextflow "head" would need to send tasks to the Nextflow "workers". This daemon mode was never completed, but echoes of it remain (see `CmdNode`, `DaemonLauncher`, and the `nf-ignite` plugin).
-
-## Call Graphs
-
-The call graph of `TaskProcessor` is shown below:
-
-```mermaid
---8<-- "call-graphs/nextflow.processor.TaskProcessor.mmd"
-```

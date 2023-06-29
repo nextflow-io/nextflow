@@ -1,16 +1,16 @@
 
-# Package `nextflow.ast`
+# `nextflow.ast`
 
 The `nextflow.ast` package implements the Nextflow language extensions as AST transforms.
 
 ## Class Diagram
 
-```mermaid
---8<-- "class-diagrams/nextflow.ast.mmd"
+```{mermaid} diagrams/nextflow.ast.mmd
 ```
 
-!!! note
-    Some classes may be excluded from the above diagram for brevity.
+```{note}
+Some classes may be excluded from the above diagram for brevity.
+```
 
 ## Notes
 
@@ -166,12 +166,4 @@ public class script1677225313239 extends nextflow.script.BaseScript {
     }
 
 }
-```
-
-## Call Graphs
-
-The call graph of `NextflowDSLImpl` is shown below:
-
-```mermaid
---8<-- "call-graphs/nextflow.ast.NextflowDSLImpl.mmd"
 ```
