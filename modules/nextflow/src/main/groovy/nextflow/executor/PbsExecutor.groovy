@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +15,23 @@
  */
 
 package nextflow.executor
-import java.nio.file.Path
 
+import java.nio.file.Path
+import java.util.regex.Pattern
+
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import nextflow.util.Escape
-
 /**
  * Implements a executor for PBS/Torque cluster
  *
  * See http://www.pbsworks.com
  */
 @Slf4j
+@CompileStatic
 class PbsExecutor extends AbstractGridExecutor {
+
+    private static Pattern OPTS_REGEX = ~/(?:^|\s)-l.+/
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -49,20 +52,26 @@ class PbsExecutor extends AbstractGridExecutor {
             result << '-q'  << (String)task.config.queue
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+        // task cpus
+        if( task.config.getCpus() > 1 ) {
+            if( matchOptions(task.config.clusterOptions?.toString()) ) {
+                log.warn1 'cpus directive is ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }'
+            }
+            else {
+                result << '-l' << "nodes=1:ppn=${task.config.getCpus()}".toString()
+            }
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final duration = task.config.getTime()
-            result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
+            result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
-        if( task.config.memory ) {
+        if( task.config.getMemory() ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
-            result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+            result << "-l" << "mem=${task.config.getMemory().toString().replaceAll(/[\s]/,'').toLowerCase()}".toString()
         }
 
         // -- at the end append the command script wrapped file name
@@ -70,13 +79,6 @@ class PbsExecutor extends AbstractGridExecutor {
             result << task.config.clusterOptions.toString() << ''
         }
 
-        return result
-    }
-
-    @Override
-    String getHeaders( TaskRun task ) {
-        String result = super.getHeaders(task)
-        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
         return result
     }
 
@@ -127,10 +129,10 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand(Object queue) {
         String cmd = 'qstat -f -1'
         if( queue ) cmd += ' ' + queue
-        return ['bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
+        return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
     }
 
-    static private Map DECODE_STATUS = [
+    static private Map<String,QueueStatus> DECODE_STATUS = [
             'C': QueueStatus.DONE,
             'R': QueueStatus.RUNNING,
             'Q': QueueStatus.PENDING,
@@ -147,7 +149,7 @@ class PbsExecutor extends AbstractGridExecutor {
 
         final JOB_ID = 'Job Id:'
         final JOB_STATUS = 'job_state ='
-        final result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         String id = null
         String status = null
@@ -169,4 +171,7 @@ class PbsExecutor extends AbstractGridExecutor {
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null
     }
 
+    static protected boolean matchOptions(String value) {
+        value ? OPTS_REGEX.matcher(value).find() : null
+    }
 }

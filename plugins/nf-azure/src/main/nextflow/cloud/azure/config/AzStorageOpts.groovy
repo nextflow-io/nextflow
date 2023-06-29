@@ -16,11 +16,10 @@
 
 package nextflow.cloud.azure.config
 
-
 import groovy.transform.CompileStatic
+import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.util.Duration
-
 /**
  * Parse Azure settings from nextflow config file
  *
@@ -43,9 +42,9 @@ class AzStorageOpts {
         this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')
         this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')
         this.sasToken = config.sasToken
-        this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('12h')
-        this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String,Map>
-                : Collections.<String,Map>emptyMap())
+        this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('48h')
+        this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
+                : Collections.<String,Map> emptyMap())
 
     }
 
@@ -63,5 +62,11 @@ class AzStorageOpts {
             result[entry.key] = new AzFileShareOpts(entry.value)
         }
         return result
+    }
+
+    synchronized String getOrCreateSasToken() {
+        if( !sasToken )
+            sasToken = AzHelper.generateAccountSas(accountName, accountKey, tokenDuration)
+        return sasToken
     }
 }

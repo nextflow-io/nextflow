@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ class AzRetryConfigTest extends Specification {
     def 'should create retry config' () {
 
         expect:
-        new AzRetryConfig().delay == Duration.of('50ms')
-        new AzRetryConfig().maxDelay == Duration.of('30s')
-        new AzRetryConfig().maxAttempts == 5
+        new AzRetryConfig().delay == Duration.of('250ms')
+        new AzRetryConfig().maxDelay == Duration.of('90s')
+        new AzRetryConfig().maxAttempts == 10
         new AzRetryConfig().jitter == 0.25d
 
         and:
-        new AzRetryConfig([maxAttempts: 10]).maxAttempts == 10
+        new AzRetryConfig([maxAttempts: 20]).maxAttempts == 20
         new AzRetryConfig([delay: '1s']).delay == Duration.of('1s')
         new AzRetryConfig([maxDelay: '1m']).maxDelay == Duration.of('1m')
         new AzRetryConfig([jitter: '0.5']).jitter == 0.5d

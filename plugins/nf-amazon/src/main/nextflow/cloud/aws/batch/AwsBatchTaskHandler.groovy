@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
@@ -50,20 +50,18 @@ import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
-import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionScriptLauncher
-import nextflow.executor.res.AcceleratorResource
+import nextflow.fusion.FusionAwareTask
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
-import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -74,7 +72,7 @@ import nextflow.util.CacheHelper
  */
 // note: do not declare this class as `CompileStatic` otherwise the proxy is not get invoked
 @Slf4j
-class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail> {
+class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail>, FusionAwareTask {
 
     private final Path exitFile
 
@@ -92,8 +90,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private final Path traceFile
 
-    private TaskBean bean
-
     private AwsBatchExecutor executor
 
     private AWSBatch client
@@ -107,10 +103,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     private CloudMachineInfo machineInfo
 
     private Map<String,String> environment
-
-    private FusionScriptLauncher fusionLauncher
-
-    private boolean fusionEnabled
 
     final static private Map<String,String> jobDefinitions = [:]
 
@@ -130,11 +122,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     AwsBatchTaskHandler(TaskRun task, AwsBatchExecutor executor) {
         super(task)
-        this.bean = new TaskBean(task)
         this.executor = executor
         this.client = executor.client
         this.environment = System.getenv()
-        this.fusionEnabled = executor.isFusionEnabled()
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
@@ -258,8 +248,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
+            // take the exit code of the container, if 0 (successful) or missing
+            // take the exit code from the `.exitcode` file create by nextflow
+            // the rationale of this is that, in case of error, the exit code return
+            // by the batch API is more reliable.
+            task.exitStatus = job.container.exitCode ?: readExitFile()
             // finalize the task
-            task.exitStatus = readExitFile()
             task.stdout = outputFile
             if( job?.status == 'FAILED' ) {
                 task.error = new ProcessUnrecoverableException(errReason(job))
@@ -333,9 +327,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected BashWrapperBuilder createTaskWrapper() {
-        return fusionEnabled
-                ? fusionLauncher = new FusionScriptLauncher(bean, executor.getRemoteBinDir(), S3Path)
-                : new AwsBatchScriptLauncher(bean, getAwsOptions())
+        return fusionEnabled()
+                ? fusionLauncher()
+                : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
     }
 
     protected void buildTaskWrapper() {
@@ -497,7 +491,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( logsGroup )
             container.setLogConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
 
-        if( fusionEnabled )
+        if( fusionEnabled() )
             container.setPrivileged(true)
 
         final mountsMap = new LinkedHashMap( 10)
@@ -599,6 +593,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
      */
     protected String createJobDef(RegisterJobDefinitionRequest req) {
+        // add nextflow tags
+        req.addTagsEntry('nextflow.io/createdAt', Instant.now().toString())
+        req.addTagsEntry('nextflow.io/version', Const.APP_VER)
+        // create the job def
         final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName}:$res.revision"
     }
@@ -624,7 +622,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return "nf-" + result
     }
 
-    protected String classicSubmitCli() {
+    protected List<String> classicSubmitCli() {
         // the cmd list to launch it
         final opts = getAwsOptions()
         final cli = opts.getAwsCli()
@@ -633,23 +631,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
         final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return cmd
-    }
-
-    protected String fusionSubmitCmd() {
-        final logFile = fusionLauncher.toContainerMount(getLogFile())
-        final runFile = fusionLauncher.toContainerMount(getWrapperFile())
-        final cmd = "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${logFile}||true; exit \$ret; }\" EXIT; bash ${runFile} 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return cmd
+        return ['bash','-o','pipefail','-c', cmd.toString()]
     }
 
     protected List<String> getSubmitCommand() {
         // final launcher command
-        final cmd = fusionEnabled ? fusionSubmitCmd() : classicSubmitCli()
-        return ['bash','-o','pipefail','-c', cmd.toString() ]
+        return fusionEnabled()
+                ? fusionSubmitCli()
+                : classicSubmitCli()
     }
 
-    protected maxSpotAttempts() {
+    protected int maxSpotAttempts() {
         return executor.awsOptions.maxSpotAttempts
     }
 
@@ -664,13 +656,20 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         /*
          * create the request object
          */
+        final labels = task.config.getResourceLabels()
         final result = new SubmitJobRequest()
         result.setJobName(normalizeJobName(task.name))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
+        if( labels ) {
+            result.setTags(labels)
+            result.setPropagateTags(true)
+        }
         // set the share identifier
-        if( this.getAwsOptions().shareIdentifier )
+        if( this.getAwsOptions().shareIdentifier ) {
             result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
+            result.setSchedulingPriorityOverride(this.getAwsOptions().schedulingPriority)
+        }
 
         /*
          * retry on spot reclaim
@@ -709,14 +708,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( mega >= 4 )
                 resources << new ResourceRequirement().withType(ResourceType.MEMORY).withValue(mega.toString())
             else
-                log.warn "Ignoring task $bean.name memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
+                log.warn "Ignoring task ${task.lazyName()} memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
         }
         // set the task cpus
         if( task.config.getCpus() > 1 )
             resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
-        if( task.config.getAccelerator() )
-            resources << createGpuResource(task.config.getAccelerator())
+        final accelerator = task.config.getAccelerator()
+        if( accelerator ) {
+            if( accelerator.type )
+                log.warn1 "Ignoring task ${task.lazyName()} accelerator type: ${accelerator.type} -- AWS Batch doesn't support accelerator type in job definition"
+            resources << new ResourceRequirement().withType(ResourceType.GPU).withValue(accelerator.request.toString())
+        }
 
         if( resources )
             container.withResourceRequirements(resources)
@@ -731,20 +734,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    protected ResourceRequirement createGpuResource(AcceleratorResource acc) {
-        final res = new ResourceRequirement()
-        final type = acc.type ?: 'GPU'
-        final count = acc.request?.toString() ?: '1'
-        res.setType(type.toUpperCase())
-        res.setValue(count)
-        return res
-    }
-
     /**
      * @return The list of environment variables to be defined in the Batch job execution context
      */
     protected List<KeyValuePair> getEnvironmentVars() {
-        def vars = []
+        List<KeyValuePair> vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
         if( this.getAwsOptions().retryMode && this.getAwsOptions().retryMode in AwsOptions.VALID_RETRY_MODES)
@@ -753,9 +747,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             vars << new KeyValuePair().withName('AWS_MAX_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
             vars << new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
         }
-        if( fusionLauncher ) {
-            final buckets = fusionLauncher.fusionBuckets().collect(it->"s3://$it").join(',')
-            vars << new KeyValuePair().withName('NXF_FUSION_BUCKETS').withValue(buckets)
+        if( fusionEnabled() ) {
+            for(Map.Entry<String,String> it : fusionLauncher().fusionEnv()) {
+                vars << new KeyValuePair().withName(it.key).withValue(it.value)
+            }
         }
         return vars
     }
@@ -808,7 +803,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         catch (AWSBatchException e) {
             if( e.statusCode>=500 )
                 // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed submit job execution: ${req.jobName} - Reason: ${e.errorCode}", e)
+                throw new ProcessSubmitException("Failed to submit job: ${req.jobName} - Reason: ${e.errorCode}", e)
             else
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e

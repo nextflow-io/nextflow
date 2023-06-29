@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,7 @@
  */
 
 package nextflow
+
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Paths
@@ -36,12 +36,10 @@ class NextflowTest extends Specification {
     }
 
     def testFile() {
-
         expect:
         Nextflow.file('file.log').toFile() == new File('file.log').canonicalFile
         Nextflow.file('relative/file.test').toFile() == new File( new File('.').canonicalFile, 'relative/file.test')
         Nextflow.file('/user/home/file.log').toFile() == new File('/user/home/file.log')
-
     }
 
     def testFile2() {
@@ -55,6 +53,19 @@ class NextflowTest extends Specification {
         Nextflow.file( Paths.get('some/path') ).toString() == current + '/some/path'
         Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
 
+    }
+
+    def 'should resolve rel paths against env base' () {
+        given:
+        SysEnv.push(NXF_FILE_ROOT: '/some/base/dir')
+
+        expect:
+        Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
+        and:
+        Nextflow.file( 'file.txt' ) == Paths.get('/some/base/dir/file.txt')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def testFile3() {
@@ -193,7 +204,7 @@ class NextflowTest extends Specification {
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, followLinks: false)
         then:
-        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'file2.fa']
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'file2.fa', 'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, maxDepth: 1)
@@ -216,8 +227,10 @@ class NextflowTest extends Specification {
         then:
         result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa',
                                                      'dir1/file3.txt',
+                                                     'dir_link',
                                                      'file1.txt',
-                                                     'file2.fa']
+                                                     'file2.fa',
+                                                     'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**", relative: true, type:'dir')
@@ -241,8 +254,10 @@ class NextflowTest extends Specification {
                                                      'dir1/dir2',
                                                      'dir1/dir2/file4.fa',
                                                      'dir1/file3.txt',
+                                                     'dir_link',
                                                      'file1.txt',
-                                                     'file2.fa']
+                                                     'file2.fa',
+                                                     'file_link.fa']
 
         cleanup:
         folder?.deleteDir()

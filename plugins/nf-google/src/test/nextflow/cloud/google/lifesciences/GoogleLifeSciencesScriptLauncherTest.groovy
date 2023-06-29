@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +55,7 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
         binding.stage_cmd == null
         binding.unstage_cmd == null
         binding.task_env == '''\
-                chmod +x /work/xx/yy/nextflow-bin/*
+                chmod +x /work/xx/yy/nextflow-bin/* || true
                 export PATH=/work/xx/yy/nextflow-bin:$PATH
                 export FOO="xxx"
                 '''.stripIndent()
@@ -83,7 +82,7 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
         def wrapper =  builder.buildNew0()
 
         then:
-        wrapper == load('bash-wrapper-gcp.txt', [folder: WORK_DIR.toString()])
+        wrapper == load('bash-wrapper-gcp.txt', [folder: WORK_DIR.toString(), sync_cmd: 'sync || true' ])
 
         cleanup:
         folder?.deleteDir()

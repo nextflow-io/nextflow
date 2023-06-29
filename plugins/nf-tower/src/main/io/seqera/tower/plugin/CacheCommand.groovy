@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,9 +52,12 @@ class CacheCommand implements PluginAbstractExec {
     protected void archiveLogs(Session sess) {
         // archive logs
         final archiver = TowerArchiver.create(sess, System.getenv())
-        if( archiver ) {
+        if( archiver ) try {
             log.debug "Running Nextflow logs archiver"
             archiver.archiveLogs()
+        }
+        finally {
+            archiver.shutdown(sess)
         }
     }
 

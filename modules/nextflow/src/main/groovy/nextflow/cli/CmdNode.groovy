@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,7 +122,7 @@ class CmdNode extends CmdBase {
     /**
      * Load a class implementing the {@code DaemonLauncher} interface by the specified class name
      *
-     * @param name The fully qualified class name e.g. {@code nextflow.executor.LocalExecutor}
+     * @param name The fully qualified class name e.g. {@code nextflow.executor.local.LocalExecutor}
      * @return The daemon launcher instance
      * @throws IllegalStateException if the class does not exist or it cannot be instantiated
      */

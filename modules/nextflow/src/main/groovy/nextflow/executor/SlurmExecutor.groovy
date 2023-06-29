@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +15,16 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
- * Processor for SLURM resource manager (DRAFT)
+ * Processor for SLURM resource manager
  *
  * See http://computing.llnl.gov/linux/slurm/
  *
@@ -30,6 +32,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class SlurmExecutor extends AbstractGridExecutor {
 
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
@@ -49,7 +52,6 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-D' << quote(task.workDir)
         result << '-J' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
         result << '--no-requeue' << '' // note: directive need to be returned as pairs
@@ -60,11 +62,11 @@ class SlurmExecutor extends AbstractGridExecutor {
             result << '--signal' << 'B:USR2@30'
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '-c' << task.config.cpus.toString()
+        if( task.config.getCpus() > 1 ) {
+            result << '-c' << task.config.getCpus().toString()
         }
 
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             result << '-t' << task.config.getTime().format('HH:mm:ss')
         }
 
@@ -101,9 +103,9 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-
-        ['sbatch', scriptFile.getName()]
-
+        return pipeLauncherScript()
+                ? List.of('sbatch')
+                : List.of('sbatch', scriptFile.getName())
     }
 
     /**
@@ -154,7 +156,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      *  Maps SLURM job status to nextflow status
      *  see http://slurm.schedmd.com/squeue.html#SECTION_JOB-STATE-CODES
      */
-    static private Map STATUS_MAP = [
+    static private Map<String,QueueStatus> STATUS_MAP = [
             'PD': QueueStatus.PENDING,  // (pending)
             'R': QueueStatus.RUNNING,   // (running)
             'CA': QueueStatus.ERROR,    // (cancelled)
@@ -173,7 +175,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         text.eachLine { String line ->
             def cols = line.split(/\s+/)
@@ -186,5 +188,15 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         return result
+    }
+
+    @Override
+    protected boolean pipeLauncherScript() {
+        return isFusionEnabled()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
     }
 }

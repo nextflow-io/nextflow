@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +74,7 @@ class WorkflowNotifier {
     /**
      * Creates {@link Mailer} object that sends the actual email message
      *
-     * @param config The {@link Mailer} settings correspoding to the content of the {@code mail} configuration file scope
+     * @param config The {@link Mailer} settings corresponding to the content of the {@code mail} configuration file scope
      * @return A {@link Mailer} object
      */
     protected Mailer createMailer(Map config) {

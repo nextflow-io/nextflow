@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.util.Duration
 /**
  * Model Google config options
  *
@@ -35,7 +36,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class GoogleOpts {
 
-    static final String DEFAULT_LOCATION = 'us-central1'
+    static final public String DEFAULT_LOCATION = 'us-central1'
 
     static Map<String,String> env = System.getenv()
 
@@ -43,11 +44,15 @@ class GoogleOpts {
     private String location
     private File credsFile
     private boolean enableRequesterPaysBuckets
+    private Duration httpConnectTimeout
+    private Duration httpReadTimeout
 
     String getProjectId() { projectId }
     File getCredsFile() { credsFile }
     String getLocation() { location ?: DEFAULT_LOCATION }
     boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
+    Duration getHttpConnectTimeout() { httpConnectTimeout }
+    Duration getHttpReadTimeout() { httpReadTimeout }
 
     @Memoized
     static GoogleOpts fromSession(Session session) {
@@ -65,6 +70,8 @@ class GoogleOpts {
         result.projectId = config.navigate("google.project") as String
         result.location = config.navigate("google.location") as String
         result.enableRequesterPaysBuckets = config.navigate('google.enableRequesterPaysBuckets') as boolean
+        result.httpConnectTimeout = config.navigate('google.httpConnectTimeout', '60s') as Duration
+        result.httpReadTimeout = config.navigate('google.httpReadTimeout', '60s') as Duration
 
         if( result.enableRequesterPaysBuckets && !result.projectId )
             throw new IllegalArgumentException("Config option 'google.enableRequesterPaysBuckets' cannot be honoured because the Google project Id has not been specified - Provide it by adding the option 'google.project' in the nextflow.config file")

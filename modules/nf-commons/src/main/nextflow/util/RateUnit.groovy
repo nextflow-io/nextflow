@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +91,7 @@ class RateUnit {
 
         final matcher = (limit =~ RATE_FORMAT)
         if( !matcher.matches() )
-            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request sec|min|hour` eg. 10 sec ie. max 10 tasks per second")
+            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be formatted as `num request sec|min|hour` eg. 10 sec ie. max 10 tasks per second")
 
         final num = matcher.group(1) ?: '_'
         final unit = matcher.group(2) ?: 'sec'
@@ -103,7 +102,7 @@ class RateUnit {
 
     private double parse0(String X, String Y, String limit ) {
         if( !X.isInteger() )
-            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request / duration` eg. 10/1s")
+            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be formatted as `num request / duration` eg. 10/1s")
 
         final num = Integer.parseInt(X)
         final duration = Y.isInteger() ? Duration.of( Y+'sec' ) : ( Y[0].isInteger() ? Duration.of(Y) : Duration.of('1'+Y) )

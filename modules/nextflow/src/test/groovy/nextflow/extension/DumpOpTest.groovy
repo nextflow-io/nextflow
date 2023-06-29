@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +21,9 @@ import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.OutputCapture
+
+import java.nio.file.Path
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -40,7 +42,7 @@ class DumpOpTest extends Specification {
         new Session(dumpChannels: ['*'])
 
         when:
-        def result = Channel.from(1,2,3).dump()
+        def result = Channel.of(1, 2, 3).dump()
         then:
         result.val == 1
         result.val == 2
@@ -58,7 +60,7 @@ class DumpOpTest extends Specification {
         new Session(dumpChannels: ['*'])
 
         when:
-        def result = Channel.from(1,2,3).dump { it * it }
+        def result = Channel.of(1, 2, 3).dump { it * it }
         then:
         result.val == 1
         result.val == 2
@@ -76,7 +78,7 @@ class DumpOpTest extends Specification {
         new Session(dumpChannels: ['*'])
 
         when:
-        def result = Channel.from(1,2,3).dump(tag:'foo')
+        def result = Channel.of(1, 2, 3).dump(tag: 'foo')
         then:
         result.val == 1
         result.val == 2
@@ -89,7 +91,7 @@ class DumpOpTest extends Specification {
     }
 
     @Unroll
-    def 'should validate isEnabled when tag=#tag and names=#names' () {
+    def 'should validate isEnabled when tag=#tag and names=#names'() {
 
         given:
         def op = new DumpOp(tag: tag, dumpNames: names.tokenize(','))
@@ -98,16 +100,61 @@ class DumpOpTest extends Specification {
         op.isEnabled() == expected
 
         where:
-        tag     | names         | expected
-        'foo'   | 'foo'         | true
-        'foo'   | '*'           | true
-        'foo'   | 'bar'         | false
-        'foo'   | 'f'           | false
-        'foo'   | 'f*'          | true
-        'bar'   | 'f*'          | false
-        'bar'   | 'f*,b*'       | true
-        null    | '*'           | true
+        tag   | names   | expected
+        'foo' | 'foo'   | true
+        'foo' | '*'     | true
+        'foo' | 'bar'   | false
+        'foo' | 'f'     | false
+        'foo' | 'f*'    | true
+        'bar' | 'f*'    | false
+        'bar' | 'f*,b*' | true
+        null  | '*'     | true
 
+    }
+
+    @Unroll
+    def 'should pretty print channel with items #items'() {
+
+        given:
+        new Session(dumpChannels: ['*'])
+
+        when:
+        def result = Channel.of(items).dump(tag: 'foo', pretty: true)
+
+        then:
+        result.val
+        result.val == Channel.STOP
+        capture.toString().contains(expected)
+
+        where:
+        items                    | expected
+        'a string'               | "[DUMP: foo] 'a string'"
+        123123                   | '[DUMP: foo] 123123'
+        ['a', 'b']               | '"a",'
+        ['a': 'b']               | '"a": "b"'
+        ['a': Path.of('b')]      | '"a": "b"'
+        ['a': [b: Path.of('c')]] | '"b": "c"'
+    }
+
+    def 'should pretty print a complex channel'() {
+
+        given:
+        new Session(dumpChannels: ['*'])
+
+        when:
+        def result = Channel.of([
+                id     : 'test',
+                samples: [
+                        [id: 'S1', path: '/path/to/s1'],
+                        [id: 'S2', path: '/path/to/s2'],
+                        [id: 'S3', path: '/path/to/s3']
+                ]
+        ]).dump(tag: 'foo', pretty: true)
+
+        then:
+        result.val
+        result.val == Channel.STOP
+        capture.toString().contains('"path": "/path/to/s1"')
     }
 
 }

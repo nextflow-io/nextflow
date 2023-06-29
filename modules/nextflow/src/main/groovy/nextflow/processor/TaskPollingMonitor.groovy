@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +30,7 @@ import nextflow.Session
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
+import nextflow.util.Threads
 import nextflow.util.Throttle
 /**
  * Monitors the queued tasks waiting for their termination
@@ -288,7 +288,7 @@ class TaskPollingMonitor implements TaskMonitor {
         session.onShutdown { this.cleanup() }
 
         // launch the thread polling the queue
-        Thread.start('Task monitor') {
+        Threads.start('Task monitor') {
             try {
                 pollLoop()
             }
@@ -299,7 +299,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // launch daemon that submits tasks for execution
-        Thread.startDaemon('Task submitter', this.&submitLoop)
+        Threads.start('Task submitter', this.&submitLoop)
 
         return this
     }
@@ -341,7 +341,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
     private RateLimiter newRateLimiter( String X, String Y, String limit ) {
         if( !X.isInteger() )
-            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request / duration` eg. 10/1s")
+            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provided using the following format `num request / duration` eg. 10/1s")
 
         final num = Integer.parseInt(X)
         final duration = Y.isInteger() ? Duration.of( Y+'sec' ) : ( Y[0].isInteger() ? Duration.of(Y) : Duration.of('1'+Y) )
@@ -349,7 +349,7 @@ class TaskPollingMonitor implements TaskMonitor {
         if( !seconds )
             throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- The interval must be at least 1 second")
 
-        log.debug "Creating submit rate limit of $num reqs by $seconds seconds"
+        log.debug "Creating submit rate limit of $num submissions per $seconds seconds"
         return RateLimiter.create( num / seconds as double )
     }
 
@@ -581,6 +581,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 handler.decProcessForks()
             }
             fault = handler.task.processor.resumeOrDie(handler?.task, error)
+            log.trace "Task fault (1): $fault"
         }
         finally {
             // abort the session if a task task was returned

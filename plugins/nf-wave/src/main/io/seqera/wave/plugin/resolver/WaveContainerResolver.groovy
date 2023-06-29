@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,13 @@ import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.WaveClient
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
 import nextflow.processor.TaskRun
+import nextflow.util.StringUtils
+
 /**
  * Implement Wave container resolve logic
  *
@@ -40,10 +43,10 @@ import nextflow.processor.TaskRun
 class WaveContainerResolver implements ContainerResolver {
 
     private ContainerResolver defaultResolver = new DefaultContainerResolver()
-    private List<String> DOCKER_LIKE = ['docker','podman']
-    private final String DOCKER_PREFIX = 'docker://'
+    static final private List<String> DOCKER_LIKE = ['docker','podman','sarus']
+    static final private List<String> SINGULARITY_LIKE = ['singularity','apptainer']
+    static final private String DOCKER_PREFIX = 'docker://'
     private WaveClient client0
-
 
     synchronized protected WaveClient client() {
         if( client0 )
@@ -52,25 +55,23 @@ class WaveContainerResolver implements ContainerResolver {
     }
 
     @Override
-    String resolveImage(TaskRun task, String imageName) {
+    ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !client().enabled() )
             return defaultResolver.resolveImage(task, imageName)
 
         if( !imageName ) {
-            // when no image name is provider the module bundle should include a
-            // Dockerfile or a Conda recipe to build an image on-fly with an
-            // automatically assigned name
+            // when no image name is provided the module bundle should include a
+            // Dockerfile or a Conda recipe or a Spack recipe to build
+            // an image on-fly with an automatically assigned name
             return waveContainer(task, null)
         }
 
-        final engine = task.processor.executor.isContainerNative()
-                ? 'docker'  // <-- container native executor such as AWS Batch are implicitly docker based
-                : task.getContainerConfig().getEngine()
+        final engine= task.getContainerConfig().getEngine()
         if( engine in DOCKER_LIKE ) {
-            final targetImage = defaultResolver.resolveImage(task, imageName)
-            return waveContainer(task, targetImage)
+            final image = defaultResolver.resolveImage(task, imageName)
+            return waveContainer(task, image.target)
         }
-        else if( engine=='singularity' ) {
+        else if( engine in SINGULARITY_LIKE ) {
             // remove any `docker://` prefix if any
             if( imageName.startsWith(DOCKER_PREFIX) )
                 imageName = imageName.substring(DOCKER_PREFIX.length())
@@ -79,14 +80,12 @@ class WaveContainerResolver implements ContainerResolver {
                 return defaultResolver.resolveImage(task, imageName)
             }
             // fetch the wave container name
-            final targetImage = waveContainer(task, imageName)
+            final image = waveContainer(task, imageName)
             // then adapt it to singularity format
-            return defaultResolver.resolveImage(task,targetImage)
+            return defaultResolver.resolveImage(task, image.target)
         }
-        else {
-            // other engine are not supported by wave
-            return defaultResolver.resolveImage(task, imageName)
-        }
+        else
+            throw new IllegalArgumentException("Wave does not support '$engine' container engine")
     }
 
     /**
@@ -98,12 +97,13 @@ class WaveContainerResolver implements ContainerResolver {
      *      An instance of {@link TaskRun} task representing the current task
      * @param container
      *      The container image name specified by the task. Can be {@code null} if the task
-     *      provides a Dockerfile or a Conda recipe
+     *      provides a Dockerfile or a Conda recipe or a Spack recipe
      * @return
      *      The container image name returned by the Wave backend or {@code null}
      *      when the task does not request any container or dockerfile to build
      */
-    protected String waveContainer(TaskRun task, String container) {
+    protected ContainerInfo waveContainer(TaskRun task, String container) {
+        validateContainerRepo(container)
         final assets = client().resolveAssets(task, container)
         if( assets ) {
             return client().fetchContainerImage(assets)
@@ -112,4 +112,13 @@ class WaveContainerResolver implements ContainerResolver {
         log.trace "No container image or build recipe defined for task ${task.processor.name}"
         return null
     }
+
+    static protected void validateContainerRepo(String name) {
+        if( !name )
+            return 
+        final scheme = StringUtils.getUrlProtocol(name)
+        if( scheme )
+            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
+    }
+
 }

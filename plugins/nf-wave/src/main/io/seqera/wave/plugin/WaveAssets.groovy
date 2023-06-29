@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import java.nio.file.Path
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
 /**
  * Hold assets required to fulfill wave container image build
@@ -33,17 +33,20 @@ import nextflow.util.CacheHelper
 @CompileStatic
 class WaveAssets {
     final String containerImage
-    final ModuleBundle bundle
+    final String containerPlatform
+    final ResourcesBundle moduleResources
     final ContainerConfig containerConfig
     final String dockerFileContent
     final Path condaFile
+    final Path spackFile
+    final ResourcesBundle projectResources
 
-    static fromImage(String containerImage) {
-        new WaveAssets(containerImage)
+    static fromImage(String containerImage,String containerPlatform=null) {
+        new WaveAssets(containerImage, containerPlatform)
     }
 
-    static fromDockerfile(String dockerfile) {
-        new WaveAssets(null, null, null, dockerfile)
+    static fromDockerfile(String dockerfile, String containerPlatform=null) {
+        new WaveAssets(null, containerPlatform, null, null, dockerfile)
     }
 
     String dockerFileEncoded() {
@@ -58,14 +61,23 @@ class WaveAssets {
                 : null
     }
 
+    String spackFileEncoded() {
+        return spackFile
+                ? spackFile.text.bytes.encodeBase64()
+                : null
+    }
+
     @Memoized
-    String hashKey() {
+    String fingerprint() {
         final allMeta = new ArrayList(10)
         allMeta.add( this.containerImage )
-        allMeta.add( this.bundle?.fingerprint() )
-        allMeta.add( this.containerConfig?.hashCode() )
+        allMeta.add( this.moduleResources?.fingerprint() )
+        allMeta.add( this.containerConfig?.fingerprint() )
         allMeta.add( this.dockerFileContent )
-        allMeta.add( this.condaFile )
+        allMeta.add( this.condaFile?.text )
+        allMeta.add( this.spackFile?.text )
+        allMeta.add( this.projectResources?.fingerprint() )
+        allMeta.add( this.containerPlatform )
         return CacheHelper.hasher(allMeta).hash().toString()
     }
 }

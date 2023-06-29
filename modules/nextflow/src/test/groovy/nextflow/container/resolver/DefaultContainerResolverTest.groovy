@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,11 @@ import spock.lang.Specification
  */
 class DefaultContainerResolverTest extends Specification {
 
-    def 'should return null for empty container' () {
+    def 'should return empty for null container' () {
         given:
         def resolver = new DefaultContainerResolver()
         expect:
-        resolver.resolveImage(Mock(TaskRun), null) == null
+        resolver.resolveImage(Mock(TaskRun), null) == ContainerInfo.EMPTY
     }
 
     def 'should resolve image' () {
@@ -48,7 +48,9 @@ class DefaultContainerResolverTest extends Specification {
         then:
         1 * task.getContainerConfig() >> new ContainerConfig([engine:'docker', enabled:true, registry:'quay.io'])
         and:
-        result == 'quay.io/ubuntu:latest'
+        result.source == 'ubuntu:latest'
+        result.target == 'quay.io/ubuntu:latest'
+        result.hashKey == 'quay.io/ubuntu:latest'
     }
 
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +16,8 @@
 
 package nextflow.scm
 
-
+import spock.lang.Ignore
+import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -97,4 +97,33 @@ class BitbucketServerRepositoryProviderTest extends Specification {
 
     }
 
+    @Ignore
+    @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
+    def 'should list branches' () {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
+        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
+        and:
+        def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
+
+        when:
+        def result = repo.getBranches()
+        then:
+        result.contains( new RepositoryProvider.BranchInfo('master', 'c62df3d9c2464adcaa0fb6c978c8e32e2672b191') )
+    }
+
+    @Ignore
+    @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
+    def 'should list tags' () {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
+        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
+        and:
+        def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
+
+        when:
+        def result = repo.getTags()
+        then:
+        result.contains( new RepositoryProvider.TagInfo('v1.0', 'c62df3d9c2464adcaa0fb6c978c8e32e2672b191') )
+    }
 }

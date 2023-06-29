@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -161,14 +160,16 @@ class MailerTest extends Specification {
         def mailer = Spy(Mailer)
         def MSG = Mock(MimeMessage)
         def mail = new Mail()
+        def provider = Spy(new JavaMailProvider())
 
         when:
         mailer.config = [smtp: [host:'foo.com'] ]
         mailer.send(mail)
         then:
         0 * mailer.getSysMailer() >> null
+        1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * mailer.sendViaJavaMail(MSG) >> null
+        1 * provider.send(MSG, mailer) >> null
 
     }
 
@@ -177,13 +178,15 @@ class MailerTest extends Specification {
         def mailer = Spy(Mailer)
         def MSG = Mock(MimeMessage)
         def mail = new Mail()
+        and:
+        def provider = Spy(new SendMailProvider())
 
         when:
         mailer.send(mail)
         then:
-        1 * mailer.getSysMailer() >> 'sendmail'
+        1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * mailer.sendViaSysMail(MSG) >> null
+        1 * provider.send(MSG, mailer) >> null
     }
 
     def 'should throw an exception' () {
@@ -202,12 +205,14 @@ class MailerTest extends Specification {
         def mailer = Spy(Mailer)
         def MSG = Mock(MimeMessage)
         def mail = new Mail()
+        and:
+        def provider = Spy(new SimpleMailProvider())
         when:
         mailer.send(mail)
         then:
-        1 * mailer.getSysMailer() >> 'mail'
+        1 * mailer.provider() >> provider
         1 * mailer.createTextMessage(mail) >> MSG
-        1 * mailer.sendViaSysMail(MSG) >> null
+        1 * provider.send(MSG, mailer) >> null
     }
 
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,12 @@
 
 package nextflow.ga4gh.tes.executor
 
+import nextflow.ga4gh.tes.client.api.TaskServiceApi
+import nextflow.ga4gh.tes.client.model.TesCreateTaskResponse
+import nextflow.ga4gh.tes.client.model.TesTask
+import nextflow.processor.TaskStatus
+
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
@@ -50,5 +55,33 @@ class TesTaskHandlerTest extends Specification {
 
     }
 
+    def 'should submit job' () {
+
+        given:
+        def executor = Mock(TesExecutor)
+        def task = Mock(TaskRun)
+        def bashBuilder = Mock(TesBashBuilder)
+        def client = Mock(TaskServiceApi)
+        def handler = Spy(TesTaskHandler)
+        handler.@client = client
+        handler.@executor = executor
+        handler.task = task
+
+        def req = Mock(TesTask)
+        def resp = Mock(TesCreateTaskResponse)
+
+        when:
+        handler.submit()
+        then:
+        1 * executor.getRemoteBinDir() >> Path.of("/work/bin")
+        1 * handler.newTesBashBuilder(task, "/work/bin") >> bashBuilder
+        1 * bashBuilder.build() >> null
+        1 * handler.newTesTask() >> req
+        1 * client.createTask(req) >> resp
+        1 * resp.getId() >> '12345'
+
+        handler.status == TaskStatus.SUBMITTED
+        handler.requestId == '12345'
+    }
 
 }

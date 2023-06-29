@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -204,7 +203,7 @@ class AssetManager {
 
         // checks that the selected hub matches with the one defined in the git config file
         if( hub != configProvider ) {
-            throw new AbortOperationException("A project with name: `$localPath` has been already download from a different provider: `$configProvider`")
+            throw new AbortOperationException("A project with name: `$localPath` has already been downloaded from a different provider: `$configProvider`")
         }
 
     }
@@ -476,7 +475,7 @@ class AssetManager {
             }
             catch (Exception e) {
                 provider.validateRepo()
-                log.debug "Cannot retried remote config file -- likely does not exist"
+                log.debug "Cannot retrieve remote config file -- likely it does not exist"
                 return null
             }
         }
@@ -573,7 +572,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    String download(String revision=null) {
+    String download(String revision=null, Integer deep=null) {
         assert project
 
         /*
@@ -596,7 +595,9 @@ class AssetManager {
                 .setURI(cloneURL)
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
-                .call()
+            if( deep )
+                clone.setDepth(deep)
+            clone.call()
 
             if( revision ) {
                 // use an explicit checkout command *after* the clone instead of cloning a specific branch
@@ -636,7 +637,7 @@ class AssetManager {
         def revInfo = getCurrentRevisionAndName()
 
         if ( revInfo.type == RevisionInfo.Type.COMMIT ) {
-            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we are NOT pulling the repo and assuming it is already up to date!")
+            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we will assume the repo is already up to date and NOT pull it!")
             return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
         }
 
@@ -664,7 +665,7 @@ class AssetManager {
      * @param directory The folder when the pipeline will be cloned
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null) {
+    void clone(File directory, String revision = null, Integer deep=null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
@@ -675,13 +676,15 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        clone.setDepth(1)
         clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider( provider.getGitCredentials() )
 
         if( revision )
             clone.setBranch(revision)
-
+        if( deep )
+            clone.setDepth(deep)
         clone.call()
     }
 
@@ -907,7 +910,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Project `$project` currently is sticked on revision: $current -- you need to specify explicitly a revision with the option `-r` to use it")
+                throw new AbortOperationException("Project `$project` is currently stickied on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
             }
         }
         if( !revision || revision == current ) {

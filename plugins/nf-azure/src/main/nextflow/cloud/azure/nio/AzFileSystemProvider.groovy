@@ -38,13 +38,14 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
+import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.blob.models.BlobStorageException
-import com.azure.storage.common.StorageSharedKeyCredential
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.cloud.azure.batch.AzHelper
 /**
  * Implements NIO File system provider for Azure Blob Storage
  *
@@ -57,6 +58,10 @@ class AzFileSystemProvider extends FileSystemProvider {
     public static final String AZURE_STORAGE_ACCOUNT_NAME = 'AZURE_STORAGE_ACCOUNT_NAME'
     public static final String AZURE_STORAGE_ACCOUNT_KEY = 'AZURE_STORAGE_ACCOUNT_KEY'
     public static final String AZURE_STORAGE_SAS_TOKEN = 'AZURE_STORAGE_SAS_TOKEN'
+
+    public static final String AZURE_CLIENT_ID = 'AZURE_CLIENT_ID'
+    public static final String AZURE_CLIENT_SECRET = 'AZURE_CLIENT_SECRET'
+    public static final String AZURE_TENANT_ID = 'AZURE_TENANT_ID'
 
     public static final String SCHEME = 'az'
 
@@ -81,7 +86,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         return this.accountKey
     }
 
-    static private AzPath asAzPath(Path path ) {
+    static private AzPath asAzPath(Path path) {
         if( path !instanceof AzPath )
             throw new IllegalArgumentException("Not a valid Azure blob storage path object: `$path` [${path?.class?.name?:'-'}]" )
         return (AzPath)path
@@ -105,34 +110,36 @@ class AzFileSystemProvider extends FileSystemProvider {
         return uri.authority.toLowerCase()
     }
 
-    @Memoized
     protected BlobServiceClient createBlobServiceWithKey(String accountName, String accountKey) {
-        log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
+        AzHelper.getOrCreateBlobServiceWithKey(accountName, accountKey)
+    }
 
-        final credential = new StorageSharedKeyCredential(accountName, accountKey);
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
-
-        return new BlobServiceClientBuilder()
-                .endpoint(endpoint)
-                .credential(credential)
-                .buildClient()
+    protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken) {
+        AzHelper.getOrCreateBlobServiceWithToken(accountName, sasToken)
     }
 
     @Memoized
-    protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken) {
-        log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
+    protected BlobServiceClient createBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
+        log.debug "Creating Azure Blob storage client using Service Principal credentials"
 
         final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
 
+        def servicePrincipalBasedCred = new ClientSecretCredentialBuilder()
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .tenantId(tenantId)
+                .build()
+
         return new BlobServiceClientBuilder()
+                .credential(servicePrincipalBasedCred)
                 .endpoint(endpoint)
-                .sasToken(sasToken)
                 .buildClient()
+
     }
 
     /**
      * Constructs a new {@code FileSystem} object identified by a URI. This
-     * method is invoked by the {@link java.nio.file.FileSystems#newFileSystem(URI,Map)}
+     * method is invoked by the {@link java.nio.file.FileSystems#newFileSystem(URI, Map)}
      * method to open a new file system identified by a URI.
      *
      * <p> The {@code uri} parameter is an absolute, hierarchical URI, with a
@@ -196,15 +203,30 @@ class AzFileSystemProvider extends FileSystemProvider {
         final accountKey = config.get(AZURE_STORAGE_ACCOUNT_KEY) as String
         final sasToken = config.get(AZURE_STORAGE_SAS_TOKEN) as String
 
+        final servicePrincipalId = config.get(AZURE_CLIENT_ID) as String
+        final servicePrincipalSecret = config.get(AZURE_CLIENT_SECRET) as String
+        final tenantId = config.get(AZURE_TENANT_ID) as String
+
+
         if( !accountName )
             throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_NAME")
 
-        if( !accountKey && !sasToken )
-            throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_KEY or AZURE_STORAGE_SAS_TOKEN")
+        def client
 
-        final client = sasToken
-                ? createBlobServiceWithToken(accountName, sasToken)
-                : createBlobServiceWithKey(accountName, accountKey)
+        if (servicePrincipalSecret && servicePrincipalId && tenantId) {
+
+            client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
+
+        } else {
+
+            if (!accountKey && !sasToken)
+                throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_KEY or AZURE_STORAGE_SAS_TOKEN")
+
+            client = sasToken
+                    ? createBlobServiceWithToken(accountName, sasToken)
+                    : createBlobServiceWithKey(accountName, accountKey)
+        }
+
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result
 

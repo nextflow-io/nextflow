@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +19,7 @@ package nextflow.util
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import nextflow.extension.Bolts
 
 /**
  * Model a semantic version number
@@ -33,6 +33,8 @@ class VersionNumber implements Comparable {
 
     private List<String> version
 
+    private String human
+
     /**
      * Create a version number object
      *
@@ -41,6 +43,7 @@ class VersionNumber implements Comparable {
      */
     VersionNumber(String str) {
         version = str ? str.tokenize('.-') : ['0']
+        human = str ? Bolts.stripStart(Bolts.stripEnd(str,'.-'),'.-') : '0'
     }
 
     /**
@@ -122,7 +125,7 @@ class VersionNumber implements Comparable {
     }
 
     String toString() {
-        version.join('.')
+        return human
     }
 
     @Override

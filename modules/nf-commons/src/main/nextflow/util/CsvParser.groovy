@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +68,7 @@ class CsvParser {
         if( !str )
             return 0 as char
         if( str.size()>1 )
-            throw new IllegalArgumentException("Not a valid CVS character: $str")
+            throw new IllegalArgumentException("Not a valid CSV character: $str")
         str.charAt(0)
     }
 

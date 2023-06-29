@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 
 package nextflow.container.resolver
 
+
 import nextflow.processor.TaskRun
 import org.pf4j.ExtensionPoint
-
 /**
  * Given a container image name resolves it to target image name.
  *
@@ -31,6 +31,19 @@ import org.pf4j.ExtensionPoint
  */
 interface ContainerResolver extends ExtensionPoint {
 
-    abstract String resolveImage(TaskRun task, String imageName)
+    /**
+     * Resolve a container name to the fully qualified name. This method
+     * can extend the specified container name with engine specific
+     * protocol prefixes and container registry specified in the
+     * pipeline configuration file
+     *
+     * @param task
+     *      The {@link TaskRun} requesting the container image
+     * @param imageName
+     *      The container image name associated to the task execution
+     * @return
+     *      The resolved container image name
+     */
+    abstract ContainerInfo resolveImage(TaskRun task, String imageName)
 
 }

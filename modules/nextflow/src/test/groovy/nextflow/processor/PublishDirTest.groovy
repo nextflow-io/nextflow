@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +21,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.file.FileTransferPool
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -93,6 +91,26 @@ class PublishDirTest extends Specification {
         publish.pattern == '*.txt'
         publish.overwrite == false
 
+    }
+
+    def 'should create publish dir with extended params' () {
+        given:
+        PublishDir publish
+
+        when:
+        publish = PublishDir.create(tags: ['foo','bar'])
+        then:
+        publish.@tags == ['foo','bar']
+
+        when:
+        publish = PublishDir.create(contentType: 'text/json')
+        then:
+        publish.@contentType == 'text/json'
+
+        when:
+        publish = PublishDir.create(storageClass: 'xyz')
+        then:
+        publish.@storageClass == 'xyz'
     }
 
     def 'should create symlinks for output files' () {
@@ -179,8 +197,8 @@ class PublishDirTest extends Specification {
         ] as Set
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
         publisher.apply( outputs, task )
-
-        FileTransferPool.shutdown(false)
+        and:
+        session.@publishPoolManager.shutdown(false)
 
         then:
         publishDir.resolve('file1.txt').text == 'aaa'

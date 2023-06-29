@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Seqera Labs.
+ * Copyright 2013-2023, Seqera Labs
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -38,6 +38,8 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import nextflow.util.Threads
+
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -211,7 +213,7 @@ class TowerClient implements TraceObserver {
                 url = url[0..-2]
             return url
         }
-        throw new IllegalArgumentException("Only http or https are supported protocols -- The given URL was: ${url}")
+        throw new IllegalArgumentException("Only http and https are supported -- The given URL was: ${url}")
     }
 
     protected String getHostUrl(String endpoint) {
@@ -281,7 +283,7 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceCreate
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
         final ret = parseTowerResponse(resp)
@@ -354,14 +356,14 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceBegin
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
-        this.sender = Thread.start('Tower-thread', this.&sendTasks0)
-        final msg = "Monitor the execution with Nextflow Tower using this url ${watchUrl}"
+        this.sender = Threads.start('Tower-thread', this.&sendTasks0)
+        final msg = "Monitor the execution with Nextflow Tower using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
 
@@ -393,6 +395,8 @@ class TowerClient implements TraceObserver {
         final req = makeCompleteReq(session)
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
+        // shutdown file archiver
+        archiver?.shutdown(session)
     }
 
     @Override
@@ -535,7 +539,7 @@ class TowerClient implements TraceObserver {
                 return new Response(httpClient.responseCode, httpClient.getResponse())
             }
             catch( ConnectException e ) {
-                String msg = "Unable to connect Tower host: ${getHostUrl(url)}"
+                String msg = "Unable to connect to Tower API: ${getHostUrl(url)}"
                 return new Response(0, msg)
             }
             catch (IOException e) {
@@ -548,7 +552,7 @@ class TowerClient implements TraceObserver {
                     continue
                 }
                 else {
-                    log.trace("Got error $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh")
+                    log.trace("Got HTTP code $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh", e)
                 }
 
                 String msg
@@ -725,7 +729,7 @@ class TowerClient implements TraceObserver {
                 Failed to send message to ${endpoint} -- received 
                 - status code : $resp.code
                 - response msg: $resp.message
-                """.stripIndent()
+                """.stripIndent(true)
             // append separately otherwise formatting get broken
             msg += "- error cause : ${cause ?: '-'}"
             log.warn(msg)
@@ -744,7 +748,7 @@ class TowerClient implements TraceObserver {
                 - endpoint url: $endpoint
                 - status code : $resp.code
                 - response msg: ${resp.message} 
-                """.stripIndent()
+                """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
         throw new Exception(msg)

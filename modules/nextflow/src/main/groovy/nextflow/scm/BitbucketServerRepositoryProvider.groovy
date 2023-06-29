@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +17,8 @@
 package nextflow.scm
 
 
+import groovy.json.JsonSlurper
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 /**
@@ -109,4 +110,50 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
         def url = getContentUrl(path)
         invoke(url)?.getBytes()
     }
+
+    @Override
+    List<TagInfo> getTags() {
+        final result = new ArrayList<TagInfo>()
+        final url = "${getEndpointUrl()}/tags"
+        final mapper = { Map entry -> result.add( new TagInfo(entry.displayId, entry.latestCommit) ) }
+        invokeAndResponseWithPaging(url, mapper)
+        return result
+    }
+
+    @Override
+    List<BranchInfo> getBranches() {
+        final result = new ArrayList<BranchInfo>()
+        final url = "${getEndpointUrl()}/branches"
+        final mapper = { Map entry -> result.add( new BranchInfo(entry.displayId, entry.latestCommit) ) }
+        invokeAndResponseWithPaging(url, mapper)
+
+        return result
+    }
+
+    @Memoized
+    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+        int start = 0
+        final limit = 100
+        final result = new ArrayList()
+        while( true ) {
+            final url = request + "?start=${start}&limit=${limit}"
+            final response = invoke(url)
+            final resp = (Map) new JsonSlurper().parseText(response)
+            final list = resp.values as List
+            if( !list )
+                break
+
+            for( def item : list ) {
+                result.add( parse(item) )
+            }
+
+            final next = resp.nextPageStart as Integer
+            if( !next || next <= start )
+                break
+            else
+                start = next
+        }
+        return result
+    }
+
 }

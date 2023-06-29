@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +19,7 @@ package nextflow.file
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
+import java.util.concurrent.Semaphore
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -137,12 +136,12 @@ class FilePorterTest extends Specification {
     static class ErrorStage extends FilePorter.FileTransfer {
 
         ErrorStage(Path path, Path stagePath, int maxRetries) {
-            super(path, stagePath, maxRetries)
+            super(path, stagePath, maxRetries, new Semaphore(100))
         }
 
         @Override
         void run() throws Exception {
-            throw new ProcessStageException('Cannot stage gile')
+            throw new ProcessStageException('Cannot stage file')
         }
     }
 
@@ -155,24 +154,26 @@ class FilePorterTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def session = new Session(workDir: folder)
         FilePorter porter = Spy(FilePorter, constructorArgs:[session])
-        def files = [ foreign1, foreign2 ]
+        def files = [
+                new FilePorter.FileCopy(foreign1, folder.resolve(foreign1.name)),
+                new FilePorter.FileCopy(foreign2, folder.resolve(foreign2.name)) ]
 
         when:
-        def result = porter.submitStagingActions(files, folder)
+        def result = porter.submitStagingActions(files)
         then:
         result.size() == 2
         result[0].result.done
         result[1].result.done
 
         when:
-        porter.submitStagingActions([Paths.get('/missing/file')], folder)
+        def missing = new FilePorter.FileCopy(Path.of('/missing/file'), folder.resolve('file'))
+        porter.submitStagingActions(List.of(missing))
         then:
         thrown(ProcessStageException)
 
         cleanup:
         folder?.deleteDir()
     }
-
 
 
 
@@ -213,39 +214,80 @@ class FilePorterTest extends Specification {
     def 'should return stage path' () {
 
         given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def porter = new FilePorter(session)
+        and:
         def STAGE = Files.createTempDirectory('test')
-        def FTP_FILE1 = 'ftp://host.com/file1.txt' as Path
-        def FTP_FILE2 = 'ftp://host.com/file2.txt' as Path
+        def REMOTE_FILE1 = TestHelper.createInMemTempFile('file1.txt', 'foo')
+        def REMOTE_FILE2 = TestHelper.createInMemTempFile('file2.txt', 'bar')
 
         when:
-        def stage1 = FilePorter.getCachePathFor(FTP_FILE1, STAGE)
+        def stage1 = porter.getCachePathFor(REMOTE_FILE1, STAGE)
         then:
-        stage1.toString().startsWith( STAGE.toString() )
+        stage1.target.toString().startsWith( STAGE.toString() )
 
         when:
-        def stage2 = FilePorter.getCachePathFor(FTP_FILE2, STAGE)
+        def stage2 = porter.getCachePathFor(REMOTE_FILE2, STAGE)
         then:
-        stage2.toString().startsWith( STAGE.toString() )
+        stage2.target.toString().startsWith( STAGE.toString() )
         stage1 != stage2
 
+        // copy the remote files and repeat the test
+        // it should return the same paths
         when:
-        STAGE.resolve('foo.txt').text = 'ciao' // <-- add a file to alter the content of the dir
+        Files.copy(REMOTE_FILE1, stage1.target)
+        Files.copy(REMOTE_FILE2, stage2.target)
         and:
-        def newStage1 = FilePorter.getCachePathFor(FTP_FILE1, STAGE)
+        def newStage1 = porter.getCachePathFor(REMOTE_FILE1, STAGE)
         then:
+        newStage1.target.toString().startsWith( STAGE.toString() )
         stage1 == newStage1
+        and:
+        stage1.target.exists()
+        newStage1.target.exists()
+
+        when:
+        stage1.target.text = 'some other content'  // <-- modify the target file
+        and:
+        newStage1 = porter.getCachePathFor(REMOTE_FILE1, STAGE)
+        then:
+        stage1 != newStage1
+        stage1.target.exists()
+        !newStage1.target.exists()
 
         cleanup:
         STAGE?.deleteDir()
     }
 
+    def 'should create transfer paths' () {
+        given:
+        def sess = Mock(Session) {
+            getConfig() >> [:]
+        }
+        def folder = Files.createTempDirectory('test')
+        def local = folder.resolve('hola.text'); local.text = 'Hola'
+        and:
+        def foreign = TestHelper.createInMemTempDir().resolve(local.name)
+
+        and:
+        def porter = new FilePorter(sess)
+        
+        when:
+        def transfer1 = porter.createFileTransfer(local, foreign)
+        then:
+        transfer1.source == local
+        transfer1.target == foreign
+
+        cleanup:
+        folder?.deleteDir()
+    }
     def 'should stage a file' () {
         given:
         def folder = Files.createTempDirectory('test')
         def local1 = folder.resolve('hola.text')
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1)
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
 
         when:
         porter.stageForeignFile(foreign1, local1)
@@ -261,17 +303,6 @@ class FilePorterTest extends Specification {
         // file was not touched, since it was in the cache
         ts == Files.getLastModifiedTime(local1)
 
-        when:
-        // breaking the local, should force a new copy
-        sleep 1100
-        local1.text = 'foo'
-        and:
-        porter.stageForeignFile(foreign1, local1)
-        then:
-        // file was not touched, since it was in the cache
-        ts != Files.getLastModifiedTime(local1)
-        local1.text == foreign1.text
-
         cleanup:
         folder?.deleteDir()
     }
@@ -284,7 +315,7 @@ class FilePorterTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def local1 = folder.resolve('hola.text'); local1.text = CONTENT
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1)
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
 
         when:
         def equals = porter.checkPathIntegrity(foreign1, local1)
@@ -314,25 +345,41 @@ class FilePorterTest extends Specification {
         def l2 = local1.resolve('file.22'); l2.text = 'file.22'
         def l3 = local1.resolve('sub/file.333'); l3.text = 'file.333'
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1)
 
         when:
-        def equals = porter.checkPathIntegrity(foreign1, local1)
+        def equals = FilePorter.checkPathIntegrity(foreign1, local1)
         then:
         equals
-        and:
-        local1.exists()
 
         when:
         l3.text = 'foo' // <-- change the file size
         and:
-        equals = porter.checkPathIntegrity(foreign1, local1)
+        equals = FilePorter.checkPathIntegrity(foreign1, local1)
         then:
         !equals
-        and:
-        !local1.exists()
 
         cleanup:
         local1?.deleteDir()
+    }
+
+    def 'should check equals and hashcode of filecopy' () {
+        given:
+        def copy1 = new FilePorter.FileCopy(Path.of('/some/path/foo'), Path.of('/other/path/foo'))
+        def copy2 = new FilePorter.FileCopy(Path.of('/some/path/foo'), Path.of('/other/path/foo'))
+        def copy3 = new FilePorter.FileCopy(Path.of('/some/path/bar'), Path.of('/other/path/bar'))
+        def copy4 = new FilePorter.FileCopy(Path.of('/some/path/bar'), Path.of('/other/path/foo'))
+
+        expect:
+        copy1 == copy2
+        copy1 != copy3
+        copy1 != copy4
+        copy3 != copy4
+
+        and:
+        copy1.hashCode() == copy2.hashCode()
+        copy1.hashCode() != copy3.hashCode()
+        copy1.hashCode() != copy4.hashCode()
+        copy3.hashCode() != copy4.hashCode()
+
     }
 }

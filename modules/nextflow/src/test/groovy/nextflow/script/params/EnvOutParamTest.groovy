@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,26 +16,27 @@
 
 package nextflow.script.params
 
-import static test.TestParser.parseAndReturnProcess
+import static test.TestParser.*
 
-import spock.lang.Specification
-
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class EnvOutParamTest extends Specification {
+class EnvOutParamTest extends Dsl2Spec {
 
     def 'should define env outputs' () {
         setup:
         def text = '''
             process hola {
               output:
-              env FOO into x 
-              env BAR into y 
+              env FOO
+              env BAR
               
               /echo command/ 
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -59,11 +59,13 @@ class EnvOutParamTest extends Specification {
         def text = '''
             process hola {
               output:
-              env FOO optional false into x
-              env BAR optional true into y
+              env FOO optional false
+              env BAR optional true
 
               /echo command/
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]

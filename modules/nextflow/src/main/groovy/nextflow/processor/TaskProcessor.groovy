@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +30,7 @@ import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -60,9 +59,9 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
@@ -78,9 +77,11 @@ import nextflow.file.FilePorter
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
-import nextflow.script.params.BasicMode
+import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -99,9 +100,10 @@ import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
-import nextflow.util.CollectionHelper
+import nextflow.util.Escape
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
+import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 /**
@@ -133,6 +135,10 @@ class TaskProcessor {
         return value==null || value =='true'
     }
 
+    @TestOnly private static volatile TaskProcessor currentProcessor0
+
+    @TestOnly static TaskProcessor currentProcessor() { currentProcessor0 }
+
     /**
      * Keeps track of the task instance executed by the current thread
      */
@@ -141,7 +147,7 @@ class TaskProcessor {
     /**
      * Unique task index number (run)
      */
-    final protected indexCount = new AtomicInteger()
+    final protected AtomicInteger indexCount = new AtomicInteger()
 
     /**
      * The current workflow execution session
@@ -241,11 +247,24 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager()
 
+    private List<Map<Short,List>> fairBuffers = new ArrayList<>()
+
+    private int currentEmission
+
+    private Boolean isFair0
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskCmdXform) )
         return config
+    }
+
+    @TestOnly
+    static void reset() {
+        processCount=0
+        errorShown.set(false)
+        currentProcessor0 = null
     }
 
     /*
@@ -257,6 +276,7 @@ class TaskProcessor {
     {
         id = ++processCount
         grengine = session && session.classLoader ? new Grengine(session.classLoader, compilerConfig()) : new Grengine(compilerConfig())
+        currentProcessor0 = this
     }
 
     /* for testing purpose - do not remove */
@@ -286,6 +306,7 @@ class TaskProcessor {
         this.name = name
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
+        this.isFair0 = config.getFair()
     }
 
     /**
@@ -624,7 +645,7 @@ class TaskProcessor {
      * @return A string 'she-bang' formatted to the added on top script to be executed.
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
-    static shebangLine(shell) {
+    static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
 
         String result = shell instanceof List ? shell.join(' ') : shell
@@ -652,7 +673,7 @@ class TaskProcessor {
         result << '\n'
 
         if( result[0] != '#' || result[1] != '!') {
-            result.insert(0, shebangLine(shell) +'\n')
+            result.insert(0, shebangLine(shell) + '\n')
         }
 
         return result.toString()
@@ -752,13 +773,13 @@ class TaskProcessor {
                 if( resumeDir )
                     exists = resumeDir.exists()
 
-                log.trace "[${task.name}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
+                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
                 def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
             }
             catch (Throwable t) {
-                log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: t)
+                log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
             }
 
             if( exists ) {
@@ -772,7 +793,7 @@ class TaskProcessor {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
                 if( !exists && !workDir.mkdirs() )
-                    throw new IOException("Unable to create folder=$workDir -- check file system permission")
+                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {
                 lock.release()
@@ -795,7 +816,7 @@ class TaskProcessor {
      */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.config.storeDir ) {
-            log.trace "[$task.name] Store dir not set -- return false"
+            log.trace "[${safeTaskName(task)}] Store dir not set -- return false"
             return false
         }
 
@@ -811,12 +832,12 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            checkWarn "[$task.name] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
             return false
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[$task.name] Store dir does not exists > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] Store dir does not exists > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -827,7 +848,7 @@ class TaskProcessor {
             task.config.exitStatus = TaskConfig.EXIT_ZERO
             // -- check if all output resources are available
             collectOutputs(task)
-            log.info "[skipping] Stored process > ${task.name}"
+            log.info "[skipping] Stored process > ${safeTaskName(task)}"
             // set the exit code in to the task object
             task.exitStatus = TaskConfig.EXIT_ZERO
             task.cached = true
@@ -838,7 +859,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
+            log.trace "[${safeTaskName(task)}] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -863,13 +884,13 @@ class TaskProcessor {
                 str = exitFile.text?.trim()
             }
             catch( IOException e ) {
-                log.trace "[$task.name] Exit file can't be read > $exitFile -- return false -- Cause: ${e.message}"
+                log.trace "[${safeTaskName(task)}] Exit file can't be read > $exitFile -- return false -- Cause: ${e.message}"
                 return false
             }
 
             exitCode = str.isInteger() ? str.toInteger() : null
             if( !task.isSuccess(exitCode) ) {
-                log.trace "[$task.name] Exit code is not valid > $str -- return false"
+                log.trace "[${safeTaskName(task)}] Exit code is not valid > $str -- return false"
                 return false
             }
         }
@@ -878,12 +899,12 @@ class TaskProcessor {
          * verify cached context map
          */
         if( !entry ) {
-            log.trace "[$task.name] Missing cache entry -- return false"
+            log.trace "[${safeTaskName(task)}] Missing cache entry -- return false"
             return false
         }
 
         if( task.hasCacheableValues() && !entry.context ) {
-            log.trace "[$task.name] Missing cache context -- return false"
+            log.trace "[${safeTaskName(task)}] Missing cache context -- return false"
             return false
         }
 
@@ -923,7 +944,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
+            log.trace "[${safeTaskName(task)}] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -941,6 +962,7 @@ class TaskProcessor {
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
         log.trace "Handling error: $error -- task: $task"
         def fault = resumeOrDie(task, error)
+        log.trace "Task fault (2): $fault"
 
         if (fault instanceof TaskFault) {
             session.fault(fault)
@@ -961,17 +983,17 @@ class TaskProcessor {
      */
     @PackageScope
     final synchronized resumeOrDie( TaskRun task, Throwable error ) {
-        log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
+        log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
-        final message = []
+        final List<String> message = []
         try {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && (error.cause instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
-                if( error.cause instanceof NodeTerminationException )
+            if( task && (error.cause instanceof ProcessRetryableException || error.cause instanceof CloudSpotTerminationException) ) {
+                if( error.cause instanceof ProcessRetryableException )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
@@ -1023,11 +1045,12 @@ class TaskProcessor {
 
             // -- make sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) || session.aborted ) {
+                log.trace "Task errorShown=${errorShown.get()}; aborted=${session.aborted}"
                 return errorStrategy
             }
 
             def dumpStackTrace = log.isTraceEnabled()
-            message << "Error executing process > '${task?.name ?: name}'"
+            message << "Error executing process > '${safeTaskName(task)}'"
             switch( error ) {
                 case ProcessException:
                     formatTaskError( message, error, task )
@@ -1053,6 +1076,12 @@ class TaskProcessor {
         }
 
         return new TaskFault(error: error, task: task, report: message.join('\n'))
+    }
+
+    protected String safeTaskName(TaskRun task)  {
+        return task!=null
+                ? task.lazyName()
+                : name
     }
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
@@ -1084,7 +1113,7 @@ class TaskProcessor {
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
-                        log.error("Unable to re-submit task `${taskCopy.name}`", e)
+                        log.error("Unable to re-submit task `${safeTaskName(taskCopy)}`", e)
                         session.abort(e)
                     }
                 } as Runnable)
@@ -1249,7 +1278,7 @@ class TaskProcessor {
         final fail = e instanceof InvocationTargetException ? e.targetException : e
 
         if( fail instanceof NoSuchFileException ) {
-            return "No such file: $fail.message"
+            return "No such file or directory: $fail.message"
         }
         if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
@@ -1339,6 +1368,7 @@ class TaskProcessor {
 
             case EnvOutParam:
             case ValueOutParam:
+            case DefaultOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add(value)
                 break
@@ -1348,37 +1378,12 @@ class TaskProcessor {
             }
         }
 
-        // -- bind out the collected values
-        for( OutParam param : config.getOutputs() ) {
-            def list = tuples[param.index]
-            if( list == null )
-                throw new IllegalStateException()
-
-            if( list instanceof MissingParam ) {
-                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $list.missing"
-                continue
-            }
-
-            if( param.mode == BasicMode.standard ) {
-                log.trace "Process $name > Binding out param: ${param} = ${list}"
-                bindOutParam(param, list)
-            }
-
-            else if( param.mode == BasicMode.flatten ) {
-                log.trace "Process $name > Flatting out param: ${param} = ${list}"
-                CollectionHelper.flatten( list ) {
-                    bindOutParam( param, it )
-                }
-            }
-
-            else if( param.mode == TupleOutParam.CombineMode.combine ) {
-                log.trace "Process $name > Combining out param: ${param} = ${list}"
-                final combs = (List<List>)list.combinations()
-                for( def it : combs ) { bindOutParam(param, it) }
-            }
-
-            else
-                throw new IllegalStateException("Unknown bind output parameter type: ${param}")
+        // bind the output
+        if( isFair0 ) {
+            fairBindOutputs0(tuples, task)
+        }
+        else {
+            bindOutputs0(tuples)
         }
 
         // -- finally prints out the task output when 'debug' is true
@@ -1387,10 +1392,57 @@ class TaskProcessor {
         }
     }
 
+    protected void fairBindOutputs0(Map<Short,List> emissions, TaskRun task) {
+        synchronized (isFair0) {
+            // decrement -1 because tasks are 1-based
+            final index = task.index-1
+            // store the task emission values in a buffer
+            fairBuffers[index-currentEmission] = emissions
+            // check if the current task index matches the expected next emission index
+            if( currentEmission == index ) {
+                while( emissions!=null ) {
+                    // bind the emission values
+                    bindOutputs0(emissions)
+                    // remove the head and try with the following
+                    fairBuffers.remove(0)
+                    // increase the index of the next emission
+                    currentEmission++
+                    // take the next emissions 
+                    emissions = fairBuffers[0]
+                }
+            }
+        }
+    }
+
+    protected void bindOutputs0(Map<Short,List> tuples) {
+        // -- bind out the collected values
+        for( OutParam param : config.getOutputs() ) {
+            final outValue = tuples[param.index]
+            if( outValue == null )
+                throw new IllegalStateException()
+
+            if( outValue instanceof MissingParam ) {
+                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
+                continue
+            }
+
+            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
+            bindOutParam(param, outValue)
+        }
+    }
+
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
-        def x = values.size() == 1 ? values[0] : values
-        for( def it : param.getOutChannels() ) { it.bind(x) }
+        final x = values.size() == 1 ? values[0] : values
+        final ch = param.getOutChannel()
+        if( ch != null ) {
+            // create a copy of the output list of operation made by a downstream task
+            // can modify the list which is used internally by the task processor
+            // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
+            final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
+            // emit the final value
+            ch.bind(copy)
+        }
     }
 
     protected void collectOutputs( TaskRun task ) {
@@ -1424,6 +1476,10 @@ class TaskProcessor {
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
                     break
 
+                case DefaultOutParam:
+                    task.setOutput(param, DefaultOutParam.Completion.DONE)
+                    break
+
                 default:
                     throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
 
@@ -1452,12 +1508,20 @@ class TaskProcessor {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
         final result = new HashMap(50)
         for(String line : env.readLines() ) {
-            def (k,v) = line.tokenize('=')
+            def (k,v) = tokenize0(line)
+            if (!k) continue
             result.put(k,v)
         }
         return result
     }
 
+    private List<String> tokenize0(String line) {
+        int p=line.indexOf('=')
+        return p==-1
+                ? List.of(line,'')
+                : List.of(line.substring(0,p), line.substring(p+1))
+    }
+    
     /**
      * Collects the process 'std output'
      *
@@ -1468,11 +1532,11 @@ class TaskProcessor {
     protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
 
         if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for process > ${task.name}")
+            throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
         }
 
         if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout} for process > ${task.name}")
+            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
         }
 
         task.setOutput(param, stdout)
@@ -1495,7 +1559,7 @@ class TaskProcessor {
                 // filter the inputs
                 if( result && !param.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result, workDir)
-                    log.trace "Process ${task.name} > after removing staged inputs: ${result}"
+                    log.trace "Process ${safeTaskName(task)} > after removing staged inputs: ${result}"
                     inputsRemovedFlag |= (result.size()==0)
                 }
             }
@@ -1506,14 +1570,14 @@ class TaskProcessor {
                 if( exists )
                     result = [file]
                 else
-                    log.debug "Process `${task.name}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
+                    log.debug "Process `${safeTaskName(task)}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
             }
 
             if( result )
                 allFiles.addAll(result)
 
             else if( !param.optional ) {
-                def msg = "Missing output file(s) `$filePattern` expected by process `${task.name}`"
+                def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
                 if( inputsRemovedFlag )
                     msg += " (note: input files are not included in the default matching set)"
                 throw new MissingFileException(msg)
@@ -1554,14 +1618,14 @@ class TaskProcessor {
         assert namePattern
         assert workDir
 
-        List files = []
+        List<Path> files = []
         def opts = visitOptions(param, namePattern)
         // scan to find the file with that name
         try {
             FileHelper.visitFiles(opts, workDir, namePattern) { Path it -> files.add(it) }
         }
         catch( NoSuchFileException e ) {
-            throw new MissingFileException("Cannot access folder: '$workDir'", e)
+            throw new MissingFileException("Cannot access directory: '$workDir'", e)
         }
 
         return files.sort()
@@ -1626,6 +1690,30 @@ class TaskProcessor {
         return result
     }
 
+    @Memoized
+    ResourcesBundle getModuleBundle() {
+        final script = this.getOwnerScript()
+        final meta = ScriptMeta.get(script)
+        return meta?.isModule() ? meta.getModuleBundle() : null
+    }
+
+    @Memoized
+    protected List<Path> getBinDirs() {
+        final result = new ArrayList(10)
+        // module bundle bin dir have priority, add before
+        final bundle = session.enableModuleBinaries() ? getModuleBundle() : null
+        if( bundle!=null )
+            result.addAll(bundle.getBinDirs())
+        // then add project bin dir
+        if( executor.binDir )
+            result.add(executor.binDir)
+        return result
+    }
+
+    @Memoized
+    boolean isLocalWorkDir() {
+        return executor.workDir.fileSystem == FileSystems.default
+    }
 
     /**
      * @return The map holding the shell environment variables for the task to be executed
@@ -1645,16 +1733,21 @@ class TaskProcessor {
             log.debug "Invalid 'session.config.env' object: ${session.config.env?.class?.name}"
         }
 
-
-        // pre-pend the 'bin' folder to the task environment
-        if( executor.binDir ) {
-            if( result.containsKey('PATH') ) {
-                // note: do not escape potential blanks in the bin path because the PATH
-                // variable is enclosed in `"` when in rendered in the launcher script -- see #630
-                result['PATH'] =  "${executor.binDir}:${result['PATH']}".toString()
-            }
-            else {
-                result['PATH'] = "${executor.binDir}:\$PATH".toString()
+        // append the 'bin' folder to the task environment
+        List<Path> paths
+        if( isLocalWorkDir() && (paths=getBinDirs()) ) {
+            for( Path it : paths ) {
+                if( result.containsKey('PATH') ) {
+                    // note: do not escape potential blanks in the bin path because the PATH
+                    // variable is enclosed in `"` when in rendered in the launcher script -- see #630
+                    result['PATH'] =  "${result['PATH']}:${it}".toString()
+                }
+                else {
+                    // note: append custom bin path *after* the system PATH
+                    // to prevent unnecessary network round-trip for each command
+                    // when the added path is a shared file system directory
+                    result['PATH'] = "\$PATH:${it}".toString()
+                }
             }
         }
 
@@ -1880,7 +1973,7 @@ class TaskProcessor {
             }
             else {
                 // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${value.replace('$','\\$')}"/
+                script << /export $name="${Escape.variable(value)}"/
             }
         }
         script << ''
@@ -1981,7 +2074,7 @@ class TaskProcessor {
         List keys = [ session.uniqueId, name, task.source ]
 
         if( task.isContainerEnabled() )
-            keys << task.container
+            keys << task.getContainerFingerprint()
 
         // add all the input name-value pairs to the key generator
         for( Map.Entry<InParam,Object> it : task.inputs ) {
@@ -2012,6 +2105,17 @@ class TaskProcessor {
             keys.add(conda)
         }
 
+        final spack = task.getSpackEnv()
+        final arch = task.getConfig().getArchitecture()
+
+        if( spack ) {
+            keys.add(spack)
+
+            if( arch ) {
+                keys.add(arch)
+            }
+        }
+
         if( session.stubRun ) {
             keys.add('stub-run')
         }
@@ -2029,7 +2133,7 @@ class TaskProcessor {
             return CacheHelper.hasher(keys, mode).hash()
         }
         catch (Throwable e) {
-            final msg = "Oops.. something wrong happened while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
             throw new UnexpectedException(msg,e)
         }
     }
@@ -2044,7 +2148,7 @@ class TaskProcessor {
      */
     @Memoized
     protected List<Path> getTaskBinEntries(String script) {
-        def result = []
+        List<Path> result = []
         def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
             def token = tokenizer.nextToken()
@@ -2052,13 +2156,13 @@ class TaskProcessor {
             if( path )
                 result.add(path)
         }
-        return result;
+        return result
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
 
         def buffer = new StringBuilder()
-        buffer.append("[${task.name}] cache hash: ${hash}; mode: $mode; entries: \n")
+        buffer.append("[${safeTaskName(task)}] cache hash: ${hash}; mode: $mode; entries: \n")
         for( Object item : entries ) {
             buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
         }
@@ -2095,7 +2199,7 @@ class TaskProcessor {
      * @return {@code TaskDef}
      */
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
-        log.trace "[${task.name}] actual run folder: ${folder}"
+        log.trace "[${safeTaskName(task)}] actual run folder: ${folder}"
 
         makeTaskContextStage3(task, hash, folder)
 
@@ -2112,7 +2216,7 @@ class TaskProcessor {
                 return true
             }
 
-            log.trace "Task ${task.name} is not executed because `when` condition is not verified"
+            log.trace "Task ${safeTaskName(task)} is not executed because `when` condition is not verified"
             finalizeTask0(task)
             return false
         }
@@ -2130,20 +2234,20 @@ class TaskProcessor {
      */
     @PackageScope
     final finalizeTask( TaskRun task ) {
-        log.trace "finalizing process > ${task.name} -- $task"
+        log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
         try {
             // -- verify task exit status
             if( task.error )
-                throw new ProcessFailedException("Process `${task.name}` failed", task.error)
+                throw new ProcessFailedException("Process `${safeTaskName(task)}` failed", task.error)
 
             if( task.type == ScriptType.SCRIPTLET ) {
                 if( task.exitStatus == Integer.MAX_VALUE )
-                    throw new ProcessFailedException("Process `${task.name}` terminated for an unknown reason -- Likely it has been terminated by the external system")
+                    throw new ProcessFailedException("Process `${safeTaskName(task)}` terminated for an unknown reason -- Likely it has been terminated by the external system")
 
                 if ( !task.isSuccess() )
-                    throw new ProcessFailedException("Process `${task.name}` terminated with an error exit status (${task.exitStatus})")
+                    throw new ProcessFailedException("Process `${safeTaskName(task)}` terminated with an error exit status (${task.exitStatus})")
             }
 
             // -- expose task exit status to make accessible as output value
@@ -2153,6 +2257,7 @@ class TaskProcessor {
         }
         catch ( Throwable error ) {
             fault = resumeOrDie(task, error)
+            log.trace "Task fault (3): $fault"
         }
 
         // -- finalize the task
@@ -2181,7 +2286,7 @@ class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
-        log.trace "Finalize process > ${task.name}"
+        log.trace "Finalize process > ${safeTaskName(task)}"
 
         // -- bind output (files)
         if( task.canBind ) {
@@ -2268,7 +2373,7 @@ class TaskProcessor {
                 control.bind(Boolean.TRUE)
             }
 
-            return message;
+            return message
         }
     }
 

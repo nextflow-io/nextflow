@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin
 
-import io.seqera.wave.plugin.packer.WaveCmd
+import io.seqera.wave.plugin.cli.WaveCmdEntry
 import nextflow.cli.PluginExecAware
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
@@ -29,11 +29,11 @@ import org.pf4j.PluginWrapper
 class WavePlugin extends BasePlugin implements PluginExecAware {
 
     @Delegate
-    private WaveCmd cli
+    private WaveCmdEntry cmd
 
     WavePlugin(PluginWrapper wrapper) {
         super(wrapper)
-        this.cli = new WaveCmd()
+        this.cmd = new WaveCmdEntry()
     }
 
 }

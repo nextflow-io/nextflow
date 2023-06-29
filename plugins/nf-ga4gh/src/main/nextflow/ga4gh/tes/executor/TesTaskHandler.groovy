@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +17,7 @@
 package nextflow.ga4gh.tes.executor
 
 import nextflow.ga4gh.tes.client.model.TesFileType
+import nextflow.processor.TaskBean
 
 import static nextflow.processor.TaskStatus.COMPLETED
 import static nextflow.processor.TaskStatus.RUNNING
@@ -54,7 +54,7 @@ class TesTaskHandler extends TaskHandler {
 
     final List<TesState> STARTED_STATUSES = [TesState.INITIALIZING, TesState.RUNNING, TesState.PAUSED] + COMPLETE_STATUSES
 
-    final TesExecutor executor
+    private TesExecutor executor
 
     private final Path exitFile
 
@@ -76,6 +76,9 @@ class TesTaskHandler extends TaskHandler {
 
     private String requestId
 
+    /** only for testing purpose -- do not use */
+    protected TesTaskHandler() {}
+
     TesTaskHandler(TaskRun task, TesExecutor executor) {
         super(task)
         this.executor = executor
@@ -90,6 +93,8 @@ class TesTaskHandler extends TaskHandler {
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
+
+    protected String getRequestId() { requestId }
 
     @Override
     boolean checkIfRunning() {
@@ -149,7 +154,8 @@ class TesTaskHandler extends TaskHandler {
     void submit() {
 
         // create task wrapper
-        final bash = new TesBashBuilder(task)
+        String remoteBinDir = executor.getRemoteBinDir()
+        final bash = newTesBashBuilder(task, remoteBinDir)
         bash.build()
 
         final body = newTesTask()
@@ -160,7 +166,11 @@ class TesTaskHandler extends TaskHandler {
         status = TaskStatus.SUBMITTED
     }
 
-    protected final TesTask newTesTask() {
+    protected TesBashBuilder newTesBashBuilder(TaskRun task, String remoteBinDir) {
+        return new TesBashBuilder(task, remoteBinDir)
+    }
+
+    protected TesTask newTesTask() {
         // the cmd list to launch it
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
         List cmd = ['/bin/bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
@@ -195,6 +205,8 @@ class TesTaskHandler extends TaskHandler {
         task.outputFilesNames?.each { fileName ->
             body.addOutputsItem(outItem(fileName))
         }
+
+        body.setName(task.getName())
 
         // add the executor
         body.executors = [exec]

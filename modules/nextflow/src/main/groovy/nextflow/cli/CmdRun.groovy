@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,6 +137,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
     @Parameter(names=['-latest'], description = 'Pull latest changes before run')
     boolean latest
 
@@ -157,6 +159,12 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
     String withTower
 
+    @Parameter(names = ['-with-wave'], hidden = true)
+    String withWave
+
+    @Parameter(names = ['-with-fusion'], hidden = true)
+    String withFusion
+
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
@@ -174,6 +182,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
     def withSingularity
+
+    @Parameter(names = '-with-apptainer', description = 'Enable process execution in a Apptainer container')
+    def withApptainer
 
     @Parameter(names = '-with-podman', description = 'Enable process execution in a Podman container')
     def withPodman
@@ -221,6 +232,12 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
     Boolean withoutConda
+
+    @Parameter(names=['-with-spack'], description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
+    String withSpack
+
+    @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments')
+    Boolean withoutSpack
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'
@@ -281,6 +298,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( withConda && withoutConda )
             throw new AbortOperationException("Command line options `-with-conda` and `-without-conda` cannot be specified at the same time")
+
+        if( withSpack && withoutSpack )
+            throw new AbortOperationException("Command line options `-with-spack` and `-without-spack` cannot be specified at the same time")
 
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
@@ -399,7 +419,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return dsl
         }
         // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDls1(scriptText) ) {
+        if( NextflowMeta.probeDsl1(scriptText) ) {
             log.debug "Applied DSL=1 by probing script field"
             return DSL1
         }
@@ -475,7 +495,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 throw new AbortOperationException("Cannot access `stdin` stream")
 
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a local script")
+                throw new AbortOperationException("Revision option cannot be used when running a script from stdin")
 
             return new ScriptFile(file)
         }
@@ -490,7 +510,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( script.exists() ) {
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a script")
+                throw new AbortOperationException("Revision option cannot be used when running a local script")
             return new ScriptFile(script)
         }
 
@@ -505,7 +525,7 @@ class CmdRun extends CmdBase implements HubOptions {
             if( offline )
                 throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo ..."
-            def result = manager.download(revision)
+            def result = manager.download(revision,deep)
             if( result )
                 log.info " $result"
             checkForUpdate = false

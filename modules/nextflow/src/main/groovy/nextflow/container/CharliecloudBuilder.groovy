@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +15,8 @@
  */
 
 package nextflow.container
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-
-import java.nio.file.Path
-
-import nextflow.util.PathTrie
 /**
  * Implements a builder for Charliecloud containerisation
  *
@@ -30,6 +24,7 @@ import nextflow.util.PathTrie
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
+ * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
  */
 @CompileStatic
 @Slf4j
@@ -51,6 +46,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
+        if( params.containsKey('readOnlyInputs') )
+            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
+
         return this
     }
 
@@ -63,19 +61,19 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     CharliecloudBuilder build(StringBuilder result) {
         assert image
 
-        result << 'ch-run --no-home --unset-env="*" -w --set-env=' + image + '/ch/environment '
+        result << 'ch-run --unset-env="*" -c "$PWD" --set-env '
+        if (!readOnlyInputs)
+            result << '-w '
 
         appendEnv(result)
 
         if( temp )
             result << "-b $temp:/tmp "
 
+        makeVolumes(mounts, result)
+
         if( runOptions )
             result << runOptions.join(' ') << ' '
-
-        makeVolumes(mounts, result)
-        
-        result << '-c "$PWD" '
 
         result << image
         result << ' --'
@@ -85,51 +83,23 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         return this
     }
 
-    protected String composeVolumePath(String path) {
-        return "-b ${escape(path)}:${escape(path)}"
+    protected String getRoot(String path) {
+        def rootPath = path.tokenize("/")
+
+        if (rootPath.size() >= 1 && path[0] == '/')
+            rootPath = "/${rootPath[0]}"
+        else
+            throw new IllegalArgumentException("Not a valid working directory value (absolute path?): ${path}")
+
+        return rootPath
     }
-
-    /**
-    * This method override is needed because charliecloud currently can't bind mount directories that do not exist in the container
-    * The workaround is to use mkdir to create the directories within the container before they are bind-mounted
-    * Can probably be removed once Charliecloud issue https://github.com/hpc/charliecloud/issues/96 has been resolved
-    */
+    
     @Override
-    protected CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result) {
-
-        def prependDirs = ''
-
-        // add the work-dir to the list of container mounts
-        final workDirStr = workDir?.toString()
-        final allMounts = new ArrayList<Path>(mountPaths)
-        if( workDir )
-            allMounts << workDir
-
-        // find the longest commons paths and mount only them
-        final trie = new PathTrie()
-        for( String it : allMounts ) { trie.add(it) }
-
-        final paths = trie.longest()
-
-        for( String it : paths ) {
-            if(!it) continue
-            prependDirs += it + ' '
-            result << composeVolumePath(it)
-            result << ' '
-        }
-
-        // -- append by default the current path -- this is needed when `scratch` is set to true
-        if( mountWorkDir ) {
-            prependDirs += '"$PWD"'
-            result << composeVolumePath('$PWD')
-            result << ' '
-        }
-
-        if( prependDirs ) {
-            prependDirs = 'ch-run --no-home -w ' + image + ' -- bash -c "mkdir -p ' + prependDirs + '";'
-            result.insert(0, prependDirs)
-        }
-        return result
+    protected String composeVolumePath(String path, boolean readOnlyInputs = false) {
+        def mountCmd = "-b ${escape(path)}"
+        if (readOnlyInputs)
+            mountCmd = "-b ${getRoot(escape(path))}"
+        return mountCmd
     }
 
     @Override
@@ -139,15 +109,14 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
             short index = 0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '
-                // use bash process substitution because --set-env expects a file handle
-                result << ("--set-env=<( echo \"${entry.key}=\"${entry.value}\"\" )")
+                result << ("--set-env=${entry.key}=${entry.value}")
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << '--set-env=<( echo "' << env << '" )'
+            result << "--set-env=" << env
         }
         else if( env instanceof String ) {
-            result << "\${$env:+--set-env=<( echo \"$env=\"\$$env\"\" )}"
+            result << "\${$env:+--set-env=$env=\$$env}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")

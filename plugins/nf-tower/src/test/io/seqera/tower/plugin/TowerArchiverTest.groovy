@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 
 package io.seqera.tower.plugin
 
+import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 import nextflow.Session
@@ -45,7 +45,7 @@ class TowerArchiverTest extends Specification {
         def sess = Mock(Session) {
             getConfig() >> [:]
         }
-        def helper = TowerArchiver.create(sess, [NXF_ARCHIVE_DIR:'/data,http://bucket/data/export'], Mock(ExecutorService))
+        def helper = TowerArchiver.create(sess, [NXF_ARCHIVE_DIR:'/data,http://bucket/data/export'])
 
         expect:
         helper.getBaseDir() == Path.of('/data')
@@ -93,7 +93,7 @@ class TowerArchiverTest extends Specification {
     def 'should validate retry policy' () {
         given:
         def sess = Mock(Session) { getConfig() >> [:] }
-        def archiver = new TowerArchiver(Path.of('/foo'),Path.of('/bar'), sess, [:], Mock(ExecutorService))
+        def archiver = new TowerArchiver(Path.of('/foo'),Path.of('/bar'), sess, [:])
 
         expect:
         !archiver.retryPattern().matcher('hello').find()
@@ -113,7 +113,7 @@ class TowerArchiverTest extends Specification {
         and:
         def sess = Mock(Session) { getConfig() >> [:] }
         def exec = Executors.newSingleThreadExecutor()
-        def archiver = Spy(new TowerArchiver(folder,Path.of('/bar'), sess, [:], exec))
+        def archiver = Spy(new TowerArchiver(folder,Path.of('/bar'), sess, [:]))
         def target = folder.resolve('bar.txt')
 
         when:
@@ -124,6 +124,30 @@ class TowerArchiverTest extends Specification {
         exec.shutdown()
         and:
         target.exists()
+    }
+
+    def 'should archive Nextflow log file' () {
+        given:
+        def workDir = Files.createTempDirectory('workdir')
+        def targetDir = Files.createTempDirectory('target')
+        def nextflowLog = workDir.resolve('nextflow.log'); nextflowLog.text = 'nextflow logs'
+        def targetLog = targetDir.resolve('nextflow.log')
+        and:
+        def sess = Mock(Session) { getConfig() >> [:] }
+        def exec = Executors.newSingleThreadExecutor()
+        def archiver = new TowerArchiver(workDir,targetDir, sess, ['NXF_WORK': workDir.toString(), 'NXF_LOG_FILE': 'nextflow.log'])
+
+        when:
+        archiver.archiveLogs()
+        sleep 100 // <-- sleep a bit to allow the task to enter in the exec pool
+        exec.shutdown()
+
+        then:
+        targetLog.exists()
+
+        cleanup:
+        workDir?.deleteDir()
+        targetDir?.deleteDir()
     }
 
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +19,17 @@ package nextflow.scm
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 
 /**
  * Implements a repository provider for GitHub service
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-final class GithubRepositoryProvider extends RepositoryProvider {
+class GithubRepositoryProvider extends RepositoryProvider {
 
     GithubRepositoryProvider(String project, ProviderConfig config=null) {
         this.project = project
@@ -42,6 +44,21 @@ final class GithubRepositoryProvider extends RepositoryProvider {
     @Override
     String getEndpointUrl() {
         return "${config.endpoint}/repos/${project}"
+    }
+
+    @Override
+    boolean hasCredentials() {
+        super.hasCredentials() ?: SysEnv.containsKey('GITHUB_TOKEN')
+    }
+
+    @Override
+    String getUser() {
+        super.getUser() ?: SysEnv.get('GITHUB_TOKEN')
+    }
+
+    @Override
+    String getPassword() {
+        super.getPassword() ?: (SysEnv.containsKey('GITHUB_TOKEN') ? 'x-oauth-basic' : null)
     }
 
     /** {@inheritDoc} */

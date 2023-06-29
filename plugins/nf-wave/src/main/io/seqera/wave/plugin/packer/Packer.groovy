@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,10 +51,19 @@ class Packer {
 
 
     def <T extends OutputStream> T makeTar(Path root, List<Path> files, T target) {
+        final entries = new HashMap<String,Path>()
+        for( Path it : files ) {
+            final name = root.relativize(it).toString()
+            entries.put(name, it)
+        }
+        return makeTar(entries, target)
+    }
+
+    def <T extends OutputStream> T makeTar(Map<String,Path> entries, T target) {
         try ( final archive = new TarArchiveOutputStream(target) ) {
-            final entries = new TreeSet<Path>(files)
-            for (Path targetPath : entries ) {
-                final name = root.relativize(targetPath).toString()
+            final sorted = new TreeSet<>(entries.keySet())
+            for (String name : sorted ) {
+                final targetPath = entries.get(name)
                 final attrs = Files.readAttributes(targetPath, BasicFileAttributes)
                 final entry = new TarArchiveEntry(targetPath, name)
                 entry.setIds(0,0)
@@ -89,12 +98,21 @@ class Packer {
     }
 
     ContainerLayer layer(Path root, List<Path> files) {
-        final tar = makeTar(root, files, new ByteArrayOutputStream()).toByteArray()
+        final Map<String,Path> entries = new HashMap<>()
+        for( Path it : files )
+            entries.put(root.relativize(it).toString(), it)
+        return layer(entries)
+    }
+
+    ContainerLayer layer(Map<String,Path> entries) {
+        final tar = makeTar(entries, new ByteArrayOutputStream()).toByteArray()
         final tarDigest = DigestFunctions.digest(tar)
-        final gzip = makeGzip(new ByteArrayInputStream(tar), new ByteArrayOutputStream()).toByteArray()
-        final gzipSize = gzip.length
-        final gzipDigest = DigestFunctions.digest(gzip)
-        final data = 'data:' + gzip.encodeBase64()
+        final gzipStream = new ByteArrayOutputStream()
+        makeGzip(new ByteArrayInputStream(tar), gzipStream); gzipStream.close()
+        final gzipBytes = gzipStream.toByteArray()
+        final gzipSize = gzipBytes.length
+        final gzipDigest = DigestFunctions.digest(gzipBytes)
+        final data = 'data:' + gzipBytes.encodeBase64()
 
         return new ContainerLayer(
                 location: data,

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,12 +29,12 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class TesBashBuilder extends BashWrapperBuilder {
 
-    TesBashBuilder(TaskRun task) {
-        super(new TaskBean(task), new TesFileCopyStrategy())
+    TesBashBuilder(TaskRun task, String remoteBinDir) {
+        super(new TaskBean(task), new TesFileCopyStrategy(remoteBinDir))
     }
 
-    TesBashBuilder(TaskBean task) {
-        super(task, new TesFileCopyStrategy())
+    TesBashBuilder(TaskBean task, String remoteBinDir) {
+        super(task, new TesFileCopyStrategy(remoteBinDir))
     }
 
 }

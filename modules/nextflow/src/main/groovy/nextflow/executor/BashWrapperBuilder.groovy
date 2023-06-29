@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,25 +17,29 @@
 package nextflow.executor
 
 import java.nio.file.FileSystemException
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.container.CharliecloudBuilder
+import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
-import nextflow.container.PodmanBuilder
-import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
-import nextflow.container.UdockerBuilder
 import nextflow.exception.ProcessException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
+
+import static java.nio.file.StandardOpenOption.*
+
+import nextflow.util.MemoryUnit
+
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -46,6 +49,16 @@ import nextflow.util.Escape
 @Slf4j
 @CompileStatic
 class BashWrapperBuilder {
+
+    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
+    private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
+    private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
+    private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
+
+    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
+    private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
+    private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
+    private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
 
     static final public KILL_CMD = '[[ "$pid" ]] && nxf_kill $pid'
 
@@ -98,6 +111,10 @@ class BashWrapperBuilder {
 
     private Path wrapperFile
 
+    private Path stageFile
+
+    private String stageScript
+
     private BashTemplateEngine engine = new BashTemplateEngine()
 
     BashWrapperBuilder( TaskRun task ) {
@@ -144,7 +161,7 @@ class BashWrapperBuilder {
     }
 
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (other container runtimes are not affected)
     }
 
     protected isMacOS() {
@@ -175,7 +192,20 @@ class BashWrapperBuilder {
         }
         result.toString()
     }
-    
+
+    protected String stageCommand(String stagingScript) {
+        if( !stagingScript )
+            return null
+
+        final header = "# stage input files\n"
+        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+            stageScript = stagingScript
+            return header + "bash ${stageFile}"
+        }
+        else
+            return header + stagingScript
+    }
+
     protected Map<String,String> makeBinding() {
         /*
          * initialise command files
@@ -185,6 +215,7 @@ class BashWrapperBuilder {
         startedFile = workDir.resolve(TaskRun.CMD_START)
         exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
+        stageFile = workDir.resolve(TaskRun.CMD_STAGE)
 
         // set true when running with through a container engine
         runWithContainer = containerEnabled && !containerNative
@@ -228,6 +259,7 @@ class BashWrapperBuilder {
         }
 
         binding.cleanup_cmd = getCleanupCmd(changeDir)
+        binding.sync_cmd = getSyncCmd()
         binding.scratch_cmd = ( changeDir ?: "NXF_SCRATCH=''" )
 
         binding.exit_file = exitFile(exitedFile)
@@ -236,6 +268,7 @@ class BashWrapperBuilder {
         binding.module_load = getModuleLoadSnippet()
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
+        binding.spack_activate = getSpackActivateSnippet()
 
         /*
          * add the task environment
@@ -264,7 +297,7 @@ class BashWrapperBuilder {
          * staging input files when required
          */
         final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
-        binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
+        binding.stage_inputs = stageCommand(stagingScript)
 
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
@@ -329,6 +362,8 @@ class BashWrapperBuilder {
         write0(targetScriptFile(), script)
         if( input != null )
             write0(targetInputFile(), input.toString())
+        if( stageScript != null )
+            write0(targetStageFile(), stageScript)
         return result
     }
 
@@ -338,14 +373,28 @@ class BashWrapperBuilder {
 
     protected Path targetInputFile() { return inputFile }
 
+    protected Path targetStageFile() { return stageFile }
+
     private Path write0(Path path, String data) {
-        try {
-            return Files.write(path, data.getBytes())
-        }
-        catch (FileSystemException e) {
-            // throw a ProcessStageException so that the error can be recovered
-            // via nextflow re-try mechanism
-            throw new ProcessException("Unable to create file ${path.toUriString()}", e)
+        int attempt=0
+        while( true ) {
+            try {
+                try (BufferedWriter writer=Files.newBufferedWriter(path, CREATE,WRITE,TRUNCATE_EXISTING)) {
+                    writer.write(data)
+                }
+                return path
+            }
+            catch (FileSystemException | SocketException | RuntimeException e) {
+                final isLocalFS = path.getFileSystem()==FileSystems.default
+                // the retry logic is needed for non-local file system such as S3.
+                // when the file is local fail without retrying
+                if( isLocalFS || ++attempt>=writeMaxAttempts )
+                    throw new ProcessException("Unable to create file ${path.toUriString()}", e)
+                // use an exponential delay before making another attempt
+                final delay = (Math.pow(writeBackOffBase, attempt) as long) * writeBackOffDelay
+                log.debug "Unexpected error writing '${path.toUriString()}'; attempt: $attempt - cause: ${e.message}"
+                Thread.sleep(delay)
+            }
         }
     }
 
@@ -383,6 +432,15 @@ class BashWrapperBuilder {
         def result = "# conda environment\n"
         result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
         result += "/bin/activate ${Escape.path(condaEnv)}\n"
+        return result
+    }
+
+    private String getSpackActivateSnippet() {
+        if( !spackEnv )
+            return null
+        def result = "# spack environment\n"
+        result += 'spack env activate -d '
+        result += "${Escape.path(spackEnv)}\n"
         return result
     }
 
@@ -466,25 +524,16 @@ class BashWrapperBuilder {
         result.readLines().join('\n  ')
     }
 
+    String getSyncCmd() {
+        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+            return 'sync || true'
+        }
+        return null
+    }
+
     @PackageScope
     ContainerBuilder createContainerBuilder0(String engine) {
-        /*
-         * create a builder instance given the container engine
-         */
-        if( engine == 'docker' )
-            return new DockerBuilder(containerImage)
-        if( engine == 'podman' )
-            return new PodmanBuilder(containerImage)
-        if( engine == 'singularity' )
-            return new SingularityBuilder(containerImage)
-        if( engine == 'udocker' )
-            return new UdockerBuilder(containerImage)
-        if( engine == 'shifter' )
-            return new ShifterBuilder(containerImage)
-        if( engine == 'charliecloud' )
-            return new CharliecloudBuilder(containerImage)
-        //
-        throw new IllegalArgumentException("Unknown container engine: $engine")
+        ContainerBuilder.create(engine, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -512,7 +561,7 @@ class BashWrapperBuilder {
             builder.addMountForInputs(inputFiles)
 
         if( allowContainerMounts )
-            builder.addMount(binDir)
+            builder.addMounts(binDirs)
 
         if(this.containerMount)
             builder.addMount(containerMount)
@@ -582,7 +631,7 @@ class BashWrapperBuilder {
         // The current work directory should be mounted only when
         // the task is executed in a temporary scratch directory (ie changeDir != null)
         // See https://github.com/nextflow-io/nextflow/issues/1710
-        builder.addMountWorkDir( changeDir as boolean )
+        builder.addMountWorkDir( changeDir as boolean || FileHelper.getWorkDirIsSymlink() )
 
         builder.build()
         return builder

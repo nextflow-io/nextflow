@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +33,7 @@ import com.amazonaws.services.logs.model.OutputLogEvent
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.AmazonClientFactory
+import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 /**
@@ -46,10 +45,10 @@ import nextflow.cloud.types.PriceModel
 @CompileStatic
 class AwsBatchHelper {
 
-    private AmazonClientFactory factory
+    private AwsClientFactory factory
     private AWSBatch batchClient
 
-    AwsBatchHelper(AWSBatch batchClient, AmazonClientFactory factory) {
+    AwsBatchHelper(AWSBatch batchClient, AwsClientFactory factory) {
         this.batchClient = batchClient
         this.factory = factory
     }
@@ -202,7 +201,7 @@ class AwsBatchHelper {
     String getTaskLogStream(String jobId) {
         final streamId = getLogStreamId(jobId)
         if( !streamId ) {
-            log.debug "Unable to find cloudwatch log stream for batch job id=$jobId"
+            log.debug "Unable to find CloudWatch log stream for batch job id=$jobId"
             return null
         }
 

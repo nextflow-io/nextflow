@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin
 
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 /**
@@ -29,11 +29,10 @@ class WaveAssetsTest extends Specification {
     def 'should compute hash key' () {
         given:
         def IMAGE = 'foo:latest'
-        def BUNDLE = Mock(ModuleBundle) { fingerprint() >> '12345' }
+        def BUNDLE = Mock(ResourcesBundle) { fingerprint() >> '12345' }
         
         expect:
-        new WaveAssets(IMAGE).hashKey() == CacheHelper.hasher([IMAGE]).hash().toString()
-//        new WaveAssets(IMAGE,BUNDLE).hashKey() == CacheHelper.hasher([IMAGE, BUNDLE]).hash().toString()
+        new WaveAssets(IMAGE).fingerprint() == CacheHelper.hasher([IMAGE]).hash().toString()
 
     }
 

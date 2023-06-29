@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ package io.seqera.wave.plugin
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import nextflow.util.CacheHelper
+
 /**
  * Model a container configuration
  *
@@ -90,5 +92,20 @@ class ContainerConfig {
         if( left ) result.addAll(left)
         if( right ) result.addAll(right)
         return result
+    }
+
+    String fingerprint() {
+        final allMeta = new ArrayList()
+        allMeta.add( entrypoint ?: 'no-entry' )
+        allMeta.add( cmd ?: 'no-cmd' )
+        allMeta.add( env ?: 'no-env' )
+        allMeta.add( workingDir ?: 'no-workdir')
+        final layers0 = layers ?: Collections.<ContainerLayer>emptyList()
+        
+        for( ContainerLayer it : layers0 ) {
+            if( !it.skipHashing )
+                allMeta.add(it.fingerprint())
+        }
+        return CacheHelper.hasher(allMeta).hash().toString()
     }
 }

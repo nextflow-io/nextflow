@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,7 +146,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         executor.register()
         then:
         def err = thrown(AbortOperationException)
-        err.message == "Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file"
+        err.message == "Missing Google project Id -- Specify it by setting `google.project='your-project-id'` in the nextflow.config file"
     }
 
     def 'should stop on missing bucket' () {

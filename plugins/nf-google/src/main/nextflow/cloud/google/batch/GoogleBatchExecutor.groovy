@@ -1,4 +1,5 @@
 /*
+ * Copyright 2023, Seqera Labs
  * Copyright 2022, Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +27,7 @@ import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -59,6 +61,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
+    @Override
     final Path getWorkDir() {
         return session.bucketDir ?: session.workDir
     }
@@ -71,7 +78,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void uploadBinDir() {
-        if( session.binDir && !config.disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             final cloudPath = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}/bin"
             this.remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
@@ -105,5 +112,16 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     TaskHandler createTaskHandler(TaskRun task) {
         return new GoogleBatchTaskHandler(task, this)
+    }
+
+    @Override
+    void shutdown() {
+        client.shutdown()
+        logging.close()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
     }
 }

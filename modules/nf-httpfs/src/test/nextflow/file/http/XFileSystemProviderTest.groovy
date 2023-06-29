@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +16,20 @@
 
 package nextflow.file.http
 
-import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomjankes.wiremock.WireMockGroovy
-import org.junit.Rule
-
 import java.nio.file.Files
 import java.nio.file.Path
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import com.github.tomjankes.wiremock.WireMockGroovy
+import nextflow.SysEnv
+import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import java.nio.file.Paths
-
 /**
  * Created by emilio on 08/11/16.
  */
 class XFileSystemProviderTest extends Specification {
+
 
     def "should return input stream"() {
         given:
@@ -62,7 +59,6 @@ class XFileSystemProviderTest extends Specification {
         and:
         stream.text == 'Hello world'
     }
-
 
     def "should read file attributes from map"() {
         given:

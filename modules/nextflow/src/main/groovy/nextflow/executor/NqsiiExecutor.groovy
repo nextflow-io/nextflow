@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +15,11 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.processor.TaskRun
-import nextflow.util.Escape
-
 /**
  * Execute a task script by running it on the NQSII cluster
  *
@@ -31,6 +30,7 @@ import nextflow.util.Escape
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Till Bayer <till.bayer@gmail.com>
  */
+@CompileStatic
 class NqsiiExecutor extends AbstractGridExecutor {
 
     /**
@@ -53,21 +53,21 @@ class NqsiiExecutor extends AbstractGridExecutor {
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( task.config.cpus>1 ) {
-            result << "-l" << "cpunum_job=${task.config.cpus}"
+        if( task.config.getCpus()>1 ) {
+            result << "-l" << "cpunum_job=${task.config.getCpus()}".toString()
         } else {
             result << "-l" << "cpunum_job=1"
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final time = task.config.getTime()
-            result << "-l" << "elapstim_req=${time.format('HH:mm:ss')}"
+            result << "-l" << "elapstim_req=${time.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
-        if( task.config.memory ) {
-            result << "-l" << "memsz_job=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+        if( task.config.getMemory() ) {
+            result << "-l" << "memsz_job=${task.config.getMemory().toString().replaceAll(/[\s]/,'').toLowerCase()}".toString()
         }
 
         // -- at the end append the command script wrapped file name
@@ -88,13 +88,6 @@ class NqsiiExecutor extends AbstractGridExecutor {
 
     protected String getHeaderToken() { '#PBS' }
 
-    @Override
-    String getHeaders( TaskRun task ) {
-        String result = super.getHeaders(task)
-        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
-        return result
-    }
-
     String sanitizeJobName( String name ) {
         // NQSII does not allow more than 63 characters for the job name string
         name.size()>63 ? name.substring(0,63) : name
@@ -108,8 +101,8 @@ class NqsiiExecutor extends AbstractGridExecutor {
      */
     @Override
     def parseJobId( String text ) {
-    def pattern = ~/Request (\d+).+ submitted to queue.+/
-    for( String line : text.readLines() ) {
+        def pattern = ~/Request (\d+).+ submitted to queue.+/
+        for( String line : text.readLines() ) {
             def m = pattern.matcher(line)
             if( m.find() ) {
                 return m.group(1)
@@ -131,7 +124,7 @@ class NqsiiExecutor extends AbstractGridExecutor {
         return result
     }
 
-    static protected Map DECODE_STATUS = [
+    static protected Map<String,QueueStatus> DECODE_STATUS = [
             'PRR': QueueStatus.RUNNING,
             'RUN': QueueStatus.RUNNING,
             'STG': QueueStatus.RUNNING,
@@ -152,7 +145,7 @@ class NqsiiExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         text?.eachLine{ String row, int index ->
             if( index< 2 ) return
             def cols = row.trim().split(/\s+/)

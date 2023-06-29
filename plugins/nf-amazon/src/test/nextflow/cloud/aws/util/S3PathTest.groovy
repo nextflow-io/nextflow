@@ -1,5 +1,6 @@
 package nextflow.cloud.aws.util
 
+import nextflow.cloud.aws.nio.S3Path
 import nextflow.file.FileHelper
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -42,4 +43,49 @@ class S3PathTest extends Specification {
 
     }
 
+    def 'should check equals and hashcode' () {
+        given:
+        def path1 = FileHelper.asPath('s3://foo/some/foo.txt')
+        def path2 = FileHelper.asPath('s3://foo/some/foo.txt')
+        def path3 = FileHelper.asPath('s3://foo/some/bar.txt')
+        def path4 = FileHelper.asPath('s3://bar/some/foo.txt')
+
+        expect:
+        path1 == path2
+        path1 != path3
+        path3 != path4
+        and:
+        path1.hashCode() == path2.hashCode()
+        path1.hashCode() != path3.hashCode()
+        path3.hashCode() != path4.hashCode()
+    }
+
+    @Unroll
+    def 'should determine bucket name' () {
+        expect:
+        S3Path.bucketName(new URI(URI_PATH)) == BUCKET
+
+        where:
+        URI_PATH            | BUCKET
+        's3:///'            | null
+        's3:///foo'         | 'foo'
+        's3:///foo/'        | 'foo'
+        's3:///foo/bar'     | 'foo'
+    }
+
+    @Unroll
+    def 'should normalise path' () {
+        expect:
+        FileHelper.asPath(PATH).normalize() == FileHelper.asPath(EXPECTED)
+
+        where:
+        PATH                        | EXPECTED
+        's3://foo'                  | 's3://foo'
+        's3://foo/x/y/z.txt'        | 's3://foo/x/y/z.txt'
+        's3://foo/x/y/./z.txt'      | 's3://foo/x/y/z.txt'
+        's3://foo/x/y/../z.txt'     | 's3://foo/x/z.txt'
+        's3://foo/x/y/../../z.txt'  | 's3://foo/z.txt'
+        's3://foo/x/y//z.txt'       | 's3://foo/x/y/z.txt'
+        's3://foo/./z.txt'          | 's3://foo/z.txt'
+    }
 }
