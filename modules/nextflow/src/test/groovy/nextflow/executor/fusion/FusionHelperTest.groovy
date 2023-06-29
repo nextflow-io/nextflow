@@ -68,9 +68,9 @@ class FusionHelperTest extends Specification {
         [engine:'docker']       | [FOO:'one']       | 'image:2'     | null          | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"
         [engine:'docker']       | [FOO:'one']       | 'image:2'     | '--this=that' | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --this=that --rm --privileged image:2 echo 'hello'"
         and:
-        [engine:'singularity']  | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --pid image:1 echo 'hello'"
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --pid image:1 echo 'hello'"
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | '--this=that' | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --pid --this=that image:1 echo 'hello'"
+        [engine:'singularity']  | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --no-home --pid image:1 echo 'hello'"
+        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid image:1 echo 'hello'"
+        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | '--this=that' | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid --this=that image:1 echo 'hello'"
 
     }
 
