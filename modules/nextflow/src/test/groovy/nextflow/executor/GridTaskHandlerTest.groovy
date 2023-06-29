@@ -110,7 +110,7 @@ class GridTaskHandlerTest extends Specification {
             getContainer() >> 'ubuntu:latest'
             getProcessor() >> Mock(TaskProcessor)
             getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
-            toTaskBean() >> Mock(TaskBean) { getWorkDir()>>WORK_DIR; getInputFiles()>>[:] }
+            toTaskBean() >> Mock(TaskBean) { getWorkDir()>>WORK_DIR; getInputFiles()>>[:]; getOutputFiles()>>[] }
             getConfig() >> Mock(TaskConfig) { getContainerOptions() >> '--this=that' }
         }
         def exec = Mock(AbstractGridExecutor)

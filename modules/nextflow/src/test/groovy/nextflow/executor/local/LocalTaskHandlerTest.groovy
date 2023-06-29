@@ -57,7 +57,7 @@ class LocalTaskHandlerTest extends Specification {
         Global.config = [:]
         def WORK_DIR = XPath.get('http://some/work/dir')
         and:
-        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:], outputFiles: [])
         and:
         def task = Mock(TaskRun) {
             getContainer() >> 'ubuntu:latest'

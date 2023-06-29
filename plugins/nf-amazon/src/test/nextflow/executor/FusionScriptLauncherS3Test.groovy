@@ -13,6 +13,7 @@ import nextflow.Global
 import nextflow.SysEnv
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
  *
@@ -51,8 +52,9 @@ class FusionScriptLauncherS3Test extends Specification {
         SysEnv.push([AWS_S3_ENDPOINT: 'http://foo.com'])
         and:
         def fusion = new FusionScriptLauncher(
-                scheme: 's3',
-                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
+                new TaskBean(),
+                's3',
+                S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_S3_ENDPOINT: 'http://foo.com',
@@ -71,8 +73,9 @@ class FusionScriptLauncherS3Test extends Specification {
         Global.config = [fusion: [exportAwsAccessKeys: true]]
         and:
         def fusion = new FusionScriptLauncher(
-                scheme: 's3',
-                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
+                new TaskBean(),
+                's3',
+                S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'xxx',
@@ -94,8 +97,9 @@ class FusionScriptLauncherS3Test extends Specification {
         Global.config = CONFIG
         and:
         def fusion = new FusionScriptLauncher(
-                scheme: 's3',
-                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
+                new TaskBean(),
+                's3',
+                S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'k1',
