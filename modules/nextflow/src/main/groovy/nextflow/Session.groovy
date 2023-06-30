@@ -468,10 +468,24 @@ class Session implements ISession {
         CH.broadcast()
 
         if( preview ) {
+            dumpContainerImages()
             terminated = true
         }
         else {
             callIgniters()
+        }
+    }
+
+    private void dumpContainerImages() {
+        for( def vertex : dag.vertices ) {
+            // skip nodes that are not processes
+            if( !vertex.process )
+                continue
+
+            // print process name and container image
+            def process = vertex.process
+            log.debug "Querying container image for process `${process.name}`..."
+            log.info "${process.name} ${process.getContainer()}"
         }
     }
 
