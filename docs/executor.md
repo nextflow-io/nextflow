@@ -158,7 +158,13 @@ Make sure the TES backend can access the Nextflow work directory when data is ex
 ### Known Limitations
 
 - Automatic deployment of workflow scripts in the `bin` folder is not supported.
+
+  :::{versionchanged} 23.07.0-edge
+  Automatic upload of the `bin` directory is now supported.
+  :::
+
 - Process output directories are not supported. For details see [#76](https://github.com/ga4gh/task-execution-schemas/issues/76).
+
 - Glob patterns in process output declarations are not supported. For details see [#77](https://github.com/ga4gh/task-execution-schemas/issues/77).
 
 (google-batch-executor)=
