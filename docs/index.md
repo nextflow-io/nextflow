@@ -17,15 +17,23 @@ script
 process
 channel
 operator
+config
 dsl2
 ```
 
 ```{toctree}
-:caption: User Interface
+:caption: Execution
 :maxdepth: 1
 
-config
 cli
+executor
+tracing
+metrics
+sharing
+metadata
+mail
+plugins
+secrets
 ```
 
 ```{toctree}
@@ -38,10 +46,9 @@ spack
 ```
 
 ```{toctree}
-:caption: Execution
+:caption: Infrastructure
 :maxdepth: 1
 
-executor
 aws
 amazons3
 azure
@@ -49,19 +56,6 @@ flux
 google
 ignite
 kubernetes
-```
-
-```{toctree}
-:caption: Miscellaneous
-:maxdepth: 1
-
-tracing
-metrics
-sharing
-metadata
-mail
-plugins
-secrets
 ```
 
 ```{toctree}
