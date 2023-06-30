@@ -33,20 +33,20 @@ classDiagram
     %% ConfigDiscovery --> ClientConfig : discover
 
     class K8sConfig {
-        target : Map~String,Object~
+        target : Map
         podOptions : PodOptions
     }
     K8sConfig --* PodOptions
 
     class PodOptions {
         affinity : Map
-        annotations : Map~String,String~
+        annotations : Map
         automountServiceAccountToken : boolean
         configMaps : Collection~PodMountConfig~
         envVars : Collection~PodEnv~
         imagePullPolicy : String
         imagePullSecret : String
-        labels : Map~String,String~
+        labels : Map
         nodeSelector : PodNodeSelector
         priorityClassName : String
         privileged : Boolean

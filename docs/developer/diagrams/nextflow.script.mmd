@@ -44,10 +44,10 @@ classDiagram
     %% BaseScript --> WorkflowDef : workflow
 
     class ScriptMeta {
-        clazz : Class~? extends BaseScript~
         scriptPath : Path
-        definitions : Map~String,ComponentDef~
-        imports : Map~String,ComponentDef~
+        definitions : Map
+        imports : Map
+        module : boolean
     }
     ScriptMeta "1" --* "*" ComponentDef : definitions
     ScriptMeta "1" --* "*" ComponentDef : imports
@@ -86,7 +86,7 @@ classDiagram
     WorkflowDef --> ChannelOut : run
 
     class ProcessConfig {
-        configProperties : Map~String,Object~
+        configProperties : Map
         inputs : InputsList
         outputs : OutputsList
     }
@@ -102,7 +102,7 @@ classDiagram
 
     class ChannelOut {
         target : List~DataflowWriteChannel~
-        channels : Map~String,DataflowWriteChannel~
+        channels : Map
     }
 
     class WorkflowBinding {

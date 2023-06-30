@@ -14,6 +14,8 @@ Some classes may be excluded from the above diagram for brevity.
 
 ## Notes
 
-The `Nextflow` class implements several methods that are exposed to Nextflow scripts. The `Channel` class implements the channel factory methods, and it is exposed directly to Nextflow scripts.
+The `Nextflow` class implements several methods that are exposed to Nextflow scripts. See {ref}`implicit-functions` for details.
 
-The `Session` class is the top-level representation of a Nextflow run, or "session". See the [nextflow.script](nextflow.script.md) for more details about how a `Session` is created.
+The `Channel` class implements the channel factory methods, and it is exposed directly to Nextflow scripts. See {ref}`channel-page` for details.
+
+The `Session` class is the top-level representation of a Nextflow run, or "session". See [nextflow.script](nextflow.script.md) for more details about how a `Session` is created.

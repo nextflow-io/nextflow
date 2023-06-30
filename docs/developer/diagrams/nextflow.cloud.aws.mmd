@@ -7,6 +7,9 @@ classDiagram
     BashWrapperBuilder <|-- AwsBatchScriptLauncher
 
     AwsBatchExecutor --* AwsOptions
+    AwsOptions --* AwsConfig
+    AwsConfig --* AwsBatchConfig
+    AwsConfig --* AwsS3Config
 
     AwsBatchExecutor --> ParallelPollingMonitor : init
     AwsBatchExecutor --> AwsBatchTaskHandler : submit

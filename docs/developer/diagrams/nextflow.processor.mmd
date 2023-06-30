@@ -21,9 +21,9 @@ classDiagram
         hash : HashCode
         id : TaskId
         index : int
-        inputs : Map~InParam,Object~
+        inputs : Map
         name : String
-        outputs : Map~OutParam,Object~
+        outputs : Map
         runType : RunType
         type : ScriptType
         workDir : Path
@@ -32,48 +32,13 @@ classDiagram
     TaskRun --* TaskContext
     TaskRun --> TaskBean : toTaskBean
 
-    %% class TaskBean {
-    %%     name : String
-    %%     input : Object
-    %%     scratch : Object
-    %%     environment : Map~String,String~
-    %%     headerScript : String
-    %%     containerImage : String
-    %%     condaEnv : Path
-    %%     moduleNames : List~String~
-    %%     workDir : Path
-    %%     targetDir : Path
-    %%     script : String
-    %%     shell : List~String~
-    %%     containerConfig : ContainerConfig
-    %%     containerCpuset : String
-    %%     containerCpus : Float
-    %%     containerMemory : MemoryUnit
-    %%     containerMount : Path
-    %%     statsEnabled : boolean
-    %%     outputEnvNames : List~String~
-    %%     beforeScript : String
-    %%     afterScript : String
-    %%     containerNative : boolean
-    %%     containerEnabled : boolean
-    %%     containerOptions : String
-    %%     inputFiles : Map~String,Path~
-    %%     outputFiles : List~String~
-    %%     stageInMode : String
-    %%     stageOutMode : String
-    %%     binDir : Path
-    %%     cleanup : Object
-    %%     secretNative : boolean
-    %%     secretNames : List~String~
-    %% }
-
     class TaskConfig {
-        target : Map~String,Object~
+        target : Map
         binding : Map
     }
 
     class TaskContext {
-        holder : Map~String,Object~
+        holder : Map
         script : Script
         name : String
     }

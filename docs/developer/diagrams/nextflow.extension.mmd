@@ -2,85 +2,11 @@ classDiagram
     %%
     %% nextflow.extension
     %%
+    direction LR
+
     ChannelEx --> DumpOp : dump
     Nextflow --> GroupKey : groupKey
 
-    %% class OperatorImpl {
-    %%     branch(DataflowReadChannel, Closure~TokenBranchDef~) ChannelOut
-    %%     buffer(DataflowReadChannel, Map, Object) DataflowWriteChannel
-    %%     buffer(DataflowReadChannel, Object, Object) DataflowWriteChannel
-    %%     buffer(DataflowReadChannel, Map~String,Object~) DataflowWriteChannel
-    %%     chain(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     chain(DataflowReadChannel, Map~String, Object~, Closure) DataflowWriteChannel
-    %%     collate(DataflowReadChannel, int, boolean) DataflowWriteChannel
-    %%     collate(DataflowReadChannel, int, int, boolean) DataflowWriteChannel
-    %%     collect(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     collect(DataflowReadChannel, Map, Closure) DataflowWriteChannel
-    %%     collectFile(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     collectFile(DataflowReadChannel, Map, Closure) DataflowWriteChannel
-    %%     combine(DataflowReadChannel, Object) DataflowWriteChannel
-    %%     combine(DataflowReadChannel, Map, Object) DataflowWriteChannel
-    %%     concat(DataflowReadChannel, DataflowReadChannel...) DataflowWriteChannel
-    %%     count(DataflowReadChannel) DataflowWriteChannel
-    %%     count(DataflowReadChannel, Object) DataflowWriteChannel
-    %%     countBy(DataflowReadChannel) DataflowWriteChannel
-    %%     countBy(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     countFasta(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     countFastq(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     countLines(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     countText(DataflowReadChannel) DataflowWriteChannel
-    %%     cross(DataflowReadChannel, DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     distinct(DataflowReadChannel) DataflowWriteChannel
-    %%     distinct(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     filter(DataflowReadChannel, Object) DataflowWriteChannel
-    %%     filter(DataflowReadChannel, Closure~Boolean~) DataflowWriteChannel
-    %%     first(DataflowReadChannel) DataflowWriteChannel
-    %%     first(DataflowReadChannel, Object) DataflowWriteChannel
-    %%     flatMap(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     flatten(DataflowReadChannel) DataflowWriteChannel
-    %%     groupTuple(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     ifEmpty(DataflowReadChannel, Object) DataflowWriteChannel
-    %%     join(DataflowReadChannel, Object) DataflowWriteChannel
-    %%     join(DataflowReadChannel, Map, Object) DataflowWriteChannel
-    %%     last(DataflowReadChannel) DataflowWriteChannel
-    %%     map(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     max(DataflowReadChannel) DataflowWriteChannel
-    %%     max(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     max(DataflowReadChannel, Comparator) DataflowVariable
-    %%     merge(DataflowReadChannel, DataflowReadChannel...) DataflowWriteChannel
-    %%     merge(DataflowReadChannel, List~DataflowReadChannel~, Closure) DataflowWriteChannel
-    %%     min(DataflowReadChannel) DataflowWriteChannel
-    %%     min(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     min(DataflowReadChannel, Comparator) DataflowWriteChannel
-    %%     mix(DataflowReadChannel, DataflowReadChannel[]) DataflowWriteChannel
-    %%     mean(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     multiMap(DataflowReadChannel, Closure~TokenMultiMapDef~) ChannelOut
-    %%     randomSample(DataflowReadChannel, int, Long) DataflowWriteChannel
-    %%     reduce(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     reduce(DataflowReadChannel, Object, Closure) DataflowWriteChannel
-    %%     set(DataflowReadChannel, Closure)
-    %%     splitCsv(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     splitFasta(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     splitFastq(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     splitText(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     splitText(DataflowReadChannel, Map, Closure) DataflowWriteChannel
-    %%     subscribe(DataflowReadChannel, Closure) DataflowReadChannel
-    %%     subscribe(DataflowReadChannel, Map~String,Closure~) DataflowReadChannel
-    %%     sum(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     take(DataflowReadChannel, int) DataflowWriteChannel
-    %%     toDouble(DataflowReadChannel) DataflowWriteChannel
-    %%     toFloat(DataflowReadChannel) DataflowWriteChannel
-    %%     toInteger(DataflowReadChannel) DataflowWriteChannel
-    %%     toList(DataflowReadChannel) DataflowWriteChannel
-    %%     toLong(DataflowReadChannel) DataflowWriteChannel
-    %%     toSortedList(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     transpose(DataflowReadChannel, Map) DataflowWriteChannel
-    %%     unique(DataflowReadChannel) DataflowWriteChannel
-    %%     unique(DataflowReadChannel, Closure) DataflowWriteChannel
-    %%     until(DataflowReadChannel, Closure~Boolean~) DataflowWriteChannel
-    %%     view(DataflowReadChannel, Map, Closure) DataflowWriteChannel
-    %%     view(DataflowReadChannel, Closure) DataflowWriteChannel
-    %% }
     OperatorImpl --> BranchOp : branch
     OperatorImpl --> BufferOp : buffer
     OperatorImpl --> CollectFileOp : collectFile

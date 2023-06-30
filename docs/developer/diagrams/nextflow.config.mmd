@@ -5,6 +5,6 @@ classDiagram
     CmdRun --> ConfigMap : run
     Session --* ConfigMap
 
-    %% ConfigBuilder --> ConfigParser : build
-    %% ConfigBuilder --> ConfigMap : build
-    %% ConfigParser --> ConfigBase : parse
+    ConfigBuilder --> ConfigParser : build
+    ConfigBuilder --> ConfigMap : build
+    ConfigParser --> ConfigBase : parse

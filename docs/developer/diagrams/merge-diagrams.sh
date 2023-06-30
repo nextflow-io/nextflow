@@ -6,6 +6,7 @@ packages+=("nextflow")
 packages+=("nextflow.cache")
 packages+=("nextflow.cli")
 # packages+=("nextflow.cloud.aws")
+# packages+=("nextflow.cloud.aws.nio")
 # packages+=("nextflow.cloud.azure")
 # packages+=("nextflow.cloud.google")
 # packages+=("nextflow.config")
@@ -26,9 +27,9 @@ outfile="nextflow-merged.mmd"
 
 echo "classDiagram" > ${outfile}
 
-for package in ${packages[@]}; do
-    echo ${package}
+for package in "${packages[@]}"; do
+    echo "${package}"
 
-    tail -n +2 ${package}.mmd >> ${outfile}
+    tail -n +2 "${package}.mmd" >> ${outfile}
     echo >> ${outfile}
 done

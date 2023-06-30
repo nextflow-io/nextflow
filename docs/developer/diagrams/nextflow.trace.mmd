@@ -2,6 +2,9 @@ classDiagram
     %%
     %% nextflow.trace
     %%
+    direction LR
+
+    %% TraceObserverFactory "1" --> "*" TraceObserver : create
     %% TraceObserver <|-- AnsiLogObserver
     %% TraceObserver <|-- GraphObserver
     %% TraceObserver <|-- ReportObserver
