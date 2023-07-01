@@ -82,8 +82,19 @@ class MermaidRenderer implements DagRenderer {
                 edges << new Edge(node.vertex, target.vertex)
         }
 
-        for( def edge : edges )
-            lines << "    ${edge.source.name} --> ${edge.target.name}"
+        for( def edge : edges ) {
+            final source = edge.source
+            final target = edge.target
+            def label = ""
+
+            if( verbose ) {
+                final dagEdge = dag.edges.find( e -> e.from == source && e.to == target )
+                if( dagEdge.label )
+                    label = "|${dagEdge.label}|"
+            }
+
+            lines << "    ${source.name} -->${label} ${target.name}"
+        }
 
         lines << ""
 
