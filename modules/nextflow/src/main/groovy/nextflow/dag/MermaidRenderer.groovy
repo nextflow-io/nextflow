@@ -31,6 +31,10 @@ import nextflow.Session
 @Slf4j
 class MermaidRenderer implements DagRenderer {
 
+    static private final String INPUTS = 'inputs'
+
+    static private final String OUTPUTS = 'outputs'
+
     private Session session = Global.session
 
     private int depth = session.config.navigate('dag.depth', -1)
@@ -50,22 +54,16 @@ class MermaidRenderer implements DagRenderer {
         if( !verbose )
             collapseOperators(nodeLookup)
 
-        // remove empty channel nodes
+        // remove empty workflow inputs
         if( !verbose )
-            removeEmptyChannels(nodeLookup)
+            removeEmptyInputs(nodeLookup)
 
         // construct node tree
         final nodeTree = getNodeTree(nodeLookup)
 
-        // prune node tree to desired depth
+        // collapse node tree to desired depth
         if( depth >= 0 )
-            pruneNodeTree(nodeTree, depth, nodeLookup)
-
-        // remove nodes that aren't connected to anything
-        final disconnectedNodes = nodeLookup
-                .findAll( (v, n) -> n.inputs.isEmpty() && n.outputs.isEmpty() )
-
-        log.debug "Excluding ${disconnectedNodes.size()} disconnected nodes"
+            collapseNodeTree(nodeTree, depth, nodeLookup)
 
         // render diagram
         def lines = []
@@ -192,41 +190,50 @@ class MermaidRenderer implements DagRenderer {
         // get subgraph properties
         final (nodes, inputs, outputs) = subgraph
 
-        // remove subgraph nodes
+        // remove subgraph
         for( def w : nodes )
             nodeLookup.remove(w.vertex)
+
+        for( def w : inputs )
+            w.outputs -= nodes
+
+        for( def w : outputs )
+            w.inputs -= nodes
 
         // add summary node
         final summaryNode = new Node(vertex, null, inputs, outputs)
         nodeLookup[vertex] = summaryNode
 
-        // connect subgraph inputs and outputs to summary node
-        for( def w : inputs ) {
-            w.outputs -= nodes
+        for( def w : inputs )
             w.outputs << summaryNode
-        }
 
-        for( def w : outputs ) {
-            w.inputs -= nodes
+        for( def w : outputs )
             w.inputs << summaryNode
-        }
     }
 
     /**
-     * Remove 'Channel.empty' nodes.
+     * Remove 'Channel.empty' workflow inputs.
      *
      * @param nodeLookup
      */
-    private void removeEmptyChannels(Map nodeLookup) {
+    private void removeEmptyInputs(Map nodeLookup) {
         final emptyInputs = nodeLookup
-                .keySet()
-                .findAll( v -> v.type == DAG.Type.ORIGIN )
-                .findAll( v -> v.label == 'Channel.empty' )
+                .findAll( (v, _) -> v.type == DAG.Type.ORIGIN )
+                .findAll( (v, _) -> v.label == 'Channel.empty' )
 
-        for( def v : emptyInputs ) {
-            def node = nodeLookup.remove(v)
-            for( def w : node.outputs )
-                w.inputs.remove(node)
+        emptyInputs.each { v, node ->
+            // find subgraph of non-process nodes
+            final (nodes, inputs, outputs) = findSubgraph(node, n -> n.vertex.type != DAG.Type.PROCESS)
+
+            // remove subgraph
+            for( def w : nodes )
+                nodeLookup.remove(w.vertex)
+
+            for( def w : inputs )
+                w.outputs -= nodes
+
+            for( def w : outputs )
+                w.inputs -= nodes
         }
     }
 
@@ -259,10 +266,10 @@ class MermaidRenderer implements DagRenderer {
                 keys = inferredKeys[node]
             }
             else if( vertex.type == DAG.Type.ORIGIN ) {
-                keys = ['inputs']
+                keys = [INPUTS]
             }
             else if( vertex.type == DAG.Type.NODE ) {
-                keys = ['outputs']
+                keys = [OUTPUTS]
             }
 
             // navigate to given subgraph
@@ -341,19 +348,19 @@ class MermaidRenderer implements DagRenderer {
     }
 
     /**
-     * Prune a node tree to the desired depth.
+     * Collapse a node tree to the desired depth.
      *
      * @param nodeTree
      * @param depth
      * @param nodeLookup
      */
-    private void pruneNodeTree(Map nodeTree, int depth, Map nodeLookup) {
+    private void collapseNodeTree(Map nodeTree, int depth, Map nodeLookup) {
         nodeTree.each { key, value ->
-            if( value !instanceof Map || key in ['inputs', 'outputs'] )
+            if( value !instanceof Map || key in [INPUTS, OUTPUTS] )
                 return
 
             if( depth > 0 ) {
-                pruneNodeTree(value, depth - 1, nodeLookup)
+                collapseNodeTree(value, depth - 1, nodeLookup)
                 return
             }
 
