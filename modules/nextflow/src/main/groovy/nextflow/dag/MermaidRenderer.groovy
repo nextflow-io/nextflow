@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import groovy.transform.EqualsAndHashCode
 import nextflow.Global
+import nextflow.Session
 /**
  * Render the DAG using the Mermaid format to the specified file.
  * See https://mermaid-js.github.io/mermaid/#/ for more info.
@@ -27,6 +28,10 @@ import nextflow.Global
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class MermaidRenderer implements DagRenderer {
+
+    private Session session = Global.session
+
+    private boolean verbose = session.config.navigate('dag.verbose', false)
 
     @Override
     void renderDocument(DAG dag, Path file) {
@@ -38,19 +43,12 @@ class MermaidRenderer implements DagRenderer {
         def nodeLookup = getNodeLookup(dag)
 
         // collapse operator nodes
-        collapseOperators(nodeLookup)
+        if( !verbose )
+            collapseOperators(nodeLookup)
 
-        // remove empty workflow inputs
-        final emptyInputs = nodeLookup
-                .keySet()
-                .findAll( v -> v.type == DAG.Type.ORIGIN )
-                .findAll( v -> v.label == 'Channel.empty' )
-
-        for( def v : emptyInputs ) {
-            def node = nodeLookup.remove(v)
-            for( def w : node.outputs )
-                w.inputs.remove(node)
-        }
+        // remove empty channel nodes
+        if( !verbose )
+            removeEmptyChannels(nodeLookup)
 
         // construct node tree
         final nodeTree = getNodeTree(nodeLookup)
@@ -201,6 +199,24 @@ class MermaidRenderer implements DagRenderer {
     }
 
     /**
+     * Remove 'Channel.empty' nodes.
+     *
+     * @param nodeLookup
+     */
+    private void removeEmptyChannels(Map nodeLookup) {
+        final emptyInputs = nodeLookup
+                .keySet()
+                .findAll( v -> v.type == DAG.Type.ORIGIN )
+                .findAll( v -> v.label == 'Channel.empty' )
+
+        for( def v : emptyInputs ) {
+            def node = nodeLookup.remove(v)
+            for( def w : node.outputs )
+                w.inputs.remove(node)
+        }
+    }
+
+    /**
      * Construct a node tree with a subgraph for each subworkflow.
      *
      * @param nodeLookup
@@ -216,25 +232,17 @@ class MermaidRenderer implements DagRenderer {
             def value = null
 
             if( vertex.type == DAG.Type.PROCESS ) {
-                // extract keys from folly qualified name
-                final name = vertex.label
-                final tokens = name.tokenize(':')
-                keys = tokens[0..<tokens.size()-1]
-                value = "([${tokens.last()}])"
+                // extract keys from fully qualified name
+                final result = getSubgraphKeys(vertex.label)
+                keys = result[0]
+                value = "([${result[1]}])"
             }
             else if( vertex.type == DAG.Type.OPERATOR ) {
-                // select a neighboring process
-                final process = (node.inputs.size() == 1)
-                    ? node.inputs[0]
-                    : node.outputs[0]
-
-                // extract keys from folly qualified name of neighbor
-                final name = process.vertex.label
-                if( name ) {
-                    final tokens = name.tokenize(':')
-                    keys = tokens[0..<tokens.size()-1]
-                }
-                value = "(( ))"
+                // infer subgraph keys from neighboring process
+                keys = inferSubgraphKeys(node)
+                value = verbose
+                    ? "([${vertex.label}])"
+                    : "(( ))"
             }
             else if( vertex.type == DAG.Type.ORIGIN ) {
                 keys = ['inputs']
@@ -258,6 +266,46 @@ class MermaidRenderer implements DagRenderer {
         }
 
         return nodeTree
+    }
+
+    /**
+     * Get the subgraph keys from a fully qualified process name.
+     *
+     * @param name
+     */
+    private def getSubgraphKeys(String name) {
+        final tokens = name.tokenize(':')
+        return [
+            tokens[0..<tokens.size()-1],
+            tokens.last()
+        ]
+    }
+
+    /**
+     * Infer the subgraph of an operator node from a neighboring
+     * process.
+     *
+     * @param node
+     */
+    private List<String> inferSubgraphKeys(Node node) {
+        // select a neighboring process
+        def process
+        final inputs = node.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+        final outputs = node.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+
+        if( inputs.size() == 1 )
+            process = inputs[0]
+        else if( outputs.size() == 1 )
+            process = outputs[0]
+        else if( inputs.size() > 0 )
+            process = inputs[0]
+        else if( outputs.size() > 0 )
+            process = outputs[0]
+
+        // extract keys from fully qualified process name
+        return process
+            ? getSubgraphKeys(process.vertex.label)[0]
+            : []
     }
 
     /**
