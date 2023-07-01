@@ -88,9 +88,9 @@ class MermaidRenderer implements DagRenderer {
             def label = ""
 
             if( verbose ) {
-                final dagEdge = dag.edges.find( e -> e.from == source && e.to == target )
-                if( dagEdge.label )
-                    label = "|${dagEdge.label}|"
+                final dagEdges = dag.edges.findAll( e -> e.from == source && e.to == target && e.label )
+                if( dagEdges )
+                    label = "|${dagEdges*.label.join(',')}|"
             }
 
             lines << "    ${source.name} -->${label} ${target.name}"
@@ -138,21 +138,41 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      */
     private void collapseOperators(Map nodeLookup) {
-        // iterate through each operator node
         def queue = nodeLookup
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR )
 
         while( !queue.isEmpty() ) {
-            // find subgraph of operator nodes
             final node = queue.pop()
             final subgraph = findSubgraph(node, n -> n.vertex.type == DAG.Type.OPERATOR)
-
-            // collapse subgraph
             collapseSubgraph(nodeLookup, subgraph, node.vertex)
-
-            // update queue
             queue.removeAll(subgraph[0])
+        }
+    }
+
+    /**
+     * Remove 'Channel.empty' workflow inputs.
+     *
+     * @param nodeLookup
+     */
+    private void removeEmptyInputs(Map nodeLookup) {
+        final queue = nodeLookup
+                .values()
+                .findAll( n -> n.vertex.type == DAG.Type.ORIGIN )
+                .findAll( n -> n.vertex.label == 'Channel.empty' )
+
+        while( !queue.isEmpty() ) {
+            final node = queue.pop()
+            final subgraph = findSubgraph(node, n -> n.vertex.type != DAG.Type.PROCESS)
+
+            final (nodes, inputs, outputs) = subgraph
+            final hasProcessNeighbors = (inputs + outputs).any( n -> n.vertex.type == DAG.Type.PROCESS )
+            if( hasProcessNeighbors )
+                removeSubgraph(nodeLookup, [[node], node.inputs, node.outputs])
+            else {
+                removeSubgraph(nodeLookup, subgraph)
+                queue.removeAll(nodes)
+            }
         }
     }
 
@@ -198,20 +218,11 @@ class MermaidRenderer implements DagRenderer {
      * @param vertex
      */
     private void collapseSubgraph(Map nodeLookup, def subgraph, DAG.Vertex vertex) {
-        // get subgraph properties
-        final (nodes, inputs, outputs) = subgraph
-
         // remove subgraph
-        for( def w : nodes )
-            nodeLookup.remove(w.vertex)
-
-        for( def w : inputs )
-            w.outputs -= nodes
-
-        for( def w : outputs )
-            w.inputs -= nodes
+        removeSubgraph(nodeLookup, subgraph)
 
         // add summary node
+        final (nodes, inputs, outputs) = subgraph
         final summaryNode = new Node(vertex, null, inputs, outputs)
         nodeLookup[vertex] = summaryNode
 
@@ -223,29 +234,22 @@ class MermaidRenderer implements DagRenderer {
     }
 
     /**
-     * Remove 'Channel.empty' workflow inputs.
+     * Remove a subgraph of nodes.
      *
      * @param nodeLookup
+     * @param subgraph
      */
-    private void removeEmptyInputs(Map nodeLookup) {
-        final emptyInputs = nodeLookup
-                .findAll( (v, _) -> v.type == DAG.Type.ORIGIN )
-                .findAll( (v, _) -> v.label == 'Channel.empty' )
+    private void removeSubgraph(Map nodeLookup, def subgraph) {
+        final (nodes, inputs, outputs) = subgraph
 
-        emptyInputs.each { v, node ->
-            // find subgraph of non-process nodes
-            final (nodes, inputs, outputs) = findSubgraph(node, n -> n.vertex.type != DAG.Type.PROCESS)
+        for( def w : nodes )
+            nodeLookup.remove(w.vertex)
 
-            // remove subgraph
-            for( def w : nodes )
-                nodeLookup.remove(w.vertex)
+        for( def w : inputs )
+            w.outputs -= nodes
 
-            for( def w : inputs )
-                w.outputs -= nodes
-
-            for( def w : outputs )
-                w.inputs -= nodes
-        }
+        for( def w : outputs )
+            w.inputs -= nodes
     }
 
     /**
@@ -375,10 +379,8 @@ class MermaidRenderer implements DagRenderer {
                 return
             }
 
-            // collect all nodes in subgraph
+            // collect subgraph
             final nodes = collectSubtree(value)
-
-            // collect inputs and outputs to subgraph
             final inputs = nodes
                     .collect( n -> n.inputs )
                     .flatten()
@@ -388,26 +390,20 @@ class MermaidRenderer implements DagRenderer {
                     .flatten()
                     .findAll( n -> n !in nodes )
 
-            // replace subgraph with summary node
+            // remove subgraph
+            removeSubgraph(nodeLookup, [nodes, inputs, outputs])
+
+            // add summary node
             final vertex = nodes.first().vertex
             final summaryNode = new Node(vertex, key, inputs, outputs)
             nodeTree[key] = summaryNode
-
-            // connect subgraph inputs and outputs to summary node
-            for( def w : inputs ) {
-                w.outputs -= nodes
-                w.outputs << summaryNode
-            }
-
-            for( def w : outputs ) {
-                w.inputs -= nodes
-                w.inputs << summaryNode
-            }
-
-            // update node lookup
-            for( def w : nodes )
-                nodeLookup.remove(w.vertex)
             nodeLookup[vertex] = summaryNode
+
+            for( def w : inputs )
+                w.outputs << summaryNode
+
+            for( def w : outputs )
+                w.inputs << summaryNode
         }
     }
 
