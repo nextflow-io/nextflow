@@ -19,6 +19,7 @@ package nextflow.dag
 import java.nio.file.Path
 
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 /**
@@ -27,9 +28,12 @@ import nextflow.Session
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 class MermaidRenderer implements DagRenderer {
 
     private Session session = Global.session
+
+    private int depth = session.config.navigate('dag.depth', -1)
 
     private boolean verbose = session.config.navigate('dag.verbose', false)
 
@@ -52,6 +56,16 @@ class MermaidRenderer implements DagRenderer {
 
         // construct node tree
         final nodeTree = getNodeTree(nodeLookup)
+
+        // prune node tree to desired depth
+        if( depth >= 0 )
+            pruneNodeTree(nodeTree, depth, nodeLookup)
+
+        // remove nodes that aren't connected to anything
+        final disconnectedNodes = nodeLookup
+                .findAll( (v, n) -> n.inputs.isEmpty() && n.outputs.isEmpty() )
+
+        log.debug "Excluding ${disconnectedNodes.size()} disconnected nodes"
 
         // render diagram
         def lines = []
@@ -183,7 +197,7 @@ class MermaidRenderer implements DagRenderer {
             nodeLookup.remove(w.vertex)
 
         // add summary node
-        final summaryNode = new Node(vertex, inputs, outputs)
+        final summaryNode = new Node(vertex, null, inputs, outputs)
         nodeLookup[vertex] = summaryNode
 
         // connect subgraph inputs and outputs to summary node
@@ -327,6 +341,73 @@ class MermaidRenderer implements DagRenderer {
     }
 
     /**
+     * Prune a node tree to the desired depth.
+     *
+     * @param nodeTree
+     * @param depth
+     * @param nodeLookup
+     */
+    private void pruneNodeTree(Map nodeTree, int depth, Map nodeLookup) {
+        nodeTree.each { key, value ->
+            if( value !instanceof Map || key in ['inputs', 'outputs'] )
+                return
+
+            if( depth > 0 ) {
+                pruneNodeTree(value, depth - 1, nodeLookup)
+                return
+            }
+
+            // collect all nodes in subgraph
+            final nodes = collectSubtree(value)
+
+            // collect inputs and outputs to subgraph
+            final inputs = nodes
+                    .collect( n -> n.inputs )
+                    .flatten()
+                    .findAll( n -> n !in nodes )
+            final outputs = nodes
+                    .collect( n -> n.outputs )
+                    .flatten()
+                    .findAll( n -> n !in nodes )
+
+            // replace subgraph with summary node
+            final vertex = nodes.first().vertex
+            final summaryNode = new Node(vertex, key, inputs, outputs)
+            nodeTree[key] = summaryNode
+
+            // connect subgraph inputs and outputs to summary node
+            for( def w : inputs ) {
+                w.outputs -= nodes
+                w.outputs << summaryNode
+            }
+
+            for( def w : outputs ) {
+                w.inputs -= nodes
+                w.inputs << summaryNode
+            }
+
+            // update node lookup
+            for( def w : nodes )
+                nodeLookup.remove(w.vertex)
+            nodeLookup[vertex] = summaryNode
+        }
+    }
+
+    /**
+     * Collect the nodes in a subtree.
+     *
+     * @param nodeTree
+     */
+    private Set<Node> collectSubtree(Map nodeTree) {
+        nodeTree.collect { key, value ->
+                    value instanceof Map
+                        ? collectSubtree(value)
+                        : value
+                }
+                .flatten() as Set<Node>
+    }
+
+    /**
      * Render a tree of nodes and subgraphs.
      *
      * @param lines
@@ -340,8 +421,12 @@ class MermaidRenderer implements DagRenderer {
         nodeTree.each { key, value ->
             if( value instanceof Map )
                 renderNodeTree(lines, key, value)
-            else
+            else {
+                // skip node if it is disconnected
+                if( value instanceof Node && !value.inputs && !value.outputs )
+                    return
                 lines << "    ${renderNode(value)}"
+            }
         }
 
         if( name )
@@ -375,17 +460,18 @@ class MermaidRenderer implements DagRenderer {
     }
 
     private static class Node {
-        String label
         DAG.Vertex vertex
+        String label
         Set<Node> inputs
         Set<Node> outputs
 
         Node(vertex) {
-            this(vertex, [], [])
+            this(vertex, null, [], [])
         }
 
-        Node(vertex, inputs, outputs) {
+        Node(vertex, label, inputs, outputs) {
             this.vertex = vertex
+            this.label = label
             this.inputs = inputs
             this.outputs = outputs
         }
