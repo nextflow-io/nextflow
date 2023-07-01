@@ -143,8 +143,8 @@ class MermaidRenderer implements DagRenderer {
     private def findSubgraph(Node seedNode, Closure predicate) {
         List<Node> queue = [seedNode]
         Set<Node> visited = []
-        Set<Node> inputs = []
-        Set<Node> outputs = []
+        List<Node> inputs = []
+        List<Node> outputs = []
 
         while( !queue.isEmpty() ) {
             final v = queue.pop()
@@ -222,35 +222,33 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      */
     private Map getNodeTree(Map nodeLookup) {
+        // infer subgraphs of operator nodess
+        final inferredKeys = inferSubgraphKeys(nodeLookup)
+
+        // construct node tree
         def nodeTree = [:]
 
         for( def node : nodeLookup.values() ) {
             final vertex = node.vertex
 
-            // determine the vertex subgraph and label
+            // determine the vertex subgraph
             def keys = []
-            def value = null
 
             if( vertex.type == DAG.Type.PROCESS ) {
                 // extract keys from fully qualified name
                 final result = getSubgraphKeys(vertex.label)
                 keys = result[0]
-                value = "([${result[1]}])"
+                node.label = result[1]
             }
             else if( vertex.type == DAG.Type.OPERATOR ) {
-                // infer subgraph keys from neighboring process
-                keys = inferSubgraphKeys(node)
-                value = verbose
-                    ? "([${vertex.label}])"
-                    : "(( ))"
+                // use inferred subgraph keys
+                keys = inferredKeys[node]
             }
             else if( vertex.type == DAG.Type.ORIGIN ) {
                 keys = ['inputs']
-                value = "[${vertex.label ?: node.label ?: ' '}]"
             }
             else if( vertex.type == DAG.Type.NODE ) {
                 keys = ['outputs']
-                value = "[${vertex.label ?: node.label ?: ' '}]"
             }
 
             // navigate to given subgraph
@@ -262,10 +260,57 @@ class MermaidRenderer implements DagRenderer {
             }
 
             // add vertex to tree
-            subgraph[vertex.name] = value
+            subgraph[vertex.name] = node
         }
 
         return nodeTree
+    }
+
+    /**
+     * Infer the subgraph of each operator node from neighboring
+     * processes.
+     *
+     * @param nodeLookup
+     */
+    private Map<Node,List> inferSubgraphKeys(Map nodeLookup) {
+        def inferredKeys = [:]
+        def queue = nodeLookup
+                .values()
+                .findAll( n -> n.vertex.type == DAG.Type.OPERATOR )
+
+        while( !queue.isEmpty() ) {
+            // find subgraph of operator nodes
+            final node = queue.pop()
+            def (visited, inputs, outputs) = findSubgraph(node, n -> n.vertex.type == DAG.Type.OPERATOR)
+
+            // select a neighboring process
+            inputs = inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+            outputs = outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+
+            def process
+            if( inputs.size() == 1 )
+                process = inputs[0]
+            else if( outputs.size() == 1 )
+                process = outputs[0]
+            else if( inputs.size() > 0 )
+                process = inputs[0]
+            else if( outputs.size() > 0 )
+                process = outputs[0]
+
+            // extract keys from fully qualified process name
+            final keys = process
+                ? getSubgraphKeys(process.vertex.label)[0]
+                : []
+
+            // save inferred keys
+            for( def w : visited )
+                inferredKeys[w] = keys
+
+            // update queue
+            queue.removeAll(visited)
+        }
+
+        return inferredKeys
     }
 
     /**
@@ -279,33 +324,6 @@ class MermaidRenderer implements DagRenderer {
             tokens[0..<tokens.size()-1],
             tokens.last()
         ]
-    }
-
-    /**
-     * Infer the subgraph of an operator node from a neighboring
-     * process.
-     *
-     * @param node
-     */
-    private List<String> inferSubgraphKeys(Node node) {
-        // select a neighboring process
-        def process
-        final inputs = node.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
-        final outputs = node.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
-
-        if( inputs.size() == 1 )
-            process = inputs[0]
-        else if( outputs.size() == 1 )
-            process = outputs[0]
-        else if( inputs.size() > 0 )
-            process = inputs[0]
-        else if( outputs.size() > 0 )
-            process = outputs[0]
-
-        // extract keys from fully qualified process name
-        return process
-            ? getSubgraphKeys(process.vertex.label)[0]
-            : []
     }
 
     /**
@@ -323,11 +341,37 @@ class MermaidRenderer implements DagRenderer {
             if( value instanceof Map )
                 renderNodeTree(lines, key, value)
             else
-                lines << "    ${key}${value}"
+                lines << "    ${renderNode(value)}"
         }
 
         if( name )
             lines << "    end"
+    }
+
+    /**
+     * Render a node.
+     *
+     * @param node
+     */
+    private String renderNode(Node node) {
+        final id = node.vertex.name
+
+        switch( node.vertex.type ) {
+            case DAG.Type.PROCESS:
+                return "${id}([${node.label}])"
+
+            case DAG.Type.OPERATOR:
+                return verbose
+                    ? "${id}([${node.vertex.label}])"
+                    : "${id}(( ))"
+
+            case DAG.Type.ORIGIN:
+            case DAG.Type.NODE:
+                return "${id}[${node.vertex.label ?: node.label ?: ' '}]"
+
+            default:
+                return null
+        }
     }
 
     private static class Node {
