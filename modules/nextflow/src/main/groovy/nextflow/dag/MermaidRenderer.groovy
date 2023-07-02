@@ -122,10 +122,10 @@ class MermaidRenderer implements DagRenderer {
             target.inputs << source
 
             // save labels for workflow inputs and outputs
-            if( e.from.type == DAG.Type.ORIGIN )
+            if( !verbose && e.from.type == DAG.Type.ORIGIN )
                 source.label = e.label
-            if( e.to.type == DAG.Type.NODE )
-                target.label == e.label
+            if( !verbose && e.to.type == DAG.Type.NODE )
+                target.label = e.label
         }
 
         return nodeLookup
@@ -466,7 +466,8 @@ class MermaidRenderer implements DagRenderer {
 
             case DAG.Type.ORIGIN:
             case DAG.Type.NODE:
-                return "${id}[${node.vertex.label ?: node.label ?: ' '}]"
+                final label = node.vertex.label ?: node.label ?: ' '
+                return "${id}[\"${label}\"]"
 
             default:
                 return null
