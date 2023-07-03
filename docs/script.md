@@ -1134,7 +1134,7 @@ for( def file : file('any/path').list() ) {
 }
 ```
 
-Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFiles()` takes a closure as a parameter:
+Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFile()` takes a closure as a parameter:
 
 ```groovy
 myDir.eachFile { item ->
