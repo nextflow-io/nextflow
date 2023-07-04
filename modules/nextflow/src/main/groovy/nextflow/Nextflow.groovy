@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory
  */
 class Nextflow {
 
+    static private final String TESTINGVAR = 'phil-delete-me'
     static private Session getSession() { Global.session as Session }
 
     // note: groovy `Slf4j` annotation causes a bizarre issue
@@ -196,7 +197,7 @@ class Nextflow {
             log.debug "Ignoring exit because execution is already aborted -- message=$message"
             return
         }
-        
+
         if ( exitCode && message ) {
             log.error message
         }
