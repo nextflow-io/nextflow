@@ -162,6 +162,10 @@ public class CacheHelper {
         if( value instanceof byte[] )
             return hasher.putBytes( (byte[])value );
 
+        if( value instanceof CacheFunnel ) {
+            return ((CacheFunnel) value).funnel(hasher,mode);
+        }
+
         if( value instanceof Object[]) {
             for( Object item: ((Object[])value) )
                 hasher = CacheHelper.hasher( hasher, item, mode );
@@ -211,10 +215,6 @@ public class CacheHelper {
 
         if( value instanceof SerializableMarker) {
             return hasher.putInt( value.hashCode() );
-        }
-
-        if( value instanceof CacheFunnel ) {
-            return ((CacheFunnel) value).funnel(hasher,mode);
         }
 
         if( value instanceof Enum ) {
