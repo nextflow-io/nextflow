@@ -96,8 +96,8 @@ class BashFunLib<V extends BashFunLib> {
                 local copy=()
                 for x in "\${pid[@]}"; do
                   # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
-                  # see https://github.com/nextflow-io/nextflow/pull/4050 
-                  [[ -e /proc/\$x ]] && copy+=(\$x) || wait \$x 
+                  # see https://github.com/nextflow-io/nextflow/pull/4050
+                  [[ -e /proc/\$x ]] && copy+=(\$x) || wait \$x
                 done
                 pid=("\${copy[@]}")
                 
