@@ -40,6 +40,9 @@ class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
     @Parameters(arity = '0..1', paramLabel = '<target>', description = 'target directory')
     String targetName
 
+    @Option(names=['-d','--deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
     @Option(names = ['-r','--revision'], description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 

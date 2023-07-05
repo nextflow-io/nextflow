@@ -34,6 +34,9 @@ class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
     @Parameter(required = true, description = 'name of the project to clone')
     List<String> args
 
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
     @Parameter(names = ['-r','-revision'], description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 

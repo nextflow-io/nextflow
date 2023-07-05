@@ -100,7 +100,8 @@ class TraceRecord implements Serializable {
             error_action:'str',
             vol_ctxt: 'num',
             inv_ctxt: 'num',
-            hostname: 'str'
+            hostname: 'str',
+            cpu_model:  'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -446,6 +447,10 @@ class TraceRecord implements Serializable {
                     // these fields are provided in KB, so they are normalized to bytes
                     def val = parseLong(value, file, name) * 1024
                     this.put(name, val)
+                    break
+
+                case 'cpu_model':
+                    this.put(name, value)
                     break
 
                 default:

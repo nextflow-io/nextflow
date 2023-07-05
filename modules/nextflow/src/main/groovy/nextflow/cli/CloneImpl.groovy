@@ -34,6 +34,7 @@ class CloneImpl {
     interface Options extends IHubOptions {
         String getPipeline()
         String getTargetName()
+        Integer getDeep()
         String getRevision()
     }
 
@@ -64,7 +65,7 @@ class CloneImpl {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
-        manager.clone(target, revision)
+        manager.clone(target, revision, deep)
         print "\r"
         println "${manager.project} cloned to: $target"
     }

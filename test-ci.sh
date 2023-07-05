@@ -9,14 +9,8 @@ X_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
 [[ $GITHUB_REF ]] && X_BRANCH=$(echo $GITHUB_REF | awk '{n=split($1,A,"/"); print A[n]}')
 [[ $GITHUB_EVENT_NAME == pull_request ]] && X_PULL_REQUEST=true
 
-if [[ $X_PULL_REQUEST != false ]] && [ ${TEST_JDK} -ne 11 ]; then
-  echo "Skipping integration tests on PR and JDK != 11"
-  exit 0
-fi
-
-if [[ $X_BRANCH != master && $X_BRANCH != testing ]] && [ ${TEST_JDK:=11} -ne 11 ]; then
-  echo "Integration tests are only executed on branch 'master' or 'testing' for JDK != 11"
-  exit 0
+if [ "$TEST_JDK" -ge 19 ]; then
+  export NXF_ENABLE_VIRTUAL_THREADS=true
 fi
 
 export WITH_DOCKER='-with-docker'

@@ -34,6 +34,7 @@ class PullImpl {
     interface Options extends IHubOptions {
         String getPipeline()
         boolean getAll()
+        Integer getDeep()
         String getRevision()
     }
 
@@ -70,7 +71,7 @@ class PullImpl {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision)
+            def result = manager.download(revision,deep)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

@@ -40,6 +40,9 @@ class PullCmd extends AbstractCmd implements PullImpl.Options, HubOptions {
     @Parameter(names = ['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
     @Override
     String getPipeline() { args[0] }
 

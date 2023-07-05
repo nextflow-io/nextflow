@@ -16,7 +16,8 @@
 
 package nextflow
 
-import java.nio.file.FileSystem
+import static nextflow.file.FileHelper.*
+
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -39,7 +40,6 @@ import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import static nextflow.file.FileHelper.isGlobAllowed
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -57,27 +57,36 @@ class Nextflow {
     private static final Random random = new Random()
 
 
-    static private fileNamePattern( FilePatternSplitter splitter, Map opts, FileSystem fs ) {
+    static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
 
         final scheme = splitter.scheme
-        final folder = splitter.parent
+        final folder = toCanonicalPath(splitter.parent)
         final pattern = splitter.fileName
-
-        if( !fs )
-            fs = FileHelper.fileSystemForScheme(scheme)
 
         if( opts == null ) opts = [:]
         if( !opts.type ) opts.type = 'file'
 
         def result = new LinkedList()
         try {
-            FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
+            FileHelper.visitFiles(opts, folder, pattern) { Path it -> result.add(it) }
         }
         catch (NoSuchFileException e) {
             log.debug "No such file or directory: $folder -- Skipping visit"
         }
         return result
 
+    }
+
+    static private String str0(value) {
+        if( value==null )
+            return null
+        if( value instanceof CharSequence )
+            return value.toString()
+        if( value instanceof File )
+            return value.toString()
+        if( value instanceof Path )
+            return value.toUriString()
+        throw new IllegalArgumentException("Invalid file path type - offending value: $value [${value.getClass().getName()}]")
     }
 
     /**
@@ -101,23 +110,19 @@ class Nextflow {
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
-            return FileHelper.checkIfExists(path, options)
+            return checkIfExists(path, options)
         }
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
-        def splitter = FilePatternSplitter.glob().parse(path.toString())
+        final strPattern = str0(filePattern)
+        final splitter = FilePatternSplitter.glob().parse(strPattern)
         if( !splitter.isPattern() ) {
-            def normalised = splitter.strip(path.toString())
-            if( path instanceof Path )  {
-                return FileHelper.checkIfExists(path.fileSystem.getPath(normalised), options)
-            }
-            else {
-                return FileHelper.checkIfExists(FileHelper.asPath(normalised), options)
-            }
+            final normalised = splitter.strip(strPattern)
+            return checkIfExists(asPath(normalised), options)
         }
 
         // revolve the glob pattern returning all matches
-        return fileNamePattern(splitter, options, path.getFileSystem())
+        return fileNamePattern(splitter, options)
     }
 
     static files( Map options=null, def path ) {
@@ -155,6 +160,7 @@ class Nextflow {
      * @param obj The object to be managed as a FASTQ
      * @return An instance of {@link FastqSplitter
      */
+    @Deprecated
     static FastqSplitter fastq( obj ) {
         (FastqSplitter)new FastqSplitter('fastq').target(obj)
     }
@@ -165,6 +171,7 @@ class Nextflow {
      * @param obj The object to be managed as a FASTA
      * @return An instance of {@link FastqSplitter
      */
+    @Deprecated
     static FastaSplitter fasta( obj ) {
         (FastaSplitter)new FastaSplitter('fasta').target(obj)
     }
@@ -183,6 +190,7 @@ class Nextflow {
      * @param exitCode The exit code to be returned
      * @param message The message that will be reported in the log file (optional)
      */
+    @Deprecated
     static void exit(int exitCode, String message = null) {
         if( session.aborted ) {
             log.debug "Ignoring exit because execution is already aborted -- message=$message"
@@ -203,6 +211,7 @@ class Nextflow {
      *
      * @param message The message that will be reported in the log file
      */
+    @Deprecated
     static void exit( String message ) {
         exit(0, message)
     }
@@ -224,6 +233,7 @@ class Nextflow {
      *
      * @return The {@code Path} to the cached directory or a newly created folder for the specified key
      */
+    @Deprecated
     static Path cacheableDir( Object key ) {
         assert key, "Please specify the 'key' argument on 'cacheableDir' method"
 
@@ -249,6 +259,7 @@ class Nextflow {
      * @param name
      * @return
      */
+    @Deprecated
     static Path cacheableFile( Object key, String name = null ) {
 
         // the cacheability is guaranteed by the folder
