@@ -60,7 +60,7 @@ class WaveConfig {
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
         this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
-        this.retryOpts = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
@@ -86,6 +86,15 @@ class WaveConfig {
 
     String cacheRepository() { cacheRepository }
 
+    private RetryOpts retryOpts0(Map opts) {
+        if( opts.retryPolicy )
+            return new RetryOpts(opts.retryPolicy as Map)
+        if( opts.retry ) {
+            log.warn "Configuration options 'wave.retry' has been deprecated - replace it with 'wave.retryPolicy'"
+            return new RetryOpts(opts.retry as Map)
+        }
+        return new RetryOpts(Map.of())
+    }
     protected List<String> parseStrategy(value) {
         if( !value ) {
             log.debug "Wave strategy not specified - using default: $DEF_STRATEGIES"
