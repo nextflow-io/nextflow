@@ -101,7 +101,7 @@ class TraceRecord implements Serializable {
             vol_ctxt: 'num',
             inv_ctxt: 'num',
             hostname: 'str',
-            cpu_model:  'str',      // -- /proc/cpuinfo field 'model name'
+            cpu_model:  'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
