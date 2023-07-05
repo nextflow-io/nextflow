@@ -25,6 +25,7 @@ import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -110,6 +111,7 @@ class GridTaskHandlerTest extends Specification {
             getProcessor() >> Mock(TaskProcessor)
             getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
             toTaskBean() >> Mock(TaskBean) { getWorkDir()>>WORK_DIR; getInputFiles()>>[:] }
+            getConfig() >> Mock(TaskConfig) { getContainerOptions() >> '--this=that' }
         }
         def exec = Mock(AbstractGridExecutor)
         def handler = Spy(new GridTaskHandler(task, exec))
@@ -123,7 +125,7 @@ class GridTaskHandlerTest extends Specification {
         result == '''\
                 #!/bin/bash
                 #$ directive=one
-                docker run -i -e "FUSION_WORK=/fusion/http/foo.com/some/dir" -e "FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)" ubuntu:latest /usr/bin/fusion bash '/fusion/http/foo.com/some/dir/.command.run'
+                docker run -i -e "FUSION_WORK=/fusion/http/foo.com/some/dir" -e "FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)" --this=that ubuntu:latest /usr/bin/fusion bash '/fusion/http/foo.com/some/dir/.command.run'
                 '''.stripIndent(true)
     }
 

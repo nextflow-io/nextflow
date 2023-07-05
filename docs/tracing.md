@@ -307,6 +307,11 @@ The following table shows the fields that can be included in the execution repor
   :::
 : The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
 
+`cpu_model`
+: :::{versionadded} 22.07.0-edge
+  :::
+: The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
+
 :::{note}
 These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
 :::
