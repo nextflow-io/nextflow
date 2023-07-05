@@ -368,20 +368,12 @@ class TaskProcessor {
     boolean hasErrors() { errorCount>0 }
 
     /**
-     * Get the container image of the process, or return
-     * null if it can't be resolved.
+     * Get a preview task config.
      */
-    String getContainer() {
-        try {
-            def config = config.createTaskConfig()
-            config.context = new TaskContext(this)
-
-            return config.getContainer()
-        }
-        catch( Exception e ) {
-            log.warn1 "Unable to resolve container image for process `${name}`", e
-            return null
-        }
+    TaskConfig getPreviewConfig() {
+        def config = config.createTaskConfig()
+        config.context = new TaskContext(this)
+        return config
     }
 
     protected void checkWarn(String msg, Map opts=null) {

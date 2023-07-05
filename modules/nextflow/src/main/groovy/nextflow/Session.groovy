@@ -65,6 +65,7 @@ import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
+import nextflow.trace.PreviewReportWriter
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
@@ -468,24 +469,11 @@ class Session implements ISession {
         CH.broadcast()
 
         if( preview ) {
-            dumpContainerImages()
+            PreviewReportWriter.create(this).render()
             terminated = true
         }
         else {
             callIgniters()
-        }
-    }
-
-    private void dumpContainerImages() {
-        for( def vertex : dag.vertices ) {
-            // skip nodes that are not processes
-            if( !vertex.process )
-                continue
-
-            // print process name and container image
-            def process = vertex.process
-            log.debug "Querying container image for process `${process.name}`..."
-            log.info "${process.name} ${process.getContainer()}"
         }
     }
 
