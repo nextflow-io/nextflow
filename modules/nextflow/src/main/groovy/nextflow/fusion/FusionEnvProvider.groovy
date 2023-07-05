@@ -39,10 +39,9 @@ class FusionEnvProvider {
         }
         // tags setting
         if( config.tagsEnabled() ) {
-            def tagsPattern = config.tagsPattern()
-            if( bean.outputFiles )
-                tagsPattern = tagsPattern.replace('[*]', "[${bean.outputFiles.join('|')}](nextflow.io/output=true),[*]")
-            result.FUSION_TAGS = tagsPattern
+            result.FUSION_TAGS = config
+                    .tagsPattern()
+                    .replaceAll('__OUTPUTS__', bean.outputFiles.join('|'))
         }
         // logs setting
         if( config.logOutput() )

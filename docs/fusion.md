@@ -201,5 +201,7 @@ The following configuration options are available:
 : Enable/disable the tagging of files created in the underlying object storage via the Fusion client (default: `true`).
 
 `tagsPattern`
-: The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
-
+: The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[__OUTPUTS__](nextflow.io/output=true),[*](nextflow.io/temporary=true)`).
+: :::{versionchanged} 22.07.0-edge
+  The `nextflow.io/output=true` default tag was added, which captures all process outputs. You can specify `__OUTPUTS__` in a custom tags pattern to capture outputs in this way.
+  :::
