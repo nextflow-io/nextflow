@@ -10,22 +10,18 @@ The AWS credentials are selected from the following sources, in order of descend
 
 1. Nextflow configuration file - `aws.accessKey` and `aws.secretKey`. See {ref}`AWS configuration<config-aws>` for more details.
 
-2. A custom profile in `~/.aws/credentials` and/or `~/.aws/config`. The profile can be supplied from the `aws.profile` config option, or the `AWS_PROFILE` or `AWS_DEFAULT_PROFILE` environmental variables.
+2. A custom profile in `$HOME/.aws/credentials` and/or `$HOME/.aws/config`. The profile can be supplied from the `aws.profile` config option, or the `AWS_PROFILE` or `AWS_DEFAULT_PROFILE` environmental variables.
 
-3. Environment variables - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`.
+3. Environment variables - `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
-4. Java System Properties - `aws.accessKeyId`, `aws.secretKey`, and `aws.sessionToken`.
+4. The `default` profile in `~/.aws/credentials` and/or `~/.aws/config`.
 
-5. Web Identity Token credentials.
-
-6. The `default` profile in `~/.aws/credentials` and/or `~/.aws/config`.
-
-7. Single Sign-On (SSO) credentials. See the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
+5. Single Sign-On (SSO) credentials. See the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
 
    :::{versionadded} 23.07.0-edge
    :::
 
-8. Instance profile credentials. See the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
+6. EC2 instance profile credentials. See the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
 
 The AWS region is selected from the following sources, in order of descending priority:
 
