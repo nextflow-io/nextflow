@@ -37,7 +37,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
-    private boolean memPerCpu
+    private boolean perCpuMemAllocation
 
     private boolean hasSignalOpt(Map config) {
         def opts = config.clusterOptions?.toString()
@@ -79,7 +79,7 @@ class SlurmExecutor extends AbstractGridExecutor {
             // Resident Set Size (RSS). A task may exceed the memory limit until the next periodic
             // accounting sample. -- https://slurm.schedmd.com/sbatch.html
             final mem = task.config.getMemory().toMega()
-            if( memPerCpu )
+            if( perCpuMemAllocation )
                 result << '--mem-per-cpu' << mem.intdiv(task.config.getCpus()).toString() + 'M'
             else
                 result << '--mem' << mem.toString() + 'M'
@@ -199,7 +199,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     void register() {
         super.register()
-        memPerCpu = session.getExecConfigProp(name, 'memPerCpu', memPerCpu)
+        perCpuMemAllocation = session.getExecConfigProp(name, 'perCpuMemAllocation', false)
     }
 
     @Override

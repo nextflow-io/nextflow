@@ -187,9 +187,9 @@ class SlurmExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-        // test memPerCpu
+        // test perCpuMemAllocation
         when:
-        executor.@memPerCpu = true
+        executor.@perCpuMemAllocation = true
         task.config = new TaskConfig()
         task.config.cpus = 8
         task.config.memory = '24 GB'
