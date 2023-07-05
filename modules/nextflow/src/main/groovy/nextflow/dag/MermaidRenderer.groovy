@@ -429,8 +429,10 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeTree
      */
     private void renderNodeTree(List<String> lines, String name, Map nodeTree) {
-        if( name )
-            lines << "    subgraph ${name}"
+        if( name ) {
+            final label = name in [INPUTS, OUTPUTS] ? '" "' : name
+            lines << "    subgraph ${label}"
+        }
 
         nodeTree.each { key, value ->
             if( value instanceof Map )
