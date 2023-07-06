@@ -1036,7 +1036,12 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-preview`
 : :::{versionadded} 22.06.0-edge
   :::
-: Run the workflow script skipping the execution of all processes
+: Run the workflow script skipping the execution of all processes.
+
+`-preview-report` (`preview-<timestamp>.json`)
+: :::{versionadded} 23.07.0-edge
+  :::
+: Run the workflow script in preview mode and create a preview report (implicitly enables `-preview`).
 
 `-process.<key>=<value>`
 : Set process config options.
@@ -1072,7 +1077,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
-`-with-dag` (`dag.dot`)
+`-with-dag` (`dag-<timestamp>.dot`)
 : Create pipeline DAG file.
 
 `-with-docker`
@@ -1084,7 +1089,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-podman`
 : Enable process execution in a Podman container.
 
-`-with-report` (`report.html`)
+`-with-report` (`report-<timestamp>.html`)
 : Create workflow execution HTML report.
 
 `-with-singularity`
@@ -1093,19 +1098,19 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-spack`
 : Use the specified Spack environment package or file (must end with `.yaml`)
 
-`-with-timeline` (`timeline.html`)
+`-with-timeline` (`timeline-<timestamp>.html`)
 : Create workflow execution timeline.
 
-`-with-tower`
+`-with-tower` (`https://api.tower.nf`)
 : Monitor workflow execution with [Tower](https://cloud.tower.nf/).
 
-`-with-trace` (`trace.txt`)
+`-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
 
-`-with-wave`
+`-with-wave` (`https://wave.seqera.io`)
 : Enable the use of Wave containers.
 
-`-with-weblog`
+`-with-weblog` (`http://localhost`)
 : Send workflow status messages via HTTP to target URL.
 
 `-without-conda`

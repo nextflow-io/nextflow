@@ -295,6 +295,10 @@ class Launcher {
                 normalized << 'true'
             }
 
+            else if( current == '-preview-report' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( (current == '-dsl2') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }

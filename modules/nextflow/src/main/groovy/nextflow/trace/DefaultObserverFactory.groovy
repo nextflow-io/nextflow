@@ -26,6 +26,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createDagObserver(result)
         createWebLogObserver(result)
         createAnsiLogObserver(result)
+        createPreviewReportObserver(result)
         return result
     }
 
@@ -114,6 +115,21 @@ class DefaultObserverFactory implements TraceObserverFactory {
         config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
         config.navigate('trace.overwrite') { observer.overwrite = it }
         result << observer
+    }
+
+    /**
+     * Create preview report file observer
+     */
+    protected void createPreviewReportObserver(Collection<TraceObserver> result) {
+        final isEnabled = config.navigate('preview.enabled') as Boolean
+        if( !isEnabled )
+            return
+
+        final directives = config.navigate('preview.directives', PreviewReportObserver.DEF_DIRECTIVES) as List
+        final fileName = config.navigate('preview.file', PreviewReportObserver.DEF_FILE_NAME)
+        final previewReport = (fileName as Path).complete()
+        final overwrite = config.navigate('preview.overwrite', false) as Boolean
+        result << new PreviewReportObserver(directives, previewReport, overwrite)
     }
 
 }

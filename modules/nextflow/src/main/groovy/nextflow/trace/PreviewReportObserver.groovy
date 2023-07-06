@@ -35,11 +35,11 @@ import nextflow.util.MemoryUnit
  */
 @Slf4j
 @CompileStatic
-class PreviewReportWriter implements TraceObserver {
+class PreviewReportObserver implements TraceObserver {
 
-    static private final List<String> DEF_DIRECTIVES = ['container', 'cpus', 'memory', 'time']
+    static final List<String> DEF_DIRECTIVES = ['container', 'cpus', 'memory', 'time']
 
-    static private final String DEF_FILE_NAME = "preview-${TraceHelper.launchTimestampFmt()}.json"
+    static final String DEF_FILE_NAME = "preview-${TraceHelper.launchTimestampFmt()}.json"
 
     private DAG dag
 
@@ -49,17 +49,7 @@ class PreviewReportWriter implements TraceObserver {
 
     private boolean overwrite
 
-    static PreviewReportWriter create(Session session) {
-        final directives = session.config.navigate('preview.directives', DEF_DIRECTIVES) as List
-        def file = session.config.navigate('preview.file', DEF_FILE_NAME)
-        file = (file as Path).complete()
-        final overwrite = session.config.navigate('preview.overwrite', false) as boolean
-
-        return new PreviewReportWriter(session.dag, directives, file, overwrite)
-    }
-
-    PreviewReportWriter( DAG dag, List<String> directives, Path file, boolean overwrite ) {
-        this.dag = dag
+    PreviewReportObserver( List<String> directives, Path file, boolean overwrite ) {
         this.directives = directives
         this.file = file
         this.overwrite = overwrite
@@ -74,7 +64,23 @@ class PreviewReportWriter implements TraceObserver {
         }
     }
 
-    void render() {
+    @Override
+    void onFlowCreate(Session session) {
+        this.dag = session.dag
+    }
+
+    @Override
+    void onFlowBegin() {
+        log.debug "Rendering preview report"
+        try {
+            render()
+        }
+        catch( Exception e ) {
+            log.warn "Failed to render preview report -- see the log file for details", e
+        }
+    }
+
+    private void render() {
         // get preview data
         final jsonData = [:]
 

@@ -1115,7 +1115,7 @@ Read the {ref}`container-podman` page to learn more about how to use Podman cont
 :::{versionadded} 23.07.0-edge
 :::
 
-The `preview` scope controls the preview report that is generated when running a pipeline in preview mode (i.e. using the `-preview` command line option).
+The `preview` scope controls the preview report that is generated when running a pipeline with the `-preview-report` option.
 
 `preview.directives`
 : The list of process directives to preview (default: `['container', 'cpus', 'memory', 'time']`).

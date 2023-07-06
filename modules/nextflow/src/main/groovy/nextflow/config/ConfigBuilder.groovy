@@ -36,6 +36,7 @@ import nextflow.secret.SecretHolder
 import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
+import nextflow.trace.PreviewReportObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
@@ -708,6 +709,18 @@ class ConfigBuilder {
             if( !(config.fusion instanceof Map) )
                 config.fusion = [:]
             config.fusion.enabled = cmdRun.withFusion == 'true'
+        }
+
+        // -- sets preview report options
+        if( cmdRun.previewReport ) {
+            cmdRun.preview = true
+            if( !(config.preview instanceof Map) )
+                config.preview = [:]
+            config.preview.enabled = true
+            if( cmdRun.previewReport != '-' )
+                config.preview.file = cmdRun.previewReport
+            else if( !config.preview.file )
+                config.preview.file = PreviewReportObserver.DEF_FILE_NAME
         }
 
         // -- nextflow setting

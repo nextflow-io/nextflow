@@ -65,7 +65,7 @@ import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
-import nextflow.trace.PreviewReportWriter
+import nextflow.trace.PreviewReportObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
@@ -469,7 +469,6 @@ class Session implements ISession {
         CH.broadcast()
 
         if( preview ) {
-            PreviewReportWriter.create(this).render()
             terminated = true
         }
         else {
