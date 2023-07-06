@@ -80,7 +80,7 @@ class SlurmExecutorTest extends Specification {
     def testGetHeaders() {
 
         setup:
-        // LSF executor
+        // SLURM executor
         def executor = [:] as SlurmExecutor
 
         // mock process
@@ -184,6 +184,23 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -t 51:00:00
                 #SBATCH --mem 3072M
                 #SBATCH -x 3
+                '''
+                .stripIndent().leftTrim()
+
+        // test perCpuMemAllocation
+        when:
+        executor.@perCpuMemAllocation = true
+        task.config = new TaskConfig()
+        task.config.cpus = 8
+        task.config.memory = '24 GB'
+        then:
+        executor.getHeaders(task) == '''
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
+                #SBATCH -c 8
+                #SBATCH --mem-per-cpu 3072M
                 '''
                 .stripIndent().leftTrim()
     }
