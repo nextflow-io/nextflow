@@ -567,7 +567,7 @@ The following functions are available in Nextflow scripts:
 `file( filePattern, options = [:] )`
 : Get one or more files from a path or glob pattern. Returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) or list of Paths if there are multiple files. See [Files and I/O](#files-and-io).
 
-`files( filePatten, options = [:] )`
+`files( filePattern, options = [:] )`
 : Convenience method for `file()` that always returns a list.
 
 `groupKey( key, size )`
@@ -1178,7 +1178,7 @@ for( def file : file('any/path').list() ) {
 }
 ```
 
-Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFiles()` takes a closure as a parameter:
+Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFile()` takes a closure as a parameter:
 
 ```groovy
 myDir.eachFile { item ->

@@ -608,6 +608,12 @@ The following settings are available:
 `executor.name`
 : The name of the executor to be used (default: `local`).
 
+`executor.perCpuMemAllocation`
+: :::{versionadded} 23.07.0-edge
+  :::
+: *Used only by the {ref}`slurm-executor` executor.*
+: When `true`, specifies memory allocations for SLURM jobs as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
+
 `executor.perJobMemLimit`
 : Specifies Platform LSF *per-job* memory limit mode. See {ref}`lsf-executor`.
 
@@ -714,6 +720,16 @@ The following settings are available:
 
 `google.enableRequesterPaysBuckets`
 : When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
+
+`google.httpConnectTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+
+`google.httpReadTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
 
 `google.location`
 : The Google Cloud location where jobs are executed (default: `us-central1`).

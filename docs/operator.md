@@ -1411,7 +1411,7 @@ Available options:
 : The index of the element to split when the operator is applied to a channel emitting lists or tuples (default: first file object or first element).
 
 `file`
-: When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified directory.
+: When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified directory.
 
 `keepHeader`
 : Parses the first line as header and prepends it to each emitted chunk (default: `false`).

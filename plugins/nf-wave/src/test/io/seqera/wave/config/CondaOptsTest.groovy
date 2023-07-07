@@ -15,7 +15,7 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package io.seqera.wave.config
 
 import spock.lang.Specification
 
