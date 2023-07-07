@@ -290,13 +290,8 @@ class PublishDir {
     @CompileStatic
     protected void apply1(Path source, boolean inProcess ) {
 
-        def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
-        if( matcher && !matcher.matches(target) ) {
-            // skip not matching file
-            return
-        }
-
-        if( saveAs && !(target=saveAs.call(target.toString()))) {
+        final target = getPublishTarget(source)
+        if( !target ) {
             // skip this file
             return
         }
@@ -326,6 +321,23 @@ class PublishDir {
             threadPool.submit({ safeProcessFile(source, destination) } as Runnable)
         }
 
+    }
+
+    @CompileStatic
+    boolean canPublish(Path source) {
+        return getPublishTarget(source) != null
+    }
+
+    @CompileStatic
+    protected def getPublishTarget(Path source) {
+        def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
+        if( matcher && !matcher.matches(target) )
+            return null
+
+        if( saveAs && !(target=saveAs.call(target.toString())))
+            return null
+
+        return target
     }
 
     @CompileStatic

@@ -17,7 +17,6 @@
 package nextflow.trace
 
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -41,11 +40,13 @@ class TaskCleanupObserver implements TraceObserver {
 
     private DAG dag
 
-    private Map<String,ProcessState> processes = new HashMap<>()
+    private Map<String,ProcessState> processes = [:]
 
-    private Map<TaskRun,TaskState> tasks = new HashMap<>()
+    private Map<TaskRun,TaskState> tasks = [:]
 
-    private Map<Path,TaskRun> taskLookup = new HashMap<>()
+    private Map<Path,TaskRun> taskLookup = [:]
+
+    private Set<Path> publishedOutputs = []
 
     private Lock sync = new ReentrantLock()
 
@@ -95,7 +96,7 @@ class TaskCleanupObserver implements TraceObserver {
                 }
             }
 
-            log.trace "Process `${processName}` is consumed by the following processes: ${consumers.collect({ "`${it}`" }).join(', ')}"
+            log.trace "Process `${processName}` is consumed by the following processes: ${consumers}"
 
             processes[processName] = new ProcessState(consumers ?: [processName] as Set)
         }
@@ -145,10 +146,26 @@ class TaskCleanupObserver implements TraceObserver {
             .values()
             .flatten() as List<Path>
 
+        // get publish outputs
+        final publishDirs = task.config.getPublishDir()
+        final publishOutputs = publishDirs
+            ? outputs.findAll( p -> publishDirs.any( publishDir -> publishDir.canPublish(p) ) )
+            : []
+
+        log.trace "Task ${task.name} will publish the following files: ${publishOutputs*.toUriString()}"
+
         sync.lock()
         try {
             // mark task as completed
             tasks[task].completed = true
+
+            // remove any outputs have already been published
+            final alreadyPublished = publishedOutputs.intersect(publishOutputs)
+            publishedOutputs.removeAll(alreadyPublished)
+            publishOutputs.removeAll(alreadyPublished)
+
+            // add publish outputs to wait on
+            tasks[task].publishOutputs = publishOutputs as Set<Path>
 
             // scan tasks for cleanup
             cleanup0()
@@ -156,6 +173,45 @@ class TaskCleanupObserver implements TraceObserver {
             // add new output files to task lookup
             for( Path path : outputs )
                 taskLookup[path] = task
+        }
+        finally {
+            sync.unlock()
+        }
+    }
+
+    /**
+     * When a file is published, mark it as published and check
+     * the corresponding task for cleanup.
+     *
+     * If the file is published before the corresponding task is
+     * marked as completed, save it for later.
+     *
+     * @param destination
+     * @param source
+     */
+    @Override
+    void onFilePublish(Path destination, Path source) {
+        sync.lock()
+        try {
+            // get the corresponding task
+            final task = taskLookup[source]
+
+            if( task ) {
+                log.trace "File ${source.toUriString()} was published by task ${task?.name}"
+
+                // remove file from task barriers
+                tasks[task].publishOutputs.remove(source)
+
+                // delete task if it can be deleted
+                if( canDelete(task) )
+                    deleteTask(task)
+            }
+            else {
+                log.trace "File ${source.toUriString()} was published, but task isn't marked as completed yet"
+
+                // save file to be processed later
+                publishedOutputs << source
+            }
         }
         finally {
             sync.unlock()
@@ -181,30 +237,48 @@ class TaskCleanupObserver implements TraceObserver {
     }
 
     /**
-     * Delete any task directories that have no more barriers.
+     * Delete any task directories that can be deleted.
      */
     private void cleanup0() {
-        for( TaskRun task : tasks.keySet() ) {
-            final taskState = tasks[task]
-            if( taskState.completed && !taskState.deleted && canDelete(task) ) {
-                log.trace "Deleting task directory: ${task.workDir.toUriString()}"
-                FileHelper.deletePath(task.workDir)
-                taskState.deleted = true
-            }
-        }
+        for( TaskRun task : tasks.keySet() )
+            if( canDelete(task) )
+                deleteTask(task)
     }
 
     /**
      * Determine whether a task directory can be deleted.
      *
-     * A task directory can be deleted if all of its process consumers
-     * are closed and all of its task consumers are completed.
+     * A task directory can be deleted if:
+     * - the task has completed
+     * - the task directory hasn't already been deleted
+     * - all of its publish outputs have been published
+     * - all of its process consumers are closed
+     * - all of its task consumers are completed
+     *
+     * @param task
      */
     private boolean canDelete(TaskRun task) {
         final taskState = tasks[task]
         final processConsumers = processes[task.processor.name].consumers
         final taskConsumers = taskState.consumers
-        processConsumers.every( p -> processes[p].closed ) && taskConsumers.every( t -> tasks[t].completed )
+
+        taskState.completed
+            && !taskState.deleted
+            && taskState.publishOutputs.isEmpty()
+            && processConsumers.every( p -> processes[p].closed )
+            && taskConsumers.every( t -> tasks[t].completed )
+    }
+
+    /**
+     * Delete a task directory.
+     *
+     * @param task
+     */
+    private void deleteTask(TaskRun task) {
+        log.trace "Deleting task directory: ${task.workDir.toUriString()}"
+
+        FileHelper.deletePath(task.workDir)
+        tasks[task].deleted = true
     }
 
     static private class ProcessState {
@@ -217,7 +291,8 @@ class TaskCleanupObserver implements TraceObserver {
     }
 
     static private class TaskState {
-        Set<TaskRun> consumers = [] as Set
+        Set<TaskRun> consumers = []
+        Set<Path> publishOutputs = []
         boolean completed = false
         boolean deleted = false
     }
