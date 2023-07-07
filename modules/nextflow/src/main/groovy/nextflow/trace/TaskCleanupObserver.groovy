@@ -37,7 +37,7 @@ import nextflow.script.params.FileOutParam
  */
 @Slf4j
 @CompileStatic
-class TemporaryFileObserver implements TraceObserver {
+class TaskCleanupObserver implements TraceObserver {
 
     private DAG dag
 
@@ -204,7 +204,7 @@ class TemporaryFileObserver implements TraceObserver {
         final taskState = tasks[task]
         final processConsumers = processes[task.processor.name].consumers
         final taskConsumers = taskState.consumers
-        processConsumers.every { p -> processes[p].closed } && taskConsumers.every { t -> tasks[t].completed }
+        processConsumers.every( p -> processes[p].closed ) && taskConsumers.every( t -> tasks[t].completed )
     }
 
     static private class ProcessState {

@@ -25,7 +25,7 @@ import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
-import nextflow.trace.TemporaryFileObserver
+import nextflow.trace.TaskCleanupObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
 import nextflow.trace.WorkflowStatsObserver
@@ -258,7 +258,7 @@ class SessionTest extends Specification {
         result = session.createObservers()
         then:
         result.size() == 2
-        result.any { it instanceof TemporaryFileObserver }
+        result.any { it instanceof TaskCleanupObserver }
 
         when:
         session = [:] as Session

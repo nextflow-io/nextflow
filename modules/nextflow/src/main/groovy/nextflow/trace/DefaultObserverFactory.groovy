@@ -26,7 +26,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createDagObserver(result)
         createWebLogObserver(result)
         createAnsiLogObserver(result)
-        createTemporaryFileObserver(result)
+        createTaskCleanupObserver(result)
         return result
     }
 
@@ -117,9 +117,9 @@ class DefaultObserverFactory implements TraceObserverFactory {
         result << observer
     }
 
-    protected void createTemporaryFileObserver(Collection<TraceObserver> result) {
+    protected void createTaskCleanupObserver(Collection<TraceObserver> result) {
         if( session.config.cleanup == 'eager' )
-            result << new TemporaryFileObserver()
+            result << new TaskCleanupObserver()
     }
 
 }
