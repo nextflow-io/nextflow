@@ -199,6 +199,8 @@ class PublishDir {
         if( params.storageClass )
             result.storageClass = params.storageClass as String
 
+        result.validatePublishMode()
+
         return result
     }
 
@@ -207,7 +209,6 @@ class PublishDir {
         assert path
 
         createPublishDir()
-        validatePublishMode()
 
         /*
          * when the publishing is using links, create them in process

@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
 import nextflow.file.FileHelper
+import nextflow.processor.PublishDir.Mode
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -100,6 +101,22 @@ class TaskCleanupObserver implements TraceObserver {
 
             processes[processName] = new ProcessState(consumers ?: [processName] as Set)
         }
+    }
+
+    static private final Set<Mode> INVALID_PUBLISH_MODES = [Mode.COPY_NO_FOLLOW, Mode.RELLINK, Mode.SYMLINK]
+
+    /**
+     * Log warning for any process that uses an incompatible
+     * publish mode.
+     *
+     * @param process
+     */
+    void onProcessCreate( TaskProcessor process ) {
+        final taskConfig = process.getPreviewConfig()
+        final publishDirs = taskConfig.getPublishDir()
+
+        if( publishDirs.any( p -> p.mode in INVALID_PUBLISH_MODES ) )
+            log.warn "Process `${process.name}` is publishing files as symlinks, which may be invalidated by eager cleanup -- consider using 'copy' or 'link' instead"
     }
 
     /**

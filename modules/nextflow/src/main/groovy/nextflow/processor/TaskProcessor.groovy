@@ -367,6 +367,15 @@ class TaskProcessor {
 
     boolean hasErrors() { errorCount>0 }
 
+    /**
+     * Get a preview task config.
+     */
+    TaskConfig getPreviewConfig() {
+        def config = config.createTaskConfig()
+        config.context = new TaskContext(this)
+        return config
+    }
+
     protected void checkWarn(String msg, Map opts=null) {
         if( NF.isStrictMode() )
             throw new ProcessUnrecoverableException(msg)
