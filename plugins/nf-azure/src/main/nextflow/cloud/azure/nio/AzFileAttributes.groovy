@@ -63,6 +63,12 @@ class AzFileAttributes implements BasicFileAttributes {
         directory = client.blobName.endsWith('/')
         size = props.getBlobSize()
         etag = props.getETag()
+
+        // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled
+        final meta = props.getMetadata()
+        if( meta.containsKey("hdi_isfolder") && size == 0 ){
+            directory = meta.get("hdi_isfolder")
+        }
     }
 
     AzFileAttributes(String containerName, BlobItem item) {

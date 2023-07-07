@@ -1,6 +1,6 @@
 (script-page)=
 
-# Nextflow scripting
+# Scripts
 
 The Nextflow scripting language is an extension of the Groovy programming language. Groovy is a powerful programming language for the Java virtual machine. The Nextflow syntax has been specialized to ease the writing of computational pipelines in a declarative manner.
 
@@ -18,7 +18,11 @@ Below you can find a crash course in the most important language constructs used
 Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
 :::
 
-## Language basics
+:::{warning}
+Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them as modules.
+:::
+
+## Groovy basics
 
 ### Hello world
 
@@ -74,8 +78,8 @@ println myList.size()
 Learn more about lists:
 
 - [Groovy Lists tutorial](http://groovy-lang.org/groovy-dev-kit.html#Collections-Lists)
-- [Groovy List SDK](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html)
-- [Java List SDK](http://docs.oracle.com/javase/7/docs/api/java/util/List.html)
+- [Groovy List API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html)
+- [Java List API](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html)
 
 ### Maps
 
@@ -116,8 +120,8 @@ Appending an "update" map is a safer way to modify maps in Nextflow, specificall
 Learn more about maps:
 
 - [Groovy Maps tutorial](http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps)
-- [Groovy Map SDK](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html)
-- [Java Map SDK](http://docs.oracle.com/javase/7/docs/api/java/util/Map.html)
+- [Groovy Map API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html)
+- [Java Map API](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html)
 
 (script-multiple-assignment)=
 
@@ -218,6 +222,184 @@ result = myLongCmdline.execute().text
 ```
 
 In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` switches and their arguments are effectively a single line.
+
+(script-regexp)=
+
+### Regular expressions
+
+Regular expressions are the Swiss Army knife of text processing. They provide the programmer with the ability to match and extract patterns from strings.
+
+Regular expressions are available via the `~/pattern/` syntax and the `=~` and `==~` operators.
+
+Use `=~` to check whether a given pattern occurs anywhere in a string:
+
+```groovy
+assert 'foo' =~ /foo/       // return TRUE
+assert 'foobar' =~ /foo/    // return TRUE
+```
+
+Use `==~` to check whether a string matches a given regular expression pattern exactly.
+
+```groovy
+assert 'foo' ==~ /foo/       // return TRUE
+assert 'foobar' ==~ /foo/    // return FALSE
+```
+
+It is worth noting that the `~` operator creates a Java `Pattern` object from the given string, while the `=~` operator creates a Java `Matcher` object.
+
+```groovy
+x = ~/abc/
+println x.class
+// prints java.util.regex.Pattern
+
+y = 'some string' =~ /abc/
+println y.class
+// prints java.util.regex.Matcher
+```
+
+Regular expression support is imported from Java. Java's regular expression language and API is documented in the [Pattern](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) class.
+
+You may also be interested in this post: [Groovy: Don't Fear the RegExp](https://web.archive.org/web/20170621185113/http://www.naleid.com/blog/2008/05/19/dont-fear-the-regexp).
+
+#### String replacement
+
+To replace pattern occurrences in a given string, use the `replaceFirst` and `replaceAll` methods:
+
+```groovy
+x = "colour".replaceFirst(/ou/, "o")
+println x
+// prints: color
+
+y = "cheesecheese".replaceAll(/cheese/, "nice")
+println y
+// prints: nicenice
+```
+
+#### Capturing groups
+
+You can match a pattern that includes groups. First create a matcher object with the `=~` operator. Then, you can index the matcher object to find the matches: `matcher[0]` returns a list representing the first match of the regular expression in the string. The first list element is the string that matches the entire regular expression, and the remaining elements are the strings that match each group.
+
+Here's how it works:
+
+```groovy
+programVersion = '2.7.3-beta'
+m = programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
+
+assert m[0] == ['2.7.3-beta', '2', '7', '3', 'beta']
+assert m[0][1] == '2'
+assert m[0][2] == '7'
+assert m[0][3] == '3'
+assert m[0][4] == 'beta'
+```
+
+Applying some syntactic sugar, you can do the same in just one line of code:
+
+```groovy
+programVersion = '2.7.3-beta'
+(full, major, minor, patch, flavor) = (programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
+
+println full    // 2.7.3-beta
+println major   // 2
+println minor   // 7
+println patch   // 3
+println flavor  // beta
+```
+
+#### Removing part of a string
+
+You can remove part of a `String` value using a regular expression pattern. The first match found is replaced with an empty String:
+
+```groovy
+// define the regexp pattern
+wordStartsWithGr = ~/(?i)\s+Gr\w+/
+
+// apply and verify the result
+('Hello Groovy world!' - wordStartsWithGr) == 'Hello world!'
+('Hi Grails users' - wordStartsWithGr) == 'Hi users'
+```
+
+Remove the first 5-character word from a string:
+
+```groovy
+assert ('Remove first match of 5 letter word' - ~/\b\w{5}\b/) == 'Remove match of 5 letter word'
+```
+
+Remove the first number with its trailing whitespace from a string:
+
+```groovy
+assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
+```
+
+(script-closure)=
+
+### Closures
+
+Briefly, a closure is a block of code that can be passed as an argument to a function. Thus, you can define a chunk of code and then pass it around as if it were a string or an integer.
+
+More formally, you can create functions that are defined as *first-class objects*.
+
+```groovy
+square = { it * it }
+```
+
+The curly brackets around the expression `it * it` tells the script interpreter to treat this expression as code. The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
+
+Once compiled the function object is assigned to the variable `square` as any other variable assignments shown previously. Now we can do something like this:
+
+```groovy
+println square(9)
+```
+
+and get the value 81.
+
+This is not very interesting until we find that we can pass the function `square` as an argument to other functions or methods. Some built-in functions take a function like this as an argument. One example is the `collect` method on lists:
+
+```groovy
+[ 1, 2, 3, 4 ].collect(square)
+```
+
+This expression says: Create an array with the values 1, 2, 3 and 4, then call its `collect` method, passing in the closure we defined above. The `collect` method runs through each item in the array, calls the closure on the item, then puts the result in a new array, resulting in:
+
+```groovy
+[ 1, 4, 9, 16 ]
+```
+
+For more methods that you can call with closures as arguments, see the [Groovy GDK documentation](http://docs.groovy-lang.org/latest/html/groovy-jdk/).
+
+By default, closures take a single parameter called `it`, but you can also create closures with multiple, custom-named parameters. For example, the method `Map.each()` can take a closure with two arguments, to which it binds the `key` and the associated `value` for each key-value pair in the `Map`. Here, we use the obvious variable names `key` and `value` in our closure:
+
+```groovy
+printMapClosure = { key, value ->
+    println "$key = $value"
+}
+
+[ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
+```
+
+Prints:
+
+```
+Yue = Wu
+Mark = Williams
+Sudha = Kumari
+```
+
+A closure has two other important features. First, it can access variables in the scope where it is defined, so that it can interact with them.
+
+Second, a closure can be defined in an anonymous manner, meaning that it is not given a name, and is defined in the place where it needs to be used.
+
+As an example showing both these features, see the following code fragment:
+
+```groovy
+myMap = ["China": 1 , "India" : 2, "USA" : 3]
+
+result = 0
+myMap.keySet().each( { result+= myMap[it] } )
+
+println result
+```
+
+Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
 
 (implicit-variables)=
 
@@ -320,183 +502,192 @@ In the above snippet the `task.cpus` holds the value for the {ref}`cpus directiv
 
 See {ref}`Process directives <process-directives>` for details.
 
-(script-closure)=
+(implicit-functions)=
 
-## Closures
+## Implicit functions
 
-Briefly, a closure is a block of code that can be passed as an argument to a function. Thus, you can define a chunk of code and then pass it around as if it were a string or an integer.
+The following functions are available in Nextflow scripts:
 
-More formally, you can create functions that are defined as *first-class objects*.
+`branchCriteria( closure )`
+: Create a branch criteria to use with the {ref}`operator-branch` operator.
 
-```groovy
-square = { it * it }
-```
+`error( message = null )`
+: Throw a script runtime error with an optional error message.
 
-The curly brackets around the expression `it * it` tells the script interpreter to treat this expression as code. The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
+`exit( exitCode = 0, message = null )`
+: :::{deprecated} 22.06.0-edge
+  Use `error()` instead
+  :::
+: Stop the pipeline execution and return an exit code and optional error message.
 
-Once compiled the function object is assigned to the variable `square` as any other variable assignments shown previously. Now we can do something like this:
+`file( filePattern, options = [:] )`
+: Get one or more files from a path or glob pattern. Returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) or list of Paths if there are multiple files. See [Files and I/O](#files-and-io).
 
-```groovy
-println square(9)
-```
+`files( filePattern, options = [:] )`
+: Convenience method for `file()` that always returns a list.
 
-and get the value 81.
+`groupKey( key, size )`
+: Create a grouping key to use with the {ref}`operator-grouptuple` operator.
 
-This is not very interesting until we find that we can pass the function `square` as an argument to other functions or methods. Some built-in functions take a function like this as an argument. One example is the `collect` method on lists:
+`multiMapCriteria( closure )`
+: Create a multi-map criteria to use with the {ref}`operator-multiMap` operator.
 
-```groovy
-[ 1, 2, 3, 4 ].collect(square)
-```
+`sendMail( params )`
+: Send an email. See {ref}`mail-page`.
 
-This expression says: Create an array with the values 1, 2, 3 and 4, then call its `collect` method, passing in the closure we defined above. The `collect` method runs through each item in the array, calls the closure on the item, then puts the result in a new array, resulting in:
+`tuple( collection )`
+: Create a tuple object from the given collection.
 
-```groovy
-[ 1, 4, 9, 16 ]
-```
+`tuple( ... args )`
+: Create a tuple object from the given arguments.
 
-For more methods that you can call with closures as arguments, see the [Groovy GDK documentation](http://docs.groovy-lang.org/latest/html/groovy-jdk/).
+(implicit-classes)=
 
-By default, closures take a single parameter called `it`, but you can also create closures with multiple, custom-named parameters. For example, the method `Map.each()` can take a closure with two arguments, to which it binds the `key` and the associated `value` for each key-value pair in the `Map`. Here, we use the obvious variable names `key` and `value` in our closure:
+## Implicit classes
 
-```groovy
-printMapClosure = { key, value ->
-    println "$key = $value"
-}
+The following classes are imported by default in Nextflow scripts:
 
-[ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
-```
+- `java.lang.*`
+- `java.util.*`
+- `java.io.*`
+- `java.net.*`
+- `groovy.lang.*`
+- `groovy.util.*`
+- `java.math.BigInteger`
+- `java.math.BigDecimal`
+- `java.nio.file.Path`
 
-Prints:
+Additionally, Nextflow imports several new classes which are described below.
 
-```
-Yue = Wu
-Mark = Williams
-Sudha = Kumari
-```
+### Channel
 
-A closure has two other important features. First, it can access variables in the scope where it is defined, so that it can interact with them.
+The `Channel` class provides the channel factory methods. See {ref}`channel-factory` for more information.
 
-Second, a closure can be defined in an anonymous manner, meaning that it is not given a name, and is defined in the place where it needs to be used.
+(implicit-classes-duration)=
 
-As an example showing both these features, see the following code fragment:
+### Duration
 
-```groovy
-myMap = ["China": 1 , "India" : 2, "USA" : 3]
+A `Duration` represents some duration of time.
 
-result = 0
-myMap.keySet().each( { result+= myMap[it] } )
+You can create a duration by adding a time unit suffix to an integer, e.g. `1.h`. The following suffixes are available:
 
-println result
-```
+| Unit                            | Description  |
+| ------------------------------- | ------------ |
+| `ms`, `milli`, `millis`         | Milliseconds |
+| `s`, `sec`, `second`, `seconds` | Seconds      |
+| `m`, `min`, `minute`, `minutes` | Minutes      |
+| `h`, `hour`, `hours`            | Hours        |
+| `d`, `day`, `days`              | Days         |
 
-Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
-
-(script-regexp)=
-
-## Regular expressions
-
-Regular expressions are the Swiss Army knife of text processing. They provide the programmer with the ability to match and extract patterns from strings.
-
-Regular expressions are available via the `~/pattern/` syntax and the `=~` and `==~` operators.
-
-Use `=~` to check whether a given pattern occurs anywhere in a string:
+You can also create a duration with `Duration.of()`:
 
 ```groovy
-assert 'foo' =~ /foo/       // return TRUE
-assert 'foobar' =~ /foo/    // return TRUE
+// integer value (milliseconds)
+oneSecond = Duration.of(1000)
+
+// simple string value
+oneHour = Duration.of('1h')
+
+// complex string value
+complexDuration = Duration.of('1day 6hours 3minutes 30seconds')
 ```
 
-Use `==~` to check whether a string matches a given regular expression pattern exactly.
+Durations can be compared like numbers, and they support basic arithmetic operations:
 
 ```groovy
-assert 'foo' ==~ /foo/       // return TRUE
-assert 'foobar' ==~ /foo/    // return FALSE
+a = 1.h
+b = 2.h
+
+assert a < b
+assert a + a == b
+assert b - a == a
+assert a * 2 == b
+assert b / 2 == a
 ```
 
-It is worth noting that the `~` operator creates a Java `Pattern` object from the given string, while the `=~` operator creates a Java `Matcher` object.
+The following methods are available for a `Duration` object:
+
+`getDays()`, `toDays()`
+: Get the duration value in days (rounded down).
+
+`getHours()`, `toHours()`
+: Get the duration value in hours (rounded down).
+
+`getMillis()`, `toMillis()`
+: Get the duration value in milliseconds.
+
+`getMinutes()`, `toMinutes()`
+: Get the duration value in minutes (rounded down).
+
+`getSeconds()`, `toSeconds()`
+: Get the duration value in seconds (rounded down).
+
+(implicit-classes-memoryunit)=
+
+### MemoryUnit
+
+A `MemoryUnit` represents a quantity of bytes.
+
+You can create a memory unit by adding a unit suffix to an integer, e.g. `1.GB`. The following suffixes are available:
+
+| Unit | Description |
+| ---- | ----------- |
+| `B`  | Bytes       |
+| `KB` | Kilobytes   |
+| `MB` | Megabytes   |
+| `GB` | Gigabytes   |
+| `TB` | Terabytes   |
+| `PB` | Petabytes   |
+| `EB` | Exabytes    |
+| `ZB` | Zettabytes  |
+
+:::{note}
+Technically speaking, a kilobyte is equal to 1000 bytes, whereas 1024 bytes is called a "kibibyte" and abbreviated as "KiB", and so on for the other units. In practice, however, kilobyte is commonly understood to mean 1024 bytes, and Nextflow follows this convention in its implementation as well as this documentation.
+:::
+
+You can also create a memory unit with `MemoryUnit.of()`:
 
 ```groovy
-x = ~/abc/
-println x.class
-// prints java.util.regex.Pattern
+// integer value (bytes)
+oneKilobyte = MemoryUnit.of(1024)
 
-y = 'some string' =~ /abc/
-println y.class
-// prints java.util.regex.Matcher
+// string value
+oneGigabyte = MemoryUnit.of('1 GB')
 ```
 
-Regular expression support is imported from Java. Java's regular expression language and API is documented in the [Pattern Java documentation](http://download.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html).
-
-You may also be interested in this post: [Groovy: Don't Fear the RegExp](https://web.archive.org/web/20170621185113/http://www.naleid.com/blog/2008/05/19/dont-fear-the-regexp).
-
-### String replacement
-
-To replace pattern occurrences in a given string, use the `replaceFirst` and `replaceAll` methods:
+Memory units can be compared like numbers, and they support basic arithmetic operations:
 
 ```groovy
-x = "colour".replaceFirst(/ou/, "o")
-println x
-// prints: color
+a = 1.GB
+b = 2.GB
 
-y = "cheesecheese".replaceAll(/cheese/, "nice")
-println y
-// prints: nicenice
+assert a < b
+assert a + a == b
+assert b - a == a
+assert a * 2 == b
+assert b / 2 == a
 ```
 
-### Capturing groups
+The following methods are available for a `MemoryUnit` object:
 
-You can match a pattern that includes groups. First create a matcher object with the `=~` operator. Then, you can index the matcher object to find the matches: `matcher[0]` returns a list representing the first match of the regular expression in the string. The first list element is the string that matches the entire regular expression, and the remaining elements are the strings that match each group.
+`getBytes()`, `toBytes()`
+: Get the memory value in bytes (B).
 
-Here's how it works:
+`getGiga()`, `toGiga()`
+: Get the memory value in gigabytes (rounded down), where 1 GB = 1024 MB.
 
-```groovy
-programVersion = '2.7.3-beta'
-m = programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
+`getKilo()`, `toKilo()`
+: Get the memory value in kilobytes (rounded down), where 1 KB = 1024 B.
 
-assert m[0] == ['2.7.3-beta', '2', '7', '3', 'beta']
-assert m[0][1] == '2'
-assert m[0][2] == '7'
-assert m[0][3] == '3'
-assert m[0][4] == 'beta'
-```
+`getMega()`, `toMega()`
+: Get the memory value in megabytes (rounded down), where 1 MB = 1024 KB.
 
-Applying some syntactic sugar, you can do the same in just one line of code:
+`toUnit( unit )`
+: Get the memory value in terms of a given unit (rounded down). The unit can be one of: `'B'`, `'KB'`, `'MB'`, `'GB'`, `'TB'`, `'PB'`, `'EB'`, `'ZB'`.
 
-```groovy
-programVersion = '2.7.3-beta'
-(full, major, minor, patch, flavor) = (programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
+### ValueObject
 
-println full    // 2.7.3-beta
-println major   // 2
-println minor   // 7
-println patch   // 3
-println flavor  // beta
-```
-
-### Removing part of a string
-
-You can remove part of a `String` value using a regular expression pattern. The first match found is replaced with an empty String:
-
-```groovy
-// define the regexp pattern
-wordStartsWithGr = ~/(?i)\s+Gr\w+/
-
-// apply and verify the result
-('Hello Groovy world!' - wordStartsWithGr) == 'Hello world!'
-('Hi Grails users' - wordStartsWithGr) == 'Hi users'
-```
-
-Remove the first 5-character word from a string:
-
-```groovy
-assert ('Remove first match of 5 letter word' - ~/\b\w{5}\b/) == 'Remove match of 5 letter word'
-```
-
-Remove the first number with its trailing whitespace from a string:
-
-```groovy
-assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
-```
+`ValueObject` is an AST transformation for classes and enums, which simply combines [AutoClone](http://docs.groovy-lang.org/latest/html/gapi/groovy/transform/AutoClone.html) and [Immutable](https://docs.groovy-lang.org/latest/html/gapi/groovy/transform/Immutable.html). It is useful for defining custom "record" types.
 
 (script-file-io)=
 
@@ -504,97 +695,169 @@ assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 
 ### Opening files
 
-To access and work with files, use the `file` method, which returns a file system object given a file path string:
+To access and work with files, use the `file()` method, which returns a file system object given a file path string:
 
 ```groovy
 myFile = file('some/path/to/my_file.file')
 ```
 
-The `file` method can reference both files and directories, depending on what the string path refers to in the file system.
+The `file()` method can reference both files and directories, depending on what the string path refers to in the file system.
 
-When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is interpreted as a [glob][glob] path matcher and the `file` method returns a list object holding the paths of files whose names match the specified pattern, or an empty list if no match is found:
+When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is interpreted as a [glob](http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) path matcher and the `file()` method returns a list object holding the paths of files whose names match the specified pattern, or an empty list if no match is found:
 
 ```groovy
 listOfFiles = file('some/path/*.fa')
 ```
 
 :::{note}
-Two asterisks (`**`) in a glob pattern works like `*` but also searches through subdirectories.
+The `file()` method does not return a list if only one file is matched. Use the `files()` method to always return a list.
 :::
 
-By default, wildcard characters do not match directories or hidden files. For example, if you want to include hidden files in the result list, add the optional parameter `hidden`:
+:::{note}
+A double asterisk (`**`) in a glob pattern works like `*` but also searches through subdirectories.
+:::
+
+By default, wildcard characters do not match directories or hidden files. For example, if you want to include hidden files in the result list, enable the `hidden` option:
 
 ```groovy
 listWithHidden = file('some/path/*.fa', hidden: true)
 ```
 
-Here are `file`'s available options:
-
-| Name          | Description                                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| glob          | When `true` interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`) |
-| type          | Type of paths returned, either `file`, `dir` or `any` (default: `file`)                                                                    |
-| hidden        | When `true` includes hidden files in the resulting paths (default: `false`)                                                                |
-| maxDepth      | Maximum number of directory levels to visit (default: `no limit`)                                                                          |
-| followLinks   | When `true` follows symbolic links during directory tree traversal, otherwise treats them as files (default: `true`)                       |
-| checkIfExists | When `true` throws an exception of the specified path do not exist in the file system (default: `false`)                                   |
-
 :::{note}
-Nextflow also provides a `files()` method, which is identical to `file()` except that it always returns a list, whereas `file()` only returns a list if it matches multiple files.
-:::
-
-:::{tip}
-If you are a Java geek, you might be interested to know that the `file` method returns a [Path](http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html) object, which allows you to use the same methods you would use in a Java program.
-:::
-
-:::{warning}
-When a file reference is created using a URL path and it's converted to a string, the protocol schema is not included in the resulting string.
-
-You can check this behavior with the code below:
-
-```groovy
-def ref = file('s3://some-bucket/foo.txt')
-assert ref.toString() == '/some-bucket/foo.txt'
-assert "$ref" == '/some-bucket/foo.txt'
-```
-
-To include the schema, the `toUriString()` method should be used instead:
-
-```groovy
-assert ref.toUriString() == 's3://some-bucket/foo.txt'
-```
-
-Also, instead of composing paths through string interpolation, the `resolve()` method or the `/` operator should be used instead::
+To compose paths, instead of string interpolation, use the `resolve()` method or the `/` operator:
 
 ```groovy
 def dir = file('s3://bucket/some/data/path')
-def sample = "$dir/sample.bam"                // don't do this
-def sample1 = dir.resolve('sample.bam')
-def sample2 = dir / 'sample.bam'              // the `/` operator can be used to compose paths
+def sample1 = dir.resolve('sample.bam')         // correct
+def sample2 = dir / 'sample.bam'
+def sample3 = file("$dir/sample.bam")           // correct (but verbose)
+def sample4 = "$dir/sample.bam"                 // incorrect
 ```
 :::
 
+The following options are available:
+
+`checkIfExists`
+: When `true`, throws an exception if the specified path does not exist in the file system (default: `false`)
+
+`followLinks`
+: When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`)
+
+`glob`
+: When `true`, interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`)
+
+`hidden`
+: When `true`, includes hidden files in the resulting paths (default: `false`)
+
+`maxDepth`
+: Maximum number of directory levels to visit (default: *no limit*)
+
+`type`
+: Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`)
+
 See also: {ref}`Channel.fromPath <channel-path>`.
 
-### Basic read/write
+### Getting file attributes
 
-Given a file variable, declared using the `file` method as shown in the previous example, reading a file is as easy as getting the value of the file's `text` property, which returns the file content as a string value:
+The `file()` method returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html), so any method defined for Path can also be used in a Nextflow script.
+
+Additionally, the following methods are also defined for Paths in Nextflow:
+
+`exists()`
+: Returns `true` if the file exists.
+
+`getBaseName()`
+: Gets the file name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
+
+`getExtension()`
+: Gets the file extension, e.g. `/some/path/file.txt` -> `txt`.
+
+`getName()`
+: Gets the file name, e.g. `/some/path/file.txt` -> `file.txt`.
+
+`getSimpleName()`
+: Gets the file name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
+
+`getParent()`
+: Gets the file parent path, e.g. `/some/path/file.txt` -> `/some/path`.
+
+`getScheme()`
+: Gets the file URI scheme, e.g. `s3://some-bucket/foo.txt` -> `s3`.
+
+`isDirectory()`
+: Returns `true` if the file is a directory.
+
+`isEmpty()`
+: Returns `true` if the file is empty or does not exist.
+
+`isFile()`
+: Returns `true` if it is a regular file (i.e. not a directory).
+
+`isHidden()`
+: Returns `true` if the file is hidden.
+
+`isLink()`
+: Returns `true` if the file is a symbolic link.
+
+`lastModified()`
+: Returns the file last modified timestamp in Unix time (i.e. milliseconds since January 1, 1970).
+
+`size()`
+: Gets the file size in bytes.
+
+`toUriString()`
+: Gets the file path along with the protocol scheme:
+  ```groovy
+  def ref = file('s3://some-bucket/foo.txt')
+
+  assert ref.toString() == '/some-bucket/foo.txt'
+  assert "$ref" == '/some-bucket/foo.txt'
+  assert ref.toUriString() == 's3://some-bucket/foo.txt'
+  ```
+
+:::{tip}
+In Groovy, any method that looks like `get*()` can also be accessed as a field. For example, `myFile.getName()` is equivalent to `myFile.name`, `myFile.getBaseName()` is equivalent to `myFile.baseName`, and so on.
+:::
+
+### Reading and writing
+
+#### Reading and writing an entire file
+
+Given a file variable, created with the `file()` method as shown previously, reading a file is as easy as getting the file's `text` property, which returns the file content as a string:
 
 ```groovy
 print myFile.text
 ```
 
-Similarly, you can save a string value to a file by simply assigning it to the file's `text` property:
+Similarly, you can save a string to a file by assigning it to the file's `text` property:
 
 ```groovy
 myFile.text = 'Hello world!'
+```
+
+Binary data can managed in the same way, just using the file property `bytes` instead of `text`. Thus, the following example reads the file and returns its content as a byte array:
+
+```groovy
+binaryContent = myFile.bytes
+```
+
+Or you can save a byte array to a file:
+
+```groovy
+myFile.bytes = binaryContent
 ```
 
 :::{note}
 The above assignment overwrites any existing file contents, and implicitly creates the file if it doesn't exist.
 :::
 
-In order to append a string value to a file without erasing existing content, you can use the `append` method:
+:::{warning}
+The above methods read and write the **entire** file contents at once, in a single variable or buffer. For this reason, when dealing with large files it is recommended that you use a more memory efficient approach, such as reading/writing a file line by line or using a fixed size buffer.
+:::
+
+#### Appending to a file
+
+In order to append a string value to a file without erasing existing content, you can use the `append()` method:
 
 ```groovy
 myFile.append('Add this line\n')
@@ -606,23 +869,7 @@ Or use the left shift operator, a more idiomatic way to append text content to a
 myFile << 'Add a line more\n'
 ```
 
-Binary data can managed in the same way, just using the file property `bytes` instead of `text`. Thus, the following example reads the file and returns its content as a byte array:
-
-```groovy
-binaryContent = myFile.bytes
-```
-
-Or you can save a byte array data buffer to a file, by simply writing:
-
-```groovy
-myFile.bytes = binaryBuffer
-```
-
-:::{warning}
-The above methods read and write the **entire** file contents at once, in a single variable or buffer. For this reason, when dealing with large files it is recommended that you use a more memory efficient approach, such as reading/writing a file line by line or using a fixed size buffer.
-:::
-
-### Read a file line by line
+#### Reading a file line by line
 
 In order to read a text file line by line you can use the method `readLines()` provided by the file object, which returns the file content as a list of strings:
 
@@ -646,7 +893,7 @@ file('some/my_file.txt')
 The method `readLines()` reads the **entire** file at once and returns a list containing all the lines. For this reason, do not use it to read big files.
 :::
 
-To process a big file, use the method `eachLine`, which reads only a single line at a time into memory:
+To process a big file, use the method `eachLine()`, which reads only a single line at a time into memory:
 
 ```groovy
 count = 0
@@ -655,11 +902,11 @@ myFile.eachLine { str ->
 }
 ```
 
-### Advanced file reading operations
+#### Advanced file reading
 
-The classes `Reader` and `InputStream` provide fine control for reading text and binary files, respectively.\_
+The classes `Reader` and `InputStream` provide fine-grained control for reading text and binary files, respectively.
 
-The method `newReader` creates a [Reader](http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html) object for the given file that allows you to read the content as single characters, lines or arrays of characters:
+The method `newReader()` creates a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object for the given file that allows you to read the content as single characters, lines or arrays of characters:
 
 ```groovy
 myReader = myFile.newReader()
@@ -670,7 +917,7 @@ while( line = myReader.readLine() ) {
 myReader.close()
 ```
 
-The method `withReader` works similarly, but automatically calls the `close` method for you when you have finished processing the file. So, the previous example can be written more simply as:
+The method `withReader()` works similarly, but automatically calls the `close()` method for you when you have finished processing the file. So, the previous example can be written more simply as:
 
 ```groovy
 myFile.withReader {
@@ -681,27 +928,40 @@ myFile.withReader {
 }
 ```
 
-The methods `newInputStream` and `withInputStream` work similarly. The main difference is that they create an [InputStream](http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html) object useful for writing binary data.
+The methods `newInputStream()` and `withInputStream()` work similarly. The main difference is that they create an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object useful for writing binary data.
 
-Here are the most important methods for reading from files:
+The following methods are useful for reading files:
 
-| Name            | Description                                                                                                                                     |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| getText         | Returns the file content as a string value                                                                                                      |
-| getBytes        | Returns the file content as byte array                                                                                                          |
-| readLines       | Reads the file line by line and returns the content as a list of strings                                                                        |
-| eachLine        | Iterates over the file line by line, applying the specified {ref}`closure <script-closure>`                                                     |
-| eachByte        | Iterates over the file byte by byte, applying the specified {ref}`closure <script-closure>`                                                     |
-| withReader      | Opens a file for reading and lets you access it with a [Reader](http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html) object            |
-| withInputStream | Opens a file for reading and lets you access it with an [InputStream](http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html) object |
-| newReader       | Returns a [Reader](http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html) object to read a text file                                     |
-| newInputStream  | Returns an [InputStream](http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html) object to read a binary file                        |
+`eachByte( closure )`
+: Iterates over the file byte by byte, applying the specified {ref}`closure <script-closure>`.
 
-Read the Java documentation for [Reader](http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html) and [InputStream](http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html) classes to learn more about methods available for reading data from files.
+`eachLine( closure )`
+: Iterates over the file line by line, applying the specified {ref}`closure <script-closure>`.
 
-### Advanced file writing operations
+`getBytes()`
+: Returns the file content as a byte array.
 
-The `Writer` and `OutputStream` classes provide fine control for writing text and binary files, respectively, including low-level operations for single characters or bytes, and support for big files.
+`getText()`
+: Returns the file content as a string value.
+
+`newInputStream()`
+: Returns an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object to read a binary file.
+
+`newReader()`
+: Returns a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object to read a text file.
+
+`readLines()`
+: Reads the file line by line and returns the content as a list of strings.
+
+`withInputStream( closure )`
+: Opens a file for reading and lets you access it with an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object.
+
+`withReader( closure )`
+: Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object.
+
+#### Advanced file writing
+
+The `Writer` and `OutputStream` classes provide fine-grained control for writing text and binary files, respectively, including low-level operations for single characters or bytes, and support for big files.
 
 For example, given two file objects `sourceFile` and `targetFile`, the following code copies the first file's content into the second file, replacing all `U` characters with `X`:
 
@@ -716,45 +976,165 @@ sourceFile.withReader { source ->
 }
 ```
 
-Here are the most important methods for writing to files:
+The following methods are available for writing to files:
 
-| Name             | Description                                                                                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| setText          | Writes a string value to a file                                                                                                                         |
-| setBytes         | Writes a byte array to a file                                                                                                                           |
-| write            | Writes a string to a file, replacing any existing content                                                                                               |
-| append           | Appends a string value to a file without replacing existing content                                                                                     |
-| newWriter        | Creates a [Writer](http://docs.oracle.com/javase/7/docs/api/java/io/Writer.html) object that allows you to save text data to a file                     |
-| newPrintWriter   | Creates a [PrintWriter](http://docs.oracle.com/javase/7/docs/api/java/io/PrintWriter.html) object that allows you to write formatted text to a file     |
-| newOutputStream  | Creates an [OutputStream](http://docs.oracle.com/javase/7/docs/api/java/io/OutputStream.html) object that allows you to write binary data to a file     |
-| withWriter       | Applies the specified closure to a [Writer](http://docs.oracle.com/javase/7/docs/api/java/io/Writer.html) object, closing it when finished              |
-| withPrintWriter  | Applies the specified closure to a [PrintWriter](http://docs.oracle.com/javase/7/docs/api/java/io/PrintWriter.html) object, closing it when finished    |
-| withOutputStream | Applies the specified closure to an [OutputStream](http://docs.oracle.com/javase/7/docs/api/java/io/OutputStream.html) object, closing it when finished |
+`append( text )`
+: Appends a string value to a file without replacing existing content.
 
-Read the Java documentation for the [Writer](http://docs.oracle.com/javase/7/docs/api/java/io/Writer.html), [PrintWriter](http://docs.oracle.com/javase/7/docs/api/java/io/PrintWriter.html) and [OutputStream](http://docs.oracle.com/javase/7/docs/api/java/io/OutputStream.html) classes to learn more about methods available for writing data to files.
+`newOutputStream()`
+: Creates an [OutputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/OutputStream.html) object that allows you to write binary data to a file.
 
-### List directory content
+`newPrintWriter()`
+: Creates a [PrintWriter](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/PrintWriter.html) object that allows you to write formatted text to a file.
 
-Let's assume that you need to walk through a directory of your choice. You can define the `myDir` variable that points to it:
+`newWriter()`
+: Creates a [Writer](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Writer.html) object that allows you to save text data to a file.
+
+`setBytes( bytes )`
+: Writes a byte array to a file. Equivalent to setting the `bytes` property.
+
+`setText( text )`
+: Writes a string value to a file. Equivalent to setting the `text` property.
+
+`withOutputStream( closure )`
+: Applies the specified closure to an [OutputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/OutputStream.html) object, closing it when finished.
+
+`withPrintWriter( closure )`
+: Applies the specified closure to a [PrintWriter](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/PrintWriter.html) object, closing it when finished.
+
+`withWriter( closure )`
+: Applies the specified closure to a [Writer](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Writer.html) object, closing it when finished.
+
+`write( text )`
+: Writes a string to a file, replacing any existing content.
+
+### Filesystem operations
+
+The following methods are available for manipulating files and directories in a filesystem:
+
+`copyTo( target )`
+: Copies a source file or directory to a target file or directory.
+
+: *When copying a file to another file:* if the target file already exists, it will be replaced.
+
+  ```groovy
+  file('/some/path/my_file.txt').copyTo('/another/path/new_file.txt')
+  ```
+
+: *When copying a file to a directory:* the file will be copied into the directory, replacing any file with the same name.
+
+  ```groovy
+  file('/some/path/my_file.txt').copyTo('/another/path')
+  ```
+
+: *When copying a directory to another directory:* if the target directory already exists, the source directory will be copied into the target directory, replacing any sub-directory with the same name. If the target path does not exist, it will be created automatically.
+
+  ```groovy
+  file('/any/dir_a').moveTo('/any/dir_b')
+  ```
+
+  The result of the above example depends on the existence of the target directory. If the target directory exists, the source is moved into the target directory, resulting in the path `/any/dir_b/dir_a`. If the target directory does not exist, the source is just renamed to the target name, resulting in the path `/any/dir_b`.
+
+: :::{note}
+  The `copyTo()` method follows the semantics of the Linux command `cp -r <source> <target>`, with the following caveat: while Linux tools often treat paths ending with a slash (e.g. `/some/path/name/`) as directories, and those not (e.g. `/some/path/name`) as regular files, Nextflow (due to its use of the Java files API) views both of these paths as the same file system object. If the path exists, it is handled according to its actual type (i.e. as a regular file or as a directory). If the path does not exist, it is treated as a regular file, with any missing parent directories created automatically.
+  :::
+
+`delete()`
+: Deletes the file or directory at the given path, returning `true` if the operation succeeds, and `false` otherwise:
+
+  ```groovy
+  myFile = file('some/file.txt')
+  result = myFile.delete()
+  println result ? "OK" : "Cannot delete: $myFile"
+  ```
+
+  If a directory is not empty, it will not be deleted and `delete()` will return `false`.
+
+`deleteDir()`
+: Deletes a directory and all of its contents.
+
+  ```groovy
+  file('any/path').deleteDir()
+  ```
+
+`getPermissions()`
+: Returns a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation), e.g. `'rw-rw-r--'`.
+
+`list()`
+: Returns the first-level elements (files and directories) of a directory as a list of strings.
+
+`listFiles()`
+: Returns the first-level elements (files and directories) of a directory as a list of Paths.
+
+`mkdir()`
+: Creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise:
+
+  ```groovy
+  myDir = file('any/path')
+  result = myDir.mkdir()
+  println result ? "OK" : "Cannot create directory: $myDir"
+  ```
+
+  If the parent directories do not exist, the directory will not be created and `mkdir()` will return `false`.
+
+`mkdirs()`
+: Creates a directory at the given path, including any nonexistent parent directories:
+
+  ```groovy
+  file('any/path').mkdirs()
+  ```
+
+`mklink( linkName, options = [:] )`
+: Creates a *filesystem link* to a given path:
+
+  ```groovy
+  myFile = file('/some/path/file.txt')
+  myFile.mklink('/user/name/link-to-file.txt')
+  ```
+
+  Available options:
+
+  `hard`
+  : When `true`, creates a *hard* link, otherwise creates a *soft* (aka *symbolic*) link (default: `false`).
+
+  `overwrite`
+  : When `true`, overwrites any existing file with the same name, otherwise throws a [FileAlreadyExistsException](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileAlreadyExistsException.html) (default: `false`).
+
+`moveTo( target )`
+: Moves a source file or directory to a target file or directory. Follows the same semantics as `copyTo()`.
+
+`renameTo( target )`
+: Rename a file or directory:
+
+  ```groovy
+  file('my_file.txt').renameTo('new_file_name.txt')
+  ```
+
+`setPermissions( permissions )`
+: Sets a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation):
+
+  ```groovy
+  myFile.setPermissions('rwxr-xr-x')
+  ```
+
+`setPermissions( owner, group, other )`
+: Sets a file's permissions using the [numeric notation](http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation), i.e. as three digits representing the **owner**, **group**, and **other** permissions:
+
+  ```groovy
+  myFile.setPermissions(7,5,5)
+  ```
+
+#### Listing directories
+
+The simplest way to list a directory is to use `list()` or `listFiles()`, which return a collection of first-level elements (files and directories) of a directory:
 
 ```groovy
-myDir = file('any/path')
-```
-
-The simplest way to get a directory list is by using the methods `list` or `listFiles`, which return a collection of first-level elements (files and directories) of a directory:
-
-```groovy
-allFiles = myDir.list()
-for( def file : allFiles ) {
+for( def file : file('any/path').list() ) {
     println file
 }
 ```
 
-:::{note}
-The only difference between `list` and `listFiles` is that the former returns a list of strings, and the latter returns a list of file objects that allow you to access file metadata (size, last modified time, etc).
-:::
-
-The `eachFile` method allows you to iterate through the first-level elements only (just like `listFiles`). As with other `each-` methods, `eachFiles` takes a closure as a parameter:
+Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFile()` takes a closure as a parameter:
 
 ```groovy
 myDir.eachFile { item ->
@@ -767,204 +1147,37 @@ myDir.eachFile { item ->
 }
 ```
 
-Several variants of the above method are available. See the table below for a complete list.
+The following methods are available for listing and traversing directories:
 
-| Name            | Description                                                                                                                                                                                                    |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| eachFile        | Iterates through first-level elements (files and directories). [Read more](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFile(groovy.io.FileType,%20groovy.lang.Closure)>)         |
-| eachDir         | Iterates through first-level directories only. [Read more](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDir(groovy.lang.Closure)>)                                                |
-| eachFileMatch   | Iterates through files and dirs whose names match the given filter. [Read more](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFileMatch(java.lang.Object,%20groovy.lang.Closure)>) |
-| eachDirMatch    | Iterates through directories whose names match the given filter. [Read more](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDirMatch(java.lang.Object,%20groovy.lang.Closure)>)     |
-| eachFileRecurse | Iterates through directory elements depth-first. [Read more](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFileRecurse(groovy.lang.Closure)>)                                      |
-| eachDirRecurse  | Iterates through directories depth-first (regular files are ignored). [Read more](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDirRecurse(groovy.lang.Closure)>)                  |
+`eachDir( closure )`
+: Iterates through first-level directories only. [Read more](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDir(groovy.lang.Closure))
 
-See also: Channel {ref}`channel-path` method.
+`eachDirMatch( nameFilter, closure )`
+: Iterates through directories whose names match the given filter. [Read more](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDirMatch(java.lang.Object,%20groovy.lang.Closure))
 
-### Create directories
+`eachDirRecurse( closure )`
+: Iterates through directories depth-first (regular files are ignored). [Read more](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDirRecurse(groovy.lang.Closure))
 
-Given a file variable representing a nonexistent directory, like the following:
+`eachFile( closure )`
+: Iterates through first-level files and directories. [Read more](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFile(groovy.lang.Closure))
 
-```groovy
-myDir = file('any/path')
-```
+`eachFileMatch( nameFilter, closure )`
+: Iterates through files and directories whose names match the given filter. [Read more](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFileMatch(java.lang.Object,%20groovy.lang.Closure))
 
-the `mkdir` method creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise:
+`eachFileRecurse( closure )`
+: Iterates through files and directories depth-first. [Read more](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFileRecurse(groovy.lang.Closure))
 
-```groovy
-result = myDir.mkdir()
-println result ? "OK" : "Cannot create directory: $myDir"
-```
+See also: {ref}`Channel.fromPath <channel-path>`.
 
-:::{note}
-If the parent directories do not exist, the above method will fail and return `false`.
-:::
+### Fetching HTTP/FTP files
 
-The `mkdirs` method creates the directory named by the file object, including any nonexistent parent directories:
-
-```groovy
-myDir.mkdirs()
-```
-
-### Create links
-
-Given a file, the `mklink` method creates a *file system link* for that file using the path specified as a parameter:
-
-```groovy
-myFile = file('/some/path/file.txt')
-myFile.mklink('/user/name/link-to-file.txt')
-```
-
-Table of optional parameters:
-
-| Name      | Description                                                                                                                                                                                                             |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| hard      | When `true` creates a *hard* link, otherwise creates a *soft* (aka *symbolic*) link. (default: `false`)                                                                                                                 |
-| overwrite | When `true` overwrites any existing file with the same name, otherwise throws a [FileAlreadyExistsException](http://docs.oracle.com/javase/8/docs/api/java/nio/file/FileAlreadyExistsException.html) (default: `false`) |
-
-### Copy files
-
-The `copyTo` method copies a file into a new file or into a directory, or copies a directory to a new directory:
-
-```groovy
-myFile.copyTo('new_name.txt')
-```
-
-:::{note}
-If the target file already exists, it will be replaced by the new one. Note also that, if the target is a directory, the source file will be copied into that directory, maintaining the file's original name.
-:::
-
-When the source file is a directory, all its content is copied to the target directory:
-
-```groovy
-myDir = file('/some/path')
-myDir.copyTo('/some/new/path')
-```
-
-If the target path does not exist, it will be created automatically.
-
-:::{note}
-The `copyTo` method mimics the semantics of the Linux command `cp -r <source> <target>`, with the following caveat: while Linux tools often treat paths ending with a slash (e.g. `/some/path/name/`) as directories, and those not (e.g. `/some/path/name`) as regular files, Nextflow (due to its use of the Java files API) views both these paths as the same file system object. If the path exists, it is handled according to its actual type (i.e. as a regular file or as a directory). If the path does not exist, it is treated as a regular file, with any missing parent directories created automatically.
-:::
-
-### Move files
-
-You can move a file by using the `moveTo` method:
-
-```groovy
-myFile = file('/some/path/file.txt')
-myFile.moveTo('/another/path/new_file.txt')
-```
-
-:::{note}
-When a file with the same name as the target already exists, it will be replaced by the source. Note also that, when the target is a directory, the file will be moved to (or within) that directory, maintaining the file's original name.
-:::
-
-When the source is a directory, all the directory content is moved to the target directory:
-
-```groovy
-myDir = file('/any/dir_a')
-myDir.moveTo('/any/dir_b')
-```
-
-Please note that the result of the above example depends on the existence of the target directory. If the target directory exists, the source is moved into the target directory, resulting in the path:
-
-```
-/any/dir_b/dir_a
-```
-
-If the target directory does not exist, the source is just renamed to the target name, resulting in the path:
-
-```
-/any/dir_b
-```
-
-:::{note}
-The `moveTo` method mimics the semantics of the Linux command `mv <source> <target>`, with the same caveat as that given above for `copyTo`.
-:::
-
-### Rename files
-
-You can rename a file or directory by simply using the `renameTo` method:
-
-```groovy
-myFile = file('my_file.txt')
-myFile.renameTo('new_file_name.txt')
-```
-
-### Delete files
-
-The `delete` method deletes the file or directory at the given path, returning `true` if the operation succeeds, and `false` otherwise:
-
-```groovy
-myFile = file('some/file.txt')
-result = myFile.delete()
-println result ? "OK" : "Cannot delete: $myFile"
-```
-
-:::{note}
-This method deletes a directory **only** if it does not contain any files or sub-directories. To delete a directory and **all** its contents (i.e. removing all the files and sub-directories it may contain), use the method `deleteDir`.
-:::
-
-### Check file attributes
-
-The following methods can be used on a file variable created by using the `file` method:
-
-| Name          | Description                                                                          |
-| ------------- | ------------------------------------------------------------------------------------ |
-| getName       | Gets the file name e.g. `/some/path/file.txt` -> `file.txt`                          |
-| getBaseName   | Gets the file name without its extension e.g. `/some/path/file.tar.gz` -> `file.tar` |
-| getSimpleName | Gets the file name without any extension e.g. `/some/path/file.tar.gz` -> `file`     |
-| getExtension  | Gets the file extension e.g. `/some/path/file.txt` -> `txt`                          |
-| getParent     | Gets the file parent path e.g. `/some/path/file.txt` -> `/some/path`                 |
-| size          | Gets the file size in bytes                                                          |
-| exists        | Returns `true` if the file exists, or `false` otherwise                              |
-| isEmpty       | Returns `true` if the file is zero length or does not exist, `false` otherwise       |
-| isFile        | Returns `true` if it is a regular file e.g. not a directory                          |
-| isDirectory   | Returns `true` if the file is a directory                                            |
-| isHidden      | Returns `true` if the file is hidden                                                 |
-| lastModified  | Returns the file last modified timestamp i.e. a long as Linux epoch time             |
-
-For example, the following line prints a file name and size:
-
-```groovy
-println "File ${myFile.getName()} size: ${myFile.size()}"
-```
-
-:::{tip}
-The invocation of any method name starting with the `get` prefix can be shortcut by omitting the `get` prefix and `()` parentheses. Therefore, writing `myFile.getName()` is exactly the same as `myFile.name` and `myFile.getBaseName()` is the same as `myFile.baseName` and so on.
-:::
-
-### Get and modify file permissions
-
-Given a file variable representing a file (or directory), the `getPermissions` method returns a 9-character string representing the file's permissions using the [Linux symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation), e.g. `rw-rw-r--`:
-
-```groovy
-permissions = myFile.getPermissions()
-```
-
-Similarly, the `setPermissions` method sets the file's permissions using the same notation:
-
-```groovy
-myFile.setPermissions('rwxr-xr-x')
-```
-
-A second version of the `setPermissions` method sets a file's permissions given three digits representing, respectively, the `owner`, `group` and `other` permissions:
-
-```groovy
-myFile.setPermissions(7,5,5)
-```
-
-Learn more about [File permissions numeric notation](http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation).
-
-### HTTP/FTP files
-
-Nextflow provides transparent integration of HTTP/S and FTP protocols for handling remote resources as local file system objects. Simply specify the resource URL as the argument of the `file` object:
+Nextflow integrates seamlessly with the HTTP(S) and FTP protocols for handling remote resources the same as local files. Simply specify the resource URL when opening the file:
 
 ```groovy
 pdb = file('http://files.rcsb.org/header/5FID.pdb')
 ```
 
-Then, you can access it as a local file as described in the previous sections:
+Then, you can access it as a local file as described previously:
 
 ```groovy
 println pdb.text
@@ -973,42 +1186,33 @@ println pdb.text
 The above one-liner prints the content of the remote PDB file. Previous sections provide code examples showing how to stream or copy the content of files.
 
 :::{note}
-Write and list operations are not supported for HTTP/S and FTP files.
+Write and list operations are not supported for HTTP(S) and FTP files.
 :::
 
-### Counting records
+### Splitting and counting records
 
-#### countLines
+The following methods are defined for Paths for splitting and counting records:
 
-The `countLines` method counts the lines in a text files.
+`countFasta()`
+: Counts the number of records in a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. See the {ref}`operator-splitfasta` operator for available options.
 
-```groovy
-def sample = file('/data/sample.txt')
-println sample.countLines()
-```
+`countFastq()`
+: Counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file. See the {ref}`operator-splitfastq` operator for available options.
 
-Files whose name ends with the `.gz` suffix are expected to be GZIP compressed and automatically uncompressed.
+`countJson()`
+: Counts the number of records in a JSON file. See the {ref}`operator-splitjson` operator for available options.
 
-#### countFasta
+`countLines()`
+: Counts the number of lines in a text file. See the {ref}`operator-splittext` operator for available options.
 
-The `countFasta` method counts the number of records in [FASTA](https://en.wikipedia.org/wiki/FASTA_format) formatted file.
+`splitFasta()`
+: Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
 
-```groovy
-def sample = file('/data/sample.fasta')
-println sample.countFasta()
-```
+`splitFastq()`
+: Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the {ref}`operator-splitfastq` operator for available options.
 
-Files whose name ends with the `.gz` suffix are expected to be GZIP compressed and automatically uncompressed.
+`splitJson()`
+: Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
 
-#### countFastq
-
-The `countFastq` method counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) formatted file.
-
-```groovy
-def sample = file('/data/sample.fastq')
-println sample.countFastq()
-```
-
-Files whose name ends with the `.gz` suffix are expected to be GZIP compressed and automatically uncompressed.
-
-[glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+`splitLines()`
+: Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.

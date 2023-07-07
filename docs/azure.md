@@ -336,6 +336,39 @@ The private registry is an addition, not a replacement, to the existing configur
 When using containers hosted in a private registry, the registry name must also be provided in the container name specified via the {ref}`container <process-container>` directive using the format: `[server]/[your-organization]/[your-image]:[tag]`. Read more about fully qualified image names in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry).
 :::
 
+### Virtual Network
+
+:::{versionadded} 23.03.0-edge
+:::
+
+Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the 
+`virtualNetwork` option can be added to the pool settings as follows:
+
+```groovy
+azure {
+    batch {
+        pools {
+            auto {
+                autoScale = true
+                vmType = 'Standard_D2_v2'
+                vmCount = 5
+                virtualNetwork = '<YOUR SUBNET ID>'
+            }
+        }
+    }
+}
+```
+
+The value of the setting must be the identifier of a subnet available in the virtual network to join. A valid subnet ID has the following form:
+
+```
+/subscriptions/<YOUR SUBSCRIPTION ID>/resourceGroups/<YOUR RESOURCE GROUP NAME>/providers/Microsoft.Network/virtualNetworks/<YOUR VIRTUAL NETWORK NAME>/subnets/<YOUR SUBNET NAME>
+```
+
+:::{warning}
+Batch Authentication with Shared Keys does not allow to link external resources (like Virtual Networks) to the pool. Therefore, Active Directory Authentication must be used in conjunction with the `virtualNetwork` setting.
+:::
+
 ## Active Directory Authentication
 
 :::{versionadded} 22.11.0-edge

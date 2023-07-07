@@ -508,6 +508,38 @@ Channel
 // -> 4
 ```
 
+(operator-countfasta)=
+
+## countFasta
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTA files, equivalent to `splitFasta | count`. See [splitFasta](#splitfasta) for the list of available options.
+
+(operator-countfastq)=
+
+## countFastq
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTQ files, equivalent to `splitFastq | count`. See [splitFastq](#splitfastq) for the list of available options.
+
+(operator-countjson)=
+
+## countJson
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of JSON files, equivalent to `splitJson | count`. See [splitJson](#splitjson) for the list of available options.
+
+(operator-countlines)=
+
+## countLines
+
+*Returns: value channel*
+
+Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
+
 (operator-cross)=
 
 ## cross
@@ -1280,7 +1312,7 @@ result = 15
 ```
 
 :::{tip}
-A common use case for this operator is to use the first paramter as an accumulator and the second parameter as the `i-th` item to be processed.
+A common use case for this operator is to use the first parameter as an accumulator and the second parameter as the `i-th` item to be processed.
 :::
 
 Optionally you can specify an initial value for the accumulator as shown below:
@@ -1308,6 +1340,8 @@ my_channel = Channel.of(10, 20, 30)
 ```
 
 However the `set` operator is more idiomatic in Nextflow scripting, since it can be used at the end of a chain of operator transformations, thus resulting in a more fluent and readable operation.
+
+(operator-splitcsv)=
 
 ## splitCsv
 
@@ -1383,6 +1417,8 @@ Available options:
 `strip`
 : Removes leading and trailing blanks from values (default: `false`)
 
+(operator-splitfasta)=
+
 ## splitFasta
 
 *Returns: queue channel*
@@ -1453,9 +1489,9 @@ Available options:
 `size`
 : Defines the size in memory units of the expected chunks e.g. `1.MB`.
 
-:::{tip}
-You can also use `countFasta` to count the number of entries in the FASTA file(s).
-:::
+See also: [countFasta](#countfasta)
+
+(operator-splitfastq)=
 
 ## splitFastq
 
@@ -1538,9 +1574,9 @@ Available options:
   - `qualityHeader`: Base quality header (it may be empty)
   - `qualityString`: Quality values for the sequence
 
-:::{tip}
-You can also use `countFastq` to count the number of entries in the FASTQ file(s).
-:::
+See also: [countFastq](#countfastq)
+
+(operator-splitjson)=
 
 ## splitJson
 
@@ -1605,9 +1641,9 @@ Available options:
 `path`
 : Define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to [JSONPath](https://goessner.net/articles/JsonPath/). The empty string is the document root (default). An integer in brackets is the 0-based index in a JSON array. A string preceded by a dot `.` is the key in a JSON object.
 
-:::{tip}
-You can also use `countJson` to count the number of elements in a JSON array or object.
-:::
+See also: [countJson](#countjson)
+
+(operator-splittext)=
 
 ## splitText
 
@@ -1669,7 +1705,7 @@ Available options:
 : The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).
 
 `file`
-: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 
 `keepHeader`
 : Parses the first line as header and prepends it to each emitted chunk.
@@ -1677,9 +1713,7 @@ Available options:
 `limit`
 : Limits the number of retrieved lines for each file to the specified value.
 
-:::{tip}
-You can also use `countLines` to count the number of lines in the text file(s).
-:::
+See also: [countLines](#countlines)
 
 (operator-subscribe)=
 

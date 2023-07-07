@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.5.14 - 14 Jun 2023
+- Update workflow.revision max length to match the one in Tower (#4010) [1433a903]
+
 1.5.13 - 15 May 2023
 - Preview support for virtual threads (#3871) [5c429046]
 - Update logging libraries [d7eae86e]
