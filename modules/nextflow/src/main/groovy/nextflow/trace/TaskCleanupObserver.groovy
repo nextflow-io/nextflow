@@ -45,7 +45,7 @@ class TaskCleanupObserver implements TraceObserver {
 
     private Map<TaskRun,TaskState> tasks = [:]
 
-    private Map<Path,TaskRun> taskLookup = [:]
+    private Map<Path,PathState> paths = [:]
 
     private Set<Path> publishedOutputs = []
 
@@ -90,10 +90,10 @@ class TaskCleanupObserver implements TraceObserver {
 
                     // add process nodes to the list of consumers
                     if( node.process != null )
-                        consumers.add(node.process.name)
+                        consumers << node.process.name
                     // add operator nodes to the queue to keep searching
                     else
-                        queue.add(node)
+                        queue << node
                 }
             }
 
@@ -121,7 +121,7 @@ class TaskCleanupObserver implements TraceObserver {
 
     /**
      * When a task is created, add it to the state map and add it as a consumer
-     * of any task whose output it takes as input.
+     * of any upstream tasks and output files.
      *
      * @param handler
      * @param trace
@@ -137,10 +137,15 @@ class TaskCleanupObserver implements TraceObserver {
             // add task to the task state map
             tasks[task] = new TaskState()
 
-            // add task as consumer to each task whoes output it takes as input
-            for( Path path : inputs )
-                if( path in taskLookup )
-                    tasks[taskLookup[path]].consumers.add(task)
+            // add task as consumer of each upstream task and output file
+            for( Path path : inputs ) {
+                if( path in paths ) {
+                    final pathState = paths[path]
+                    final taskState = tasks[pathState.task]
+                    taskState.consumers << task
+                    pathState.consumers << task
+                }
+            }
         }
         finally {
             sync.unlock()
@@ -148,7 +153,7 @@ class TaskCleanupObserver implements TraceObserver {
     }
 
     /**
-     * When a task is completed, track any temporary output files
+     * When a task is completed, track the task and its output files
      * for automatic cleanup.
      *
      * @param handler
@@ -187,9 +192,14 @@ class TaskCleanupObserver implements TraceObserver {
             // scan tasks for cleanup
             cleanup0()
 
-            // add new output files to task lookup
-            for( Path path : outputs )
-                taskLookup[path] = task
+            // add each output file to the path state map
+            for( Path path : outputs ) {
+                final pathState = new PathState(task)
+                if( path !in publishOutputs )
+                    pathState.published = true
+
+                paths[path] = pathState
+            }
         }
         finally {
             sync.unlock()
@@ -211,22 +221,26 @@ class TaskCleanupObserver implements TraceObserver {
         sync.lock()
         try {
             // get the corresponding task
-            final task = taskLookup[source]
+            final pathState = paths[source]
+            if( pathState ) {
+                final task = pathState.task
 
-            if( task ) {
-                log.trace "File ${source.toUriString()} was published by task ${task?.name}"
+                log.trace "File ${source.toUriString()} was published by task ${task.name}"
 
-                // remove file from task barriers
+                // mark file as published
                 tasks[task].publishOutputs.remove(source)
+                pathState.published = true
 
                 // delete task if it can be deleted
-                if( canDelete(task) )
+                if( canDeleteTask(task) )
                     deleteTask(task)
+                else if( canDeleteFile(source) )
+                    deleteFile(source)
             }
             else {
-                log.trace "File ${source.toUriString()} was published, but task isn't marked as completed yet"
+                log.trace "File ${source.toUriString()} was published before task was marked as completed"
 
-                // save file to be processed later
+                // save file to be processed when task completes
                 publishedOutputs << source
             }
         }
@@ -254,12 +268,16 @@ class TaskCleanupObserver implements TraceObserver {
     }
 
     /**
-     * Delete any task directories that can be deleted.
+     * Delete any task directories and output files that can be deleted.
      */
     private void cleanup0() {
         for( TaskRun task : tasks.keySet() )
-            if( canDelete(task) )
+            if( canDeleteTask(task) )
                 deleteTask(task)
+
+        for( Path path : paths.keySet() )
+            if( canDeleteFile(path) )
+                deleteFile(path)
     }
 
     /**
@@ -274,16 +292,15 @@ class TaskCleanupObserver implements TraceObserver {
      *
      * @param task
      */
-    private boolean canDelete(TaskRun task) {
+    private boolean canDeleteTask(TaskRun task) {
         final taskState = tasks[task]
-        final processConsumers = processes[task.processor.name].consumers
-        final taskConsumers = taskState.consumers
+        final processState = processes[task.processor.name]
 
         taskState.completed
             && !taskState.deleted
             && taskState.publishOutputs.isEmpty()
-            && processConsumers.every( p -> processes[p].closed )
-            && taskConsumers.every( t -> tasks[t].completed )
+            && processState.consumers.every( p -> processes[p].closed )
+            && taskState.consumers.every( t -> tasks[t].completed )
     }
 
     /**
@@ -296,6 +313,39 @@ class TaskCleanupObserver implements TraceObserver {
 
         FileHelper.deletePath(task.workDir)
         tasks[task].deleted = true
+    }
+
+    /**
+     * Determine whether a file can be deleted.
+     *
+     * A file can be deleted if:
+     * - the file has been published (or doesn't need to be published)
+     * - the file hasn't already been deleted
+     * - all of its process consumers are closed
+     * - all of its task consumers are completed
+     *
+     * @param path
+     */
+    private boolean canDeleteFile(Path path) {
+        final pathState = paths[path]
+        final processState = processes[pathState.task.processor.name]
+
+        pathState.published
+            && !pathState.deleted
+            && processState.consumers.every( p -> processes[p].closed )
+            && pathState.consumers.every( t -> tasks[t].completed )
+    }
+
+    /**
+     * Delete a file.
+     *
+     * @param path
+     */
+    private void deleteFile(Path path) {
+        log.trace "Deleting file: ${path.toUriString()}"
+
+        FileHelper.deletePath(path)
+        paths[path].deleted = true
     }
 
     static private class ProcessState {
@@ -312,6 +362,17 @@ class TaskCleanupObserver implements TraceObserver {
         Set<Path> publishOutputs = []
         boolean completed = false
         boolean deleted = false
+    }
+
+    static private class PathState {
+        TaskRun task
+        Set<TaskRun> consumers = []
+        boolean deleted = false
+        boolean published = false
+
+        PathState(TaskRun task) {
+            this.task = task
+        }
     }
 
 }
