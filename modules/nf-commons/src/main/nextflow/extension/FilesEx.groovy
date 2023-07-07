@@ -1606,9 +1606,11 @@ class FilesEx {
         if( Files.isDirectory(path) )
             return null
 
+        // use etag if available
         if( path instanceof ETagAwareFile )
-            return ((ETagAwareFile)path).getETag()
+            return path.getETag()
 
+        // otherwise compute checksum manually
         final is = Files.newInputStream(path)
         final md = MessageDigest.getInstance('MD5')
         final buf = new byte[16 << 10]

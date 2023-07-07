@@ -34,7 +34,7 @@ class MermaidRendererTest extends Specification {
         new Session()
     }
 
-    def 'should render a process graph using the `mmd` format' () {
+    def 'should render a workflow graph using the `mmd` format' () {
         given:
         def file = Files.createTempFile('test', null)
         def ch1 = new DataflowQueue()
@@ -48,7 +48,7 @@ class MermaidRendererTest extends Specification {
         dag.normalize()
 
         when:
-        new MermaidRenderer().renderProcessGraph(dag, file)
+        new MermaidRenderer().renderWorkflowGraph(dag, file)
         then:
         file.text ==
             '''

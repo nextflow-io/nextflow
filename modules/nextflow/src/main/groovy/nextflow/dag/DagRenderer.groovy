@@ -26,10 +26,10 @@ import java.nio.file.Path
 trait DagRenderer {
 
     /**
-     * Render a process DAG.
+     * Render a workflow DAG.
      */
-    void renderProcessGraph(DAG dag, Path file) {
-        throw new UnsupportedOperationException("Process DAG rendering is not supported for this file format")
+    void renderWorkflowGraph(DAG dag, Path file) {
+        throw new UnsupportedOperationException("Workflow DAG rendering is not supported for this file format")
     }
 
     /**

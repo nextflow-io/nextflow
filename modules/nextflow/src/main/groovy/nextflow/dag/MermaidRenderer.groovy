@@ -30,7 +30,7 @@ import groovy.transform.CompileStatic
 class MermaidRenderer implements DagRenderer {
 
     @Override
-    void renderProcessGraph(DAG dag, Path file) {
+    void renderWorkflowGraph(DAG dag, Path file) {
         def lines = []
         lines << "flowchart TD"
 

@@ -48,7 +48,7 @@ class GraphObserver implements TraceObserver {
 
     private Path file
 
-    private String type = 'process'
+    private String type = 'workflow'
 
     private DAG dag
 
@@ -104,17 +104,17 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onFlowComplete() {
-        if( type == 'process' ) {
+        if( type == 'workflow' ) {
             // -- normalise the DAG
             dag.normalize()
             // -- render it to a file
-            createRenderer().renderProcessGraph(dag, file)
+            createRenderer().renderWorkflowGraph(dag, file)
         }
         else if( type == 'task' ) {
             createRenderer().renderTaskGraph(taskDag, file)
         }
         else {
-            log.warn("Invalid DAG type '${type}', should be 'process' or 'task'")
+            log.warn("Invalid DAG type '${type}', should be 'workflow' or 'task'")
         }
     }
 
