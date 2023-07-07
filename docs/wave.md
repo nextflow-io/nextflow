@@ -2,13 +2,12 @@
 
 # Wave containers
 
+:::{versionadded} 22.10.0
+:::
+
 [Wave](https://seqera.io/wave/) is a container provisioning service integrated with Nextflow. With Wave, you can build, upload, and manage the container images required by your data analysis workflows automatically and on-demand during pipeline execution.
 
 ## Getting started
-
-:::{note}
-This feature requires Nextflow `22.10.0` or later.
-:::
 
 ### Nextflow installation
 
@@ -39,7 +38,7 @@ tower {
 ```
 
 :::{note}
-The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/registry_credentials/) in Tower.
+The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/overview) in Tower.
 :::
 
 ## Use cases
@@ -93,6 +92,34 @@ wave.strategy = ['conda']
 
 The above setting instructs Wave to use the `conda` directive to provision the pipeline containers and ignore the `container` directive and any Dockerfile(s).
 
+### Build Spack based containers
+
+:::{warning}
+Spack based Wave containers are currently in beta testing. Functionality is still sub-optimal, due to long build times that may result in backend time-out and subsequent task failure.
+:::
+
+Wave allows the provisioning of containers based on the {ref}`process-spack` directive used by the processes in your
+pipeline. This is an alternative to building Spack packages in the local computer.
+Moreover, this enables to run optimised builds with almost no user intervention.
+
+Having Wave enabled in your pipeline, there's nothing else to do other than define the `spack` requirements in
+the pipeline processes provided the same process does not also specify a `container` or `conda` directive or a Dockerfile.
+
+In the latter case, add the following setting to your pipeline configuration:
+
+```groovy
+wave.strategy = ['spack']
+```
+
+The above setting instructs Wave to only use the `spack` directive to provision the pipeline containers, ignoring the use of
+the `container` directive and any Dockerfile(s).
+
+In order to request the build of containers that are optimised for a specific CPU microarchitecture, the latter can be specified by means of the {ref}`process-arch` directive. The architecture must always be specified for processes that run on an ARM system. Otherwise, by default, Wave will build containers for the generic `x86_64` architecture family.
+
+:::{note}
+If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
+:::
+
 ### Push to a private repository
 
 Containers built by Wave are uploaded to the Wave default repository hosted on AWS ECR at `195996028523.dkr.ecr.eu-west-1.amazonaws.com/wave/build`. The images in this repository are automatically deleted 1 week after the date of their push.
@@ -122,29 +149,66 @@ See the {ref}`Fusion documentation <fusion-page>` for more details.
 The following configuration options are available:
 
 `wave.enabled`
-: Enable/disable the execution of Wave containers
+: Enable/disable the execution of Wave containers.
 
 `wave.endpoint`
-: The Wave service endpoint (default: `https://wave.seqera.io`)
+: The Wave service endpoint (default: `https://wave.seqera.io`).
 
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
-`wave.build.cacheRepositor`
+`wave.build.cacheRepository`
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
-`wave.conda.mambaImage`
+`wave.build.conda.basePackages`
+: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
+
+`wave.build.conda.commands`
+: One or more commands to be added to the Dockerfile used to build a Conda based image.
+
+`wave.build.conda.mambaImage`
 : The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
 
-`wave.conda.commands`
-: One or more commands to be added to the Dockerfile used by build a Conda based image.
+`wave.build.spack.basePackages`
+: :::{versionadded} 22.06.0-edge
+:::
+: One or more Spack packages to be always added in the resulting container.
 
-`wave.conda.basePackages`
-: One or more Conda packages that should always added in the resulting container e.g. `conda-forge::procps-ng`.
+`wave.build.spack.commands`
+: :::{versionadded} 22.06.0-edge
+:::
+: One or more commands to be added to the Dockerfile used to build a Spack based image.
+
+`wave.httpClient.connectTime`
+: :::{versionadded} 22.06.0-edge
+:::
+: Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
 
 `wave.strategy`
-: The strategy to be used when resolving ambiguous Wave container requirement (default: `'container,dockerfile,conda'`)
+: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
-### More examples
+`wave.report.enabled` (preview)
+: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`, requires version `23.06.0-edge` or later).
 
-See the [Wave showcase repository](https://github.com/seqeralabs/wave-showcase) for more Wave containers configuration examples.
+`wave.report.file` (preview)
+: The name of the containers report file (default: `containers-<timestamp>.config` requires version `23.06.0-edge` or later).
+
+`wave.retryPolicy.delay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The initial delay when a failing HTTP request is retried (default: `150ms`). 
+
+`wave.retryPolicy.maxDelay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max delay when a failing HTTP request is retried (default: `90 seconds`).
+
+`wave.retryPolicy.maxAttempts`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max number of attempts a failing HTTP request is retried (default: `5`).
+
+`wave.retryPolicy.jitter`
+: :::{versionadded} 22.06.0-edge
+  :::
+: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).

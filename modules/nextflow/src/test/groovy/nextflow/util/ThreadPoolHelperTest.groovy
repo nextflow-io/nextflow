@@ -15,7 +15,9 @@
  *
  */
 
-package nextflow
+package nextflow.util
+
+import java.util.concurrent.ExecutorService
 
 import spock.lang.Specification
 
@@ -23,14 +25,10 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelTest extends Specification {
+class ThreadPoolHelperTest extends Specification {
 
-    def testFromPathS3() {
-
-        when:
-        Channel.fromPath('s3://bucket/some/data.txt')
-        then:
-        noExceptionThrown()
+    def 'should strip message' () {
+        expect:
+        ThreadPoolHelper.format('foo (%d bar)', Mock(ExecutorService)) == 'foo '
     }
-
 }
