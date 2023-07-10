@@ -106,12 +106,18 @@ class TaskCleanupObserver implements TraceObserver {
     static private final Set<Mode> INVALID_PUBLISH_MODES = [Mode.COPY_NO_FOLLOW, Mode.RELLINK, Mode.SYMLINK]
 
     /**
-     * Log warning for any process that uses an incompatible
-     * publish mode.
+     * Log warning for any process that uses any incompatible features.
      *
      * @param process
      */
     void onProcessCreate( TaskProcessor process ) {
+        // check for includeInputs
+        final outputs = process.config.getOutputs()
+
+        if( outputs.any( p -> p instanceof FileOutParam && p.includeInputs ) )
+            log.warn "Process `${process.name}` is forwarding input files with includeInputs, which may be invalidated by eager cleanup"
+
+        // check for incompatible publish modes
         final taskConfig = process.getPreviewConfig()
         final publishDirs = taskConfig.getPublishDir()
 
