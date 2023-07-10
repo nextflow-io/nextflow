@@ -17,6 +17,7 @@
 package nextflow.script.params
 
 import groovy.util.logging.Slf4j
+import nextflow.exception.ScriptRuntimeException
 
 /**
  * Base class for input/output parameters
@@ -139,6 +140,13 @@ abstract class BaseParam implements Cloneable {
 
     boolean isNestedParam() {
         return mapIndex >= 0
+    }
+
+    /**
+     * Report missing method calls as possible syntax errors.
+     */
+    def methodMissing( String name, def args ) {
+        throw new ScriptRuntimeException("Invalid method call `${name}(${args})` -- possible syntax error")
     }
 
 }
