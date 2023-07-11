@@ -41,7 +41,7 @@ class AzPathSerializer extends Serializer<AzPath> implements SerializerRegistran
     }
 
     @Override
-    AzPath read(Kryo kryo, Input input, Class<AzPath> type) {
+    AzPath read(Kryo kryo, Input input, Class<? extends AzPath> type) {
         final path = input.readString()
         log.trace "Azure Blob storage path > path=$path"
         return (AzPath)FileHelper.asPath(path)
