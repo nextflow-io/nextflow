@@ -87,6 +87,8 @@ class KryoHelper {
     static private Kryo newInstance() {
         def kryo = new Kryo()
         kryo.setInstantiatorStrategy( InstantiationStrategy.instance )
+        kryo.setReferences(true)
+        kryo.setRegistrationRequired(false)
 
         // special serializers
         UnmodifiableCollectionsSerializer.registerSerializers(kryo)

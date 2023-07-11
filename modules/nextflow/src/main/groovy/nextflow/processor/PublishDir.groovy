@@ -168,7 +168,7 @@ class PublishDir {
 
         def result = new PublishDir()
         if( params.path )
-            result.path = params.path
+        result.path = params.path
 
         if( params.mode )
             result.mode = params.mode
@@ -199,9 +199,20 @@ class PublishDir {
         if( params.storageClass )
             result.storageClass = params.storageClass as String
 
-        result.validatePublishMode()
-
         return result
+    }
+
+    @CompileStatic
+    boolean canPublish(Path source, TaskRun task) {
+        if( !sourceDir ) {
+            this.sourceDir = task.targetDir
+            this.sourceFileSystem = sourceDir.fileSystem
+            this.stageInMode = task.config.stageInMode
+            this.taskName = task.name
+            validatePublishMode()
+        }
+
+        return getPublishTarget(source) != null
     }
 
     @CompileStatic
@@ -209,6 +220,7 @@ class PublishDir {
         assert path
 
         createPublishDir()
+        validatePublishMode()
 
         /*
          * when the publishing is using links, create them in process
@@ -322,11 +334,6 @@ class PublishDir {
             threadPool.submit({ safeProcessFile(source, destination) } as Runnable)
         }
 
-    }
-
-    @CompileStatic
-    boolean canPublish(Path source) {
-        return getPublishTarget(source) != null
     }
 
     @CompileStatic

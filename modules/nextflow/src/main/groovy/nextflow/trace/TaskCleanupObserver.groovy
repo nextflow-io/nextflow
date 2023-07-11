@@ -188,7 +188,7 @@ class TaskCleanupObserver implements TraceObserver {
         // get publish outputs
         final publishDirs = task.config.getPublishDir()
         final publishOutputs = publishDirs
-            ? outputs.findAll( p -> publishDirs.any( publishDir -> publishDir.canPublish(p) ) )
+            ? outputs.findAll( p -> publishDirs.any( publishDir -> publishDir.canPublish(p, task) ) )
             : []
 
         log.trace "Task ${task.name} will publish the following files: ${publishOutputs*.toUriString()}"
