@@ -23,6 +23,7 @@ import java.util.concurrent.locks.ReentrantLock
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cache.CacheDB
 import nextflow.dag.DAG
 import nextflow.file.FileHelper
 import nextflow.processor.PublishDir.Mode
@@ -41,6 +42,8 @@ class TaskCleanupObserver implements TraceObserver {
 
     private DAG dag
 
+    private CacheDB cache
+
     private Map<String,ProcessState> processes = [:]
 
     private Map<TaskRun,TaskState> tasks = [:]
@@ -54,6 +57,7 @@ class TaskCleanupObserver implements TraceObserver {
     @Override
     void onFlowCreate(Session session) {
         this.dag = session.dag
+        this.cache = session.cache
     }
 
     /**
@@ -167,8 +171,15 @@ class TaskCleanupObserver implements TraceObserver {
      */
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        // query task output files
         final task = handler.task
+
+        // handle failed tasks separately
+        if( !task.isSuccess() ) {
+            handleTaskFailure(task)
+            return
+        }
+
+        // query task output files
         final outputs = task
             .getOutputsByType(FileOutParam)
             .values()
@@ -206,6 +217,24 @@ class TaskCleanupObserver implements TraceObserver {
 
                 paths[path] = pathState
             }
+        }
+        finally {
+            sync.unlock()
+        }
+    }
+
+    /**
+     * When a task fails, mark it as completed without tracking its
+     * output files. Failed tasks are not included as consumers of
+     * upstream tasks in the cache.
+     *
+     * @param task
+     */
+    void handleTaskFailure(TaskRun task) {
+        sync.lock()
+        try {
+            // mark task as completed
+            tasks[task].completed = true
         }
         finally {
             sync.unlock()
@@ -317,8 +346,16 @@ class TaskCleanupObserver implements TraceObserver {
     private void deleteTask(TaskRun task) {
         log.trace "Deleting task directory: ${task.workDir.toUriString()}"
 
+        // delete task
+        final taskState = tasks[task]
         FileHelper.deletePath(task.workDir)
-        tasks[task].deleted = true
+        taskState.deleted = true
+
+        // finalize task in the cache db
+        final consumers = taskState.consumers
+            .findAll( t -> t.isSuccess() )
+            .collect( t -> t.hash )
+        cache.finalizeTaskAsync(task.hash, consumers)
     }
 
     /**
@@ -350,8 +387,11 @@ class TaskCleanupObserver implements TraceObserver {
     private void deleteFile(Path path) {
         log.trace "Deleting file: ${path.toUriString()}"
 
-        FileHelper.deletePath(path)
-        paths[path].deleted = true
+        final pathState = paths[path]
+        final taskState = tasks[pathState.task]
+        if( !taskState.deleted )
+            FileHelper.deletePath(path)
+        pathState.deleted = true
     }
 
     static private class ProcessState {
