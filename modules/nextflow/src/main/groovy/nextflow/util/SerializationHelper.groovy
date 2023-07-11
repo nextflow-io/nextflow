@@ -27,6 +27,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.google.common.hash.HashCode
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -215,6 +216,7 @@ class DefaultSerializers implements SerializerRegistrant {
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
         serializers.put( SerializableMarker, null )
+        serializers.put( HashCode, HashCodeSerializer )
     }
 }
 
@@ -446,5 +448,25 @@ class MapEntrySerializer extends Serializer<Map.Entry> {
         def key = kryo.readClassAndObject(input)
         def val = kryo.readClassAndObject(input)
         new MapEntry(key,val)
+    }
+}
+
+@CompileStatic
+class HashCodeSerializer extends Serializer<HashCode> {
+
+    @Override
+    void write(Kryo kryo, Output output, HashCode entry) {
+        final bytes = entry.asBytes()
+        output.writeInt(bytes.length)
+        output.write(bytes)
+    }
+
+    @Override
+    HashCode read(Kryo kryo, Input input, Class<? extends HashCode> type) {
+        final len = input.readInt()
+        final bytes = new byte[len]
+        input.read(bytes)
+
+        HashCode.fromBytes(bytes)
     }
 }

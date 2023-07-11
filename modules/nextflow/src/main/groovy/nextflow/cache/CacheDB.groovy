@@ -87,7 +87,7 @@ class CacheDB implements Closeable {
         TraceRecord trace = TraceRecord.deserialize( (byte[])record[0] )
         final processor = processorLookup[trace.get('process')]
         TaskContext ctx = record[1]!=null && processor!=null ? TaskContext.deserialize(processor, (byte[])record[1]) : null
-        final consumers = record[3]!=null ? ((List<String>)record[3]).collect( str -> HashCode.fromString(str) ) : null
+        final consumers = record[3]!=null ? ((List<HashCode>)record[3]) : null
 
         return new TaskEntry(processor, trace, ctx, consumers)
     }
@@ -178,7 +178,7 @@ class CacheDB implements Closeable {
         }
 
         final record = (List)KryoHelper.deserialize(payload)
-        record[3] = consumers.collect( t -> t.toString() )
+        record[3] = consumers
         store.putEntry(hash, KryoHelper.serialize(record))
     }
 
