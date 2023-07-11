@@ -607,7 +607,16 @@ class WaveClient {
         return Failsafe.with(policy).get(action)
     }
 
+    static private List<Integer> SERVER_ERRORS = [502,503,504]
+
     protected HttpResponse<String> httpSend(HttpRequest req)  {
-        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        return safeApply(() -> {
+            final resp=httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+            if( resp.statusCode() in SERVER_ERRORS) {
+                // throws an IOException so that the condition is handled by the retry policy
+                throw new IOException("Unexpected server response code ${resp.statusCode()} - message: ${resp.body()}")
+            }
+            return resp
+        })
     }
 }
