@@ -118,8 +118,11 @@ class DefaultObserverFactory implements TraceObserverFactory {
     }
 
     protected void createTaskCleanupObserver(Collection<TraceObserver> result) {
-        if( session.config.cleanup == 'eager' )
-            result << new TaskCleanupObserver()
+        final strategy = session.config.cleanup
+        if( strategy instanceof CharSequence && !CleanupStrategy.isValid(strategy) )
+            throw new IllegalArgumentException("Invalid cleanup strategy '${strategy}' -- available strategies are ${CleanupStrategy.values().join(',').toLowerCase()}")
+        if( strategy )
+            result << new TaskCleanupObserver(strategy.toString().toUpperCase() as CleanupStrategy)
     }
 
 }

@@ -1425,26 +1425,32 @@ Detailed information about the JSON fields can be found in the {ref}`weblog desc
 There are additional variables that can be defined within a configuration file that do not have a dedicated scope.
 
 `cleanup`
-: If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
-
-  :::{warning}
-  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
+: :::{versionchanged} 23.10.0
+  Added `'lazy'`, `'eager'`, and `'aggressive'` strategies.
   :::
+: Automatically delete task directories using one of the following strategies:
 
-  :::{versionadded} 23.10.0
-  :::
+  `false` (default)
+  : Disable automatic cleanup.
 
-  Setting `cleanup = 'eager'` enables the "eager" cleanup strategy. This strategy will delete each task directory as soon as it is no longer needed by downstream tasks, rather than at the end of the workflow run. This feature is useful for minimizing disk usage during the workflow run.
+  `true`
+  : Equivalent to `'lazy'`.
 
-  The lifetime of a task is determined by the downstream tasks that use the task's output files. When all of these tasks finish, the upstream task can be deleted.
+  `'lazy'`
+  : If a workflow completes successfully, delete all task directories.
+  : This strategy supports resumability for both successful and failed runs.
+  : Note that deleting all work directories at once can take a lot of time, especially when using a shared file system or remote cloud storage.
 
-  The following caveats apply when using eager cleanup:
+  `'eager'`
+  : Delete each task directory as soon as it is no longer needed by downstream tasks.
+  : A task can be deleted once all of the tasks that use any of its output files have completed.
+  : This strategy supports resumability for both successful and failed runs.
+  : Output files that are published via symlink will be invalidated when the original task directory is deleted. Avoid using the following publish modes: `copyNoFollow`, `rellink`, `symlink`.
 
-  - Eager cleanup will break the resumability of your pipeline. If a workflow run fails, you will have to restart from the beginning, whereas with `cleanup = true` the cleanup would not have happened. As a result, eager cleanup is designed to be used only when you are confident that the workflow run will not fail.
-
-  - Output files should not be published via symlink when using eager cleanup, because the symlinks will be invalidated when the original task directory is deleted. Avoid using the following publish modes: `copyNoFollow`, `rellink`, `symlink`.
-
-  - Eager cleanup currently does not work properly with processes that forward input files with the `includeInputs` option. In this case, the forwarded input files will be deleted prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output.
+  `'aggressive'`
+  : Equivalent to `'eager'`, but also deletes individual output files as soon as they are no longer needed.
+  : An output file can be deleted once the tasks that use it have completed. In some cases, an output file can be deleted sooner than its originating task.
+  : This strategy supports resumability for successful runs, but not necessarily for failed runs. Therefore, it is recommended when you want to minimize disk storage during the pipeline and you don't need resumability.
 
 `dumpHashes`
 : If `true`, dump task hash keys in the log file, for debugging purposes.

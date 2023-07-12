@@ -40,6 +40,8 @@ import nextflow.script.params.FileOutParam
 @CompileStatic
 class TaskCleanupObserver implements TraceObserver {
 
+    private CleanupStrategy strategy
+
     private DAG dag
 
     private CacheDB cache
@@ -53,6 +55,10 @@ class TaskCleanupObserver implements TraceObserver {
     private Set<Path> publishedOutputs = []
 
     private Lock sync = new ReentrantLock()
+
+    TaskCleanupObserver(CleanupStrategy strategy) {
+        this.strategy = strategy
+    }
 
     @Override
     void onFlowCreate(Session session) {
@@ -282,9 +288,9 @@ class TaskCleanupObserver implements TraceObserver {
                 pathState.published = true
 
                 // delete task if it can be deleted
-                if( canDeleteTask(task) )
+                if( strategy >= CleanupStrategy.EAGER && canDeleteTask(task) )
                     deleteTask(task)
-                else if( canDeleteFile(source) )
+                else if( strategy >= CleanupStrategy.AGGRESSIVE && canDeleteFile(source) )
                     deleteFile(source)
             }
             else {
@@ -318,12 +324,31 @@ class TaskCleanupObserver implements TraceObserver {
     }
 
     /**
+     * When the workflow completes, delete all task directories (only
+     * when using the 'lazy' strategy).
+     */
+    @Override
+    void onFlowComplete() {
+        if( strategy != CleanupStrategy.LAZY )
+            return
+
+        for( TaskRun task : tasks.keySet() )
+            deleteTask(task)
+    }
+
+    /**
      * Delete any task directories and output files that can be deleted.
      */
     private void cleanup0() {
+        if( strategy < CleanupStrategy.EAGER )
+            return
+
         for( TaskRun task : tasks.keySet() )
             if( canDeleteTask(task) )
                 deleteTask(task)
+
+        if( strategy < CleanupStrategy.AGGRESSIVE )
+            return
 
         for( Path path : paths.keySet() )
             if( canDeleteFile(path) )
