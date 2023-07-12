@@ -67,6 +67,9 @@ class TaskCleanupObserver implements TraceObserver {
     @Override
     void onFlowBegin() {
 
+        // construct process lookup
+        final withIncludeInputs = [] as Set
+
         for( def processNode : dag.vertices ) {
             // skip nodes that are not processes
             if( !processNode.process )
@@ -101,9 +104,27 @@ class TaskCleanupObserver implements TraceObserver {
                 }
             }
 
-            log.trace "Process `${processName}` is consumed by the following processes: ${consumers}"
-
             processes[processName] = new ProcessState(consumers ?: [processName] as Set)
+
+            // check if process uses includeInputs
+            final hasIncludeInputs = processNode.process
+                .config.getOutputs()
+                .any( p -> p instanceof FileOutParam && p.includeInputs )
+
+            if( hasIncludeInputs )
+                withIncludeInputs << processName
+        }
+
+        // update producers of processes that use includeInputs
+        processes.each { processName, processState ->
+            final consumers = processState.consumers
+            for( def consumer : consumers.intersect(withIncludeInputs) ) {
+                log.trace "Process `${consumer}` uses includeInputs, adding its consumers to `${processName}`"
+                final consumerState = processes[consumer]
+                consumers.addAll(consumerState.consumers)
+            }
+
+            log.trace "Process `${processName}` is consumed by the following processes: ${consumers}"
         }
     }
 
@@ -115,12 +136,6 @@ class TaskCleanupObserver implements TraceObserver {
      * @param process
      */
     void onProcessCreate( TaskProcessor process ) {
-        // check for includeInputs
-        final outputs = process.config.getOutputs()
-
-        if( outputs.any( p -> p instanceof FileOutParam && p.includeInputs ) )
-            log.warn "Process `${process.name}` is forwarding input files with includeInputs, which may be invalidated by eager cleanup"
-
         // check for incompatible publish modes
         final taskConfig = process.getPreviewConfig()
         final publishDirs = taskConfig.getPublishDir()
