@@ -238,12 +238,25 @@ class MatcherInstantiator implements ObjectInstantiator {
 
 @Singleton
 @CompileStatic
+class HashCodeInstantiator implements ObjectInstantiator {
+
+    @Override
+    Object newInstance() {
+        HashCode.fromInt(0)
+    }
+}
+
+@Singleton
+@CompileStatic
 class InstantiationStrategy extends Kryo.DefaultInstantiatorStrategy {
 
     @Override
     ObjectInstantiator newInstantiatorOf (final Class type) {
         if( type == Matcher ) {
             MatcherInstantiator.instance
+        }
+        else if( type == HashCode.BytesHashCode ) {
+            HashCodeInstantiator.instance
         }
         else {
             super.newInstantiatorOf(type)
