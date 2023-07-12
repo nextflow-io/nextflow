@@ -206,7 +206,7 @@ class TaskCleanupObserver implements TraceObserver {
             ? outputs.findAll( p -> publishDirs.any( publishDir -> publishDir.canPublish(p, task) ) )
             : []
 
-        log.trace "Task ${task.name} will publish the following files: ${publishOutputs*.toUriString()}"
+        log.trace "[${task.name}] will publish the following files: ${publishOutputs*.toUriString()}"
 
         sync.lock()
         try {
@@ -275,7 +275,7 @@ class TaskCleanupObserver implements TraceObserver {
             if( pathState ) {
                 final task = pathState.task
 
-                log.trace "File ${source.toUriString()} was published by task ${task.name}"
+                log.trace "File ${source.toUriString()} was published by task <${task.name}>"
 
                 // mark file as published
                 tasks[task].publishOutputs.remove(source)
@@ -359,7 +359,7 @@ class TaskCleanupObserver implements TraceObserver {
      * @param task
      */
     private void deleteTask(TaskRun task) {
-        log.trace "Deleting task directory: ${task.workDir.toUriString()}"
+        log.trace "[${task.name}] Deleting task directory: ${task.workDir.toUriString()}"
 
         // delete task
         final taskState = tasks[task]
@@ -400,12 +400,14 @@ class TaskCleanupObserver implements TraceObserver {
      * @param path
      */
     private void deleteFile(Path path) {
-        log.trace "Deleting file: ${path.toUriString()}"
-
         final pathState = paths[path]
-        final taskState = tasks[pathState.task]
-        if( !taskState.deleted )
+        final task = pathState.task
+        final taskState = tasks[task]
+
+        if( !taskState.deleted ) {
+            log.trace "[${task.name}] Deleting file: ${path.toUriString()}"
             FileHelper.deletePath(path)
+        }
         pathState.deleted = true
     }
 
