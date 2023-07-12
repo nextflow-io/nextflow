@@ -47,7 +47,7 @@ class GsPathSerializer extends Serializer<CloudStoragePath> implements Serialize
     }
 
     @Override
-    CloudStoragePath read(Kryo kryo, Input input, Class<? extends CloudStoragePath> type) {
+    CloudStoragePath read(Kryo kryo, Input input, Class<CloudStoragePath> type) {
         final path = input.readString()
         log.trace "Google CloudStoragePath de-serialization > path=$path"
         def uri = CloudStorageFileSystem.URI_SCHEME + '://' + path

@@ -87,8 +87,6 @@ class KryoHelper {
     static private Kryo newInstance() {
         def kryo = new Kryo()
         kryo.setInstantiatorStrategy( InstantiationStrategy.instance )
-        kryo.setReferences(true)
-        kryo.setRegistrationRequired(false)
 
         // special serializers
         UnmodifiableCollectionsSerializer.registerSerializers(kryo)
@@ -274,7 +272,7 @@ class PathSerializer extends Serializer<Path> {
     }
 
     @Override
-    Path read(Kryo kryo, Input input, Class<? extends Path> type) {
+    Path read(Kryo kryo, Input input, Class<Path> type) {
         final scheme = input.readString()
         final path = input.readString()
         log.trace "Path de-serialization > scheme: $scheme; path: $path"
@@ -306,16 +304,16 @@ class GStringSerializer extends Serializer<GString> {
     static final private Class<String[]> STR_ARRAY_CLASS = (Class<String[]>)(new String[0]).getClass()
 
     @Override
-    void write(Kryo kryo, Output output, GString object) {
+    void write(Kryo kryo, Output stream, GString object) {
         log.trace "GString serialization: values: ${object?.getValues()} - strings: ${object?.getStrings()}"
-        kryo.writeObject( output, object.getValues() )
-        kryo.writeObject( output, object.getStrings() )
+        kryo.writeObject( stream, object.getValues() )
+        kryo.writeObject( stream, object.getStrings() )
     }
 
     @Override
-    GString read(Kryo kryo, Input input, Class<? extends GString> type) {
-        Object[] values = kryo.readObject(input, OBJ_ARRAY_CLASS)
-        String[] strings = kryo.readObject(input, STR_ARRAY_CLASS)
+    GString read(Kryo kryo, Input stream, Class<GString> type) {
+        Object[] values = kryo.readObject(stream, OBJ_ARRAY_CLASS)
+        String[] strings = kryo.readObject(stream, STR_ARRAY_CLASS)
         log.trace "GString de-serialize: values: ${values} - strings: ${strings}"
         new GStringImpl(values, strings)
     }
@@ -333,7 +331,7 @@ class URLSerializer extends Serializer<URL> {
     }
 
     @Override
-    URL read(Kryo kryo, Input input, Class<? extends URL> type) {
+    URL read(Kryo kryo, Input input, Class<URL> type) {
         log.trace "URL de-serialization"
         return new URL(input.readString())
     }
@@ -351,7 +349,7 @@ class UUIDSerializer extends Serializer<UUID> {
     }
 
     @Override
-    UUID read(Kryo kryo, Input input, Class<? extends UUID> type) {
+    UUID read(Kryo kryo, Input input, Class<UUID> type) {
         log.trace "UUID de-serialization"
         long mostBits = input.readLong()
         long leastBits = input.readLong()
@@ -371,7 +369,7 @@ class FileSerializer extends Serializer<File> {
     }
 
     @Override
-    File read(Kryo kryo, Input input, Class<? extends File> type) {
+    File read(Kryo kryo, Input input, Class<File> type) {
         log.trace "File de-serialization"
         return new File(input.readString())
     }
@@ -400,7 +398,7 @@ class PatternSerializer extends Serializer<Pattern> {
     }
 
     @Override
-    Pattern read(Kryo kryo, Input input, Class<? extends Pattern> type) {
+    Pattern read(Kryo kryo, Input input, Class<Pattern> type) {
 
         def len = input.readInt()
         def buffer = new byte[len]
@@ -425,7 +423,7 @@ class ArrayTupleSerializer extends Serializer<ArrayTuple> {
     }
 
     @Override
-    ArrayTuple read(Kryo kryo, Input input, Class<? extends ArrayTuple> type) {
+    ArrayTuple read(Kryo kryo, Input input, Class<ArrayTuple> type) {
         final len = input.readInt()
         def list = new ArrayList(len)
         for( int i=0; i<len; i++ ) {
@@ -446,7 +444,7 @@ class MapEntrySerializer extends Serializer<Map.Entry> {
     }
 
     @Override
-    Map.Entry read(Kryo kryo, Input input, Class<? extends Map.Entry> type) {
+    Map.Entry read(Kryo kryo, Input input, Class<Map.Entry> type) {
         def key = kryo.readClassAndObject(input)
         def val = kryo.readClassAndObject(input)
         new MapEntry(key,val)
@@ -464,7 +462,7 @@ class HashCodeSerializer extends Serializer<HashCode> {
     }
 
     @Override
-    HashCode read(Kryo kryo, Input input, Class<? extends HashCode> type) {
+    HashCode read(Kryo kryo, Input input, Class<HashCode> type) {
         final len = input.readInt()
         final bytes = new byte[len]
         input.read(bytes)

@@ -41,7 +41,7 @@ class XPathSerializer extends Serializer<XPath> {
     }
 
     @Override
-    XPath read(Kryo kryo, Input input, Class<? extends XPath> type) {
+    XPath read(Kryo kryo, Input input, Class<XPath> type) {
         final uri = input.readString()
         log.trace "Path de-serialization > uri=$uri"
         (XPath) FileHelper.asPath(new URI(uri))
