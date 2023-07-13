@@ -80,38 +80,4 @@ class TaskDAGTest extends Specification {
         dag.getProducerVertex(v2.inputs['data.foo']) == v1
     }
 
-    def 'should write meta file' () {
-
-        given:
-        def folder = File.createTempDir()
-        def outputFile = new File(folder, 'data.bar') ; outputFile.text = 'bar'
-
-        def task1 = Mock(TaskRun) {
-            name >> 'foo'
-            hash >> HashCode.fromString('00112233')
-            getInputFilesMap() >> [ 'data.txt': Paths.get('/inputs/data.txt') ]
-            getOutputsByType(_) >> [ 'data.foo': Paths.get('/work/00112233/data.foo') ]
-        }
-        def task2 = Mock(TaskRun) {
-            name >> 'bar'
-            workDir >> folder.toPath()
-            hash >> HashCode.fromString('aabbccdd')
-            getInputFilesMap() >> [ 'data.foo': Paths.get('/work/00112233/data.foo') ]
-            getOutputsByType(_) >> [ 'data.bar': outputFile.toPath() ]
-        }
-        def dag = new TaskDAG()
-
-        when:
-        dag.addTask(task1)
-        dag.addTaskOutputs(task1)
-        dag.addTask(task2)
-        dag.addTaskOutputs(task2)
-        dag.writeMetaFile(task2)
-        then:
-        task2.workDir.resolve(TaskRun.CMD_META).text == """{"hash":"aabbccdd","inputs":[{"name":"data.foo","path":"/work/00112233/data.foo","predecessor":"00112233"}],"outputs":[{"name":"data.bar","path":"${folder}/data.bar","size":3,"checksum":"37b51d194a7513e45b56f6524f2d51f2"}]}"""
-
-        cleanup:
-        folder.delete()
-    }
-
 }

@@ -16,12 +16,14 @@
 
 package nextflow.trace
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cache.CacheDB
 import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.TaskDAG
@@ -31,6 +33,7 @@ import nextflow.dag.GexfRenderer
 import nextflow.dag.GraphvizRenderer
 import nextflow.dag.MermaidRenderer
 import nextflow.exception.AbortOperationException
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -48,11 +51,13 @@ class GraphObserver implements TraceObserver {
 
     private Path file
 
-    private String type = 'workflow'
+    private String type
 
     private DAG dag
 
     private TaskDAG taskDag
+
+    private CacheDB cache
 
     private String name
 
@@ -64,17 +69,25 @@ class GraphObserver implements TraceObserver {
 
     String getName() { name }
 
-    GraphObserver( Path file ) {
+    GraphObserver( Path file, String type='workflow', boolean overwrite=false ) {
         assert file
+
+        if( type !in ['workflow', 'task'] )
+            throw new IllegalArgumentException("Invalid DAG type '${type}', should be 'workflow' or 'task'")
+
         this.file = file
         this.name = file.baseName
         this.format = file.getExtension().toLowerCase() ?: 'dot'
+        this.type = type
+        this.overwrite = overwrite
     }
 
     @Override
     void onFlowCreate(Session session) {
         this.dag = session.dag
         this.taskDag = session.taskDag
+        this.cache = session.cache
+
         // check file existance
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
@@ -92,8 +105,28 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        taskDag.addTaskOutputs(handler.task)
-        taskDag.writeMetaFile(handler.task)
+        final task = handler.task
+
+        // update task graph
+        taskDag.addTaskOutputs(task)
+
+        // save inputs and outputs to trace record
+        final vertex = taskDag.vertices[task]
+        trace.inputs = vertex.inputs.collect { name, path ->
+            new TraceRecord.Input(
+                name,
+                path,
+                taskDag.getProducerTask(path)?.hash)
+        }
+        trace.outputs = vertex.outputs.collect { path ->
+            new TraceRecord.Output(
+                path,
+                Files.size(path),
+                FilesEx.getChecksum(path))
+        }
+
+        // update cache db
+        cache.finalizeTaskAsync(task.hash, trace)
     }
 
     @Override
@@ -112,9 +145,6 @@ class GraphObserver implements TraceObserver {
         }
         else if( type == 'task' ) {
             createRenderer().renderTaskGraph(taskDag, file)
-        }
-        else {
-            log.warn("Invalid DAG type '${type}', should be 'workflow' or 'task'")
         }
     }
 

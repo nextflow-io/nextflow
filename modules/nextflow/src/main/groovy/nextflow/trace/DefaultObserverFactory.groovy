@@ -92,10 +92,9 @@ class DefaultObserverFactory implements TraceObserverFactory {
         String fileName = config.navigate('dag.file')
         if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
-        def observer = new GraphObserver(traceFile)
-        config.navigate('dag.type') { observer.type = it ?: 'workflow' }
-        config.navigate('dag.overwrite')  { observer.overwrite = it }
-        result << observer
+        String type = config.navigate('dag.type', 'workflow')
+        boolean overwrite = config.navigate('dag.overwrite') as Boolean
+        result << new GraphObserver(traceFile, type, overwrite)
     }
 
     /*

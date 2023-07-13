@@ -16,16 +16,13 @@
 
 package nextflow.dag
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
-import groovy.json.JsonBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.extension.FilesEx
 import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
 /**
@@ -91,40 +88,21 @@ class TaskDAG {
     }
 
     /**
+     * Get the task that produced the given file.
+     *
+     * @param path
+     */
+    TaskRun getProducerTask(Path path) {
+        taskLookup[path]
+    }
+
+    /**
      * Get the vertex for the task that produced the given file.
      *
      * @param path
      */
     Vertex getProducerVertex(Path path) {
         vertices[taskLookup[path]]
-    }
-
-    /**
-     * Write the metadata JSON file for a task.
-     *
-     * @param task
-     */
-    void writeMetaFile(TaskRun task) {
-        final record = [
-            hash: task.hash.toString(),
-            inputs: vertices[task].inputs.collect { name, path ->
-                [
-                    name: name,
-                    path: path.toUriString(),
-                    predecessor: taskLookup[path]?.hash?.toString()
-                ]
-            },
-            outputs: vertices[task].outputs.collect { path ->
-                [
-                    name: path.name,
-                    path: path.toUriString(),
-                    size: Files.size(path),
-                    checksum: FilesEx.getChecksum(path)
-                ]
-            }
-        ]
-
-        task.workDir.resolve(TaskRun.CMD_META).text = new JsonBuilder(record).toString()
     }
 
     @TupleConstructor(excludes = 'outputs')

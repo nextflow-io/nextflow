@@ -157,6 +157,30 @@ class CacheDB implements Closeable {
         writer.send { writeTaskEntry0(handler, trace) }
     }
 
+    /**
+     * Finalize task entry in the cache DB.
+     *
+     * @param hash
+     * @param trace
+     */
+    @PackageScope
+    void finalizeTaskEntry0( HashCode hash, TraceRecord trace ) {
+
+        final payload = store.getEntry(hash)
+        if( !payload ) {
+            log.debug "Unable to finalize task with key: $hash"
+            return
+        }
+
+        final record = (List)KryoHelper.deserialize(payload)
+        record[0] = trace.serialize()
+        store.putEntry(hash, KryoHelper.serialize(record))
+    }
+
+    void finalizeTaskAsync( HashCode hash, TraceRecord trace ) {
+        writer.send { finalizeTaskEntry0(hash, trace) }
+    }
+
     void cacheTaskAsync( TaskHandler handler ) {
         writer.send {
             writeTaskIndex0(handler,true)
