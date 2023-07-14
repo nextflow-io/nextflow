@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.cloud.aws.cache
+package nextflow.cache
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -26,12 +26,12 @@ import nextflow.cache.CacheStore
 import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
 /**
- * Implements the S3 Nextflow cache store
+ * Implements the path-based cache store
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class S3CacheStore implements CacheStore {
+class PathCacheStore implements CacheStore {
 
     private final String LOCK_NAME = 'LOCK'
 
@@ -52,7 +52,7 @@ class S3CacheStore implements CacheStore {
     /** The lock file for this cache instance */
     private Path lock
 
-    S3CacheStore(UUID uniqueId, String runName, Path basePath=null) {
+    PathCacheStore(UUID uniqueId, String runName, Path basePath=null) {
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
@@ -64,19 +64,19 @@ class S3CacheStore implements CacheStore {
     private Path defaultBasePath() {
         final basePath = System.getenv('NXF_CACHE_PATH')
         if( !basePath )
-            throw new IllegalArgumentException("NXF_CACHE_PATH must be defined when using the S3 cache store")
+            throw new IllegalArgumentException("NXF_CACHE_PATH must be defined when using the path-based cache store")
 
         return basePath as Path
     }
 
     @Override
-    S3CacheStore open() {
+    PathCacheStore open() {
         acquireLock()
         return this
     }
 
     @Override
-    S3CacheStore openForRead() {
+    PathCacheStore openForRead() {
         if( !dataPath.exists() )
             throw new AbortOperationException("Missing cache directory: $dataPath")
         acquireLock()
@@ -92,8 +92,7 @@ class S3CacheStore implements CacheStore {
                 - You are trying to resume the execution of an already running pipeline
                 - A previous execution was abruptly interrupted, leaving the session open
 
-                You can see the name of the run that is holding the lock file by using the following command:
-                  aws s3 cp ${lock} -
+                You can see the name of the conflicting run by inspecting the contents of the following path: ${lock}
                 """
             throw new IOException(msg)
         }

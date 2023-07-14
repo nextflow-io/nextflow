@@ -18,6 +18,7 @@ nextflow.trace.DefaultObserverFactory
 nextflow.util.DefaultSerializers
 nextflow.secret.LocalSecretsProvider
 nextflow.cache.DefaultCacheFactory
+nextflow.cache.PathCacheFactory
 nextflow.scm.RepositoryFactory
 nextflow.container.resolver.DefaultContainerResolver
 nextflow.mail.SendMailProvider

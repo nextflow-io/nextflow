@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.cloud.aws.cache
+package nextflow.cache
 
 import java.nio.file.Path
 
@@ -24,23 +24,23 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 /**
- * Implements the S3 cache factory
+ * Implements the path-based cache factory
  *
- * @see S3CacheStore
+ * @see PathCacheStore
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class S3CacheFactory extends CacheFactory {
+class PathCacheFactory extends CacheFactory {
 
     @Override
-    protected String getName() { 's3' }
+    protected String getName() { 'path' }
 
     @Override
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new S3CacheStore(uniqueId, runName, home)
+        final store = new PathCacheStore(uniqueId, runName, home)
         return new CacheDB(store)
     }
 
