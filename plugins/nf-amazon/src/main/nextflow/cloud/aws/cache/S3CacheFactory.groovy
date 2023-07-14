@@ -15,31 +15,32 @@
  *
  */
 
-package nextflow.cache
+package nextflow.cloud.aws.cache
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import nextflow.cache.CacheDB
+import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
-
 /**
- * Implements the default cache factory
+ * Implements the S3 cache factory
  *
- * @see DefaultCacheStore
+ * @see S3CacheStore
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class DefaultCacheFactory extends CacheFactory {
+class S3CacheFactory extends CacheFactory {
 
     @Override
-    protected String getName() { 'leveldb' }
+    protected String getName() { 's3' }
 
     @Override
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new DefaultCacheStore(uniqueId, runName, home)
+        final store = new S3CacheStore(uniqueId, runName, home)
         return new CacheDB(store)
     }
 

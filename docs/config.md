@@ -1516,6 +1516,16 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_ASSETS`
 : Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
 
+`NXF_CACHE_PATH`
+: :::{versionadded} 23.07.0-edge
+  :::
+: Defines the base cache path when using the S3 cache store.
+
+`NXF_CACHE_STORE`
+: :::{versionadded} 23.07.0-edge
+  :::
+: Defines which cache store to use, can be `'leveldb'` or `'s3'` (default: `'leveldb'`).
+
 `NXF_CHARLIECLOUD_CACHEDIR`
 : Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 

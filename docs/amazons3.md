@@ -92,6 +92,20 @@ aws {
 }
 ```
 
+## S3 cache store
+
+:::{versionadded} 23.07.0-edge
+:::
+
+Nextflow can use S3 to cache task metadata, instead of the default cache store under `.nextflow/cache`. To enable this feature, set the following environment variables:
+
+```bash
+export NXF_CACHE_STORE='s3'
+export NXF_CACHE_PATH='s3://<my-bucket>/cache'
+```
+
+The cache path can be any S3 path.
+
 ## Advanced configuration
 
 Read {ref}`AWS configuration<config-aws>` section to learn more about advanced S3 client configuration options.
