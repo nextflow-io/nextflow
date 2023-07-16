@@ -26,7 +26,7 @@ import java.util.Map;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class CondaOpts {
-    final public static String DEFAULT_MAMBA_IMAGE = "mambaorg/micromamba:1.4.2";
+    final public static String DEFAULT_MAMBA_IMAGE = "mambaorg/micromamba:1.4.9";
 
     final public String mambaImage;
     final public List<String> commands;
