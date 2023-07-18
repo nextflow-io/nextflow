@@ -13,6 +13,7 @@ Currently the following functionalities are implemented as plugin components and
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
 - `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
 - `nf-google`: Support for Google cloud.
+- `nf-path-cache`: Support for path-based Nextflow cache.
 - `nf-tower`: Support for [Nextflow Tower](https://tower.nf) platform.
 
 ## Configuration

@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.Priority
 /**
  * Implements the path-based cache factory
  *
@@ -31,10 +32,8 @@ import nextflow.exception.AbortOperationException
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
+@Priority(-10)
 class PathCacheFactory extends CacheFactory {
-
-    @Override
-    protected String getName() { 'path' }
 
     @Override
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {

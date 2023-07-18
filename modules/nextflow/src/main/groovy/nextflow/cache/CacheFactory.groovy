@@ -33,19 +33,14 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 abstract class CacheFactory implements ExtensionPoint {
 
-    protected abstract String getName()
-
     protected abstract CacheDB newInstance(UUID uniqueId, String runName, Path home=null)
 
     static CacheDB create(UUID uniqueId, String runName, Path home=null) {
-        final name = System.getenv('NXF_CACHE_STORE') ?: 'leveldb'
-        final all = Plugins.getExtensions(CacheFactory)
+        final all = Plugins.getPriorityExtensions(CacheFactory)
         if( !all )
             throw new IllegalStateException("Unable to find Nextflow cache factory")
-        final factory = all.find( f -> f.name == name )
-        if( !factory )
-            throw new IllegalStateException("Unable to find Nextflow cache factory with name: ${name}")
-        log.debug "Using Nextflow cache factory: ${factory.getName()}"
+        final factory = all.first()
+        log.debug "Using Nextflow cache factory: ${factory.getClass().getName()}"
         return factory.newInstance(uniqueId, runName, home)
     }
 

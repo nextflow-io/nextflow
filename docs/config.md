@@ -1521,11 +1521,6 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Defines the base cache path when using the path-based cache store.
 
-`NXF_CACHE_STORE`
-: :::{versionadded} 23.07.0-edge
-  :::
-: Defines which cache store to use, can be `'leveldb'` or `'path'` (default: `'leveldb'`).
-
 `NXF_CHARLIECLOUD_CACHEDIR`
 : Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
