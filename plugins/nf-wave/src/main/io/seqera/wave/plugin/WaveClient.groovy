@@ -23,7 +23,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
-import java.time.Instant
+import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
@@ -35,7 +35,6 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
@@ -45,7 +44,6 @@ import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import io.seqera.wave.plugin.adapter.InstantAdapter
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -167,7 +165,8 @@ class WaveClient {
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
-                fingerprint: assets.fingerprint()
+                fingerprint: assets.fingerprint(),
+                freeze: config.freezeMode()
         )
     }
 
@@ -189,7 +188,9 @@ class WaveClient {
                 towerAccessToken: tower.accessToken,
                 towerWorkspaceId: tower.workspaceId,
                 towerEndpoint: tower.endpoint,
-                workflowId: tower.workflowId)
+                workflowId: tower.workflowId,
+                freeze: config.freezeMode()
+        )
         return sendRequest(request)
     }
 
@@ -456,6 +457,13 @@ class WaveClient {
             final key = assets.fingerprint()
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
+            if( config.freezeMode() )  {
+                if( response.buildId ) {
+                    // await the image to be available when a new image is being built
+                    awaitImage(response.targetImage)
+                }
+                return new ContainerInfo(assets.containerImage, response.containerImage, key)
+            }
             // assemble the container info response
             return new ContainerInfo(assets.containerImage, response.targetImage, key)
         }
@@ -464,7 +472,30 @@ class WaveClient {
         }
     }
 
+    protected URI imageToManifestUri(String image) {
+        final p = image.indexOf('/')
+        if( p==-1 ) throw new IllegalArgumentException("Invalid container name: $image")
+        final result = 'https://' + image.substring(0,p) + '/v2' + image.substring(p).replace(':','/manifests/')
+        return new URI(result)
+    }
 
+    protected void awaitImage(String image) {
+        final manifest = imageToManifestUri(image)
+        final req = HttpRequest.newBuilder()
+                .uri(manifest)
+                .headers('Content-Type','application/json')
+                .timeout(Duration.ofSeconds(15 * 60 + 10))
+                .GET()
+                .build()
+        final begin = System.currentTimeMillis()
+        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container available in ${nextflow.util.Duration.of(System.currentTimeMillis()-begin)}: [$code] ${resp.body()}"
+        }
+        else
+            throw new BadResponseException("Unexpected response for \'$manifest\': [${resp.statusCode()}] ${resp.body()}")
+    }
 
     static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )
@@ -524,64 +555,6 @@ class WaveClient {
                 return it
         }
         return null
-    }
-
-    String resolveSourceContainer(String container) {
-        final token = getWaveToken(container)
-        if( !token )
-            return container
-        final resp = fetchContainerInfo(token)
-        final describe = jsonToDescribeContainerResponse(resp)
-        return describe.source.digest==describe.wave.digest
-                ? digestImage(describe.source)      // when the digest are equals, return the source because it's a stable name
-                : digestImage(describe.wave)        // otherwise returns the wave container name
-    }
-
-    protected String digestImage(DescribeContainerResponse.ContainerInfo info) {
-        if( !info.digest )
-            return info.image
-        final p = info.image.lastIndexOf(':')
-        return p!=-1
-            ? info.image.substring(0,p) + '@' + info.digest
-            : info.image + '@' + info.digest
-    }
-
-    protected String getWaveToken(String name) {
-        if( !name )
-            return null
-        final matcher = CONTAINER_PATH.matcher(name)
-        if( !matcher.find() )
-            return null
-        return matcher.group(1)==waveRegistry
-                ? matcher.group(2)
-                : null
-    }
-
-    @Memoized
-    protected String fetchContainerInfo(String token) {
-        final uri = new URI("$endpoint/container-token/$token")
-        log.trace "Wave request container info: $uri"
-        final req = HttpRequest.newBuilder()
-                .uri(uri)
-                .headers('Content-Type','application/json')
-                .GET()
-                .build()
-
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        final code = resp.statusCode()
-        if( code>=200 && code<400 ) {
-            log.debug "Wave container config info: [$code] ${resp.body()}"
-            return resp.body()
-        }
-        throw new BadResponseException("Unexpected response for \'$uri\': [${resp.statusCode()}] ${resp.body()}")
-    }
-
-    protected DescribeContainerResponse jsonToDescribeContainerResponse(String json) {
-        final gson = new GsonBuilder()
-                .registerTypeAdapter(Instant.class, new InstantAdapter())
-                .create();
-        final type = new TypeToken<DescribeContainerResponse>(){}.getType()
-        return gson.fromJson(json, type)
     }
 
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {

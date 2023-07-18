@@ -106,4 +106,9 @@ class SubmitContainerTokenRequest {
      */
     String fingerprint
 
+    /**
+     * Enable freeze container mode
+     */
+    boolean freeze
+
 }
