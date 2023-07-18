@@ -18,6 +18,7 @@
 package nextflow.cache
 
 import java.nio.file.NoSuchFileException
+import java.nio.file.Files
 import java.nio.file.Path
 
 import com.google.common.hash.HashCode
@@ -52,6 +53,15 @@ class PathCacheStore implements CacheStore {
     /** The lock file for this cache instance */
     private Path lock
 
+    /** The path to the index file */
+    private Path indexPath
+
+    /** Index file input stream */
+    private InputStream indexReader
+
+    /** Index file output stream */
+    private OutputStream indexWriter
+
     PathCacheStore(UUID uniqueId, String runName, Path basePath=null) {
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
@@ -59,6 +69,7 @@ class PathCacheStore implements CacheStore {
         this.basePath = basePath ?: defaultBasePath()
         this.dataPath = this.basePath.resolve("$uniqueId")
         this.lock = dataPath.resolve(LOCK_NAME)
+        this.indexPath = dataPath.resolve("index.$runName")
     }
 
     private Path defaultBasePath() {
@@ -72,6 +83,7 @@ class PathCacheStore implements CacheStore {
     @Override
     PathCacheStore open() {
         acquireLock()
+        indexWriter = Files.newOutputStream(indexPath)
         return this
     }
 
@@ -80,6 +92,7 @@ class PathCacheStore implements CacheStore {
         if( !dataPath.exists() )
             throw new AbortOperationException("Missing cache directory: $dataPath")
         acquireLock()
+        indexReader = Files.newInputStream(indexPath)
         return this
     }
 
@@ -107,39 +120,48 @@ class PathCacheStore implements CacheStore {
 
     @Override
     void close() {
+        indexWriter.close()
         lock.delete()
     }
 
     @Override
     void writeIndex(HashCode key, boolean cached) {
-        getCachePath(key).bytes = [ cached as byte ] as byte[]
+        indexWriter.write(key.asBytes())
+        indexWriter.write(cached ? 1 : 0)
     }
 
     @Override
-    void deleteIndex() {}
+    void deleteIndex() {
+        indexPath.delete()
+    }
 
     @Override
     Iterator<Index> iterateIndex() {
-        final entries = dataPath.list() as List<String>
-        entries.remove(LOCK_NAME)
-
         return new Iterator<Index>() {
-            private Iterator<String> delegate
+            private Index next
 
             {
-                delegate = entries.iterator()
+                next = fetch()
             }
 
             @Override
             boolean hasNext() {
-                return delegate.hasNext()
+                return next != null
             }
 
             @Override
             Index next() {
-                final key = HashCode.fromString(delegate.next())
-                final cached = getCachePath(key).bytes[0] as Boolean
-                return new Index(key, cached)
+                final result = next
+                next = fetch()
+                return result
+            }
+
+            private Index fetch() {
+                byte[] key = new byte[KEY_SIZE]
+                if( indexReader.read(key) == -1 )
+                    return null
+                final cached = indexReader.read() == 1
+                return new Index(HashCode.fromBytes(key), cached)
             }
         }
     }
