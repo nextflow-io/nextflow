@@ -1546,6 +1546,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Disables the cancellation of child jobs on workflow execution termination.
 
+`NXF_DISABLE_PARAMS_TYPE_DETECTION`
+: :::{versionadded} 23.07.0-edge
+:::
+: Disables the automatic type detection of command line parameters.
+
 `NXF_DISABLE_WAVE_REQUIREMENT`
 : :::{versionadded} 23.07.0-edge
 :::
