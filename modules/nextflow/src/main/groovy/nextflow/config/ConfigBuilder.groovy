@@ -39,7 +39,6 @@ import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
-import nextflow.trace.WebLogObserver
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -678,7 +677,7 @@ class ConfigBuilder {
             if( cmdRun.withWebLog != '-' )
                 config.weblog.url = cmdRun.withWebLog
             else if( !config.weblog.url )
-                config.weblog.url = WebLogObserver.DEF_URL
+                config.weblog.url = 'http://localhost'
         }
 
         // -- sets tower options
