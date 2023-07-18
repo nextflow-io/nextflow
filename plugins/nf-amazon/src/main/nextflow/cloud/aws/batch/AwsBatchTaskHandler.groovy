@@ -252,9 +252,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             // take the exit code from the `.exitcode` file create by nextflow
             // the rationale of this is that, in case of error, the exit code return
             // by the batch API is more reliable.
-            log.info "[JOSH] exitCode `${job.container.exitCode}`"
-            log.info "[JOSH] readExitFile `${readExitFile()}`"
-            log.info "[JOSH] exitCode updated `${(job.container.exitCode || job.container.exitCode == 0) ? job.container.exitCode : 451}`"
             task.exitStatus = (job.container.exitCode || job.container.exitCode == 0) ? job.container.exitCode : readExitFile()
             // finalize the task
             task.stdout = outputFile
