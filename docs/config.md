@@ -1546,6 +1546,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Disables the cancellation of child jobs on workflow execution termination.
 
+`NXF_DISABLE_WAVE_REQUIREMENT`
+: :::{versionadded} 23.07.0-edge
+:::
+: Disables the requirement for Wave service when enabling the Fusion file system.
+
 `NXF_ENABLE_SECRETS`
 : :::{versionadded} 21.09.0-edge
   :::
