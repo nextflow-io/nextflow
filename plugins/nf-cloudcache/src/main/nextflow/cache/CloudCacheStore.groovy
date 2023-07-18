@@ -27,12 +27,12 @@ import nextflow.cache.CacheStore
 import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
 /**
- * Implements the path-based cache store
+ * Implements the cloud cache store
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class PathCacheStore implements CacheStore {
+class CloudCacheStore implements CacheStore {
 
     private final String LOCK_NAME = 'LOCK'
 
@@ -62,7 +62,7 @@ class PathCacheStore implements CacheStore {
     /** Index file output stream */
     private OutputStream indexWriter
 
-    PathCacheStore(UUID uniqueId, String runName, Path basePath=null) {
+    CloudCacheStore(UUID uniqueId, String runName, Path basePath=null) {
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
@@ -81,14 +81,14 @@ class PathCacheStore implements CacheStore {
     }
 
     @Override
-    PathCacheStore open() {
+    CloudCacheStore open() {
         acquireLock()
         indexWriter = Files.newOutputStream(indexPath)
         return this
     }
 
     @Override
-    PathCacheStore openForRead() {
+    CloudCacheStore openForRead() {
         if( !dataPath.exists() )
             throw new AbortOperationException("Missing cache directory: $dataPath")
         acquireLock()

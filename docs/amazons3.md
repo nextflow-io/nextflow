@@ -97,11 +97,11 @@ aws {
 :::{versionadded} 23.07.0-edge
 :::
 
-Nextflow can use S3 to cache task metadata, instead of the default cache store under `.nextflow/cache`. To use this cache method, enable the `nf-path-cache` plugin:
+Nextflow can use S3 to cache task metadata, instead of the default cache store under `.nextflow/cache`. To use this cache method, enable the `nf-cloudcache` plugin:
 
 ```groovy
 plugins {
-    id 'nf-path-cache'
+    id 'nf-cloudcache'
 }
 ```
 

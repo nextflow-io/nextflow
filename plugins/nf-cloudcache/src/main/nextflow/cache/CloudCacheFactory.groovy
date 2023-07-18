@@ -25,21 +25,21 @@ import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Priority
 /**
- * Implements the path-based cache factory
+ * Implements the cloud cache factory
  *
- * @see PathCacheStore
+ * @see CloudCacheStore
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
 @Priority(-10)
-class PathCacheFactory extends CacheFactory {
+class CloudCacheFactory extends CacheFactory {
 
     @Override
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new PathCacheStore(uniqueId, runName, home)
+        final store = new CloudCacheStore(uniqueId, runName, home)
         return new CacheDB(store)
     }
 

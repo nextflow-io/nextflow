@@ -16,15 +16,15 @@ import groovy.util.logging.Slf4j
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
 /**
- * Nextflow path cache plugin
+ * Nextflow cloud cache plugin
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class PathCachePlugin extends BasePlugin {
+class CloudCachePlugin extends BasePlugin {
 
-    PathCachePlugin(PluginWrapper wrapper) {
+    CloudCachePlugin(PluginWrapper wrapper) {
         super(wrapper)
     }
 

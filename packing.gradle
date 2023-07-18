@@ -21,14 +21,13 @@ dependencies {
     // Capsule manages the fat jar building process
     capsule 'io.nextflow:capsule:1.1.1'
     capsule 'io.nextflow:capsule-maven:1.0.3.2'
-    amazon    project(':plugins:nf-amazon')
-    azure     project(':plugins:nf-azure')
-    console   project(':plugins:nf-console')
-    ga4gh     project(':plugins:nf-ga4gh')
-    google    project(':plugins:nf-google')
-    pathcache project(':plugins:nf-path-cache')
-    tower     project(':plugins:nf-tower')
-    wave      project(':plugins:nf-wave')
+    console project(':plugins:nf-console')
+    ga4gh   project(':plugins:nf-ga4gh')
+    google  project(':plugins:nf-google')
+    amazon  project(':plugins:nf-amazon')
+    azure   project(':plugins:nf-azure')
+    tower   project(':plugins:nf-tower')
+    wave    project(':plugins:nf-wave')
 }
 
 
