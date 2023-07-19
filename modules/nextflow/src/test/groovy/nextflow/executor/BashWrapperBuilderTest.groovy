@@ -165,6 +165,7 @@ class BashWrapperBuilderTest extends Specification {
         builder.targetInputFile() == folder.resolve('.command.in')
         builder.targetScriptFile() == folder.resolve('.command.sh')
         builder.targetWrapperFile() == folder.resolve('.command.run')
+        builder.targetStageFile() == folder.resolve('.command.stage')
         and:
         Files.exists(folder.resolve('.command.sh'))
         Files.exists(folder.resolve('.command.run'))
