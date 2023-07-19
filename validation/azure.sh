@@ -52,6 +52,7 @@ $NXF_CMD -C ./azure.config \
     -with-report \
     -with-trace $OPTS \
     -plugins nf-cloudcache
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
 $NXF_CMD -C ./azure.config \
@@ -60,4 +61,5 @@ $NXF_CMD -C ./azure.config \
     -with-trace $OPTS \
     -plugins nf-cloudcache \
     -resume
-
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
+[[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
