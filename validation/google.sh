@@ -20,10 +20,6 @@ export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
 
 [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
 set -x
-$NXF_CMD -C ./google.config \
-    run nextflow-io/rnaseq-nf \
-    -with-report \
-    -with-trace $OPTS
 
 $NXF_CMD -C ./google.config \
     run ./test-readspair.nf \
@@ -68,4 +64,18 @@ $NXF_CMD -C ./gls.config run ./test-overwrite.nf
 ## re-executing should overwrite the published file
 [ `$NXF_CMD -C ./gls.config run ./test-overwrite.nf -resume | { grep 'Failed to publish file' -c || true; }` == 0 ] && echo OK || { echo 'Failed to publish file' && false; }
 
+NXF_CLOUDCACHE_PATH=gs://rnaseq-nf/cache \
+$NXF_CMD -C ./google.config \
+    run nextflow-io/rnaseq-nf \
+    -with-report \
+    -with-trace $OPTS \
+    -plugins nf-cloudcache
 
+
+NXF_CLOUDCACHE_PATH=gs://rnaseq-nf/cache \
+$NXF_CMD -C ./google.config \
+    run nextflow-io/rnaseq-nf \
+    -with-report \
+    -with-trace $OPTS \
+    -plugins nf-cloudcache \
+    -resume

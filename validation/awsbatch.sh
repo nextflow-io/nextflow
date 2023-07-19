@@ -36,7 +36,17 @@ $NXF_CMD run test-complexpaths.nf -resume -c awsbatch.config
 
 $NXF_CMD run test-subdirs.nf -c awsbatch.config
 
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
 $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
     -with-report \
-    -with-trace
+    -with-trace \
+    -plugins nf-cloudcache
+
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
+$NXF_CMD run nextflow-io/rnaseq-nf \
+    -profile batch \
+    -with-report \
+    -with-trace \
+    -plugins nf-cloudcache \
+    -resume
