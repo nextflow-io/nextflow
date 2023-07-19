@@ -17,14 +17,15 @@
 
 package nextflow.cache
 
-import java.nio.file.NoSuchFileException
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
-import nextflow.cache.CacheStore
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 /**
  * Implements the cloud cache store
@@ -73,9 +74,9 @@ class CloudCacheStore implements CacheStore {
     }
 
     private Path defaultBasePath() {
-        final basePath = System.getenv('NXF_CACHE_PATH')
+        final basePath = SysEnv.get('NXF_CLOUDCACHE_PATH')
         if( !basePath )
-            throw new IllegalArgumentException("NXF_CACHE_PATH must be defined when using the path-based cache store")
+            throw new IllegalArgumentException("NXF_CLOUDCACHE_PATH must be defined when using the path-based cache store")
 
         return basePath as Path
     }
@@ -83,7 +84,7 @@ class CloudCacheStore implements CacheStore {
     @Override
     CloudCacheStore open() {
         acquireLock()
-        indexWriter = Files.newOutputStream(indexPath)
+        indexWriter = new BufferedOutputStream(Files.newOutputStream(indexPath))
         return this
     }
 
@@ -120,7 +121,7 @@ class CloudCacheStore implements CacheStore {
 
     @Override
     void close() {
-        indexWriter.close()
+        FilesEx.closeQuietly(indexWriter)
         lock.delete()
     }
 

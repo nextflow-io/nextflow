@@ -1516,7 +1516,7 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_ASSETS`
 : Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
 
-`NXF_CACHE_PATH`
+`NXF_CLOUDCACHE_PATH`
 : :::{versionadded} 23.07.0-edge
   :::
 : Defines the base cache path when using the cloud cache store.
