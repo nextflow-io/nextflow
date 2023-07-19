@@ -1555,6 +1555,12 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_EXECUTOR`
 : Defines the default process executor e.g. `sge`
 
+`NXF_FILE_ROOT`
+: :::{versionadded} 23.05.0-edge
+  :::
+: The file storage path against which relative file paths are resolved.
+: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).
 
@@ -1613,11 +1619,11 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_WORK`
 : Directory where working files are stored (usually your *scratch* directory)
 
-`NXF_FILE_ROOT`
+`NXF_WRAPPER_STAGE_FILE_THRESHOLD`
 : :::{versionadded} 23.05.0-edge
   :::
-: The file storage path against which relative file paths are resolved.
-: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+: Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
+: This setting is useful for executors that impose a size limit on job scripts.
 
 `JAVA_HOME`
 : Defines the path location of the Java VM installation used to run Nextflow.
