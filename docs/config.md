@@ -333,6 +333,9 @@ The following settings are available:
 `azure.batch.terminateJobsOnCompletion`
 : Enables the Batch Job to automatically terminate a job once all tasks have completed (default: `true`).
 
+`azure.batch.deleteTasksOnCompletion`
+: Delete tasks after successful completion. This deletes them on the Azure Batch service but files and resources may persist on the compute nodes (default: `true`).
+
 `azure.batch.deleteJobsOnCompletion`
 : Enable the automatic deletion of jobs created by the pipeline execution (default: `true`).
 

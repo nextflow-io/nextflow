@@ -350,7 +350,6 @@ class AzBatchServiceTest extends Specification {
 
     }
 
-
     def 'should cleanup jobs by default' () {
         given:
         def CONFIG = [:]
