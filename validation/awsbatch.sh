@@ -50,3 +50,4 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
     -with-trace \
     -plugins nf-cloudcache \
     -resume
+[[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
