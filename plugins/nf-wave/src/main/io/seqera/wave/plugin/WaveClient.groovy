@@ -29,7 +29,6 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
-import java.util.regex.Pattern
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -69,7 +68,14 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
-    private static final Pattern CONTAINER_PATH = ~/(\S+)\/wt\/([a-z0-9]+)\/\S+/
+    final static private String[] REQUEST_HEADERS =  new String[]{
+                        'Content-Type','application/json',
+                        'Accept','application/json',
+                        'Accept','application/vnd.oci.image.index.v1+json',
+                        'Accept','application/vnd.oci.image.manifest.v1+json',
+                        'Accept','application/vnd.docker.distribution.manifest.v1+prettyjws',
+                        'Accept','application/vnd.docker.distribution.manifest.v2+json',
+                        'Accept','application/vnd.docker.distribution.manifest.list.v2+json' }
 
     private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
 
@@ -483,7 +489,7 @@ class WaveClient {
         final manifest = imageToManifestUri(image)
         final req = HttpRequest.newBuilder()
                 .uri(manifest)
-                .headers('Content-Type','application/json')
+                .headers(REQUEST_HEADERS)
                 .timeout(Duration.ofSeconds(15 * 60 + 10))
                 .GET()
                 .build()
