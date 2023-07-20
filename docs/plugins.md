@@ -4,9 +4,9 @@
 
 Nextflow has a plugin system that allows the use of extensible components that are downloaded and installed at runtime.
 
-## Default plugins
+## Core plugins
 
-Nextflow has a set of *default* plugins, which are downloaded only when they are needed at runtime. This allows Nextflow to support a wide variety of extensions out-of-the-box without bloating the core application binary.
+Nextflow has a set of *core* plugins, which are downloaded only when they are needed at runtime. This allows Nextflow to support a wide variety of extensions out-of-the-box without bloating the core application binary.
 
 ### `nf-amazon`
 
@@ -114,9 +114,9 @@ See {ref}`wave-page` for more information.
 
 ## Using plugins
 
-The default plugins do not require any configuration. They are automatically installed when the corresponding feature is requested by a Nextflow pipeline. You can still specify them as described below, e.g. if you want to pin the version of a plugin, however if you try to use a plugin version that isn't compatible with your Nextflow version, Nextflow will fail.
+The core plugins do not require any configuration. They are automatically installed when the corresponding feature is requested by a Nextflow pipeline. You can still specify them as described below, e.g. if you want to pin the version of a plugin, however if you try to use a plugin version that isn't compatible with your Nextflow version, Nextflow will fail.
 
-To use non-default plugins in your pipeline, you can declare them in your Nextflow configuration file:
+You can enable a plugin by declaring it in your Nextflow configuration:
 
 ```groovy
 plugins {
@@ -142,6 +142,10 @@ Nextflow's plugin system exposes a variety of extension points for plugins. The 
 
 :::{note}
 If you would like to implement something in a plugin that isn't covered by any of the following sections, feel free to create an issue on GitHub and describe your use case. In general, any class in the Nextflow codebase that implements `ExtensionPoint` can be extended by a plugin, and existing plugins are a great source of examples when writing new plugins.
+:::
+
+:::{note}
+Plugin extension points must be added to `extensions.idx` in the plugin repository to make them discoverable. See the `nf-hello` plugin for an example.
 :::
 
 ### Commands

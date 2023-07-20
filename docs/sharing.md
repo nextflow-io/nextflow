@@ -195,11 +195,123 @@ The following configuration properties are supported for each provider configura
 : *Required only for private SCM servers*
 : SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
-## Git providers
+## SCM providers
+
+### BitBucket credentials
+
+Create a `bitbucket` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and app password, as shown below:
+
+```groovy
+providers {
+    bitbucket {
+        user = 'me'
+        password = 'my-secret'
+    }
+}
+```
+
+:::{note}
+App passwords are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more at [this link](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/).
+:::
+
+### BitBucket Server credentials
+
+[BitBucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
+
+:::{note}
+BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
+:::
+
+To access your local BitBucket Server create an entry in the [SCM configuration file](#scm-configuration-file) specifying as shown below:
+
+```groovy
+providers {
+    mybitbucket {
+        platform = 'bitbucketserver'
+        server = 'https://your.bitbucket.host.com'
+        endpoint = 'https://your.bitbucket.host.com'
+        user = 'your-user'
+        password = 'your-password or your-token'
+    }
+}
+```
+
+### GitHub credentials
+
+Create a `github` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and access token as shown below:
+
+```groovy
+providers {
+    github {
+        user = 'your-user-name'
+        password = 'your-personal-access-token'
+    }
+}
+```
+
+GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs. Learn more about PAT and how to create it at [this link](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token).
+
+:::{versionadded} 23.01.0-edge
+Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+:::
+
+### GitLab credentials
+
+Create a `gitlab` entry in the [SCM configuration file](#scm-configuration-file) specifying the user name, password and your API access token that can be found in your GitLab [account page](https://gitlab.com/profile/account) (sign in required). For example:
+
+```groovy
+providers {
+    gitlab {
+        user = 'me'
+        password = 'my-secret'
+        token = 'YgpR8m7viH_ZYnC8YSe8'
+    }
+}
+```
+
+:::{tip}
+The GitLab *token* string can be used as the `password` value in the above setting. When doing that the `token` field can be omitted.
+:::
+
+### Gitea credentials
+
+[Gitea](https://gitea.io) is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite easy, it is suitable for building a private development environment in your network. To access your Gitea server, you have to provide all the credential information below:
+
+```groovy
+providers {
+    mygitea {
+        server = 'http://your-domain.org/gitea'
+        endpoint = 'http://your-domain.org/gitea/api/v1'
+        platform = 'gitea'
+        user = 'your-user'
+        password = 'your-password'
+        token = 'your-api-token'
+    }
+}
+```
+
+See [Gitea documentation](https://docs.gitea.io/en-us/api-usage/) about how to enable API access on your server and how to issue a token.
+
+### Azure Repos credentials
+
+Nextflow has a builtin support for [Azure Repos](https://azure.microsoft.com/en-us/services/devops/repos/), a Git source code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials using the configuration snippet shown below:
+
+```groovy
+providers {
+    azurerepos {
+        user = 'your-user-name'
+        password = 'your-personal-access-token'
+    }
+}
+```
+
+:::{tip}
+The Personal access token can be generated in the repository `Clone Repository` dialog.
+:::
 
 (aws-codecommit)=
 
-### AWS CodeCommit
+### AWS CodeCommit credentials
 
 :::{versionadded} 22.06.0-edge
 :::
@@ -234,118 +346,6 @@ In the above example replace `my-repo` with your own repository. Note also that 
 
 :::{note}
 The support for protocols other than HTTPS is not available at this time.
-:::
-
-### Azure Repos
-
-Nextflow has a builtin support for [Azure Repos](https://azure.microsoft.com/en-us/services/devops/repos/), a Git source code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials using the configuration snippet shown below:
-
-```groovy
-providers {
-    azurerepos {
-        user = 'your-user-name'
-        password = 'your-personal-access-token'
-    }
-}
-```
-
-:::{tip}
-The Personal access token can be generated in the repository `Clone Repository` dialog.
-:::
-
-### BitBucket
-
-Create a `bitbucket` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and app password, as shown below:
-
-```groovy
-providers {
-    bitbucket {
-        user = 'me'
-        password = 'my-secret'
-    }
-}
-```
-
-:::{note}
-App passwords are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more at [this link](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/).
-:::
-
-### BitBucket Server
-
-[BitBucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
-
-:::{note}
-BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
-:::
-
-To access your local BitBucket Server create an entry in the [SCM configuration file](#scm-configuration-file) specifying as shown below:
-
-```groovy
-providers {
-    mybitbucket {
-        platform = 'bitbucketserver'
-        server = 'https://your.bitbucket.host.com'
-        endpoint = 'https://your.bitbucket.host.com'
-        user = 'your-user'
-        password = 'your-password or your-token'
-    }
-}
-```
-
-### Gitea
-
-[Gitea](https://gitea.io) is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite easy, it is suitable for building a private development environment in your network. To access your Gitea server, you have to provide all the credential information below:
-
-```groovy
-providers {
-    mygitea {
-        server = 'http://your-domain.org/gitea'
-        endpoint = 'http://your-domain.org/gitea/api/v1'
-        platform = 'gitea'
-        user = 'your-user'
-        password = 'your-password'
-        token = 'your-api-token'
-    }
-}
-```
-
-See [Gitea documentation](https://docs.gitea.io/en-us/api-usage/) about how to enable API access on your server and how to issue a token.
-
-### GitHub
-
-Create a `github` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and access token as shown below:
-
-```groovy
-providers {
-    github {
-        user = 'your-user-name'
-        password = 'your-personal-access-token'
-    }
-}
-```
-
-GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs. Learn more about PAT and how to create it at [this link](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token).
-
-:::{versionadded} 23.01.0-edge
-Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
-:::
-
-### GitLab
-
-Create a `gitlab` entry in the [SCM configuration file](#scm-configuration-file) specifying the user name, password and your API access token that can be found in your GitLab [account page](https://gitlab.com/profile/account) (sign in required). For example:
-
-```groovy
-providers {
-    gitlab {
-        user = 'me'
-        password = 'my-secret'
-        token = 'YgpR8m7viH_ZYnC8YSe8'
-    }
-}
-```
-
-:::{tip}
-The GitLab *token* string can be used as the `password` value in the above setting. When doing that the `token` field can be omitted.
 :::
 
 ## Private server configuration
