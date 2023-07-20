@@ -149,7 +149,7 @@ class CombineOpTest extends Specification {
 
     def 'should combine with empty value' () {
         given:
-        def left = Channel.value().close()
+        def left = Channel.empty()
         def right = Channel.value('z')
         def op = new CombineOp(left, right)
         when:

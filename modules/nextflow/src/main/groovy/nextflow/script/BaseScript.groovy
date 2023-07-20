@@ -90,13 +90,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected process( String name, Closure<BodyDef> body ) {
-        if( NF.isDsl2() ) {
-            def process = new ProcessDef(this,body,name)
-            meta.addDefinition(process)
-        }
-        else {
-            throw new UnsupportedOperationException("DSL1 is not supported anymore")
-        }
+        def process = new ProcessDef(this,body,name)
+        meta.addDefinition(process)
     }
 
     /**

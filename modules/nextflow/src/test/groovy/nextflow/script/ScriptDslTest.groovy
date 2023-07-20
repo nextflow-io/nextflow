@@ -475,26 +475,6 @@ class ScriptDslTest extends Dsl2Spec {
         err.message == "Access to 'flow1.out' is undefined since the workflow 'flow1' has not been invoked before accessing the output attribute"
     }
 
-    def 'should report unsupported error' () {
-        when:
-        dsl_eval('''
-        process foo {
-          /echo foo/
-        }
-        
-        workflow {
-          get: 
-            x
-          main: 
-          flow()
-        }
-        ''')
-
-        then:
-        def err = thrown(ScriptCompilationException)
-        err.message.contains "Workflow 'get' is not supported anymore use 'take' instead"
-    }
-
     def 'should fail with wrong scope'() {
         when:
         dsl_eval('''\
