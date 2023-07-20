@@ -153,14 +153,8 @@ class ScriptMeta {
         if( component !instanceof WorkflowDef && component !instanceof ProcessDef && component !instanceof FunctionDef ) {
             return
         }
-        if( functionsCount.get(name) ) {
-            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define a function with the same name as a workflow or process"
-            if( NF.isStrictMode() )
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
-        }
-        if( imports.get(name) ) {
-            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define a function with the same name as a workflow or process"
+        if( functionsCount.get(name) || imports.get(name) ) {
+            final msg = "A component (function, process, or workflow) named '$name' is defined more than once in module script: $scriptPath -- Make sure to not define multiple components with the same name"
             if( NF.isStrictMode() )
                 throw new DuplicateModuleFunctionException(msg)
             log.warn(msg)
