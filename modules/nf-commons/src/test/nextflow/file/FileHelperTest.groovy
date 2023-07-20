@@ -463,18 +463,26 @@ class FileHelperTest extends Specification {
         Files.createSymbolicLink(
                 folder.resolve('file4.fa'),
                 folder.resolve('file3.bam'))
+        and:
+        folder.resolve('subdir_real').mkdirs()
+        folder.resolve('subdir_real/file5.fa').text = 'file 5'
+        and:
+        Files.createSymbolicLink(
+                folder.resolve('subdir_link'),
+                folder.resolve('subdir_real'))
 
         when:
         def result = []
-        FileHelper.visitFiles(folder, '*.fa', relative: true) { result << it.toString() }
+        FileHelper.visitFiles(folder, '**.fa', relative: true) { result << it.toString() }
         then:
-        result.sort() == ['file2.fa','file4.fa']
+        result.sort() == ['file2.fa','file4.fa','subdir_link/file5.fa', 'subdir_real/file5.fa']
 
         when:
         result = []
-        FileHelper.visitFiles(folder, '*.fa', relative: true, followLinks: false) { result << it.toString() }
+        FileHelper.visitFiles(folder, '**.fa', relative: true, followLinks: false) { result << it.toString() }
         then:
-        result.sort() == ['file2.fa']
+        // note: "file4.fa" is included in the result because it matches the name of the symlink file
+        result.sort() == ['file2.fa','file4.fa','subdir_real/file5.fa']
 
         cleanup:
         folder?.deleteDir()
@@ -1055,9 +1063,10 @@ class FileHelperTest extends Specification {
 
     }
 
+    @Unroll
     def 'should convert to canonical path with base' () {
         given:
-        SysEnv.push(NXF_FILE_ROOT: 'http://host.com')
+        SysEnv.push(NXF_FILE_ROOT: 'http://host.com/work')
 
         expect:
         FileHelper.toCanonicalPath(VALUE) == EXPECTED
@@ -1068,8 +1077,13 @@ class FileHelperTest extends Specification {
         where:
         VALUE                       | EXPECTED
         null                        | null
-        'file.txt'                  | Paths.get(new URI('http://host.com/file.txt'))
-        Paths.get('file.txt')       |  Paths.get(new URI('http://host.com/file.txt'))
+        'file.txt'                  | Paths.get(new URI('http://host.com/work/file.txt'))
+        Paths.get('file.txt')       |  Paths.get(new URI('http://host.com/work/file.txt'))
+        and:
+        './file.txt'                | Paths.get(new URI('http://host.com/work/file.txt'))
+        '.'                         | Paths.get(new URI('http://host.com/work'))
+        './'                        | Paths.get(new URI('http://host.com/work'))
+        '../file.txt'               | Paths.get(new URI('http://host.com/file.txt'))
         and:
         '/file.txt'                 | Paths.get('/file.txt')
         Paths.get('/file.txt')      | Paths.get('/file.txt')

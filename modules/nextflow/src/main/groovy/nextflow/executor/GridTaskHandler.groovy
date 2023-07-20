@@ -221,7 +221,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
+        final containerOpts = task.config.getContainerOptions()
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
         // create an inline script to launch the job execution
         return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
     }
@@ -314,7 +315,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        def exitAttrs = null
+        BasicFileAttributes exitAttrs = null
         if( !exitFile || !(exitAttrs=FileHelper.readAttributes(exitFile)) || !exitAttrs.lastModifiedTime()?.toMillis() ) {
             if( log.isTraceEnabled() ) {
                 if( !exitFile )
@@ -447,7 +448,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     boolean checkIfCompleted() {
 
         // verify the exit file exists
-        def exit
+        Integer exit
         if( isRunning() && (exit = readExitStatus()) != null ) {
             // finalize the task
             task.exitStatus = exit

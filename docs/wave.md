@@ -38,7 +38,7 @@ tower {
 ```
 
 :::{note}
-The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/registry_credentials/) in Tower.
+The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/overview) in Tower.
 :::
 
 ## Use cases
@@ -157,42 +157,58 @@ The following configuration options are available:
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
-`wave.build.cacheRepositor`
+`wave.build.cacheRepository`
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
-
-`wave.build.conda.mambaImage`
-: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
-
-`wave.build.conda.commands`
-: One or more commands to be added to the Dockerfile used to build a Conda based image.
 
 `wave.build.conda.basePackages`
 : One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
 
-`wave.build.spack.checksum`
-: Enable checksum verification for source tarballs (recommended). Disable only when requesting a package version not yet encoded in the corresponding Spack recipe (default: `true`).
+`wave.build.conda.commands`
+: One or more commands to be added to the Dockerfile used to build a Conda based image.
 
-`wave.build.spack.builderImage`
-: The Spack container image is used to build Spack based container. This is expected to be one of the [Spack-provided](https://spack.readthedocs.io/en/latest/containers.html) images.
+`wave.build.conda.mambaImage`
+: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
 
-`wave.build.spack.runnerImage`
-: The OS container image is used for the production container. This is expected to match the OS of the `builderImage` above.
-
-`wave.build.spack.osPackages`
-: Additional OS packages to be installed in the production container. Note that package names may vary depending on the OS of the `runnerImage` above.
-
-`wave.build.spack.cFlags`
-: C compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
-
-`wave.build.spack.cxxFlags`
-: C++ compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
-
-`wave.build.spack.fFlags`
-: Fortran compiler flags used during the build. Default: `-O3` for GCC compiler. Recommended: one of `-O3` (high optimisation) or `-O2` (moderate optimisation).
+`wave.build.spack.basePackages`
+: :::{versionadded} 22.06.0-edge
+:::
+: One or more Spack packages to be always added in the resulting container.
 
 `wave.build.spack.commands`
+: :::{versionadded} 22.06.0-edge
+:::
 : One or more commands to be added to the Dockerfile used to build a Spack based image.
+
+`wave.httpClient.connectTime`
+: :::{versionadded} 22.06.0-edge
+:::
+: Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
 
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
+`wave.report.enabled` (preview)
+: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`, requires version `23.06.0-edge` or later).
+
+`wave.report.file` (preview)
+: The name of the containers report file (default: `containers-<timestamp>.config` requires version `23.06.0-edge` or later).
+
+`wave.retryPolicy.delay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The initial delay when a failing HTTP request is retried (default: `150ms`). 
+
+`wave.retryPolicy.maxDelay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max delay when a failing HTTP request is retried (default: `90 seconds`).
+
+`wave.retryPolicy.maxAttempts`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max number of attempts a failing HTTP request is retried (default: `5`).
+
+`wave.retryPolicy.jitter`
+: :::{versionadded} 22.06.0-edge
+  :::
+: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).

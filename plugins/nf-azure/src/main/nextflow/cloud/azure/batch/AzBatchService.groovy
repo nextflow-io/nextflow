@@ -876,7 +876,7 @@ class AzBatchService implements Closeable {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}", event.lastFailure)
+                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
             }
         }
         return RetryPolicy.<T>builder()
