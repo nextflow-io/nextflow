@@ -20,7 +20,6 @@ import java.nio.file.Files
 
 import groovy.transform.InheritConstructors
 import nextflow.NF
-import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleFunctionException
 import test.Dsl2Spec
 import test.TestHelper
@@ -39,7 +38,6 @@ class ScriptMetaTest extends Dsl2Spec {
 
     def setupSpec(){
         NF.init()
-        NextflowMeta.instance.strictMode(true)
     }
 
     def 'should return all defined names' () {

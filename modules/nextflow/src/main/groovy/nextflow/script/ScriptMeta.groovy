@@ -154,10 +154,7 @@ class ScriptMeta {
             return
         }
         if( functionsCount.get(name) || imports.get(name) ) {
-            final msg = "A component (function, process, or workflow) named '$name' is defined more than once in module script: $scriptPath -- Make sure to not define multiple components with the same name"
-            if( NF.isStrictMode() )
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+            throw new DuplicateModuleFunctionException("A component (function, process, or workflow) named '$name' is defined more than once in module script: $scriptPath -- Make sure to not define multiple components with the same name")
         }
     }
 
