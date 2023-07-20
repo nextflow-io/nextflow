@@ -44,6 +44,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
+import nextflow.util.InsensitiveMap
 import sun.net.www.protocol.ftp.FtpURLConnection
 
 import static XFileSystemConfig.*
@@ -191,7 +192,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             XAuthRegistry.instance.authorize(conn)
         }
         if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308] && attempt < MAX_REDIRECT_HOPS ) {
-            def header = conn.getHeaderFields()
+            final header = InsensitiveMap.of(conn.getHeaderFields())
             String location = header.get("Location")?.get(0)
             URL newPath = new URI(location).toURL()
             log.debug "Remote redirect URL: $newPath"
@@ -454,15 +455,16 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             return new XFileAttributes(null,-1)
         }
         if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302, 307, 308]) {
-            def header = conn.getHeaderFields()
+            final header = conn.getHeaderFields()
             return readHttpAttributes(header)
         }
         return null
     }
 
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {
-        def lastMod = header.get("Last-Modified")?.get(0)
-        long contentLen = header.get("Content-Length")?.get(0)?.toLong() ?: -1
+        final header0 = InsensitiveMap.<String,List<String>>of(header)
+        def lastMod = header0.get("Last-Modified")?.get(0)
+        long contentLen = header0.get("Content-Length")?.get(0)?.toLong() ?: -1
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z', Locale.ENGLISH) // <-- make sure date parse is not language dependent (for the week day)
         def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).time, TimeUnit.MILLISECONDS) : (FileTime)null
         new XFileAttributes(modTime, contentLen)

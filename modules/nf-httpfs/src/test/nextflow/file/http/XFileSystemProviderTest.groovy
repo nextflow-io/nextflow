@@ -63,7 +63,7 @@ class XFileSystemProviderTest extends Specification {
     def "should read file attributes from map"() {
         given:
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729']]
+        def attrMap = ['last-modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'content-length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
@@ -85,7 +85,7 @@ class XFileSystemProviderTest extends Specification {
         def GERMAN = new Locale.Builder().setLanguage("de").setRegion("DE").build()
         Locale.setDefault(Locale.Category.FORMAT, GERMAN)
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729']]
+        def attrMap = ['last-modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'content-length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
