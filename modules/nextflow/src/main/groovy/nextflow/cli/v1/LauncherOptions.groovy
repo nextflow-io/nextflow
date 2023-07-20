@@ -30,7 +30,7 @@ import nextflow.cli.ILauncherOptions
 @CompileStatic
 class LauncherOptions implements ILauncherOptions {
 
-    boolean ansiLogCli
+    Boolean ansiLogCli
 
     void setAnsiLog(boolean value) { ansiLogCli = value }
 

@@ -28,7 +28,7 @@ import picocli.CommandLine.Option
 @CompileStatic
 class LauncherOptions implements ILauncherOptions {
 
-    boolean ansiLogCli
+    Boolean ansiLogCli
 
     void setAnsiLog(boolean value) { ansiLogCli = value }
 

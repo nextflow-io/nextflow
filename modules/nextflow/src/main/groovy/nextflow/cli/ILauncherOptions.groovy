@@ -29,7 +29,7 @@ import org.fusesource.jansi.Ansi
 @Slf4j
 trait ILauncherOptions {
 
-    abstract boolean getAnsiLogCli()
+    abstract Boolean getAnsiLogCli()
 
     abstract boolean isBackground()
 
