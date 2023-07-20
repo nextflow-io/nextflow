@@ -14,4 +14,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-MAIN_CLASS="nextflow.cli.v2.Launcher" ./launch.sh "$@"
+MAIN_CLASS="nextflow.cli.v1.Launcher" ./launch.sh "$@"

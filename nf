@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Copyright 2013-2023, Seqera Labs
 #
@@ -14,4 +14,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-MAIN_CLASS="nextflow.cli.v2.Launcher" ./launch.sh "$@"
+NXF_CLI_V2="true" nextflow "$@"
