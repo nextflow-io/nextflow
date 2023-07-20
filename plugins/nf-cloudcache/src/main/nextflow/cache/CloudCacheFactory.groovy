@@ -20,25 +20,26 @@ package nextflow.cache
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import nextflow.cache.CacheDB
+import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Priority
-
 /**
- * Implements the default cache factory
+ * Implements the cloud cache factory
  *
- * @see DefaultCacheStore
+ * @see CloudCacheStore
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-@Priority(0)
-class DefaultCacheFactory extends CacheFactory {
+@Priority(-10)
+class CloudCacheFactory extends CacheFactory {
 
     @Override
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new DefaultCacheStore(uniqueId, runName, home)
+        final store = new CloudCacheStore(uniqueId, runName, home)
         return new CacheDB(store)
     }
 
