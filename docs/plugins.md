@@ -32,6 +32,10 @@ Components:
 
 See {ref}`azure-page` for more information.
 
+### `nf-cloudcache`
+
+The `nf-cloudcache` plugin contains a custom cache store backed by cloud object storage.
+
 ### `nf-codecommit`
 
 The `nf-codecommit` plugin contains the integration with AWS CodeCommit.
