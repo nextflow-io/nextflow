@@ -15,21 +15,21 @@
  */
 
 package nextflow.cli
-
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
-
 /**
- * CLI `pull` sub-command
+ * CLI sub-command PULL
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class PullImpl {
+class CmdPull {
 
     interface Options extends IHubOptions {
         String getPipeline()
@@ -38,23 +38,51 @@ class PullImpl {
         String getRevision()
     }
 
+    @Parameters(commandDescription = 'Download or update a project')
+    static class V1 extends CmdBase implements Options, HubOptions {
+
+        @Parameter(description = 'project name or repository url to pull', arity = 1)
+        List<String> args
+
+        @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+        boolean all
+
+        @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+        String revision
+
+        @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer deep
+
+        @Override
+        String getPipeline() { args[0] }
+
+        @Override
+        String getName() { 'pull' }
+
+        @Override
+        void run() {
+            new CmdPull(this).run()
+        }
+
+    }
+
     @Delegate
     private Options options
 
     /* only for testing purpose */
     protected File root
 
-    PullImpl(Options options) {
+    CmdPull(Options options) {
         this.options = options
     }
 
     void run() {
 
         if( !pipeline && !all )
-            throw new AbortOperationException('Project name or option `all` is required')
+            throw new AbortOperationException('Project name or option `-all` is required')
 
-        def pipelines = all ? AssetManager.list() : [pipeline]
-        if( !pipelines ) {
+        def list = all ? AssetManager.list() : [pipeline]
+        if( !list ) {
             log.info "(nothing to do)"
             return
         }
@@ -67,7 +95,7 @@ class PullImpl {
         // init plugin system
         Plugins.init()
 
-        pipelines.each {
+        list.each {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 

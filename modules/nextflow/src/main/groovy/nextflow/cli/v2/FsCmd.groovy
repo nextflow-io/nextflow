@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.FsImpl
+import nextflow.cli.CmdFs
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 
@@ -37,32 +37,32 @@ class FsCmd extends AbstractCmd {
     void copy(
             @Parameters(paramLabel = '<source>') String source,
             @Parameters(paramLabel = '<target>') String target) {
-        new FsImpl().run(FsImpl.Command.COPY, [ source, target ])
+        new CmdFs().run(CmdFs.Command.COPY, [ source, target ])
     }
 
     @Command(description = 'Move a file')
     void move(
             @Parameters(paramLabel = '<source>') String source,
             @Parameters(paramLabel = '<target>') String target) {
-        new FsImpl().run(FsImpl.Command.MOVE, [ source, target ])
+        new CmdFs().run(CmdFs.Command.MOVE, [ source, target ])
     }
 
     @Command(description = 'List the contents of a folder')
     void list(
             @Parameters(paramLabel = '<source>') String source) {
-        new FsImpl().run(FsImpl.Command.LIST, [ source ])
+        new CmdFs().run(CmdFs.Command.LIST, [ source ])
     }
 
     @Command(description = 'Print a file to stdout')
     void cat(
             @Parameters(paramLabel = '<source>') String source) {
-        new FsImpl().run(FsImpl.Command.CAT, [ source ])
+        new CmdFs().run(CmdFs.Command.CAT, [ source ])
     }
 
     @Command(description = 'Remove a file')
     void remove(
             @Parameters(paramLabel = '<source>') String source) {
-        new FsImpl().run(FsImpl.Command.REMOVE, [ source ])
+        new CmdFs().run(CmdFs.Command.REMOVE, [ source ])
     }
 
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,41 +14,40 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.cli.ViewImpl
 
 /**
- * CLI `view` sub-command (v1)
+ * CLI `help` sub-command (v1)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = 'View project script file(s)')
-class ViewCmd extends AbstractCmd implements ViewImpl.Options {
+@Parameters(commandDescription = 'Print the usage help for a command')
+class CmdHelp extends CmdBase {
 
     @Override
-    String getName() { 'view' }
+    String getName() { 'help' }
 
-    @Parameter(required = true, description = 'project name')
-    List<String> args = []
+    @Parameter(arity = 1, description = 'command name')
+    List<String> args
 
-    @Parameter(names = ['-l','-all'], arity = 0, description = 'List repository content')
-    boolean all
-
-    @Parameter(names = ['-q','-quiet'], arity = 0, description = 'Hide header line')
-    boolean quiet
-
-    @Override
-    String getPipeline() {
-        args.size() > 0 ? args[0] : null
+    private UsageAware getUsage( List<String> args ) {
+        def result = args ? launcher.findCommand(args[0]) : null
+        result instanceof UsageAware ? result as UsageAware: null
     }
 
     @Override
     void run() {
-        new ViewImpl(this).run()
+        def cmd = getUsage(args)
+        if( cmd ) {
+            cmd.usage(args.size()>1 ? args[1..-1] : Collections.<String>emptyList())
+        }
+        else {
+            launcher.usage(args ? args[0] : null)
+        }
     }
 }

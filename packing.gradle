@@ -31,7 +31,7 @@ dependencies {
 }
 
 
-ext.mainClassName = 'nextflow.cli.v1.Launcher'
+ext.mainClassName = 'nextflow.cli.Launcher'
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"

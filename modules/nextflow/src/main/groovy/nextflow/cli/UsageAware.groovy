@@ -14,23 +14,18 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
-
-import com.beust.jcommander.Parameters
+package nextflow.cli
 
 /**
- * CLI `self-update` sub-command (v1)
+ * Command can implement this interface to provide a
+ * custom usage description
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Parameters(commandDescription = 'Update nextflow runtime to the latest available version')
-class SelfUpdateCmd extends AbstractCmd {
-    @Override
-    String getName() { 'self-update' }
+interface UsageAware {
 
-    @Override
-    void run() {
-        // actually it's doing nothing, the update process is managed by the external launcher script
-        // this class in only necessary to print the command line the usage output
-    }
+    void usage()
+
+    void usage(List<String> args)
+
 }

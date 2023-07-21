@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.ConsoleImpl
+import nextflow.cli.CmdConsole
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 
@@ -31,13 +31,13 @@ import picocli.CommandLine.Parameters
     name = 'console',
     description = 'Launch Nextflow interactive console'
 )
-class ConsoleCmd extends AbstractCmd implements ConsoleImpl.Options {
+class ConsoleCmd extends AbstractCmd implements CmdConsole.Options {
 
     @Parameters(arity = '0..1', description = 'script filename')
     String script
 
     @Override
     void run() {
-        new ConsoleImpl(this).run()
+        new CmdConsole(this).run()
     }
 }

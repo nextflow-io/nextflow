@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.ConfigImpl
+import nextflow.cli.CmdConfig
 import nextflow.cli.ILauncherOptions
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -34,7 +34,7 @@ import picocli.CommandLine.ParentCommand
     name = 'config',
     description = 'Print a project configuration'
 )
-class ConfigCmd extends AbstractCmd implements ConfigImpl.Options {
+class ConfigCmd extends AbstractCmd implements CmdConfig.Options {
 
     @ParentCommand
     private Launcher launcher
@@ -64,7 +64,7 @@ class ConfigCmd extends AbstractCmd implements ConfigImpl.Options {
 
     @Override
     void run() {
-        new ConfigImpl(this).run()
+        new CmdConfig(this).run()
     }
 
 }

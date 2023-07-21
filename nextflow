@@ -22,7 +22,7 @@ NXF_PROT=${NXF_PROT:-'https'}
 NXF_BASE=${NXF_BASE:-$NXF_PROT://www.nextflow.io/releases}
 NXF_TEMP=${NXF_TEMP:-$TMPDIR}
 NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
-NXF_CLI="$0 $@"
+NXF_CLI=${NXF_CLI:-"$0 $@"}
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 
 export NXF_CLI
@@ -399,7 +399,7 @@ else
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
 
     # use v2 launcher if specified
-    [[ "$NXF_CLI_V2" == 'true' && "${cli[-1]}" == "\"nextflow.cli.v1.Launcher\"" ]] && cli[-1]="\"nextflow.cli.v2.Launcher\""
+    [[ "$NXF_CLI_V2" == 'true' && "${cli[-1]}" == "\"nextflow.cli.Launcher\"" ]] && cli[-1]="\"nextflow.cli.v2.Launcher\""
 
     # first string between double quotes is the full path to java, also blank spaces are included
     # remainder string are arguments

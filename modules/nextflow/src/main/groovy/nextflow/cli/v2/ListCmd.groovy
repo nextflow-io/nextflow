@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.ListImpl
+import nextflow.cli.CmdList
 import picocli.CommandLine.Command
 
 /**
@@ -30,11 +30,11 @@ import picocli.CommandLine.Command
     name = 'list',
     description = 'List all downloaded projects'
 )
-class ListCmd extends AbstractCmd implements ListImpl.Options {
+class ListCmd extends AbstractCmd implements CmdList.Options {
 
     @Override
     void run() {
-        new ListImpl(this).run()
+        new CmdList(this).run()
     }
 
 }

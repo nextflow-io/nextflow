@@ -19,7 +19,7 @@ package nextflow.util
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cli.v1.AbstractCmd
+import nextflow.cli.CmdBase
 /**
  * This class is used to resolve at runtime some spurious dependencies
  * with optional modules
@@ -31,10 +31,10 @@ import nextflow.cli.v1.AbstractCmd
 @CompileStatic
 class SpuriousDeps {
 
-    static AbstractCmd cmdCloud() {
+    static CmdBase cmdCloud() {
         try {
             final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (AbstractCmd)clazz.newInstance()
+            return (CmdBase)clazz.newInstance()
         }
         catch (ClassNotFoundException e) {
             return null

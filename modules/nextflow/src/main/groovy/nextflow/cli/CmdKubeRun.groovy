@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
 import java.util.regex.Pattern
 
@@ -33,7 +33,7 @@ import nextflow.util.HistoryFile
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a workflow in a Kubernetes cluster (experimental)")
-class KubeRunCmd extends RunCmd {
+class CmdKubeRun extends CmdRun.V1 {
 
     static private String POD_NAME = /[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/
 
@@ -101,7 +101,7 @@ class KubeRunCmd extends RunCmd {
         runName = runName.replace('_','-')
     }
 
-    /* copied from {@code RunImpl} */
+    /* copied from {@code CmdRun} */
 
     protected void checkRunName0() {
         if( runName == 'last' )

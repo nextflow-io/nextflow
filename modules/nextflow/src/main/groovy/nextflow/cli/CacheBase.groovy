@@ -28,7 +28,7 @@ import nextflow.util.HistoryFile
 import static nextflow.util.HistoryFile.Record
 
 /**
- * Common cache operations shared by {@link LogImpl} and {@link CleanImpl}
+ * Common cache operations shared by {@link CmdLog} and {@link CmdClean}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

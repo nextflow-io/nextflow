@@ -15,10 +15,11 @@
  */
 
 package nextflow.cli
-
 import java.nio.file.Path
 
 import ch.artecat.grengine.Grengine
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
 import groovy.text.Template
 import groovy.transform.CompileStatic
@@ -34,13 +35,13 @@ import nextflow.ui.TableBuilder
 import static nextflow.cli.CmdHelper.fixEqualsOp
 
 /**
- * CLI `log` sub-command
+ * Implements the `log` command to print tasks runtime information of an execute pipeline
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class LogImpl implements CacheBase {
+class CmdLog implements CacheBase {
 
     static private List<String> ALL_FIELDS
 
@@ -68,6 +69,49 @@ class LogImpl implements CacheBase {
         List<String> getArgs()
     }
 
+    @Parameters(commandDescription = 'Print executions log and runtime info')
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(names = ['-s'], description='Character used to separate column values')
+        String separator = '\\t'
+
+        @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
+        String fields
+
+        @Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
+        String templateStr
+
+        @Parameter(names=['-l','-list-fields'], description = 'Show all available fields', arity = 0)
+        boolean listFields
+
+        @Parameter(names=['-F','-filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
+        String filterStr
+
+        @Parameter(names='-after', description = 'Show log entries for runs executed after the specified one')
+        String after
+
+        @Parameter(names='-before', description = 'Show log entries for runs executed before the specified one')
+        String before
+
+        @Parameter(names='-but', description = 'Show log entries of all runs except the specified one')
+        String but
+
+        @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
+        boolean quiet
+
+        @Parameter(description = 'Run name or session id')
+        List<String> args
+
+        @Override
+        String getName() { 'log' }
+
+        @Override
+        void run() {
+            new CmdLog(this).run()
+        }
+
+    }
+
     @Delegate
     private Options options
 
@@ -79,38 +123,12 @@ class LogImpl implements CacheBase {
 
     private Map<HashCode,Boolean> printed = new HashMap<>()
 
-    LogImpl(Options options) {
+    CmdLog(Options options) {
         this.options = options
     }
 
     /* For testing purposes only */
-    LogImpl() {}
-
-    void run() {
-        Plugins.init()
-        init()
-
-        // -- show the list of expected fields and exit
-        if( listFields ) {
-            ALL_FIELDS.each { println "  $it" }
-            return
-        }
-
-        // -- show the current history and exit
-        if( showHistory ) {
-            quiet ? printQuiet() : printHistory()
-            return
-        }
-
-        // -- main
-        listIds().each { entry ->
-            cacheFor(entry)
-                .openForRead()
-                .eachRecord(this.&printRecord)
-                .close()
-        }
-
-    }
+    CmdLog() {}
 
     void init() {
         CacheBase.super.init()
@@ -148,6 +166,37 @@ class LogImpl implements CacheBase {
         }
 
         templateScript = new TaskTemplateEngine().createTemplate(templateStr0)
+    }
+
+    /**
+     * Implements the `log` command
+     */
+    void run() {
+        Plugins.init()
+        init()
+
+        // -- show the list of expected fields and exit
+        if( listFields ) {
+            ALL_FIELDS.each { println "  $it" }
+            return
+        }
+
+        // -- show the current history and exit
+        if( showHistory ) {
+            quiet ? printQuiet() : printHistory()
+            return
+        }
+
+        // -- main
+        listIds().each { entry ->
+
+            cacheFor(entry)
+                .openForRead()
+                .eachRecord(this.&printRecord)
+                .close()
+
+        }
+
     }
 
     /**

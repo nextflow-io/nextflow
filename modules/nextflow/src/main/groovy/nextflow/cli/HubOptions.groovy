@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +14,25 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
-import com.beust.jcommander.Parameters
+import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
-import nextflow.cli.ListImpl
+import nextflow.cli.IHubOptions
 
 /**
- * CLI `list` sub-command (v1)
+ * CLI v1 implementation of command line options related to interacting with
+ * a git registry (GitHub, BitBucket, etc)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = 'List all downloaded projects')
-class ListCmd extends AbstractCmd implements ListImpl.Options {
+trait HubOptions implements IHubOptions {
 
-    @Override
-    String getName() { 'list' }
+    @Parameter(names = ['-hub'], description = "Service hub where the project is hosted")
+    String hubProvider
 
-    @Override
-    void run() {
-        new ListImpl(this).run()
-    }
+    @Parameter(names = ['-user'], description = 'Private repository user name')
+    String hubUserCli
 
 }

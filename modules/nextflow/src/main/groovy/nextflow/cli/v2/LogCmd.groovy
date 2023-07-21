@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.LogImpl
+import nextflow.cli.CmdLog
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'log',
     description = 'Print executions log and runtime info'
 )
-class LogCmd extends AbstractCmd implements LogImpl.Options {
+class LogCmd extends AbstractCmd implements CmdLog.Options {
 
     @Option(names = ['--after'], paramLabel = '<name>|<id>', description = 'Show log entries for runs executed after the specified one')
     String after
@@ -66,7 +66,7 @@ class LogCmd extends AbstractCmd implements LogImpl.Options {
 
     @Override
     void run() {
-        new LogImpl(this).run()
+        new CmdLog(this).run()
     }
 
 }

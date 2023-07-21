@@ -26,10 +26,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
-import nextflow.cli.ConfigImpl
+import nextflow.cli.CmdConfig
 import nextflow.cli.ILauncherOptions
-import nextflow.cli.NodeImpl
-import nextflow.cli.RunImpl
+import nextflow.cli.CmdNode
+import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretHolder
@@ -53,9 +53,9 @@ class ConfigBuilder {
 
     ILauncherOptions options
 
-    RunImpl cmdRun
+    CmdRun cmdRun
 
-    NodeImpl cmdNode
+    CmdNode cmdNode
 
     Path baseDir
 
@@ -105,7 +105,7 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setRunOptions( RunImpl cmdRun ) {
+    ConfigBuilder setRunOptions( CmdRun cmdRun ) {
         this.cmdRun = cmdRun
         setProfile(cmdRun.profile)
         return this
@@ -126,12 +126,12 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setNodeOptions( NodeImpl node ) {
+    ConfigBuilder setNodeOptions( CmdNode node ) {
         this.cmdNode = node
         return this
     }
 
-    ConfigBuilder setCmdConfig( ConfigImpl cmdConfig ) {
+    ConfigBuilder setCmdConfig( CmdConfig cmdConfig ) {
         showAllProfiles = cmdConfig.showAllProfiles
         setProfile(cmdConfig.profile)
         return this
@@ -527,7 +527,7 @@ class ConfigBuilder {
     }
 
     @PackageScope
-    void configRunOptions(ConfigObject config, Map env, RunImpl cmdRun) {
+    void configRunOptions(ConfigObject config, Map env, CmdRun cmdRun) {
 
         // -- set config options
         if( cmdRun.cacheable != null )
@@ -892,7 +892,7 @@ class ConfigBuilder {
         }
     }
 
-    static String resolveConfig(Path baseDir, RunImpl cmdRun) {
+    static String resolveConfig(Path baseDir, CmdRun cmdRun) {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)

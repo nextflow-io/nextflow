@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
 import java.lang.reflect.Field
 
@@ -54,11 +54,11 @@ class Launcher {
 
     private LauncherOptions options
 
-    private AbstractCmd command
+    private CmdBase command
 
     private String cliString
 
-    private List<AbstractCmd> allCommands
+    private List<CmdBase> allCommands
 
     private List<String> normalizedArgs
 
@@ -76,29 +76,29 @@ class Launcher {
     }
 
     protected void init() {
-        allCommands = (List<AbstractCmd>)[
-            new CleanCmd(),
-            new CloneCmd(),
-            new ConfigCmd(),
-            new ConsoleCmd(),
-            new DropCmd(),
-            new FsCmd(),
-            new HelpCmd(),
-            new InfoCmd(),
-            new KubeRunCmd(),
-            new ListCmd(),
-            new LogCmd(),
-            new NodeCmd(),
-            new PluginCmd(),
-            new PluginsCmd(),
-            new PullCmd(),
-            new RunCmd(),
-            new SelfUpdateCmd(),
-            new ViewCmd()
+        allCommands = (List<CmdBase>)[
+            new CmdClean.V1(),
+            new CmdClone.V1(),
+            new CmdConfig.V1(),
+            new CmdConsole.V1(),
+            new CmdDrop.V1(),
+            new CmdFs.V1(),
+            new CmdHelp(),
+            new CmdInfo.V1(),
+            new CmdKubeRun(),
+            new CmdList.V1(),
+            new CmdLog.V1(),
+            new CmdNode.V1(),
+            new CmdPlugin.V1(),
+            new CmdPlugins(),
+            new CmdPull.V1(),
+            new CmdRun.V1(),
+            new CmdSelfUpdate(),
+            new CmdView.V1()
         ]
 
         if( SecretsLoader.isEnabled() )
-            allCommands.add(new SecretsCmd())
+            allCommands.add(new CmdSecrets.V1())
 
         // legacy command
         final cmdCloud = SpuriousDeps.cmdCloud()
@@ -130,7 +130,7 @@ class Launcher {
         jcommander.parse( normalizedArgs as String[] )
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         // whether is running a daemon
-        daemonMode = command instanceof NodeCmd
+        daemonMode = command instanceof CmdNode.V1
         // set the log file name
         checkLogFileName()
 
@@ -156,7 +156,7 @@ class Launcher {
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
-            else if( command instanceof RunCmd || options.debug || options.trace )
+            else if( command instanceof CmdRun.V1 || options.debug || options.trace )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
     }
@@ -337,7 +337,7 @@ class Launcher {
         !x.startsWith('-') || x.isNumber() || x.contains(' ')
     }
 
-    AbstractCmd findCommand( String cmdName ) {
+    CmdBase findCommand( String cmdName ) {
         allCommands.find { it.name == cmdName }
     }
 
@@ -388,12 +388,12 @@ class Launcher {
         }
     }
 
-    protected void printCommands(List<AbstractCmd> commands) {
+    protected void printCommands(List<CmdBase> commands) {
         println "\nCommands:"
 
         int len = 0
         def all = new TreeMap<String,String>()
-        new ArrayList<AbstractCmd>(commands).each {
+        new ArrayList<CmdBase>(commands).each {
             def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
             if( description ) {
                 all[it.name] = description
@@ -448,9 +448,9 @@ class Launcher {
 
             // replace the current command with the `help` command
             def target = command?.name
-            command = allCommands.find { it instanceof HelpCmd }
+            command = allCommands.find { it instanceof CmdHelp }
             if( target ) {
-                (command as HelpCmd).args = [target]
+                (command as CmdHelp).args = [target]
             }
         }
 

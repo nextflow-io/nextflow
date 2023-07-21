@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
@@ -23,13 +25,13 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 
 /**
- * CLI `view` sub-command
+ * CLI sub-command VIEW -- Print a pipeline script to console
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class ViewImpl {
+class CmdView {
 
     interface Options {
         String getPipeline()
@@ -37,10 +39,36 @@ class ViewImpl {
         boolean getAll()
     }
 
+    @Parameters(commandDescription = 'View project script file(s)')
+    static class V1 extends CmdBase implements Options {
+
+        @Override
+        String getName() { 'view' }
+
+        @Parameter(description = 'project name', required = true)
+        List<String> args = []
+
+        @Parameter(names = '-q', description = 'Hide header line', arity = 0)
+        boolean quiet
+
+        @Parameter(names = '-l', description = 'List repository content', arity = 0)
+        boolean all
+
+        @Override
+        String getPipeline() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        void run() {
+            new CmdView(this).run()
+        }
+    }
+
     @Delegate
     private Options options
 
-    ViewImpl(Options options) {
+    CmdView(Options options) {
         this.options = options
     }
 

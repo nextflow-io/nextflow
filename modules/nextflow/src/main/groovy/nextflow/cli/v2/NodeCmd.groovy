@@ -18,7 +18,7 @@ package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
 import nextflow.cli.ILauncherOptions
-import nextflow.cli.NodeImpl
+import nextflow.cli.CmdNode
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -34,7 +34,7 @@ import picocli.CommandLine.ParentCommand
     name = 'node',
     description = 'Launch Nextflow in deamon mode'
 )
-class NodeCmd extends AbstractCmd implements NodeImpl.Options {
+class NodeCmd extends AbstractCmd implements CmdNode.Options {
 
     @ParentCommand
     private Launcher launcher
@@ -57,7 +57,7 @@ class NodeCmd extends AbstractCmd implements NodeImpl.Options {
 
     @Override
     void run() {
-        new NodeImpl(this).run()
+        new CmdNode(this).run()
     }
 
 }

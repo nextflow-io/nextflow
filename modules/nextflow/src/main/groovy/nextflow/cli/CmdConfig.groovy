@@ -19,6 +19,8 @@ package nextflow.cli
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -27,15 +29,14 @@ import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.ConfigHelper
-
 /**
- * CLI `config` sub-command
+ *  Prints the pipeline configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class ConfigImpl {
+class CmdConfig {
 
     interface Options {
         String getPipeline()
@@ -48,17 +49,58 @@ class ConfigImpl {
         ILauncherOptions getLauncherOptions()
     }
 
+    @Parameters(commandDescription = 'Print a project configuration')
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(description = 'project name')
+        List<String> args = []
+
+        @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
+        boolean showAllProfiles
+
+        @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+        String profile
+
+        @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
+        boolean printProperties
+
+        @Parameter(names = '-flat', description = 'Print config using flat notation')
+        boolean printFlatten
+
+        @Parameter(names = '-sort', description = 'Sort config attributes')
+        boolean sort
+
+        @Override
+        String getPipeline() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        ILauncherOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { 'config' }
+
+        @Override
+        void run() {
+            new CmdConfig(this).run()
+        }
+
+    }
+
     private OutputStream stdout = System.out
 
     @Delegate
     private Options options
 
-    ConfigImpl(Options options) {
+    CmdConfig(Options options) {
         this.options = options
     }
 
     /* For testing purposes only */
-    ConfigImpl() {}
+    CmdConfig() {}
 
     void run() {
         Plugins.init()

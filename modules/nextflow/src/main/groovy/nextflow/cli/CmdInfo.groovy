@@ -19,6 +19,8 @@ package nextflow.cli
 import java.lang.management.ManagementFactory
 import java.nio.file.spi.FileSystemProvider
 
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import com.sun.management.OperatingSystemMXBean
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -31,15 +33,14 @@ import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
 import nextflow.util.Threads
 import org.yaml.snakeyaml.Yaml
-
 /**
- * CLI `info` sub-command
+ * CLI sub-command INFO
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class InfoImpl {
+class CmdInfo {
 
     interface Options {
         abstract String getPipeline()
@@ -49,17 +50,50 @@ class InfoImpl {
         abstract boolean getCheckForUpdates()
     }
 
+    @Parameters(commandDescription = 'Print project and system runtime information')
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(description = 'project name')
+        List<String> args
+
+        @Parameter(names='-d',description = 'Show detailed information', arity = 0)
+        boolean detailed
+
+        @Parameter(names='-dd', hidden = true, arity = 0)
+        boolean moreDetailed
+
+        @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
+        String format
+
+        @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
+        boolean checkForUpdates
+
+        @Override
+        String getPipeline() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        String getName() { 'info' }
+
+        @Override
+        void run() {
+            new CmdInfo(this).run()
+        }
+
+    }
+
     private PrintStream out = System.out
 
     @Delegate
     private Options options
 
-    InfoImpl(Options options) {
+    CmdInfo(Options options) {
         this.options = options
     }
 
     /* For testing purposes only */
-    InfoImpl() {}
+    CmdInfo() {}
 
     void run() {
 

@@ -57,7 +57,7 @@ fi
 declare -a args=()
 DEBUG=''
 COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
-MAIN_CLASS=${MAIN_CLASS:-'nextflow.cli.v1.Launcher'}
+MAIN_CLASS=${MAIN_CLASS:-'nextflow.cli.Launcher'}
 JAVA_VER="$($JAVA_BIN -version 2>&1)"
 if [ $? -ne 0 ]; then
     echo "${JAVA_VER:-Failed to launch the Java virtual machine}"

@@ -64,7 +64,7 @@ import picocli.CommandLine.ParseResult
         PluginCmd.class,
         PullCmd.class,
         RunCmd.class,
-        SelfUpdateCmd.class,
+        CmdSelfUpdate.class,
         ViewCmd.class
     ]
 )

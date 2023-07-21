@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.CleanImpl
+import nextflow.cli.CmdClean
 import nextflow.cli.ILauncherOptions
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -34,7 +34,7 @@ import picocli.CommandLine.ParentCommand
     name = 'clean',
     description = 'Clean up project cache and work directories'
 )
-class CleanCmd extends AbstractCmd implements CleanImpl.Options {
+class CleanCmd extends AbstractCmd implements CmdClean.Options {
 
     @ParentCommand
     private Launcher launcher
@@ -70,7 +70,7 @@ class CleanCmd extends AbstractCmd implements CleanImpl.Options {
 
     @Override
     void run() {
-        new CleanImpl(this).run()
+        new CmdClean(this).run()
     }
 
 }

@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
@@ -23,23 +25,44 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 
 /**
- * CLI `drop` sub-command
+ * CLI sub-command DROP
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class DropImpl {
+class CmdDrop {
 
     interface Options {
         String getPipeline()
         boolean getForce()
     }
 
+    @Parameters(commandDescription = 'Delete the local copy of a project')
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(required=true, description = 'name of the project to drop')
+        List<String> args
+
+        @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
+        boolean force
+
+        @Override
+        String getPipeline() { args[0] }
+
+        @Override
+        String getName() { 'drop' }
+
+        @Override
+        void run() {
+            new CmdDrop(this).run()
+        }
+    }
+
     @Delegate
     private Options options
 
-    DropImpl(Options options) {
+    CmdDrop(Options options) {
         this.options = options
     }
 

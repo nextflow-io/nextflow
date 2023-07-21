@@ -16,26 +16,48 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.plugin.Plugins
 import nextflow.ui.console.ConsoleExtension
 
 /**
- * CLI `console` sub-command
+ * Launch the Nextflow Console plugin
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class ConsoleImpl {
+class CmdConsole {
 
     interface Options {
         String getScript()
     }
 
+    @Parameters(commandDescription = 'Launch Nextflow interactive console')
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(description = 'Nextflow console arguments')
+        List<String> args
+
+        @Override
+        String getScript() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        String getName() { 'console' }
+
+        @Override
+        void run() {
+            new CmdConsole(this).run()
+        }
+    }
+
     @Delegate
     private Options options
 
-    ConsoleImpl(Options options) {
+    CmdConsole(Options options) {
         this.options = options
     }
 

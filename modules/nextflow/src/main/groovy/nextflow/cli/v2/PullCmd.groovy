@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.PullImpl
+import nextflow.cli.CmdPull
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'pull',
     description = 'Download or update a project'
 )
-class PullCmd extends AbstractCmd implements PullImpl.Options, HubOptions {
+class PullCmd extends AbstractCmd implements CmdPull.Options, HubOptions {
 
     @Parameters(description = 'project name or repository url to pull')
     String pipeline
@@ -48,7 +48,7 @@ class PullCmd extends AbstractCmd implements PullImpl.Options, HubOptions {
 
     @Override
     void run() {
-        new PullImpl(this).run()
+        new CmdPull(this).run()
     }
 
 }

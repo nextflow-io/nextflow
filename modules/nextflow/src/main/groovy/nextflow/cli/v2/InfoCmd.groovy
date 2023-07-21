@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.InfoImpl
+import nextflow.cli.CmdInfo
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'info',
     description = 'Print project and system runtime information'
 )
-class InfoCmd extends AbstractCmd implements InfoImpl.Options {
+class InfoCmd extends AbstractCmd implements CmdInfo.Options {
 
     @Parameters(arity = '0..1', description = 'project name')
     String pipeline
@@ -51,7 +51,7 @@ class InfoCmd extends AbstractCmd implements InfoImpl.Options {
 
     @Override
     void run() {
-        new InfoImpl(this).run()
+        new CmdInfo(this).run()
     }
 
 }

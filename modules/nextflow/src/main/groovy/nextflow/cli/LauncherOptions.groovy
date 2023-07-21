@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter

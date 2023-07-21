@@ -12,30 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import com.beust.jcommander.Parameters
 
 /**
- * Deprecated - see {@link PluginCmd} instead
+ * CLI `self-update` sub-command (v1)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
-@CompileStatic
-class PluginsCmd extends PluginCmd {
-
+@Parameters(commandDescription = 'Update nextflow runtime to the latest available version')
+class CmdSelfUpdate extends CmdBase {
     @Override
-    String getName() { 'plugins' }
+    String getName() { 'self-update' }
 
     @Override
     void run() {
-        log.info "Command 'plugins' has been deprecated - Use 'plugin' instead"
-        super.run()
+        // actually it's doing nothing, the update process is managed by the external launcher script
+        // this class in only necessary to print the command line the usage output
     }
 }

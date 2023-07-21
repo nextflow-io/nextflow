@@ -16,37 +16,25 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.scm.AssetManager
 
 /**
- * CLI `list` sub-command
+ * Base class for CLI v1 commands
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
-class ListImpl {
+abstract class CmdBase implements Runnable {
 
-    interface Options {}
+    private Launcher launcher
 
-    @Delegate
-    private Options options
+    @Parameter(names = ['-h','-help'], arity = 0, description = 'Print the command usage', help = true)
+    boolean help
 
-    ListImpl(Options options) {
-        this.options = options
-    }
+    abstract String getName()
 
-    void run() {
+    Launcher getLauncher() { launcher }
 
-        def all = AssetManager.list()
-        if( !all ) {
-            log.info '(none)'
-            return
-        }
-
-        all.each { println it }
-    }
-
+    void setLauncher( Launcher value ) { this.launcher = value }
 }

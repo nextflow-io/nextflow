@@ -18,14 +18,14 @@ package nextflow.ui.console
 import javax.swing.UIManager
 
 import groovy.util.logging.Slf4j
-import nextflow.cli.v1.LauncherOptions
+import nextflow.cli.LauncherOptions
 import nextflow.util.LoggerHelper
 import org.codehaus.groovy.runtime.StackTraceUtils
 
 /**
  * Implement the {@link ConsoleExtension} to launch the NF console app.
  *
- * See {@link nextflow.cli.ConsoleImpl#run()}
+ * See {@link nextflow.cli.CmdConsole#run()}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

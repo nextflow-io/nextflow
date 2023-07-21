@@ -19,7 +19,7 @@ package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
 import nextflow.cli.ILauncherOptions
-import nextflow.cli.PluginImpl
+import nextflow.cli.CmdPlugin
 import nextflow.exception.AbortOperationException
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
@@ -53,12 +53,12 @@ class PluginCmd extends AbstractCmd {
         if( command == 'install' ) {
             if( args.size()!=1 )
                 throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
-            PluginImpl.install(args[0].tokenize(','))
+            CmdPlugin.install(args[0].tokenize(','))
         }
 
         // plugin run command
         else if( command.contains(CMD_SEP) ) {
-            PluginImpl.exec(command, args, launcher.options)
+            CmdPlugin.exec(command, args, launcher.options)
         }
 
         else {

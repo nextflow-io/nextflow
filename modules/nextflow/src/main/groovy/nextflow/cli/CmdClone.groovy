@@ -15,21 +15,21 @@
  */
 
 package nextflow.cli
-
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
-
 /**
- * CLI `clone` sub-command
+ * CLI sub-command clone
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class CloneImpl {
+class CmdClone {
 
     interface Options extends IHubOptions {
         String getPipeline()
@@ -38,10 +38,39 @@ class CloneImpl {
         String getRevision()
     }
 
+    @Parameters(commandDescription = 'Clone a project into a folder')
+    static class V1 extends CmdBase implements Options, HubOptions {
+
+        @Parameter(required=true, description = 'name of the project to clone')
+        List<String> args
+
+        @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
+        String revision
+
+        @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer deep
+
+        @Override
+        String getPipeline() { args[0] }
+
+        @Override
+        String getTargetName() {
+            args.size() > 1 ? args[1] : null
+        }
+
+        @Override
+        String getName() { 'clone' }
+
+        @Override
+        void run() {
+            new CmdClone(this).run()
+        }
+    }
+
     @Delegate
     private Options options
 
-    CloneImpl(Options options) {
+    CmdClone(Options options) {
         this.options = options
     }
 

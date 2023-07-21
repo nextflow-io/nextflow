@@ -20,6 +20,10 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import com.beust.jcommander.DynamicParameter
+import com.beust.jcommander.IStringConverter
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -39,17 +43,17 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
+import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import org.yaml.snakeyaml.Yaml
-
 /**
- * CLI `run` sub-command
+ * CLI sub-command RUN
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class RunImpl {
+class CmdRun {
 
     interface Options extends IHubOptions {
         String getPipeline()
@@ -128,17 +132,245 @@ class RunImpl {
         GParsConfig.poolFactory = new CustomPoolFactory()
     }
 
+    @Parameters(commandDescription = 'Execute a pipeline project')
+    static class V1 extends CmdBase implements Options, HubOptions {
+
+        static class DurationConverter implements IStringConverter<Long> {
+            @Override
+            Long convert(String value) {
+                if( !value ) throw new IllegalArgumentException()
+                if( value.isLong() ) {  return value.toLong() }
+                return Duration.of(value).toMillis()
+            }
+        }
+
+        @Parameter(names=['-name'], description = 'Assign a mnemonic name to the a pipeline run')
+        String runName
+
+        @Parameter(names=['-lib'], description = 'Library extension path')
+        String libPath
+
+        @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
+        Boolean cacheable
+
+        @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
+        String resume
+
+        @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
+        Integer poolSize
+
+        @Parameter(names=['-pi','-poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter, hidden = true)
+        long pollInterval
+
+        @Parameter(names=['-qs','-queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
+        Integer queueSize
+
+        @Parameter(names=['-test'], description = 'Test a script function with the name specified')
+        String test
+
+        @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
+        String workDir
+
+        @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
+        String bucketDir
+
+        /**
+        * Defines the parameters to be passed to the pipeline script
+        */
+        @DynamicParameter(names = '--', description = 'Set a parameter used by the pipeline', hidden = true)
+        Map<String,String> params = new LinkedHashMap<>()
+
+        @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
+        String paramsFile
+
+        @DynamicParameter(names = ['-process.'], description = 'Set process options' )
+        Map<String,String> processOptions = [:]
+
+        @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
+        Map<String,String> env = [:]
+
+        @Parameter(names = ['-E'], description = 'Exports all current system environment')
+        boolean exportSysEnv
+
+        @DynamicParameter(names = ['-executor.'], description = 'Set executor options', hidden = true )
+        Map<String,String> executorOptions = [:]
+
+        @Parameter(description = 'Project name or repository url')
+        List<String> args
+
+        @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+        String revision
+
+        @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer deep
+
+        @Parameter(names=['-latest'], description = 'Pull latest changes before run')
+        boolean latest
+
+        @Parameter(names='-stdin', hidden = true)
+        boolean stdin
+
+        @Parameter(names = ['-ansi'], hidden = true, arity = 0)
+        void setAnsi(boolean value) {
+            launcher.options.ansiLog = value
+        }
+
+        @Parameter(names = ['-ansi-log'], description = 'Enable/disable ANSI console logging', arity = 1)
+        void setAnsiLog(boolean value) {
+            launcher.options.ansiLog = value
+        }
+
+        @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
+        String withTower
+
+        @Parameter(names = ['-with-wave'], hidden = true)
+        String withWave
+
+        @Parameter(names = ['-with-fusion'], hidden = true)
+        String withFusion
+
+        @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
+        String withWebLog
+
+        @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
+        String withTrace
+
+        @Parameter(names = ['-with-report'], description = 'Create processes execution html report')
+        String withReport
+
+        @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
+        String withTimeline
+
+        @Parameter(names = '-with-charliecloud', description = 'Enable process execution in a Charliecloud container runtime')
+        String withCharliecloud
+
+        @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
+        String withSingularity
+
+        @Parameter(names = '-with-apptainer', description = 'Enable process execution in a Apptainer container')
+        String withApptainer
+
+        @Parameter(names = '-with-podman', description = 'Enable process execution in a Podman container')
+        String withPodman
+
+        @Parameter(names = '-without-podman', description = 'Disable process execution in a Podman container')
+        boolean withoutPodman
+
+        @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
+        String withDocker
+
+        @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
+        boolean withoutDocker
+
+        @Parameter(names = '-with-mpi', hidden = true)
+        boolean withMpi
+
+        @Parameter(names = '-with-dag', description = 'Create pipeline DAG file')
+        String withDag
+
+        @Parameter(names = ['-bg'], arity = 0, hidden = true)
+        void setBackground(boolean value) {
+            launcher.options.background = value
+        }
+
+        @Parameter(names=['-c','-config'], hidden = true )
+        List<String> runConfig
+
+        @DynamicParameter(names = ['-cluster.'], description = 'Set cluster options', hidden = true )
+        Map<String,String> clusterOptions = [:]
+
+        @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+        String profile
+
+        @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
+        boolean dumpHashes
+
+        @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
+        String dumpChannels
+
+        @Parameter(names=['-N','-with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
+        String withNotification
+
+        @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
+        String withConda
+
+        @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
+        Boolean withoutConda
+
+        @Parameter(names=['-with-spack'], description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
+        String withSpack
+
+        @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments')
+        Boolean withoutSpack
+
+        @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
+        boolean offline = System.getenv('NXF_OFFLINE')=='true'
+
+        @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
+        String entryName
+
+        @Parameter(names=['-dsl1'], description = 'Execute the workflow using DSL1 syntax')
+        boolean dsl1
+
+        @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
+        boolean dsl2
+
+        @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
+        String mainScript
+
+        @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
+        boolean stubRun
+
+        @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
+        boolean preview
+
+        @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
+        String plugins
+
+        @Parameter(names=['-disable-jobs-cancellation'], description = 'Prevent the cancellation of child jobs on execution termination')
+        Boolean disableJobsCancellation
+
+        @Override
+        String getPipeline() {
+            stdin ? '-' : args[0]
+        }
+
+        @Override
+        List<String> getArgs() {
+            args.size() > 1 ? args[1..-1] : []
+        }
+
+        @Override
+        String getLauncherCliString() {
+            launcher.cliString
+        }
+
+        @Override
+        ILauncherOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { 'run' }
+
+        @Override
+        void run() {
+            new CmdRun(this).run()
+        }
+
+    }
+
     private Map<String,String> sysEnv = System.getenv()
 
     @Delegate
     private Options options
 
-    RunImpl(Options options) {
+    CmdRun(Options options) {
         this.options = options
     }
 
     /* For testing purposes only */
-    RunImpl() {}
+    CmdRun() {}
 
     Boolean getDisableJobsCancellation() {
         options.disableJobsCancellation != null
@@ -233,7 +465,7 @@ class RunImpl {
             return
         }
 
-        def info = InfoImpl.status( log.isTraceEnabled() )
+        def info = CmdInfo.status( log.isTraceEnabled() )
         log.debug( '\n'+info )
 
         // -- add this run to the local history

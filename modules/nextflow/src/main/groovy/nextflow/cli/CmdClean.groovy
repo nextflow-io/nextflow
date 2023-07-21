@@ -15,7 +15,6 @@
  */
 
 package nextflow.cli
-
 import java.nio.file.FileVisitResult
 import java.nio.file.FileVisitor
 import java.nio.file.Files
@@ -24,6 +23,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -39,14 +40,14 @@ import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile.Record
 
 /**
- * CLI `clean` sub-command
+ * Implements cache clean up command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class CleanImpl implements CacheBase {
+class CmdClean implements CacheBase {
 
     interface Options {
         String getAfter()
@@ -61,6 +62,48 @@ class CleanImpl implements CacheBase {
         ILauncherOptions getLauncherOptions()
     }
 
+    @Parameters(commandDescription = 'Clean up project cache and work directories')
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(names=['-q', '-quiet'], description = 'Do not print names of files removed', arity = 0)
+        boolean quiet
+
+        @Parameter(names=['-f', '-force'], description = 'Force clean command', arity = 0)
+        boolean force
+
+        @Parameter(names=['-n', '-dry-run'], description = 'Print names of file to be removed without deleting them' , arity = 0)
+        boolean dryRun
+
+        @Parameter(names='-after', description = 'Clean up runs executed after the specified one')
+        String after
+
+        @Parameter(names='-before', description = 'Clean up runs executed before the specified one')
+        String before
+
+        @Parameter(names='-but', description = 'Clean up all runs except the specified one')
+        String but
+
+        @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
+        boolean keepLogs
+
+        @Parameter
+        List<String> args
+
+        @Override
+        ILauncherOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { 'clean' }
+
+        @Override
+        void run() {
+            new CmdClean(this).run()
+        }
+
+    }
+
     @Delegate
     private Options options
 
@@ -68,7 +111,7 @@ class CleanImpl implements CacheBase {
 
     private Map<HashCode, Short> dryHash = new HashMap<>()
 
-    CleanImpl(Options options) {
+    CmdClean(Options options) {
         this.options = options
     }
 

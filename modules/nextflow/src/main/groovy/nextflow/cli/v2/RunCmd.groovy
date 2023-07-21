@@ -19,7 +19,7 @@ package nextflow.cli.v2
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cli.ILauncherOptions
-import nextflow.cli.RunImpl
+import nextflow.cli.CmdRun
 import nextflow.util.Duration
 import picocli.CommandLine.Command
 import picocli.CommandLine.ITypeConverter
@@ -38,7 +38,7 @@ import picocli.CommandLine.ParentCommand
     name = 'run',
     description = 'Execute a pipeline'
 )
-class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
+class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptions {
 
     static class DurationConverter implements ITypeConverter<Long> {
         @Override
@@ -323,7 +323,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
 
     @Override
     void run() {
-        new RunImpl(this).run()
+        new CmdRun(this).run()
     }
 
 }

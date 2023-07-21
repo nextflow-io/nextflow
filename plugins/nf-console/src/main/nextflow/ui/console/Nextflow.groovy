@@ -27,9 +27,9 @@ import groovy.console.ui.OutputTransforms
 import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
-import nextflow.cli.v1.LauncherOptions
-import nextflow.cli.InfoImpl
-import nextflow.cli.RunImpl
+import nextflow.cli.LauncherOptions
+import nextflow.cli.CmdInfo
+import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
@@ -85,7 +85,7 @@ class Nextflow extends Console {
         return new ConfigBuilder()
                     .setLauncherOptions( new LauncherOptions() )
                     .setBaseDir(base)
-                    .setRunOptions( new RunImpl() )
+                    .setRunOptions( new CmdRun() )
                     .build()
     }
 
@@ -171,7 +171,7 @@ class Nextflow extends Console {
      */
     void showAbout(EventObject evt = null) {
         def pane = swing.optionPane()
-        pane.setMessage('REPL Console for evaluating Nextflow scripts\n\n' + InfoImpl.getInfo(0))
+        pane.setMessage('REPL Console for evaluating Nextflow scripts\n\n' + CmdInfo.getInfo(0))
         def dialog = pane.createDialog(frame, 'About ' + TITLE)
         dialog.show()
     }

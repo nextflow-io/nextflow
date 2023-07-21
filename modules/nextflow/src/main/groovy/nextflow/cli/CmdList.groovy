@@ -14,40 +14,53 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.scm.AssetManager
 
 /**
- * CLI `help` sub-command (v1)
+ * CLI sub-command LIST. Prints a list of locally installed pipelines
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-@Parameters(commandDescription = 'Print the usage help for a command')
-class HelpCmd extends AbstractCmd {
+class CmdList {
 
-    @Override
-    String getName() { 'help' }
+    interface Options {}
 
-    @Parameter(arity = 1, description = 'command name')
-    List<String> args
+    @Parameters(commandDescription = 'List all downloaded projects')
+    static class V1 extends CmdBase implements Options {
 
-    private UsageAware getUsage( List<String> args ) {
-        def result = args ? launcher.findCommand(args[0]) : null
-        result instanceof UsageAware ? result as UsageAware: null
+        @Override
+        String getName() { 'list' }
+
+        @Override
+        void run() {
+            new CmdList(this).run()
+        }
+
     }
 
-    @Override
+    @Delegate
+    private Options options
+
+    CmdList(Options options) {
+        this.options = options
+    }
+
     void run() {
-        def cmd = getUsage(args)
-        if( cmd ) {
-            cmd.usage(args.size()>1 ? args[1..-1] : Collections.<String>emptyList())
+
+        def all = AssetManager.list()
+        if( !all ) {
+            log.info '(none)'
+            return
         }
-        else {
-            launcher.usage(args ? args[0] : null)
-        }
+
+        all.each { println it }
     }
+
 }

@@ -25,9 +25,9 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
-import nextflow.cli.RunImpl
-import nextflow.cli.v1.KubeRunCmd
-import nextflow.cli.v1.RunCmd
+import nextflow.cli.CmdRun
+import nextflow.cli.CmdKubeRun
+import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -89,7 +89,7 @@ class K8sDriverLauncher {
     /**
      * Command run options
      */
-    private KubeRunCmd cmd
+    private CmdKubeRun cmd
 
     /**
      * Kubernetes client
@@ -266,7 +266,7 @@ class K8sDriverLauncher {
                 .setShowClosures(true)
                 .setLauncherOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
-                .setRunOptions(new RunImpl(cmd))
+                .setRunOptions(new CmdRun(cmd))
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
@@ -384,9 +384,9 @@ class K8sDriverLauncher {
     }
 
 
-    private Field getField(RunCmd cmd, String name) {
+    private Field getField(CmdRun.V1 cmd, String name) {
         def clazz = cmd.class
-        while( clazz != RunCmd ) {
+        while( clazz != CmdRun.V1 ) {
             clazz = cmd.class.getSuperclass()
         }
         clazz.getDeclaredField(name)

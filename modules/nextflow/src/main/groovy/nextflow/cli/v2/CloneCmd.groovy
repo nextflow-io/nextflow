@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.CloneImpl
+import nextflow.cli.CmdClone
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'clone',
     description = 'Clone a project into a folder'
 )
-class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
+class CloneCmd extends AbstractCmd implements CmdClone.Options, HubOptions {
 
     @Parameters(index = '0', description = 'name of the project to clone')
     String pipeline
@@ -48,6 +48,6 @@ class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
 
     @Override
     void run() {
-        new CloneImpl(this).run()
+        new CmdClone(this).run()
     }
 }

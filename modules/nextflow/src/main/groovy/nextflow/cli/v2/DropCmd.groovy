@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.DropImpl
+import nextflow.cli.CmdDrop
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'drop',
     description = 'Delete the local copy of a project'
 )
-class DropCmd extends AbstractCmd implements DropImpl.Options {
+class DropCmd extends AbstractCmd implements CmdDrop.Options {
 
     @Parameters(description = 'name of the project to drop')
     String pipeline
@@ -42,6 +42,6 @@ class DropCmd extends AbstractCmd implements DropImpl.Options {
 
     @Override
     void run() {
-        new DropImpl(this).run()
+        new CmdDrop(this).run()
     }
 }

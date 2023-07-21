@@ -15,7 +15,9 @@
  */
 
 package nextflow.cli
-
+import com.beust.jcommander.DynamicParameter
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigBuilder
@@ -23,15 +25,13 @@ import nextflow.daemon.DaemonLauncher
 import nextflow.plugin.Plugins
 import nextflow.util.ServiceName
 import nextflow.util.ServiceDiscover
-
 /**
- * CLI `node` sub-command
- *
+ * CLI-command NODE
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class NodeImpl {
+class CmdNode {
 
     interface Options {
         Map<String,String> getClusterOptions()
@@ -40,10 +40,44 @@ class NodeImpl {
         ILauncherOptions getLauncherOptions()
     }
 
+    @Parameters(commandDescription = 'Launch Nextflow in deamon mode')
+    static class V1 extends CmdBase implements Options {
+
+        @DynamicParameter(names ='-cluster.', description='Define cluster config options')
+        Map<String,String> clusterOptions = [:]
+
+        @Parameter(names = ['-bg'], arity = 0, description = 'Start the cluster node daemon in background')
+        void setBackground(boolean value) {
+            launcher.options.background = value
+        }
+
+        @Parameter
+        List<String> args
+
+        @Override
+        String getProvider() {
+            args.size() ? args[0] : null
+        }
+
+        @Override
+        ILauncherOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { 'node' }
+
+        @Override
+        void run() {
+            new CmdNode(this).run()
+        }
+
+    }
+
     @Delegate
     private Options options
 
-    NodeImpl(Options options) {
+    CmdNode(Options options) {
         this.options = options
     }
 

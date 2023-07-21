@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,37 +12,30 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.cli.ConsoleImpl
+import groovy.util.logging.Slf4j
 
 /**
- * CLI `console` sub-command (v1)
+ * Deprecated - see {@link PluginCmd} instead
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@Deprecated
 @CompileStatic
-@Parameters(commandDescription = 'Launch Nextflow interactive console')
-class ConsoleCmd extends AbstractCmd implements ConsoleImpl.Options {
-
-    @Parameter(description = 'Nextflow console arguments')
-    List<String> args = []
+class CmdPlugins extends CmdPlugin.V1 {
 
     @Override
-    String getScript() {
-        args.size() > 0 ? args[0] : null
-    }
-
-    @Override
-    String getName() { 'console' }
+    String getName() { 'plugins' }
 
     @Override
     void run() {
-        new ConsoleImpl(this).run()
+        log.info "Command 'plugins' has been deprecated - Use 'plugin' instead"
+        super.run()
     }
 }

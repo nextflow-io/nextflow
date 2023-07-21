@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.ViewImpl
+import nextflow.cli.CmdView
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'view',
     description = 'View project script file(s)'
 )
-class ViewCmd extends AbstractCmd implements ViewImpl.Options {
+class ViewCmd extends AbstractCmd implements CmdView.Options {
 
     @Parameters(description = 'project name')
     String pipeline
@@ -45,6 +45,6 @@ class ViewCmd extends AbstractCmd implements ViewImpl.Options {
 
     @Override
     void run() {
-        new ViewImpl(this).run()
+        new CmdView(this).run()
     }
 }
