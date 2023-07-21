@@ -215,18 +215,18 @@ class ScriptMetaTest extends Dsl2Spec {
         meta1.addDefinition(func1)
         then:
         def e = thrown(DuplicateModuleFunctionException)
-        e.message.contains "A component (function, process, or workflow) named 'func1' is defined more than once"
+        e.message.contains "A function named 'func1' is already defined"
 
         when:
         meta1.addDefinition(proc1)
         then:
         e = thrown(DuplicateModuleFunctionException)
-        e.message.contains "A component (function, process, or workflow) named 'proc1' is defined more than once"
+        e.message.contains "A process named 'proc1' is already defined"
 
         when:
         meta1.addDefinition(work1)
         then:
         e = thrown(DuplicateModuleFunctionException)
-        e.message.contains "A component (function, process, or workflow) named 'work1' is defined more than once"
+        e.message.contains "A workflow named 'work1' is already defined"
     }
 }
