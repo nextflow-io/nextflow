@@ -99,7 +99,7 @@ class AzureConfigTest extends Specification {
                                              endpoint: ENDPOINT,
                                              location: LOCATION,
                                              autoPoolMode: true,
-                                             allowPoolCreation: true,                                            
+                                             allowPoolCreation: true,
                                              terminateJobsOnCompletion: false,
                                              deleteTasksOnCompletion: false,
                                              deleteJobsOnCompletion: false,
