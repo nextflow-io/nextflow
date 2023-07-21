@@ -35,6 +35,7 @@ class CleanImplTest extends Specification {
         when:
         def result = cleaner.deleteFolder(folder,false)
 
+
         then:
         assert(result == true)
         assert(!folder.exists())
@@ -66,6 +67,7 @@ class CleanImplTest extends Specification {
 
     }
 
+
     def 'non-empty folder [.command.file name] keep logs' () {
 
         given:
@@ -88,5 +90,9 @@ class CleanImplTest extends Specification {
         if (folderExists)
             folder?.deleteDir()
     }
+
+
+
+
 
 }

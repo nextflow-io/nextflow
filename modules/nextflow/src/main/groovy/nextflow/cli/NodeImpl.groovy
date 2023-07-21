@@ -52,6 +52,7 @@ class NodeImpl {
         launchDaemon(provider)
     }
 
+
     /**
      * Launch the daemon service
      *
@@ -77,6 +78,7 @@ class NodeImpl {
         else {
             instance = loadDaemonFirst()
         }
+
 
         // launch it
         instance.launch(config)

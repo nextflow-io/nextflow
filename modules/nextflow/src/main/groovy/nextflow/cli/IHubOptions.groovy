@@ -19,7 +19,7 @@ package nextflow.cli
 import groovy.transform.CompileStatic
 
 /**
- * Interface for command line options related to interacting with
+ * Defines the command line options for interacting with
  * a git registry (GitHub, BitBucket, etc)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

@@ -336,18 +336,17 @@ class LauncherTest extends Specification {
 
     static class Opts {
 
-        @Parameter(names = ['-log'], description = 'Set nextflow log file')
+        @Parameter(names=['-log'], description = 'Set nextflow log file')
         String opt1
 
-        @Parameter(names = ['-c','-config'], description = 'Add the specified file to configuration set')
+        @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
         String opt2
 
         @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
         Map opt3
 
-        @Parameter(names = ['hidden'], hidden = true)
+        @Parameter(names=['hidden'], hidden = true)
         String opt4
 
     }
-
 }

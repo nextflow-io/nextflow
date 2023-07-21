@@ -135,19 +135,19 @@ class LogImpl implements CacheBase {
         //
         // initialize the template engine
         //
-        def templateStr1
+        def templateStr0
         if( !templateStr ) {
-            String fields1 = fields ?: DEFAULT_FIELDS
-            templateStr1 = fields1
+            String fields0 = fields ?: DEFAULT_FIELDS
+            templateStr0 = fields0
                 .tokenize(',  \n')
                 .collect { '$'+it }
                 .join(separator)
         }
         else if( new File(templateStr).exists() ) {
-            templateStr1 = new File(templateStr).text
+            templateStr0 = new File(templateStr).text
         }
 
-        templateScript = new TaskTemplateEngine().createTemplate(templateStr1)
+        templateScript = new TaskTemplateEngine().createTemplate(templateStr0)
     }
 
     /**

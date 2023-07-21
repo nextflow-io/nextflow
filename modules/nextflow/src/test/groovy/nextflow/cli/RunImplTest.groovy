@@ -65,9 +65,9 @@ class RunImplTest extends Specification {
         SysEnv.push(NXF_DISABLE_PARAMS_TYPE_DETECTION: 'true')
 
         expect:
-        CmdRun.parseParamValue('true')  == 'true'
-        CmdRun.parseParamValue('1000')  == '1000'
-        CmdRun.parseParamValue('hola')  == 'hola'
+        RunImpl.parseParamValue('true')  == 'true'
+        RunImpl.parseParamValue('1000')  == '1000'
+        RunImpl.parseParamValue('hola')  == 'hola'
 
         cleanup:
         SysEnv.pop()

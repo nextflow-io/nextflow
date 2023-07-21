@@ -31,6 +31,6 @@ class SelfUpdateCmd extends AbstractCmd {
     @Override
     void run() {
         // actually it's doing nothing, the update process is managed by the external launcher script
-        // this class in only necessary to print the usage help
+        // this class in only necessary to print the command line the usage output
     }
 }

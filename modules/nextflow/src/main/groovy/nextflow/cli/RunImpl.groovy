@@ -116,12 +116,19 @@ class RunImpl {
         void setRunName(String runName)
     }
 
-    private Map<String,String> sysEnv = System.getenv()
+    static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
+
+    static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
+
+    static final public DSL2 = '2'
+    static final public DSL1 = '1'
 
     static {
         // install the custom pool factory for GPars threads
         GParsConfig.poolFactory = new CustomPoolFactory()
     }
+
+    private Map<String,String> sysEnv = System.getenv()
 
     @Delegate
     private Options options
@@ -147,27 +154,31 @@ class RunImpl {
         options.paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
     }
 
+    boolean hasParams() {
+        options.params || getParamsFile()
+    }
+
     void run() {
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
 
         if( withPodman && withoutPodman )
-            throw new AbortOperationException("Command line options `with-podman` and `without-podman` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `-with-podman` and `-without-podman` cannot be specified at the same time")
 
         if( withDocker && withoutDocker )
-            throw new AbortOperationException("Command line options `with-docker` and `without-docker` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
 
         if( withConda && withoutConda )
-            throw new AbortOperationException("Command line options `with-conda` and `without-conda` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `-with-conda` and `-without-conda` cannot be specified at the same time")
 
         if( withSpack && withoutSpack )
-            throw new AbortOperationException("Command line options `with-spack` and `without-spack` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `-with-spack` and `-without-spack` cannot be specified at the same time")
 
         if( offline && latest )
-            throw new AbortOperationException("Command line options `latest` and `offline` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
         if( dsl1 && dsl2 )
-            throw new AbortOperationException("Command line options `dsl1` and `dsl2` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `-dsl1` and `-dsl2` cannot be specified at the same time")
 
         checkRunName()
 
@@ -232,6 +243,70 @@ class RunImpl {
         runner.execute(args, this.entryName)
     }
 
+    protected checkConfigEnv(ConfigMap config) {
+        // Warn about setting NXF_ environment variables within env config scope
+        final env = config.env as Map<String, String>
+        for( String name : env.keySet() ) {
+            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
+                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
+                log.warn(msg)
+            }
+        }
+    }
+
+    protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
+        // -- determine strict mode
+        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
+        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
+        if( strictMode ) {
+            log.debug "Enabling nextflow strict mode"
+            NextflowMeta.instance.strictMode(true)
+        }
+        // -- determine dsl mode
+        final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
+        NextflowMeta.instance.enableDsl(dsl)
+        // -- show launch info
+        final ver = NF.dsl2 ? DSL2 : DSL1
+        final repo = scriptFile.repository ?: scriptFile.source
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
+        if( scriptFile.repository )
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
+        else
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
+    }
+
+    static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
+        // -- try determine DSL version from config file
+
+        final dsl = config.navigate('nextflow.enable.dsl') as String
+
+        // -- script can still override the DSL version
+        final scriptDsl = NextflowMeta.checkDslMode(scriptText)
+        if( scriptDsl ) {
+            log.debug("Applied DSL=$scriptDsl from script declararion")
+            return scriptDsl
+        }
+        else if( dsl ) {
+            log.debug("Applied DSL=$dsl from config declaration")
+            return dsl
+        }
+        // -- if still unknown try probing for DSL1
+        if( NextflowMeta.probeDsl1(scriptText) ) {
+            log.debug "Applied DSL=1 by probing script field"
+            return DSL1
+        }
+
+        final envDsl = sysEnv.get('NXF_DEFAULT_DSL')
+        if( envDsl ) {
+            log.debug "Applied DSL=$envDsl from NXF_DEFAULT_DSL variable"
+            return envDsl
+        }
+        else {
+            log.debug "Applied DSL=2 by global default"
+            return DSL2
+        }
+    }
+
     protected void checkRunName() {
         if( runName == 'last' )
             throw new AbortOperationException("Not a valid run name: `last`")
@@ -249,8 +324,6 @@ class RunImpl {
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
     }
 
-    static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
-
     static protected boolean matchRunName(String name) {
         RUN_NAME_PATTERN.matcher(name).matches()
     }
@@ -266,6 +339,20 @@ class RunImpl {
             else
                 throw e
         }
+    }
+
+    static protected boolean guessIsRepo(String name) {
+        if( FileHelper.getUrlProtocol(name) != null )
+            return true
+        if( name.startsWith('/') )
+            return false
+        if( name.startsWith('./') || name.startsWith('../') )
+            return false
+        if( name.endsWith('.nf') )
+            return false
+        if( name.count('/') != 1 )
+            return false
+        return true
     }
 
     protected ScriptFile getScriptFile0(String pipelineName) {
@@ -349,103 +436,7 @@ class RunImpl {
         return result
     }
 
-    static protected boolean guessIsRepo(String name) {
-        if( FileHelper.getUrlProtocol(name) != null )
-            return true
-        if( name.startsWith('/') )
-            return false
-        if( name.startsWith('./') || name.startsWith('../') )
-            return false
-        if( name.endsWith('.nf') )
-            return false
-        if( name.count('/') != 1 )
-            return false
-        return true
-    }
-
-    static final public DSL1 = '1'
-    static final public DSL2 = '2'
-
-    protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
-        // -- determine strict mode
-        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
-        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
-        if( strictMode ) {
-            log.debug "Enabling nextflow strict mode"
-            NextflowMeta.instance.strictMode(true)
-        }
-        // -- determine dsl mode
-        final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
-        NextflowMeta.instance.enableDsl(dsl)
-        // -- show launch info
-        final ver = NF.dsl2 ? DSL2 : DSL1
-        final repo = scriptFile.repository ?: scriptFile.source
-        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
-        if( scriptFile.repository )
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
-        else
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
-    }
-
-    static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
-        // -- try determine DSL version from config file
-
-        final dsl = config.navigate('nextflow.enable.dsl') as String
-
-        // -- script can still override the DSL version
-        final scriptDsl = NextflowMeta.checkDslMode(scriptText)
-        if( scriptDsl ) {
-            log.debug("Applied DSL=$scriptDsl from script declararion")
-            return scriptDsl
-        }
-        else if( dsl ) {
-            log.debug("Applied DSL=$dsl from config declaration")
-            return dsl
-        }
-        // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDsl1(scriptText) ) {
-            log.debug "Applied DSL=1 by probing script field"
-            return DSL1
-        }
-
-        final envDsl = sysEnv.get('NXF_DEFAULT_DSL')
-        if( envDsl ) {
-            log.debug "Applied DSL=$envDsl from NXF_DEFAULT_DSL variable"
-            return envDsl
-        }
-        else {
-            log.debug "Applied DSL=2 by global default"
-            return DSL2
-        }
-    }
-
-    protected checkConfigEnv(ConfigMap config) {
-        // Warn about setting NXF_ environment variables within env config scope
-        final env = config.env as Map<String, String>
-        for( String name : env.keySet() ) {
-            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
-                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
-                log.warn(msg)
-            }
-        }
-    }
-
-    /**
-     * Check whether pipeline params were provided via CLI options
-     * or params file.
-     */
-    boolean hasParams() {
-        return getParams() || getParamsFile()
-    }
-
-    /**
-     * Collect all pipeline params provided via CLI options and params file.
-     *
-     * Memoized to avoid parsing the same file multiple times.
-     *
-     * @param configVars
-     */
-    @Memoized
+    @Memoized  // <-- avoid parse multiple times the same file and params
     Map parsedParams(Map configVars) {
 
         final result = [:]
@@ -469,69 +460,6 @@ class RunImpl {
         return result
     }
 
-    static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
-
-    private Path validateParamsFile(String file) {
-
-        def result = FileHelper.asPath(file)
-        def ext = result.getExtension()
-        if( !VALID_PARAMS_FILE.contains(ext) )
-            throw new AbortOperationException("Not a valid params file extension: $file -- It must be one of the following: ${VALID_PARAMS_FILE.join(',')}")
-
-        return result
-    }
-
-    private void readJsonFile(Path file, Map configVars, Map result) {
-        try {
-            def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def json = (Map)new JsonSlurper().parseText(text)
-            result.putAll(json)
-        }
-        catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()} - Cause: ${e.message}", e)
-        }
-    }
-
-    private void readYamlFile(Path file, Map configVars, Map result) {
-        try {
-            def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def yaml = (Map)new Yaml().load(text)
-            result.putAll(yaml)
-        }
-        catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)
-        }
-    }
-
-    static private Pattern PARAMS_VAR = ~/(?m)\$\{(\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)}/
-
-    static protected String replaceVars0(String content, Map binding) {
-        content.replaceAll(PARAMS_VAR) { List<String> matcher ->
-            // - the regex matcher is represented as list
-            // - the first element is the matching string ie. `${something}`
-            // - the second element is the group content ie. `something`
-            // - make sure the regex contains at least a group otherwise the closure
-            // parameter is a string instead of a list of the call fail
-            final placeholder = matcher.get(0)
-            final key = matcher.get(1)
-
-            if( !binding.containsKey(key) ) {
-                final msg = "Missing params file variable: $placeholder"
-                if(NF.strictMode)
-                    throw new AbortOperationException(msg)
-                log.warn msg
-                return placeholder
-            }
-
-            return binding.get(key)
-        }
-    }
 
     static final private Pattern DOT_ESCAPED = ~/\\\./
     static final private Pattern DOT_NOT_ESCAPED = ~/(?<!\\)\./
@@ -562,6 +490,7 @@ class RunImpl {
         }
     }
 
+
     static protected parseParamValue(String str) {
         if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
             return str
@@ -576,6 +505,68 @@ class RunImpl {
         if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
+    }
+
+    private Path validateParamsFile(String file) {
+
+        def result = FileHelper.asPath(file)
+        def ext = result.getExtension()
+        if( !VALID_PARAMS_FILE.contains(ext) )
+            throw new AbortOperationException("Not a valid params file extension: $file -- It must be one of the following: ${VALID_PARAMS_FILE.join(',')}")
+
+        return result
+    }
+
+    static private Pattern PARAMS_VAR = ~/(?m)\$\{(\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)}/
+
+    protected String replaceVars0(String content, Map binding) {
+        content.replaceAll(PARAMS_VAR) { List<String> matcher ->
+            // - the regex matcher is represented as list
+            // - the first element is the matching string ie. `${something}`
+            // - the second element is the group content ie. `something`
+            // - make sure the regex contains at least a group otherwise the closure
+            // parameter is a string instead of a list of the call fail
+            final placeholder = matcher.get(0)
+            final key = matcher.get(1)
+
+            if( !binding.containsKey(key) ) {
+                final msg = "Missing params file variable: $placeholder"
+                if(NF.strictMode)
+                    throw new AbortOperationException(msg)
+                log.warn msg
+                return placeholder
+            }
+
+            return binding.get(key)
+        }
+    }
+
+    private void readJsonFile(Path file, Map configVars, Map result) {
+        try {
+            def text = configVars ? replaceVars0(file.text, configVars) : file.text
+            def json = (Map)new JsonSlurper().parseText(text)
+            result.putAll(json)
+        }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()} - Cause: ${e.message}", e)
+        }
+    }
+
+    private void readYamlFile(Path file, Map configVars, Map result) {
+        try {
+            def text = configVars ? replaceVars0(file.text, configVars) : file.text
+            def yaml = (Map)new Yaml().load(text)
+            result.putAll(yaml)
+        }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)
+        }
     }
 
 }
