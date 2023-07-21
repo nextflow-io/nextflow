@@ -15,7 +15,6 @@
  */
 
 package nextflow.cli
-
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -59,13 +58,13 @@ trait CacheBase {
             throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)")
 
         if( after && before )
-            throw new AbortOperationException("Options `after` and `before` cannot be used together")
+            throw new AbortOperationException("Options `after` and `before` cannot be used in the same command")
 
         if( after && but )
-            throw new AbortOperationException("Options `after` and `but` cannot be used together")
+            throw new AbortOperationException("Options `after` and `but` cannot be used in the same command")
 
         if( before && but )
-            throw new AbortOperationException("Options `before` and `but` cannot be used together")
+            throw new AbortOperationException("Options `before` and `but` cannot be used in the same command")
 
     }
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +15,6 @@
  */
 
 package nextflow.cli
-
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,12 +29,20 @@ import nextflow.file.FilePatternSplitter
 import nextflow.plugin.Plugins
 
 /**
- * CLI `fs` sub-command
+ * Implements `fs` command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 class CmdFs {
+
+    enum Command {
+        COPY,
+        MOVE,
+        LIST,
+        CAT,
+        REMOVE
+    }
 
     @Parameters(commandDescription = 'Perform basic filesystem operations')
     static class V1 extends CmdBase implements UsageAware {
@@ -159,14 +165,6 @@ class CmdFs {
             @Override Command getCommand() { Command.REMOVE }
         }
 
-    }
-
-    enum Command {
-        COPY,
-        MOVE,
-        LIST,
-        CAT,
-        REMOVE
     }
 
     void run(Command command, List<String> args) {

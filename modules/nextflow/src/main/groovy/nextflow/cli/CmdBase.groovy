@@ -20,7 +20,7 @@ import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
 
 /**
- * Base class for CLI v1 commands
+ * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -29,12 +29,12 @@ abstract class CmdBase implements Runnable {
 
     private Launcher launcher
 
-    @Parameter(names = ['-h','-help'], arity = 0, description = 'Print the command usage', help = true)
-    boolean help
-
     abstract String getName()
 
     Launcher getLauncher() { launcher }
 
     void setLauncher( Launcher value ) { this.launcher = value }
+
+    @Parameter(names=['-h','-help'], description = 'Print the command usage', arity = 0, help = true)
+    boolean help
 }

@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.Const.*
+
 import java.lang.reflect.Field
 
 import com.beust.jcommander.DynamicParameter
@@ -27,7 +29,6 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -39,10 +40,9 @@ import nextflow.util.LoggerHelper
 import nextflow.util.ProxyHelper
 import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
-
 /**
  * Main application entry point. It parses the command line and
- * launches the pipeline execution.
+ * launch the pipeline execution.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -111,7 +111,7 @@ class Launcher {
             cmd.launcher = this;
             jcommander.addCommand(cmd.name, cmd)
         }
-        jcommander.setProgramName( Const.APP_NAME )
+        jcommander.setProgramName( APP_NAME )
     }
 
     /**
@@ -580,10 +580,10 @@ class Launcher {
     static String getVersion(boolean full = false) {
 
         if ( full ) {
-            Const.SPLASH
+            SPLASH
         }
         else {
-            "${Const.APP_NAME} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
+            "${APP_NAME} version ${APP_VER}.${APP_BUILDNUM}"
         }
 
     }

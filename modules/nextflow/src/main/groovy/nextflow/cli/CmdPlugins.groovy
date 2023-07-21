@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 /**
- * Deprecated - see {@link PluginCmd} instead
+ * Deprecate - see {@link CmdPlugin} instead
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -31,7 +31,9 @@ import groovy.util.logging.Slf4j
 class CmdPlugins extends CmdPlugin.V1 {
 
     @Override
-    String getName() { 'plugins' }
+    String getName() {
+        return 'plugins'
+    }
 
     @Override
     void run() {

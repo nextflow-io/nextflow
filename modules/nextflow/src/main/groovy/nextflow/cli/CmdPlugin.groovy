@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +25,7 @@ import nextflow.plugin.Plugins
 import static nextflow.cli.PluginExecAware.CMD_SEP
 
 /**
- * CLI `plugin` sub-command
+ * Plugin manager command
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -37,7 +36,7 @@ class CmdPlugin {
     static class V1 extends CmdBase {
 
         @Parameter(hidden = true)
-        List<String> args = []
+        List<String> args
 
         @Override
         String getName() { 'plugin' }

@@ -18,21 +18,19 @@ package nextflow.cli
 
 import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
-import nextflow.cli.IHubOptions
-
 /**
- * CLI v1 implementation of command line options related to interacting with
- * a git registry (GitHub, BitBucket, etc)
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
+  * Defines the command line parameters for command that need to interact with a pipeline service hub i.e. GitHub or BitBucket
+  *
+  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+  */
+
 @CompileStatic
 trait HubOptions implements IHubOptions {
 
-    @Parameter(names = ['-hub'], description = "Service hub where the project is hosted")
+    @Parameter(names=['-hub'], description = "Service hub where the project is hosted")
     String hubProvider
 
-    @Parameter(names = ['-user'], description = 'Private repository user name')
+    @Parameter(names='-user', description = 'Private repository user name')
     String hubUserCli
 
 }

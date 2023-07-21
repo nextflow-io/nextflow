@@ -71,6 +71,13 @@ class CmdKubeRun extends CmdRun.V1 {
     @Override
     String getName() { 'kuberun' }
 
+    protected void checkRunName() {
+        if( runName && !runName.matches(POD_NAME) )
+            throw new AbortOperationException("Not a valid K8s pod name -- It can only contain lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character")
+        checkRunName0()
+        runName = runName.replace('_','-')
+    }
+
     protected boolean background() { launcher.options.background }
 
     protected hasAnsiLogFlag() { launcher.options.hasAnsiLogFlag() }
@@ -92,13 +99,6 @@ class CmdKubeRun extends CmdRun.V1 {
         driver.run(pipeline, scriptArgs)
         final status = driver.shutdown()
         System.exit(status)
-    }
-
-    protected void checkRunName() {
-        if( runName && !runName.matches(POD_NAME) )
-            throw new AbortOperationException("Not a valid K8s pod name -- It can only contain lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character")
-        checkRunName0()
-        runName = runName.replace('_','-')
     }
 
     /* copied from {@code CmdRun} */

@@ -19,11 +19,11 @@ package nextflow.cli
 import com.beust.jcommander.Parameters
 
 /**
- * CLI `self-update` sub-command (v1)
+ * Self-update command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Parameters(commandDescription = 'Update nextflow runtime to the latest available version')
+@Parameters(commandDescription = "Update nextflow runtime to the latest available version")
 class CmdSelfUpdate extends CmdBase {
     @Override
     String getName() { 'self-update' }

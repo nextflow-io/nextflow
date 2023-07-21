@@ -27,9 +27,9 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
 import nextflow.cli.CmdConfig
-import nextflow.cli.ILauncherOptions
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
+import nextflow.cli.ILauncherOptions
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretHolder
