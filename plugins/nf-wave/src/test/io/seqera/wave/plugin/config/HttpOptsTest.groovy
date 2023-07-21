@@ -30,12 +30,12 @@ class HttpOptsTest extends Specification {
         when:
         def opts = new HttpOpts([:])
         then:
-        opts.connectTimeout() == Duration.ofSeconds(30)
+        opts.connectTimeout() == Duration.ofSeconds(60)
 
         when:
-        opts = new HttpOpts([connectTimeout:'50s'])
+        opts = new HttpOpts([connectTimeout:'120s'])
         then:
-        opts.connectTimeout() == Duration.ofSeconds(50)
+        opts.connectTimeout() == Duration.ofSeconds(120)
 
     }
 }
