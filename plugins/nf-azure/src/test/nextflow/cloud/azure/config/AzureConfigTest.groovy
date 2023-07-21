@@ -70,8 +70,10 @@ class AzureConfigTest extends Specification {
 
         and:
         cfg.batch().endpoint == null
-        cfg.batch().deleteJobsOnCompletion == null
+        cfg.batch().terminateJobsOnCompletion == true
+        cfg.batch().deleteJobsOnCompletion == true
         cfg.batch().deletePoolsOnCompletion == null
+        cfg.batch().deleteTasksOnCompletion == null
         cfg.batch().location == null
         cfg.batch().autoPoolMode == null
         cfg.batch().allowPoolCreation == null
@@ -101,9 +103,9 @@ class AzureConfigTest extends Specification {
                                              autoPoolMode: true,
                                              allowPoolCreation: true,
                                              terminateJobsOnCompletion: false,
-                                             deleteTasksOnCompletion: false,
                                              deleteJobsOnCompletion: false,
                                              deletePoolsOnCompletion: true,
+                                             deleteTasksOnCompletion: false,
                                              pools: [ myPool: [
                                                      vmType: 'Foo_A1',
                                                      autoScale: true,
@@ -128,9 +130,9 @@ class AzureConfigTest extends Specification {
         cfg.batch().autoPoolMode == true
         cfg.batch().allowPoolCreation == true
         cfg.batch().terminateJobsOnCompletion == false
-        cfg.batch().deleteTasksOnCompletion == false
         cfg.batch().deleteJobsOnCompletion == false
         cfg.batch().deletePoolsOnCompletion == true
+        cfg.batch().deleteTasksOnCompletion == false
         cfg.batch().canCreatePool()
         and:
         cfg.batch().pool('myPool').vmType == 'Foo_A1'

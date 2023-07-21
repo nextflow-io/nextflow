@@ -331,13 +331,13 @@ The following settings are available:
 : Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
 
 `azure.batch.deleteJobsOnCompletion`
-: Enable the automatic deletion of jobs created by the pipeline execution (default: `true`).
+: Delete all jobs when the workflow completes (default: `true`).
 
 `azure.batch.deletePoolsOnCompletion`
-: Enable the automatic deletion of compute node pools upon pipeline completion (default: `false`).
+: Delete all compute node pools when the workflow completes (default: `false`).
 
 `azure.batch.deleteTasksOnCompletion`
-: Delete tasks after successful completion. This deletes them on the Azure Batch service but files and resources may persist on the compute nodes (default: `true`).
+: Delete each task when it completes (default: `true`).
 
 `azure.batch.endpoint`
 : The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
@@ -346,7 +346,7 @@ The following settings are available:
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
 
 `azure.batch.terminateJobsOnCompletion`
-: Enables the Batch Job to automatically terminate a job once all tasks have completed (default: `true`).
+: Terminate each job once all of its tasks have completed (default: `true`).
 
 `azure.batch.pools.<name>.autoScale`
 : Enable autoscaling feature for the pool identified with `<name>`.

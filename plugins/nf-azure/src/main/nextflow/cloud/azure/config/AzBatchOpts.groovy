@@ -64,8 +64,8 @@ class AzBatchOpts implements CloudTransferOptions {
         location = config.location
         autoPoolMode = config.autoPoolMode
         allowPoolCreation = config.allowPoolCreation
-        terminateJobsOnCompletion = config.terminateJobsOnCompletion
-        deleteJobsOnCompletion = config.deleteJobsOnCompletion
+        terminateJobsOnCompletion = config.terminateJobsOnCompletion != Boolean.FALSE
+        deleteJobsOnCompletion = config.deleteJobsOnCompletion != Boolean.FALSE
         deletePoolsOnCompletion = config.deletePoolsOnCompletion
         deleteTasksOnCompletion = config.deleteTasksOnCompletion
         pools = parsePools(config.pools instanceof Map ? config.pools as Map<String,Map> : Collections.<String,Map>emptyMap())

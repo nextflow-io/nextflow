@@ -785,17 +785,13 @@ class AzBatchService implements Closeable {
         apply(() -> client.taskOperations().deleteTask(key.jobId, key.taskId))
     }
 
+    /**
+     * Set all jobs to terminate on completion.
+     */
     protected void terminateJobs() {
-        /* 
-        We set the job to terminate when all tasks are complete rather than directly terminating, this allows Azure Batch to handle the termination for us.
-        */
-
-        for( Map.Entry<TaskProcessor,String> entry : allJobIds ) {
-            final proc = entry.key
-            final jobId = entry.value
-
+        for( String jobId : allJobIds.values() ) {
             try {
-                log.trace "Terminating Azure job ${jobId}"
+                log.trace "Setting Azure job ${jobId} to terminate on completion"
 
                 CloudJob job = apply(() -> client.jobOperations().getJob(jobId))
                 final poolInfo = job.poolInfo()
@@ -813,10 +809,7 @@ class AzBatchService implements Closeable {
     }
 
     protected void cleanupJobs() {
-        for( Map.Entry<TaskProcessor,String> entry : allJobIds ) {
-            final proc = entry.key
-            final jobId = entry.value
-
+        for( String jobId : allJobIds.values() ) {
             try {
                 log.trace "Deleting Azure job ${jobId}"
                 apply(() -> client.jobOperations().deleteJob(jobId))
@@ -828,7 +821,7 @@ class AzBatchService implements Closeable {
     }
 
     protected void cleanupPools() {
-        for( String poolId : allPools.keySet()) {
+        for( String poolId : allPools.keySet() ) {
             try {
                 apply(() -> client.poolOperations().deletePool(poolId))
             }
@@ -849,17 +842,20 @@ class AzBatchService implements Closeable {
         }
         return identity
     }
+
     @Override
     void close() {
-        // Terminate existing jobs to prevent them occupying quota
-        if( config.batch().terminateJobsOnCompletion!=Boolean.FALSE ) {
+        // terminate all jobs to prevent them from occupying quota
+        if( config.batch().terminateJobsOnCompletion ) {
             terminateJobs()
         }
 
-        // cleanup app successful jobs
-        if( config.batch().deleteJobsOnCompletion!=Boolean.FALSE ) {
+        // delete all jobs
+        if( config.batch().deleteJobsOnCompletion ) {
             cleanupJobs()
         }
+
+        // delete all autopools
         if( config.batch().canCreatePool() && config.batch().deletePoolsOnCompletion ) {
             cleanupPools()
         }
