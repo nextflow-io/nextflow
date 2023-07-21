@@ -331,7 +331,7 @@ The following settings are available:
 : Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
 
 `azure.batch.deleteJobsOnCompletion`
-: Delete all jobs when the workflow completes (default: `true`).
+: Delete all jobs when the workflow completes (default: `false`).
 
 `azure.batch.deletePoolsOnCompletion`
 : Delete all compute node pools when the workflow completes (default: `false`).
