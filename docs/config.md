@@ -346,7 +346,7 @@ The following settings are available:
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
 
 `azure.batch.terminateJobsOnCompletion`
-: When the workflow completes, set all jobs to complete on task completion. (default: `true`).
+: When the workflow completes, set all jobs to terminate on task completion. (default: `true`).
 
 `azure.batch.pools.<name>.autoScale`
 : Enable autoscaling feature for the pool identified with `<name>`.
