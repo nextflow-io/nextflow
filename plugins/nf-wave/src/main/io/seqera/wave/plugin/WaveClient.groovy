@@ -490,11 +490,11 @@ class WaveClient {
         final req = HttpRequest.newBuilder()
                 .uri(manifest)
                 .headers(REQUEST_HEADERS)
-                .timeout(Duration.ofSeconds(15 * 60 + 10))
+                .timeout(Duration.ofMinutes(5))
                 .GET()
                 .build()
         final begin = System.currentTimeMillis()
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        final resp = httpSend(req)
         final code = resp.statusCode()
         if( code>=200 && code<400 ) {
             log.debug "Wave container available in ${nextflow.util.Duration.of(System.currentTimeMillis()-begin)}: [$code] ${resp.body()}"
