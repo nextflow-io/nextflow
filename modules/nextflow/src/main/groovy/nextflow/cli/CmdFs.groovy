@@ -36,6 +36,8 @@ import nextflow.plugin.Plugins
 @CompileStatic
 class CmdFs {
 
+    static final public NAME = 'fs'
+
     enum Command {
         COPY,
         MOVE,
@@ -48,14 +50,97 @@ class CmdFs {
     static class V1 extends CmdBase implements UsageAware {
 
         trait SubCmd {
-            abstract String getName()
             abstract int getArity()
+
+            abstract String getName()
+
             abstract String getDescription()
+
             abstract Command getCommand()
 
             String usage() {
                 "Usage: nextflow fs ${name} " + (arity==1 ? "<path>" : "source_file target_file")
             }
+        }
+
+        static class CmdCopy implements SubCmd {
+
+            @Override
+            int getArity() { 2 }
+
+            @Override
+            String getName() { 'cp' }
+
+            @Override
+            String getDescription() { 'Copy a file' }
+
+            @Override
+            Command getCommand() { Command.COPY }
+
+        }
+
+        static class CmdMove implements SubCmd {
+
+            @Override
+            int getArity() { 2 }
+
+            @Override
+            String getName() { 'mv' }
+
+            @Override
+            String getDescription() { 'Move a file' }
+
+            @Override
+            Command getCommand() { Command.MOVE }
+
+        }
+
+        static class CmdList implements SubCmd {
+
+            @Override
+            int getArity() { 1 }
+
+            @Override
+            String getDescription() { 'List the content of a folder' }
+
+            @Override
+            String getName() { 'ls' }
+
+            @Override
+            Command getCommand() { Command.LIST }
+
+        }
+
+        static class CmdCat implements SubCmd {
+
+            @Override
+            int getArity() { 1 }
+
+            @Override
+            String getName() { 'cat' }
+
+            @Override
+            String getDescription() { 'Print a file to the stdout' }
+
+            @Override
+            Command getCommand() { Command.CAT }
+
+        }
+
+        static class CmdRemove implements SubCmd {
+
+            @Override
+            int getArity() { 1 }
+
+            @Override
+            String getName() { 'rm' }
+
+            @Override
+            String getDescription() { 'Remove a file' }
+
+            @Override
+            Command getCommand() { Command.REMOVE }
+
         }
 
         private List<SubCmd> commands = (List<SubCmd>)[
@@ -66,11 +151,13 @@ class CmdFs {
             new CmdRemove()
         ]
 
-        @Parameter(hidden = true)
-        List<String> args = []
+        @Parameter
+        List<String> args
 
         @Override
-        String getName() { 'fs' }
+        String getName() {
+            return NAME
+        }
 
         @Override
         void run() {
@@ -79,19 +166,19 @@ class CmdFs {
                 return
             }
 
-            final cmd = commands.find { it.name == args[0] }
+            final cmd = findCmd(args[0])
             if( !cmd ) {
-                def matches = commands.collect{ it.name }.closest(args[0])
-                def msg = "Unknown fs sub-command: ${args[0]}"
-                if( matches )
-                    msg += " -- Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
-                throw new AbortOperationException(msg)
+                throw new AbortOperationException("Unknown file system command: `$cmd`")
             }
 
             if( args.size() - 1 != cmd.getArity() )
                 throw new AbortOperationException(cmd.usage())
 
             new CmdFs().run(cmd.getCommand(), args.drop(1))
+        }
+
+        private SubCmd findCmd( String name ) {
+            commands.find { it.name == name }
         }
 
         /**
@@ -120,49 +207,13 @@ class CmdFs {
                 println result.join('\n').toString()
             }
             else {
-                def sub = commands.find { it.name == args[0] }
+                def sub = findCmd(args[0])
                 if( sub )
                     println sub.usage()
                 else {
                     throw new AbortOperationException("Unknown fs sub-command: ${args[0]}")
                 }
             }
-
-        }
-
-        static class CmdCopy implements SubCmd {
-            @Override String getName() { 'cp' }
-            @Override int getArity() { 2 }
-            @Override String getDescription() { 'Copy a file' }
-            @Override Command getCommand() { Command.COPY }
-        }
-
-        static class CmdMove implements SubCmd {
-            @Override String getName() { 'mv' }
-            @Override int getArity() { 2 }
-            @Override String getDescription() { 'Move a file' }
-            @Override Command getCommand() { Command.MOVE }
-        }
-
-        static class CmdList implements SubCmd {
-            @Override String getName() { 'ls' }
-            @Override int getArity() { 1 }
-            @Override String getDescription() { 'List the contents of a folder' }
-            @Override Command getCommand() { Command.LIST }
-        }
-
-        static class CmdCat implements SubCmd {
-            @Override String getName() { 'cat' }
-            @Override int getArity() { 1 }
-            @Override String getDescription() { 'Print a file to stdout' }
-            @Override Command getCommand() { Command.CAT }
-        }
-
-        static class CmdRemove implements SubCmd {
-            @Override String getName() { 'rm' }
-            @Override int getArity() { 1 }
-            @Override String getDescription() { 'Remove a file' }
-            @Override Command getCommand() { Command.REMOVE }
         }
 
     }
@@ -171,30 +222,35 @@ class CmdFs {
         Plugins.setup()
 
         try {
-            switch( command ) {
-                case COPY:
-                    traverse(args[0]) { Path path -> copy(path, args[1] as Path) }
-                    break
-                case MOVE:
-                    traverse(args[0]) { Path path -> move(path, args[1] as Path) }
-                    break
-                case LIST:
-                    traverse(args[0]) { Path path -> list(path) }
-                    break
-                case CAT:
-                    traverse(args[0]) { Path path -> cat(path) }
-                    break
-                case REMOVE:
-                    traverse(args[0]) { Path path -> remove(path) }
-                    break
-            }
+            run0(command, args)
         }
         finally {
             Plugins.stop()
         }
     }
 
+    private void run0(Command command, List<String> args) {
+        switch( command ) {
+            case COPY:
+                traverse(args[0]) { Path path -> copy(path, args[1] as Path) }
+                break
+            case MOVE:
+                traverse(args[0]) { Path path -> move(path, args[1] as Path) }
+                break
+            case LIST:
+                traverse(args[0]) { Path path -> list(path) }
+                break
+            case CAT:
+                traverse(args[0]) { Path path -> cat(path) }
+                break
+            case REMOVE:
+                traverse(args[0]) { Path path -> remove(path) }
+                break
+        }
+    }
+
     private void traverse( String source, Closure op ) {
+
         // if it isn't a glob pattern simply return it a normalized absolute Path object
         def splitter = FilePatternSplitter.glob().parse(source)
         if( splitter.isPattern() ) {
@@ -212,6 +268,7 @@ class CmdFs {
             def normalised = splitter.strip(source)
             op.call(FileHelper.asPath(normalised))
         }
+
     }
 
     void copy(Path source, Path target) {

@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.IHubOptions
+import nextflow.cli.HubOptions
 import picocli.CommandLine.Option
 
 /**
@@ -27,7 +27,7 @@ import picocli.CommandLine.Option
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-trait HubOptions implements IHubOptions {
+trait HubOptionsV2 implements HubOptions {
 
     @Option(names = ['--hub'], paramLabel = '<hub>', description = 'Service hub where the project is hosted')
     String hubProvider

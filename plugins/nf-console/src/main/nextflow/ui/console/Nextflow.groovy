@@ -27,7 +27,7 @@ import groovy.console.ui.OutputTransforms
 import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
-import nextflow.cli.LauncherOptions
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdInfo
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
@@ -83,7 +83,7 @@ class Nextflow extends Console {
 
         // create the config object
         return new ConfigBuilder()
-                    .setLauncherOptions( new LauncherOptions() )
+                    .setLauncherOptions( new CliOptions.V1() )
                     .setBaseDir(base)
                     .setRunOptions( new CmdRun() )
                     .build()

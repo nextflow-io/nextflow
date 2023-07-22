@@ -22,7 +22,7 @@ import java.nio.file.Paths
 import ch.qos.logback.classic.Level
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import nextflow.extension.OpCall
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding
@@ -64,7 +64,7 @@ class LoggerHelperTest extends Specification {
     def 'should create LoggerHelper object' () {
 
         given:
-        def logger = new LoggerHelper(Mock(ILauncherOptions))
+        def logger = new LoggerHelper(Mock(CliOptions))
         when:
         logger.setDaemon(true)
         then:

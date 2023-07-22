@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import picocli.CommandLine.Option
 
 /**
@@ -26,7 +26,7 @@ import picocli.CommandLine.Option
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class LauncherOptions implements ILauncherOptions {
+class CliOptionsV2 implements CliOptions {
 
     Boolean ansiLogCli
 

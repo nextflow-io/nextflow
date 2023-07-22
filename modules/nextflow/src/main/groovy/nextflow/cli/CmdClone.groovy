@@ -31,15 +31,17 @@ import nextflow.scm.AssetManager
 @CompileStatic
 class CmdClone {
 
-    interface Options extends IHubOptions {
+    static final public NAME = 'clone'
+
+    interface Options extends HubOptions {
         String getPipeline()
         String getTargetName()
         Integer getDeep()
         String getRevision()
     }
 
-    @Parameters(commandDescription = 'Clone a project into a folder')
-    static class V1 extends CmdBase implements Options, HubOptions {
+    @Parameters(commandDescription = "Clone a project into a folder")
+    static class V1 extends CmdBase implements Options, HubOptions.V1 {
 
         @Parameter(required=true, description = 'name of the project to clone')
         List<String> args
@@ -59,7 +61,7 @@ class CmdClone {
         }
 
         @Override
-        String getName() { 'clone' }
+        final String getName() { NAME }
 
         @Override
         void run() {

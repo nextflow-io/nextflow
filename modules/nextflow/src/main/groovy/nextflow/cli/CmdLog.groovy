@@ -56,6 +56,8 @@ class CmdLog implements CacheBase {
         ALL_FIELDS.sort(true)
     }
 
+    static final public NAME = 'log'
+
     interface Options {
         String getAfter()
         String getBefore()
@@ -69,7 +71,7 @@ class CmdLog implements CacheBase {
         List<String> getArgs()
     }
 
-    @Parameters(commandDescription = 'Print executions log and runtime info')
+    @Parameters(commandDescription = "Print executions log and runtime info")
     static class V1 extends CmdBase implements Options {
 
         @Parameter(names = ['-s'], description='Character used to separate column values')
@@ -103,7 +105,7 @@ class CmdLog implements CacheBase {
         List<String> args
 
         @Override
-        String getName() { 'log' }
+        final String getName() { NAME }
 
         @Override
         void run() {

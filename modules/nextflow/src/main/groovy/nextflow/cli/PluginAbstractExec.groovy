@@ -44,7 +44,7 @@ trait PluginAbstractExec implements PluginExecAware {
     abstract List<String> getCommands()
 
     @Override
-    final int exec(ILauncherOptions options, String pluginId, String cmd, List<String> args) {
+    final int exec(CliOptions options, String pluginId, String cmd, List<String> args) {
         // create the config
         final config = new ConfigBuilder()
                 .setLauncherOptions(options)

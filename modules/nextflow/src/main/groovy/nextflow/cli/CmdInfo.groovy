@@ -42,6 +42,8 @@ import org.yaml.snakeyaml.Yaml
 @CompileStatic
 class CmdInfo {
 
+    static final public NAME = 'info'
+
     interface Options {
         abstract String getPipeline()
         abstract boolean getDetailed()
@@ -74,7 +76,7 @@ class CmdInfo {
         }
 
         @Override
-        String getName() { 'info' }
+        final String getName() { NAME }
 
         @Override
         void run() {

@@ -49,6 +49,8 @@ import nextflow.util.HistoryFile.Record
 @CompileStatic
 class CmdClean implements CacheBase {
 
+    static final public NAME = 'clean'
+
     interface Options {
         String getAfter()
         String getBefore()
@@ -59,7 +61,7 @@ class CmdClean implements CacheBase {
         boolean getQuiet()
         List<String> getArgs()
 
-        ILauncherOptions getLauncherOptions()
+        CliOptions getLauncherOptions()
     }
 
     @Parameters(commandDescription = 'Clean up project cache and work directories')
@@ -90,12 +92,12 @@ class CmdClean implements CacheBase {
         List<String> args
 
         @Override
-        ILauncherOptions getLauncherOptions() {
+        CliOptions getLauncherOptions() {
             launcher.options
         }
 
         @Override
-        String getName() { 'clean' }
+        String getName() { NAME }
 
         @Override
         void run() {

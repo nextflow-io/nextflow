@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +27,7 @@ class HubOptionsTest extends Specification {
     def testUserV1() {
 
         when:
-        def cmd = [:] as v1.HubOptions
+        def cmd = [:] as HubOptions.V1
         cmd.hubUserCli = credential
         then:
         cmd.getHubUser() == user
@@ -45,7 +44,7 @@ class HubOptionsTest extends Specification {
     def testUserV2() {
 
         when:
-        def cmd = [:] as v2.HubOptions
+        def cmd = [:] as HubOptions.V2
         cmd.hubUserCli = credential
         then:
         cmd.getHubUser() == user

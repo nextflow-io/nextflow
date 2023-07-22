@@ -18,7 +18,7 @@ package nextflow.ui.console
 import javax.swing.UIManager
 
 import groovy.util.logging.Slf4j
-import nextflow.cli.LauncherOptions
+import nextflow.cli.CliOptions
 import nextflow.util.LoggerHelper
 import org.codehaus.groovy.runtime.StackTraceUtils
 
@@ -39,7 +39,7 @@ class ConsoleRunner implements ConsoleExtension {
      */
     @Override
     void run(String script) {
-        LauncherOptions opts = new LauncherOptions()
+        def opts = new CliOptions.V1()
         opts.logFile = '.nextflow-console.log'
         new LoggerHelper(opts).setup()
 

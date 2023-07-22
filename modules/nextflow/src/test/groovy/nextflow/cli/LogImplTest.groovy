@@ -101,10 +101,10 @@ class LogImplTest extends Specification {
         history.write(runName,uuid,'b3d3aca8eb','run')
 
         when:
-        def options = Mock(LogImpl.Options) {
+        def options = Mock(CmdLog.Options) {
             args >> [runName]
         }
-        def log = new LogImpl(basePath: folder, options: options)
+        def log = new CmdLog(basePath: folder, options: options)
         log.run()
         def stdout = capture
                 .toString()
@@ -174,11 +174,11 @@ class LogImplTest extends Specification {
         history.write(runName,uuid,'b3d3aca8eb','run')
 
         when:
-        def options = Mock(LogImpl.Options) {
+        def options = Mock(CmdLog.Options) {
             filterStr >> 'exit == 0'
             args >> ['test_1']
         }
-        def log = new LogImpl(basePath: folder, options: options)
+        def log = new CmdLog(basePath: folder, options: options)
         log.run()
 
         def stdout = capture

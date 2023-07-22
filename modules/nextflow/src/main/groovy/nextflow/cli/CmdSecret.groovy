@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,15 +25,16 @@ import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.secret.SecretsLoader
 import nextflow.secret.SecretsProvider
-
 /**
- * CLI `secrets` sub-command
+ * Implements the {@code secret} command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class CmdSecrets {
+class CmdSecret {
+
+    static public final String NAME = 'secrets'
 
     enum Command {
         GET,
@@ -42,45 +43,30 @@ class CmdSecrets {
         DELETE
     }
 
-    @Parameters(commandDescription = 'Manage pipeline secrets (preview)')
+    @Parameters(commandDescription = "Manage pipeline secrets (preview)")
     static class V1 extends CmdBase implements UsageAware {
 
         interface SubCmd {
             String getName()
-            void apply(List<String> args)
-            void usage(List<String> args)
+            void apply(List<String> result)
+            void usage(List<String> result)
         }
 
-        private List<SubCmd> commands = (List<SubCmd>)[
-            new GetCmd(),
-            new SetCmd(),
-            new ListCmd(),
-            new DeleteCmd()
-        ]
+        private List<SubCmd> commands = []
+
+        String getName() {
+            return NAME
+        }
 
         @Parameter(hidden = true)
-        List<String> args = []
+        List<String> args
 
-        @Override
-        String getName() { 'secrets' }
-
-        @Override
-        void run() {
-            if( !args ) {
-                usage()
-                return
-            }
-
-            final cmd = commands.find { it.name == args[0] }
-            if( !cmd ) {
-                def matches = commands.collect{ it.name }.closest(args[0])
-                def msg = "Unknown secrets sub-command: ${args[0]}"
-                if( matches )
-                    msg += " -- Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
-                throw new AbortOperationException(msg)
-            }
-
-            cmd.apply(args.drop(1))
+        V1() {
+            commands.add( new GetCmd() )
+            commands.add( new PutCmd() )
+            commands.add( new SetCmd() )
+            commands.add( new ListCmd() )
+            commands.add( new DeleteCmd() )
         }
 
         /**
@@ -120,11 +106,35 @@ class CmdSecrets {
             println result.join('\n').toString()
         }
 
-        private void addOption(String fieldName, List<String> args) {
+        @Override
+        void run() {
+            if( !args ) {
+                usage()
+                return
+            }
+
+            getCmd(args).apply(args.drop(1))
+        }
+
+        protected SubCmd getCmd(List<String> args) {
+
+            def cmd = commands.find { it.name == args[0] }
+            if( cmd ) {
+                return cmd
+            }
+
+            def matches = commands.collect{ it.name }.closest(args[0])
+            def msg = "Unknown secrets sub-command: ${args[0]}"
+            if( matches )
+                msg += " -- Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
+            throw new AbortOperationException(msg)
+        }
+
+        private void addOption(String fieldName, List<String> result) {
             def annot = this.class.getDeclaredField(fieldName)?.getAnnotation(Parameter)
             if( annot ) {
-                args << '  ' + annot.names().join(', ')
-                args << '     ' + annot.description()
+                result << '  ' + annot.names().join(', ')
+                result << '     ' + annot.description()
             }
             else {
                 log.debug "Unknown help field: $fieldName"
@@ -136,55 +146,58 @@ class CmdSecrets {
             @Override
             String getName() { 'put' }
 
-            void apply(List<String> args) {
+            @Override
+            void apply(List<String> result) {
                 log.warn "Put command is deprecated - use 'set' instead'"
-                super.apply(args)
+                super.apply(result)
             }
         }
 
         class SetCmd implements SubCmd {
+
             @Override
             String getName() { 'set' }
 
             @Override
-            void apply(List<String> args) {
-                if( args.size() < 1 )
+            void apply(List<String> result) {
+                if( result.size() < 1 )
                     throw new AbortOperationException("Missing secret name")
-                if( args.size() < 2 )
+                if( result.size() < 2 )
                     throw new AbortOperationException("Missing secret value")
 
-                new CmdSecrets().run(Command.SET, args)
+                new CmdSecret().run(Command.SET, result)
             }
 
             @Override
-            void usage(List<String> args) {
-                args << 'Set a key-pair in the secrets store'
-                args << "Usage: nextflow secrets $name <NAME> <VALUE>".toString()
-                args << ''
-                args << ''
+            void usage(List<String> result) {
+                result << 'Set a key-pair in the secrets store'
+                result << "Usage: nextflow secrets $name <NAME> <VALUE>".toString()
+                result << ''
+                result << ''
             }
         }
 
         class GetCmd implements SubCmd {
+
             @Override
             String getName() { 'get' }
 
             @Override
-            void apply(List<String> args) {
-                if( args.size() != 1 )
+            void apply(List<String> result) {
+                if( result.size() != 1 )
                     throw new AbortOperationException("Wrong number of arguments")
 
-                if( !args[0] )
+                if( !result.first() )
                     throw new AbortOperationException("Missing secret name")
 
-                new CmdSecrets().run(Command.GET, args)
+                new CmdSecret().run(Command.GET, result)
             }
 
             @Override
-            void usage(List<String> args) {
-                args << 'Get a secret value with the name'
-                args << "Usage: nextflow secrets $name <NAME>".toString()
-                args << ''
+            void usage(List<String> result) {
+                result << 'Get a secret value with the name'
+                result << "Usage: nextflow secrets $name <NAME>".toString()
+                result << ''
             }
         }
 
@@ -193,18 +206,18 @@ class CmdSecrets {
             String getName() { 'list' }
 
             @Override
-            void apply(List<String> args) {
-                if( args.size() > 0 )
+            void apply(List<String> result) {
+                if( result.size() > 0 )
                     throw new AbortOperationException("Wrong number of arguments")
 
-                new CmdSecrets().run(Command.LIST, args)
+                new CmdSecret().run(Command.LIST, result)
             }
 
             @Override
-            void usage(List<String> args) {
-                args << 'List all names in the secrets store'
-                args << "Usage: nextflow secrets $name".toString()
-                args << ''
+            void usage(List<String> result) {
+                result << 'List all names in the secrets store'
+                result << "Usage: nextflow secrets $name".toString()
+                result << ''
             }
         }
 
@@ -213,23 +226,23 @@ class CmdSecrets {
             String getName() { 'delete' }
 
             @Override
-            void apply(List<String> args) {
-                if( args.size() != 1 )
+            void apply(List<String> result) {
+                if( result.size() != 1 )
                     throw new AbortOperationException("Wrong number of arguments")
 
-                if( !args[0] )
+                if( !result.first() )
                     throw new AbortOperationException("Missing secret name")
 
-                new CmdSecrets().run(Command.DELETE, args)
+                new CmdSecret().run(Command.DELETE, result)
             }
 
             @Override
-            void usage(List<String> args) {
-                args << 'Delete an entry from the secrets store'
-                args << "Usage: nextflow secrets $name".toString()
-                args << ''
-                addOption('secretName', args)
-                args << ''
+            void usage(List<String> result) {
+                result << 'Delete an entry from the secrets store'
+                result << "Usage: nextflow secrets $name".toString()
+                result << ''
+                addOption('secretName', result)
+                result << ''
             }
         }
     }

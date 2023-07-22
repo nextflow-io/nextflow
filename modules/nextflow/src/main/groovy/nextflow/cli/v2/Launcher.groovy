@@ -19,7 +19,7 @@ package nextflow.cli.v2
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -71,14 +71,14 @@ import picocli.CommandLine.ParseResult
 class Launcher extends AbstractCmd {
 
     @ArgGroup(validate = false)
-    private LauncherOptions options
+    private CliOptionsV2 options
 
     private String cliString
 
     private boolean daemonMode
 
     Launcher() {
-        this.options = new LauncherOptions()
+        this.options = new CliOptionsV2()
     }
 
     private int executionStrategy(ParseResult parseResult) {
@@ -130,7 +130,7 @@ class Launcher extends AbstractCmd {
         return cli
     }
 
-    LauncherOptions getOptions() { options }
+    CliOptionsV2 getOptions() { options }
 
     String getCliString() { cliString }
 

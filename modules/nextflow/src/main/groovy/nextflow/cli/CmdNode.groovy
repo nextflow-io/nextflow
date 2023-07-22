@@ -33,14 +33,16 @@ import nextflow.util.ServiceDiscover
 @CompileStatic
 class CmdNode {
 
+    static final public NAME = 'node'
+
     interface Options {
         Map<String,String> getClusterOptions()
         String getProvider()
 
-        ILauncherOptions getLauncherOptions()
+        CliOptions getLauncherOptions()
     }
 
-    @Parameters(commandDescription = 'Launch Nextflow in deamon mode')
+    @Parameters(commandDescription = 'Launch Nextflow in daemon mode')
     static class V1 extends CmdBase implements Options {
 
         @DynamicParameter(names ='-cluster.', description='Define cluster config options')
@@ -60,12 +62,12 @@ class CmdNode {
         }
 
         @Override
-        ILauncherOptions getLauncherOptions() {
+        CliOptions getLauncherOptions() {
             launcher.options
         }
 
         @Override
-        String getName() { 'node' }
+        String getName() { NAME }
 
         @Override
         void run() {

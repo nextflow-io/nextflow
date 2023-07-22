@@ -17,7 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdNode
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -51,7 +51,7 @@ class NodeCmd extends AbstractCmd implements CmdNode.Options {
     String provider
 
     @Override
-    ILauncherOptions getLauncherOptions() {
+    CliOptions getLauncherOptions() {
         launcher.options
     }
 

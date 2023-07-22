@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
 import spock.lang.Specification
 
@@ -57,13 +57,13 @@ class LauncherTest extends Specification {
         when:
         launcher = new Launcher().parseMainArgs('help')
         then:
-        launcher.command instanceof HelpCmd
+        launcher.command instanceof CmdHelp
         launcher.command.args == null
 
         when:
         launcher = new Launcher().parseMainArgs('help','xxx')
         then:
-        launcher.command instanceof HelpCmd
+        launcher.command instanceof CmdHelp
         launcher.command.args == ['xxx']
 
     }
@@ -119,7 +119,7 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
-        launcher.command instanceof RunCmd
+        launcher.command instanceof CmdRun.V1
         launcher.command.pipeline == 'xxx'
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
@@ -128,14 +128,14 @@ class LauncherTest extends Specification {
         when:
         launcher = new Launcher().parseMainArgs('run','alpha', '-hub', 'github')
         then:
-        launcher.command instanceof RunCmd
+        launcher.command instanceof CmdRun.V1
         launcher.command.pipeline == 'alpha'
         launcher.command.hubProvider == 'github'
 
         when:
         launcher = new Launcher().parseMainArgs('run', 'script.nf', 'arg1', 'arg2', '--alpha', '0', '--omega', '9')
         then:
-        launcher.command instanceof RunCmd
+        launcher.command instanceof CmdRun.V1
         launcher.command.pipeline == 'script.nf'
         launcher.command.args == ['arg1', 'arg2']
         launcher.command.params.'alpha' == '0'
@@ -149,7 +149,7 @@ class LauncherTest extends Specification {
         given:
         def script = Files.createTempFile('file',null)
         def launcher = [:] as Launcher
-        launcher.allCommands = [ new RunCmd(), new InfoCmd() ]
+        launcher.allCommands = [ new CmdRun.V1(), new InfoCmd() ]
 
         expect:
         launcher.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
@@ -322,7 +322,7 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new InfoCmd(), new RunCmd(), new ListCmd()] )
+        launcher.printCommands( [new InfoCmd(), new CmdRun.V1(), new ListCmd()] )
         then:
         capture.toString() == '''
                 Commands:

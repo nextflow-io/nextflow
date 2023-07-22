@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'pull',
     description = 'Download or update a project'
 )
-class PullCmd extends AbstractCmd implements CmdPull.Options, HubOptions {
+class PullCmd extends AbstractCmd implements CmdPull.Options, HubOptionsV2 {
 
     @Parameters(description = 'project name or repository url to pull')
     String pipeline

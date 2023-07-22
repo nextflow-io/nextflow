@@ -18,7 +18,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdPlugin
 import nextflow.exception.AbortOperationException
 import picocli.CommandLine.Command

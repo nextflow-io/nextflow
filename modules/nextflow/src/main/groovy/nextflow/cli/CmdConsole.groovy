@@ -34,7 +34,7 @@ class CmdConsole {
         String getScript()
     }
 
-    @Parameters(commandDescription = 'Launch Nextflow interactive console')
+    @Parameters(commandDescription = "Launch Nextflow interactive console")
     static class V1 extends CmdBase implements Options {
 
         @Parameter(description = 'Nextflow console arguments')

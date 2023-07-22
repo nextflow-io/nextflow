@@ -18,7 +18,7 @@ package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
 import nextflow.cli.CmdConfig
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -58,7 +58,7 @@ class ConfigCmd extends AbstractCmd implements CmdConfig.Options {
     boolean sort
 
     @Override
-    ILauncherOptions getLauncherOptions() {
+    CliOptions getLauncherOptions() {
         launcher.options
     }
 

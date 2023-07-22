@@ -33,12 +33,12 @@ class CloneImplTest extends Specification {
         given:
         def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def dir = Files.createTempDirectory('test')
-        def options = Mock(CloneImpl.Options) {
+        def options = Mock(CmdClone.Options) {
             hubUser >> accessToken
             pipeline >> 'nextflow-io/hello'
             targetName >> dir.toFile().toString()
         }
-        def cmd = new CloneImpl(options)
+        def cmd = new CmdClone(options)
 
         when:
         cmd.run()

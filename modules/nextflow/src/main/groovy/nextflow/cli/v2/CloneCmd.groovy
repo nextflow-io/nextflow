@@ -32,7 +32,7 @@ import picocli.CommandLine.Parameters
     name = 'clone',
     description = 'Clone a project into a folder'
 )
-class CloneCmd extends AbstractCmd implements CmdClone.Options, HubOptions {
+class CloneCmd extends AbstractCmd implements CmdClone.Options, HubOptionsV2 {
 
     @Parameters(index = '0', description = 'name of the project to clone')
     String pipeline

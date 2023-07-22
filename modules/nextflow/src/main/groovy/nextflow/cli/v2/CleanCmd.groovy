@@ -18,7 +18,7 @@ package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
 import nextflow.cli.CmdClean
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -64,7 +64,7 @@ class CleanCmd extends AbstractCmd implements CmdClean.Options {
     List<String> args = []
 
     @Override
-    ILauncherOptions getLauncherOptions() {
+    CliOptions getLauncherOptions() {
         launcher.options
     }
 

@@ -33,17 +33,19 @@ import nextflow.scm.AssetManager
 @CompileStatic
 class CmdView {
 
+    static final public NAME = 'view'
+
     interface Options {
         String getPipeline()
         boolean getQuiet()
         boolean getAll()
     }
 
-    @Parameters(commandDescription = 'View project script file(s)')
+    @Parameters(commandDescription = "View project script file(s)")
     static class V1 extends CmdBase implements Options {
 
         @Override
-        String getName() { 'view' }
+        String getName() { NAME }
 
         @Parameter(description = 'project name', required = true)
         List<String> args = []

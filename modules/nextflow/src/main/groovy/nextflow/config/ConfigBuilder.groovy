@@ -26,10 +26,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
-import nextflow.cli.ILauncherOptions
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretHolder
@@ -51,7 +51,7 @@ class ConfigBuilder {
 
     static final public String DEFAULT_PROFILE = 'standard'
 
-    ILauncherOptions options
+    CliOptions options
 
     CmdRun cmdRun
 
@@ -100,7 +100,7 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setLauncherOptions( ILauncherOptions options ) {
+    ConfigBuilder setLauncherOptions( CliOptions options ) {
         this.options = options
         return this
     }

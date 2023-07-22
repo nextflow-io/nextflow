@@ -30,13 +30,15 @@ import nextflow.scm.AssetManager
 @CompileStatic
 class CmdList {
 
+    static final public NAME = 'list'
+
     interface Options {}
 
-    @Parameters(commandDescription = 'List all downloaded projects')
+    @Parameters(commandDescription = "List all downloaded projects")
     static class V1 extends CmdBase implements Options {
 
         @Override
-        String getName() { 'list' }
+        final String getName() { NAME }
 
         @Override
         void run() {

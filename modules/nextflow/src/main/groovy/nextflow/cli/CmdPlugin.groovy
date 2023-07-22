@@ -32,27 +32,27 @@ import static nextflow.cli.PluginExecAware.CMD_SEP
 @CompileStatic
 class CmdPlugin {
 
-    @Parameters(commandDescription = 'Manage plugins and execute custom plugin commands')
+    @Parameters(commandDescription = "Execute plugin-specific commands")
     static class V1 extends CmdBase {
+
+        @Override
+        String getName() {
+            return 'plugin'
+        }
 
         @Parameter(hidden = true)
         List<String> args
 
         @Override
-        String getName() { 'plugin' }
-
-        @Override
         void run() {
             if( !args )
                 throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
-
             // plugin install command
             if( args[0] == 'install' ) {
                 if( args.size()!=2 )
                     throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
                 CmdPlugin.install(args[1].tokenize(','))
             }
-
             // plugin run command
             else if( args[0].contains(CMD_SEP) ) {
                 CmdPlugin.exec(args.pop(), args, launcher.options)
@@ -70,12 +70,12 @@ class CmdPlugin {
         Plugins.pull(ids)
     }
 
-    static void exec(String command, List<String> args, ILauncherOptions launcherOptions) {
+    static void exec(String head, List<String> args, CliOptions launcherOptions) {
         Plugins.setup()
 
-        final items = command.tokenize(CMD_SEP)
+        final items = head.tokenize(CMD_SEP)
         final target = items[0]
-        final targetCmd = items[1] ? items[1..-1].join(CMD_SEP) : null
+        final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
 
         // push back the command as the first item
         Plugins.start(target)
@@ -84,7 +84,7 @@ class CmdPlugin {
             throw new AbortOperationException("Cannot find target plugin: $target")
         final plugin = wrapper.getPlugin()
         if( plugin instanceof PluginExecAware ) {
-            final ret = plugin.exec(launcherOptions, target, targetCmd, args)
+            final ret = plugin.exec(launcherOptions, target, cmd, args)
             // use explicit exit to invoke the system shutdown hooks
             System.exit(ret)
         }

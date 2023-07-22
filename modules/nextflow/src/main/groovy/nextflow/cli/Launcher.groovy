@@ -52,7 +52,7 @@ class Launcher {
 
     private JCommander jcommander
 
-    private LauncherOptions options
+    private CliOptions.V1 options
 
     private CmdBase command
 
@@ -98,14 +98,14 @@ class Launcher {
         ]
 
         if( SecretsLoader.isEnabled() )
-            allCommands.add(new CmdSecrets.V1())
+            allCommands.add(new CmdSecret.V1())
 
         // legacy command
         final cmdCloud = SpuriousDeps.cmdCloud()
         if( cmdCloud )
             allCommands.add(cmdCloud)
 
-        options = new LauncherOptions()
+        options = new CliOptions.V1()
         jcommander = new JCommander(options)
         allCommands.each { cmd ->
             cmd.launcher = this;
@@ -175,7 +175,7 @@ class Launcher {
         }
     }
 
-    LauncherOptions getOptions() { options }
+    CliOptions.V1 getOptions() { options }
 
     List<String> getNormalizedArgs() { normalizedArgs }
 
@@ -362,7 +362,7 @@ class Launcher {
         }
 
         println "Usage: nextflow [options] COMMAND [arg...]\n"
-        printOptions(LauncherOptions)
+        printOptions(CliOptions.V1)
         printCommands(allCommands)
     }
 

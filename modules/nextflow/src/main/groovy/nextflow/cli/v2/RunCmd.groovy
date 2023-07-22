@@ -18,7 +18,7 @@ package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cli.ILauncherOptions
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdRun
 import nextflow.util.Duration
 import picocli.CommandLine.Command
@@ -38,7 +38,7 @@ import picocli.CommandLine.ParentCommand
     name = 'run',
     description = 'Execute a pipeline'
 )
-class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptions {
+class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
 
     static class DurationConverter implements ITypeConverter<Long> {
         @Override
@@ -246,6 +246,10 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptions {
         int i = args.findIndexOf { it.startsWith('--') }
         pipelineArgs = i == -1 ? args : args[0..<i]
 
+        for( String arg : pipelineArgs )
+            if( arg.startsWith('-') )
+                log.warn "Possible legacy command line argument: $arg -- did you mean -$arg ?"
+
         // parse pipeline params
         pipelineParams = [:]
 
@@ -317,7 +321,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptions {
     }
 
     @Override
-    ILauncherOptions getLauncherOptions() {
+    CliOptions getLauncherOptions() {
         launcher.options
     }
 

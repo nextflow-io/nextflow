@@ -39,7 +39,7 @@ class RunImplTest extends Specification {
     def 'should parse cmd param=#STR' () {
 
         expect:
-        RunImpl.parseParamValue(STR)  == EXPECTED
+        CmdRun.parseParamValue(STR)  == EXPECTED
 
         where:
         STR         | EXPECTED
@@ -65,9 +65,9 @@ class RunImplTest extends Specification {
         SysEnv.push(NXF_DISABLE_PARAMS_TYPE_DETECTION: 'true')
 
         expect:
-        RunImpl.parseParamValue('true')  == 'true'
-        RunImpl.parseParamValue('1000')  == '1000'
-        RunImpl.parseParamValue('hola')  == 'hola'
+        CmdRun.parseParamValue('true')  == 'true'
+        CmdRun.parseParamValue('1000')  == '1000'
+        CmdRun.parseParamValue('hola')  == 'hola'
 
         cleanup:
         SysEnv.pop()
@@ -75,7 +75,7 @@ class RunImplTest extends Specification {
 
     def 'should parse nested params' () {
         when:
-        RunImpl.addParam(PARAMS, KEY, VALUE)
+        CmdRun.addParam(PARAMS, KEY, VALUE)
         then:
         PARAMS == EXPECTED
 
@@ -93,7 +93,7 @@ class RunImplTest extends Specification {
     @Unroll
     def 'should check run name #STR' () {
         expect:
-        RunImpl.matchRunName(STR) == EXPECTED
+        CmdRun.matchRunName(STR) == EXPECTED
         where:
         EXPECTED    | STR
         true        | 'foo'
@@ -133,7 +133,7 @@ class RunImplTest extends Specification {
         def file = folder.resolve('params.json')
         file.text = JSON
         and:
-        def cmd = new RunImpl( Mock(RunImpl.Options) { paramsFile >> file.toString() } )
+        def cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> file.toString() } )
         def params = cmd.parsedParams()
         then:
         params.abc == 1
@@ -145,7 +145,7 @@ class RunImplTest extends Specification {
         file = folder.resolve('params.yaml')
         file.text = YAML
         and:
-        cmd = new RunImpl( Mock(RunImpl.Options) { paramsFile >> file.toString() } )
+        cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> file.toString() } )
         params = cmd.parsedParams()
         then:
         params.foo == 1
@@ -154,7 +154,7 @@ class RunImplTest extends Specification {
         cmd.hasParams()
 
         when:
-        cmd = new RunImpl(options: Mock(RunImpl.Options), sysEnv: [NXF_PARAMS_FILE: file.toString()])
+        cmd = new CmdRun(options: Mock(CmdRun.Options), sysEnv: [NXF_PARAMS_FILE: file.toString()])
         params = cmd.parsedParams()
         then:
         params.foo == 1
@@ -163,7 +163,7 @@ class RunImplTest extends Specification {
         cmd.hasParams()
 
         when:
-        cmd = new RunImpl(options: Mock(RunImpl.Options), sysEnv: [NXF_PARAMS_FILE: '/missing/path.yml'])
+        cmd = new CmdRun(options: Mock(CmdRun.Options), sysEnv: [NXF_PARAMS_FILE: '/missing/path.yml'])
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
@@ -186,7 +186,7 @@ class RunImplTest extends Specification {
             }
             '''.stripIndent()
         when:
-        def cmd = new RunImpl( Mock(RunImpl.Options) { paramsFile >> json.toString() } )
+        def cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> json.toString() } )
         and:
         def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR'] )
         then:
@@ -212,7 +212,7 @@ class RunImplTest extends Specification {
                 omega: "${baseDir}/end"
             '''.stripIndent()
         when:
-        def cmd = new RunImpl( Mock(RunImpl.Options) { paramsFile >> json.toString() } )
+        def cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> json.toString() } )
         and:
         def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR'] )
         then:
@@ -229,34 +229,34 @@ class RunImplTest extends Specification {
         def options
 
         when:
-        options = Mock(RunImpl.Options)
+        options = Mock(CmdRun.Options)
         then:
-        !new RunImpl(options).hasParams()
+        !new CmdRun(options).hasParams()
 
         when:
-        options = Mock(RunImpl.Options) { params >> [foo:'x'] }
+        options = Mock(CmdRun.Options) { params >> [foo:'x'] }
         then:
-        new RunImpl(options).hasParams()
+        new CmdRun(options).hasParams()
 
         when:
-        options = Mock(RunImpl.Options) { paramsFile >> '/some/file.yml' }
+        options = Mock(CmdRun.Options) { paramsFile >> '/some/file.yml' }
         then:
-        new RunImpl(options).hasParams()
+        new CmdRun(options).hasParams()
 
         when:
-        options = Mock(RunImpl.Options)
+        options = Mock(CmdRun.Options)
         then:
-        new RunImpl(options: options, sysEnv: [NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
+        new CmdRun(options: options, sysEnv: [NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
     }
 
     def 'should replace values' () {
         expect:
         // only dollar are ignored
-        new RunImpl( Mock(RunImpl.Options) ).replaceVars0('some $xxx there', [xxx:'here']) == 'some $xxx there'
+        new CmdRun( Mock(CmdRun.Options) ).replaceVars0('some $xxx there', [xxx:'here']) == 'some $xxx there'
 
         and:
         // dollar wrapped with {} are interpreted as vars
-        new RunImpl( Mock(RunImpl.Options) ).replaceVars0('some ${xxx} ${xxx}', [xxx:'here']) == 'some here here'
+        new CmdRun( Mock(CmdRun.Options) ).replaceVars0('some ${xxx} ${xxx}', [xxx:'here']) == 'some here here'
 
         and:
         def text = '''\
@@ -266,7 +266,7 @@ class RunImplTest extends Specification {
             omega: "${unknown}"
             '''.stripIndent()
         
-        new RunImpl( Mock(RunImpl.Options) ).replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK' ] ) == '''\
+        new CmdRun( Mock(CmdRun.Options) ).replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK' ] ) == '''\
             alpha: "/HOME/hello"
             delta: "/WORK/world"
             gamma: "${012345}"
@@ -276,17 +276,17 @@ class RunImplTest extends Specification {
 
     def 'should validate dont kill jobs' () {
         when:
-        def cmd = new RunImpl( Mock(RunImpl.Options) )
+        def cmd = new CmdRun( Mock(CmdRun.Options) )
         then:
         cmd.getDisableJobsCancellation() == false
 
         when:
-        cmd = new RunImpl( Mock(RunImpl.Options) { disableJobsCancellation >> true } )
+        cmd = new CmdRun( Mock(CmdRun.Options) { disableJobsCancellation >> true } )
         then:
         cmd.getDisableJobsCancellation() == true
 
         when:
-        cmd = new RunImpl(options: Mock(RunImpl.Options), sysEnv: [NXF_DISABLE_JOBS_CANCELLATION: true])
+        cmd = new CmdRun(options: Mock(CmdRun.Options), sysEnv: [NXF_DISABLE_JOBS_CANCELLATION: true])
         then:
         cmd.getDisableJobsCancellation() == true
     }
@@ -294,7 +294,7 @@ class RunImplTest extends Specification {
     @Unroll
     def 'should guss is repo' () {
         expect:
-        RunImpl.guessIsRepo(PATH) == EXPECTED
+        CmdRun.guessIsRepo(PATH) == EXPECTED
         
         where:
         EXPECTED    | PATH
@@ -326,47 +326,47 @@ class RunImplTest extends Specification {
 
         expect:
         // default to DSL2 if nothing is specified
-        RunImpl.detectDslMode(new ConfigMap(), '', [:]) == '2'
+        CmdRun.detectDslMode(new ConfigMap(), '', [:]) == '2'
 
         and:
         // take from the config
-        RunImpl.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), '', [:]) == '1'
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), '', [:]) == '1'
 
         and:
         // the script declaration has priority
-        RunImpl.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'nextflow.enable.dsl=3', [:]) == '3'
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'nextflow.enable.dsl=3', [:]) == '3'
 
         and:
         // env variable is ignored when the config is provided
-        RunImpl.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '1'
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '1'
 
         and:
         // env variable is used if nothing else is specified
-        RunImpl.detectDslMode(new ConfigMap(), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '4'
+        CmdRun.detectDslMode(new ConfigMap(), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '4'
 
         and:
         // dsl mode is taken from the config
-        RunImpl.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL1_SCRIPT, [:]) == '4'
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL1_SCRIPT, [:]) == '4'
 
         and:
         // dsl mode is taken from the config
-        RunImpl.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL2_SCRIPT, [:]) == '4'
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL2_SCRIPT, [:]) == '4'
 
         and:
         // detect version from DSL1 script
-        RunImpl.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '1'
+        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '1'
 
         and:
         // detect version from DSL1 script
-        RunImpl.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [:]) == '1'
+        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [:]) == '1'
 
         and:
         // detect version from env
-        RunImpl.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '2'
+        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '2'
 
         and:
         // detect version from global default
-        RunImpl.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [:]) == '2'
+        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [:]) == '2'
     }
 
     def 'should warn for invalid config vars' () {
@@ -374,7 +374,7 @@ class RunImplTest extends Specification {
         def ENV = [NXF_ANSI_SUMMARY: 'true']
 
         when:
-        new RunImpl( Mock(RunImpl.Options) ).checkConfigEnv(new ConfigMap([env:ENV]))
+        new CmdRun( Mock(CmdRun.Options) ).checkConfigEnv(new ConfigMap([env:ENV]))
 
         then:
         def warning = capture
@@ -391,7 +391,7 @@ class RunImplTest extends Specification {
         def ENV = [FOO: '/something', NXF_DEBUG: 'true']
 
         when:
-        new RunImpl( Mock(RunImpl.Options) ).checkConfigEnv(new ConfigMap([env:ENV]))
+        new CmdRun( Mock(CmdRun.Options) ).checkConfigEnv(new ConfigMap([env:ENV]))
 
         then:
         def warning = capture

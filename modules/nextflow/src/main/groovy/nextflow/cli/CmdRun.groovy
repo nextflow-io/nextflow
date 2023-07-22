@@ -55,7 +55,9 @@ import org.yaml.snakeyaml.Yaml
 @CompileStatic
 class CmdRun {
 
-    interface Options extends IHubOptions {
+    static final public String NAME = 'run'
+
+    interface Options extends HubOptions {
         String getPipeline()
         List<String> getArgs()
         Map<String,String> getParams()
@@ -115,7 +117,7 @@ class CmdRun {
         String getWorkDir()
 
         String getLauncherCliString()
-        ILauncherOptions getLauncherOptions()
+        CliOptions getLauncherOptions()
 
         void setRunName(String runName)
     }
@@ -132,8 +134,8 @@ class CmdRun {
         GParsConfig.poolFactory = new CustomPoolFactory()
     }
 
-    @Parameters(commandDescription = 'Execute a pipeline project')
-    static class V1 extends CmdBase implements Options, HubOptions {
+    @Parameters(commandDescription = "Execute a pipeline project")
+    static class V1 extends CmdBase implements Options, HubOptions.V1 {
 
         static class DurationConverter implements IStringConverter<Long> {
             @Override
@@ -304,7 +306,7 @@ class CmdRun {
         Boolean withoutSpack
 
         @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
-        boolean offline = System.getenv('NXF_OFFLINE')=='true'
+        boolean offline
 
         @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
         String entryName
@@ -346,12 +348,12 @@ class CmdRun {
         }
 
         @Override
-        ILauncherOptions getLauncherOptions() {
+        CliOptions getLauncherOptions() {
             launcher.options
         }
 
         @Override
-        String getName() { 'run' }
+        String getName() { NAME }
 
         @Override
         void run() {
@@ -373,21 +375,21 @@ class CmdRun {
     CmdRun() {}
 
     Boolean getDisableJobsCancellation() {
-        options.disableJobsCancellation != null
+        return options.disableJobsCancellation!=null
             ? options.disableJobsCancellation
             : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
 
     boolean getOffline() {
-        options.offline || System.getenv('NXF_OFFLINE') as boolean
+        return options.offline || System.getenv('NXF_OFFLINE') as boolean
     }
 
     String getParamsFile() {
-        options.paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
+        return options.paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
     }
 
     boolean hasParams() {
-        options.params || getParamsFile()
+        return options.params || getParamsFile()
     }
 
     void run() {

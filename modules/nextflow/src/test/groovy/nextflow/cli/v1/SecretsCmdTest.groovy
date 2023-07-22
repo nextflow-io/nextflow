@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli.v1
+package nextflow.cli
 
 import java.nio.file.Files
 import java.nio.file.Path

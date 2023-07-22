@@ -33,12 +33,14 @@ import nextflow.scm.AssetManager
 @CompileStatic
 class CmdDrop {
 
+    static final public NAME = 'drop'
+
     interface Options {
         String getPipeline()
         boolean getForce()
     }
 
-    @Parameters(commandDescription = 'Delete the local copy of a project')
+    @Parameters(commandDescription = "Delete the local copy of a project")
     static class V1 extends CmdBase implements Options {
 
         @Parameter(required=true, description = 'name of the project to drop')
@@ -51,7 +53,7 @@ class CmdDrop {
         String getPipeline() { args[0] }
 
         @Override
-        String getName() { 'drop' }
+        final String getName() { NAME }
 
         @Override
         void run() {

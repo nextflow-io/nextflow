@@ -38,6 +38,8 @@ import nextflow.util.ConfigHelper
 @CompileStatic
 class CmdConfig {
 
+    static final public NAME = 'config'
+
     interface Options {
         String getPipeline()
         boolean getShowAllProfiles()
@@ -46,10 +48,10 @@ class CmdConfig {
         boolean getPrintFlatten()
         boolean getSort()
 
-        ILauncherOptions getLauncherOptions()
+        CliOptions getLauncherOptions()
     }
 
-    @Parameters(commandDescription = 'Print a project configuration')
+    @Parameters(commandDescription = "Print a project configuration")
     static class V1 extends CmdBase implements Options {
 
         @Parameter(description = 'project name')
@@ -76,12 +78,12 @@ class CmdConfig {
         }
 
         @Override
-        ILauncherOptions getLauncherOptions() {
+        CliOptions getLauncherOptions() {
             launcher.options
         }
 
         @Override
-        String getName() { 'config' }
+        String getName() { NAME }
 
         @Override
         void run() {

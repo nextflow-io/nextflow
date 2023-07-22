@@ -31,15 +31,17 @@ import nextflow.scm.AssetManager
 @CompileStatic
 class CmdPull {
 
-    interface Options extends IHubOptions {
+    static final public NAME = 'pull'
+
+    interface Options extends HubOptions {
         String getPipeline()
         boolean getAll()
         Integer getDeep()
         String getRevision()
     }
 
-    @Parameters(commandDescription = 'Download or update a project')
-    static class V1 extends CmdBase implements Options, HubOptions {
+    @Parameters(commandDescription = "Download or update a project")
+    static class V1 extends CmdBase implements Options, HubOptions.V1 {
 
         @Parameter(description = 'project name or repository url to pull', arity = 1)
         List<String> args
@@ -57,7 +59,7 @@ class CmdPull {
         String getPipeline() { args[0] }
 
         @Override
-        String getName() { 'pull' }
+        final String getName() { NAME }
 
         @Override
         void run() {
@@ -78,7 +80,7 @@ class CmdPull {
 
     void run() {
 
-        if( !pipeline && !all )
+        if( !all && !pipeline )
             throw new AbortOperationException('Project name or option `-all` is required')
 
         def list = all ? AssetManager.list() : [pipeline]
