@@ -1,5 +1,12 @@
 nf-azure changelog
 ===================
+1.1.4 - 22 Jul 2023
+- Fix failing test [9a52f848]
+- Fix Improve error message for invalid Azure URI [0f4d8867]
+- Fix invalid detection of hierarchical namespace stub blobs as files (#4046) [ce06c877]
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Bump Groovy 3.0.18 [207eb535]
+
 1.1.3 - 19 Jum 2023
 - Increase Azure min retry delay to 250ms [2e77e5e4]
 - Fix AzFileSystem retry policy (2) [c2f3cc96]
