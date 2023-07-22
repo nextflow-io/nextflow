@@ -1,5 +1,16 @@
 nf-wave changelog
 ==================
+0.11.0 - 22 Jul 2023
+- Add support legacy wave retry [ci fast] [73a1e7d4]
+- Add support for Wave container freeze [9a5903e6]
+- Add retry logic to wave image await [ci fast] [9fc1d3bd]
+- Add missing header to wave container await [ci fast] [d39866e6]
+- Allow disabling the Wave requirement when Fusion is enabled [9180d633]
+- Improve handling Wave server errors [84f7a61a]
+- Bump micromamba 1.4.9 [6307f9b5]
+- Remove default arch from wave request [ci fast] [f0e5c0c1]
+- Bump Groovy 3.0.18 [207eb535]
+
 0.10.0 - 14 Jun 2023
 - Add retry policy to Wave http client [1daebeef]
 - Add support for arch auto-detection to Wave [7b5fdaf0]
