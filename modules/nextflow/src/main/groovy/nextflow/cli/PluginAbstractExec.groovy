@@ -47,7 +47,7 @@ trait PluginAbstractExec implements PluginExecAware {
     final int exec(CliOptions options, String pluginId, String cmd, List<String> args) {
         // create the config
         final config = new ConfigBuilder()
-                .setLauncherOptions(options)
+                .setOptions(options)
                 .setBaseDir(Paths.get('.'))
                 .build()
 

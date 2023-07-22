@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,87 +23,89 @@ import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
 
 /**
- * Interface for top-level CLI options.
+ * Main application command line options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-trait CliOptions {
+abstract class CliOptions {
 
     abstract Boolean getAnsiLogCli()
-
     abstract boolean isBackground()
-
     abstract List<String> getConfig()
-
     abstract List<String> getDebug()
-
     abstract boolean getIgnoreConfigIncludes()
-
     abstract String getLogFile()
-
     abstract boolean isQuiet()
-
     abstract String getSyslog()
-
     abstract List<String> getTrace()
-
     abstract List<String> getUserConfig()
-
+    abstract boolean getVersion()
     abstract void setAnsiLog(boolean value)
-
     abstract void setBackground(boolean value)
 
-    static class V1 implements CliOptions {
+    static class V1 extends CliOptions {
 
-        Boolean ansiLogCli
-
-        void setAnsiLog(boolean value) { ansiLogCli = value }
-
-        @Parameter(names = ['-bg'], arity = 0, description = 'Execute nextflow in background')
-        boolean background
-
-        @Parameter(names = ['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
-        List<String> config
-
-        @Parameter(names = ['-c','-config'], description = 'Add the specified file to configuration set')
-        List<String> userConfig
-
-        @Parameter(names = ['-config-ignore-includes'], description = 'Disable the parsing of config includes')
-        boolean ignoreConfigIncludes
-
-        @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
-        Map<String,String> jvmOpts = [:]
-
-        @Parameter(names = ['-debug'], hidden = true)
+        /**
+         * The packages to debug
+         */
+        @Parameter(hidden = true, names='-debug')
         List<String> debug
 
-        @Parameter(names = ['-d','-dockerize'], arity = 0, description = 'Launch nextflow via Docker (experimental)')
-        boolean dockerize
+        @Parameter(names=['-log'], description = 'Set nextflow log file path')
+        String logFile
 
+        @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
+        List<String> userConfig
+
+        @Parameter(names=['-config-ignore-includes'], description = 'Disable the parsing of config includes')
+        boolean ignoreConfigIncludes
+
+        @Parameter(names=['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
+        List<String> config
+
+        /**
+         * the packages to trace
+         */
+        @Parameter(names='-trace', description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
+        List<String> trace
+
+        /**
+         * Enable syslog appender
+         */
+        @Parameter(names = ['-syslog'], description = 'Send logs to syslog server (eg. localhost:514)' )
+        String syslog
+
+        /**
+         * Print out the version number and exit
+         */
+        @Parameter(names = ['-v','-version'], description = 'Print the program version')
+        boolean version
+
+        /**
+         * Print out the 'help' and exit
+         */
         @Parameter(names = ['-h'], description = 'Print this help', help = true)
         boolean help
-
-        @Parameter(names = ['-log'], description = 'Set nextflow log file path')
-        String logFile
 
         @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
         boolean quiet
 
-        @Parameter(names = ['-self-update'], arity = 0, description = 'Update nextflow to the latest version', hidden = true)
+        @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
+        boolean background
+
+        @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
+        Map<String,String> jvmOpts = [:]
+
+        @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
         boolean selfUpdate
 
-        @Parameter(names = ['-syslog'], description = 'Send logs to syslog server (eg. localhost:514)' )
-        String syslog
+        @Parameter(names = ['-d','-dockerize'], description = 'Launch nextflow via Docker (experimental)', arity = 0)
+        boolean dockerize
 
-        @Parameter(names = ['-trace'], description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
-        List<String> trace
+        Boolean ansiLogCli
 
-        @Parameter(names = ['-v'], description = 'Print the program version')
-        boolean version
-
-        @Parameter(names = ['-version'], description = 'Print the program version (full)')
-        boolean fullVersion
+        void setAnsiLog(boolean value) { ansiLogCli = value }
 
     }
 

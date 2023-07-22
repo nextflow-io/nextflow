@@ -52,7 +52,7 @@ class CmdInfo {
         abstract boolean getCheckForUpdates()
     }
 
-    @Parameters(commandDescription = 'Print project and system runtime information')
+    @Parameters(commandDescription = "Print project and system runtime information")
     static class V1 extends CmdBase implements Options {
 
         @Parameter(description = 'project name')

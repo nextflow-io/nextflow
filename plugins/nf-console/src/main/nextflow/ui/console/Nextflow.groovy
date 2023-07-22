@@ -83,9 +83,9 @@ class Nextflow extends Console {
 
         // create the config object
         return new ConfigBuilder()
-                    .setLauncherOptions( new CliOptions.V1() )
+                    .setOptions( new CliOptions.V1() )
                     .setBaseDir(base)
-                    .setRunOptions( new CmdRun() )
+                    .setCmdRun( new CmdRun() )
                     .build()
     }
 

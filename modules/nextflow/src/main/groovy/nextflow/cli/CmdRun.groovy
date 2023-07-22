@@ -424,8 +424,8 @@ class CmdRun {
 
         // create the config object
         final builder = new ConfigBuilder()
-                .setLauncherOptions(launcherOptions)
-                .setRunOptions(this)
+                .setOptions(launcherOptions)
+                .setCmdRun(this)
                 .setBaseDir(scriptFile.parent)
         final config = builder .build()
 

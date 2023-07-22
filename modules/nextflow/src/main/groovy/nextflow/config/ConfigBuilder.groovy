@@ -100,12 +100,12 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setLauncherOptions( CliOptions options ) {
+    ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
         return this
     }
 
-    ConfigBuilder setRunOptions( CmdRun cmdRun ) {
+    ConfigBuilder setCmdRun( CmdRun cmdRun ) {
         this.cmdRun = cmdRun
         setProfile(cmdRun.profile)
         return this
@@ -126,7 +126,7 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setNodeOptions( CmdNode node ) {
+    ConfigBuilder setCmdNode( CmdNode node ) {
         this.cmdNode = node
         return this
     }
@@ -896,8 +896,8 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
-                .setLauncherOptions(cmdRun.launcherOptions)
-                .setRunOptions(cmdRun)
+                .setOptions(cmdRun.launcherOptions)
+                .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)
                 .buildConfigObject()
 

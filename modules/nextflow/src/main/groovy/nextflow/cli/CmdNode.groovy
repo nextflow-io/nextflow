@@ -98,8 +98,8 @@ class CmdNode {
 
         // create the config object
         def config = new ConfigBuilder()
-            .setLauncherOptions(launcherOptions)
-            .setNodeOptions(this)
+            .setOptions(launcherOptions)
+            .setCmdNode(this)
             .build()
 
         DaemonLauncher instance

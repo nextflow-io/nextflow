@@ -26,7 +26,7 @@ import picocli.CommandLine.Option
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class CliOptionsV2 implements CliOptions {
+class CliOptionsV2 extends CliOptions {
 
     Boolean ansiLogCli
 

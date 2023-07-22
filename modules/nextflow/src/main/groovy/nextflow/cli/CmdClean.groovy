@@ -133,7 +133,7 @@ class CmdClean implements CacheBase {
             final builder = new ConfigBuilder()
                     .setShowClosures(true)
                     .showMissingVariables(true)
-                    .setLauncherOptions(launcherOptions)
+                    .setOptions(launcherOptions)
                     .setBaseDir(Paths.get('.'))
 
             final config = builder.buildConfigObject()

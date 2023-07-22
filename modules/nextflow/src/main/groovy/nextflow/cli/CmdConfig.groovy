@@ -120,7 +120,7 @@ class CmdConfig {
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
                 .showMissingVariables(true)
-                .setLauncherOptions(launcherOptions)
+                .setOptions(launcherOptions)
                 .setBaseDir(base)
                 .setCmdConfig(this)
 

@@ -54,6 +54,8 @@ class Launcher {
 
     private CliOptions.V1 options
 
+    private boolean fullVersion
+
     private CmdBase command
 
     private String cliString
@@ -128,6 +130,7 @@ class Launcher {
 
         normalizedArgs = normalizeArgs(args)
         jcommander.parse( normalizedArgs as String[] )
+        fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         // whether is running a daemon
         daemonMode = command instanceof CmdNode.V1
@@ -175,7 +178,7 @@ class Launcher {
         }
     }
 
-    CliOptions.V1 getOptions() { options }
+    CliOptions getOptions() { options }
 
     List<String> getNormalizedArgs() { normalizedArgs }
 
@@ -199,7 +202,7 @@ class Launcher {
 
             // when the first argument is a file, it's supposed to be a script to be executed
             if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
-                normalized.add(0,'run')
+                normalized.add(0,CmdRun.NAME)
             }
 
             else if( current == '-resume' ) {
@@ -474,12 +477,7 @@ class Launcher {
 
             // -- print out the version number, then exit
             if ( options.version ) {
-                println getVersion(false)
-                return 0
-            }
-
-            if ( options.fullVersion ) {
-                println getVersion(true)
+                println getVersion(fullVersion)
                 return 0
             }
 
@@ -543,7 +541,8 @@ class Launcher {
     }
 
     /**
-     * Dump the stack trace of current running threads
+     * Dump th stack trace of current running threads
+     * @return
      */
     private String dumpThreads() {
 
@@ -573,9 +572,9 @@ class Launcher {
 
 
     /**
-     * Print the version number.
-     *
+     * Print the application version number
      * @param full When {@code true} prints full version number including build timestamp
+     * @return The version number string
      */
     static String getVersion(boolean full = false) {
 
