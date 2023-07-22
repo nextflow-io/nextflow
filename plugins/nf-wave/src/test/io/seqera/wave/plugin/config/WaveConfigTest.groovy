@@ -186,7 +186,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(60)
+        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
 
         when:
         opts = new WaveConfig([httpClient: [connectTimeout: '90s']])
