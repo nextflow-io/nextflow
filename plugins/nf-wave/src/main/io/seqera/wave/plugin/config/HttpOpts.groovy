@@ -32,7 +32,7 @@ class HttpOpts {
     final private Duration connectTimeout
 
     HttpOpts(Map opts) {
-        connectTimeout = opts.connectTimeout as Duration ?: Duration.of('60s')
+        connectTimeout = opts.connectTimeout as Duration ?: Duration.of('30s')
     }
 
     java.time.Duration connectTimeout() {
