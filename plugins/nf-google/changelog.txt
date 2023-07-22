@@ -1,5 +1,9 @@
 nf-google changelog
 ===================
+1.8.1 - 22 Jul 2023
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Bump Groovy 3.0.18 [207eb535]
+
 1.8.0 - 14 Jun 2023
 - Add httpConnectTimeout and httpReadTimeout to Google options (#3974) [49fa15f7]
 - Add disk resource with type option for Google Batch (#3861) [166b3638]
