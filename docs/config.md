@@ -757,7 +757,7 @@ The following settings are available:
 : Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
 
 `google.batch.installGpuDrivers`
-: :::{versionadded} 23.06.0-edge
+: :::{versionadded} 23.08.0-edge
   :::
 : When `true` automatically installs the appropriate GPU drivers to the VM when a GPU is requested (default: `false`). Only needed when using an instance template.
 

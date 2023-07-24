@@ -90,7 +90,7 @@ Read the {ref}`Google configuration<config-google>` section to learn more about 
 
 ### Process definition
 
-Processes can be defined as usual. By default, the `cpus` and `memory` directives are used to find the cheapest machine type that is available at the current location and that fits the requested resources. If `memory` is not specified, 1GB of memory is allocated per CPU.
+By default, the `cpus` and `memory` directives are used to find the cheapest machine type that is available at the current location and that fits the requested resources. If `memory` is not specified, 1 GB of memory is allocated per CPU.
 
 The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
@@ -124,10 +124,10 @@ process machine_type_series {
 }
 ```
 
-:::{versionadded} 23.06.0-edge
+:::{versionadded} 23.08.0-edge
 :::
 
-The `machineType` directive can also be an [instance template](https://cloud.google.com/compute/docs/instance-templates), specified as `template://<instance-template>`. Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch options: `cpuPlatform`, `preemptible`, and `spot`.
+The `machineType` directive can also be an [instance template](https://cloud.google.com/compute/docs/instance-templates), specified as `template://<instance-template>`. Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch config options: `cpuPlatform`, `preemptible`, and `spot`.
 
 To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
 
