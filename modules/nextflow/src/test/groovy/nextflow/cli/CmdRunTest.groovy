@@ -30,7 +30,7 @@ import test.OutputCapture
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class RunImplTest extends Specification {
+class CmdRunTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()

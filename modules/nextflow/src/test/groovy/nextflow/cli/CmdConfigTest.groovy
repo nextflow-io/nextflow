@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConfigImplTest extends Specification {
+class CmdConfigTest extends Specification {
 
     def cleanup() {
         Plugins.stop()

@@ -42,7 +42,9 @@ class LauncherTest extends Specification {
         when:
         launcher = new Launcher().parseMainArgs('-version')
         then:
-        assert launcher.options.fullVersion
+        assert launcher.options.version
+        assert launcher.fullVersion
+
 
     }
 
@@ -73,13 +75,13 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('info')
         then:
-        launcher.command instanceof InfoCmd
+        launcher.command instanceof CmdInfo.V1
         launcher.command.pipeline == null
 
         when:
         launcher = new Launcher().parseMainArgs('info','xxx')
         then:
-        launcher.command instanceof InfoCmd
+        launcher.command instanceof CmdInfo.V1
         launcher.command.pipeline == 'xxx'
 
     }
@@ -89,13 +91,13 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('pull','alpha')
         then:
-        launcher.command instanceof PullCmd
+        launcher.command instanceof CmdPull.V1
         launcher.command.pipeline == 'alpha'
 
         when:
         launcher = new Launcher().parseMainArgs('pull','xxx', '-hub', 'bitbucket', '-user','xx:11')
         then:
-        launcher.command instanceof PullCmd
+        launcher.command instanceof CmdPull.V1
         launcher.command.pipeline == 'xxx'
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
@@ -107,7 +109,7 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
-        launcher.command instanceof CloneCmd
+        launcher.command instanceof CmdClone.V1
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
@@ -149,7 +151,7 @@ class LauncherTest extends Specification {
         given:
         def script = Files.createTempFile('file',null)
         def launcher = [:] as Launcher
-        launcher.allCommands = [ new CmdRun.V1(), new InfoCmd() ]
+        launcher.allCommands = [ new CmdRun.V1(), new CmdInfo.V1() ]
 
         expect:
         launcher.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
@@ -322,7 +324,7 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new InfoCmd(), new CmdRun.V1(), new ListCmd()] )
+        launcher.printCommands( [new CmdInfo.V1(), new CmdRun.V1(), new CmdList.V1()] )
         then:
         capture.toString() == '''
                 Commands:

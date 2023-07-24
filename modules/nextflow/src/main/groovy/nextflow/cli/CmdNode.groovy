@@ -54,7 +54,7 @@ class CmdNode {
         }
 
         @Parameter
-        List<String> args
+        List<String> args = []
 
         @Override
         String getProvider() {

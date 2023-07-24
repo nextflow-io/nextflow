@@ -27,10 +27,10 @@ import picocli.CommandLine.Command
     name = 'self-update',
     description = 'Update nextflow runtime to the latest available version'
 )
-class CmdSelfUpdate extends AbstractCmd {
+class SelfUpdateCmd extends AbstractCmd {
     @Override
     void run() {
         // actually it's doing nothing, the update process is managed by the external launcher script
-        // this class in only necessary to print the usage help
+        // this class is only necessary to print the usage help
     }
 }

@@ -37,7 +37,7 @@ import test.OutputCapture
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class LogImplTest extends Specification {
+class CmdLogTest extends Specification {
 
     def cleanup() {
         Plugins.stop()

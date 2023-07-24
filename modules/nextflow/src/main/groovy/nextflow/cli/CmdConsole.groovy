@@ -38,7 +38,7 @@ class CmdConsole {
     static class V1 extends CmdBase implements Options {
 
         @Parameter(description = 'Nextflow console arguments')
-        List<String> args
+        List<String> args = []
 
         @Override
         String getScript() {

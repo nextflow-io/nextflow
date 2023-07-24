@@ -80,7 +80,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['-c','--config'], split = ',', hidden = true)
     List<String> runConfig
 
-    @Option(names=['-d','--deep'], description = 'Create a shallow clone of the specified depth')
+    @Option(names = ['-d','--deep'], description = 'Create a shallow clone of the specified depth')
     Integer deep
 
     @Option(names = ['--disable-jobs-cancellation'], description = 'Do not cancel child jobs on workflow termination')

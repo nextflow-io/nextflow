@@ -56,7 +56,7 @@ class CmdInfo {
     static class V1 extends CmdBase implements Options {
 
         @Parameter(description = 'project name')
-        List<String> args
+        List<String> args = []
 
         @Parameter(names='-d',description = 'Show detailed information', arity = 0)
         boolean detailed

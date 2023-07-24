@@ -19,32 +19,37 @@ package nextflow.cli
 import java.nio.file.Files
 
 import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CloneImplTest extends Specification {
+@IgnoreIf({System.getenv('NXF_SMOKE')})
+class CmdPullTest extends Specification {
 
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testClone() {
+    def cleanup() {
+        Plugins.stop()
+    }
+    
+    @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
+    def 'should pull the github repository in the local folder'() {
 
         given:
         def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def dir = Files.createTempDirectory('test')
-        def options = Mock(CmdClone.Options) {
-            hubUser >> accessToken
+        def options = Mock(CmdPull.Options) {
             pipeline >> 'nextflow-io/hello'
-            targetName >> dir.toFile().toString()
+            hubUser >> accessToken
         }
-        def cmd = new CmdClone(options)
+        def cmd = new CmdPull(options: options, root: dir.toFile())
 
         when:
         cmd.run()
-
         then:
-        dir.resolve('README.md').exists()
+        dir.resolve('nextflow-io/hello/.git').exists()
+        dir.resolve('nextflow-io/hello/README.md').exists()
 
         cleanup:
         dir?.deleteDir()

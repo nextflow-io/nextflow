@@ -41,7 +41,7 @@ class CmdPlugin {
         }
 
         @Parameter(hidden = true)
-        List<String> args
+        List<String> args = []
 
         @Override
         void run() {

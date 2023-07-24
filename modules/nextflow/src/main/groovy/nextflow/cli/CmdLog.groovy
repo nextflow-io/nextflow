@@ -102,7 +102,7 @@ class CmdLog implements CacheBase {
         boolean quiet
 
         @Parameter(description = 'Run name or session id')
-        List<String> args
+        List<String> args = []
 
         @Override
         final String getName() { NAME }

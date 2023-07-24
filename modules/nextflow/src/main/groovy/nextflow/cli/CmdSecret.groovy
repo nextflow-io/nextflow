@@ -59,7 +59,7 @@ class CmdSecret {
         }
 
         @Parameter(hidden = true)
-        List<String> args
+        List<String> args = []
 
         V1() {
             commands.add( new GetCmd() )

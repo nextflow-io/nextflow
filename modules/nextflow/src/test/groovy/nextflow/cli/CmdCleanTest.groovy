@@ -24,7 +24,7 @@ import java.nio.file.Files
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
-class CleanImplTest extends Specification {
+class CmdCleanTest extends Specification {
 
     def 'empty folder' () {
 

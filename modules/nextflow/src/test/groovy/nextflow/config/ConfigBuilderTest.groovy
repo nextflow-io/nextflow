@@ -179,7 +179,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { params >> [alpha: 'Hello', beta: 'World', omega: 'Last'] })
-        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -212,7 +212,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { params >> [alpha: 'Hello', beta: 'World', omega: 'Last'] })
-        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -264,7 +264,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { params >> [one: '1', two: 'dos', three: 'tres'] })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(configMain.toPath())
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
 
         then:
         config.params.one == 1
@@ -310,7 +310,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { params >> [igenomes_base: 'test'] })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(configMain.toPath())
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
 
         then:
         config.params.genomes.GRCh37 == [fasta:'test/genome.fa', bwa:'test/BWAIndex/genome.fa']
@@ -402,7 +402,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { params >> [alpha: 'AAA', beta: 'BBB'] })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -415,7 +415,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions.V1()
         run = new CmdRun( Mock(CmdRun.Options) { params >> [alpha: 'AAA', beta: 'BBB'] ; profile >> 'first' })
-        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -430,7 +430,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions.V1()
         run = new CmdRun( Mock(CmdRun.Options) { params >> [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'] ; profile >> 'second' })
-        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -474,7 +474,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { paramsFile >> params })
-        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).setBaseDir(baseDir).buildGivenFiles(file)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
@@ -516,7 +516,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { getParamsFile() >> paramsFile ; params >> [alpha: 'Hola', beta: 'Mundo'] })
-        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hola'   // <-- this comes from the CLI
@@ -603,7 +603,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { executorOptions >> [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ] })
-        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles()
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
         then:
         result.executor.alpha == 1
         result.executor.beta.x == 'hola'
@@ -616,7 +616,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { clusterOptions >> [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ] })
-        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles()
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
         then:
         result.cluster.alpha == 1
         result.cluster.beta.x == 'hola'
@@ -629,7 +629,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { withDocker >> 'cbcrg/piper' })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
 
         then:
         config.docker.enabled
@@ -653,7 +653,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath] )
         def run = new CmdRun( Mock(CmdRun.Options) { withDocker >> '-' })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
         config.docker.image == 'busybox'
@@ -662,7 +662,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions.V1(config: [file.toFile().canonicalPath] )
         run = new CmdRun( Mock(CmdRun.Options) { withDocker >> 'cbcrg/mybox' })
-        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
         config.process.container == 'cbcrg/mybox'
@@ -681,7 +681,7 @@ class ConfigBuilderTest extends Specification {
                 '''
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath])
         def run = new CmdRun( Mock(CmdRun.Options) { withDocker >> '-' })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
         config.process.$test.container == 'busybox'
@@ -693,7 +693,7 @@ class ConfigBuilderTest extends Specification {
                 '''
         opt = new CliOptions.V1(config: [file.toFile().canonicalPath])
         run = new CmdRun( Mock(CmdRun.Options) { withDocker >> '-' })
-        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
         config.process.container == 'busybox'
@@ -701,7 +701,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions.V1()
         run = new CmdRun( Mock(CmdRun.Options) { withDocker >> '-' })
-        new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         def e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image was specified'
@@ -713,7 +713,7 @@ class ConfigBuilderTest extends Specification {
                 '''
         opt = new CliOptions.V1(config: [file.toFile().canonicalPath])
         run = new CmdRun( Mock(CmdRun.Options) { withDocker >> '-' })
-        new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image was specified'
@@ -736,7 +736,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath] )
         def run = new CmdRun( Mock(CmdRun.Options) { withoutDocker >> true })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         !config.docker.enabled
         config.docker.image == 'busybox'
@@ -755,8 +755,8 @@ class ConfigBuilderTest extends Specification {
         )
 
         def config = new ConfigBuilder()
-                .setLauncherOptions(opt)
-                .setNodeOptions(cmd)
+                .setOptions(opt)
+                .setCmdNode(cmd)
                 .build()
 
         then:
@@ -1222,7 +1222,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath])
         def run = new CmdRun( Mock(CmdRun.Options) { withoutConda >> true } )
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         !config.conda.enabled
         !config.process.conda
@@ -1290,7 +1290,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath])
         def run = new CmdRun( Mock(CmdRun.Options) { withoutSpack >> true })
-        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         !config.spack.enabled
         !config.process.spack
@@ -1461,19 +1461,19 @@ class ConfigBuilderTest extends Specification {
         def builder
 
         when:
-        builder = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { profile >> 'foo' }))
+        builder = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { profile >> 'foo' }))
         then:
         builder.profile == 'foo'
         builder.validateProfile
 
         when:
-        builder = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) ))
+        builder = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) ))
         then:
         builder.profile == 'standard'
         !builder.validateProfile
 
         when:
-        builder = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { profile >> 'standard' }))
+        builder = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { profile >> 'standard' }))
         then:
         builder.profile == 'standard'
         builder.validateProfile
@@ -1540,56 +1540,56 @@ class ConfigBuilderTest extends Specification {
         def config
 
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: EMPTY)).setRunOptions(new CmdRun( Mock(CmdRun.Options) )).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: EMPTY)).setCmdRun(new CmdRun( Mock(CmdRun.Options) )).build()
         then:
         config.params == [:]
 
         // get params for the CLI
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: EMPTY)).setRunOptions(new CmdRun( Mock(CmdRun.Options) { params >> [foo:'one', bar:'two'] })).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: EMPTY)).setCmdRun(new CmdRun( Mock(CmdRun.Options) { params >> [foo:'one', bar:'two'] })).build()
         then:
         config.params == [foo:'one', bar:'two']
 
         // get params from config file
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: [configFile])).setRunOptions(new CmdRun( Mock(CmdRun.Options) )).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: [configFile])).setCmdRun(new CmdRun( Mock(CmdRun.Options) )).build()
         then:
         config.params == [foo:1, bar:2, data: '/some/path']
 
         // get params form JSON file
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: EMPTY)).setRunOptions(new CmdRun( Mock(CmdRun.Options) { paramsFile >> jsonFile })).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: EMPTY)).setCmdRun(new CmdRun( Mock(CmdRun.Options) { paramsFile >> jsonFile })).build()
         then:
         config.params == [foo:10, bar:20]
 
         // get params from YAML file
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: EMPTY)).setRunOptions(new CmdRun( Mock(CmdRun.Options) { paramsFile >> yamlFile })).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: EMPTY)).setCmdRun(new CmdRun( Mock(CmdRun.Options) { paramsFile >> yamlFile })).build()
         then:
         config.params == [foo:100, bar:200]
 
         // cli override config
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: [configFile])).setRunOptions(new CmdRun( Mock(CmdRun.Options) { params >> [foo:'hello', baz:'world'] })).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: [configFile])).setCmdRun(new CmdRun( Mock(CmdRun.Options) { params >> [foo:'hello', baz:'world'] })).build()
         then:
         config.params == [foo:'hello', bar:2, baz: 'world', data: '/some/path']
 
         // CLI override JSON
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: EMPTY)).setRunOptions(new CmdRun( Mock(CmdRun.Options) { params >> [foo:'hello', baz:'world'] ; paramsFile >> jsonFile })).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: EMPTY)).setCmdRun(new CmdRun( Mock(CmdRun.Options) { params >> [foo:'hello', baz:'world'] ; paramsFile >> jsonFile })).build()
         then:
         config.params == [foo:'hello', bar:20, baz: 'world']
 
         // JSON override config
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: [configFile])).setRunOptions(new CmdRun( Mock(CmdRun.Options) { paramsFile >> jsonFile })).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: [configFile])).setCmdRun(new CmdRun( Mock(CmdRun.Options) { paramsFile >> jsonFile })).build()
         then:
         config.params == [foo:10, bar:20, data: '/some/path']
 
 
         // CLI override JSON that override config
         when:
-        config = new ConfigBuilder().setLauncherOptions(new CliOptions.V1(config: [configFile])).setRunOptions(new CmdRun( Mock(CmdRun.Options) { paramsFile >> jsonFile ; params >> [foo:'Ciao'] })).build()
+        config = new ConfigBuilder().setOptions(new CliOptions.V1(config: [configFile])).setCmdRun(new CmdRun( Mock(CmdRun.Options) { paramsFile >> jsonFile ; params >> [foo:'Ciao'] })).build()
         then:
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
@@ -1597,7 +1597,7 @@ class ConfigBuilderTest extends Specification {
     def 'should run with conda' () {
 
         when:
-        def config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withConda >> '/some/path/env.yml' })).build()
+        def config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withConda >> '/some/path/env.yml' })).build()
         then:
         config.process.conda == '/some/path/env.yml'
 
@@ -1606,7 +1606,7 @@ class ConfigBuilderTest extends Specification {
     def 'should run with spack' () {
 
         when:
-        def config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withSpack >> '/some/path/env.yaml' })).build()
+        def config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withSpack >> '/some/path/env.yaml' })).build()
         then:
         config.process.spack == '/some/path/env.yaml'
 
@@ -1625,7 +1625,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath] )
-        def cfg = new ConfigBuilder().setLauncherOptions(opt).build()
+        def cfg = new ConfigBuilder().setOptions(opt).build()
         then:
         cfg.params.foo == System.getenv('HOME')
 
@@ -1635,7 +1635,7 @@ class ConfigBuilderTest extends Specification {
                 params.foo = bar
                 '''
         opt = new CliOptions.V1(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setLauncherOptions(opt).build()
+        new ConfigBuilder().setOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
         e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
@@ -1655,7 +1655,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath] )
         def builder = new ConfigBuilder()
-                .setLauncherOptions(opt)
+                .setOptions(opt)
                 .showMissingVariables(true)
         def cfg = builder.buildConfigObject()
         def str = ConfigHelper.toCanonicalString(cfg)
@@ -1683,7 +1683,7 @@ class ConfigBuilderTest extends Specification {
                 params.x = foo.bar
                 '''
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setLauncherOptions(opt).build()
+        new ConfigBuilder().setOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
         e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
@@ -1723,23 +1723,23 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) )).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) )).build()
         then:
         !config.notification
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withNotification >> true })).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withNotification >> true })).build()
         then:
         config.notification.enabled == true
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withNotification >> false })).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withNotification >> false })).build()
         then:
         config.notification.enabled == false
         config.notification.to == null
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withNotification >> 'yo@nextflow.com' })).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withNotification >> 'yo@nextflow.com' })).build()
         then:
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
@@ -1751,22 +1751,22 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) )).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) )).build()
         then:
         !config.fusion
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withFusion >> true })).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withFusion >> true })).build()
         then:
         config.fusion.enabled == true
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withFusion >> false })).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withFusion >> false })).build()
         then:
         config.fusion == [enabled: false]
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { withFusion >> true })).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { withFusion >> true })).build()
         then:
         config.fusion == [enabled: true]
     }
@@ -1776,12 +1776,12 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) )).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) )).build()
         then:
         !config.stubRun
 
         when:
-        config = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { stubRun >> true })).build()
+        config = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { stubRun >> true })).build()
         then:
         config.stubRun == true
     }
@@ -2153,7 +2153,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions.V1()
         def run = new CmdRun( Mock(CmdRun.Options) { params >> [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"] })
-        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setLauncherOptions(opt).setRunOptions(run).build()
+        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setOptions(opt).setCmdRun(run).build()
 
         then:
         config.params.foo == 'Hello'
@@ -2228,7 +2228,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def cfg1 = new ConfigBuilder()
-                .setLauncherOptions( new CliOptions.V1(userConfig: [config.toString()]))
+                .setOptions( new CliOptions.V1(userConfig: [config.toString()]))
                 .build()
         then:
         cfg1.params.test.foo == "foo_def"
@@ -2237,8 +2237,8 @@ class ConfigBuilderTest extends Specification {
         
         when:
         def cfg2 = new ConfigBuilder()
-                .setLauncherOptions( new CliOptions.V1(userConfig: [config.toString()]))
-                .setRunOptions( new CmdRun( Mock(CmdRun.Options) { params >> ['test.foo': 'CLI_FOO'] }))
+                .setOptions( new CliOptions.V1(userConfig: [config.toString()]))
+                .setCmdRun( new CmdRun( Mock(CmdRun.Options) { params >> ['test.foo': 'CLI_FOO'] }))
                 .build()
         then:
         cfg2.params.test.foo == "CLI_FOO"
@@ -2269,7 +2269,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { paramsFile >> config.toString() })).build()
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { paramsFile >> config.toString() })).build()
 
         then:
         cfg1.params.title == "something"
@@ -2297,7 +2297,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setRunOptions(new CmdRun( Mock(CmdRun.Options) { paramsFile >> config.toString() })).build()
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun( Mock(CmdRun.Options) { paramsFile >> config.toString() })).build()
 
         then:
         cfg1.params.title == "something"

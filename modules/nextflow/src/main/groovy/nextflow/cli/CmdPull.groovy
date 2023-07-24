@@ -44,7 +44,7 @@ class CmdPull {
     static class V1 extends CmdBase implements Options, HubOptions.V1 {
 
         @Parameter(description = 'project name or repository url to pull', arity = 1)
-        List<String> args
+        List<String> args = []
 
         @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
         boolean all

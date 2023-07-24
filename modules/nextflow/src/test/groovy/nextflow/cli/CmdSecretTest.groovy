@@ -31,7 +31,7 @@ import test.OutputCapture
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class SecretsCmdTest extends Specification {
+class CmdSecretTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -62,7 +62,7 @@ class SecretsCmdTest extends Specification {
 
     def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {
         when:
-        new SecretsCmd(args: [COMMAND] + ARGUMENTS).run()
+        new CmdSecret.V1(args: [COMMAND] + ARGUMENTS).run()
 
         then:
         thrown(AbortOperationException)
@@ -85,7 +85,7 @@ class SecretsCmdTest extends Specification {
         secretFile.delete()
 
         when:
-        new SecretsCmd(args: ['list']).run()
+        new CmdSecret.V1(args: ['list']).run()
         def screen = capture
                 .toString()
                 .readLines()
@@ -101,7 +101,7 @@ class SecretsCmdTest extends Specification {
         secretFile.delete()
 
         when:
-        new SecretsCmd(args: ['set','foo','bar']).run()
+        new CmdSecret.V1(args: ['set','foo','bar']).run()
 
         then:
         secretFile.text.indexOf('"name": "foo"') != -1
@@ -121,7 +121,7 @@ class SecretsCmdTest extends Specification {
         secretFile.permissions = 'rw-------'
 
         when:
-        new SecretsCmd(args: ['delete', 'foo']).run()
+        new CmdSecret.V1(args: ['delete', 'foo']).run()
 
         then:
         secretFile.text.indexOf('"name": "foo"') == -1

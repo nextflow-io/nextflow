@@ -152,7 +152,7 @@ class CmdFs {
         ]
 
         @Parameter
-        List<String> args
+        List<String> args = []
 
         @Override
         String getName() {

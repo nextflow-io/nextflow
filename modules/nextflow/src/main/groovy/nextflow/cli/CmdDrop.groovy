@@ -44,7 +44,7 @@ class CmdDrop {
     static class V1 extends CmdBase implements Options {
 
         @Parameter(required=true, description = 'name of the project to drop')
-        List<String> args
+        List<String> args = []
 
         @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
         boolean force

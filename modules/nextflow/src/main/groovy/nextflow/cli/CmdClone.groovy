@@ -44,7 +44,7 @@ class CmdClone {
     static class V1 extends CmdBase implements Options, HubOptions.V1 {
 
         @Parameter(required=true, description = 'name of the project to clone')
-        List<String> args
+        List<String> args = []
 
         @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
         String revision

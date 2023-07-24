@@ -32,7 +32,7 @@ import org.yaml.snakeyaml.Yaml
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-class InfoImplTest extends Specification {
+class CmdInfoTest extends Specification {
 
     @Shared Path tempDir
 

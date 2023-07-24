@@ -198,7 +198,7 @@ class CmdRun {
         Map<String,String> executorOptions = [:]
 
         @Parameter(description = 'Project name or repository url')
-        List<String> args
+        List<String> args = []
 
         @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
         String revision
