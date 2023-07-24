@@ -440,7 +440,7 @@ Moreover to guarantee that a pipeline is reproducible it should be self-containe
 
 Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.
 
-In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available in the [Docker registry](https://registry.hub.docker.com).
+In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available in the [Docker Hub](https://hub.docker.com).
 
 Then declare in the `nextflow.config` file, that you will include in your project, the name of the Docker image you have created. For example:
 
