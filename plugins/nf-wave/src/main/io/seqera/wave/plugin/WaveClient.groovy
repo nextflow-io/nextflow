@@ -116,7 +116,7 @@ class WaveClient {
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
-        log.debug "Wave server endpoint: ${endpoint}"
+        log.debug "Wave endpoint: ${endpoint}; config: $config"
         this.packer = new Packer()
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
