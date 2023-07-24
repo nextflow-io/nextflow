@@ -237,9 +237,7 @@ class ReportObserver implements TraceObserver {
     }
 
     protected String renderSummaryJson() {
-        final result = aggregator.renderSummaryJson()
-        log.debug "Execution report summary data:\n  ${result}"
-        return result
+        aggregator.renderSummaryJson()
     }
 
     protected String renderPayloadJson() {
