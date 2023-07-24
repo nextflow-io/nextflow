@@ -332,12 +332,15 @@ The following settings are available:
 
 `azure.batch.deleteJobsOnCompletion`
 : Delete all jobs when the workflow completes (default: `false`).
+: :::{versionchanged} 23.08.0-edge
+  Default value was changed from `true` to `false`.
+  :::
 
 `azure.batch.deletePoolsOnCompletion`
 : Delete all compute node pools when the workflow completes (default: `false`).
 
 `azure.batch.deleteTasksOnCompletion`
-: Delete each task when it completes (default: `true`).
+: Delete each task when it completes (default: `false`).
 
 `azure.batch.endpoint`
 : The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
@@ -346,6 +349,8 @@ The following settings are available:
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
 
 `azure.batch.terminateJobsOnCompletion`
+: :::{versionadded} 23.05.0-edge
+  :::
 : When the workflow completes, set all jobs to terminate on task completion. (default: `true`).
 
 `azure.batch.pools.<name>.autoScale`
