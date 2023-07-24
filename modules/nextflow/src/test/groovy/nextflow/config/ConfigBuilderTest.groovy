@@ -19,11 +19,11 @@ package nextflow.config
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
-import nextflow.cli.CliOptions
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.TraceHelper

@@ -55,13 +55,13 @@ class CmdInfoTest extends Specification {
 
     def 'should print project info' () {
 
-        when:
+        given:
         def buffer = new ByteArrayOutputStream()
-        def screen = buffer.toString()
-        def options = Mock(CmdInfo.Options) { pipeline >> 'hello' }
-        def cmd = new CmdInfo(options: options, out: new PrintStream(buffer))
 
-        cmd.run()
+        when:
+        def options = Mock(CmdInfo.Options) { pipeline >> 'hello' }
+        new CmdInfo(options: options, out: new PrintStream(buffer)).run()
+        def screen = buffer.toString()
 
         then:
         screen.contains(" project name: nextflow-io/hello")
@@ -74,14 +74,15 @@ class CmdInfoTest extends Specification {
 
     def 'should print json info' () {
 
-        when:
+        given:
         def buffer = new ByteArrayOutputStream()
-        def screen = buffer.toString()
-        def json = (Map)new JsonSlurper().parseText(screen)
         def options = Mock(CmdInfo.Options) { pipeline >> 'hello' ; format >> 'json' }
         def cmd = new CmdInfo(options: options, out: new PrintStream(buffer))
 
+        when:
         cmd.run()
+        def screen = buffer.toString()
+        def json = (Map)new JsonSlurper().parseText(screen)
 
         then:
         json.projectName == "nextflow-io/hello"
@@ -100,14 +101,15 @@ class CmdInfoTest extends Specification {
 
     def 'should print yaml info' () {
 
-        when:
+        given:
         def buffer = new ByteArrayOutputStream()
-        def screen = buffer.toString()
-        def json = (Map)new Yaml().load(screen)
         def options = Mock(CmdInfo.Options) { pipeline >> 'hello' ; format >> 'yaml' }
         def cmd = new CmdInfo(options: options, out: new PrintStream(buffer))
 
+        when:
         cmd.run()
+        def screen = buffer.toString()
+        def json = (Map)new Yaml().load(screen)
 
         then:
         json.projectName == "nextflow-io/hello"

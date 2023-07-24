@@ -18,9 +18,9 @@ package nextflow.k8s
 
 import java.nio.file.Files
 
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdKubeRun
 import nextflow.cli.Launcher
-import nextflow.cli.CliOptions
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.model.PodMountConfig

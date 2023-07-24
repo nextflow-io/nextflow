@@ -18,8 +18,6 @@ package nextflow.cli
 
 import java.nio.file.Files
 
-import nextflow.cli.Launcher
-import nextflow.cli.CliOptions
 import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 import spock.lang.Specification

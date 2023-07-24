@@ -16,6 +16,7 @@
 
 package nextflow.cli
 
+
 import java.nio.file.Files
 
 import nextflow.SysEnv
