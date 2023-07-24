@@ -340,7 +340,10 @@ The following settings are available:
 : Delete all compute node pools when the workflow completes (default: `false`).
 
 `azure.batch.deleteTasksOnCompletion`
-: Delete each task when it completes (default: `false`).
+: :::{versionadded} 23.08.0-edge
+  :::
+: Delete each task when it completes (default: `true`).
+: Although this setting is enabled by default, failed tasks will not be deleted unless it is explicitly enabled. This way, the default behavior is that successful tasks are deleted while failed tasks are preserved for debugging purposes.
 
 `azure.batch.endpoint`
 : The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
