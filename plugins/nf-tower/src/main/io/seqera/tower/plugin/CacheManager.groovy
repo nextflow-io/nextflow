@@ -65,7 +65,9 @@ class CacheManager {
         if( !sessionUuid )
             throw new AbortOperationException("Missing target uuid - cache sync cannot be performed")
 
-        this.localCachePath = Paths.get(".nextflow/cache/${sessionUuid}")
+        this.localCachePath = env.containsKey('NXF_CLOUDCACHE_PATH')
+            ? null
+            : Paths.get(".nextflow/cache/${sessionUuid}")
 
         if( env.NXF_OUT_FILE )
             localOutFile = Paths.get(env.NXF_OUT_FILE)
@@ -80,7 +82,7 @@ class CacheManager {
     }
 
     protected void restoreCacheFiles() {
-        if( !remoteWorkDir || !sessionUuid )
+        if( !remoteWorkDir || !sessionUuid || !localCachePath )
             return
 
         if(!Files.exists(remoteCachePath)) {
@@ -100,7 +102,7 @@ class CacheManager {
     }
 
     protected void saveCacheFiles() {
-        if( !remoteWorkDir || !sessionUuid )
+        if( !remoteWorkDir || !sessionUuid || !localCachePath )
             return
 
         if( !Files.exists(localCachePath) ) {
@@ -118,7 +120,9 @@ class CacheManager {
         catch (Throwable e) {
             log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} — cause: ${e}", e
         }
+    }
 
+    protected void saveMiscFiles() {
         // — upload out file
         try {
             if( localOutFile?.exists() )

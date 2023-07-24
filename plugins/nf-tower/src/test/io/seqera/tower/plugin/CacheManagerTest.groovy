@@ -78,6 +78,7 @@ class CacheManagerTest extends Specification {
         tower.localCachePath.resolve('db/yyy').text = 'data yyy'
         and:
         tower.saveCacheFiles()
+        tower.saveMiscFiles()
         then:
         tower.remoteCachePath.resolve('index-foo').text == 'index foo'
         tower.remoteCachePath.resolve('db/xxx').text == 'data xxx'
@@ -99,6 +100,7 @@ class CacheManagerTest extends Specification {
         tower.localCachePath.resolve('db/delta').text = 'data delta'
         and:
         tower.saveCacheFiles()
+        tower.saveMiscFiles()
         then:
         tower.remoteCachePath.resolve('index-bar').text == 'index bar'
         tower.remoteCachePath.resolve('db/alpha').text == 'data alpha'
