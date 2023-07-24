@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,10 +43,7 @@ class WaveObserver implements TraceObserver {
 
     protected void apply(TaskHandler handler) {
         final process = handler.task.getProcessor().getName()
-        containers.computeIfAbsent(process, (String it) -> {
-            final container = handler.task.getContainer()
-            return client.resolveSourceContainer(container)
-        })
+        containers.computeIfAbsent(process, (String it) -> handler.task.getContainer())
     }
 
     void onProcessComplete(TaskHandler handler, TraceRecord trace){

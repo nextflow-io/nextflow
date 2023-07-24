@@ -20,3 +20,6 @@ nextflow.secret.LocalSecretsProvider
 nextflow.cache.DefaultCacheFactory
 nextflow.scm.RepositoryFactory
 nextflow.container.resolver.DefaultContainerResolver
+nextflow.mail.SendMailProvider
+nextflow.mail.SimpleMailProvider
+nextflow.mail.JavaMailProvider
