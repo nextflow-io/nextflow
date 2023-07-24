@@ -156,4 +156,26 @@ class CacheManagerTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should not backup/restore cache if cloudcache is enabled' () {
+        given:
+        def ENV = [
+                NXF_UUID: 'uuid',
+                NXF_WORK: '/work',
+                NXF_CLOUDCACHE_PATH: 's3://my-bucket/cache'
+        ]
+        and:
+        def tower = new CacheManager(ENV)
+
+        when:
+        tower.saveCacheFiles()
+        then:
+        0 * tower.getRemoteCachePath()
+
+        when:
+        tower.restoreCacheFiles()
+        then:
+        0 * tower.getRemoteCachePath()
+
+    }
 }
