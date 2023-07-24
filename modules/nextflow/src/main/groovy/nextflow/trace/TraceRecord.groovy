@@ -19,7 +19,6 @@ package nextflow.trace
 import java.nio.file.Path
 import java.util.regex.Pattern
 
-import com.google.common.hash.HashCode
 import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -626,7 +625,7 @@ class TraceRecord implements Serializable {
     static class Input {
         String stageName
         Path storePath
-        HashCode source
+        String source
     }
 
     @TupleConstructor

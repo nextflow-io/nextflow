@@ -16,6 +16,7 @@
 
 package nextflow.dag
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -23,8 +24,10 @@ import java.util.concurrent.locks.ReentrantLock
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import nextflow.extension.FilesEx
 import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
+import nextflow.trace.TraceRecord
 /**
  * Model the task graph of a pipeline execution.
  *
@@ -103,6 +106,31 @@ class TaskDAG {
      */
     Vertex getProducerVertex(Path path) {
         vertices[taskLookup[path]]
+    }
+
+    /**
+     * Save task input and output metadata to trace record.
+     *
+     * @param task
+     * @param record
+     */
+    void apply(TaskRun task, TraceRecord record) {
+        final vertex = vertices[task]
+
+        record.inputs = vertex.inputs.collect { name, path ->
+            final producer = getProducerTask(path)
+            new TraceRecord.Input(
+                name,
+                path,
+                producer ? producer.hash.toString() : null)
+        }
+
+        record.outputs = vertex.outputs.collect { path ->
+            new TraceRecord.Output(
+                path,
+                Files.size(path),
+                FilesEx.getChecksum(path))
+        }
     }
 
     @TupleConstructor(excludes = 'outputs')

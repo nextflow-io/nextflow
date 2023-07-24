@@ -16,14 +16,12 @@
 
 package nextflow.trace
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.cache.CacheDB
 import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.TaskDAG
@@ -33,7 +31,6 @@ import nextflow.dag.GexfRenderer
 import nextflow.dag.GraphvizRenderer
 import nextflow.dag.MermaidRenderer
 import nextflow.exception.AbortOperationException
-import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -56,8 +53,6 @@ class GraphObserver implements TraceObserver {
     private DAG dag
 
     private TaskDAG taskDag
-
-    private CacheDB cache
 
     private String name
 
@@ -86,7 +81,6 @@ class GraphObserver implements TraceObserver {
     void onFlowCreate(Session session) {
         this.dag = session.dag
         this.taskDag = session.taskDag
-        this.cache = session.cache
 
         // check file existance
         final attrs = FileHelper.readAttributes(file)
@@ -96,43 +90,6 @@ class GraphObserver implements TraceObserver {
             else if( !overwrite )
                 throw new AbortOperationException("DAG file already exists: ${file.toUriString()} -- enable `dag.overwrite` in your config file to overwrite existing DAG files")
         }
-    }
-
-    @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        taskDag.addTask(handler.task)
-    }
-
-    @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        final task = handler.task
-
-        // update task graph
-        taskDag.addTaskOutputs(task)
-
-        // save inputs and outputs to trace record
-        final vertex = taskDag.vertices[task]
-        trace.inputs = vertex.inputs.collect { name, path ->
-            new TraceRecord.Input(
-                name,
-                path,
-                taskDag.getProducerTask(path)?.hash)
-        }
-        trace.outputs = vertex.outputs.collect { path ->
-            new TraceRecord.Output(
-                path,
-                Files.size(path),
-                FilesEx.getChecksum(path))
-        }
-
-        // update cache db
-        cache.finalizeTaskAsync(task.hash, trace)
-    }
-
-    @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
-        taskDag.addTask(handler.task)
-        taskDag.addTaskOutputs(handler.task)
     }
 
     @Override

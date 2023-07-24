@@ -975,6 +975,8 @@ class Session implements ISession {
     void notifyTaskSubmit( TaskHandler handler ) {
         final task = handler.task
         log.info "[${task.hashLog}] ${task.runType.message} > ${task.name}"
+        // -- update task graph
+        taskDag.addTask(task)
         // -- save a record in the cache index
         cache.putIndexAsync(handler)
 
@@ -1012,8 +1014,12 @@ class Session implements ISession {
      * @param handler
      */
     void notifyTaskComplete( TaskHandler handler ) {
+        // update task graph
+        taskDag.addTaskOutputs(handler.task)
+
         // save the completed task in the cache DB
         final trace = handler.safeTraceRecord()
+        taskDag.apply(handler.task, trace)
         cache.putTaskAsync(handler, trace)
 
         // notify the event to the observers
@@ -1029,6 +1035,10 @@ class Session implements ISession {
     }
 
     void notifyTaskCached( TaskHandler handler ) {
+        // update task graph
+        taskDag.addTask(handler.task)
+        taskDag.addTaskOutputs(handler.task)
+
         final trace = handler.getTraceRecord()
         // save a record in the cache index only the when the trace record is available
         // otherwise it means that the event is trigger by a `stored dir` driven task
