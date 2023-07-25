@@ -195,6 +195,8 @@ The following configuration properties are supported for each provider configura
 : *Required only for private SCM servers*
 : SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
+## SCM providers
+
 ### BitBucket credentials
 
 Create a `bitbucket` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and app password, as shown below:
@@ -306,6 +308,8 @@ providers {
 :::{tip}
 The Personal access token can be generated in the repository `Clone Repository` dialog.
 :::
+
+(aws-codecommit)=
 
 ### AWS CodeCommit credentials
 
