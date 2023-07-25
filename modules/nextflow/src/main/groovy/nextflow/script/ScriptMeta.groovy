@@ -142,7 +142,7 @@ class ScriptMeta {
         for( final name : functionsCount.keySet() ) {
             if( functionsCount.get(name)<2 )
                 continue
-            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Only the last function will be used"
+            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function with multiple signatures or arguments with a default value"
             if( NF.isStrictMode() )
                 throw new DuplicateModuleFunctionException(msg)
             log.warn(msg)
@@ -154,11 +154,11 @@ class ScriptMeta {
             return
         }
         if( functionsCount.get(name) ) {
-            throw new DuplicateModuleFunctionException("A function named '$name' is already defined in module script: $scriptPath -- Make sure to not define multiple components with the same name")
+            throw new DuplicateModuleFunctionException("A function named '$name' is already defined or included in script: $scriptPath")
         }
         final existing = imports.get(name)
         if( existing != null ) {
-            throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined in module script: $scriptPath -- Make sure to not define multiple components with the same name")
+            throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined or included in script: $scriptPath")
         }
     }
 
