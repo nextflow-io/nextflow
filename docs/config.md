@@ -1594,6 +1594,11 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
 
+`NXF_PLUGINS_TEST_REPOSITORY`
+: :::{versionadded} 23.04.0
+  :::
+: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See {ref}`testing-plugins` for more information.
+
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0
   :::
