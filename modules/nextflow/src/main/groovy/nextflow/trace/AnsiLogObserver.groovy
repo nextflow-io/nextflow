@@ -264,6 +264,8 @@ class AnsiLogObserver implements TraceObserver {
 
         // render line
         for( ProgressRecord entry : processes ) {
+            if( entry.getTotalCount() == 0 )
+                continue
             term.a(line(entry))
             term.newline()
         }
