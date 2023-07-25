@@ -29,7 +29,7 @@ class AzRetryConfigTest extends Specification {
     def 'should create retry config' () {
 
         expect:
-        new AzRetryConfig().delay == Duration.of('150ms')
+        new AzRetryConfig().delay == Duration.of('250ms')
         new AzRetryConfig().maxDelay == Duration.of('90s')
         new AzRetryConfig().maxAttempts == 10
         new AzRetryConfig().jitter == 0.25d

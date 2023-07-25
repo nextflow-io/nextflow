@@ -29,12 +29,12 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class TesBashBuilder extends BashWrapperBuilder {
 
-    TesBashBuilder(TaskRun task) {
-        super(new TaskBean(task), new TesFileCopyStrategy())
+    TesBashBuilder(TaskRun task, String remoteBinDir) {
+        super(new TaskBean(task), new TesFileCopyStrategy(remoteBinDir))
     }
 
-    TesBashBuilder(TaskBean task) {
-        super(task, new TesFileCopyStrategy())
+    TesBashBuilder(TaskBean task, String remoteBinDir) {
+        super(task, new TesFileCopyStrategy(remoteBinDir))
     }
 
 }
