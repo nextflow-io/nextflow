@@ -52,7 +52,7 @@ class SubmitContainerTokenRequest {
     String towerEndpoint
 
     /**
-     * The ID of the executed container
+     * The ID of the workflow that submitted this container request
      */
     String workflowId
 

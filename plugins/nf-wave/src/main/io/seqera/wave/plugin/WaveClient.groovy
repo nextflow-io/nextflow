@@ -116,7 +116,7 @@ class WaveClient {
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
-        log.debug "Wave server endpoint: ${endpoint}"
+        log.debug "Wave endpoint: ${endpoint}; config: $config"
         this.packer = new Packer()
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
@@ -490,11 +490,11 @@ class WaveClient {
         final req = HttpRequest.newBuilder()
                 .uri(manifest)
                 .headers(REQUEST_HEADERS)
-                .timeout(Duration.ofSeconds(15 * 60 + 10))
+                .timeout(Duration.ofMinutes(5))
                 .GET()
                 .build()
         final begin = System.currentTimeMillis()
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        final resp = httpSend(req)
         final code = resp.statusCode()
         if( code>=200 && code<400 ) {
             log.debug "Wave container available in ${nextflow.util.Duration.of(System.currentTimeMillis()-begin)}: [$code] ${resp.body()}"
