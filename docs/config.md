@@ -330,20 +330,31 @@ The following settings are available:
 `azure.batch.copyToolInstallMode`
 : Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
 
-`azure.batch.terminateJobsOnCompletion`
-: Enables the Batch Job to automatically terminate a job once all tasks have completed (default: `true`).
-
 `azure.batch.deleteJobsOnCompletion`
-: Enable the automatic deletion of jobs created by the pipeline execution (default: `true`).
+: Delete all jobs when the workflow completes (default: `false`).
+: :::{versionchanged} 23.08.0-edge
+  Default value was changed from `true` to `false`.
+  :::
 
 `azure.batch.deletePoolsOnCompletion`
-: Enable the automatic deletion of compute node pools upon pipeline completion (default: `false`).
+: Delete all compute node pools when the workflow completes (default: `false`).
+
+`azure.batch.deleteTasksOnCompletion`
+: :::{versionadded} 23.08.0-edge
+  :::
+: Delete each task when it completes (default: `true`).
+: Although this setting is enabled by default, failed tasks will not be deleted unless it is explicitly enabled. This way, the default behavior is that successful tasks are deleted while failed tasks are preserved for debugging purposes.
 
 `azure.batch.endpoint`
 : The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
 
 `azure.batch.location`
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
+
+`azure.batch.terminateJobsOnCompletion`
+: :::{versionadded} 23.05.0-edge
+  :::
+: When the workflow completes, set all jobs to terminate on task completion. (default: `true`).
 
 `azure.batch.pools.<name>.autoScale`
 : Enable autoscaling feature for the pool identified with `<name>`.
