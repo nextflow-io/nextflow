@@ -148,12 +148,18 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
 
         if( binding.entryName && !entryFlow ) {
-            def msg = "Unknown workflow entry name: ${binding.entryName}"
-            final allNames = meta.getLocalWorkflowNames()
-            final guess = allNames.closest(binding.entryName)
-            if( guess )
-                msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
-            throw new IllegalArgumentException(msg)
+            component = meta.getComponent(binding.entryName)
+            if( component instanceof WorkflowDef ) {
+                entryFlow = component
+            }
+            else {
+                def msg = "Unknown workflow entry name: ${binding.entryName}"
+                final allNames = meta.getLocalWorkflowNames()
+                final guess = allNames.closest(binding.entryName)
+                if( guess )
+                    msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
+                throw new IllegalArgumentException(msg)
+            }
         }
 
         if( !entryFlow ) {
