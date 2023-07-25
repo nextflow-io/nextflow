@@ -15,31 +15,36 @@
  *
  */
 
-package nextflow.cache
-
-import java.nio.file.Path
+package nextflow.util
 
 import groovy.transform.CompileStatic
-import nextflow.exception.AbortOperationException
-import nextflow.plugin.Priority
 
 /**
- * Implements the default cache factory
- *
- * @see DefaultCacheStore
- *
+ * A {@link Map} that handles keys in a case insensitive manner
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Priority(0)
-class DefaultCacheFactory extends CacheFactory {
+class InsensitiveMap<K,V> implements Map<K,V> {
 
-    @Override
-    protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
-        if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
-        if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new DefaultCacheStore(uniqueId, runName, home)
-        return new CacheDB(store)
+    @Delegate
+    private Map<K,V> target
+
+    private InsensitiveMap(Map<K,V> map) {
+        this.target = map
     }
 
+    @Override
+    boolean containsKey(Object key) {
+        target.any( it -> key?.toString()?.toLowerCase() == it.key?.toString()?.toLowerCase())
+    }
+
+    @Override
+    V get(Object key) {
+        target.find(it -> key?.toString()?.toLowerCase() == it.key?.toString()?.toLowerCase())?.value
+    }
+
+    static <K,V> Map<K,V> of(Map<K,V> target) {
+        new InsensitiveMap(target)
+    }
 }
