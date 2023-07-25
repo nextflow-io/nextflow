@@ -65,9 +65,10 @@ class CacheManager {
         if( !sessionUuid )
             throw new AbortOperationException("Missing target uuid - cache sync cannot be performed")
 
-        this.localCachePath = env.containsKey('NXF_CLOUDCACHE_PATH')
-            ? null
-            : Paths.get(".nextflow/cache/${sessionUuid}")
+        // ignore the `localCachePath` when the `NXF_CLOUDCACHE_PATH` variable is set because
+        // the nextflow cache metadata is going to be managed (and stored) via the nf-cloudcache plugin
+        if( !env.containsKey('NXF_CLOUDCACHE_PATH') )
+            this.localCachePath = Paths.get(".nextflow/cache/${sessionUuid}")
 
         if( env.NXF_OUT_FILE )
             localOutFile = Paths.get(env.NXF_OUT_FILE)
