@@ -6,111 +6,16 @@ Nextflow has a plugin system that allows the use of extensible components that a
 
 ## Core plugins
 
-Nextflow has a set of *core* plugins, which are downloaded only when they are needed at runtime. This allows Nextflow to support a wide variety of extensions out-of-the-box without bloating the core application binary.
+The following functionalities are provided via plugin components, and they make part of the Nextflow *core* plugins:
 
-### `nf-amazon`
+- `nf-amazon`: Support for Amazon cloud.
+- `nf-azure`: Support for Azure cloud.
+- `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
+- `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
+- `nf-google`: Support for Google cloud.
+- `nf-tower`: Support for [Tower](https://tower.nf) cloud platform.
+- `nf-wave`: Support for [Wave containers](https://seqera.io/wave/) service.
 
-The `nf-amazon` plugin contains the integration with Amazon Web Services.
-
-Components:
-
-- `aws` configuration scope
-- `awsbatch` executor
-- Support for S3 paths in pipeline scripts
-
-See {ref}`aws-page` and {ref}`amazons3-page` for more information.
-
-### `nf-azure`
-
-The `nf-azure` plugin contains the integration with Microsoft Azure.
-
-Components:
-
-- `azure` configuration scope
-- `azurebatch` executor
-- Support for Azure Blob paths in pipeline scripts
-
-See {ref}`azure-page` for more information.
-
-### `nf-cloudcache`
-
-The `nf-cloudcache` plugin contains a custom cache store backed by cloud object storage.
-
-### `nf-codecommit`
-
-The `nf-codecommit` plugin contains the integration with AWS CodeCommit.
-
-Components:
-
-- `codecommit` Git provider
-
-See {ref}`aws-codecommit` for more information.
-
-### `nf-console`
-
-The `nf-console` implements the Nextflow REPL console, first introduced in this [blog post](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
-
-Components:
-
-- `nextflow console` command
-
-See {ref}`cli-console` for more information.
-
-### `nf-ga4gh`
-
-The `nf-ga4gh` plugin contains the integration with GA4GH APIs, specified the Task Execution Service (TES).
-
-Components:
-
-- `tes` executor
-
-See {ref}`ga4ghtes-executor` for more information.
-
-### `nf-google`
-
-The `nf-google` plugin contains the integration with Google Cloud.
-
-Components:
-
-- `google` configuration scope
-- `google-batch` executor
-- `google-lifesciences` executor
-- Support for Google Cloud Storage paths in pipeline scripts
-
-See {ref}`google-page` for more information.
-
-### `nf-tower`
-
-The `nf-tower` plugin contains the integration with [Nextflow Tower](https://tower.nf).
-
-Components:
-
-- `tower` configuration scope
-
-Plugin commands:
-
-- `cache-backup`
-- `cache-restore`
-
-See {ref}`config-tower` and the [Tower documentation](https://help.tower.nf/) for more information.
-
-### `nf-wave`
-
-The `nf-wave` plugin contains the integration with [Wave](https://seqera.io/wave/).
-
-Components:
-
-- `fusion` configuration scope
-- `wave` configuration scope
-
-Plugin commands:
-
-- `get-container`
-- `run-container`
-- `pack`
-- `debug-task`
-
-See {ref}`wave-page` for more information.
 
 ## Using plugins
 
@@ -130,29 +35,41 @@ Or you can use the `-plugins` command line option:
 nextflow run <pipeline> -plugins nf-hello@0.1.0
 ```
 
-The plugin identifier consists of the plugin name and plugin version separated by a `@`. Multiple plugins can be specified in the configuration with multiple `id` declarations, or on the command line as a comma-separated list. When specifying plugins via the command line, any plugin declarations in the configuration file are ignored.
+The plugin identifier consists of the plugin name and plugin version separated by a `@`. Multiple plugins can be specified 
+in the configuration with multiple `id` declarations, or on the command line as a comma-separated list. When specifying 
+plugins via the command line, any plugin declarations in the configuration file are ignored.
 
-The default plugins are documented in this documentation. For all other plugins, please refer to the plugin's code repository for documentation and support.
+The default plugins are documented in this documentation. For all other plugins, please refer to the plugin's code repository 
+for documentation and support.
 
 ## Writing plugins
 
-To get started with your own plugin, refer to the [nf-hello](https://github.com/nextflow-io/nf-hello) repository, which provides a minimal plugin implementation with several examples of different extension points, as well as instructions for building, testing, and publishing.
+To get started with your own plugin, refer to the [nf-hello](https://github.com/nextflow-io/nf-hello) repository, 
+which provides a minimal plugin implementation with several examples of different extension points, as well as instructions 
+for building, testing, and publishing.
 
-Nextflow's plugin system exposes a variety of extension points for plugins. The following sections describe how to use these extension points when writing a plugin, as well as how they are used in a pipeline.
+Nextflow's plugin system exposes a variety of extension points for plugins. The following sections describe how to use 
+these extension points when writing a plugin, as well as how they are used in a pipeline.
 
 :::{note}
-If you would like to implement something in a plugin that isn't covered by any of the following sections, feel free to create an issue on GitHub and describe your use case. In general, any class in the Nextflow codebase that implements `ExtensionPoint` can be extended by a plugin, and existing plugins are a great source of examples when writing new plugins.
+If you would like to implement something in a plugin that isn't covered by any of the following sections, feel free to 
+create an issue on GitHub and describe your use case. In general, any class in the Nextflow codebase that implements 
+`ExtensionPoint` can be extended by a plugin, and existing plugins are a great source of examples when writing new plugins.
 :::
 
 :::{note}
-Plugin extension points must be added to `extensions.idx` in the plugin repository to make them discoverable. See the `nf-hello` plugin for an example.
+Plugin extension points must be added to `extensions.idx` in the plugin repository to make them discoverable. 
+See the `nf-hello` plugin for an example.
 :::
 
 ### Commands
 
 Plugins can define custom CLI commands that can be executed with the `nextflow plugin` command.
 
-To implement a plugin-specific command, implement the `PluginExecAware` interface in your plugin entrypoint (the class that extends `BasePlugin`). Alternatively, you can implement the `PluginAbstractExec` trait, which provides an abstract implementation with some boilerplate code. This trait requires you to implement two methods, `getCommands()` and `exec()`:
+To implement a plugin-specific command, implement the `PluginExecAware` interface in your plugin entrypoint 
+(the class that extends `BasePlugin`). Alternatively, you can implement the `PluginAbstractExec` trait, which 
+provides an abstract implementation with some boilerplate code. This trait requires you to implement two methods, 
+`getCommands()` and `exec()`:
 
 ```groovy
 import nextflow.cli.PluginAbstractExec
@@ -188,7 +105,10 @@ See the {ref}`cli-plugin` CLI command for usage information.
 
 ### Configuration
 
-Plugins can access the resolved Nextflow configuration through the session object using `session.config.navigate()`. Several extension points provide the session object for this reason. This method allows you to query any configuration option in a safe manner -- if the option isn't defined, it will return `null`. A common practice is to define any configuration for your plugin in a custom config scope.
+Plugins can access the resolved Nextflow configuration through the session object using `session.config.navigate()`. 
+Several extension points provide the session object for this reason. This method allows you to query any configuration 
+option in a safe manner -- if the option isn't defined, it will return `null`. A common practice is to define any 
+configuration for your plugin in a custom config scope.
 
 Here is an example of querying a config option in a trace observer hook:
 
@@ -248,7 +168,8 @@ process foo {
 ```
 
 :::{tip}
-Refer to the source code of Nextflow's built-in executors to see how to implement the various components of an executor. You might be able to implement most of your executor by simply reusing existing code.
+Refer to the source code of Nextflow's built-in executors to see how to implement the various components of an executor. 
+You might be able to implement most of your executor by simply reusing existing code.
 :::
 
 ### Functions
@@ -258,7 +179,8 @@ Refer to the source code of Nextflow's built-in executors to see how to implemen
 
 Plugins can define custom Groovy functions, which can then be included into Nextflow pipelines.
 
-To implement a custom function, create a class in your plugin that extends the `PluginExtensionPoint` class, and implement your function with the `Function` annotation:
+To implement a custom function, create a class in your plugin that extends the `PluginExtensionPoint` class, and implement 
+your function with the `Function` annotation:
 
 ```groovy
 import nextflow.Session
@@ -299,7 +221,8 @@ include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 
 Plugins can define custom channel factories and operators, which can then be included into Nextflow pipelines.
 
-To implement a custom factory or operator, create a class in your plugin that extends the `PluginExtensionPoint` class, and implement your function with the `Factory` or `Operator` annotation:
+To implement a custom factory or operator, create a class in your plugin that extends the `PluginExtensionPoint` class, 
+and implement your function with the `Factory` or `Operator` annotation:
 
 ```groovy
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -338,13 +261,18 @@ channel
     .sqlInsert(into: 'BAR', columns: 'id', db: 'test')
 ```
 
-The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory is included under the alias `fromTable`.
+The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory 
+is included under the alias `fromTable`.
 
 ### Trace observers
 
-A *trace observer* in Nextflow is an entity that can listen and react to workflow events, such as when a workflow starts, a task completes, a file is published, etc. Several components in Nextflow, such as the execution report and DAG visualization, are implemented as trace observers.
+A *trace observer* in Nextflow is an entity that can listen and react to workflow events, such as when a workflow starts, 
+a task completes, a file is published, etc. Several components in Nextflow, such as the execution report and DAG visualization, 
+are implemented as trace observers.
 
-Plugins can define custom trace observers that react to workflow events with custom behavior. To implement a trace observer, create a class that implements the `TraceObserver` trait and another class that implements the `TraceObserverFactory` interface. Implement any of the hooks defined in `TraceObserver`, and implement the `create()` method in your observer factory:
+Plugins can define custom trace observers that react to workflow events with custom behavior. To implement a trace observer, 
+create a class that implements the `TraceObserver` trait and another class that implements the `TraceObserverFactory` interface. 
+Implement any of the hooks defined in `TraceObserver`, and implement the `create()` method in your observer factory:
 
 ```groovy
 // MyObserverFactory.groovy
@@ -357,10 +285,7 @@ class MyObserverFactory implements TraceObserverFactory {
     @Override
     Collection<TraceObserver> create(Session session) {
         final enabled = session.config.navigate('myplugin.enabled')
-
-        enabled
-            ? [ new MyObserver() ]
-            : []
+        return enabled ? [ new MyObserver() ] : []
     }
 }
 
@@ -405,7 +330,8 @@ class MyObserver implements TraceObserver {
 }
 ```
 
-You can then use your trace observer by simply enabling the plugin in your pipeline. In the above example, the observer must also be enabled with a config option:
+You can then use your trace observer by simply enabling the plugin in your pipeline. In the above example, the observer 
+must also be enabled with a config option:
 
 ```groovy
 myplugin.enabled = true
@@ -415,7 +341,8 @@ Refer to the `TraceObserver` [source code](https://github.com/nextflow-io/nextfl
 
 ## Plugin registry
 
-Nextflow resolves plugins through a plugin registry, which stores metadata for each plugin version, including the publish date, checksum, and download URL for the plugin binary. The default registry is located on GitHub at [nextflow-io/plugins](https://github.com/nextflow-io/plugins/).
+Nextflow resolves plugins through a plugin registry, which stores metadata for each plugin version, including the publishing date, 
+checksum, and download URL for the plugin binary. The default registry is located on GitHub at [nextflow-io/plugins](https://github.com/nextflow-io/plugins/).
 
 To publish a plugin release to the main registry, simply create a pull request with the requested plugin metadata.
 
@@ -426,7 +353,9 @@ To publish a plugin release to the main registry, simply create a pull request w
 :::{versionadded} 23.04.0
 :::
 
-You can also use a different plugin registry with the `NXF_PLUGINS_TEST_REPOSITORY` environment variable. This setting is useful for testing a plugin release before publishing it to the main registry. It can refer to the JSON file for a custom registry or a plugin release.
+You can also use a different plugin registry with the `NXF_PLUGINS_TEST_REPOSITORY` environment variable. This setting 
+is useful for testing a plugin release before publishing it to the main registry. It can refer to the JSON file for a 
+custom registry or a plugin release.
 
 For example:
 
