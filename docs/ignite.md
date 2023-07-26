@@ -3,7 +3,11 @@
 # Apache Ignite
 
 :::{warning}
-This feature is no longer maintained. In order to use it in Nextflow 22.01 or later, it must be loaded via the `nf-ignite` plugin.
+This feature is no longer maintained.
+:::
+
+:::{versionchanged} 22.01.0-edge
+The `ignite` executor must be enabled via the `nf-ignite` plugin.
 :::
 
 Nextflow can be deployed in a *cluster* mode by using [Apache Ignite](https://ignite.apache.org/), an in-memory data-grid and clustering platform.

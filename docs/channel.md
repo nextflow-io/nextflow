@@ -2,12 +2,12 @@
 
 # Channels
 
-Nextflow is based on the Dataflow programming model in which processes communicate through channels.
+Nextflow is based on the dataflow programming model in which processes communicate through channels.
 
 A channel has two major properties:
 
-1. Sending a message is an *asynchronous* operation which completes immediately, without having to wait for the receiving process.
-2. Receiving data is a blocking operation which stops the receiving process until the message has arrived.
+1. Sending a message is an *asynchronous* (i.e. non-blocking) operation, which means the sender doesn't have to wait for the receiving process.
+2. Receiving a message is a *synchronous* (i.e. blocking) operation, which means the receiving process must wait until a message has arrived.
 
 (channel-types)=
 
@@ -27,11 +27,9 @@ A queue channel can be created by factory methods ([of](#of), [fromPath](#frompa
 
 ### Value channel
 
-A *value channel* a.k.a. *singleton channel* is bound to a single value and can be read any number of times without being consumed.
+A *value channel* contains a single value and can be consumed any number of times by a process or operator.
 
 A value channel can be created with the [value](#value) factory method or by any operator that produces a single value ({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
-
-A value channel is implicitly created by a process when it is invoked with a simple value. Furthermore, a value channel is also implicitly created as output for a process whose inputs are all value channels.
 
 For example:
 
@@ -54,7 +52,7 @@ workflow {
 }
 ```
 
-In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly converted to a value channel, and the output is also emitted as a value channel.
+In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly wrapped in a value channel, and the output is also emitted as a value channel.
 
 See also: {ref}`process-multiple-input-channels`.
 
@@ -64,8 +62,8 @@ See also: {ref}`process-multiple-input-channels`.
 
 Channels may be created explicitly using the following channel factory methods.
 
-:::{note}
-As of version 20.07.0, `channel` has been introduced as an alias of `Channel`, therefore factory methods can be specified either as `channel.of()` or `Channel.of()`, and so on.
+:::{versionadded} 20.07.0
+`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or `Channel.of()`, and so on.
 :::
 
 (channel-empty)=
@@ -80,8 +78,8 @@ See also: {ref}`operator-ifempty`.
 
 ### from
 
-:::{warning}
-This method is deprecated. Use [of](#of) or [fromList](#fromlist) instead.
+:::{deprecated} 19.09.0-edge
+Use [of](#of) or [fromList](#fromlist) instead.
 :::
 
 The `from` method allows you to create a channel emitting any sequence of values that are specified as the method argument, for example:
@@ -128,8 +126,7 @@ Channel.from( [1, 2], [5,6], [7,9] )
 
 ### fromList
 
-:::{note}
-This feature requires Nextflow version 19.10.0 or later.
+:::{versionadded} 19.10.0
 :::
 
 The `fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
@@ -311,8 +308,7 @@ Available options:
 
 ### fromSRA
 
-:::{note}
-This feature requires Nextflow version 19.04.0 or later.
+:::{versionadded} 19.04.0
 :::
 
 The `fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
@@ -386,8 +382,7 @@ Available options:
 
 ### of
 
-:::{note}
-This feature requires Nextflow version 19.10.0 of later.
+:::{versionadded} 19.10.0
 :::
 
 The `of` method allows you to create a channel that emits the arguments provided to it, for example:

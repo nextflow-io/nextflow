@@ -6,21 +6,30 @@
 
 Nextflow uses the [AWS security credentials](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html) to make programmatic calls to AWS services.
 
-You can provide your AWS access keys using the standard AWS variables shown below:
+The AWS credentials are selected from the following sources, in order of descending priority:
 
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_DEFAULT_REGION`
+1. Nextflow configuration file - `aws.accessKey` and `aws.secretKey`. See {ref}`AWS configuration<config-aws>` for more details.
 
-If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not defined in the environment, Nextflow will attempt to
-retrieve credentials from your `~/.aws/credentials` and `~/.aws/config` files. The `default` profile can be
-overridden via the environmental variable `AWS_PROFILE` (or `AWS_DEFAULT_PROFILE`).
+2. A custom profile in `$HOME/.aws/credentials` and/or `$HOME/.aws/config`. The profile can be supplied from the `aws.profile` config option, or the `AWS_PROFILE` or `AWS_DEFAULT_PROFILE` environmental variables.
 
-Alternatively AWS credentials and profile can be specified in the Nextflow configuration file. See {ref}`AWS configuration<config-aws>` for more details.
+3. Environment variables - `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
-:::{note}
-Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that it spares you from managing/distributing AWS keys explicitly. Read the [IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) documentation and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
-:::
+4. The `default` profile in `~/.aws/credentials` and/or `~/.aws/config`.
+
+5. Single Sign-On (SSO) credentials. See the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
+
+   :::{versionadded} 23.07.0-edge
+   :::
+
+6. EC2 instance profile credentials. See the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
+
+The AWS region is selected from the following sources, in order of descending priority:
+
+1. Nextflow configuration file - `aws.region`
+2. Environment variables - `AWS_REGION` or `AWS_DEFAULT_REGION`
+3. EC2 instance metadata (if Nextflow is running in an EC2 instance)
+
+SSO credentials and instance profile credentials are the most recommended because they don't require you to manage and distribute AWS keys explicitly. SSO credentials are ideal for launching pipelines from outside of AWS (e.g. your laptop), while instance profile credentials are ideal for launching pipelines within AWS (e.g. an EC2 instance).
 
 ## AWS IAM policies
 
@@ -30,7 +39,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 - To use AWS Batch:
 
-  ```
+  ```json
   "batch:DescribeJobQueues"
   "batch:CancelJob"
   "batch:SubmitJob"
@@ -44,7 +53,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 - To view [EC2](https://aws.amazon.com/ec2/) instances:
 
-  ```
+  ```json
   "ecs:DescribeTasks"
   "ec2:DescribeInstances"
   "ec2:DescribeInstanceTypes"
@@ -55,7 +64,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 - To pull container images from [ECR](https://aws.amazon.com/ecr/) repositories:
 
-  ```
+  ```json
   "ecr:GetAuthorizationToken"
   "ecr:BatchCheckLayerAvailability"
   "ecr:GetDownloadUrlForLayer"
@@ -196,7 +205,10 @@ Different queues bound to the same or different Compute Environments can be conf
 
 ## Container Options
 
-As of version `21.12.1-edge`, the {ref}`process-containerOptions` directive can be used to control the properties of the container execution associated with each Batch job.
+:::{versionadded} 21.12.1-edge
+:::
+
+The {ref}`process-containerOptions` directive can be used to control the properties of the container execution associated with each Batch job.
 
 The following container options are currently supported:
 
@@ -306,12 +318,12 @@ aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
 
 Replace the path above with the one matching the location where the `aws` tool is installed in your AMI.
 
-:::{warning}
-The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
+:::{versionchanged} 19.07.0
+The `executor.awscli` config option was replaced by `aws.batch.cliPath`.
 :::
 
-:::{note}
-In versions of Nextflow prior to 19.07.x, the `executor.awscli` config option should be used instead of `aws.batch.cliPath`.
+:::{warning}
+The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
 :::
 
 ### Docker installation
@@ -416,6 +428,9 @@ With the above configuration, processes with the `bigTask` {ref}`process-label` 
 
 ### Volume mounts
 
+:::{versionadded} 19.07.0
+:::
+
 User provided container volume mounts can be provided as shown below:
 
 ```groovy
@@ -439,10 +454,6 @@ aws {
 ```
 
 The above snippet defines two volume mounts for the jobs executed in your pipeline. The first volume mounts the host path `/tmp` to the same path in the container, with the *read-write* access mode. The second volume mounts the host path `/host/path` to `/mnt/path` in the container, with the *read-only* access mode.
-
-:::{note}
-This feature requires Nextflow version 19.07.x or later.
-:::
 
 ### Troubleshooting
 

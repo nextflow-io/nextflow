@@ -260,19 +260,19 @@ class TaskConfigTest extends Specification {
 
         when:
         def config = new TaskConfig().setContext(x: 20)
-        config.disk = value
+        config.disk = [request: value]
         config.resourceLimits = [disk: '100G']
 
         then:
         config.disk == expected
         config.getDisk() == expected
+        config.getDiskResource()?.getRequest() == expected
 
         where:
         expected                || value
         null                    || null
         new MemoryUnit('1M')    || 1024 * 1024
         new MemoryUnit('5M')    || '5M'
-        new MemoryUnit('20G')   || { "$x G" }
         new MemoryUnit('30G')   || MemoryUnit.of('30G')
         new MemoryUnit('100G')  || '200G'
 

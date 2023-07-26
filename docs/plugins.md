@@ -13,6 +13,7 @@ Currently the following functionalities are implemented as plugin components and
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
 - `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
 - `nf-google`: Support for Google cloud.
+- `nf-cloudcache`: Support for Nextflow cache in object storage.
 - `nf-tower`: Support for [Nextflow Tower](https://tower.nf) platform.
 
 ## Configuration
@@ -45,7 +46,10 @@ To add a new plugin to the Index, create a pull request including the request pl
 
 ## Import operators from plugin
 
-As of version `22.04.x`, Nextflow allows the inclusion of extension operators from Nextflow plugins.
+:::{versionadded} 22.04.0
+:::
+
+Nextflow supports the inclusion of custom operators from Nextflow plugins.
 
 For example:
 
@@ -66,7 +70,10 @@ The prefix `plugin/` must precede the plugin name in the include `from` statemen
 
 ## Import custom functions from plugin
 
-In the same way, as of version `22.09.x`, a plugin can export custom functions.
+:::{versionadded} 22.09.0-edge
+:::
+
+Nextflow supports the inclusion of custom functions from Nextflow plugins.
 
 For example, a plugin can export a util function to reverse a String:
 

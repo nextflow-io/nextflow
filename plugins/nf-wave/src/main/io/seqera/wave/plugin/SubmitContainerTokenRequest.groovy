@@ -52,7 +52,7 @@ class SubmitContainerTokenRequest {
     String towerEndpoint
 
     /**
-     * The ID of the executed container
+     * The ID of the workflow that submitted this container request
      */
     String workflowId
 
@@ -75,6 +75,11 @@ class SubmitContainerTokenRequest {
      * Conda recipe file used to build the container
      */
     String condaFile
+
+    /**
+     * Spack recipe file used to build the container
+     */
+    String spackFile
 
     /**
      * The request container platform
@@ -100,5 +105,10 @@ class SubmitContainerTokenRequest {
      * Request unique fingerprint
      */
     String fingerprint
+
+    /**
+     * Enable freeze container mode
+     */
+    boolean freeze
 
 }
