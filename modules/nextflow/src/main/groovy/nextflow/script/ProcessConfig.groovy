@@ -955,7 +955,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     ProcessConfig resourceLimits( Map entries ) {
-        final validDirectives = ['cpus', 'memory', 'disk', 'time'] as Set
+        final validDirectives = ['cpus', 'memory', 'disk', 'time']
         for( entry in entries )
             if( entry.key !in validDirectives )
                 throw new IllegalArgumentException("Not a valid directive in `resourceLimits`: $entry.key")

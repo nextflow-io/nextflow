@@ -249,7 +249,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             return value
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `memory` value in process definition: $value")
+            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
         }
     }
 
@@ -264,7 +264,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             return value
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `disk` value in process definition: $value")
+            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
         }
     }
 
@@ -294,7 +294,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         if ( value && limit && value > limit )
             value = limit
 
-        return value ?: 1  // note: always return at least 1 cpus
+        // always return at least 1 cpus
+        return value ?: 1
     }
 
     int getMaxRetries() {
