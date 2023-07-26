@@ -271,7 +271,7 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     TaskMonitor start() {
-        log.trace ">>> barrier register (monitor: ${this.name})"
+        log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
 
         this.taskCompleteLock = new ReentrantLock()
@@ -292,8 +292,11 @@ class TaskPollingMonitor implements TaskMonitor {
             try {
                 pollLoop()
             }
+            catch (Throwable e) {
+                log.debug "Unexpected error in tasks monitor pool loop", e
+            }
             finally {
-                log.trace "<<< barrier arrives (monitor: ${this.name})"
+                log.debug "<<< barrier arrives (monitor: ${this.name}) - terminating tasks monitor poll loop"
                 session.barrier.arrive(this)
             }
         }
@@ -434,7 +437,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try {
             def pending = runningQueue.size()
             if( !pending ) {
-                log.debug "No more task to compute -- ${session.dumpNetworkStatus() ?: 'Execution may be stalled'}"
+                log.debug "!! executor $name > No more task to compute -- ${session.dumpNetworkStatus() ?: 'Execution may be stalled'}"
                 return
             }
 
