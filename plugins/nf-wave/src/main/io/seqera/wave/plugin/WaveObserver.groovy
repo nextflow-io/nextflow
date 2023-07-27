@@ -43,10 +43,7 @@ class WaveObserver implements TraceObserver {
 
     protected void apply(TaskHandler handler) {
         final process = handler.task.getProcessor().getName()
-        containers.computeIfAbsent(process, (String it) -> {
-            final container = handler.task.getContainer()
-            return client.resolveSourceContainer(container)
-        })
+        containers.computeIfAbsent(process, (String it) -> handler.task.getContainer())
     }
 
     void onProcessComplete(TaskHandler handler, TraceRecord trace){

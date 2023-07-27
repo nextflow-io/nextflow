@@ -50,6 +50,7 @@ class AzBatchOpts implements CloudTransferOptions {
     Boolean terminateJobsOnCompletion
     Boolean deleteJobsOnCompletion
     Boolean deletePoolsOnCompletion
+    Boolean deleteTasksOnCompletion
     CopyToolInstallMode copyToolInstallMode
 
     Map<String,AzPoolOpts> pools
@@ -63,9 +64,10 @@ class AzBatchOpts implements CloudTransferOptions {
         location = config.location
         autoPoolMode = config.autoPoolMode
         allowPoolCreation = config.allowPoolCreation
-        terminateJobsOnCompletion = config.terminateJobsOnCompletion
+        terminateJobsOnCompletion = config.terminateJobsOnCompletion != Boolean.FALSE
         deleteJobsOnCompletion = config.deleteJobsOnCompletion
         deletePoolsOnCompletion = config.deletePoolsOnCompletion
+        deleteTasksOnCompletion = config.deleteTasksOnCompletion
         pools = parsePools(config.pools instanceof Map ? config.pools as Map<String,Map> : Collections.<String,Map>emptyMap())
         maxParallelTransfers = config.maxParallelTransfers ? config.maxParallelTransfers as int : MAX_TRANSFER
         maxTransferAttempts = config.maxTransferAttempts ? config.maxTransferAttempts as int : MAX_TRANSFER_ATTEMPTS

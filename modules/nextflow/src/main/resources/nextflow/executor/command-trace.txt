@@ -127,6 +127,7 @@ nxf_write_trace() {
     echo "nextflow.trace/v2"           > $trace_file
     echo "realtime=$wall_time"         >> $trace_file
     echo "%cpu=$ucpu"                  >> $trace_file
+    echo "cpu_model=$cpu_model"        >> $trace_file
     echo "rchar=${io_stat1[0]}"        >> $trace_file
     echo "wchar=${io_stat1[1]}"        >> $trace_file
     echo "syscr=${io_stat1[2]}"        >> $trace_file
@@ -144,6 +145,7 @@ nxf_trace_mac() {
     local end_millis=$(nxf_date)
     local wall_time=$((end_millis-start_millis))
     local ucpu=''
+    local cpu_model=''
     local io_stat1=('' '' '' '' '' '')
     nxf_write_trace
 }
@@ -163,6 +165,7 @@ nxf_trace_linux() {
     ##  https://stackoverflow.com/questions/27508531/calculate-cpu-per-process/27514562##27514562
     ##  https://stackoverflow.com/questions/16726779/how-do-i-get-the-total-cpu-usage-of-an-application-from-proc-pid-stat
     local num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
+    local cpu_model=$(< /proc/cpuinfo grep '^model name' | head -n 1 | awk 'BEGIN{FS="\t: "} { print $2 }')
     local tot_time0=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
     local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
@@ -199,6 +202,7 @@ nxf_trace_linux() {
     echo "nextflow.trace/v2"           > $trace_file
     echo "realtime=$wall_time"         >> $trace_file
     echo "%cpu=$ucpu"                  >> $trace_file
+    echo "cpu_model=$cpu_model"        >> $trace_file
     echo "rchar=${io_stat1[0]}"        >> $trace_file
     echo "wchar=${io_stat1[1]}"        >> $trace_file
     echo "syscr=${io_stat1[2]}"        >> $trace_file
