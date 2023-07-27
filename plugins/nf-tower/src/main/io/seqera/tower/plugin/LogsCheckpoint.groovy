@@ -64,24 +64,27 @@ class LogsCheckpoint implements TraceObserver {
     }
 
     protected void run() {
-        log.trace "Starting logs checkpoint thread"
+        log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
             while( !thread.isInterrupted() ) {
                 // just wait the declared delay
-                try {
-                    Thread.sleep(interval.toMillis())
-                }
-                catch (InterruptedException e) {
-                    log.trace "Interrupted logs checkpoint thread"
-                    Thread.currentThread().interrupt()
-                    break
-                }
+                await(interval)
                 // checkpoint the logs
                 handler.saveFiles()
             }
         }
         finally {
-            log.trace "Terminating logs checkpoint thread"
+            log.debug "Terminating logs checkpoint thread"
+        }
+    }
+
+    protected void await(Duration interval) {
+        try {
+            Thread.sleep(interval.toMillis())
+        }
+        catch (InterruptedException e) {
+            log.trace "Interrupted logs checkpoint thread"
+            Thread.currentThread().interrupt()
         }
     }
 }
