@@ -295,7 +295,7 @@ class Launcher {
                 normalized << 'true'
             }
 
-            else if( current == '-preview-report' && (i==args.size() || args[i].startsWith('-'))) {
+            else if( current == '-preview-containers' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
 

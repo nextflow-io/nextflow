@@ -370,10 +370,18 @@ class TaskProcessor {
     /**
      * Get a preview task config.
      */
-    TaskConfig getPreviewConfig() {
-        def config = config.createTaskConfig()
-        config.context = new TaskContext(this)
-        return config
+    TaskRun getPreviewTask() {
+        final task = new TaskRun(
+                processor: this,
+                type: scriptType,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this)
+        )
+        task.config.context = task.context
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
+
+        return task
     }
 
     protected void checkWarn(String msg, Map opts=null) {

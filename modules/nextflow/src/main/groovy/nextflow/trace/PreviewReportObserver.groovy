@@ -23,10 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
-import nextflow.exception.AbortOperationException
-import nextflow.file.FileHelper
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 /**
  * Render the preview report when running a pipeline
  * in preview mode.
@@ -37,31 +33,20 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class PreviewReportObserver implements TraceObserver {
 
-    static final List<String> DEF_DIRECTIVES = ['container', 'cpus', 'memory', 'time']
-
     static final String DEF_FILE_NAME = "preview-${TraceHelper.launchTimestampFmt()}.json"
 
     private DAG dag
 
-    private List<String> directives
-
     private Path file
 
-    private boolean overwrite
+    private String format
 
-    PreviewReportObserver( List<String> directives, Path file, boolean overwrite ) {
-        this.directives = directives
+    PreviewReportObserver( Path file ) {
         this.file = file
-        this.overwrite = overwrite
+        this.format = file.getExtension().toLowerCase() ?: 'json'
 
-        // check file existance
-        final attrs = FileHelper.readAttributes(file)
-        if( attrs ) {
-            if( overwrite && (attrs.isDirectory() || !file.delete()) )
-                throw new AbortOperationException("Unable to overwrite existing preview file: ${file.toUriString()}")
-            else if( !overwrite )
-                throw new AbortOperationException("Preview file already exists: ${file.toUriString()} -- enable `preview.overwrite` in your config file to overwrite existing preview files")
-        }
+        if( format !in ['config', 'json'] )
+            throw new IllegalArgumentException("Invalid format for container preview: '${format}' -- should be *.json or *.config")
     }
 
     @Override
@@ -71,18 +56,21 @@ class PreviewReportObserver implements TraceObserver {
 
     @Override
     void onFlowBegin() {
-        log.debug "Rendering preview report"
+        log.debug "Rendering container preview"
         try {
-            render()
+            final containers = getContainers()
+            if( format == 'config' )
+                renderConfig(containers)
+            else if( format == 'json' )
+                renderJson(containers)
         }
         catch( Exception e ) {
-            log.warn "Failed to render preview report -- see the log file for details", e
+            log.warn "Failed to preview containers -- see the log file for details", e
         }
     }
 
-    private void render() {
-        // get preview data
-        final jsonData = [:]
+    private Map<String,String> getContainers() {
+        final containers = [:]
 
         for( def vertex : dag.vertices ) {
             // skip nodes that are not processes
@@ -90,36 +78,29 @@ class PreviewReportObserver implements TraceObserver {
             if( !process )
                 continue
 
-            // get preview task config
-            final taskConfig = process.getPreviewConfig()
-
-            // get preview for each directive
-            def config = [:]
-
-            for( def directive : directives ) {
-                // try to resolve directive value
-                def value = null
-                try {
-                    value = taskConfig.get(directive)
-                }
-                catch( Exception e ) {
-                    log.warn1 "Unable to preview directive `${directive}` for process `${process.name}`: ${e}"
-                }
-
-                // convert custom types to string values
-                if( value instanceof Duration || value instanceof MemoryUnit )
-                    value = value.toString()
-
-                // add directive value if it was resolved
-                if( value != null )
-                    config[directive] = value
+            // get container preview
+            try {
+                containers[process.name] = process.getPreviewTask().getContainer()
             }
-
-            jsonData[process.name] = config
+            catch( Exception e ) {
+                log.warn1 "Unable to preview container for process `${process.name}`: ${e}"
+            }
         }
 
-        // write preview data to file
-        file.text = new JsonBuilder(jsonData).toString()
+        return containers
+    }
+
+    private void renderConfig(Map<String,String> containers) {
+        final result = new StringBuilder()
+        for( def entry : containers ) {
+            result.append("process { withName: '${entry.key}' { container = '${entry.value}' } }\n")
+        }
+
+        file.text = result.toString()
+    }
+
+    private void renderJson(Map<String,String> containers) {
+        file.text = new JsonBuilder(containers).toString()
     }
 
 }
