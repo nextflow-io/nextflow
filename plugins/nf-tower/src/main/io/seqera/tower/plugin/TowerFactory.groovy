@@ -39,12 +39,24 @@ class TowerFactory implements TraceObserverFactory {
     Collection<TraceObserver> create(Session session) {
         final config = session.config
         Boolean isEnabled = config.navigate('tower.enabled') as Boolean || env.get('TOWER_WORKFLOW_ID')
-        String endpoint = config.navigate('tower.endpoint') as String
-        Duration requestInterval = config.navigate('tower.requestInterval') as Duration
-        Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
 
         if( !isEnabled )
             return Collections.emptyList()
+
+        final result = new ArrayList(1)
+        // create the tower client
+        final tower = createTowerClient(session, config)
+        result.add(tower)
+        // create the logs checkpoint
+        if( env.containsKey('NXF_CLOUDCACHE_PATH') )
+            result.add( new LogsCheckpoint() )
+        return result
+    }
+
+    protected TowerClient createTowerClient(Session session, Map config) {
+        String endpoint = config.navigate('tower.endpoint') as String
+        Duration requestInterval = config.navigate('tower.requestInterval') as Duration
+        Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
 
         if ( !endpoint || endpoint=='-' )
             endpoint = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
@@ -64,13 +76,12 @@ class TowerFactory implements TraceObserverFactory {
         tower.workspaceId = env.get('TOWER_WORKFLOW_ID')
                 ? env.get('TOWER_WORKSPACE_ID')
                 : config.navigate('tower.workspaceId', env.get('TOWER_WORKSPACE_ID'))
-        final result = new ArrayList(1)
-        result.add(tower)
+
         // register auth provider
         // note: this is needed to authorize access to resources via XFileSystemProvider used by NF
         // it's not needed by the tower client logic
         XAuthRegistry.instance.register(provider(tower.endpoint, tower.accessToken))
-        return result
+        return tower
     }
 
     protected XAuthProvider provider(String endpoint, String accessToken) {
@@ -79,4 +90,5 @@ class TowerFactory implements TraceObserverFactory {
         final refreshToken = env.get('TOWER_REFRESH_TOKEN')
         return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
+
 }
