@@ -15,28 +15,18 @@ export NXF_UUID=$(uuidgen | tr [:upper:] [:lower:])
 #
 # run normal mode
 #
-$NXF_RUN -name test_1 | tee .stdout
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache-test \
+$NXF_RUN -name test_1 -plugins nf-cloudcache | tee .stdout
 [[ `grep -c 'Submitted process > foo' .nextflow.log` == 1 ]] || false
 
 #
-# backup cache
-#
-NXF_WORK=s3://nextflow-ci/cache-test  \
-  $NXF_CMD -log .nextflow-backup.log plugin nf-tower:cache-backup
-
-#
-# remove it
+# remove the local cache
 #
 rm -rf .nextflow
 
 #
-# restore cache
-#
-NXF_WORK=s3://nextflow-ci/cache-test  \
-  $NXF_CMD -log .nextflow-restore.log plugin nf-tower:cache-restore
-
-#
 # run resume mode
 #
-$NXF_RUN -name test_2 -resume $NXF_UUID | tee .stdout
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache-test \
+$NXF_RUN -name test_2 -plugins nf-cloudcache -resume $NXF_UUID | tee .stdout
 [[ `grep -c 'Cached process > foo' .nextflow.log` == 1 ]] || false
