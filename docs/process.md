@@ -2018,6 +2018,10 @@ process foo {
 Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through channels.
 :::
 
+:::{tip}
+To skip all publishDir directives for a process, set the `skipPublishDir` directive for the according process.
+:::
+
 Available options:
 
 `contentType`
@@ -2065,6 +2069,33 @@ Available options:
   :::
 : *Experimental: currently only supported for S3.*
 : Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
+
+(process-skippublishdir)=
+
+### skipPublishDir
+`contentType`
+: :::{versionadded} 23.08.0-edge
+:::
+The `publishDir` directives for one task can be spread over the workflow file and many config files. Each `publishDir` has to be disabled individually. To skip all publishDir directives at once for a process, set the `skipPublishDir` directive for the according process.
+
+```groovy
+process foo {
+    publishDir '/data/chunks1', mode: 'copy', overwrite: false
+    publishDir '/data/chunks2', mode: 'copy', overwrite: false
+    publishDir '/data/chunks3', mode: 'copy', overwrite: false
+    skipPublishDir true
+
+    output:
+    path 'chunk_*'
+
+    '''
+    printf 'Hola' | split -b 1 - chunk_
+    '''
+}
+```
+
+```groovy
+
 
 (process-queue)=
 

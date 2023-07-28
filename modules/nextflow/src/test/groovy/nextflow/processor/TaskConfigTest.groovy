@@ -490,6 +490,23 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def 'should skip publishDir object' () {
+
+        setup:
+        def script = Mock(BaseScript)
+        ProcessConfig process
+        List<PublishDir> publish
+
+        when:
+        process = new ProcessConfig(script)
+        process.publishDir '/data'
+        process.skipPublishDir = true
+        publish = process.createTaskConfig().getPublishDir()
+        then:
+        publish.isEmpty()
+
+    }
+
     def 'should create publishDir with local variables' () {
 
         given:
