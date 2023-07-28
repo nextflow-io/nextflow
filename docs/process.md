@@ -2073,9 +2073,10 @@ Available options:
 (process-skippublishdir)=
 
 ### skipPublishDir
-`contentType`
-: :::{versionadded} 23.08.0-edge
+
+:::{versionadded} 23.08.0-edge
 :::
+
 The `publishDir` directives for one task can be spread over the workflow file and many config files. Each `publishDir` has to be disabled individually. To skip all publishDir directives at once for a process, set the `skipPublishDir` directive for the according process.
 
 ```groovy
