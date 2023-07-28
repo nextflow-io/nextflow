@@ -2094,9 +2094,6 @@ process foo {
 }
 ```
 
-```groovy
-
-
 (process-queue)=
 
 ### queue
