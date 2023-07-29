@@ -108,15 +108,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
     protected workflow(Closure<BodyDef> workflowBody) {
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
-        if( !binding.entryName )
-            this.entryFlow = workflow
+        // capture the main (unnamed) workflow definition
+        this.entryFlow = workflow
+        // add it to the list of workflow definitions
         meta.addDefinition(workflow)
     }
 
     protected workflow(String name, Closure<BodyDef> workflowDef) {
         final workflow = new WorkflowDef(this,workflowDef,name)
-        if( binding.entryName==name )
-            this.entryFlow = workflow
         meta.addDefinition(workflow)
     }
 
@@ -147,9 +146,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return result
         }
 
-        if( binding.entryName && !entryFlow ) {
+        // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
+        if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"
-            final allNames = meta.getLocalWorkflowNames()
+            final allNames = meta.getWorkflowNames()
             final guess = allNames.closest(binding.entryName)
             if( guess )
                 msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')

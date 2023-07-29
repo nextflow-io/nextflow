@@ -21,30 +21,29 @@ import java.nio.file.Paths
 
 import nextflow.NextflowMeta
 import nextflow.Session
-import spock.lang.Specification
+import test.Dsl2Spec
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BaseScriptTest extends Specification {
+class BaseScriptTest extends Dsl2Spec {
 
 
     def 'should define implicit variables' () {
 
         given:
         def script = Files.createTempFile('test',null)
-
+        and:
         def WORKFLOW = Mock(WorkflowMetadata)
         def WORK_DIR = Paths.get('/work/dir')
         def PROJECT_DIR = Paths.get('/some/base')
-
         and:
         def session = Mock(Session) {
             getBaseDir() >> PROJECT_DIR
             getWorkDir() >> WORK_DIR
             getWorkflowMetadata() >> WORKFLOW
         }
-
         def binding = new ScriptBinding([:])
         def parser = new ScriptParser(session)
 
@@ -63,9 +62,8 @@ class BaseScriptTest extends Specification {
         parser.setBinding(binding)
         parser.runScript(script)
 
-
         then:
-        binding.result.baseDir ==PROJECT_DIR
+        binding.result.baseDir == PROJECT_DIR
         binding.result.projectDir == PROJECT_DIR
         binding.result.workDir == WORK_DIR
         binding.result.launchDir == Paths.get('.').toRealPath()
@@ -77,5 +75,70 @@ class BaseScriptTest extends Specification {
         script?.delete()
     }
 
+    def 'should use custom entry workflow' () {
+
+        given:
+        def script = Files.createTempFile('test',null)
+        and:
+        def session = Mock(Session)
+        def binding = new ScriptBinding([:])
+        def parser = new ScriptParser(session)
+
+        when:
+        script.text = '''
+                workflow foo {
+                }
+
+                workflow {
+                    error 'you were supposed to run foo!'
+                }
+                '''
+
+        parser.setBinding(binding)
+        parser.setEntryName('foo')
+        parser.runScript(script)
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        script?.delete()
+    }
+
+    def 'should use entry workflow from module' () {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def module = folder.resolve('module.nf')
+        def script = folder.resolve('main.nf')
+        and:
+        def session = Mock(Session)
+        def binding = new ScriptBinding([:])
+        def parser = new ScriptParser(session)
+
+        when:
+        module.text = '''
+                workflow foo {
+                }
+                '''
+
+        script.text = '''
+                include { foo } from './module.nf'
+
+                workflow {
+                    error 'you were supposed to run foo!'
+                }
+                '''
+
+        parser.setBinding(binding)
+        parser.setEntryName('foo')
+        parser.runScript(script)
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        folder?.delete()
+    }
 
 }
