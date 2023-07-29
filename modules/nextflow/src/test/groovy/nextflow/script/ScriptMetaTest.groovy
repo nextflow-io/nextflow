@@ -104,12 +104,15 @@ class ScriptMetaTest extends Dsl2Spec {
         meta1.getComponent('xxx') == null
         meta1.getComponent('func3') == null
         meta1.getComponent('proc3') == null
+        and:
         meta1.getComponent('work3') == work3
         meta1.getComponent('my_process') instanceof ProcessDef
         meta1.getComponent('my_process').name == 'my_process'
 
-//        then:
-//        meta1.getProcessNames() == ['proc1','proc2','my_process'] as Set
+        then:
+        meta1.getProcessNames() == ['proc1','proc2','my_process'] as Set
+        and:
+        meta1.getWorkflowNames() == ['work1', 'work2', 'work3'] as Set
     }
 
 
