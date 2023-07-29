@@ -44,7 +44,7 @@ class CacheCommand implements PluginAbstractExec {
 
     protected void cacheBackup() {
         log.debug "Running Nextflow cache backup"
-        new LogsHandler(System.getenv()).saveFiles()
+        new LogsHandler(getSession(), System.getenv()).saveFiles()
     }
 
     protected void cacheRestore() {

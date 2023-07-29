@@ -19,15 +19,16 @@ package io.seqera.tower.plugin
 
 import static java.nio.file.StandardCopyOption.*
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-
 /**
  * Backup Nextflow logs, timeline and reports files
  *
@@ -50,11 +51,12 @@ class LogsHandler {
     @PackageScope Path getRemoteTowerConfig() { remoteWorkDir.resolve(localTowerConfig.getName()) }
     @PackageScope Path getRemoteTowerReports() { remoteWorkDir.resolve(localTowerReports.getName()) }
 
-    LogsHandler(Map<String,String> env) {
-        final work = env.get('NXF_WORK') ?: env.get('NXF_TEST_WORK')
-        if( !work )
-            throw new AbortOperationException("Missing target work dir - logs files cannot be checkpointed")
-        this.remoteWorkDir = FileHelper.asPath(work)
+    LogsHandler(Session session, Map<String,String> env) {
+        if( !session.workDir )
+            throw new AbortOperationException("Missing workflow work directory")
+        if( session.workDir.fileSystem == FileSystems.default )
+            throw new AbortOperationException("Logs handler is only meant to be used with a remote workflow work directory")
+        this.remoteWorkDir = session.workDir
 
         if( env.NXF_OUT_FILE )
             localOutFile = Paths.get(env.NXF_OUT_FILE)

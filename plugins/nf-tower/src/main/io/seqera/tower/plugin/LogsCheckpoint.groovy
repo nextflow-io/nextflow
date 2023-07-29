@@ -44,7 +44,7 @@ class LogsCheckpoint implements TraceObserver {
     void onFlowCreate(Session session) {
         this.session = session
         this.config = session.config
-        this.handler = new LogsHandler(SysEnv.get())
+        this.handler = new LogsHandler(session, SysEnv.get())
         this.interval = config.navigate('tower.logs.checkpoint.interval', defaultInterval()) as Duration
     }
 

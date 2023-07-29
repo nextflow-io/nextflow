@@ -9,8 +9,11 @@ package io.seqera.tower.plugin
 
 import java.nio.file.Files
 
+import nextflow.Session
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -19,7 +22,7 @@ class LogsHandlerTest extends Specification {
 
     def 'should init empty files' () {
         when:
-        new LogsHandler([:])
+        new LogsHandler(Mock(Session), [:])
         then:
         thrown(AbortOperationException)
     }
@@ -27,7 +30,7 @@ class LogsHandlerTest extends Specification {
     def 'should upload cache files' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def remote = folder.resolve('remote'); remote.mkdir()
+        def remote = TestHelper.createInMemTempDir()
         def local = folder.resolve('local'); local.mkdir()
         def outFile = local.resolve('nf-out.txt'); outFile.text = 'out file'
         def logFile = local.resolve('nf-log.txt'); logFile.text = 'log file'
@@ -37,9 +40,9 @@ class LogsHandlerTest extends Specification {
         and:
         def uuid = UUID.randomUUID().toString()
         and:
+        def session = Mock(Session) {getWorkDir() >> remote }
         def ENV = [
                 NXF_UUID:uuid,
-                NXF_WORK: remote.toString(),
                 NXF_OUT_FILE: outFile.toString(),
                 NXF_LOG_FILE: logFile.toString(),
                 NXF_TML_FILE: tmlFile.toString(),
@@ -48,7 +51,7 @@ class LogsHandlerTest extends Specification {
         ]
 
         when:
-        def tower = new LogsHandler(ENV)
+        def tower = new LogsHandler(session, ENV)
         then:
         tower.localOutFile == outFile
         tower.localLogFile == logFile

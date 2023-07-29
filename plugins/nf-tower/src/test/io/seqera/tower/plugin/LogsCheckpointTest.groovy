@@ -21,6 +21,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.util.Duration
 import spock.lang.Specification
+import test.TestHelper
 
 /**
  *
@@ -30,8 +31,10 @@ class LogsCheckpointTest extends Specification {
 
     def 'should configure default delay' () {
         given:
-        SysEnv.push(NXF_WORK: '/some/path')
-        def session = Mock(Session) { getConfig()>>[:] }
+        def session = Mock(Session) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getConfig() >> [:]
+        }
         and:
         def checkpoint = new LogsCheckpoint()
 
@@ -39,15 +42,15 @@ class LogsCheckpointTest extends Specification {
         checkpoint.onFlowCreate(session)
         then:
         checkpoint.@interval == Duration.of('90s')
-
-        cleanup:
-        SysEnv.pop()
     }
 
     def 'should configure delay via env var' () {
         given:
-        SysEnv.push(NXF_WORK: '/some/path', TOWER_LOGS_CHECKPOINT_INTERVAL: '200s')
-        def session = Mock(Session) { getConfig()>>[:] }
+        SysEnv.push(TOWER_LOGS_CHECKPOINT_INTERVAL: '200s')
+        def session = Mock(Session) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getConfig() >> [:]
+        }
         and:
         def checkpoint = new LogsCheckpoint()
 
@@ -65,6 +68,7 @@ class LogsCheckpointTest extends Specification {
         SysEnv.push(NXF_WORK: '/some/path', TOWER_LOGS_CHECKPOINT_INTERVAL: '200s')
         def session = Mock(Session) {
             getConfig()>>[tower:[logs:[checkpoint:[interval: '500s']]]]
+            getWorkDir() >> TestHelper.createInMemTempDir()
         }
         and:
         def checkpoint = new LogsCheckpoint()
