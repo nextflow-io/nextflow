@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
+import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.TaskProcessor
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -983,6 +984,28 @@ class ParamsInTest extends Dsl2Spec {
         !in1.isNestedParam()
         (in1.inner[0] as ValueInParam).isNestedParam()
         (in1.inner[1] as FileInParam).isNestedParam()
+    }
+
+    def 'should throw error on missing comma' () {
+        setup:
+        def text = '''
+            process hola {
+              input:
+              tuple val(x) val(y)
+
+              /command/
+            }
+            
+            workflow {
+              hola(['x', 'y'])
+            }
+            '''
+        when:
+        parseAndReturnProcess(text)
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Invalid function call `val(y)` -- possible syntax error'
     }
 
 }
