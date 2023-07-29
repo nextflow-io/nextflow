@@ -327,16 +327,12 @@ class ScriptMeta {
 
     void addModule(ScriptMeta script, String name, String alias) {
         assert script
-        if( name ) {
-            // include a specific
-            def item = script.getComponent(name)
-            if( !item )
-                throw new MissingModuleComponentException(script, name)
-            addModule0(item, alias)
-        }
-        else for( def item : script.getDefinitions() ) {
-            addModule0(item)
-        }
+        assert name
+        // include a specific
+        def item = script.getComponent(name)
+        if( !item )
+            throw new MissingModuleComponentException(script, name)
+        addModule0(item, alias)
     }
 
     protected void addModule0(ComponentDef component, String alias=null) {
