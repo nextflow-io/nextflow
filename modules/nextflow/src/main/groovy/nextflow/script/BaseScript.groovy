@@ -146,7 +146,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return result
         }
 
-        // if an `entryName` was specified via the command line, override `entryFlow` to be executed
+        // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
         if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"
             final allNames = meta.getWorkflowNames()
