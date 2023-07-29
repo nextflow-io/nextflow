@@ -1001,10 +1001,11 @@ class ParamsInTest extends Dsl2Spec {
             }
             '''
         when:
-        def process = parseAndReturnProcess(text)
+        parseAndReturnProcess(text)
 
         then:
-        thrown(ScriptRuntimeException)
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Invalid function call `val(y)` -- possible syntax error'
     }
 
 }
