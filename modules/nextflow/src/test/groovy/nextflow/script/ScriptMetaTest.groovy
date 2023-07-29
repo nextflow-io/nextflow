@@ -83,7 +83,9 @@ class ScriptMetaTest extends Dsl2Spec {
         meta3.addDefinition(proc3, func3, work3)
 
         when:
-        meta1.addModule(meta2, null, null)
+        meta1.addModule(meta2, 'func2', null)
+        meta1.addModule(meta2, 'proc2', null)
+        meta1.addModule(meta2, 'work2', null)
         meta1.addModule(meta3, 'proc3', 'my_process')
         meta1.addModule(meta3, 'work3', null)
 
