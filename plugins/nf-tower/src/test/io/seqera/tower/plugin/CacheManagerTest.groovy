@@ -78,6 +78,7 @@ class CacheManagerTest extends Specification {
         tower.localCachePath.resolve('db/yyy').text = 'data yyy'
         and:
         tower.saveCacheFiles()
+        tower.saveMiscFiles()
         then:
         tower.remoteCachePath.resolve('index-foo').text == 'index foo'
         tower.remoteCachePath.resolve('db/xxx').text == 'data xxx'
@@ -99,6 +100,7 @@ class CacheManagerTest extends Specification {
         tower.localCachePath.resolve('db/delta').text = 'data delta'
         and:
         tower.saveCacheFiles()
+        tower.saveMiscFiles()
         then:
         tower.remoteCachePath.resolve('index-bar').text == 'index bar'
         tower.remoteCachePath.resolve('db/alpha').text == 'data alpha'
@@ -153,5 +155,27 @@ class CacheManagerTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should not backup/restore cache if cloudcache is enabled' () {
+        given:
+        def ENV = [
+                NXF_UUID: 'uuid',
+                NXF_WORK: '/work',
+                NXF_CLOUDCACHE_PATH: 's3://my-bucket/cache'
+        ]
+        and:
+        def tower = new CacheManager(ENV)
+
+        when:
+        tower.saveCacheFiles()
+        then:
+        0 * tower.getRemoteCachePath()
+
+        when:
+        tower.restoreCacheFiles()
+        then:
+        0 * tower.getRemoteCachePath()
+
     }
 }

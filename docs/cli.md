@@ -469,6 +469,8 @@ profiles {
 }
 ```
 
+(cli-console)=
+
 ### console
 
 Launch the Nextflow interactive console.
@@ -885,6 +887,26 @@ $ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
 
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
+
+(cli-plugin)=
+
+### plugin
+
+Manage plugins and run plugin-specific commands.
+
+```console
+$ nextflow plugin <subcommand> [options]
+```
+
+The `plugin` command provides several subcommands for managing and using plugins:
+
+`install <plugin[@version],..>`
+
+: Install a plugin. Multiple plugins can be specified as a comma-separated list. Each plugin id consists of a name and optional version separated by a `@`.
+
+`<plugin>:<subcommand> [options]`
+
+: Execute a plugin-specific command.
 
 ### pull
 

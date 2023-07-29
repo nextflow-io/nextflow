@@ -350,8 +350,7 @@ class AzBatchServiceTest extends Specification {
 
     }
 
-
-    def 'should cleanup jobs by default' () {
+    def 'should set jobs to automatically terminate by default' () {
         given:
         def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -359,12 +358,12 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupJobs() >> null
+        1 * svc.terminateJobs() >> null
     }
 
-    def 'should cleanup jobs no cleanup jobs' () {
+    def 'should not cleanup jobs by default' () {
         given:
-        def CONFIG = [batch:[deleteJobsOnCompletion: false]]
+        def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
@@ -373,7 +372,18 @@ class AzBatchServiceTest extends Specification {
         0 * svc.cleanupJobs() >> null
     }
 
-    def 'should cleanup not cleanup pools by default' () {
+    def 'should cleanup jobs if specified' () {
+        given:
+        def CONFIG = [batch:[deleteJobsOnCompletion: true]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        when:
+        svc.close()
+        then:
+        1 * svc.cleanupJobs() >> null
+    }
+
+    def 'should not cleanup pools by default' () {
         given:
         def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -395,7 +405,7 @@ class AzBatchServiceTest extends Specification {
         1 * svc.cleanupPools() >> null
     }
 
-    def 'should cleanup cleanup pools with allowPoolCreation' () {
+    def 'should cleanup pools with allowPoolCreation' () {
         given:
         def CONFIG = [batch:[allowPoolCreation: true, deletePoolsOnCompletion: true]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
