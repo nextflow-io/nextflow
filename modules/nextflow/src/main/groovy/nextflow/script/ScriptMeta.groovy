@@ -237,15 +237,18 @@ class ScriptMeta {
     }
 
     WorkflowDef getWorkflow(String name) {
-        (WorkflowDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof WorkflowDef ? result : null
     }
 
     ProcessDef getProcess(String name) {
-        (ProcessDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof ProcessDef ? result : null
     }
 
     FunctionDef getFunction(String name) {
-        (FunctionDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof FunctionDef ? result : null
     }
 
     Set<String> getAllNames() {
@@ -258,6 +261,21 @@ class ScriptMeta {
         // processes from imports
         for( def item: imports.values() ) {
             if( item.name )
+                result.add(item.name)
+        }
+        return result
+    }
+
+    Set<String> getWorkflowNames() {
+        final result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item instanceof WorkflowDef )
+                result.add(item.name)
+        }
+        // processes from imports
+        for( def item: imports.values() ) {
+            if( item instanceof WorkflowDef )
                 result.add(item.name)
         }
         return result
