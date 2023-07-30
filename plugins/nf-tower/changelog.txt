@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.5.15 - 22 Jul 2023
+- Bump Groovy 3.0.18 [207eb535]
+
 1.5.14 - 14 Jun 2023
 - Update workflow.revision max length to match the one in Tower (#4010) [1433a903]
 

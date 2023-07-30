@@ -21,7 +21,6 @@ import java.nio.file.Path
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
-import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -63,7 +62,7 @@ class XFileSystemProviderTest extends Specification {
     def "should read file attributes from map"() {
         given:
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729']]
+        def attrMap = ['last-modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'content-length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
@@ -85,7 +84,7 @@ class XFileSystemProviderTest extends Specification {
         def GERMAN = new Locale.Builder().setLanguage("de").setRegion("DE").build()
         Locale.setDefault(Locale.Category.FORMAT, GERMAN)
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729']]
+        def attrMap = ['last-modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'content-length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
@@ -106,7 +105,7 @@ class XFileSystemProviderTest extends Specification {
         when:
         def attrs = fsp.readHttpAttributes(path)
         then:
-        attrs.lastModifiedTime() == null
+        attrs.lastModifiedTime()
         attrs.size() > 0
     }
 
@@ -157,6 +156,7 @@ class XFileSystemProviderTest extends Specification {
     @Rule
     WireMockRule wireMockRule = new WireMockRule(18080)
 
+    @Unroll
     def 'should follow a redirect when read a http file '() {
         given:
         def wireMock = new WireMockGroovy(18080)
@@ -180,14 +180,14 @@ class XFileSystemProviderTest extends Specification {
             response {
                 status HTTP_CODE
                 headers {
-                    "Location" "http://localhost:18080/redirected.html"
+                    "Location" "http://localhost:18080/target.html"
                 }
             }
         }
         wireMock.stub {
             request {
                 method "GET"
-                url "/redirected.html"
+                url "/target.html"
             }
             response {
                 status 200
@@ -212,22 +212,36 @@ class XFileSystemProviderTest extends Specification {
         Files.size(path) == EXPECTED
 
         where:
-        HTTP_CODE | REDIRECT_TO        | EXPECTED
-        300       | "/redirected.html" | 10
-        300       | "/index2.html"     | 10
+        HTTP_CODE | REDIRECT_TO         | EXPECTED
+        301       | "/target.html"      | 10
+        301       | "/index2.html"      | 10
 
-        301       | "/redirected.html" | 10
-        301       | "/index2.html"     | 10
+        302       | "/target.html"      | 10
+        302       | "/index2.html"      | 10
 
-        302       | "/redirected.html" | 10
-        302       | "/index2.html"     | 10
+        307       | "/target.html"      | 10
+        307       | "/index2.html"      | 10
 
-        307       | "/redirected.html" | 10
-        307       | "/index2.html"     | 10
-
-        308       | "/redirected.html" | 10
-        308       | "/index2.html"     | 10
+        308       | "/target.html"      | 10
+        308       | "/index2.html"      | 10
         //infinite redirect to himself
-        308       | "/index.html"      | -1
+        308       | "/index.html"       | -1
+    }
+
+    def 'should normalize location' () {
+        given:
+        def provider = Spy(XFileSystemProvider)
+
+        expect:
+        provider.absLocation(LOCATION, new URL(TARGET)) == EXPECTED
+
+        where:
+        LOCATION                | TARGET                    | EXPECTED
+        'https://this/that'     | 'http://foo.com:123'      | 'https://this/that'
+        '/'                     | 'http://foo.com:123'      | 'http://foo.com:123/'
+        '/this/that'            | 'http://foo.com:123'      | 'http://foo.com:123/this/that'
+        '/this/that'            | 'http://foo.com:123/abc'  | 'http://foo.com:123/this/that'
+        'this/that'             | 'http://foo.com:123/abc'  | 'http://foo.com:123/this/that'
+
     }
 }

@@ -165,6 +165,7 @@ class BashWrapperBuilderTest extends Specification {
         builder.targetInputFile() == folder.resolve('.command.in')
         builder.targetScriptFile() == folder.resolve('.command.sh')
         builder.targetWrapperFile() == folder.resolve('.command.run')
+        builder.targetStageFile() == folder.resolve('.command.stage')
         and:
         Files.exists(folder.resolve('.command.sh'))
         Files.exists(folder.resolve('.command.run'))
@@ -1051,7 +1052,7 @@ class BashWrapperBuilderTest extends Specification {
         def binding = builder.makeBinding()
         then:
         builder.fixOwnership() >> true
-        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && chown -fR --from root $NXF_OWNER /work/dir/{*,.*} || true'
+        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && (shopt -s extglob; GLOBIGNORE=\'..\'; chown -fR --from root $NXF_OWNER /work/dir/{*,.*}) || true'
 
 
         when:

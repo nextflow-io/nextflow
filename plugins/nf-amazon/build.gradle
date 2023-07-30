@@ -47,6 +47,8 @@ dependencies {
     api ('com.amazonaws:aws-java-sdk-codecommit:1.12.429')
     api ('com.amazonaws:aws-java-sdk-sts:1.12.429')
     api ('com.amazonaws:aws-java-sdk-ses:1.12.429')
+    api ('software.amazon.awssdk:sso:2.20.89')
+    api ('software.amazon.awssdk:ssooidc:2.20.89')
 
     constraints {
         api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
