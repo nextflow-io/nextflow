@@ -100,6 +100,11 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     String getHeaderToken() { '#SBATCH' }
 
+    /** name of the submit command, overriden in TgccExecutor */
+    protected String getSubmidCmd() {
+    	return 'sbatch'
+    	}
+
     /**
      * The command line to submit this job
      *
@@ -110,8 +115,13 @@ class SlurmExecutor extends AbstractGridExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
         return pipeLauncherScript()
-                ? List.of('sbatch')
-                : List.of('sbatch', scriptFile.getName())
+                ? List.of(getSubmidCmd())
+                : List.of(getSubmidCmd(), scriptFile.getName())
+    }
+
+    /** overriden in TGCC */
+    protected Pattern  getSubmitRegex() {
+    	return SUBMIT_REGEX;
     }
 
     /**
@@ -124,7 +134,7 @@ class SlurmExecutor extends AbstractGridExecutor {
     def parseJobId(String text) {
 
         for( String line : text.readLines() ) {
-            def m = SUBMIT_REGEX.matcher(line)
+            def m = getSubmitRegex().matcher(line)
             if( m.find() ) {
                 return m.group(1).toString()
             }

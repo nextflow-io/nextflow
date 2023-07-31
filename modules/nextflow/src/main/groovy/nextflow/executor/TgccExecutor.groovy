@@ -58,15 +58,25 @@ class TgccExecutor extends SlurmExecutor /* TGCC wraps slurm */ {
 	 // the requested partition (a.k.a queue) name
         if( task.config.queue ) {
             result << '-q' << (task.config.queue.toString())
+        } else {
+	    result << '-q' << 'milan'
         }
 	
-        // the associated project
         if( task.config.project ) {
             result << '-A' << (task.config.project.toString())
+        } else {
+           throw new UnsupportedOperationException("[TGCC executor] Cannot create a directive without a defined 'project'");
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '-c' << task.config.cpus.toString()
+	//  Mounted filesystems
+        if( task.config.filesystems ) {
+            result << '-m' << (task.config.filesystems.toString())
+        } else {
+            result << '-m' << 'scratch,store,work,genostore'
+        }
+
+        if( task.config.getCpus() > 1 ) {
+            result << '-c' << task.config.getCpus().toString()
         }
 
         if( task.config.time ) {
@@ -87,20 +97,17 @@ class TgccExecutor extends SlurmExecutor /* TGCC wraps slurm */ {
         if( task.config.clusterOptions ) {
             result << task.config.clusterOptions.toString() << ''
         }
-	
+        
         return result
     }
 
     @Override
     String getHeaderToken() { '#MSUB' }
 
-    
     @Override
-    List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
- 	return pipeLauncherScript()
-                ? List.of('ccc_msub')
-                : List.of('ccc_msub', scriptFile.getName())
-    }
+    protected String getSubmidCmd() {
+    	return 'ccc_msub'
+    	}
     
     @Override
     protected Pattern  getSubmitRegex() {
@@ -160,7 +167,7 @@ class TgccExecutor extends SlurmExecutor /* TGCC wraps slurm */ {
    		}
    	else
    		{
-   		 log.error "[CNG Executor] invalid status identifier for Status: `$s` . Interpretted as ERROR. "
+   		 log.error "[TGCC Executor] invalid status identifier for Status: `$s` . Interpretted as ERROR. "
    		return QueueStatus.ERROR;
    		}
    	}
