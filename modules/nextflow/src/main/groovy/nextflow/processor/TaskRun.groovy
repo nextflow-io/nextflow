@@ -547,6 +547,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_EXIT = '.exitcode'
     static final public String CMD_START = '.command.begin'
     static final public String CMD_RUN = '.command.run'
+    static final public String CMD_STAGE = '.command.stage'
     static final public String CMD_TRACE = '.command.trace'
     static final public String CMD_ENV = '.command.env'
 
@@ -604,8 +605,10 @@ class TaskRun implements Cloneable {
         if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
             return null
 
+        final String arch = config.getArchitecture()?.spackArch
+
         final cache = new SpackCache(processor.session.getSpackConfig())
-        cache.getCachePathFor(config.spack as String)
+        cache.getCachePathFor(config.spack as String, arch)
     }
 
     protected ContainerInfo containerInfo() {
@@ -813,7 +816,7 @@ class TaskRun implements Cloneable {
         return engine.result
     }
 
-    protected placeholderChar() {
+    protected char placeholderChar() {
         (config.placeholder ?: '!') as char
     }
 

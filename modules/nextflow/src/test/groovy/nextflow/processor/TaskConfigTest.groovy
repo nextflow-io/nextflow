@@ -261,6 +261,7 @@ class TaskConfigTest extends Specification {
         then:
         config.disk == expected
         config.getDisk() == expected
+        config.getDiskResource()?.getRequest() == expected
 
         where:
         expected                || value

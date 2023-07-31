@@ -17,14 +17,10 @@
 
 package nextflow.executor.local
 
-import java.nio.file.FileSystems
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
-import nextflow.extension.FilesEx
 import nextflow.fusion.FusionHelper
 import nextflow.processor.LocalPollingMonitor
 import nextflow.processor.TaskHandler
@@ -55,17 +51,6 @@ class LocalExecutor extends Executor {
             return new NativeTaskHandler(task,this)
         else
             return new LocalTaskHandler(task,this)
-
-    }
-
-    @Override
-    protected void register() {
-        super.register()
-        final remoteFs = workDir.fileSystem!=FileSystems.default
-        if(  isFusionEnabled() && !remoteFs )
-            throw new ProcessUnrecoverableException("Fusion file system requires the use of a S3-compatible object storage — offending work directory path: ${FilesEx.toUriString(workDir)}")
-        if( remoteFs && !isFusionEnabled())
-            throw new ProcessUnrecoverableException("Local executor requires the use of POSIX compatible file system — offending work directory path: ${FilesEx.toUriString(workDir)}")
     }
 
     @Override

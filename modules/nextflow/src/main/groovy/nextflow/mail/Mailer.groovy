@@ -15,6 +15,7 @@
  */
 
 package nextflow.mail
+
 import javax.activation.DataHandler
 import javax.activation.URLDataSource
 import javax.mail.Message
@@ -34,7 +35,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.io.LogOutputStream
-import nextflow.util.Duration
+import nextflow.plugin.Plugins
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.parser.Parser
@@ -61,8 +62,6 @@ class Mailer {
 
     private final static Pattern HTML_PATTERN = Pattern.compile("("+TAG_START+".*"+TAG_END+")|("+TAG_SELF_CLOSING+")|("+HTML_ENTITY+")", Pattern.DOTALL )
 
-    private long SEND_MAIL_TIMEOUT = 15_000
-
     private static String DEF_CHARSET = Charset.defaultCharset().toString()
 
     /**
@@ -86,6 +85,8 @@ class Mailer {
         }
         return this
     }
+
+    Map getConfig() { config }
 
     protected String getSysMailer() {
         if( !fMailer )
@@ -200,7 +201,7 @@ class Mailer {
         getConfig('password')
     }
 
-    protected getConfig(String name ) {
+    protected getConfig(String name) {
         def key = "smtp.${name}"
         def value = config.navigate(key)
         if( !value ) {
@@ -208,58 +209,6 @@ class Mailer {
             value = env.get("NXF_${key.toUpperCase().replace('.','_')}".toString())
         }
         return value
-    }
-
-    /**
-     * Send a email message by using the Java API
-     *
-     * @param message A {@link MimeMessage} object representing the email to send
-     */
-    protected void sendViaJavaMail(MimeMessage message) {
-        if( !message.getAllRecipients() )
-            throw new IllegalArgumentException("Missing mail message recipient")
-        
-        final transport = getSession().getTransport()
-        transport.connect(host, port as int, user, password)
-        log.trace("Connected to host=$host port=$port")
-        try {
-            transport.sendMessage(message, message.getAllRecipients())
-        }
-        finally {
-            transport.close()
-        }
-    }
-
-    protected long getSendTimeout() {
-        def timeout = config.sendMailTimeout as Duration
-        return timeout ? timeout.toMillis() : SEND_MAIL_TIMEOUT
-    }
-
-    /**
-     * Send a email message by using system tool such as `sendmail` or `mail`
-     *
-     * @param message A {@link MimeMessage} object representing the email to send
-     */
-    protected void sendViaSysMail(MimeMessage message) {
-        final mailer = getSysMailer()
-        final cmd = [mailer, '-t']
-        final proc = new ProcessBuilder()
-                        .command(cmd)
-                        .redirectErrorStream(true)
-                        .start()
-        // pipe the message to the sendmail stdin
-        final stdout = new StringBuilder()
-        final stdin = proc.getOutputStream()
-        message.writeTo(stdin);
-        stdin.close()   // <-- don't forget otherwise it hangs
-        // wait for the sending to complete
-        final consumer = proc.consumeProcessOutputStream(stdout)
-        proc.waitForOrKill(sendTimeout)
-        def status = proc.exitValue()
-        if( status != 0 ) {
-            consumer.join()
-            throw new MessagingException("Unable to send mail message\n  $mailer exit status: $status\n  reported error: $stdout")
-        }
     }
 
     /**
@@ -407,41 +356,55 @@ class Mailer {
         guessHtml(str) ? 'text/html' : 'text/plain'
     }
 
+    protected boolean detectAwsEnv() {
+        if( env.get('AWS_REGION') ) return true
+        if( env.get('AWS_DEFAULT_REGION') ) return true
+        return false
+    }
+
+    protected MailProvider provider() {
+        // load all providers
+        final providers = Plugins.getExtensions(MailProvider)
+        // find the AWS provider
+        final awsProvider = providers.find(it -> it.name()=='aws-ses')
+        // check if it can use the aws provider
+        if( env.get('NXF_ENABLE_AWS_SES')=='true' ) {
+            if( awsProvider )
+                return awsProvider
+            else
+                log.warn "Unable to load AWS Simple Email Service (SES) client"
+        }
+
+        if( config.containsKey('smtp') ) {
+            return providers.find(it -> it.name()=='javamail')
+        }
+
+        if( awsProvider && detectAwsEnv() ) {
+            return awsProvider
+        }
+
+        // detect the mailer type
+        final type = getSysMailer()
+        return providers.find(it -> it.name()==type)
+    }
+
     /**
      * Send the mail given the provided config setting
      */
     void send(Mail mail) {
         log.trace "Mailer config: $config -- mail: $mail"
 
-        // if the user provided required configuration
-        // send via Java Mail API
-        if( config.containsKey('smtp') ) {
-            log.trace "Mailer send via `javamail`"
-            def msg = createMimeMessage(mail)
-            sendViaJavaMail(msg)
+        final p = provider()
+        if( p != null ) {
+            log.debug "Sending mail via `${p.name()}`"
+            final msg = p.textOnly()
+                    ? createTextMessage(mail)
+                    : createMimeMessage(mail)
+            p.send(msg, this)
             return
         }
 
-        final mailer = getSysMailer()
-        // otherwise fallback on system sendmail
-        if( mailer == 'sendmail' ) {
-            log.trace "Mailer send via `sendmail`"
-            def msg = createMimeMessage(mail)
-            sendViaSysMail(msg)
-            return
-        }
-
-        if( mailer == 'mail' ) {
-            log.trace "Mailer send via `mail`"
-            def msg = createTextMessage(mail)
-            sendViaSysMail(msg)
-            return
-        }
-
-        String msg = (mailer
-                ? "Unknown system mail tool: $mailer"
-                : "Cannot send email message -- Make sure you have installed `sendmail` or `mail` program or configure a mail SMTP server in the nextflow config file"
-        )
+        final msg = "Cannot send email message -- Make sure you have installed `sendmail` or `mail` program or configure a mail SMTP server in the nextflow config file"
         throw new IllegalArgumentException(msg)
     }
 

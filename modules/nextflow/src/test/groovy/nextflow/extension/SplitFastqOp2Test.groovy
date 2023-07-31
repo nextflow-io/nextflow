@@ -76,7 +76,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
 
         when:
         channel = dsl_eval("""
-            Channel.from([['sample_id', file("$file1"), file("$file2")]]).splitFastq(by:1, pe:true)
+            Channel.of(['sample_id', file("$file1"), file("$file2")]).splitFastq(by:1, pe:true)
         """)
 
         result = channel.val

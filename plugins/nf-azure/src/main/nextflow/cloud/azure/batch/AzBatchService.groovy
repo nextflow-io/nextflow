@@ -38,8 +38,10 @@ import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
+import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
+import com.microsoft.azure.batch.protocol.models.OnAllTasksComplete
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -51,6 +53,7 @@ import com.microsoft.azure.batch.protocol.models.PoolState
 import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.StartTask
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
+import com.microsoft.azure.batch.protocol.models.TaskConstraints
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
 import com.microsoft.azure.batch.protocol.models.TaskSchedulingPolicy
 import com.microsoft.azure.batch.protocol.models.UserIdentity
@@ -412,8 +415,13 @@ class AzBatchService implements Closeable {
         final String cmd = fusionEnabled
                 ? launcher.fusionSubmitCli(task).join(' ')
                 : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
-
+        // cpus and memory
         final slots = computeSlots(task, pool)
+        // max wall time
+        final constraints = new TaskConstraints()
+        if( task.config.getTime() )
+            constraints.withMaxWallClockTime( new Period(task.config.getTime().toMillis()) )
+
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
         return new TaskAddParameter()
@@ -424,6 +432,7 @@ class AzBatchService implements Closeable {
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
+                .withConstraints(constraints)
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
@@ -757,29 +766,50 @@ class AzBatchService implements Closeable {
             '''.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
+        final vars = poolCreationBindings(opts, Instant.now())
+        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
+        log.debug "Pool autoscale formula:\n$result"
+        return result
+    }
+
+    protected Map poolCreationBindings(AzPoolOpts opts, Instant time) {
         final vars = new HashMap<String, String>()
         vars.scaleInterval = opts.scaleInterval.minutes
         vars.vmCount = opts.vmCount
         vars.maxVmCount = opts.maxVmCount
-        vars.poolCreationTime = Instant.now().toString()
-        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
-        log.debug "Pool autoscale formula:\n$result"
-        return result
+        vars.poolCreationTime = time.truncatedTo(ChronoUnit.MICROS).toString()
+        return vars
     }
 
     void deleteTask(AzTaskKey key) {
         apply(() -> client.taskOperations().deleteTask(key.jobId, key.taskId))
     }
 
-    protected void cleanupJobs() {
-        for( Map.Entry<TaskProcessor,String> entry : allJobIds ) {
-            final proc = entry.key
-            final jobId = entry.value
-            if( proc.hasErrors() ) {
-                log.debug "Preserving Azure job with error: ${jobId}"
-                continue
-            }
+    /**
+     * Set all jobs to terminate on completion.
+     */
+    protected void terminateJobs() {
+        for( String jobId : allJobIds.values() ) {
+            try {
+                log.trace "Setting Azure job ${jobId} to terminate on completion"
 
+                CloudJob job = apply(() -> client.jobOperations().getJob(jobId))
+                final poolInfo = job.poolInfo()
+
+                JobUpdateParameter jobParameter = new JobUpdateParameter()
+                        .withOnAllTasksComplete(OnAllTasksComplete.TERMINATE_JOB)
+                        .withPoolInfo(poolInfo)
+
+                apply(() -> client.jobOperations().updateJob(jobId, jobParameter))
+            }
+            catch (Exception e) {
+                log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+            }
+        }
+    }
+
+    protected void cleanupJobs() {
+        for( String jobId : allJobIds.values() ) {
             try {
                 log.trace "Deleting Azure job ${jobId}"
                 apply(() -> client.jobOperations().deleteJob(jobId))
@@ -791,7 +821,7 @@ class AzBatchService implements Closeable {
     }
 
     protected void cleanupPools() {
-        for( String poolId : allPools.keySet()) {
+        for( String poolId : allPools.keySet() ) {
             try {
                 apply(() -> client.poolOperations().deletePool(poolId))
             }
@@ -812,12 +842,20 @@ class AzBatchService implements Closeable {
         }
         return identity
     }
+
     @Override
     void close() {
-        // cleanup app successful jobs
-        if( config.batch().deleteJobsOnCompletion!=Boolean.FALSE ) {
+        // terminate all jobs to prevent them from occupying quota
+        if( config.batch().terminateJobsOnCompletion ) {
+            terminateJobs()
+        }
+
+        // delete all jobs
+        if( config.batch().deleteJobsOnCompletion ) {
             cleanupJobs()
         }
+
+        // delete all autopools
         if( config.batch().canCreatePool() && config.batch().deletePoolsOnCompletion ) {
             cleanupPools()
         }
@@ -834,7 +872,7 @@ class AzBatchService implements Closeable {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}", event.lastFailure)
+                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
             }
         }
         return RetryPolicy.<T>builder()

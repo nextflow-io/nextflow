@@ -61,7 +61,7 @@ class FusionConfigTest extends Specification {
     @Unroll
     def 'should get export aws key' () {
         expect:
-        new FusionConfig(OPTS).exportAwsAccessKeys() == EXPECTED
+        new FusionConfig(OPTS).exportStorageCredentials() == EXPECTED
 
         where:
         OPTS                            | EXPECTED

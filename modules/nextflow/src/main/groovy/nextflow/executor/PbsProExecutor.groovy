@@ -16,7 +16,7 @@
 
 package nextflow.executor
 
-
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -31,6 +31,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class PbsProExecutor extends PbsExecutor {
 
     /**
@@ -61,10 +62,10 @@ class PbsProExecutor extends PbsExecutor {
         }
 
         def res = []
-        if( task.config.hasCpus() || task.config.memory ) {
+        if( task.config.hasCpus() || task.config.getMemory() ) {
             res << "ncpus=${task.config.getCpus()}".toString()
         }
-        if( task.config.memory ) {
+        if( task.config.getMemory() ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
@@ -78,7 +79,7 @@ class PbsProExecutor extends PbsExecutor {
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final duration = task.config.getTime()
             result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
         }
@@ -99,7 +100,7 @@ class PbsProExecutor extends PbsExecutor {
 
     // see https://www.pbsworks.com/pdfs/PBSRefGuide18.2.pdf
     // table 8.1
-    static private Map DECODE_STATUS = [
+    static private Map<String,QueueStatus> DECODE_STATUS = [
             'F': QueueStatus.DONE,      // job is finished
             'E': QueueStatus.RUNNING,   // job is exiting (therefore still running)
             'R': QueueStatus.RUNNING,   // job is running 

@@ -27,7 +27,6 @@ import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.TraceHelper
-import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -1000,7 +999,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.weblog instanceof Map
         config.weblog.enabled
-        config.weblog.url == WebLogObserver.DEF_URL
+        config.weblog.url == 'http://localhost'
 
     }
 

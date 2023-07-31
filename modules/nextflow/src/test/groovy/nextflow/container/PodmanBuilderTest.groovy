@@ -160,14 +160,14 @@ class PodmanBuilderTest extends Specification {
         then:
         podman.runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
         podman.removeCommand == 'podman rm c1'
-        podman.killCommand == 'podman kill c1'
+        podman.killCommand == 'podman stop c1'
 
         when:
         podman = new PodmanBuilder('busybox').setName('c3').params(remove: true).build()
         then:
         podman.runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
         podman.removeCommand == 'podman rm c3'
-        podman.killCommand == 'podman kill c3'
+        podman.killCommand == 'podman stop c3'
 
         when:
         podman = new PodmanBuilder('busybox').setName('c4').params(kill: 'SIGKILL').build()

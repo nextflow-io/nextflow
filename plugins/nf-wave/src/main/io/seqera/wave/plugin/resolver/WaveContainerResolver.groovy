@@ -60,9 +60,9 @@ class WaveContainerResolver implements ContainerResolver {
             return defaultResolver.resolveImage(task, imageName)
 
         if( !imageName ) {
-            // when no image name is provider the module bundle should include a
-            // Dockerfile or a Conda recipe to build an image on-fly with an
-            // automatically assigned name
+            // when no image name is provided the module bundle should include a
+            // Dockerfile or a Conda recipe or a Spack recipe to build
+            // an image on-fly with an automatically assigned name
             return waveContainer(task, null)
         }
 
@@ -97,7 +97,7 @@ class WaveContainerResolver implements ContainerResolver {
      *      An instance of {@link TaskRun} task representing the current task
      * @param container
      *      The container image name specified by the task. Can be {@code null} if the task
-     *      provides a Dockerfile or a Conda recipe
+     *      provides a Dockerfile or a Conda recipe or a Spack recipe
      * @return
      *      The container image name returned by the Wave backend or {@code null}
      *      when the task does not request any container or dockerfile to build

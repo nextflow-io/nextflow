@@ -46,6 +46,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     static final public List<String> DIRECTIVES = [
             'accelerator',
             'afterScript',
+            'arch',
             'beforeScript',
             'cache',
             'conda',
@@ -928,6 +929,63 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    /**
+     * Allow user to specify `disk` directive as a value with a list of options, eg:
+     *
+     *     disk 375.GB, type: 'local-ssd'
+     *
+     * @param opts
+     *      A map representing the disk options
+     * @param value
+     *      The default disk value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( Map opts, value )  {
+        opts.request = value
+        return disk(opts)
+    }
+
+    /**
+     * Allow user to specify `disk` directive as a value or a list of options, eg:
+     *
+     *     disk 100.GB
+     *     disk request: 375.GB, type: 'local-ssd'
+     *
+     * @param value
+     *      The default disk value or map of options
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( value ) {
+        if( value instanceof Map || value instanceof Closure )
+            configProperties.put('disk', value)
+        else
+            configProperties.put('disk', [request: value])
+        return this
+    }
+
+    ProcessConfig arch( Map params, value )  {
+        if( value instanceof String ) {
+            if( params.name==null )
+                params.name=value
+        }
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
+        arch(params)
+        return this
+    }
+
+    ProcessConfig arch( value ) {
+        if( value instanceof String )
+            configProperties.put('arch', [name: value])
+        else if( value instanceof Map )
+            configProperties.put('arch', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
         return this
     }
 

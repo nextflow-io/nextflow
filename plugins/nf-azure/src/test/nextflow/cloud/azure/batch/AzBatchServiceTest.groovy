@@ -1,5 +1,7 @@
 package nextflow.cloud.azure.batch
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.google.common.hash.HashCode
@@ -15,6 +17,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import org.joda.time.Period
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -234,6 +237,23 @@ class AzBatchServiceTest extends Specification {
         formula.contains '$TargetDedicatedNodes = lifespan < interval ? 3 : targetPoolSize;'
     }
 
+    def 'should  check formula vars' () {
+        given:
+        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def svc = new AzBatchService(exec)
+        and:
+        def opts = new AzPoolOpts(vmCount: 3, maxVmCount: 10, scaleInterval: Duration.of('5 min'))
+        def now = Instant.now()
+
+        when:
+        def vars = svc.poolCreationBindings(opts, now)
+        then:
+        vars == [scaleInterval: 5,
+                 maxVmCount: 10,
+                 vmCount: 3,
+                 poolCreationTime: now.truncatedTo(ChronoUnit.MICROS).toString() ]
+    }
+
     def 'should guess vm' () {
         given:
         def LOC = 'europe'
@@ -301,7 +321,7 @@ class AzBatchServiceTest extends Specification {
 
     }
 
-    def 'should create spec for autotask' () {
+    def 'should create spec for autopool' () {
         given:
         def LOC = 'europe'
         def CFG = new AzConfig([batch: [location: LOC]])
@@ -330,8 +350,7 @@ class AzBatchServiceTest extends Specification {
 
     }
 
-
-    def 'should cleanup jobs by default' () {
+    def 'should set jobs to automatically terminate by default' () {
         given:
         def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -339,12 +358,12 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupJobs() >> null
+        1 * svc.terminateJobs() >> null
     }
 
-    def 'should cleanup jobs no cleanup jobs' () {
+    def 'should not cleanup jobs by default' () {
         given:
-        def CONFIG = [batch:[deleteJobsOnCompletion: false]]
+        def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
@@ -353,7 +372,18 @@ class AzBatchServiceTest extends Specification {
         0 * svc.cleanupJobs() >> null
     }
 
-    def 'should cleanup not cleanup pools by default' () {
+    def 'should cleanup jobs if specified' () {
+        given:
+        def CONFIG = [batch:[deleteJobsOnCompletion: true]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        when:
+        svc.close()
+        then:
+        1 * svc.cleanupJobs() >> null
+    }
+
+    def 'should not cleanup pools by default' () {
         given:
         def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -375,7 +405,7 @@ class AzBatchServiceTest extends Specification {
         1 * svc.cleanupPools() >> null
     }
 
-    def 'should cleanup cleanup pools with allowPoolCreation' () {
+    def 'should cleanup pools with allowPoolCreation' () {
         given:
         def CONFIG = [batch:[allowPoolCreation: true, deletePoolsOnCompletion: true]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -496,7 +526,7 @@ class AzBatchServiceTest extends Specification {
         result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
     }
 
-    def 'should create task for submit with mounts' () {
+    def 'should create task for submit with extra options' () {
         given:
         def POOL_ID = 'my-pool'
         def SAS = '123'
@@ -507,7 +537,10 @@ class AzBatchServiceTest extends Specification {
         def TASK = Mock(TaskRun) {
             getHash() >> HashCode.fromInt(2)
             getContainer() >> 'ubuntu:latest'
-            getConfig() >> Mock(TaskConfig) {getContainerOptions() >> '-v /foo:/foo' }
+            getConfig() >> Mock(TaskConfig) {
+                getContainerOptions() >> '-v /foo:/foo'
+                getTime() >> Duration.of('24 h')
+            }
         }
         and:
         def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
@@ -527,6 +560,8 @@ class AzBatchServiceTest extends Specification {
         and:
         result.containerSettings().imageName() == 'ubuntu:latest'
         result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
+        and:
+        result.constraints().maxWallClockTime() == new Period( TASK.config.time.toMillis() )
     }
 
     def 'should create task for submit with fusion' () {

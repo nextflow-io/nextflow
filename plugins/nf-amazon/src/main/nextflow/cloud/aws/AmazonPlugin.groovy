@@ -15,7 +15,7 @@
  */
 package nextflow.cloud.aws
 
-import com.upplication.s3fs.S3FileSystemProvider
+import nextflow.cloud.aws.nio.S3FileSystemProvider
 import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin

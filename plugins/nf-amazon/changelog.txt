@@ -1,5 +1,31 @@
 nf-amazon changelog
 ===================
+2.1.0 - 22 Jul 2023
+- Add support for AWS SSO credentials provider (#4045) [53e33cde]
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Ignore accelerator type for AWS Batch (#4043) [263ecca8]
+- Bump Groovy 3.0.18 [207eb535]
+
+2.0.1 - 14 Jun 2023
+- Add support for AWS SES as mail sending provider [df85d443]
+- Fix access to public S3 bucket when no creds are provided (#3992) [cf8ba466]
+- Fix S3 path normalization [b75ec444]
+
+2.0.0 - 15 May 2023
+- Add fusion.exportStorageCredentials option [ci fast] [acb6aedf]
+- Fix AWS SSE env propagation to Fusion [e24608c3]
+- Fix string comparison in S3 client (#3875) [ci fast] [9344d294]
+- Preview support for virtual threads (#3871) [5c429046]
+- Refactor the AWS configuration  (#3498) [a74e42d9]
+- Rename AmazonS3Client to S3Client [cc59596a]
+- Rename com.upplication.s3fs package to nextflow.cloud.aws.nio [a2f3bb24]
+- Security fixes [973b7bea]
+- Update logging libraries [d7eae86e]
+- Bump groovy 3.0.17 [cfe4ba56]
+
+1.16.2 - 15 Apr 2023
+- Update plugin deps [83e8fd6a]
+
 1.16.1 - 1 Apr 2023
 - Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
 

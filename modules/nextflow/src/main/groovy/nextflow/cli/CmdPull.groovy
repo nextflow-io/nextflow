@@ -43,7 +43,8 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
-
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
 
     @Override
     final String getName() { NAME }
@@ -75,7 +76,7 @@ class CmdPull extends CmdBase implements HubOptions {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision)
+            def result = manager.download(revision,deep)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

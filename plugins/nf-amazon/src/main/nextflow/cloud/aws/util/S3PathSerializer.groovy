@@ -21,7 +21,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.nio.S3Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.util.SerializerRegistrant

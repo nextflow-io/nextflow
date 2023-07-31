@@ -184,6 +184,9 @@ class ScriptParser {
             msg = msg != 'startup failed' ? msg : header
             msg = msg.replaceAll(/startup failed:\n/,'')
             msg = msg.replaceAll(~/$clazzName(: \d+:\b*)?/, header+'\n- cause:')
+            if( msg.contains "Unexpected input: '{'" ) {
+                msg += "\nNOTE: If this is the beginning of a process or workflow, there may be a syntax error in the body, such as a missing or extra comma, for which a more specific error message could not be produced."
+            }
             throw new ScriptCompilationException(msg, e)
         }
     }
@@ -196,13 +199,8 @@ class ScriptParser {
 
     ScriptParser parse(Path scriptPath) {
         this.scriptPath = scriptPath
-        parse(scriptPath.text)
-    }
-
-    ScriptParser runScript(Path scriptPath) {
-        this.scriptPath = scriptPath
         try {
-            runScript(scriptPath.text)
+            parse(scriptPath.text)
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
@@ -212,6 +210,12 @@ class ScriptParser {
 
     ScriptParser runScript(String scriptText) {
         parse(scriptText)
+        runScript()
+        return this
+    }
+
+    ScriptParser runScript(Path scriptPath) {
+        parse(scriptPath)
         runScript()
         return this
     }

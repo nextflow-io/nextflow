@@ -22,6 +22,7 @@ import java.util.regex.Pattern
 
 import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
+
 /**
  * String helper routines
  *
@@ -33,6 +34,10 @@ class StringUtils {
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z0-9]*):\\/\\/(.+)/
     static final private Pattern URL_PASSWORD = ~/^[a-zA-Z][a-zA-Z0-9]*:\\/\\/(.+)@.+/
 
+    /**
+     * Deprecated. Use {@link nextflow.file.FileHelper#getUrlProtocol(java.lang.String)} instead
+     */
+    @Deprecated
     static String getUrlProtocol(String str) {
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
@@ -40,6 +45,10 @@ class StringUtils {
 
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
+    /**
+     * Deprecated. Use {@link nextflow.file.FileHelper#baseUrl(java.lang.String)} instead
+     */
+    @Deprecated
     static String baseUrl(String url) {
         if( !url )
             return null

@@ -572,7 +572,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    String download(String revision=null) {
+    String download(String revision=null, Integer deep=null) {
         assert project
 
         /*
@@ -595,7 +595,9 @@ class AssetManager {
                 .setURI(cloneURL)
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
-                .call()
+            if( deep )
+                clone.setDepth(deep)
+            clone.call()
 
             if( revision ) {
                 // use an explicit checkout command *after* the clone instead of cloning a specific branch
@@ -663,7 +665,7 @@ class AssetManager {
      * @param directory The folder when the pipeline will be cloned
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null) {
+    void clone(File directory, String revision = null, Integer deep=null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
@@ -674,13 +676,15 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        clone.setDepth(1)
         clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider( provider.getGitCredentials() )
 
         if( revision )
             clone.setBranch(revision)
-
+        if( deep )
+            clone.setDepth(deep)
         clone.call()
     }
 

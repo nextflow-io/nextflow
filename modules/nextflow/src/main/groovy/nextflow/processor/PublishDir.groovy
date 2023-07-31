@@ -122,17 +122,11 @@ class PublishDir {
     @Lazy
     private ExecutorService threadPool = { def sess = Global.session as Session; sess.publishDirExecutorService() }()
 
-    void setPath( Closure obj ) {
-        setPath( obj.call() as Path )
-    }
-
-    void setPath( String str ) {
-        nullPathWarn = checkNull(str)
-        setPath(str as Path)
-    }
-
-    void setPath( Path obj ) {
-        this.path = obj.complete()
+    void setPath( def value ) {
+        final resolved = value instanceof Closure ? value.call() : value
+        if( resolved instanceof String || resolved instanceof GString )
+            nullPathWarn = checkNull(resolved.toString())
+        this.path = FileHelper.toCanonicalPath(resolved)
     }
 
     void setMode( String str ) {

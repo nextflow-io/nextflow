@@ -105,6 +105,10 @@ public class CustomThreadPool extends DefaultPool {
         );
     }
 
+    static Pool virtualPool() {
+        return new VirtualThreadPool( newDaemonThreadFactory() );
+    }
+
     /**
      * Creates the pool with specified executor.
      */

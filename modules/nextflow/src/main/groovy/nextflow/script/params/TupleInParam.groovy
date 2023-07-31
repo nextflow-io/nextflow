@@ -37,6 +37,8 @@ class TupleInParam extends BaseInParam {
 
     @Override String getTypeName() { 'set' }
 
+    List<BaseInParam> getInner() { inner }
+
     @Override
     TupleInParam clone() {
         final copy = (TupleInParam)super.clone()

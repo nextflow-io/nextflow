@@ -59,9 +59,9 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
@@ -81,6 +81,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -146,7 +147,7 @@ class TaskProcessor {
     /**
      * Unique task index number (run)
      */
-    final protected indexCount = new AtomicInteger()
+    final protected AtomicInteger indexCount = new AtomicInteger()
 
     /**
      * The current workflow execution session
@@ -644,7 +645,7 @@ class TaskProcessor {
      * @return A string 'she-bang' formatted to the added on top script to be executed.
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
-    static shebangLine(shell) {
+    static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
 
         String result = shell instanceof List ? shell.join(' ') : shell
@@ -672,7 +673,7 @@ class TaskProcessor {
         result << '\n'
 
         if( result[0] != '#' || result[1] != '!') {
-            result.insert(0, shebangLine(shell) +'\n')
+            result.insert(0, shebangLine(shell) + '\n')
         }
 
         return result.toString()
@@ -985,7 +986,7 @@ class TaskProcessor {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
-        final message = []
+        final List<String> message = []
         try {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
@@ -1367,6 +1368,7 @@ class TaskProcessor {
 
             case EnvOutParam:
             case ValueOutParam:
+            case DefaultOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add(value)
                 break
@@ -1472,6 +1474,10 @@ class TaskProcessor {
 
                 case EnvOutParam:
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
+                    break
+
+                case DefaultOutParam:
+                    task.setOutput(param, DefaultOutParam.Completion.DONE)
                     break
 
                 default:
@@ -1612,7 +1618,7 @@ class TaskProcessor {
         assert namePattern
         assert workDir
 
-        List files = []
+        List<Path> files = []
         def opts = visitOptions(param, namePattern)
         // scan to find the file with that name
         try {
@@ -2100,8 +2106,14 @@ class TaskProcessor {
         }
 
         final spack = task.getSpackEnv()
+        final arch = task.getConfig().getArchitecture()
+
         if( spack ) {
             keys.add(spack)
+
+            if( arch ) {
+                keys.add(arch)
+            }
         }
 
         if( session.stubRun ) {
@@ -2136,7 +2148,7 @@ class TaskProcessor {
      */
     @Memoized
     protected List<Path> getTaskBinEntries(String script) {
-        def result = []
+        List<Path> result = []
         def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
             def token = tokenizer.nextToken()
@@ -2144,7 +2156,7 @@ class TaskProcessor {
             if( path )
                 result.add(path)
         }
-        return result;
+        return result
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
@@ -2361,7 +2373,7 @@ class TaskProcessor {
                 control.bind(Boolean.TRUE)
             }
 
-            return message;
+            return message
         }
     }
 

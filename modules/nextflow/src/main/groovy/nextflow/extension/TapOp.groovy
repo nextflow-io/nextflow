@@ -85,6 +85,7 @@ class TapOp {
      * @param source An instance of {@link DataflowReadChannel} used to feed the operator
      * @param target An instance of {@link DataflowWriteChannel} that will receive the items emitted by the source
      */
+    @Deprecated
     TapOp( DataflowReadChannel source, DataflowWriteChannel target ) {
         assert source != null
         assert target != null

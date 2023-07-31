@@ -357,7 +357,7 @@ class SessionTest extends Specification {
         def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == CONFIG as ContainerConfig
+        session.containerConfig == new ContainerConfig(CONFIG + [engine:ENGINE])
         session.containerConfig.enabled
         session.containerConfig.engine == ENGINE
 

@@ -33,7 +33,7 @@ import com.amazonaws.services.logs.model.OutputLogEvent
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.AmazonClientFactory
+import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 /**
@@ -45,10 +45,10 @@ import nextflow.cloud.types.PriceModel
 @CompileStatic
 class AwsBatchHelper {
 
-    private AmazonClientFactory factory
+    private AwsClientFactory factory
     private AWSBatch batchClient
 
-    AwsBatchHelper(AWSBatch batchClient, AmazonClientFactory factory) {
+    AwsBatchHelper(AWSBatch batchClient, AwsClientFactory factory) {
         this.batchClient = batchClient
         this.factory = factory
     }
