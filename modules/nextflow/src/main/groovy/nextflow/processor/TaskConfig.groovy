@@ -235,14 +235,15 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
-    Map getResourceLimits() {
-        return get('resourceLimits') as Map
+    def getResourceLimit(String directive) {
+        final limits = get('resourceLimits') as Map
+        return limits?.get(directive)
     }
 
     MemoryUnit getMemory() {
         try {
             def value = MemoryUnit.of(get('memory'))
-            def limit = MemoryUnit.of(getResourceLimits()?.get('memory'))
+            def limit = MemoryUnit.of(getResourceLimit('memory'))
 
             if ( value && limit && value > limit )
                 value = limit
@@ -256,12 +257,14 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     DiskResource getDiskResource() {
         try {
-            def disk = get('disk') as Map
-            if( !disk )
+            def disk0 = get('disk')
+            if( !disk0 )
                 return null
 
+            def disk = (disk0 instanceof Map) ? disk0 : [request: disk0]
+
             def value = MemoryUnit.of(disk.request)
-            def limit = MemoryUnit.of(getResourceLimits()?.get('disk'))
+            def limit = MemoryUnit.of(getResourceLimit('disk'))
             if ( value && limit && value > limit )
                 value = limit
 
@@ -279,7 +282,7 @@ class TaskConfig extends LazyMap implements Cloneable {
     Duration getTime() {
         try {
             def value = Duration.of(get('time'))
-            def limit = Duration.of(getResourceLimits()?.get('time'))
+            def limit = Duration.of(getResourceLimit('time'))
 
             if ( value && limit && value > limit )
                 value = limit
@@ -297,7 +300,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     int getCpus() {
         def value = get('cpus') as Integer
-        def limit = getResourceLimits()?.get('cpus') as Integer
+        def limit = getResourceLimit('cpus') as Integer
 
         if ( value && limit && value > limit )
             value = limit

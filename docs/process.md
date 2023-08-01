@@ -2146,6 +2146,18 @@ process my_task {
 }
 ```
 
+Or in the Nextflow configuration:
+
+```groovy
+process {
+    resourceLimits = [
+        cpus: 24,
+        memory: 768.GB,
+        time: 72.h
+    ]
+}
+```
+
 Resource limits can be defined for the following directives:
 
 - [cpus](#cpus)
