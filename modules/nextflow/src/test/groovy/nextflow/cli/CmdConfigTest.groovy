@@ -166,6 +166,32 @@ class CmdConfigTest extends Specification {
 
     }
 
+    def 'should print the value of a config property' () {
+
+        given:
+        def cmd = new CmdConfig()
+        and:
+        def config = new ConfigObject()
+        config.process.executor = 'slurm'
+        config.process.queue = 'long'
+        config.docker.enabled = true
+        and:
+        def buffer
+
+        when:
+        buffer = new ByteArrayOutputStream()
+        cmd.printProperty(config, 'process.executor', buffer)
+        then:
+        buffer.toString() == 'slurm'
+
+        when:
+        buffer = new ByteArrayOutputStream()
+        cmd.printProperty(config, 'does.not.exist', buffer)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Property 'does.not.exist' not found"
+
+    }
 
     def 'should parse config file' () {
         given:
