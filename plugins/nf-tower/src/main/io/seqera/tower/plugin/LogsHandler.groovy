@@ -19,28 +19,25 @@ package io.seqera.tower.plugin
 
 import static java.nio.file.StandardCopyOption.*
 
-import java.nio.file.Files
-import java.nio.file.NoSuchFileException
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 /**
- * Back and restore Nextflow cache
+ * Backup Nextflow logs, timeline and reports files
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class CacheManager {
+class LogsHandler {
 
-    @PackageScope String sessionUuid
-    @PackageScope Path localCachePath
     @PackageScope Path localOutFile
     @PackageScope Path localLogFile
     @PackageScope Path localTimelineFile
@@ -48,27 +45,18 @@ class CacheManager {
     @PackageScope Path localTowerReports
     @PackageScope Path remoteWorkDir
 
-    @PackageScope Path getRemoteCachePath() { remoteWorkDir.resolve(".nextflow/cache/${sessionUuid}") }
     @PackageScope Path getRemoteOutFile() { remoteWorkDir.resolve(localOutFile.getName()) }
     @PackageScope Path getRemoteLogFile() { remoteWorkDir.resolve(localLogFile.getName()) }
     @PackageScope Path getRemoteTimelineFile() { remoteWorkDir.resolve(localTimelineFile.getName()) }
     @PackageScope Path getRemoteTowerConfig() { remoteWorkDir.resolve(localTowerConfig.getName()) }
     @PackageScope Path getRemoteTowerReports() { remoteWorkDir.resolve(localTowerReports.getName()) }
 
-    CacheManager(Map<String,String> env) {
-        final work = env.get('NXF_WORK') ?: env.get('NXF_TEST_WORK')
-        if( !work )
-            throw new AbortOperationException("Missing target work dir - cache sync cannot be performed")
-        this.remoteWorkDir = FileHelper.asPath(work)
-
-        this.sessionUuid = env.get('NXF_UUID')
-        if( !sessionUuid )
-            throw new AbortOperationException("Missing target uuid - cache sync cannot be performed")
-
-        // ignore the `localCachePath` when the `NXF_CLOUDCACHE_PATH` variable is set because
-        // the nextflow cache metadata is going to be managed (and stored) via the nf-cloudcache plugin
-        if( !env.containsKey('NXF_CLOUDCACHE_PATH') )
-            this.localCachePath = Paths.get(".nextflow/cache/${sessionUuid}")
+    LogsHandler(Session session, Map<String,String> env) {
+        if( !session.workDir )
+            throw new AbortOperationException("Missing workflow work directory")
+        if( session.workDir.fileSystem == FileSystems.default )
+            throw new AbortOperationException("Logs handler is only meant to be used with a remote workflow work directory")
+        this.remoteWorkDir = session.workDir
 
         if( env.NXF_OUT_FILE )
             localOutFile = Paths.get(env.NXF_OUT_FILE)
@@ -82,48 +70,8 @@ class CacheManager {
             localTowerReports = Paths.get(env.TOWER_REPORTS_FILE)
     }
 
-    protected void restoreCacheFiles() {
-        if( !remoteWorkDir || !sessionUuid || !localCachePath )
-            return
-
-        if(!Files.exists(remoteCachePath)) {
-            log.debug "Remote cache path does not exist: $remoteCachePath - skipping cache restore"
-            return
-        }
-
-        try {
-            log.info "Restoring cache: ${remoteCachePath.toUriString()} => ${localCachePath.toUriString()}"
-            localCachePath.deleteDir()
-            localCachePath.parent.mkdirs()
-            FileHelper.copyPath(remoteCachePath, localCachePath, REPLACE_EXISTING)
-        }
-        catch (NoSuchFileException e) {
-            log.info "Remote cache restore ignored — reason: ${e.message ?: e}"
-        }
-    }
-
-    protected void saveCacheFiles() {
-        if( !remoteWorkDir || !sessionUuid || !localCachePath )
-            return
-
-        if( !Files.exists(localCachePath) ) {
-            log.debug "Local cache path does not exist: $localCachePath — skipping cache backup"
-            return
-        }
-
-        // upload nextflow cache metadata
-        try {
-            log.info "Saving cache: ${localCachePath.toUriString()} => ${remoteCachePath.toUriString()}"
-            remoteCachePath.deleteDir()
-            remoteCachePath.parent.mkdirs()
-            FilesEx.copyTo(localCachePath, remoteCachePath)
-        }
-        catch (Throwable e) {
-            log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} — cause: ${e}", e
-        }
-    }
-
-    protected void saveMiscFiles() {
+    void saveFiles() {
+        log.trace "Checkpointing logs, timeline and report files"
         // — upload out file
         try {
             if( localOutFile?.exists() )

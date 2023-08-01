@@ -319,7 +319,7 @@ class BashWrapperBuilder {
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
 
         // patch root ownership problem on files created with docker
-        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true" : null
+        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
