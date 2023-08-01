@@ -50,6 +50,9 @@ class CmdConfig extends CmdBase {
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
     String profile
 
+    @Parameter(names = '-property', description = 'Prints a config property using Java properties notation')
+    String printProperty = null
+
     @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
     boolean printProperties
 
@@ -58,7 +61,6 @@ class CmdConfig extends CmdBase {
 
     @Parameter(names = '-sort', description = 'Sort config attributes')
     boolean sort
-
 
     @Override
     String getName() { NAME }
@@ -76,8 +78,13 @@ class CmdConfig extends CmdBase {
             throw new AbortOperationException("Option `-profile` conflicts with option `-show-profiles`")
         }
 
-        if( printProperties && printFlatten )
+        if( printProperties && printFlatten ) {
             throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
+        }
+
+        if ( printProperty && (printProperties || printFlatten) ) {
+            throw new AbortOperationException("Option `-property` conflicts with `-flat` and `-properties` options")
+        }
 
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
@@ -93,6 +100,9 @@ class CmdConfig extends CmdBase {
         }
         else if( printFlatten ) {
             printFlatten0(config, stdout)
+        }
+        else if( printProperty ) {
+            printProperty(config, printProperty, stdout)
         }
         else {
             printCanonical0(config, stdout)
@@ -121,6 +131,20 @@ class CmdConfig extends CmdBase {
      */
     @PackageScope void printProperties0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toPropertiesString(config, sort)
+    }
+
+    /**
+     * Prints a property of a {@link ConfigObject} using Java {@link Properties} format
+     *
+     * @param config The {@link ConfigObject} representing the parsed workflow configuration
+     * @param name The {@link String} representing the property name using dot notation
+     * @param output The stream where output the formatted configuration notation
+     */
+    @PackageScope void printProperty(ConfigObject config, String name, OutputStream output) {
+        if (!config.flatten().containsKey(printProperty)) {
+            throw new AbortOperationException("Property '$name' not found")
+        }
+        output << config.navigate(name).toString()
     }
 
     /**
