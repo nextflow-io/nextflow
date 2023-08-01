@@ -141,7 +141,7 @@ class CmdConfig extends CmdBase {
      * @param output The stream where output the formatted configuration notation
      */
     @PackageScope void printProperty(ConfigObject config, String name, OutputStream output) {
-        if (!config.flatten().containsKey(printProperty)) {
+        if (!config.flatten().containsKey(name)) {
             throw new AbortOperationException("Property '$name' not found")
         }
         output << config.navigate(name).toString()
