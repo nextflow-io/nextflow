@@ -51,7 +51,7 @@ class CmdConfig extends CmdBase {
     String profile
 
     @Parameter(names = '-property', description = 'Prints a config property using Java properties notation')
-    String printProperty = null
+    String printProperty
 
     @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
     boolean printProperties
