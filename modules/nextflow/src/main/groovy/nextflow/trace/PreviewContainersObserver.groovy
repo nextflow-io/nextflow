@@ -44,7 +44,7 @@ class PreviewContainersObserver implements TraceObserver {
 
     private String format
 
-    PreviewContainersObserver(Path file ) {
+    PreviewContainersObserver(Path file) {
         this.file = file
         this.format = file.getExtension().toLowerCase() ?: 'json'
 
@@ -103,7 +103,8 @@ class PreviewContainersObserver implements TraceObserver {
     }
 
     private void renderJson(Map<String,String> containers) {
-        file.text = JsonOutput.prettyPrint(new JsonBuilder(containers).toString())
+        final list = containers.collect( (k, v) -> [name: k, container: v] )
+        file.text = JsonOutput.prettyPrint(new JsonBuilder(list).toString())
     }
 
 }
