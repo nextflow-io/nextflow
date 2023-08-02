@@ -110,9 +110,9 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        final fileName = config.navigate('preview.file', PreviewReportObserver.DEF_FILE_NAME)
+        final fileName = config.navigate('preview.file', PreviewContainersObserver.DEF_FILE_NAME)
         final previewReport = (fileName as Path).complete()
-        result << new PreviewReportObserver(previewReport)
+        result << new PreviewContainersObserver(previewReport)
     }
 
 }

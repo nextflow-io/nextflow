@@ -19,6 +19,7 @@ package nextflow.trace
 import java.nio.file.Path
 
 import groovy.json.JsonBuilder
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -31,7 +32,7 @@ import nextflow.dag.DAG
  */
 @Slf4j
 @CompileStatic
-class PreviewReportObserver implements TraceObserver {
+class PreviewContainersObserver implements TraceObserver {
 
     static final String DEF_FILE_NAME = "preview-${TraceHelper.launchTimestampFmt()}.json"
 
@@ -41,7 +42,7 @@ class PreviewReportObserver implements TraceObserver {
 
     private String format
 
-    PreviewReportObserver( Path file ) {
+    PreviewContainersObserver(Path file ) {
         this.file = file
         this.format = file.getExtension().toLowerCase() ?: 'json'
 
@@ -100,7 +101,7 @@ class PreviewReportObserver implements TraceObserver {
     }
 
     private void renderJson(Map<String,String> containers) {
-        file.text = new JsonBuilder(containers).toString()
+        file.text = JsonOutput.prettyPrint(new JsonBuilder(containers).toString())
     }
 
 }

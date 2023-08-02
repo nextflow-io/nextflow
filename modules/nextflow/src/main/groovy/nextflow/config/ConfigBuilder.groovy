@@ -36,7 +36,7 @@ import nextflow.secret.SecretHolder
 import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
-import nextflow.trace.PreviewReportObserver
+import nextflow.trace.PreviewContainersObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
@@ -719,7 +719,7 @@ class ConfigBuilder {
             if( cmdRun.previewContainers != '-' )
                 config.preview.file = cmdRun.previewContainers
             else if( !config.preview.file )
-                config.preview.file = PreviewReportObserver.DEF_FILE_NAME
+                config.preview.file = PreviewContainersObserver.DEF_FILE_NAME
         }
 
         // -- nextflow setting
