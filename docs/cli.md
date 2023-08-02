@@ -450,6 +450,13 @@ docker.enabled = true
 process.executor = local
 ```
 
+Print out a single config property.
+
+```console
+$ nextflow config -property process.executor
+local
+```
+
 Print out all profiles from the project's configuration.
 
 ```console
