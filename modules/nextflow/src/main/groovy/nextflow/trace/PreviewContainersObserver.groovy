@@ -66,6 +66,7 @@ class PreviewContainersObserver implements TraceObserver {
                 renderConfig(containers)
             else if( format == 'json' )
                 renderJson(containers)
+            log.info "Preview containers file has been created at path: $file"
         }
         catch( Exception e ) {
             log.warn "Failed to preview containers -- see the log file for details", e
