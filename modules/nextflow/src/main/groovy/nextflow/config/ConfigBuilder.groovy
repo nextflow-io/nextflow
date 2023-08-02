@@ -711,13 +711,13 @@ class ConfigBuilder {
         }
 
         // -- sets preview report options
-        if( cmdRun.previewReport ) {
+        if( cmdRun.previewContainers ) {
             cmdRun.preview = true
-            if( !(config.preview instanceof Map) )
+            if( config.preview !instanceof Map )
                 config.preview = [:]
             config.preview.enabled = true
-            if( cmdRun.previewReport != '-' )
-                config.preview.file = cmdRun.previewReport
+            if( cmdRun.previewContainers != '-' )
+                config.preview.file = cmdRun.previewContainers
             else if( !config.preview.file )
                 config.preview.file = PreviewReportObserver.DEF_FILE_NAME
         }

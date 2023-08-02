@@ -110,11 +110,9 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        final directives = config.navigate('preview.directives', PreviewReportObserver.DEF_DIRECTIVES) as List
         final fileName = config.navigate('preview.file', PreviewReportObserver.DEF_FILE_NAME)
         final previewReport = (fileName as Path).complete()
-        final overwrite = config.navigate('preview.overwrite', false) as Boolean
-        result << new PreviewReportObserver(directives, previewReport, overwrite)
+        result << new PreviewReportObserver(previewReport)
     }
 
 }

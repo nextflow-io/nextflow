@@ -1125,24 +1125,6 @@ The following settings are available:
 
 Read the {ref}`container-podman` page to learn more about how to use Podman containers with Nextflow.
 
-(config-preview)=
-
-### Scope `preview`
-
-:::{versionadded} 23.07.0-edge
-:::
-
-The `preview` scope controls the preview report that is generated when running a pipeline with the `-preview-report` option.
-
-`preview.directives`
-: The list of process directives to preview (default: `['container', 'cpus', 'memory', 'time']`).
-
-`preview.file`
-: Preview report file name. Must be a JSON file (default: `preview-<timestamp>.json`).
-
-`preview.overwrite`
-: When `true` overwrites any existing preview report with the same name.
-
 (config-process)=
 
 ### Scope `process`
