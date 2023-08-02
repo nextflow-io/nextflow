@@ -145,7 +145,7 @@ class CmdConfig extends CmdBase {
     @PackageScope void printProperty(ConfigObject config, String name, OutputStream output) {
         final map = config.flatten()
         if( !map.containsKey(name) )
-            throw new IllegalArgumentException("Property '$name' not found")
+            throw new AbortOperationException("Configuration property '$name' not found")
 
         output << map.get(name).toString()
     }
