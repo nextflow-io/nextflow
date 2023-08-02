@@ -88,7 +88,7 @@ class ContainerConfig extends LinkedHashMap {
         if( !eng )
             return null
         if( eng=='docker' )
-            return '--rm --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined'
+            return '--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'
         if( eng=='podman' )
             return '--rm --device /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
