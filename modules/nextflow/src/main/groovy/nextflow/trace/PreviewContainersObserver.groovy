@@ -24,6 +24,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
+import org.codehaus.groovy.util.ListHashMap
+
 /**
  * Render the preview report when running a pipeline
  * in preview mode.
@@ -71,7 +73,7 @@ class PreviewContainersObserver implements TraceObserver {
     }
 
     private Map<String,String> getContainers() {
-        final containers = [:]
+        final containers = new ListHashMap<String,String>()
 
         for( def vertex : dag.vertices ) {
             // skip nodes that are not processes
