@@ -185,9 +185,8 @@ The following configuration options are available:
 : Enable/disable the use of Fusion file system.
 
 `fusion.exportStorageCredentials`
-: :::{versionadded} 23.05.0-edge
-  :::
-: When `true` the access credentials required by the underlying object storage are exported the pipeline jobs execution environment.
+: When `true` the access credentials required by the underlying object storage are exported the pipeline jobs execution environment
+(requires version `23.05.0-edge` or later).
 
 `fusion.containerConfigUrl`
 : The URL from where the container layer provisioning the Fusion client is downloaded. 
@@ -198,9 +197,9 @@ The following configuration options are available:
 `fusion.logOutput`
 : Where the logging output is written. 
 
-`fusion.tagsEnabled`
+`tagsEnabled`
 : Enable/disable the tagging of files created in the underlying object storage via the Fusion client (default: `true`).
 
-`fusion.tagsPattern`
+`tagsPattern`
 : The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
 
