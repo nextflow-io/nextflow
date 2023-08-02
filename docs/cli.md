@@ -405,16 +405,16 @@ The `config` command is used for printing the project's configuration i.e. the `
 `-properties`
 : Print config using Java properties notation.
 
-`-property`
-: :::{versionadded} 23.08.0-edge
-  :::
-: Print the value of a config property, or fail if the property is not defined.
-
 `-a, -show-profiles`
 : Show all configuration profiles.
 
 `-sort`
 : Sort config attributes.
+
+`-value`
+: :::{versionadded} 23.08.0-edge
+  :::
+: Print the value of a config option, or fail if the option is not defined.
 
 **Examples**
 

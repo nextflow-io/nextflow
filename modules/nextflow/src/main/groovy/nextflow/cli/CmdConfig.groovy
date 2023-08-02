@@ -50,9 +50,6 @@ class CmdConfig extends CmdBase {
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
     String profile
 
-    @Parameter(names = '-property', description = 'Print the value of a config property, or fail if the property is not defined.')
-    String printProperty
-
     @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
     boolean printProperties
 
@@ -62,6 +59,8 @@ class CmdConfig extends CmdBase {
     @Parameter(names = '-sort', description = 'Sort config attributes')
     boolean sort
 
+    @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined.')
+    String printValue
 
     @Override
     String getName() { NAME }
@@ -82,11 +81,11 @@ class CmdConfig extends CmdBase {
         if( printProperties && printFlatten )
             throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
 
-        if ( printProperty && printFlatten )
-            throw new AbortOperationException("Option `-property` and `-flat` conflicts")
+        if ( printValue && printFlatten )
+            throw new AbortOperationException("Option `-value` and `-flat` conflicts")
 
-        if ( printProperty && printProperties )
-            throw new AbortOperationException("Option `-property` and `-properties` conflicts")
+        if ( printValue && printProperties )
+            throw new AbortOperationException("Option `-value` and `-properties` conflicts")
 
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
@@ -103,8 +102,8 @@ class CmdConfig extends CmdBase {
         else if( printFlatten ) {
             printFlatten0(config, stdout)
         }
-        else if( printProperty ) {
-            printProperty(config, printProperty, stdout)
+        else if( printValue ) {
+            printValue0(config, printValue, stdout)
         }
         else {
             printCanonical0(config, stdout)
@@ -142,12 +141,12 @@ class CmdConfig extends CmdBase {
      * @param name The {@link String} representing the property name using dot notation
      * @param output The stream where output the formatted configuration notation
      */
-    @PackageScope void printProperty(ConfigObject config, String name, OutputStream output) {
+    @PackageScope void printValue0(ConfigObject config, String name, OutputStream output) {
         final map = config.flatten()
         if( !map.containsKey(name) )
-            throw new AbortOperationException("Configuration property '$name' not found")
+            throw new AbortOperationException("Configuration option '$name' not found")
 
-        output << map.get(name).toString()
+        output << map.get(name).toString() << '\n'
     }
 
     /**

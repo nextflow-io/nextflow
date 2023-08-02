@@ -16,11 +16,11 @@
 
 package nextflow.cli
 
-import nextflow.plugin.Plugins
-import spock.lang.IgnoreIf
-
 import java.nio.file.Files
 
+import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 /**
  *
@@ -166,7 +166,7 @@ class CmdConfigTest extends Specification {
 
     }
 
-    def 'should print the value of a config property' () {
+    def 'should print the value of a config option' () {
 
         given:
         def cmd = new CmdConfig()
@@ -180,16 +180,16 @@ class CmdConfigTest extends Specification {
 
         when:
         buffer = new ByteArrayOutputStream()
-        cmd.printProperty(config, 'process.executor', buffer)
+        cmd.printValue0(config, 'process.executor', buffer)
         then:
-        buffer.toString() == 'slurm'
+        buffer.toString() == 'slurm\n'
 
         when:
         buffer = new ByteArrayOutputStream()
-        cmd.printProperty(config, 'does.not.exist', buffer)
+        cmd.printValue0(config, 'does.not.exist', buffer)
         then:
-        def e = thrown(IllegalArgumentException)
-        e.message == "Property 'does.not.exist' not found"
+        def e = thrown(AbortOperationException)
+        e.message == "Configuration option 'does.not.exist' not found"
 
     }
 
