@@ -59,7 +59,7 @@ class CmdConfig extends CmdBase {
     @Parameter(names = '-sort', description = 'Sort config attributes')
     boolean sort
 
-    @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined.')
+    @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
     String printValue
 
     @Override
