@@ -453,7 +453,7 @@ process.executor = local
 Print out the value of a specific configuration property.
 
 ```console
-$ nextflow config -property process.executor
+$ nextflow config -value process.executor
 local
 ```
 
