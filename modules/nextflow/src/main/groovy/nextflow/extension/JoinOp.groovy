@@ -69,6 +69,8 @@ class JoinOp {
         // sanity check
         if( remainder && failOnMismatch )
             throw new AbortOperationException("Conflicting join operator options `remainder` and `failOnMismatch`")
+        if ( (params?.failOnMismatch == false || params?.failOnDuplicate == false) && NF.isStrictMode())
+            throw new AbortOperationException("Conflicting join operator options `failOn*` cannot be set to false in strict mode")
     }
 
     private List<Integer> parsePivot(value) {
