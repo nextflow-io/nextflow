@@ -171,17 +171,17 @@ The following configuration options are available:
 
 `wave.build.spack.basePackages`
 : :::{versionadded} 22.06.0-edge
-:::
+  :::
 : One or more Spack packages to be always added in the resulting container.
 
 `wave.build.spack.commands`
 : :::{versionadded} 22.06.0-edge
-:::
+  :::
 : One or more commands to be added to the Dockerfile used to build a Spack based image.
 
 `wave.httpClient.connectTime`
 : :::{versionadded} 22.06.0-edge
-:::
+  :::
 : Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
 
 `wave.strategy`
