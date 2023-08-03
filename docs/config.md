@@ -1713,11 +1713,11 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
   - When merging params from a config file with params from the command line, Nextflow will fail if a param is specified from both sources but with different types
 
-  - When using the `join` operator, the `failOnDuplicate` option is `true` by default
+  - When using the `join` operator, the `failOnDuplicate` option is `true` regardless of any user setting
 
-  - When using the `join` operator, the `failOnMismatch` option is `true` by default (unless `remainder` is also `true`)
+  - When using the `join` operator, the `failOnMismatch` option is `true` (unless `remainder` is also `true`) regardless of any user setting
 
-  - When using the `publishDir` process directive, the `failOnError` option is `true` by default
+  - When using the `publishDir` process directive, the `failOnError` option is `true` regardless of any user setting
 
   - In a process definition, Nextflow will fail if an input or output tuple has only one element
 
