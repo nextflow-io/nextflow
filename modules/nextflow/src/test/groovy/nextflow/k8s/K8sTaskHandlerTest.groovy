@@ -864,7 +864,9 @@ class K8sTaskHandlerTest extends Specification {
         handler.getRunName() >> 'pedantic-joe'
         task.getName() >> 'hello-world-1'
         task.getProcessor() >> proc
-        task.getConfig() >> Mock(TaskConfig)
+        task.getConfig() >> Mock(TaskConfig) {
+            getResourceLabels() >> [mylabel: 'myvalue']
+        }
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
@@ -873,7 +875,9 @@ class K8sTaskHandlerTest extends Specification {
                 [label: 'app', value: 'nextflow'],
                 [label: 'x', value: 'hello_world']
         ]]
-
+        and:
+        labels.mylabel == 'myvalue'
+        and:
         labels.app == 'nextflow'
         labels.foo == 'bar'
         labels.x == 'hello_world'
