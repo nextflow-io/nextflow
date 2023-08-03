@@ -411,6 +411,11 @@ The `config` command is used for printing the project's configuration i.e. the `
 `-sort`
 : Sort config attributes.
 
+`-value`
+: :::{versionadded} 23.08.0-edge
+  :::
+: Print the value of a config option, or fail if the option is not defined.
+
 **Examples**
 
 Print out the inferred config using a the default group key-value notation.
@@ -443,6 +448,13 @@ $ nextflow config -properties
 
 docker.enabled = true
 process.executor = local
+```
+
+Print out the value of a specific configuration property.
+
+```console
+$ nextflow config -value process.executor
+local
 ```
 
 Print out all profiles from the project's configuration.
