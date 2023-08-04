@@ -64,7 +64,7 @@ class WaveFactoryTest extends Specification {
 
     def 'should not fail when wave is disabled' () {
         given:
-        SysEnv.push(NXF_DISABLE_WAVE_REQUIREMENT: 'true')
+        SysEnv.push(NXF_DISABLE_WAVE_SERVICE: 'true')
         def CONFIG = [wave:[:], fusion:[enabled:true]]
         def session = Mock(Session) { getConfig() >> CONFIG }
         def factory = new WaveFactory()
