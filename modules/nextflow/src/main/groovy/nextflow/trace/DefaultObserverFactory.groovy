@@ -25,7 +25,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
-        createPreviewReportObserver(result)
+        createPreviewContainersObserver(result)
         return result
     }
 
@@ -105,14 +105,12 @@ class DefaultObserverFactory implements TraceObserverFactory {
     /**
      * Create preview report file observer
      */
-    protected void createPreviewReportObserver(Collection<TraceObserver> result) {
-        final isEnabled = config.navigate('preview.enabled') as Boolean
-        if( !isEnabled )
+    protected void createPreviewContainersObserver(Collection<TraceObserver> result) {
+        final format = config.previewContainers
+        if( !format )
             return
 
-        final fileName = config.navigate('preview.file', PreviewContainersObserver.DEF_FILE_NAME)
-        final previewReport = (fileName as Path).complete()
-        result << new PreviewContainersObserver(previewReport)
+        result << new PreviewContainersObserver(format)
     }
 
 }

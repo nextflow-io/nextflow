@@ -27,8 +27,7 @@ import nextflow.dag.DAG
 import org.codehaus.groovy.util.ListHashMap
 
 /**
- * Render the preview report when running a pipeline
- * in preview mode.
+ * Preview the list of containers used by a pipeline.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -36,20 +35,15 @@ import org.codehaus.groovy.util.ListHashMap
 @CompileStatic
 class PreviewContainersObserver implements TraceObserver {
 
-    static final String DEF_FILE_NAME = "preview-${TraceHelper.launchTimestampFmt()}.json"
+    protected DAG dag
 
-    private DAG dag
+    protected String format
 
-    private Path file
-
-    private String format
-
-    PreviewContainersObserver(Path file) {
-        this.file = file
-        this.format = file.getExtension().toLowerCase() ?: 'json'
-
+    PreviewContainersObserver(String format = 'json') {
         if( format !in ['config', 'json'] )
-            throw new IllegalArgumentException("Invalid format for container preview: '${format}' -- should be *.json or *.config")
+            throw new IllegalArgumentException("Invalid format for container preview: '${format}' -- should be 'config' or 'json'")
+
+        this.format = format
     }
 
     @Override
@@ -63,17 +57,16 @@ class PreviewContainersObserver implements TraceObserver {
         try {
             final containers = getContainers()
             if( format == 'config' )
-                renderConfig(containers)
+                println renderConfig(containers)
             else if( format == 'json' )
-                renderJson(containers)
-            log.info "Preview containers file has been created at path: $file"
+                println renderJson(containers)
         }
         catch( Exception e ) {
             log.warn "Failed to preview containers -- see the log file for details", e
         }
     }
 
-    private Map<String,String> getContainers() {
+    protected Map<String,String> getContainers() {
         final containers = new ListHashMap<String,String>()
 
         for( def vertex : dag.vertices ) {
@@ -94,18 +87,18 @@ class PreviewContainersObserver implements TraceObserver {
         return containers
     }
 
-    private void renderConfig(Map<String,String> containers) {
+    protected String renderConfig(Map<String,String> containers) {
         final result = new StringBuilder()
         for( def entry : containers ) {
             result.append("process { withName: '${entry.key}' { container = '${entry.value}' } }\n")
         }
 
-        file.text = result.toString()
+        return result.toString()
     }
 
-    private void renderJson(Map<String,String> containers) {
+    protected String renderJson(Map<String,String> containers) {
         final list = containers.collect( (k, v) -> [name: k, container: v] )
-        file.text = JsonOutput.prettyPrint(new JsonBuilder(list).toString())
+        return JsonOutput.prettyPrint(new JsonBuilder(list).toString())
     }
 
 }

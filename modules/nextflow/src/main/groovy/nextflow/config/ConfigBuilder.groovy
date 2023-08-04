@@ -710,16 +710,12 @@ class ConfigBuilder {
             config.fusion.enabled = cmdRun.withFusion == 'true'
         }
 
-        // -- sets preview report options
+        // -- set preview containers option
         if( cmdRun.previewContainers ) {
             cmdRun.preview = true
-            if( config.preview !instanceof Map )
-                config.preview = [:]
-            config.preview.enabled = true
-            if( cmdRun.previewContainers != '-' )
-                config.preview.file = cmdRun.previewContainers
-            else if( !config.preview.file )
-                config.preview.file = PreviewContainersObserver.DEF_FILE_NAME
+            config.previewContainers = cmdRun.previewContainers != '-'
+                    ? cmdRun.previewContainers
+                    : 'json'
         }
 
         // -- nextflow setting

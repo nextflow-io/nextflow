@@ -297,6 +297,7 @@ class Launcher {
 
             else if( current == '-preview-containers' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
+                normalized.add(0, '-quiet')
             }
 
             else if( (current == '-dsl2') && (i==args.size() || args[i].startsWith('-'))) {

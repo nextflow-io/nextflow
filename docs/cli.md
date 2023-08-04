@@ -1060,10 +1060,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   :::
 : Run the workflow script skipping the execution of all processes.
 
-`-preview-containers` (`preview-<timestamp>.json`)
+`-preview-containers` (`json`)
 : :::{versionadded} 23.08.0-edge
   :::
-: Create a preview of the containers used for each process (implicitly enables `-preview`). Can be JSON or Nextflow config.
+: Print a preview of the containers used for each process to stdout (implicitly enables `-preview`). An optional argument specifies the output format, can be `config` or `json`.
 
 `-process.<key>=<value>`
 : Set process config options.

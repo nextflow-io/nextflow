@@ -165,7 +165,7 @@ class LoggerHelper {
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
-        packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
+        packages[MAIN_PACKAGE] = quiet ? Level.ERROR : Level.INFO
 
         // -- add the S3 uploader by default
         if( !containsClassName(debugConf,traceConf, 'nextflow.cloud.aws.nio') )
