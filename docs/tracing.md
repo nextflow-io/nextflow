@@ -304,8 +304,12 @@ The following table shows the fields that can be included in the execution repor
 
 `hostname`
 : :::{versionadded} 22.05.0-edge
+  Supported by Kubernetes with `k8s.fetchNodeName = true`.
   :::
-: The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
+: :::{versionchanged} 23.08.0-edge
+  Supported by AWS Batch with `aws.fetchInstanceType = true`.
+  :::
+: The name of the host on which the task was executed.
 
 `cpu_model`
 : :::{versionadded} 22.07.0-edge

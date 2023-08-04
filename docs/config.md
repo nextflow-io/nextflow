@@ -169,6 +169,10 @@ The following settings are available:
 `aws.batch.delayBetweenAttempts`
 : Delay between download attempts from S3 (default: `10 sec`).
 
+`aws.batch.fetchInstanceType`
+: When `true` fetches the instance type and instance ID of each task (default: `false`).
+: The instance ID can be accessed from the trace file under the `hostname` field.
+
 `aws.batch.jobRole`
 : The AWS Job Role ARN that needs to be used to execute the Batch Job.
 

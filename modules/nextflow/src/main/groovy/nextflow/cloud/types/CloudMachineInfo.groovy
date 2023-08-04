@@ -28,4 +28,5 @@ class CloudMachineInfo {
     String type
     String zone
     PriceModel priceModel
+    String instanceId = null
 }

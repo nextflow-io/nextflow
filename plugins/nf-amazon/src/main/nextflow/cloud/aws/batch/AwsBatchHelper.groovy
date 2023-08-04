@@ -157,7 +157,8 @@ class AwsBatchHelper {
         new CloudMachineInfo(
                 instance.getInstanceType(),
                 instance.getPlacement().getAvailabilityZone(),
-                getPrice(instance))
+                getPrice(instance),
+                instanceId)
     }
 
     private PriceModel getPrice(Instance instance) {
