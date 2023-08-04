@@ -21,9 +21,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
     Collection<TraceObserver> create(Session session) {
         this.session = session
         this.config = session.config
-        this.binding = new ScriptBinding(  this.session.binding.getVariables() )
-        binding.setVariable( 'workflow', this.session.workflowMetadata )
-        binding.setVariable( 'nextflow', NextflowMeta.instance )
+        this.binding = createBinding(session)
 
         final result = new ArrayList(10)
         createTraceFileObserver(result)
@@ -32,6 +30,14 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createDagObserver(result)
         createAnsiLogObserver(result)
         return result
+    }
+
+    protected ScriptBinding createBinding(Session session) {
+        final binding = new ScriptBinding( session.binding.getVariables() )
+        binding.setVariable( 'workflow', session.workflowMetadata )
+        binding.setVariable( 'nextflow', NextflowMeta.instance )
+
+        return binding
     }
 
     protected void createAnsiLogObserver(Collection<TraceObserver> result) {
@@ -49,7 +55,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = this.resolveConfigKey('report.file')
+        String fileName = config.navigateDynamic('report.file', binding)
         def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
         if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
         def report = (fileName as Path).complete()
@@ -67,7 +73,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = this.resolveConfigKey('timeline.file')
+        String fileName = config.navigateDynamic('timeline.file', binding)
         if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TimelineObserver(traceFile)
@@ -80,7 +86,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = this.resolveConfigKey('dag.file')
+        String fileName = config.navigateDynamic('dag.file', binding)
         if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new GraphObserver(traceFile)
@@ -96,7 +102,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = this.resolveConfigKey('trace.file')
+        String fileName = config.navigateDynamic('trace.file', binding)
         if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TraceFileObserver(traceFile)
@@ -107,14 +113,4 @@ class DefaultObserverFactory implements TraceObserverFactory {
         result << observer
     }
 
-    protected String resolveConfigKey(String key) {
-        Object fileName = config.navigate(key)
-
-        if( fileName instanceof Closure ) {
-            final clone = fileName.cloneWith(this.binding)
-            return clone.call()
-        } else {
-            return fileName
-        }
-    }
 }

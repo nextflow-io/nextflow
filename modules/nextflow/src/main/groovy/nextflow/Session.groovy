@@ -386,10 +386,12 @@ class Session implements ISession {
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
+        // configure observers
         this.observers = createObservers()
         this.statsEnabled = observers.any { it.enableMetrics() }
 
         cache = CacheFactory.create(uniqueId,runName).open()
+
         return this
     }
 
