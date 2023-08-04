@@ -36,12 +36,17 @@ class WaveFactory implements TraceObserverFactory {
     @Override
     Collection<TraceObserver> create(Session session) {
         final config = session.config
-        final wave = (Map)config.wave
-        final fusion = (Map)config.fusion
-        if( fusion?.enabled ) {
-            if( !wave?.enabled ) {
-                if( SysEnv.get('NXF_DISABLE_WAVE_REQUIREMENT') )
-                    return
+        final wave = (Map)config.wave ?: new HashMap<>(1)
+        final fusion = (Map)config.fusion ?: new HashMap<>(1)
+
+        if( SysEnv.get('NXF_DISABLE_WAVE_SERVICE') ) {
+            log.debug "Detected NXF_DISABLE_WAVE_SERVICE environment variable - Turning off Wave service"
+            wave.enabled = false
+            return List.of()
+        }
+        
+        if( fusion.enabled ) {
+            if( !wave.enabled ) {
                 throw new AbortOperationException("Fusion feature requires enabling Wave service")
             }
             else {
@@ -52,7 +57,7 @@ class WaveFactory implements TraceObserverFactory {
         }
 
         final observer = new WaveObserver(session)
-        return wave?.enabled && observer.reportOpts().enabled()
+        return wave.enabled && observer.reportOpts().enabled()
                 ? List.<TraceObserver>of(observer)
                 : List.<TraceObserver>of()
     }

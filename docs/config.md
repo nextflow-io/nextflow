@@ -1557,8 +1557,8 @@ The following environment variables control the configuration of the Nextflow ru
 :::
 : Disables the automatic type detection of command line parameters.
 
-`NXF_DISABLE_WAVE_REQUIREMENT`
-: :::{versionadded} 23.07.0-edge
+`NXF_DISABLE_WAVE_SERVICE`
+: :::{versionadded} 23.08.0-edge
 :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
