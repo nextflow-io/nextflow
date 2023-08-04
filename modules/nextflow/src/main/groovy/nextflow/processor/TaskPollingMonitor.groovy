@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +30,7 @@ import nextflow.Session
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
+import nextflow.util.Threads
 import nextflow.util.Throttle
 /**
  * Monitors the queued tasks waiting for their termination
@@ -271,7 +271,7 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     TaskMonitor start() {
-        log.trace ">>> barrier register (monitor: ${this.name})"
+        log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
 
         this.taskCompleteLock = new ReentrantLock()
@@ -288,18 +288,21 @@ class TaskPollingMonitor implements TaskMonitor {
         session.onShutdown { this.cleanup() }
 
         // launch the thread polling the queue
-        Thread.start('Task monitor') {
+        Threads.start('Task monitor') {
             try {
                 pollLoop()
             }
+            catch (Throwable e) {
+                log.debug "Unexpected error in tasks monitor pool loop", e
+            }
             finally {
-                log.trace "<<< barrier arrives (monitor: ${this.name})"
+                log.debug "<<< barrier arrives (monitor: ${this.name}) - terminating tasks monitor poll loop"
                 session.barrier.arrive(this)
             }
         }
 
         // launch daemon that submits tasks for execution
-        Thread.startDaemon('Task submitter', this.&submitLoop)
+        Threads.start('Task submitter', this.&submitLoop)
 
         return this
     }
@@ -434,7 +437,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try {
             def pending = runningQueue.size()
             if( !pending ) {
-                log.debug "No more task to compute -- ${session.dumpNetworkStatus() ?: 'Execution may be stalled'}"
+                log.debug "!! executor $name > No more task to compute -- ${session.dumpNetworkStatus() ?: 'Execution may be stalled'}"
                 return
             }
 

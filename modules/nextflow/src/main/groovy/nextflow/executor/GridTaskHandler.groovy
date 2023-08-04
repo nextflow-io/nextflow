@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +29,7 @@ import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessException
@@ -48,6 +48,7 @@ import nextflow.util.Throttle
  * Handles a job execution in the underlying grid platform
  */
 @Slf4j
+@CompileStatic
 class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     /** The target executor platform */
@@ -77,7 +78,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private Duration sanityCheckInterval
 
-    final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
+    static private final Duration READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
 
     BatchCleanup batch
 
@@ -145,12 +146,13 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             void accept(ExecutionAttemptedEvent event) throws Throwable {
                 final failure = event.getLastFailure()
                 if( failure instanceof ProcessNonZeroExitStatusException ) {
+                    final failure0 = (ProcessNonZeroExitStatusException)failure
                     final msg = """\
                         Failed to submit process '${task.name}'
                          - attempt : ${event.attemptCount}
-                         - command : ${failure.command}
-                         - reason  : ${failure.reason}
-                        """.stripIndent()
+                         - command : ${failure0.command}
+                         - reason  : ${failure0.reason}
+                        """.stripIndent(true)
                     log.warn msg
 
                 } else {
@@ -219,7 +221,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
+        final containerOpts = task.config.getContainerOptions()
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
         // create an inline script to launch the job execution
         return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
     }
@@ -312,7 +315,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        def exitAttrs = null
+        BasicFileAttributes exitAttrs = null
         if( !exitFile || !(exitAttrs=FileHelper.readAttributes(exitFile)) || !exitAttrs.lastModifiedTime()?.toMillis() ) {
             if( log.isTraceEnabled() ) {
                 if( !exitFile )
@@ -445,7 +448,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     boolean checkIfCompleted() {
 
         // verify the exit file exists
-        def exit
+        Integer exit
         if( isRunning() && (exit = readExitStatus()) != null ) {
             // finalize the task
             task.exitStatus = exit

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -358,7 +357,7 @@ class SessionTest extends Specification {
         def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == CONFIG as ContainerConfig
+        session.containerConfig == new ContainerConfig(CONFIG + [engine:ENGINE])
         session.containerConfig.enabled
         session.containerConfig.engine == ENGINE
 

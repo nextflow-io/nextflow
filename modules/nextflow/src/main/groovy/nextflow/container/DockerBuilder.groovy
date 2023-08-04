@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -193,9 +192,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         }
 
         if( kill )  {
-            killCommand = 'docker kill '
+            killCommand = 'docker stop '
             // if `kill` is a string it is interpreted as a the kill signal
-            if( kill instanceof String ) killCommand += "-s $kill "
+            if( kill instanceof String ) killCommand = "docker kill -s $kill "
             killCommand += name
             // prefix with sudo if required
             if( sudo ) killCommand = 'sudo ' + killCommand

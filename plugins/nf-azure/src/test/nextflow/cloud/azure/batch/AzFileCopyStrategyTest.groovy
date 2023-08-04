@@ -132,7 +132,9 @@ class AzFileCopyStrategyTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -267,7 +269,9 @@ class AzFileCopyStrategyTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -426,7 +430,9 @@ class AzFileCopyStrategyTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
 

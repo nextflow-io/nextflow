@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -779,9 +778,12 @@ class TaskProcessorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH'], true)
+        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH', HOLA: 'one|two'], true)
         then:
-        env.trim() == 'export PATH="foo:\\$PATH"'
+        env == '''\
+            export PATH="foo:\\$PATH"
+            export HOLA="one\\|two"
+            '''.stripIndent()
         env.charAt(env.size()-1) == '\n' as char
 
         when:

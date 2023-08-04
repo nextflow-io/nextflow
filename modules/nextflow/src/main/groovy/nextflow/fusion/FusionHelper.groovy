@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,12 +44,14 @@ class FusionHelper {
         return result!=null ? result.toString()=='true' : false
     }
 
-    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
+    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, String containerOpts, List<String> runCmd) {
         if( !containerName )
             throw new IllegalArgumentException("Missing task container -- Fusion requires the task to be executed by a container process")
         final engine = containerConfig.getEngine()
         final containerBuilder = ContainerBuilder.create(engine, containerName)
                 .addMountWorkDir(false)
+                .addRunOptions(containerConfig.runOptions as String)
+                .addRunOptions(containerOpts)
                 .addRunOptions(containerConfig.fusionOptions())
                 .params(containerConfig)
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +93,7 @@ class CmdKubeRun extends CmdRun {
             headImage = podImage
         }
         checkRunName()
-        final driver = new K8sDriverLauncher(cmd: this, runName: runName, headImage: headImage, background: background(), headCpus: headCpus, headMemory: headMemory, headPreScript: headPreScript) 
+        final driver = new K8sDriverLauncher(cmd: this, runName: runName, headImage: headImage, background: background(), headCpus: headCpus, headMemory: headMemory, headPreScript: headPreScript, plugins: plugins)
         driver.run(pipeline, scriptArgs)
         final status = driver.shutdown()
         System.exit(status)

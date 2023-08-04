@@ -13,7 +13,7 @@ language: Groovy
 documentation:
   general: http://docs.nextflow.io
   installation: https://www.nextflow.io/docs/latest/getstarted.html
-  tutorial: https://training.seqera.io
+  tutorial: https://training.nextflow.io
 
 social:
   twitter: nextflowio

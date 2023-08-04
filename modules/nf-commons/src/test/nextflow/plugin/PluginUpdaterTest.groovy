@@ -385,4 +385,21 @@ class PluginUpdaterTest extends Specification {
         'nf-amazon'     | '1.1.0'       | '1.0.0'   | true
 
     }
+
+    @Unroll
+    def 'should match meta file name' () {
+        when:
+        def matcher = PluginUpdater.META_REGEX.matcher(FILE_NAME)
+        then:
+        matcher.matches() == EXPECTED
+        !EXPECTED || matcher.group(1) == PLUGIN
+        
+        where:
+        FILE_NAME                               | EXPECTED  | PLUGIN
+        'foo'                                   | false     | null
+        'foo.json'                              | false     | null
+        'nf-foo-1.0.0-meta.json'                | true      | 'nf-foo'
+        'xpack-google-1.0.0-beta.3-meta.json'   | true      | 'xpack-google'
+
+    }
 }

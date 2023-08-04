@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +21,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.NodeTerminationException
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.file.http.XPath
@@ -29,6 +29,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
+import nextflow.k8s.client.PodUnschedulableException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodMountSecret
@@ -274,6 +275,56 @@ class K8sTaskHandlerTest extends Specification {
                     ]
         ]
 
+    }
+
+    def 'should create a pod with debug options' () {
+        given:
+        SysEnv.push([NXF_DEBUG:'true'])
+        and:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def config = Mock(TaskConfig)
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def handler = Spy(new K8sTaskHandler(builder: builder, client:client))
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> config
+        1 * config.getCpus() >> 0
+        1 * config.getMemory() >> null
+        1 * client.getConfig() >> new ClientConfig()
+        result == [ apiVersion: 'v1',
+                    kind: 'Pod',
+                    metadata: [
+                            name:'nf-123',
+                            namespace:'default'
+                    ],
+                    spec: [
+                            restartPolicy:'Never',
+                            containers:[
+                                    [name:'nf-123',
+                                     image:'debian:latest',
+                                     args:['/bin/bash', '-ue','/some/work/dir/.command.run'],
+                                     env:[[name:'NXF_DEBUG', value:'true']] ]
+                            ]
+                    ]
+        ]
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should create a pod with specified client configs' () {
@@ -754,6 +805,24 @@ class K8sTaskHandlerTest extends Specification {
         state.nodeTermination.message == "Node shutdown happened"
     }
 
+    def 'should return other nodeTermination state' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> { throw new PodUnschedulableException("Pod failed for unknown reason", new Exception("cause")) }
+        then:
+        state.terminated.startedAt
+        state.terminated.finishedAt
+        and:
+        state.nodeTermination instanceof PodUnschedulableException
+        state.nodeTermination.message == "Pod failed for unknown reason"
+    }
+
     def 'should return container mounts' () {
 
         given:
@@ -795,7 +864,9 @@ class K8sTaskHandlerTest extends Specification {
         handler.getRunName() >> 'pedantic-joe'
         task.getName() >> 'hello-world-1'
         task.getProcessor() >> proc
-        task.getConfig() >> Mock(TaskConfig)
+        task.getConfig() >> Mock(TaskConfig) {
+            getResourceLabels() >> [mylabel: 'myvalue']
+        }
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
@@ -804,7 +875,9 @@ class K8sTaskHandlerTest extends Specification {
                 [label: 'app', value: 'nextflow'],
                 [label: 'x', value: 'hello_world']
         ]]
-
+        and:
+        labels.mylabel == 'myvalue'
+        and:
         labels.app == 'nextflow'
         labels.foo == 'bar'
         labels.x == 'hello_world'
@@ -1030,6 +1103,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
         launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
         and:
         handler.getTask() >> task
         handler.fusionEnabled() >> true

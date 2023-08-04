@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -217,14 +216,14 @@ class DockerBuilderTest extends Specification {
         then:
         docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
         docker.removeCommand == 'docker rm c1'
-        docker.killCommand == 'docker kill c1'
+        docker.killCommand == 'docker stop c1'
 
         when:
         docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true).build()
         then:
         docker.runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c2 busybox'
         docker.removeCommand == 'sudo docker rm c2'
-        docker.killCommand == 'sudo docker kill c2'
+        docker.killCommand == 'sudo docker stop c2'
 
 
         when:
@@ -232,7 +231,7 @@ class DockerBuilderTest extends Specification {
         then:
         docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
         docker.removeCommand == 'docker rm c3'
-        docker.killCommand == 'docker kill c3'
+        docker.killCommand == 'docker stop c3'
 
         when:
         docker =  new DockerBuilder('busybox').setName('c4').params(kill: 'SIGKILL').build()

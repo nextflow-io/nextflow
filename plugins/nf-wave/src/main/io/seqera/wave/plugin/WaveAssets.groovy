@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ class WaveAssets {
     final ContainerConfig containerConfig
     final String dockerFileContent
     final Path condaFile
+    final Path spackFile
     final ResourcesBundle projectResources
 
     static fromImage(String containerImage,String containerPlatform=null) {
@@ -60,6 +61,12 @@ class WaveAssets {
                 : null
     }
 
+    String spackFileEncoded() {
+        return spackFile
+                ? spackFile.text.bytes.encodeBase64()
+                : null
+    }
+
     @Memoized
     String fingerprint() {
         final allMeta = new ArrayList(10)
@@ -67,7 +74,8 @@ class WaveAssets {
         allMeta.add( this.moduleResources?.fingerprint() )
         allMeta.add( this.containerConfig?.fingerprint() )
         allMeta.add( this.dockerFileContent )
-        allMeta.add( this.condaFile )
+        allMeta.add( this.condaFile?.text )
+        allMeta.add( this.spackFile?.text )
         allMeta.add( this.projectResources?.fingerprint() )
         allMeta.add( this.containerPlatform )
         return CacheHelper.hasher(allMeta).hash().toString()

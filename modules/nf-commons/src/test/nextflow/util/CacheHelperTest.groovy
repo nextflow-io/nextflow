@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +32,8 @@ import test.TestHelper
  */
 class CacheHelperTest extends Specification {
 
+    enum TestEnum { TEST_A, TEST_B, TEST_C }
+
     def 'test hashCode' () {
 
         setup:
@@ -45,6 +46,7 @@ class CacheHelperTest extends Specification {
         def anObjectArray = Hashing.murmur3_128().newHasher().putInt(1).putInt(2).putInt(3).hash()
         def aMap =  Hashing.murmur3_128().newHasher().putInt(1).putUnencodedChars('String1').putBoolean(true).hash()
         def aList = Hashing.murmur3_128().newHasher().putUnencodedChars('A').putUnencodedChars('B').putUnencodedChars('C').hash()
+        def anEnum = Hashing.murmur3_128().newHasher().putUnencodedChars('nextflow.util.CacheHelperTest$TestEnum.TEST_A').hash()
 
         def file = Files.createTempFile('test', null)
         file.deleteOnExit()
@@ -67,6 +69,7 @@ class CacheHelperTest extends Specification {
         CacheHelper.hasher([1,2,3] as Object[]).hash() == anObjectArray
         CacheHelper.hasher( [f1: 1, f2: 'String1', f3: true] ) .hash() == aMap
         CacheHelper.hasher( ['A','B','C'] ).hash() == aList
+        CacheHelper.hasher(TestEnum.TEST_A).hash() == anEnum
         CacheHelper.hasher(file).hash() == aFile
 
         CacheHelper.hasher(['abc',123]).hash() == CacheHelper.hasher(['abc',123]).hash()

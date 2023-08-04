@@ -30,7 +30,6 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createReportObserver(result)
         createTimelineObserver(result)
         createDagObserver(result)
-        createWebLogObserver(result)
         createAnsiLogObserver(result)
         return result
     }
@@ -39,20 +38,6 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( session.ansiLog ) {
             session.ansiLogObserver = new AnsiLogObserver()
             result << session.ansiLogObserver
-        }
-    }
-
-    /**
-     * Create workflow message observer
-     * @param result
-     */
-    protected void createWebLogObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('weblog.enabled') as Boolean
-        String url = this.resolveConfigKey('weblog.url') as String
-        if ( isEnabled ) {
-            if ( !url ) url = WebLogObserver.DEF_URL
-            def observer = new WebLogObserver(url)
-            result << observer
         }
     }
 

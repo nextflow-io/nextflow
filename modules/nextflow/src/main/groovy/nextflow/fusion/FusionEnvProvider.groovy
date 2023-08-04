@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
  */
 
 package nextflow.fusion
+
 
 import nextflow.Global
 import nextflow.SysEnv
@@ -35,6 +36,14 @@ class FusionEnvProvider {
             final env = it.getEnvironment(scheme,config)
             if( env ) result.putAll(env)
         }
+        // tags setting
+        if( config.tagsEnabled() )
+            result.FUSION_TAGS = config.tagsPattern()
+        // logs setting
+        if( config.logOutput() )
+            result.FUSION_LOG_OUTPUT = config.logOutput()
+        if( config.logLevel() )
+            result.FUSION_LOG_LEVEL = config.logLevel()
         return result
     }
 }

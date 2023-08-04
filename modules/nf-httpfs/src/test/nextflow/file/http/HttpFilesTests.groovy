@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +112,7 @@ class HttpFilesTests extends Specification {
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
         then:
         lines.size()>0
-        lines[0] == '<html>'
+        lines[0] == '<!DOCTYPE html>'
 
     }
 

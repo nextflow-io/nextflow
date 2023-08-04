@@ -1,5 +1,22 @@
 nf-tower changelog
 ===================
+1.5.15 - 22 Jul 2023
+- Bump Groovy 3.0.18 [207eb535]
+
+1.5.14 - 14 Jun 2023
+- Update workflow.revision max length to match the one in Tower (#4010) [1433a903]
+
+1.5.13 - 15 May 2023
+- Preview support for virtual threads (#3871) [5c429046]
+- Update logging libraries [d7eae86e]
+- Bump groovy 3.0.17 [cfe4ba56]
+
+1.5.12 - 15 Apr 2023
+- Security fixes [83e8fd6a]
+
+1.5.11 - 1 Apr 2023
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
 1.5.10 - 21 Feb 2023
 - Log exception when an unexpected  occurs (#3603) [ci fast] [9aeca99f]
 - Bump groovy 3.0.15 [7a3ebc7d]
