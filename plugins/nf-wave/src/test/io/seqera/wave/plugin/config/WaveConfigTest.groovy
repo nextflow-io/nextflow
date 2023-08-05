@@ -161,7 +161,8 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.retryOpts().maxAttempts == 5
+        opts.retryOpts().delay == Duration.of('450ms')
+        opts.retryOpts().maxAttempts == 10
         opts.retryOpts().maxDelay == Duration.of('90s')
 
         when:
