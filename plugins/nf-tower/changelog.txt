@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.6.0 - 5 Aug 2023
+- Add Tower logs checkpoint (#4132) [71dfecc2]
+- Restore Tower CacheManager for backward compatibility [6d269070]
+- Disable cache backup/restore if cloudcache is used (#4125) [46e828e1]
+
 1.5.15 - 22 Jul 2023
 - Bump Groovy 3.0.18 [207eb535]
 
