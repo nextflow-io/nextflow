@@ -2,9 +2,7 @@ package nextflow.trace
 
 import java.nio.file.Path
 
-import nextflow.NextflowMeta
 import nextflow.Session
-import nextflow.script.ScriptBinding
 
 /**
  * Creates Nextflow observes object
@@ -15,13 +13,11 @@ class DefaultObserverFactory implements TraceObserverFactory {
 
     private Map config
     private Session session
-    private ScriptBinding binding
 
     @Override
     Collection<TraceObserver> create(Session session) {
         this.session = session
         this.config = session.config
-        this.binding = createBinding(session)
 
         final result = new ArrayList(10)
         createTraceFileObserver(result)
@@ -30,14 +26,6 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createDagObserver(result)
         createAnsiLogObserver(result)
         return result
-    }
-
-    protected ScriptBinding createBinding(Session session) {
-        final binding = new ScriptBinding( session.binding.getVariables() )
-        binding.setVariable( 'workflow', session.workflowMetadata )
-        binding.setVariable( 'nextflow', NextflowMeta.instance )
-
-        return binding
     }
 
     protected void createAnsiLogObserver(Collection<TraceObserver> result) {
@@ -55,7 +43,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigateDynamic('report.file', binding)
+        String fileName = config.navigateDynamic('report.file', session.binding)
         def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
         if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
         def report = (fileName as Path).complete()
@@ -73,7 +61,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigateDynamic('timeline.file', binding)
+        String fileName = config.navigateDynamic('timeline.file', session.binding)
         if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TimelineObserver(traceFile)
@@ -86,7 +74,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigateDynamic('dag.file', binding)
+        String fileName = config.navigateDynamic('dag.file', session.binding)
         if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new GraphObserver(traceFile)
@@ -102,7 +90,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigateDynamic('trace.file', binding)
+        String fileName = config.navigateDynamic('trace.file', session.binding)
         if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TraceFileObserver(traceFile)
