@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+2.1.1 - 5 Aug 2023
+- Fix glob resolution for remove files [19a72c40]
+- Fix Option fixOwnership traverse parent directories [f2a2ea35]
+
 2.1.0 - 22 Jul 2023
 - Add support for AWS SSO credentials provider (#4045) [53e33cde]
 - Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
