@@ -1,5 +1,11 @@
 nf-wave changelog
 ==================
+0.11.1 - 5 Aug 2023
+- Improve Wave config logging [547fad62]
+- Increase Wave client max attempts [fe5dd497]
+- Enable use virtual threads in Wave client [dd32f80a]
+- Fix Wave disable flag [8579e7a4]
+
 0.11.0 - 22 Jul 2023
 - Add support legacy wave retry [ci fast] [73a1e7d4]
 - Add support for Wave container freeze [9a5903e6]
