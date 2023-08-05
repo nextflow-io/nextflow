@@ -44,6 +44,7 @@ import nextflow.util.ThreadPoolManager
  */
 @Slf4j
 @CompileStatic
+@Deprecated
 class TowerArchiver {
 
     private static final String RETRY_REASON = 'slowdown|slow down|toomany|too many'
