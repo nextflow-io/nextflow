@@ -66,6 +66,7 @@ class PluginsFacadeTest extends Specification {
         given:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
+                'nf-cloudcache': new PluginSpec('nf-cloudcache', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0'),
                 'nf-wave': new PluginSpec('nf-wave', '0.1.0')
@@ -137,6 +138,12 @@ class PluginsFacadeTest extends Specification {
         result = handler.pluginsRequirement([:])
         then:
         result == [ new PluginSpec('nf-google','2.0.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_CLOUDCACHE_PATH:'xyz'])
+        result = handler.pluginsRequirement([:])
+        then:
+        result == [ new PluginSpec('nf-cloudcache', '0.1.0') ]
 
     }
 
