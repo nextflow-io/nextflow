@@ -76,7 +76,7 @@ class CloudCacheStore implements CacheStore {
     private Path defaultBasePath() {
         final basePath = SysEnv.get('NXF_CLOUDCACHE_PATH')
         if( !basePath )
-            throw new IllegalArgumentException("NXF_CLOUDCACHE_PATH must be defined when using the path-based cache store")
+            throw new IllegalArgumentException("NXF_CLOUDCACHE_PATH must be defined when using the cloud cache store")
 
         return basePath as Path
     }
