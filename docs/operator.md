@@ -953,7 +953,7 @@ left.join(right).view()
 ```
 
 :::{note}
-In the output, items from the 'left' channel always precede the corresponding items from the 'right' channel."
+In the output, items from the 'left' channel always precede the corresponding items from the 'right' channel.
 :::
 
 The `index` of a different matching element can be specified by using the `by` parameter.
