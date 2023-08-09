@@ -98,7 +98,7 @@ class PluginUpdater extends UpdateManager {
                         =                                                                           =
                         = ${repos}
                         =                                                                           =
-                        = This is only meant to be used for plugin repos purposes.                  =
+                        = This is only meant to be used for plugin testing purposes.                =
                         =============================================================================
                         """.stripIndent(true)
         log.warn(msg)
