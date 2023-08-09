@@ -1384,6 +1384,10 @@ Channel
     .splitCsv(header: ['col1', 'col2', 'col3'], skip: 1 )
     .view { row -> "${row.col1} - ${row.col2} - ${row.col3}" }
 ```
+:::{note}
+- If the header option is not used, .splitCsv() returns each row as a List.
+- If header: true is used, or if a list of strings is provided for the header, then .splitCsv() returns each row as a LinkedHashMap
+:::
 
 Available options:
 
