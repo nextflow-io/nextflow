@@ -1026,6 +1026,10 @@ Channel
 Done
 ```
 
+:::{note}
+In Groovy, the default Map is a LinkedHashMap, ensuring consistent input and output order. This is especially important in Nextflow's pipeline context, where order preservation is often needed.
+:::
+
 (operator-max)=
 
 ## max
@@ -1384,6 +1388,11 @@ Channel
     .splitCsv(header: ['col1', 'col2', 'col3'], skip: 1 )
     .view { row -> "${row.col1} - ${row.col2} - ${row.col3}" }
 ```
+:::{note}
+- If the header option is not used, .splitCsv() returns each row as a List.
+- If header: true is used, or if a list of strings is provided for the header, then .splitCsv() returns each row as a LinkedHashMap
+:::
+
 
 Available options:
 
