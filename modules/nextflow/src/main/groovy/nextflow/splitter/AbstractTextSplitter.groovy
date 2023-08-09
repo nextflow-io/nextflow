@@ -228,7 +228,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             // -- append to the list buffer
             collector.add(record)
 
-            if( counter.isChunckComplete() ) {
+            if( counter.isChunkComplete() ) {
                 result = invokeEachClosure(closure, collector.nextChunk())
                 counter.reset()
             }

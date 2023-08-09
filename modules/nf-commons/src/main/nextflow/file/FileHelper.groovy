@@ -365,7 +365,7 @@ class FileHelper {
                 throw new IllegalArgumentException("Malformed file URI: $uri -- It must start either with a `file:/` or `file:///` prefix")
 
             if( !uri.path )
-                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolue path prefix i.e. `file:/`")
+                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolute path prefix i.e. `file:/`")
         }
         else if( !uri.path ) {
             throw new IllegalArgumentException("URI path cannot be empty")
