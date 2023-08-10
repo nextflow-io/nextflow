@@ -54,23 +54,6 @@ class ChannelEx {
 //        }
 //    }
 
-    static DataflowWriteChannel dump(final DataflowWriteChannel source, Closure closure = null) {
-        dump(source, Collections.emptyMap(), closure)
-    }
-
-    static DataflowWriteChannel dump(final DataflowWriteChannel source, Map opts, Closure closure = null) {
-        def op = new DumpOp(opts, closure)
-        if( op.isEnabled() ) {
-            op.setSource(source)
-            def target = op.apply()
-            NodeMarker.addOperatorNode('dump', source, target)
-            return target
-        }
-        else {
-            return source
-        }
-    }
-
     /**
      * Creates a channel emitting the entries in the collection to which is applied
      *

@@ -60,6 +60,26 @@ class OperatorImpl {
 
     private static Session getSession() { Global.getSession() as Session }
 
+    DataflowWriteChannel dump(final DataflowReadChannel source, Closure closure = null) {
+        dump(source, Collections.emptyMap(), closure)
+    }
+
+    DataflowWriteChannel dump(final DataflowReadChannel source, Map opts, Closure closure = null) {
+        def op = new DumpOp(opts, closure)
+        if( op.isEnabled() ) {
+            op.setSource(source)
+            return op.apply()
+        }
+        else {
+            def target = CH.createBy(source)
+            DataflowHelper.subscribeImpl(source, [
+                onNext: { target.bind(it) },
+                onComplete: { CH.close0(target) }
+            ])
+            return target
+        }
+    }
+
     /**
      * Subscribe *onNext* event
      *

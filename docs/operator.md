@@ -651,6 +651,18 @@ Channel
 ```
 :::
 
+:::{versionadded} 23.09.0-edge
+The `dump` operator can be chained like any other operator:
+
+```groovy
+Channel.of('foo', 'bar', 'baz')
+    | dump(tag: 'words')
+    | map { it[0] }
+    | unique
+    | dump(tag: 'first_letters')
+```
+:::
+
 ## filter
 
 *Returns: queue channel*
