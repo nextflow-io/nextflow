@@ -441,7 +441,7 @@ class NameGenerator {
             // A. P. J. Abdul Kalam - is an Indian scientist aka Missile Man of India for his work on the development of ballistic missile and launch vehicle technology. https://en.wikipedia.org/wiki/A._P._J._Abdul_Kalam
             "kalam",
 
-            // Rudolf E. Kálmán, American engineer and mathematican of Hungarian origin. One of the inventors of the smoother/predictor commonly known as "Kalman Filter". https://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n
+            // Rudolf E. Kálmán, American engineer and mathematician of Hungarian origin. One of the inventors of the smoother/predictor commonly known as "Kalman Filter". https://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n
             "kalman",
 
             // Susan Kare, created the icons and many of the interface elements for the original Apple Macintosh in the 1980s, and was an original employee of NeXT, working as the Creative Director. https://en.wikipedia.org/wiki/Susan_Kare
@@ -654,7 +654,7 @@ class NameGenerator {
             // Max Karl Ernst Ludwig Planck was a German theoretical physicist, best known for the discovery of energy quenta and Planck's constant. https://en.wikipedia.org/wiki/Max_Planck
             "planck",
 
-            // Joseph Plateau - Belgian physisist known for being one of the first persons to demonstrate the illusion of moving image. https://en.wikipedia.org/wiki/Joseph_Plateau
+            // Joseph Plateau - Belgian physicist known for being one of the first persons to demonstrate the illusion of moving image. https://en.wikipedia.org/wiki/Joseph_Plateau
             "plateau",
 
             // Henri Poincaré made fundamental contributions in several fields of mathematics. https://en.wikipedia.org/wiki/Henri_Poincar%C3%A9
