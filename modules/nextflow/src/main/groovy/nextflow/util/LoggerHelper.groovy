@@ -336,7 +336,7 @@ class LoggerHelper {
      *     instead in the file are saved the DEBUG level messages.
      *
      * @param logFileName The file where save the application log
-     * @param quiet When {@code true} only Warning and Error messages are visualized to teh console
+     * @param quiet When {@code true} only Warning and Error messages are visualized to the console
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
