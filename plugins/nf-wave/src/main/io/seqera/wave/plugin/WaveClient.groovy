@@ -596,7 +596,7 @@ class WaveClient {
         return Failsafe.with(policy).get(action)
     }
 
-    static private final List<Integer> SERVER_ERRORS = [502,503,504]
+    static private final List<Integer> SERVER_ERRORS = [429,502,503,504]
 
     protected HttpResponse<String> httpSend(HttpRequest req)  {
         return safeApply(() -> {
