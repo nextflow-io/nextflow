@@ -43,7 +43,7 @@ class BytesSplitter extends AbstractBinarySplitter {
             while( (item=targetObject.read()) != -1 ) {
                 buffer[c++] = (byte)item
 
-                if ( counter.isChunkComplete() ) {
+                if ( counter.isChunckComplete() ) {
                     result = invokeEachClosure(closure, buffer)
                     buffer = new byte[counter.size]
                     c = 0
