@@ -264,7 +264,7 @@ From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AM
 **AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}
-The selected instance has a bootstrap volume of 30GB. Make sure to add a second EBS volume with enough storage for real genomic workloads.
+The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
 :::
 
 When the instance is running, SSH into it (or connect with the Session Manager service), install the AWS CLI, and install any other tool that may be required (see following sections).
