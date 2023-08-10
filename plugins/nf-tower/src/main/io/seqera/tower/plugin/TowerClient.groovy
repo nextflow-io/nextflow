@@ -652,7 +652,7 @@ class TowerClient implements TraceObserver {
             def map = obj as Map
             return map.collect { k,v -> "$k:$v" }.join(',')
         }
-        throw new IllegalArgumentException("Illegal container attribut type: ${obj.getClass().getName()} = ${obj}" )
+        throw new IllegalArgumentException("Illegal container attribute type: ${obj.getClass().getName()} = ${obj}" )
     }
 
     protected Map makeTaskMap0(TraceRecord trace) {

@@ -1048,7 +1048,7 @@ class OperatorImpl {
     static private final Map PARAMS_VIEW = [newLine: Boolean]
 
     /**
-     * Print out the channel content retuning a new channel emitting the identical content as the original one
+     * Print out the channel content returning a new channel emitting the identical content as the original one
      *
      * @param source
      * @param closure
