@@ -21,7 +21,7 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
 /**
- * Model a K8s pod host mount defintion
+ * Model a K8s pod host mount definition
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

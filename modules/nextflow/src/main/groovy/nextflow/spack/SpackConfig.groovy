@@ -55,6 +55,6 @@ class SpackConfig extends LinkedHashMap {
             return value.tokenize(',').collect(it -> it.trim())
         }
 
-        throw new IllegalArgumentException("Unexected spack.channels value: $value")
+        throw new IllegalArgumentException("Unexpected spack.channels value: $value")
     }
 }

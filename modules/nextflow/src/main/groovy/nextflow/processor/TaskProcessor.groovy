@@ -379,7 +379,7 @@ class TaskProcessor {
     /**
      * Launch the 'script' define by the code closure as a local bash script
      *
-     * @param code A {@code Closure} retuning a bash script e.g.
+     * @param code A {@code Closure} returning a bash script e.g.
      *          <pre>
      *              {
      *                 """

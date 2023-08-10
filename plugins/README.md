@@ -107,7 +107,7 @@ If no plugins are specified in the nextflow.config file, Nextflow default plugin
 The default plugins list is defined in the Nextflow resources file included in the distribution runtime 
 `./modules/nextflow/src/main/resources/META-INF/plugins-info.txt`. 
 
-To disable the use of defualt plugins set the following variable `NXF_PLUGINS_DEFAULT=false`.
+To disable the use of default plugins set the following variable `NXF_PLUGINS_DEFAULT=false`.
 
 ## Gradle Tasks 
 

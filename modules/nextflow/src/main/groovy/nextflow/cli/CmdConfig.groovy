@@ -115,7 +115,7 @@ class CmdConfig extends CmdBase {
 
     /**
      * Prints a {@link ConfigObject} using Java {@link Properties} in canonical format
-     * ie. any nested config object is printed withing curly brackets
+     * ie. any nested config object is printed within curly brackets
      *
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation

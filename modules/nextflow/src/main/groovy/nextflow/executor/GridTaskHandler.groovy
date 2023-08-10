@@ -381,7 +381,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             /*
              * Since working with NFS it may happen that the file exists BUT it is empty due to network latencies,
-             * before retuning an invalid exit code, wait some seconds.
+             * before returning an invalid exit code, wait some seconds.
              *
              * More in detail:
              * 1) the very first time that arrive here initialize the 'exitTimestampMillis' to the current timestamp

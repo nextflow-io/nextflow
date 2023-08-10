@@ -252,7 +252,7 @@ class PluginsFacade implements PluginStateListener {
             return manager.getExtensions(type)
         }
         else {
-            // this should oly be used to load system extensions
+            // this should only be used to load system extensions
             // i.e. included in the app class path not provided by
             // a plugin extension
             log.debug "Using Default plugin manager"

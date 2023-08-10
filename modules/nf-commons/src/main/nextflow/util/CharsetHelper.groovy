@@ -43,7 +43,7 @@ class CharsetHelper {
             return Charset.forName(object)
 
         if( object != null )
-            log.warn "Invalid charset object: $object -- using defualt: ${Charset.defaultCharset()}"
+            log.warn "Invalid charset object: $object -- using default: ${Charset.defaultCharset()}"
 
         Charset.defaultCharset()
     }

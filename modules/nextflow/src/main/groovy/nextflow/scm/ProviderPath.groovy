@@ -89,7 +89,7 @@ class ProviderPath implements Path {
             return true
         }
         catch (Exception e) {
-            log.trace "Failed to check existance -- cause [${e.class.name}] ${e.message}"
+            log.trace "Failed to check existence -- cause [${e.class.name}] ${e.message}"
             return false
         }
     }

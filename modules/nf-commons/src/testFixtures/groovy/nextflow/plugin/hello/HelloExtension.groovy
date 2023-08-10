@@ -139,7 +139,7 @@ class HelloExtension extends PluginExtensionPoint {
      */
     @Function
     String sayHello(String lang='en'){
-        assert initialized, "PluginExtension was not initilized"
+        assert initialized, "PluginExtension was not initialized"
         // sayHello is the entrypoint where we can write all the logic or delegate to other classes, ...
         return functions.sayHello(lang)
     }

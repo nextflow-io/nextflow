@@ -230,7 +230,7 @@ public class CacheHelper {
      *
      * @param hasher The current {@code Hasher} object
      * @param file The {@code File} object to hash
-     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object
@@ -244,7 +244,7 @@ public class CacheHelper {
      *
      * @param hasher The current {@code Hasher} object
      * @param path The {@code Path} object to hash
-     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object

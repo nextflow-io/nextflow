@@ -1272,7 +1272,7 @@ class FilesExTest extends Specification {
         FilesEx.toPosixFilePermission(0644) == [OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ] as Set
     }
 
-    def 'should convert permissions to actal' () {
+    def 'should convert permissions to octal' () {
         expect:
         FilesEx.toOctalFileMode([] as Set) == 0
         and:

@@ -67,7 +67,7 @@ class GraphObserver implements TraceObserver {
     @Override
     void onFlowCreate(Session session) {
         this.dag = session.dag
-        // check file existance
+        // check file existence
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
             if( overwrite && (attrs.isDirectory() || !file.delete()) )

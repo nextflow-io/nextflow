@@ -113,11 +113,11 @@ class ReportSummary {
      *      - q3: third quartile
      *      - max: maximum value
      *      - mean: average value
-     *      - minLabel: label fot the task reporting the min value
-     *      - q1Label: label fot the task reporting the q1 value
-     *      - q2Label: label fot the task reporting the q2 value
-     *      - q3Label: label fot the task reporting the q3 value
-     *      - maxLabel: label fot the task reporting the max value
+     *      - minLabel: label for the task reporting the min value
+     *      - q1Label: label for the task reporting the q1 value
+     *      - q2Label: label for the task reporting the q2 value
+     *      - q3Label: label for the task reporting the q3 value
+     *      - maxLabel: label for the task reporting the max value
      */
     Map<String,?> compute(String name) {
         if( !names.contains(name) )
@@ -207,11 +207,11 @@ class ReportSummary {
          *      - q3: third quartile
          *      - max: maximum value
          *      - mean: average value
-         *      - minLabel: label fot the task reporting the min value
-         *      - q1Label: label fot the task reporting the q1 value
-         *      - q2Label: label fot the task reporting the q2 value
-         *      - q3Label: label fot the task reporting the q3 value
-         *      - maxLabel: label fot the task reporting the max value
+         *      - minLabel: label for the task reporting the min value
+         *      - q1Label: label for the task reporting the q1 value
+         *      - q2Label: label for the task reporting the q2 value
+         *      - q3Label: label for the task reporting the q3 value
+         *      - maxLabel: label for the task reporting the max value
          */
         Map<String,?> compute() {
             if( count==0 )
