@@ -33,8 +33,8 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretHolder
-import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
+import nextflow.secret.SecretsProvider
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
@@ -334,8 +334,19 @@ class ConfigBuilder {
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
         if( SecretsLoader.isEnabled() )
-            binding.put('secrets', new SecretsContext())
+            binding.put('secrets', makeSecretsContext())
         return binding
+    }
+
+    static private def makeSecretsContext() {
+        return new Object() {
+            private SecretsProvider provider = SecretsLoader.instance.load()
+
+            @Override
+            def getProperty(String name) {
+                provider.getSecret(name)?.value
+            }
+        }
     }
 
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
