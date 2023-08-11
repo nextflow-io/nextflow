@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.04.3 - 11 Aug 2023
+- Increase Wave client max attempts [8c67610a]
+- Fix log typo [03e19ea2]
+- Add 429 http status code to Wave retriable errors [a8b8c6c5]
+- Improve handling Wave server errors [621c9665]
+- Bump nf-wave@0.8.4 [d7fa3f26]
+- Bump corretto 17.0.8 [7a73a78f]
+
 23.04.2 - 8 Jun 2023
 - Fix non-deterministic null container engine error [f93221ab]
 - Add retry policy to Wave client [2f1532f6]
