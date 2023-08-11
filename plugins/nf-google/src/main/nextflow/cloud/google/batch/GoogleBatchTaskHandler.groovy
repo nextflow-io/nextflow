@@ -131,7 +131,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
          * create submit request
          */
         final req = newSubmitRequest(task, spec0(launcher))
-        log.trace "[GOOGLE BATCH] new job request > $req"
+
+        if( log.isTraceEnabled() )
+            log.trace "[GOOGLE BATCH] new job request > $req"
+
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
         this.status = TaskStatus.SUBMITTED

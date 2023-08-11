@@ -175,7 +175,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
             throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
         final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory
-        if( !result && log.isTraceEnabled( ) ) {
+        if( !result && log.isTraceEnabled() ) {
             log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)}"
         }
         return result

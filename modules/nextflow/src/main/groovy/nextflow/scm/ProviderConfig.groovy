@@ -312,8 +312,10 @@ class ProviderConfig {
 
     static private void dumpScmContent(Path file, String content) {
         try {
-            log.trace "Parsing SCM config path: ${file.toUriString()}\n${StringUtils.stripSecrets(content)}\n"
-        }catch(Exception e){
+            if( log.isTraceEnabled() )
+                log.trace "Parsing SCM config path: ${file.toUriString()}\n${StringUtils.stripSecrets(content)}\n"
+        }
+        catch(Exception e){
             log.debug "Error dumping configuration ${file.toUriString()}", e
         }
     }

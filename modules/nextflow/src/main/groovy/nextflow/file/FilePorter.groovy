@@ -98,9 +98,9 @@ class FilePorter {
 
     void transfer(Batch batch) {
         if( batch.size() ) {
-            log.trace "Stage foreign files: $batch"
+            if( log.isTraceEnabled() ) log.trace "Stage foreign files: $batch"
             submitStagingActions(batch.foreignPaths)
-            log.trace "Stage foreign files completed: $batch"
+            if( log.isTraceEnabled() ) log.trace "Stage foreign files completed: $batch"
         }
     }
 

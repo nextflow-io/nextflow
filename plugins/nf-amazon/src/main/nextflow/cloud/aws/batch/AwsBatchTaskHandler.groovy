@@ -186,7 +186,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         // retrieve the status for the specified job and along with the next batch
-        log.trace "[AWS BATCH] requesting describe jobs=${jobIdsToString(batchIds)}"
+        if( log.isTraceEnabled() )
+            log.trace "[AWS BATCH] requesting describe jobs=${jobIdsToString(batchIds)}"
+
         DescribeJobsResult resp = client.describeJobs(new DescribeJobsRequest().withJobs(batchIds))
         if( !resp.getJobs() ) {
             log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"
@@ -312,7 +314,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          * create submit request
          */
         final req = newSubmitRequest(task)
-        log.trace "[AWS BATCH] new job request > $req"
+
+        if( log.isTraceEnabled() )
+            log.trace "[AWS BATCH] new job request > $req"
 
         /*
          * submit the task execution

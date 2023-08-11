@@ -181,7 +181,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             // -- forward the job launcher script to the command stdin if required
             if( pipeScript ) {
-                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
+                if( log.isTraceEnabled() ) {
+                    log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
+                }
                 process.out << pipeScript
                 process.out.close()
             }

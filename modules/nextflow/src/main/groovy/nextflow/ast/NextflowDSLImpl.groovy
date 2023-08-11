@@ -342,7 +342,9 @@ class NextflowDSLImpl implements ASTTransformation {
          *
          */
         protected void convertWorkflowDef(MethodCallExpression methodCall, SourceUnit unit) {
-            log.trace "Convert 'workflow' ${methodCall.arguments}"
+            if( log.isTraceEnabled() ) {
+                log.trace "Convert 'workflow' ${methodCall.arguments}"
+            }
 
             assert methodCall.arguments instanceof ArgumentListExpression
             def args = (ArgumentListExpression)methodCall.arguments
@@ -383,7 +385,10 @@ class NextflowDSLImpl implements ASTTransformation {
             // as an extra item in the arguments list
             args = (ArgumentListExpression)nested.getArguments()
             len = args.size()
-            log.trace "Workflow name: $name with args: $args"
+
+            if( log.isTraceEnabled() ) {
+                log.trace "Workflow name: $name with args: $args"
+            }
 
             // make sure to add the 'name' after the map item
             // (which represent the named parameter attributes)
@@ -560,7 +565,9 @@ class NextflowDSLImpl implements ASTTransformation {
          * @param unit
          */
         protected void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
-            log.trace "Apply task closure transformation to method call: $methodCall"
+            if( log.isTraceEnabled() ) {
+                log.trace "Apply task closure transformation to method call: $methodCall"
+            }
 
             final args = methodCall.arguments as ArgumentListExpression
             final lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null
@@ -928,7 +935,9 @@ class NextflowDSLImpl implements ASTTransformation {
          * handle *input* parameters
          */
         protected void convertInputMethod( Expression expression ) {
-            log.trace "convert > input expression: $expression"
+            if( log.isTraceEnabled() ) {
+                log.trace "convert > input expression: $expression"
+            }
 
             if( expression instanceof MethodCallExpression ) {
 
@@ -1006,7 +1015,9 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         protected void convertOutputMethod( Expression expression ) {
-            log.trace "convert > output expression: $expression"
+            if( log.isTraceEnabled() ) {
+                log.trace "convert > output expression: $expression"
+            }
 
             if( !(expression instanceof MethodCallExpression) ) {
                 return
@@ -1276,7 +1287,9 @@ class NextflowDSLImpl implements ASTTransformation {
          * @param unit
          */
         protected void convertProcessDef( MethodCallExpression methodCall, SourceUnit unit ) {
-            log.trace "Converts 'process' ${methodCall.arguments}"
+            if( log.isTraceEnabled() ) {
+                log.trace "Converts 'process' ${methodCall.arguments}"
+            }
 
             assert methodCall.arguments instanceof ArgumentListExpression
             def list = (methodCall.arguments as ArgumentListExpression).getExpressions()
@@ -1301,7 +1314,10 @@ class NextflowDSLImpl implements ASTTransformation {
             // to the process definition, plus adding the process *name*
             // as an extra item in the arguments list
             def args = nested.getArguments() as ArgumentListExpression
-            log.trace "Process name: $name with args: $args"
+
+            if( log.isTraceEnabled() ) {
+                log.trace "Process name: $name with args: $args"
+            }
 
             // make sure to add the 'name' after the map item
             // (which represent the named parameter attributes)

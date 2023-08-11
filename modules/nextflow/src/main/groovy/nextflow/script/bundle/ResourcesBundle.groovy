@@ -170,7 +170,10 @@ class ResourcesBundle {
                 regular ? attrs.size() : 0,
                 regular ? md5(file, attrs) : 0,
                 Integer.toOctalString(file.getPermissionsMode()) ]
-        log.trace "Module bundle entry=$meta"
+
+        if( log.isTraceEnabled() )
+            log.trace "Module bundle entry=$meta"
+
         return meta
     }
 

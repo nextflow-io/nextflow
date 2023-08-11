@@ -310,9 +310,11 @@ class SpackCache {
 
     @PackageScope
     void runCommand( String cmd ) {
-        log.trace """spack env create
-                     command: $cmd
-                     timeout: $createTimeout""".stripIndent(true)
+        if( log.isTraceEnabled() )
+            log.trace """\
+                spack env create
+                command: $cmd
+                timeout: $createTimeout""".stripIndent(true)
 
         final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])

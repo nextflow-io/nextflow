@@ -658,7 +658,9 @@ class K8sClient {
 
         if( !method ) method = body ? 'POST' : 'GET'
         conn.setRequestMethod(method)
-        log.trace "[K8s] API request $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
+
+        if( log.isTraceEnabled() )
+            log.trace "[K8s] API request $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
 
         if( body ) {
             conn.setDoOutput(true);
@@ -676,7 +678,8 @@ class K8sClient {
     }
 
     static private void trace(String method, String path, String text) {
-        log.trace "[K8s] API response $method $path \n${prettyPrint(text).indent()}"
+        if( log.isTraceEnabled() )
+            log.trace "[K8s] API response $method $path \n${prettyPrint(text).indent()}"
     }
 
     protected K8sResponseApi get(String path) {

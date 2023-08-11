@@ -280,7 +280,8 @@ abstract class AbstractGridExecutor extends Executor {
             final result = buf.toString()
 
             if( exit == 0 ) {
-                log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
+                if( log.isTraceEnabled() )
+                    log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
                 return parseQueueStatus(result)
             }
             else {
@@ -310,7 +311,8 @@ abstract class AbstractGridExecutor extends Executor {
         }
         Map<String,QueueStatus> status = Throttle.cache("${name}_${queue}", queueInterval) {
             final result = getQueueStatus0(queue)
-            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
+            if( log.isTraceEnabled() )
+                log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
             return result
         }
         // track the last status for debugging purpose

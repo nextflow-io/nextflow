@@ -234,7 +234,7 @@ class SortFileCollector extends FileCollector implements Closeable {
 
         Hasher hasher = cacheable ? CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) : null
         if( hasher ) {
-            log.trace "  hasher: ${CacheHelper.hasher( hashKeys, CacheHelper.HashMode.STANDARD ) } \n"
+            log.trace "  hasher: ${hasher} \n"
         }
 
         // index route file

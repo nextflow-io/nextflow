@@ -814,7 +814,9 @@ class FileHelper {
             FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final int depth = fullPath.nameCount - folder.nameCount
                 final path = relativize0(folder, fullPath)
-                log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
+
+                if( log.isTraceEnabled() )
+                    log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
                     def result = relative ? path : fullPath
@@ -827,7 +829,9 @@ class FileHelper {
             @Override
             FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final path = folder.relativize(fullPath)
-                log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
+
+                if( log.isTraceEnabled() )
+                    log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
                     def result = relative ? path : fullPath

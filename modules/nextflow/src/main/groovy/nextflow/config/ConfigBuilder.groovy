@@ -906,7 +906,8 @@ class ConfigBuilder {
         // compute config
         final result = toCanonicalString(config, false)
         // dump config for debugging
-        log.trace "Resolved config:\n${result.indent('\t')}"
+        if( log.isTraceEnabled() )
+            log.trace "Resolved config:\n${result.indent('\t')}"
         return result
     }
 }

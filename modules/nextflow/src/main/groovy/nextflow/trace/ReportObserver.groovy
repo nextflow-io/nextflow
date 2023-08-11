@@ -159,7 +159,9 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - submit process > $handler"
+        if( log.isTraceEnabled() )
+            log.trace "Trace report - submit process > $handler"
+
         synchronized (records) {
             records[ trace.taskId ] = trace
         }
@@ -172,7 +174,9 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessStart(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - start process > $handler"
+        if( log.isTraceEnabled() )
+            log.trace "Trace report - start process > $handler"
+
         synchronized (records) {
             records[ trace.taskId ] = trace
         }
@@ -185,7 +189,9 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - complete process > $handler"
+        if( log.isTraceEnabled() )
+            log.trace "Trace report - complete process > $handler"
+
         if( !trace ) {
             log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"
             return
@@ -204,7 +210,8 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessCached(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - cached process > $handler"
+        if( log.isTraceEnabled() )
+            log.trace "Trace report - cached process > $handler"
 
         // event was triggered by a stored task, ignore it
         if( trace == null ) {

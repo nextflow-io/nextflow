@@ -95,7 +95,9 @@ class WorkflowBinding extends Binding  {
     @Override
     Object invokeMethod(String name, Object args) {
         if( meta ) {
-            log.trace "Trying to invoke component: $name - args=${args}"
+            if( log.isTraceEnabled() )
+                log.trace "Trying to invoke component: $name - args=${args}"
+
             final component = getComponent0(name)
             if( component ) {
                 checkScope0(component)

@@ -227,7 +227,9 @@ class TaskPollingMonitor implements TaskMonitor {
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
             session.notifyTaskPending(handler)
-            log.trace "Scheduled task > $handler"
+
+            if( log.isTraceEnabled() )
+                log.trace "Scheduled task > $handler"
         }
         finally {
             pendingLock.unlock()
@@ -606,7 +608,8 @@ class TaskPollingMonitor implements TaskMonitor {
 
         // check if it is started
         if( handler.checkIfRunning() ) {
-            log.trace "Task started > $handler"
+            if( log.isTraceEnabled() )
+                log.trace "Task started > $handler"
             session.notifyTaskStart(handler)
         }
 

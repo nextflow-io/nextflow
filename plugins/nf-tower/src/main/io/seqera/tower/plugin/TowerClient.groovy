@@ -529,7 +529,10 @@ class TowerClient implements TraceObserver {
             // The actual HTTP request
             final String json = payload != null ? generator.toJson(payload) : null
             final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
-            log.trace "HTTP url=$url; payload:\n${debug}\n"
+
+            if( log.isTraceEnabled() )
+                log.trace "HTTP url=$url; payload:\n${debug}\n"
+
             try {
                 if( refreshTries==1 ) {
                     refreshToken(currentRefresh)

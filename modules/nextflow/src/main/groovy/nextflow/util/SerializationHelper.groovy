@@ -263,7 +263,9 @@ class PathSerializer extends Serializer<Path> {
     void write(Kryo kryo, Output output, Path target) {
         final scheme = target.getFileSystem().provider().getScheme()
         final path = target.toString()
-        log.trace "Path serialization > scheme: $scheme; path: $path"
+
+        if( log.isTraceEnabled() )
+            log.trace "Path serialization > scheme: $scheme; path: $path"
 
         output.writeString(scheme)
         output.writeString(path)
@@ -273,7 +275,9 @@ class PathSerializer extends Serializer<Path> {
     Path read(Kryo kryo, Input input, Class<Path> type) {
         final scheme = input.readString()
         final path = input.readString()
-        log.trace "Path de-serialization > scheme: $scheme; path: $path"
+
+        if( log.isTraceEnabled() )
+            log.trace "Path de-serialization > scheme: $scheme; path: $path"
 
         if( "file".equalsIgnoreCase(scheme) ) {
             return FileSystems.getDefault().getPath(path)
@@ -303,7 +307,9 @@ class GStringSerializer extends Serializer<GString> {
 
     @Override
     void write(Kryo kryo, Output stream, GString object) {
-        log.trace "GString serialization: values: ${object?.getValues()} - strings: ${object?.getStrings()}"
+        if( log.isTraceEnabled() )
+            log.trace "GString serialization: values: ${object?.getValues()} - strings: ${object?.getStrings()}"
+
         kryo.writeObject( stream, object.getValues() )
         kryo.writeObject( stream, object.getStrings() )
     }
@@ -312,7 +318,10 @@ class GStringSerializer extends Serializer<GString> {
     GString read(Kryo kryo, Input stream, Class<GString> type) {
         Object[] values = kryo.readObject(stream, OBJ_ARRAY_CLASS)
         String[] strings = kryo.readObject(stream, STR_ARRAY_CLASS)
-        log.trace "GString de-serialize: values: ${values} - strings: ${strings}"
+
+        if( log.isTraceEnabled() )
+            log.trace "GString de-serialize: values: ${values} - strings: ${strings}"
+
         new GStringImpl(values, strings)
     }
 }

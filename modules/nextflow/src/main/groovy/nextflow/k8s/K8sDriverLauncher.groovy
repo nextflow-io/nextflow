@@ -378,7 +378,9 @@ class K8sDriverLauncher {
         if( !config.libDir )
             config.remove('libDir')
 
-        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(config).indent('  ')}"
+        if( log.isTraceEnabled() )
+            log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(config).indent('  ')}"
+
         return config
     }
 

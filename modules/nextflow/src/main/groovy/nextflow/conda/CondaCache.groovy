@@ -309,9 +309,11 @@ class CondaCache {
 
     @PackageScope
     int runCommand( String cmd ) {
-        log.trace """${binaryName} create
-                     command: $cmd
-                     timeout: $createTimeout""".stripIndent(true)
+        if( log.isTraceEnabled() )
+            log.trace """\
+                ${binaryName} create
+                command: $cmd
+                timeout: $createTimeout""".stripIndent(true)
 
         final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])

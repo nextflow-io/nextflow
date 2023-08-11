@@ -431,7 +431,10 @@ class TaskProcessor {
         state = new Agent<>(new StateObj(name))
         state.addListener { StateObj old, StateObj obj ->
             try {
-                log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
+                if( log.isTraceEnabled() ) {
+                    log.trace "<$name> Process state changed to: $obj -- finished: ${obj.isFinished()}"
+                }
+
                 if( !completed && obj.isFinished() ) {
                     terminateProcess()
                     completed = true
@@ -582,7 +585,8 @@ class TaskProcessor {
         final values = (List) args[1]
 
         // create and initialize the task instance to be executed
-        log.trace "Invoking task > $name with params=$params; values=$values"
+        if( log.isTraceEnabled() )
+            log.trace "Invoking task > $name with params=$params; values=$values"
 
         // -- create the task run instance
         final task = createTaskRun(params)
@@ -773,7 +777,9 @@ class TaskProcessor {
                 if( resumeDir )
                     exists = resumeDir.exists()
 
-                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
+                if( log.isTraceEnabled() )
+                    log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
+
                 def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
@@ -1356,7 +1362,8 @@ class TaskProcessor {
 
             switch( param ) {
             case StdOutParam:
-                log.trace "Process $name > normalize stdout param: $param"
+                if( log.isTraceEnabled() )
+                    log.trace "Process $name > normalize stdout param: $param"
                 value = value instanceof Path ? value.text : value?.toString()
 
             case OptionalParam:
@@ -1369,7 +1376,8 @@ class TaskProcessor {
             case EnvOutParam:
             case ValueOutParam:
             case DefaultOutParam:
-                log.trace "Process $name > collecting out param: ${param} = $value"
+                if( log.isTraceEnabled() )
+                    log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add(value)
                 break
 
@@ -1426,13 +1434,15 @@ class TaskProcessor {
                 continue
             }
 
-            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
+            if( log.isTraceEnabled() )
+                log.trace "Process $name > Binding out param: ${param} = ${outValue}"
             bindOutParam(param, outValue)
         }
     }
 
     protected void bindOutParam( OutParam param, List values ) {
-        log.trace "<$name> Binding param $param with $values"
+        if( log.isTraceEnabled() )
+            log.trace "<$name> Binding param $param with $values"
         final x = values.size() == 1 ? values[0] : values
         final ch = param.getOutChannel()
         if( ch != null ) {
@@ -1455,7 +1465,8 @@ class TaskProcessor {
      * @param task
      */
     final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
-        log.trace "<$name> collecting output: ${task.outputs}"
+        if( log.isTraceEnabled() )
+            log.trace "<$name> collecting output: ${task.outputs}"
 
         for( OutParam param : task.outputs.keySet() ) {
 
@@ -1597,7 +1608,8 @@ class TaskProcessor {
             // set into the output set
             task.setOutput(param,val)
             // trace the result
-            log.trace "Collecting param: ${param.name}; value: ${val}"
+            if( log.isTraceEnabled() )
+                log.trace "Collecting param: ${param.name}; value: ${val}"
         }
         catch( MissingPropertyException e ) {
             throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
@@ -2234,7 +2246,8 @@ class TaskProcessor {
      */
     @PackageScope
     final finalizeTask( TaskRun task ) {
-        log.trace "finalizing process > ${safeTaskName(task)} -- $task"
+        if( log.isTraceEnabled() )
+            log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
         try {
@@ -2388,7 +2401,9 @@ class TaskProcessor {
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "<${name}> Before run -- messages: ${messages}"
+            if( log.isTraceEnabled() ) {
+                log.trace "<${name}> Before run -- messages: ${messages}"
+            }
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
@@ -2399,7 +2414,6 @@ class TaskProcessor {
             result[1] = messages
             return result
         }
-
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {

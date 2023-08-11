@@ -82,7 +82,9 @@ abstract class Executor {
      * @param task A {@code TaskRun} instance
      */
     final void submit( TaskRun task ) {
-        log.trace "Scheduling process: ${task}"
+        if( log.isTraceEnabled() ) {
+            log.trace "Scheduling process: ${task}"
+        }
 
         if( session.isTerminated() ) {
             new IllegalStateException("Session terminated - Cannot add process to execution queue: ${task}")

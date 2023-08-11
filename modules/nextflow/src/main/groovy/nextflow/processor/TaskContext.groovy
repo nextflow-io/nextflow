@@ -79,7 +79,8 @@ class TaskContext implements Map<String,Object>, Cloneable {
             variableNames = variableNames - processor.getDeclaredNames()
         }
 
-        log.trace "Binding names for '$name' > $variableNames"
+        if( log.isTraceEnabled() )
+            log.trace "Binding names for '$name' > $variableNames"
     }
 
     protected TaskContext(Script script, Map holder, String name) {
@@ -88,7 +89,9 @@ class TaskContext implements Map<String,Object>, Cloneable {
         this.name = name
         def names = script.getBinding()?.getVariables()?.keySet()
         this.variableNames = names ? new HashSet<String>(names) : new HashSet<String>()
-        log.trace "Binding names for '$name' > $variableNames"
+
+        if( log.isTraceEnabled() )
+            log.trace "Binding names for '$name' > $variableNames"
     }
 
     /** ONLY FOR TEST PURPOSE -- do not use */
@@ -234,7 +237,10 @@ class TaskContext implements Map<String,Object>, Cloneable {
             def var = ( p == -1 ? it : it.substring(0,p) )
             checkAndSet(var, copy)
         }
-        log.trace "Delegate for $name > binding copy: ${copy}"
+
+        if( log.isTraceEnabled() )
+            log.trace "Delegate for $name > binding copy: ${copy}"
+
         kryo.writeObject(out, copy)
 
         out.flush()
