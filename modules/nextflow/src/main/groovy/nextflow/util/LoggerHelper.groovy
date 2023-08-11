@@ -471,8 +471,14 @@ class LoggerHelper {
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
         }
-        else if( fail instanceof NoClassDefFoundError) {
-            buffer.append("Class definition not found: ${normalize(fail.message)}")
+        else if( fail instanceof NoClassDefFoundError ) {
+            final msg = """
+                Class definition not found: ${normalize(fail.message)}
+
+                NOTE: If you are using offline mode, you might be missing a core plugin. Use an `*-all` release of Nextflow, or use the `nextflow plugin` command to install the required plugin.
+                """.stripIndent(true).trim()
+
+            buffer.append(msg)
         }
         else if( fail instanceof DirectoryNotEmptyException ) {
             buffer.append("Unable to delete not empty directory: $fail.message")
