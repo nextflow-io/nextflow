@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin.config
 
-
+import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -159,7 +159,7 @@ class WaveConfigTest extends Specification {
         opts.retryOpts().maxDelay == Duration.of('90s')
 
         when:
-        opts = new WaveConfig([retryPolicy:[ maxAttempts: 20, jitter: 1.0, delay: '1s', maxDelay: '10s' ]])
+        opts = new WaveConfig([retry:[ maxAttempts: 20, jitter: 1.0, delay: '1s', maxDelay: '10s' ]])
         then:
         opts.retryOpts().maxAttempts == 20
         opts.retryOpts().jitter == 1.0d
@@ -176,15 +176,4 @@ class WaveConfigTest extends Specification {
         opts.retryOpts().maxDelay == Duration.of('40s')
     }
 
-    def 'should get http config options' () {
-        when:
-        def opts = new WaveConfig([:])
-        then:
-        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
-
-        when:
-        opts = new WaveConfig([httpClient: [connectTimeout: '90s']])
-        then:
-        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(90)
-    }
 }
