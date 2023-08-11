@@ -2121,8 +2121,15 @@ process my_task {
 
 The limits and the syntax of the corresponding cloud provider should be taken into consideration when using resource labels.
 
-:::{note}
-Resource labels are currently only supported by the {ref}`awsbatch-executor`, {ref}`google-lifesciences-executor`, Google Cloud Batch and {ref}`k8s-executor` executors.
+Resource labels are currently supported by the following executors:
+
+- {ref}`awsbatch-executor`
+- {ref}`google-lifesciences-executor`
+- {ref}`google-batch-executor`
+- {ref}`k8s-executor`
+
+:::{versionadded} 23.09.0-edge
+Resource labels are supported for {ref}`azurebatch-executor`. However, because cost analysis in Azure is tied to pools, resource labels are applied to pools rather than jobs. Therefore, when using Azure Batch it is recommended that you define resource labels once for all processes, as each pool will use the resource labels of the first process that creates it.
 :::
 
 See also: [label](#label)

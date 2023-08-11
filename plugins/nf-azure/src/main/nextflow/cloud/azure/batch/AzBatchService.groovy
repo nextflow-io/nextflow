@@ -39,6 +39,7 @@ import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
+import com.microsoft.azure.batch.protocol.models.MetadataItem
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
 import com.microsoft.azure.batch.protocol.models.OnAllTasksComplete
@@ -618,7 +619,7 @@ class AzBatchService implements Closeable {
         def pool = getPool(spec.poolId)
         if( !pool ) {
             if( config.batch().canCreatePool() ) {
-                createPool(spec)
+                createPool(spec, task)
             }
             else {
                 throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or set `allowPoolCreation=true` in the nextflow config file")
@@ -676,7 +677,7 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    protected void createPool(AzVmPoolSpec spec) {
+    protected void createPool(AzVmPoolSpec spec, TaskRun task) {
 
         def resourceFiles = new ArrayList(10)
 
@@ -697,6 +698,17 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
+
+        // resource labels
+        final resourceLabels = task.config.getResourceLabels()
+        if( resourceLabels ) {
+            final metadata = resourceLabels.collect { name, value ->
+                new MetadataItem()
+                    .withName(name)
+                    .withValue(value)
+            }
+            poolParams.withMetadata(metadata)
+        }
 
         // virtual network
         if( spec.opts.virtualNetwork )
