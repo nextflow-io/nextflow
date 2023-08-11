@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.04.3 - 11 Aug 2023
+- Increase Wave client max attempts [8c67610a]
+- Fix log typo [03e19ea2]
+- Add 429 http status code to Wave retriable errors [a8b8c6c5]
+- Improve handling Wave server errors [621c9665]
+- Bump nf-wave@0.8.4 [d7fa3f26]
+- Bump corretto 17.0.8 [7a73a78f]
+
 23.08.0-edge - 5 Aug 2023 
 - Add `-value` option to `config` command (#4142) [57e3100b]
 - Add `deleteTasksOnCompletion` to Azure Batch configuration (#4114) [b14674dc]
@@ -113,6 +121,12 @@ NEXTFLOW CHANGE-LOG
 - Bump nf-azure@1.1.4 [1895efc4]
 - Bump nf-amazon@2.1.0 [57464746]
 - Bump nf-cloudcache@0.1.0 [cb6242c4]
+
+23.04.2 - 8 Jun 2023
+- Fix non-deterministic null container engine error [f93221ab]
+- Add retry policy to Wave client [2f1532f6]
+- Fix wave build docs [34a73022]
+- Bump nf-wave@0.8.3 [350201b5]
 
 23.05.0-edge - 15 May 2023
 - Add support for custom custom root directory to resolve relative paths (#3942) [f06bb1f7]
