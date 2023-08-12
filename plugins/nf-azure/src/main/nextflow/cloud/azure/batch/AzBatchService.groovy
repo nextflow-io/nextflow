@@ -564,9 +564,11 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        final key = CacheHelper.hasher([vmType.name, opts]).hash().toString()
+        def metadata = task.config.getResourceLabels()
+
+        final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
-        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts)
+        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
     protected void checkPool(CloudPool pool, AzVmPoolSpec spec) {
@@ -619,7 +621,7 @@ class AzBatchService implements Closeable {
         def pool = getPool(spec.poolId)
         if( !pool ) {
             if( config.batch().canCreatePool() ) {
-                createPool(spec, task)
+                createPool(spec)
             }
             else {
                 throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or set `allowPoolCreation=true` in the nextflow config file")
@@ -677,7 +679,7 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    protected void createPool(AzVmPoolSpec spec, TaskRun task) {
+    protected void createPool(AzVmPoolSpec spec) {
 
         def resourceFiles = new ArrayList(10)
 
@@ -700,9 +702,8 @@ class AzBatchService implements Closeable {
                 .withStartTask(poolStartTask)
 
         // resource labels
-        final resourceLabels = task.config.getResourceLabels()
-        if( resourceLabels ) {
-            final metadata = resourceLabels.collect { name, value ->
+        if( spec.metadata ) {
+            final metadata = spec.metadata.collect { name, value ->
                 new MetadataItem()
                     .withName(name)
                     .withValue(value)
