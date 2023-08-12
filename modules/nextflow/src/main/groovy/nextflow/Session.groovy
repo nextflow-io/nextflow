@@ -881,6 +881,7 @@ class Session implements ISession {
             String name = null
             if( key.startsWith('$') ) {
                 name = key.substring(1)
+                log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
             }
             else if( key.startsWith('withName:') ) {
                 name = key.substring('withName:'.length())
@@ -1270,6 +1271,7 @@ class Session implements ISession {
             config.process.each { String name, value ->
                 if( name.startsWith('$') ) {
                     name = name.substring(1)
+                    log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
                 }
                 else if( name.startsWith('withName:') ) {
                     name = name.substring('withName:'.length())
