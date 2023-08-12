@@ -1275,7 +1275,7 @@ class TaskProcessor {
 
 
     static String err0(Throwable e) {
-        final fail = e instanceof InvocationTargetException ? e.targetException : e
+        final fail = e instanceof InvocationTargetException ? e.cause : e
 
         if( fail instanceof NoSuchFileException ) {
             return "No such file or directory: $fail.message"
