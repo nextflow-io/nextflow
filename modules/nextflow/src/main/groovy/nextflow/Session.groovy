@@ -1268,7 +1268,14 @@ class Session implements ISession {
              * look for `container` definition at process level
              */
             config.process.each { String name, value ->
-                if( name.startsWith('$') && value instanceof Map && value.container ) {
+                if( name.startsWith('$') ) {
+                    name = name.substring(1)
+                }
+                else if( name.startsWith('withName:') ) {
+                    name = name.substring('withName:'.length())
+                }
+
+                if( value instanceof Map && value.container ) {
                     result[name] = resolveClosure(value.container)
                 }
             }
