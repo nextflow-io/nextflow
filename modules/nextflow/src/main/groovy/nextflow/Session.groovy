@@ -879,12 +879,12 @@ class Session implements ISession {
         def keys = (config.process as Map).keySet()
         for(String key : keys) {
             String name = null
-            if( key.startsWith('$') ) {
+            if( key.startsWith('withName:') ) {
+                name = key.substring('withName:'.length())
+            }
+            else if( key.startsWith('$') ) {
                 name = key.substring(1)
                 log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
-            }
-            else if( key.startsWith('withName:') ) {
-                name = key.substring('withName:'.length())
             }
             if( name )
                 checkValidProcessName(processNames, name, result)
@@ -1269,12 +1269,12 @@ class Session implements ISession {
              * look for `container` definition at process level
              */
             config.process.each { String name, value ->
-                if( name.startsWith('$') ) {
+                if( name.startsWith('withName:') ) {
+                    name = name.substring('withName:'.length())
+                }
+                else if( name.startsWith('$') ) {
                     name = name.substring(1)
                     log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
-                }
-                else if( name.startsWith('withName:') ) {
-                    name = name.substring('withName:'.length())
                 }
 
                 if( value instanceof Map && value.container ) {
