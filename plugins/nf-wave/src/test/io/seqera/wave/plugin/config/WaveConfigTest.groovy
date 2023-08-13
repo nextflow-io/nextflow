@@ -86,7 +86,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.2'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.9'
         opts.condaOpts().commands == null
 
         when:
@@ -101,25 +101,13 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.spackOpts().checksum == true
-        opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.19.2'
-        opts.spackOpts().runnerImage == 'ubuntu:22.04'
-        opts.spackOpts().osPackages == ''
-        opts.spackOpts().cFlags == '-O3'
-        opts.spackOpts().cxxFlags == '-O3'
-        opts.spackOpts().fFlags == '-O3'
+        opts.spackOpts().basePackages == null
         opts.spackOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[spack:[ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', commands:['USER hola'] ]]])
+        opts = new WaveConfig([build:[spack:[ basePackages: 'foo bar', commands:['USER hola'] ]]])
         then:
-        opts.spackOpts().checksum == false
-        opts.spackOpts().builderImage == 'spack/foo:1'
-        opts.spackOpts().runnerImage == 'ubuntu/foo'
-        opts.spackOpts().osPackages == 'libfoo'
-        opts.spackOpts().cFlags == '-foo'
-        opts.spackOpts().cxxFlags == '-foo2'
-        opts.spackOpts().fFlags == '-foo3'
+        opts.spackOpts().basePackages == 'foo bar'
         opts.spackOpts().commands == ['USER hola']
         
     }
@@ -173,7 +161,8 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.retryOpts().maxAttempts == 5
+        opts.retryOpts().delay == Duration.of('450ms')
+        opts.retryOpts().maxAttempts == 10
         opts.retryOpts().maxDelay == Duration.of('90s')
 
         when:
@@ -183,5 +172,26 @@ class WaveConfigTest extends Specification {
         opts.retryOpts().jitter == 1.0d
         opts.retryOpts().delay == Duration.of('1s')
         opts.retryOpts().maxDelay == Duration.of('10s')
+
+        // legacy
+        when:
+        opts = new WaveConfig([retry:[ maxAttempts: 10, jitter: 2.0, delay: '3s', maxDelay: '40s' ]])
+        then:
+        opts.retryOpts().maxAttempts == 10
+        opts.retryOpts().jitter == 2.0d
+        opts.retryOpts().delay == Duration.of('3s')
+        opts.retryOpts().maxDelay == Duration.of('40s')
+    }
+
+    def 'should get http config options' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
+
+        when:
+        opts = new WaveConfig([httpClient: [connectTimeout: '90s']])
+        then:
+        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(90)
     }
 }

@@ -33,11 +33,18 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private boolean autoMounts
 
+    private boolean homeMount
+
     private boolean newPidNamespace
 
     SingularityBuilder(String name) {
         this.image = name
+        this.homeMount = defaultHomeMount()
         this.newPidNamespace = defaultNewPidNamespace()
+    }
+
+    private boolean defaultHomeMount() {
+        SysEnv.get("NXF_${getBinaryName().toUpperCase()}_HOME_MOUNT", 'false').toString() == 'true'
     }
 
     private boolean defaultNewPidNamespace() {
@@ -91,6 +98,9 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             result << engineOptions.join(' ') << ' '
 
         result << 'exec '
+
+        if( !homeMount )
+            result << '--no-home '
 
         if( newPidNamespace )
             result << '--pid '

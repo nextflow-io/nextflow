@@ -1201,9 +1201,10 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::{note}
 The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
 
-- [AWS](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_)
 - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
 - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+
+The accelerator `type` option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 :::
 
 (process-afterscript)=
@@ -1333,7 +1334,7 @@ process foo {
 
 Multiple packages can be specified separating them with a blank space e.g. `bwa=0.7.15 fastqc=0.11.5`. The name of the channel from where a specific package needs to be downloaded can be specified using the usual Conda notation i.e. prefixing the package with the channel name as shown here `bioconda::bwa=0.7.15`.
 
-The `conda` directory also allows the specification of a Conda environment file path or the path of an existing environment directory. See the {ref}`conda-page` page for further details.
+The `conda` directive also allows the specification of a Conda environment file path or the path of an existing environment directory. See the {ref}`conda-page` page for further details.
 
 (process-container)=
 
@@ -2069,7 +2070,7 @@ Available options:
 
 ### queue
 
-The `queue` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor in your pipeline. For example:
+The `queue` directive allows you to set the `queue` where jobs are scheduled when using a grid based executor in your pipeline. For example:
 
 ```groovy
 process grid_job {

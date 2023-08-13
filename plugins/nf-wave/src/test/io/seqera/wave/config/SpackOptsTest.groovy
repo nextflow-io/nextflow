@@ -29,39 +29,20 @@ class SpackOptsTest extends Specification {
         given:
         def opts = new SpackOpts()
         expect:
-        opts.checksum
-        opts.builderImage == SpackOpts.DEFAULT_SPACK_BUILDER_IMAGE
-        opts.runnerImage == SpackOpts.DEFAULT_SPACK_RUNNER_IMAGE
-        opts.osPackages == SpackOpts.DEFAULT_SPACK_OSPACKAGES
-        opts.cFlags == SpackOpts.DEFAULT_SPACK_FLAGS
-        opts.cxxFlags == SpackOpts.DEFAULT_SPACK_FLAGS
-        opts.fFlags == SpackOpts.DEFAULT_SPACK_FLAGS
         opts.commands == null
+        opts.basePackages == null
     }
 
     def 'check spack custom opts' () {
         given:
         def opts = new SpackOpts([
-                checksum:false,
-                builderImage: 'my/builder:image',
-                runnerImage: 'my/runner:image',
-                osPackages:  'my-os-packages',
-                cFlags: "--my-c-flags",
-                cxxFlags: '--my-cxx-flags',
-                fFlags: '--my-f-flags',
+                basePackages: 'foo bar',
                 commands: ['run','--this','--that']
         ])
 
         expect:
-        !opts.checksum
-        and:
-        opts.builderImage == 'my/builder:image'
-        opts.runnerImage == 'my/runner:image'
-        opts.osPackages == 'my-os-packages'
-        and:
-        opts.cFlags == '--my-c-flags'
-        opts.cxxFlags == '--my-cxx-flags'
-        opts.fFlags == '--my-f-flags'
         opts.commands == ['run','--this','--that']
+        and:
+        opts.basePackages == 'foo bar'
     }
 }

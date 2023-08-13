@@ -112,7 +112,8 @@ class FilePatternSplitterTest extends Specification {
         'test/data/file[a-b]'                   | 'test/data/'      | 'file[a-b]'           | null
         'test/data[a-b]/file'                   | 'test/'           | 'data[a-b]/file'      | null
         '/some/path\\[a-b\\]/data{a,b}/file\\?' | '/some/path[a-b]/'| 'data{a,b}/file\\?'   | null
-
+        's3://foo/bar/*'                        | 'foo/bar/'        | '*'                   | 's3'
+        's3://foo/bar/file.txt'                 | 'foo/bar/'        | 'file.txt'            | 's3'
     }
 
     def 'should strip glob escape chars' () {

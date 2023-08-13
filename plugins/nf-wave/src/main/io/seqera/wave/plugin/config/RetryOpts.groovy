@@ -17,15 +17,19 @@
 
 package io.seqera.wave.plugin.config
 
+import groovy.transform.CompileStatic
+import groovy.transform.ToString
 import nextflow.util.Duration
 
 /**
  * Model retry options for Wave http requests
  */
+@ToString(includeNames = true, includePackage = false)
+@CompileStatic
 class RetryOpts {
-    Duration delay = Duration.of('150ms')
+    Duration delay = Duration.of('450ms')
     Duration maxDelay = Duration.of('90s')
-    int maxAttempts = 5
+    int maxAttempts = 10
     double jitter = 0.25
 
     RetryOpts() {

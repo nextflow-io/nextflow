@@ -278,7 +278,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         final resLabels = task.config.getResourceLabels()
         if( resLabels )
-            resLabels.putAll(resLabels)
+            result.putAll(resLabels)
         result.'nextflow.io/app' = 'nextflow'
         result.'nextflow.io/runName' = getRunName()
         result.'nextflow.io/taskName' = task.getName()

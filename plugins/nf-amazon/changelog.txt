@@ -1,5 +1,20 @@
 nf-amazon changelog
 ===================
+2.1.1 - 5 Aug 2023
+- Fix glob resolution for remove files [19a72c40]
+- Fix Option fixOwnership traverse parent directories [f2a2ea35]
+
+2.1.0 - 22 Jul 2023
+- Add support for AWS SSO credentials provider (#4045) [53e33cde]
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Ignore accelerator type for AWS Batch (#4043) [263ecca8]
+- Bump Groovy 3.0.18 [207eb535]
+
+2.0.1 - 14 Jun 2023
+- Add support for AWS SES as mail sending provider [df85d443]
+- Fix access to public S3 bucket when no creds are provided (#3992) [cf8ba466]
+- Fix S3 path normalization [b75ec444]
+
 2.0.0 - 15 May 2023
 - Add fusion.exportStorageCredentials option [ci fast] [acb6aedf]
 - Fix AWS SSE env propagation to Fusion [e24608c3]

@@ -95,6 +95,9 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
         else if( env instanceof String && env.contains('=') ) {
             result << env
         }
+        else if( env instanceof String ) {
+            result << "\${$env:+\"$env=\$$env\"}"
+        }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
         }

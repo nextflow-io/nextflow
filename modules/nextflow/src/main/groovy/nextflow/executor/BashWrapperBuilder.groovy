@@ -183,6 +183,7 @@ class BashWrapperBuilder {
         result.append('\n')
         result.append('# capture process environment\n')
         result.append('set +u\n')
+        result.append('cd "$NXF_TASK_WORKDIR"\n')
         for( int i=0; i<names.size(); i++) {
             final key = names[i]
             result.append "echo $key=\${$key[@]} "
@@ -319,7 +320,7 @@ class BashWrapperBuilder {
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
 
         // patch root ownership problem on files created with docker
-        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true" : null
+        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
@@ -582,6 +583,8 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        // export task work directory
+        builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
         if( isTraceRequired() )
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
