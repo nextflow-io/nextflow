@@ -35,8 +35,6 @@ import nextflow.util.CacheHelper
 @CompileStatic
 class CloudCacheStore implements CacheStore {
 
-    private final String LOCK_NAME = 'LOCK'
-
     private final int KEY_SIZE
 
     /** The session UUID */
@@ -50,9 +48,6 @@ class CloudCacheStore implements CacheStore {
 
     /** The base path for this cache instance */
     private Path dataPath
-
-    /** The lock file for this cache instance */
-    private Path lock
 
     /** The path to the index file */
     private Path indexPath
@@ -69,7 +64,6 @@ class CloudCacheStore implements CacheStore {
         this.runName = runName
         this.basePath = basePath ?: defaultBasePath()
         this.dataPath = this.basePath.resolve("$uniqueId")
-        this.lock = dataPath.resolve(LOCK_NAME)
         this.indexPath = dataPath.resolve("index.$runName")
     }
 
@@ -83,7 +77,6 @@ class CloudCacheStore implements CacheStore {
 
     @Override
     CloudCacheStore open() {
-        acquireLock()
         indexWriter = new BufferedOutputStream(Files.newOutputStream(indexPath))
         return this
     }
@@ -92,26 +85,8 @@ class CloudCacheStore implements CacheStore {
     CloudCacheStore openForRead() {
         if( !dataPath.exists() )
             throw new AbortOperationException("Missing cache directory: $dataPath")
-        acquireLock()
         indexReader = Files.newInputStream(indexPath)
         return this
-    }
-
-    private void acquireLock() {
-        if( lock.exists() ) {
-            final msg = """
-                Unable to acquire lock for session with ID ${uniqueId}
-
-                Common reasons for this error are:
-                - You are trying to resume the execution of an already running pipeline
-                - A previous execution was abruptly interrupted, leaving the session open
-
-                You can see the name of the conflicting run by inspecting the contents of the following path: ${lock}
-                """
-            throw new IOException(msg)
-        }
-
-        lock.text = runName
     }
 
     @Override
@@ -122,7 +97,6 @@ class CloudCacheStore implements CacheStore {
     @Override
     void close() {
         FilesEx.closeQuietly(indexWriter)
-        lock.delete()
     }
 
     @Override
