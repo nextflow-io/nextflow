@@ -315,9 +315,9 @@ class CondaCache {
 
         final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
-        final proc = builder.start()
+        final proc = builder.redirectErrorStream(true).start()
         final err = new StringBuilder()
-        final consumer = proc.consumeProcessErrorStream(err)
+        final consumer = proc.consumeProcessOutputStream(err)
         proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {
