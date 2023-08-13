@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.2.0 - 5 Aug 2023
+- Add deleteTasksOnCompletion to Azure Batch configuration (#4114) [b14674dc]
+
 1.1.4 - 22 Jul 2023
 - Fix failing test [9a52f848]
 - Fix Improve error message for invalid Azure URI [0f4d8867]
