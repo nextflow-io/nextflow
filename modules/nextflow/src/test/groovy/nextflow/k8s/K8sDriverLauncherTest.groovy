@@ -213,6 +213,9 @@ class K8sDriverLauncherTest extends Specification {
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
 
+        and:
+        def metadata = [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']]
+
         when:
         def spec = driver.makeLauncherSpec()
         then:
@@ -221,11 +224,12 @@ class K8sDriverLauncherTest extends Specification {
         spec == [
             apiVersion: 'batch/v1', 
             kind: 'Job', 
-            metadata: [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']],
+            metadata: metadata,
             spec: [
-               backoffLimit: 0,
-               template: [
-                  spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: metadata,
+                    spec: [
                         restartPolicy: 'Never',
                         containers: [
                             [
@@ -249,8 +253,8 @@ class K8sDriverLauncherTest extends Specification {
                             [name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
                             [name:'vol-2', configMap:[name:'cfg-2']]
                         ]
-                  ]
-               ]
+                    ]
+                ]
             ]
         ]
     }
