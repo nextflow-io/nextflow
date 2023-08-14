@@ -114,7 +114,7 @@ new_scores = scores + ["Pete": 3, "Cedric": 120]
 When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys are overwritten by the second map.
 
 :::{tip}
-Appending an "update" map is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, any references to the original map elsewhere in the pipeline won't be modified.
+Copying a map with the `+` operator is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, a new instance of the map will be created, and any references to the original map won't be affected.
 :::
 
 Learn more about maps:
