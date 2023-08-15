@@ -787,8 +787,8 @@ class ConfigBuilder {
                 return true
 
             def result = process
-                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
-                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
+                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
 
             return result as boolean
         }
