@@ -385,11 +385,8 @@ EOF
 }
 
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
-if [[ -f /.nextflow/dockerized ]]; then
-  LAUNCH_FILE=/.nextflow/launch-classpath
-else
-  LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
-fi
+LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
+
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
     declare -a launcher="($(cat "$LAUNCH_FILE"))"
 else
