@@ -564,8 +564,7 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        def metadata = task.config.getResourceLabels()
-
+        final metadata = task.config.getResourceLabels()
         final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
         return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
