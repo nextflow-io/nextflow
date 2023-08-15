@@ -193,7 +193,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
         catch( InvocationTargetException e ) {
             // provide the exception cause which is more informative than InvocationTargetException
-            throw e.cause?.cause ?: e.cause ?: e
+            Throwable target = e
+            while( target.cause )
+                target = target.cause
+            throw target
         }
         finally {
             ExecutionStack.pop()
