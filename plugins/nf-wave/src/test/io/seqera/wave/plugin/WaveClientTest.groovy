@@ -476,6 +476,7 @@ class WaveClientTest extends Specification {
                     micromamba install -y -n base -c conda-forge -c defaults \\
                     salmon=1.2.3 \\
                     && micromamba clean -a -y
+                USER root
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -544,6 +545,7 @@ class WaveClientTest extends Specification {
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
                     && micromamba clean -a -y
+                USER root
                     '''.stripIndent()
         and:
         assets.condaFile == condaFile

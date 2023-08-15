@@ -4,3 +4,4 @@ RUN \
     {{target}} \
     {{base_packages}}
     && micromamba clean -a -y
+USER root
