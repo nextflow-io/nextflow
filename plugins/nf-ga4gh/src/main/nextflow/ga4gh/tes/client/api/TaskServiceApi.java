@@ -27,26 +27,26 @@
 
 package nextflow.ga4gh.tes.client.api;
 
-import io.swagger.client.ApiCallback;
-import io.swagger.client.ApiClient;
-import io.swagger.client.ApiException;
-import io.swagger.client.ApiResponse;
-import io.swagger.client.Configuration;
-import io.swagger.client.Pair;
-import io.swagger.client.ProgressRequestBody;
-import io.swagger.client.ProgressResponseBody;
+import nextflow.ga4gh.tes.client.ApiCallback;
+import nextflow.ga4gh.tes.client.ApiClient;
+import nextflow.ga4gh.tes.client.ApiException;
+import nextflow.ga4gh.tes.client.ApiResponse;
+import nextflow.ga4gh.tes.client.Configuration;
+import nextflow.ga4gh.tes.client.Pair;
+import nextflow.ga4gh.tes.client.ProgressRequestBody;
+import nextflow.ga4gh.tes.client.ProgressResponseBody;
 
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 
 
-import io.swagger.client.model.TesCancelTaskResponse;
-import io.swagger.client.model.TesCreateTaskResponse;
-import io.swagger.client.model.TesListTasksResponse;
-import io.swagger.client.model.TesServiceInfo;
-import io.swagger.client.model.TesState;
-import io.swagger.client.model.TesTask;
+import nextflow.ga4gh.tes.client.model.TesCancelTaskResponse;
+import nextflow.ga4gh.tes.client.model.TesCreateTaskResponse;
+import nextflow.ga4gh.tes.client.model.TesListTasksResponse;
+import nextflow.ga4gh.tes.client.model.TesServiceInfo;
+import nextflow.ga4gh.tes.client.model.TesState;
+import nextflow.ga4gh.tes.client.model.TesTask;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
