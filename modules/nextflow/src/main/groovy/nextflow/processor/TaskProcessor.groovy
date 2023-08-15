@@ -1567,6 +1567,10 @@ class TaskProcessor {
                 def path = param.glob ? splitter.strip(filePattern) : filePattern
                 def file = workDir.resolve(path)
                 def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+                if( !exists && param.isNullable() ) {
+                    file = null
+                    exists = true
+                }
                 if( exists )
                     result = [file]
                 else
@@ -1584,10 +1588,10 @@ class TaskProcessor {
             }
         }
 
-        if( param.arity && !param.arity.contains(allFiles.size()) )
+        if( !param.isValidArity(allFiles.size()) )
             throw new IllegalArgumentException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
 
-        task.setOutput( param, allFiles.size()==1 && (!param.arity || param.arity.isSingle()) ? allFiles[0] : allFiles )
+        task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
 
     }
 
@@ -1789,7 +1793,7 @@ class TaskProcessor {
         if( obj instanceof Path )
             return obj
 
-        if( !obj == null )
+        if( obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
         
         if( !(obj instanceof CharSequence) )
@@ -1808,7 +1812,7 @@ class TaskProcessor {
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, boolean nullable, FilePorter.Batch batch ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1816,6 +1820,8 @@ class TaskProcessor {
         // use a bag so that cache hash key is not affected by file entries order
         def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
+            if( item == null && nullable )
+                continue
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
@@ -2031,23 +2037,21 @@ class TaskProcessor {
         for( Map.Entry<FileInParam,?> entry : secondPass.entrySet() ) {
             final param = entry.getKey()
             final val = entry.getValue()
-            final fileParam = param as FileInParam
+            final normalized = normalizeInputToFiles(val, count, param.isPathQualifier(), param.isNullable(), batch)
+            final resolved = expandWildcards( param.getFilePattern(ctx), normalized )
 
-            def files = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
-            files = expandWildcards( fileParam.getFilePattern(ctx), files )
+            if( !param.isValidArity(resolved.size()) )
+                throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
 
-            if( param.arity && !param.arity.contains(files.size()) )
-                throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${files.size()}")
-
-            ctx.put( param.name, singleItemOrList(files, !param.arity || param.arity.isSingle(), task.type) )
-            count += files.size()
-            for( FileHolder item : files ) {
+            ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
+            count += resolved.size()
+            for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1
                 allNames.put(item.stageName,num)
             }
 
             // add the value to the task instance context
-            task.setInput(param, files)
+            task.setInput(param, resolved)
         }
 
         // -- set the delegate map as context in the task config

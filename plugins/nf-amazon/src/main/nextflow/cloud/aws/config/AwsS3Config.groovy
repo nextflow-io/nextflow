@@ -50,8 +50,8 @@ class AwsS3Config {
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
-        this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String) ?: SysEnv.get('NXF_AWS_SSE_MODE')
-        this.storageKmsKeyId = opts.storageKmsKeyId ?: SysEnv.get('NXF_AWS_SSE_KMS_KEY_ID')
+        this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
+        this.storageKmsKeyId = opts.storageKmsKeyId
         this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
     }

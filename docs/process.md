@@ -476,7 +476,7 @@ Available options:
 `arity`
 : :::{versionadded} 23.09.0-edge
   :::
-: Specify the number of expected files (default: `'1..*'`). Can be a number or a range:
+: Specify the number of expected files. Can be a number or a range:
 
   ```groovy
   input:
@@ -487,6 +487,8 @@ Available options:
   ```
 
   When a task is created, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
+
+  An input is *nullable* if the arity is exactly `0..1`. Nullable inputs can accept "null" files from nullable `path` outputs.
 
 `stageAs`
 : Specify how the file should be named in the task work directory:
@@ -536,9 +538,9 @@ seq1 seq2 seq3
 ...
 ```
 
-The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the arity of the received input collection.
+The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the cardinality of the received input collection.
 
-| Arity       | Name pattern | Staged file names                                                                                       |
+| Cardinality | Name pattern | Staged file names                                                                                       |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------- |
 | any         | `*`          | named as the source file                                                                                |
 | 1           | `file*.ext`  | `file.ext`                                                                                              |
@@ -935,19 +937,19 @@ Available options:
 `arity`
 : :::{versionadded} 23.09.0-edge
   :::
-: Specify the number of expected files (default: ``'1..*'``, or ``'0..*'`` if the output is declared optional). Can be a number or a range:
+: Specify the number of expected files. Can be a number or a range:
 
   ```groovy
   output:
       path('one.txt', arity: '1')         // exactly one file is expected
       path('pair_*.txt', arity: '2')      // exactly two files are expected
       path('many_*.txt', arity: '1..*')   // one or more files are expected
-      path('optional.txt', arity: '0..1') // zero or one file is expected (equivalent to optional: true)
+      path('optional.txt', arity: '0..1') // zero or one file is expected
   ```
 
-  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not.
+  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not. If the arity is *single* (i.e. either `1` or `0..1`), a single file will be emitted. Otherwise, a list will always be emitted, even if only one file is produced.
 
-  If you declare an output as optional and also give it an arity, the optional flag will be ignored.
+  An output is *nullable* if the arity is exactly `0..1`. Whereas optional outputs emit nothing if the output file does not exist, nullable outputs emit a "null" file that can only be accepted by a nullable `path` input.
 
 `followLinks`
 : When `true` target files are return in place of any matching symlink (default: `true`)

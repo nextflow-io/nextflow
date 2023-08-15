@@ -54,6 +54,24 @@ trait ArityParam {
         throw new IllegalArgumentException("Path arity should be a number (e.g. '1') or a range (e.g. '1..*')")
     }
 
+    /**
+     * Determine whether a null file is allowed.
+     */
+    boolean isNullable() {
+        return arity && arity.min == 0 && arity.max == 1
+    }
+
+    /**
+     * Determine whether a single output file should be unwrapped.
+     */
+    boolean isSingle() {
+        return !arity || arity.max == 1
+    }
+
+    boolean isValidArity(int size) {
+        return !arity || arity.contains(size)
+    }
+
     @EqualsAndHashCode
     static class Range {
         int min
@@ -66,10 +84,6 @@ trait ArityParam {
 
         boolean contains(int value) {
             min <= value && value <= max
-        }
-
-        boolean isSingle() {
-            max == 1
         }
 
         @Override

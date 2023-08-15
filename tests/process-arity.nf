@@ -5,7 +5,7 @@ process foo {
     path('one.txt', arity: '1')
     path('pair_*.txt', arity: '2')
     path('many_*.txt', arity: '1..*')
-    path('optional.txt', arity: '0..1')
+    path('nullable.txt', arity: '0..1')
   script:
     """
     echo 'one' > one.txt
@@ -22,13 +22,13 @@ process bar {
     path('one.txt', arity: '1')
     path('pair_*.txt', arity: '2')
     path('many_*.txt', arity: '1..*')
-    path('optional.txt', arity: '0..1')
+    path('nullable.txt', arity: '0..1')
   script:
     """
     cat one.txt
     cat pair_*.txt
     cat many_*.txt
-    [[ -f optional.txt ]] && cat optional.txt || true
+    [[ -f nullable.txt ]] && cat nullable.txt || true
     """
 }
 
