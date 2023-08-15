@@ -275,7 +275,7 @@ class Bolts {
     }
 
     /**
-     * Check if a alphabetic characters in a string are lowercase. Non alphabetic characters are ingored
+     * Check if a alphabetic characters in a string are lowercase. Non alphabetic characters are ignored
      * @param self The string to check
      * @return {@true} if the string contains no uppercase characters, {@code false} otherwise
      */

@@ -55,6 +55,6 @@ class CondaConfig extends LinkedHashMap {
             return value.tokenize(',').collect(it -> it.trim())
         }
 
-        throw new IllegalArgumentException("Unexected conda.channels value: $value")
+        throw new IllegalArgumentException("Unexpected conda.channels value: $value")
     }
 }
