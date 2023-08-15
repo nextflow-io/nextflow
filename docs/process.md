@@ -474,7 +474,7 @@ workflow {
 Available options:
 
 `arity`
-: :::{versionadded} 23.06.0-edge
+: :::{versionadded} 23.09.0-edge
   :::
 : Specify the number of expected files (default: `'1..*'`). Can be a number or a range:
 
@@ -933,7 +933,7 @@ In the above example, the `randomNum` process creates a file named `result.txt` 
 Available options:
 
 `arity`
-: :::{versionadded} 23.06.0-edge
+: :::{versionadded} 23.09.0-edge
   :::
 : Specify the number of expected files (default: ``'1..*'``, or ``'0..*'`` if the output is declared optional). Can be a number or a range:
 
