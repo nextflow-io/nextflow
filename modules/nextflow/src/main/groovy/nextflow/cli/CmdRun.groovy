@@ -32,6 +32,7 @@ import groovyx.gpars.GParsConfig
 import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
+import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
@@ -619,7 +620,9 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
 
-    static protected parseParamValue(String str ) {
+    static protected parseParamValue(String str) {
+        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
+            return str
 
         if ( str == null ) return null
 

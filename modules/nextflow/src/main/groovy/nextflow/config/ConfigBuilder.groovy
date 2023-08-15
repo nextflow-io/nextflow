@@ -39,7 +39,6 @@ import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
-import nextflow.trace.WebLogObserver
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -678,7 +677,7 @@ class ConfigBuilder {
             if( cmdRun.withWebLog != '-' )
                 config.weblog.url = cmdRun.withWebLog
             else if( !config.weblog.url )
-                config.weblog.url = WebLogObserver.DEF_URL
+                config.weblog.url = 'http://localhost'
         }
 
         // -- sets tower options
@@ -788,8 +787,8 @@ class ConfigBuilder {
                 return true
 
             def result = process
-                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
-                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
+                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
 
             return result as boolean
         }

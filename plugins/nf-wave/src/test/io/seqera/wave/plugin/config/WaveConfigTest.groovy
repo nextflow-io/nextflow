@@ -86,7 +86,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.2'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.9'
         opts.condaOpts().commands == null
 
         when:
@@ -161,7 +161,8 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.retryOpts().maxAttempts == 5
+        opts.retryOpts().delay == Duration.of('450ms')
+        opts.retryOpts().maxAttempts == 10
         opts.retryOpts().maxDelay == Duration.of('90s')
 
         when:

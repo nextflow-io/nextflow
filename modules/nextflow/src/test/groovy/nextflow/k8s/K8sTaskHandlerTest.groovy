@@ -605,23 +605,22 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getConfig() >> config
 
         result == [
-            apiVersion: 'batch/v1', 
-            kind: 'Job', 
-            metadata:[name: 'nf-123', namespace: 'default'], 
-            spec:[
-              backoffLimit: 0,
-              template: [
-                  spec: [
-                     restartPolicy: 'Never',
-                     containers: [
-                       [
-                           name: 'nf-123',
-                           image: 'debian:latest',
-                           command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
-                       ]
-                     ]
-                  ]
-              ]
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: [name: 'nf-123', namespace: 'default'],
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: [name: 'nf-123', namespace: 'default'],
+                    spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'nf-123',
+                            image: 'debian:latest',
+                            command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
+                        ]]
+                    ]
+                ]
             ]
         ]
     }
@@ -864,7 +863,9 @@ class K8sTaskHandlerTest extends Specification {
         handler.getRunName() >> 'pedantic-joe'
         task.getName() >> 'hello-world-1'
         task.getProcessor() >> proc
-        task.getConfig() >> Mock(TaskConfig)
+        task.getConfig() >> Mock(TaskConfig) {
+            getResourceLabels() >> [mylabel: 'myvalue']
+        }
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
@@ -873,7 +874,9 @@ class K8sTaskHandlerTest extends Specification {
                 [label: 'app', value: 'nextflow'],
                 [label: 'x', value: 'hello_world']
         ]]
-
+        and:
+        labels.mylabel == 'myvalue'
+        and:
         labels.app == 'nextflow'
         labels.foo == 'bar'
         labels.x == 'hello_world'

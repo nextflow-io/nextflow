@@ -122,6 +122,7 @@ nxf_main() {
     spack env activate -d /spack/env/path
     set -u
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
     nxf_stage
 
     set +e
