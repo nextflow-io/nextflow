@@ -2124,12 +2124,15 @@ The limits and the syntax of the corresponding cloud provider should be taken in
 Resource labels are currently supported by the following executors:
 
 - {ref}`awsbatch-executor`
-- {ref}`google-lifesciences-executor`
+- {ref}`azurebatch-executor`
 - {ref}`google-batch-executor`
+- {ref}`google-lifesciences-executor`
 - {ref}`k8s-executor`
 
 :::{versionadded} 23.09.0-edge
-Resource labels are supported for {ref}`azurebatch-executor`. However, because cost analysis in Azure is tied to pools, resource labels are applied to pools rather than jobs. Therefore, when using Azure Batch it is recommended that you define resource labels once for all processes, as each pool will use the resource labels of the first process that creates it.
+Resource labels are supported for Azure Batch when using automatic pool creation.
+
+Resource labels in Azure are added to pools, rather than jobs, in order to facilitate cost analysis. A new pool will be created for each new set of resource labels, therefore it is recommended to also set `azure.batch.deletePoolsOnCompletion = true` when using process-specific resource labels.
 :::
 
 See also: [label](#label)
