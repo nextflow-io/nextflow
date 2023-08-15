@@ -26,6 +26,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
 import nextflow.ga4gh.tes.client.model.TesExecutor as TesExecutorModel
@@ -171,6 +172,9 @@ class TesTaskHandler extends TaskHandler {
     }
 
     protected TesTask newTesTask() {
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
+
         // the cmd list to launch it
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
         List cmd = ['/bin/bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
@@ -234,16 +238,21 @@ class TesTaskHandler extends TaskHandler {
         def result = new TesInput()
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
-        result.type = TesFileType.FILE
         log.trace "[TES] Adding INPUT file: $result"
         return result
     }
 
     private TesOutput outItem( String fileName ) {
         def result = new TesOutput()
-        result.path = "$WORK_DIR/$fileName"
-        result.url = task.workDir.resolve(fileName).toUriString()
-        result.type = TesFileType.FILE
+        if( fileName.contains('*') || fileName.contains('?') ) {
+            result.path = "$WORK_DIR/$fileName"
+            result.pathPrefix = WORK_DIR
+            result.url = task.workDir.toUriString()
+        }
+        else {
+            result.path = "$WORK_DIR/$fileName"
+            result.url = task.workDir.resolve(fileName).toUriString()
+        }
         log.trace "[TES] Adding OUTPUT file: $result"
         return result
     }

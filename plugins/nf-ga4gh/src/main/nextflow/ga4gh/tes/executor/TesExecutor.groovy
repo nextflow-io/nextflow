@@ -86,7 +86,12 @@ class TesExecutor extends Executor implements ExtensionPoint {
     }
 
     protected String getEndPoint() {
-        def result = session.getConfigAttribute('executor.tes.endpoint', 'http://localhost:8000')
+        def result = session.getConfigAttribute('executor.tes.endpoint', null)
+        if( result )
+            log.warn 'Config option `executor.tes.endpoint` is deprecated, use `tes.endpoint` instead'
+        else
+            result = session.config.navigate('tes.endpoint', 'http://localhost:8000')
+
         log.debug "[TES] endpoint=$result"
         return result
     }
