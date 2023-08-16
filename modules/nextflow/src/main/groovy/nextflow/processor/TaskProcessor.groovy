@@ -1589,7 +1589,7 @@ class TaskProcessor {
             }
         }
 
-        if( !param.isValidArity(allFiles.size()) )
+        if( !param.isValidArity(allFiles) )
             throw new IllegalArgumentException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
 
         task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
@@ -1824,6 +1824,7 @@ class TaskProcessor {
         // use a bag so that cache hash key is not affected by file entries order
         def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
+
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item, nullable)
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
@@ -2041,8 +2042,12 @@ class TaskProcessor {
             final normalized = normalizeInputToFiles(val, count, param.isPathQualifier(), param.isNullable(), batch)
             final resolved = expandWildcards( param.getFilePattern(ctx), normalized )
 
-            if( !param.isValidArity(resolved.size()) )
-                throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
+            if( !param.isValidArity(resolved) ) {
+                final msg = param.isNullable()
+                    ? "expected a nullable file (0..1) but a list was provided"
+                    : "expected ${param.arity}, found ${resolved.size()}"
+                throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- ${msg}")
+            }
 
             ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
             count += resolved.size()

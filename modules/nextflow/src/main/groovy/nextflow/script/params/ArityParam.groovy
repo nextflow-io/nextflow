@@ -68,8 +68,21 @@ trait ArityParam {
         return !arity || arity.max == 1
     }
 
-    boolean isValidArity(int size) {
-        return !arity || arity.contains(size)
+    /**
+     * Determine whether a collection of files has valid arity.
+     *
+     * If the param is nullable, there should be exactly one file (either
+     * a real file or a null file)
+     *
+     * @param files
+     */
+    boolean isValidArity(Collection files) {
+        if( !arity )
+            return true
+
+        return isNullable()
+            ? files.size() == 1
+            : arity.contains(files.size())
     }
 
     @EqualsAndHashCode
