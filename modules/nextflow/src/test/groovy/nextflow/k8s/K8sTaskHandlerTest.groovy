@@ -605,23 +605,22 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getConfig() >> config
 
         result == [
-            apiVersion: 'batch/v1', 
-            kind: 'Job', 
-            metadata:[name: 'nf-123', namespace: 'default'], 
-            spec:[
-              backoffLimit: 0,
-              template: [
-                  spec: [
-                     restartPolicy: 'Never',
-                     containers: [
-                       [
-                           name: 'nf-123',
-                           image: 'debian:latest',
-                           command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
-                       ]
-                     ]
-                  ]
-              ]
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: [name: 'nf-123', namespace: 'default'],
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: [name: 'nf-123', namespace: 'default'],
+                    spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'nf-123',
+                            image: 'debian:latest',
+                            command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
+                        ]]
+                    ]
+                ]
             ]
         ]
     }
