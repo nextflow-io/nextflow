@@ -103,6 +103,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.Escape
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
+import nextflow.util.NullPath
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -1568,7 +1569,7 @@ class TaskProcessor {
                 def file = workDir.resolve(path)
                 def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
                 if( !exists && param.isNullable() ) {
-                    file = null
+                    file = new NullPath(path)
                     exists = true
                 }
                 if( exists )
@@ -1789,11 +1790,14 @@ class TaskProcessor {
         return new FileHolder(source, result)
     }
 
-    protected Path normalizeToPath( obj ) {
+    protected Path normalizeToPath( obj, boolean nullable ) {
+        if( obj instanceof NullPath && !nullable )
+            throw new ProcessUnrecoverableException("Path value cannot be null")
+
         if( obj instanceof Path )
             return obj
 
-        if( obj == null )
+        if( !obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
         
         if( !(obj instanceof CharSequence) )
@@ -1820,11 +1824,8 @@ class TaskProcessor {
         // use a bag so that cache hash key is not affected by file entries order
         def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
-            if( item == null && nullable )
-                continue
-
             if( item instanceof Path || coerceToPath ) {
-                def path = normalizeToPath(item)
+                def path = normalizeToPath(item, nullable)
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
                 def holder = new FileHolder(target)
                 files << holder
