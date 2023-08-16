@@ -2388,7 +2388,9 @@ class TaskProcessor {
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "<${name}> Before run -- messages: ${messages}"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
@@ -2403,12 +2405,15 @@ class TaskProcessor {
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            log.trace "<${name}> After run"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After run"
             currentTask.remove()
         }
 
         @Override
         Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2420,6 +2425,7 @@ class TaskProcessor {
 
         @Override
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2429,7 +2435,9 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                log.trace "<${name}> Poison pill arrived; port: $index"
+                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+                if( log.isTraceEnabled() )
+                    log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
             }
@@ -2439,7 +2447,9 @@ class TaskProcessor {
 
         @Override
         void afterStop(final DataflowProcessor processor) {
-            log.trace "<${name}> After stop"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After stop"
         }
 
         /**
