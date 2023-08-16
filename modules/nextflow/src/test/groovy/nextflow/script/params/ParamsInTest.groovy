@@ -710,9 +710,9 @@ class ParamsInTest extends Dsl2Spec {
               path x, arity: '1'
               path f1, arity: '1..2'
               path '*.fa', arity: '1..*'
-              path 'file.txt'
-              path f2, name: '*.fa'
-              path f3, stageAs: '*.txt'
+              path 'file.txt', arity: true
+              path f2, name: '*.fa', arity: true
+              path f3, stageAs: '*.txt', arity: true
 
               return ''
             }
@@ -759,16 +759,19 @@ class ParamsInTest extends Dsl2Spec {
         in3.inChannel.val == FILE
         in3.index == 3
         in3.isPathQualifier()
+        in3.arity == new ArityParam.Range(1, 1)
 
         in4.name == 'f2'
         in4.filePattern == '*.fa'
         in4.index == 4
         in4.isPathQualifier()
+        in4.arity == new ArityParam.Range(1, Integer.MAX_VALUE)
 
         in5.name == 'f3'
         in5.filePattern == '*.txt'
         in5.index == 5
         in5.isPathQualifier()
+        in5.arity == new ArityParam.Range(1, Integer.MAX_VALUE)
     }
 
     def 'test input paths with gstring'() {

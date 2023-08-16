@@ -276,4 +276,14 @@ class FileOutParam extends BaseOutParam implements OutParam, ArityParam, Optiona
         (FileOutParam)super.setOptions(opts)
     }
 
+    def setArity(boolean value) {
+        if( !value )
+            return
+
+        final str = filePattern?.contains('*') || filePattern?.contains('?')
+            ? '1..*'
+            : '1'
+        setArity(str)
+    }
+
 }

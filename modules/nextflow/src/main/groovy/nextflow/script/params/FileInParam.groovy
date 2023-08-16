@@ -153,4 +153,14 @@ class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
         return this
     }
 
+    def setArity(boolean value) {
+        if( !value )
+            return
+
+        final str = filePattern?.contains('*') || filePattern?.contains('?')
+            ? '1..*'
+            : '1'
+        setArity(str)
+    }
+
 }

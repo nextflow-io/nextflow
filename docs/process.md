@@ -490,6 +490,8 @@ Available options:
 
   An input is *nullable* if the arity is exactly `0..1`. Nullable inputs can accept "null" files from nullable `path` outputs.
 
+  You can also set `arity: true` to infer the arity from the file pattern: `1..*` if the pattern is a glob, `1` otherwise.
+
 `stageAs`
 : Specify how the file should be named in the task work directory:
 
@@ -508,7 +510,7 @@ Available options:
   }
   ```
 
-  Cab be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
+  Can be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
 
 ### Multiple input files
 
@@ -950,6 +952,8 @@ Available options:
   When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not. If the arity is *single* (i.e. either `1` or `0..1`), a single file will be emitted. Otherwise, a list will always be emitted, even if only one file is produced.
 
   An output is *nullable* if the arity is exactly `0..1`. Whereas optional outputs emit nothing if the output file does not exist, nullable outputs emit a "null" file that can only be accepted by a nullable `path` input.
+
+  You can also set `arity: true` to infer the arity from the file pattern: `1..*` if the pattern is a glob, `1` otherwise.
 
 `followLinks`
 : When `true` target files are return in place of any matching symlink (default: `true`)
