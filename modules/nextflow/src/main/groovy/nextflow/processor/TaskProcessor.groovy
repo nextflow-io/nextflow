@@ -873,7 +873,12 @@ class TaskProcessor {
      * @param folder The folder where the outputs are stored (eventually)
      * @return {@code true} when all outputs are available, {@code false} otherwise
      */
+
+    int count_a=0
+
     final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash, TaskEntry entry) {
+        log.trace "Some trace [${++count_a}]"
+        log.info "Checking cache [${count_a}]"
 
         // check if exists the task exit code file
         def exitCode = null
@@ -2382,13 +2387,17 @@ class TaskProcessor {
      */
     class TaskProcessorInterceptor extends BaseProcessInterceptor {
 
+        int count_b =0
+
         TaskProcessorInterceptor(List<DataflowReadChannel> inputs, boolean stop) {
             super(inputs, stop)
         }
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "<${name}> Before run -- messages: ${messages}"
+            log.trace "<${name}> Before run [${++count_b}] -- messages: ${messages}"
+            log.info "Before run ${count_b}"
+
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
