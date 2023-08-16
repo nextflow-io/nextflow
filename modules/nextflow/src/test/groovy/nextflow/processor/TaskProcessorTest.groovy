@@ -829,7 +829,7 @@ class TaskProcessorTest extends Specification {
         def proc = new TaskProcessor(); proc.executor = executor
 
         when:
-        def result = proc.normalizeInputToFiles(PATH.toString(), 0, true, batch)
+        def result = proc.normalizeInputToFiles(PATH.toString(), 0, true, false, batch)
         then:
         1 * executor.isForeignFile(PATH) >> false
         0 * batch.addToForeign(PATH) >> null

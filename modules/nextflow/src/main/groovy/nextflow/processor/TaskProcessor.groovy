@@ -1790,7 +1790,7 @@ class TaskProcessor {
         return new FileHolder(source, result)
     }
 
-    protected Path normalizeToPath( obj, boolean nullable ) {
+    protected Path normalizeToPath( obj, boolean nullable=false ) {
         if( obj instanceof NullPath && !nullable )
             throw new ProcessUnrecoverableException("Path value cannot be null")
 
