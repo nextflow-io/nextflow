@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.3.0 - 17 Aug 2023
+- Add resource labels support for Azure Batch (#4178) [7b5e50a1]
+- Fix typos in source code comments (#4173) [ci fast] [e78bc37e]
+
 1.2.0 - 5 Aug 2023
 - Add deleteTasksOnCompletion to Azure Batch configuration (#4114) [b14674dc]
 
