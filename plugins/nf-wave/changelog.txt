@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+0.11.2 - 17 Aug 2023
+- Use root user in Wave container based on micromamba (#4038) [ci fast] [a3a75ea2]
+- Add 429 http status code to Wave retriable errors [8eb5f305]
+
 0.11.1 - 5 Aug 2023
 - Improve Wave config logging [547fad62]
 - Increase Wave client max attempts [fe5dd497]
