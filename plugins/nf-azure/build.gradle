@@ -52,6 +52,7 @@ dependencies {
 
     constraints {
         api 'net.minidev:json-smart:2.4.9'
+        api 'com.google.code.gson:gson:2.8.9'
     }
 
     testImplementation(testFixtures(project(":nextflow")))
