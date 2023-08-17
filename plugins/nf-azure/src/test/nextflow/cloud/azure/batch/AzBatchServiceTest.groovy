@@ -338,6 +338,7 @@ class AzBatchServiceTest extends Specification {
                 getMemory() >> MEM
                 getCpus() >> CPUS
                 getMachineType() >> TYPE
+                getResourceLabels() >> [foo: 'bar']
             }
         }
 
@@ -346,7 +347,8 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-ddb1223ab79edfe07c0af2be7fceeb13-Standard_X1'
+        spec.poolId == 'nf-pool-9022a3fbfb5f93028d78fefaea5e21ab-Standard_X1'
+        spec.metadata == [foo: 'bar']
 
     }
 
