@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.6.1 -17 Aug 2023
+- Fix checkpoint thread termination (#4166) [2b449daa]
+- Fix typos in source code comments (#4173) [ci fast] [e78bc37e]
+
 1.6.0 - 5 Aug 2023
 - Add Tower logs checkpoint (#4132) [71dfecc2]
 - Restore Tower CacheManager for backward compatibility [6d269070]
