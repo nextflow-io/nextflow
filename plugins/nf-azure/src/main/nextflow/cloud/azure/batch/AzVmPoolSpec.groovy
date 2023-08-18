@@ -36,4 +36,5 @@ class AzVmPoolSpec {
     String poolId
     AzVmType vmType
     AzPoolOpts opts
+    Map<String,String> metadata
 }

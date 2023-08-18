@@ -39,6 +39,7 @@ import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
+import com.microsoft.azure.batch.protocol.models.MetadataItem
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
 import com.microsoft.azure.batch.protocol.models.OnAllTasksComplete
@@ -274,7 +275,7 @@ class AzBatchService implements Closeable {
             if (!config.batch().accountName)
                 throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
             if (!config.batch().accountKey)
-                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
 
             return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
 
@@ -563,9 +564,10 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        final key = CacheHelper.hasher([vmType.name, opts]).hash().toString()
+        final metadata = task.config.getResourceLabels()
+        final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
-        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts)
+        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
     protected void checkPool(CloudPool pool, AzVmPoolSpec spec) {
@@ -697,6 +699,16 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
+
+        // resource labels
+        if( spec.metadata ) {
+            final metadata = spec.metadata.collect { name, value ->
+                new MetadataItem()
+                    .withName(name)
+                    .withValue(value)
+            }
+            poolParams.withMetadata(metadata)
+        }
 
         // virtual network
         if( spec.opts.virtualNetwork )
@@ -872,7 +884,7 @@ class AzBatchService implements Closeable {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
             }
         }
         return RetryPolicy.<T>builder()

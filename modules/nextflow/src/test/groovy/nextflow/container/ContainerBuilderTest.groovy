@@ -56,7 +56,7 @@ class ContainerBuilderTest extends Specification {
         when:
         result = builder.makeEnv( 'FOO' )
         then:
-        result.toString() == '${FOO:+-e "FOO=$FOO"}'
+        result.toString() == '-e "FOO"'
 
         when:
         builder.makeEnv( 1 )

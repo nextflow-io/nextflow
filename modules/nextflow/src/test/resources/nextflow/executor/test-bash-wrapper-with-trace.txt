@@ -305,6 +305,7 @@ nxf_main() {
     set +u
     set -u
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
     nxf_stage
 
     set +e

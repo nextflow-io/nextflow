@@ -389,7 +389,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     @Override
     DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        throw new UnsupportedOperationException("Direcotry listing unsupported by ${getScheme().toUpperCase()} file system provider")
+        throw new UnsupportedOperationException("Directory listing unsupported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
