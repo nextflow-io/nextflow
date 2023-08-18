@@ -24,6 +24,13 @@ package nextflow.container
  */
 class SarusBuilder extends ContainerBuilder<SarusBuilder> {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'envWhitelist',
+        'runOptions',
+        'tty',
+    ]
+
     private boolean tty
 
     private boolean verbose

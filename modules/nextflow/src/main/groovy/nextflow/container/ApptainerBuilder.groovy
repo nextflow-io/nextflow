@@ -29,6 +29,18 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ApptainerBuilder extends SingularityBuilder {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'autoMounts',
+        'cacheDir',
+        'enabled',
+        'engineOptions',
+        'envWhitelist',
+        'noHttps',
+        'pullTimeout',
+        'registry',
+        'runOptions',
+    ]
+
     ApptainerBuilder(String name) {
         super(name)
     }

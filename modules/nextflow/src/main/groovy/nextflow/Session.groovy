@@ -38,6 +38,14 @@ import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
+import nextflow.container.ApptainerBuilder
+import nextflow.container.CharliecloudBuilder
+import nextflow.container.DockerBuilder
+import nextflow.container.PodmanBuilder
+import nextflow.container.SarusBuilder
+import nextflow.container.ShifterBuilder
+import nextflow.container.SingularityBuilder
+import nextflow.container.UdockerBuilder
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
@@ -1204,9 +1212,21 @@ class Session implements ISession {
         return getContainerConfig(null)
     }
 
+    private static final Map<String,Set<String>> CONTAINER_VALID_OPTIONS = [
+        'apptainer': ApptainerBuilder.VALID_OPTIONS,
+        'docker': DockerBuilder.VALID_OPTIONS,
+        'charliecloud': CharliecloudBuilder.VALID_OPTIONS,
+        'podman': PodmanBuilder.VALID_OPTIONS,
+        'sarus': SarusBuilder.VALID_OPTIONS,
+        'shifter': ShifterBuilder.VALID_OPTIONS,
+        'singularity': SingularityBuilder.VALID_OPTIONS,
+        'udocker': UdockerBuilder.VALID_OPTIONS,
+    ]
+
     private void getContainerConfig0(String engine, List<Map> drivers) {
         final entry = this.config?.get(engine)
         if( entry instanceof Map ) {
+            ConfigHelper.checkInvalidConfigOptions(engine, entry, CONTAINER_VALID_OPTIONS[engine])
             final config0 = new LinkedHashMap((Map)entry)
             config0.put('engine', engine)
             drivers.add(config0)

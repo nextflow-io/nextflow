@@ -31,6 +31,18 @@ import nextflow.SysEnv
 @Slf4j
 class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'autoMounts',
+        'cacheDir',
+        'enabled',
+        'engineOptions',
+        'envWhitelist',
+        'noHttps',
+        'pullTimeout',
+        'registry',
+        'runOptions',
+    ]
+
     private boolean autoMounts
 
     private boolean homeMount

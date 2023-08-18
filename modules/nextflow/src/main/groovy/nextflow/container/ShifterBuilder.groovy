@@ -24,6 +24,10 @@ package nextflow.container
  */
 class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'enabled',
+    ]
+
     private boolean verbose
 
     ShifterBuilder( String image ) {

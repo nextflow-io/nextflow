@@ -25,6 +25,17 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'engineOptions',
+        'envWhitelist',
+        'mountFlags',
+        'registry',
+        'remove',
+        'runOptions',
+        'temp',
+    ]
+
     private boolean remove = true
 
     private String registry

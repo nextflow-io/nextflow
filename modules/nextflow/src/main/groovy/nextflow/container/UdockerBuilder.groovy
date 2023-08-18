@@ -27,6 +27,10 @@ import groovy.transform.PackageScope
  */
 class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'enabled'
+    ]
+
     private String temp
 
     private boolean remove = true
