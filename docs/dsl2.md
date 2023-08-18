@@ -153,6 +153,12 @@ workflow {
     foo.out.samples_bam.view()
 }
 ```
+If you're referencing the named output right at the point where the process is being executed, you don't need to use the `.out` syntax. This is the more concise method. For instance:
+```groovy
+workflow {
+    ch_example = foo().samples_bam
+}
+```
 
 ### Process named stdout
 
