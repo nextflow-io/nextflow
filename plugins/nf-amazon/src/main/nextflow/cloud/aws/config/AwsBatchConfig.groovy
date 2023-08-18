@@ -25,6 +25,7 @@ import nextflow.SysEnv
 import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 
 /**
@@ -35,6 +36,20 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class AwsBatchConfig implements CloudTransferOptions {
+
+    static private final Set<String> VALID_OPTIONS = [
+        'cliPath',
+        'delayBetweenAttempts',
+        'jobRole',
+        'logsGroup',
+        'maxParallelTransfers',
+        'maxSpotAttempts',
+        'maxTransferAttempts',
+        'retryMode',
+        'schedulingPriority',
+        'shareIdentifier',
+        'volumes',
+    ]
 
     public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 5
 
@@ -85,6 +100,8 @@ class AwsBatchConfig implements CloudTransferOptions {
     protected AwsBatchConfig() {}
 
     AwsBatchConfig(Map opts) {
+        ConfigHelper.checkInvalidConfigOptions('aws.batch', opts, VALID_OPTIONS)
+
         cliPath = parseCliPath(opts.cliPath as String)
         maxParallelTransfers = opts.maxParallelTransfers as Integer ?: MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts as Integer ?: defaultMaxTransferAttempts()

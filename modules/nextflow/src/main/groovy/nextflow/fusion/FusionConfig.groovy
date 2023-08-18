@@ -18,6 +18,7 @@
 package nextflow.fusion
 
 import groovy.transform.CompileStatic
+import nextflow.util.ConfigHelper
 /**
  * Model Fusion config options
  *
@@ -25,6 +26,17 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class FusionConfig {
+
+    final static private Set<String> VALID_OPTIONS = [
+        'enabled',
+        'containerConfigUrl',
+        'exportAwsAccessKeys',
+        'exportStorageCredentials',
+        'logLevel',
+        'logOutput',
+        'tagsEnabled',
+        'tagsPattern',
+    ]
 
     final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
     final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
@@ -64,6 +76,8 @@ class FusionConfig {
     }
 
     FusionConfig(Map opts, Map<String,String> env=System.getenv()) {
+        ConfigHelper.checkInvalidConfigOptions('fusion', opts, VALID_OPTIONS)
+
         this.enabled = opts.enabled
         this.exportAwsAccessKeys = opts.exportAwsAccessKeys
         this.exportStorageCredentials = opts.exportStorageCredentials

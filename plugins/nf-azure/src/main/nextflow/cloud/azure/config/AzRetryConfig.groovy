@@ -20,6 +20,7 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 
 /**
@@ -31,6 +32,7 @@ import nextflow.util.Duration
 @EqualsAndHashCode
 @CompileStatic
 class AzRetryConfig {
+
     Duration delay = Duration.of('250ms')
     Duration maxDelay = Duration.of('90s')
     int maxAttempts = 10
@@ -41,6 +43,8 @@ class AzRetryConfig {
     }
 
     AzRetryConfig(Map config) {
+        ConfigHelper.checkInvalidConfigOptions('azure.retryPolicy', config, this)
+
         if( config.delay )
             delay = config.delay as Duration
         if( config.maxDelay )

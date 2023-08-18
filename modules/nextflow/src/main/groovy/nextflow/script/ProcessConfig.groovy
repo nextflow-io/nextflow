@@ -43,18 +43,18 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     static final public transient LABEL_REGEXP = ~/[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9]+)?/
 
-    static final public List<String> DIRECTIVES = [
+    static final public Set<String> DIRECTIVES = [
             'accelerator',
             'afterScript',
             'arch',
             'beforeScript',
             'cache',
-            'conda',
-            'cpus',
-            'container',
-            'containerOptions',
             'cleanup',
             'clusterOptions',
+            'conda',
+            'container',
+            'containerOptions',
+            'cpus',
             'debug',
             'disk',
             'echo', // deprecated
@@ -62,9 +62,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'executor',
             'ext',
             'fair',
-            'machineType',
-            'queue',
             'label',
+            'machineType',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -73,24 +72,17 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
+            'queue',
+            'resourceLabels',
             'scratch',
+            'secret',
             'shell',
             'spack',
+            'stageInMode',
+            'stageOutMode',
             'storeDir',
             'tag',
             'time',
-            // input-output qualifiers
-            'file',
-            'set',
-            'val',
-            'each',
-            'env',
-            'secret',
-            'stdin',
-            'stdout',
-            'stageInMode',
-            'stageOutMode',
-            'resourceLabels'
     ]
 
     /**

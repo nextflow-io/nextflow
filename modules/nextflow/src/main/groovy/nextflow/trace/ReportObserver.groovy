@@ -40,6 +40,12 @@ import nextflow.script.WorkflowMetadata
 @CompileStatic
 class ReportObserver implements TraceObserver {
 
+    static final public Set<String> VALID_OPTIONS = [
+        'enabled',
+        'file',
+        'overwrite'
+    ]
+
     static final public String DEF_FILE_NAME = "report-${TraceHelper.launchTimestampFmt()}.html"
 
     static final public int DEF_MAX_TASKS = 10_000

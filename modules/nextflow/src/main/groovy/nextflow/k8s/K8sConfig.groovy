@@ -31,6 +31,7 @@ import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 
 /**
@@ -43,12 +44,36 @@ import nextflow.util.Duration
 @CompileStatic
 class K8sConfig implements Map<String,Object> {
 
+    static private final Set<String> VALID_OPTIONS = [
+        'autoMountHostPaths',
+        'computeResourceType',
+        'context',
+        'fetchNodeName',
+        'httpConnectTimeout',
+        'httpReadTimeout',
+        'launchDir',
+        'maxErrorRetry',
+        'namespace',
+        'pod',
+        'projectDir',
+        'pullPolicy',
+        'runAsUser',
+        'securityContext',
+        'serviceAccount',
+        'storageClaimName',
+        'storageMountPath',
+        'storageSubPath',
+        'workDir',
+    ]
+
     @Delegate
     private Map<String,Object> target
 
     private PodOptions podOptions
 
     K8sConfig(Map<String,Object> config) {
+        ConfigHelper.checkInvalidConfigOptions('k8s', config, VALID_OPTIONS)
+
         target = config ?: Collections.<String,Object>emptyMap()
 
         this.podOptions = createPodOptions(target.pod)

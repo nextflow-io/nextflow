@@ -21,6 +21,8 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
+import nextflow.SysEnv
 import nextflow.secret.SecretHolder
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
@@ -324,7 +326,27 @@ class ConfigHelper {
         return true;
     }
 
+    static void checkInvalidConfigOptions(String scope, Map config, Set<String> validOptions) {
+        if( !config || SysEnv.get('NXF_ENABLE_STRICT_CONFIG')!='true' )
+            return
 
+        for( def key : config.keySet() ) {
+            if( key !in validOptions ) {
+                final msg = "Unrecognized config option -- ${scope}.${key}"
+                if( NF.isStrictMode() )
+                    throw new IllegalArgumentException(msg)
+                log.warn(msg)
+            }
+        }
+    }
+
+    static void checkInvalidConfigOptions(String scope, Map config, def object) {
+        final validOptions = object.metaClass.properties
+                .collect( it -> it.name )
+                .findAll( it -> it!='class' ) as Set
+
+        checkInvalidConfigOptions(scope, config, validOptions)
+    }
 
 }
 

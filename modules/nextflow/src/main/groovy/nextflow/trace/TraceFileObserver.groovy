@@ -38,6 +38,15 @@ import nextflow.processor.TaskProcessor
 @CompileStatic
 class TraceFileObserver implements TraceObserver {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'fields',
+        'file',
+        'overwrite',
+        'raw',
+        'sep'
+    ]
+
     public static final String DEF_FILE_NAME = "trace-${TraceHelper.launchTimestampFmt()}.txt"
 
     /**

@@ -19,6 +19,7 @@ package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import nextflow.util.ConfigHelper
 
 /**
  * Model Tower config accessed by Wave
@@ -28,6 +29,14 @@ import groovy.transform.ToString
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class TowerConfig {
+
+    static private final Set<String> VALID_OPTIONS = [
+        'accessToken',
+        'enabled',
+        'endpoint',
+        'refreshToken',
+        'workspaceId',
+    ]
 
     final String accessToken
 
@@ -40,6 +49,7 @@ class TowerConfig {
     final String workflowId
 
     TowerConfig(Map opts, Map<String,String> env) {
+        ConfigHelper.checkInvalidConfigOptions('tower', opts, VALID_OPTIONS)
         this.accessToken = accessToken0(opts, env)
         this.refreshToken = refreshToken0(opts, env)
         this.workspaceId = workspaceId0(opts, env) as Long

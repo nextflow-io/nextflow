@@ -19,6 +19,7 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 /**
  * Parse Azure settings from nextflow config file
@@ -28,16 +29,25 @@ import nextflow.util.Duration
 @CompileStatic
 class AzStorageOpts {
 
+    static private final Set<String> VALID_OPTIONS = [
+        'accountName',
+        'accountKey',
+        'sasToken',
+        'tokenDuration',
+    ]
+
     private Map<String,String> sysEnv
+
     String accountKey
     String accountName
     String sasToken
     Duration tokenDuration
     Map<String,AzFileShareOpts> fileShares
 
-
     AzStorageOpts(Map config, Map<String,String> env=null) {
         assert config!=null
+        ConfigHelper.checkInvalidConfigOptions('azure.storage', config, VALID_OPTIONS)
+
         this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
         this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')
         this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')

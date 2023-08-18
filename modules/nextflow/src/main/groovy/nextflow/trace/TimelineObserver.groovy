@@ -39,6 +39,12 @@ import org.apache.commons.lang.StringEscapeUtils
 @CompileStatic
 class TimelineObserver implements TraceObserver {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'file',
+        'overwrite'
+    ]
+
     public static final String DEF_FILE_NAME = "timeline-${TraceHelper.launchTimestampFmt()}.html"
 
     /**

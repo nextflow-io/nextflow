@@ -17,6 +17,7 @@
 package nextflow.conda
 
 import groovy.transform.CompileStatic
+import nextflow.util.ConfigHelper
 
 /**
  * Model Conda configuration
@@ -26,6 +27,15 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class CondaConfig extends LinkedHashMap {
 
+    static private final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'cacheDir',
+        'createOptions',
+        'createTimeout',
+        'useMamba',
+        'useMicromamba'
+    ]
+
     private Map<String,String> env
 
     /* required by Kryo deserialization -- do not remove */
@@ -33,6 +43,7 @@ class CondaConfig extends LinkedHashMap {
 
     CondaConfig(Map config, Map<String, String> env) {
         super(config)
+        ConfigHelper.checkInvalidConfigOptions('conda', config, VALID_OPTIONS)
         this.env = env
     }
 

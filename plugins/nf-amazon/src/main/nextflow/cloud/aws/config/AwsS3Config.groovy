@@ -23,6 +23,7 @@ import com.amazonaws.services.s3.model.CannedAccessControlList
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.util.ConfigHelper
 /**
  * Model AWS S3 config settings
  *
@@ -31,6 +32,37 @@ import nextflow.SysEnv
 @Slf4j
 @CompileStatic
 class AwsS3Config {
+
+    static private final Set<String> VALID_OPTIONS = [
+        'anonymous',
+        'connectionTimeout',
+        'endpoint',
+        'glacierAutoRetrieval',
+        'glacierExpirationDays',
+        'glacierRetrievalTier',
+        'maxConnections',
+        'maxErrorRetry',
+        'protocol',
+        'proxyHost',
+        'proxyPort',
+        'proxyUsername',
+        'proxyPassword',
+        's3Acl',
+        's3PathStyleAccess',
+        'signerOverride',
+        'socketSendBufferSizeHint',
+        'socketRecvBufferSizeHint',
+        'socketTimeout',
+        'storageEncryption',
+        'storageKmsKeyId',
+        'userAgent',
+        // legacy
+        'uploadChunkSize',
+        'uploadMaxAttempts',
+        'uploadMaxThreads',
+        'uploadRetrySleep',
+        'uploadStorageClass',
+    ]
 
     private String endpoint
 
@@ -47,6 +79,8 @@ class AwsS3Config {
     private Boolean pathStyleAccess
 
     AwsS3Config(Map opts) {
+        ConfigHelper.checkInvalidConfigOptions('aws.client', opts, VALID_OPTIONS)
+
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes

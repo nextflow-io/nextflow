@@ -24,6 +24,7 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 
 /**
@@ -35,6 +36,24 @@ import nextflow.util.Duration
 @EqualsAndHashCode
 @CompileStatic
 class AzPoolOpts implements CacheFunnel {
+
+    static private final Set<String> VALID_OPTIONS = [
+        'autoScale',
+        'fileShareRootPath',
+        'maxVmCount',
+        'mountOptions',
+        'offer',
+        'privileged',
+        'publisher',
+        'runAs',
+        'scaleFormula',
+        'scaleInterval',
+        'schedulePolicy',
+        'sku',
+        'virtualNetwork',
+        'vmCount',
+        'vmType',
+    ]
 
     static public final String DEFAULT_PUBLISHER = "microsoft-azure-batch"
     static public final String DEFAULT_OFFER = "ubuntu-server-container"
@@ -71,7 +90,9 @@ class AzPoolOpts implements CacheFunnel {
         this(Collections.emptyMap())
     }
 
-    AzPoolOpts(Map opts) {
+    AzPoolOpts(Map opts, String name='auto') {
+        ConfigHelper.checkInvalidConfigOptions("azure.batch.pools.${name}".toString(), opts, VALID_OPTIONS)
+
         this.runAs = opts.runAs ?: ''
         this.privileged = opts.privileged ?: false
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER

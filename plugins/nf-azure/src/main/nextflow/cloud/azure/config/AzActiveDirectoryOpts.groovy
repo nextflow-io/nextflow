@@ -17,6 +17,7 @@ package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
 import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.util.ConfigHelper
 
 /**
  * Model Azure identity options from nextflow config file
@@ -26,6 +27,12 @@ import nextflow.cloud.azure.nio.AzFileSystemProvider
 @CompileStatic
 class AzActiveDirectoryOpts {
 
+    static private final Set<String> VALID_OPTIONS = [
+        'servicePrincipalId',
+        'servicePrincipalSecret',
+        'tenantId',
+    ]
+
     private Map<String, String> sysEnv
 
     String servicePrincipalId
@@ -34,6 +41,8 @@ class AzActiveDirectoryOpts {
 
     AzActiveDirectoryOpts(Map config, Map<String, String> env = null) {
         assert config != null
+        ConfigHelper.checkInvalidConfigOptions('azure.activeDirectory', config, VALID_OPTIONS)
+
         this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env
         this.servicePrincipalId = config.servicePrincipalId ?: sysEnv.get('AZURE_CLIENT_ID')
         this.servicePrincipalSecret = config.servicePrincipalSecret ?: sysEnv.get('AZURE_CLIENT_SECRET')

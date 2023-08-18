@@ -480,6 +480,9 @@ The `conda` scope controls the creation of a Conda environment by the Conda pack
 
 The following settings are available:
 
+`conda.enabled`
+: Enable the use of Conda environments (default: `false`).
+
 `conda.cacheDir`
 : Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
 
@@ -1332,6 +1335,9 @@ The `spack` scope controls the creation of a Spack environment by the Spack pack
 
 The following settings are available:
 
+`spack.enabled`
+: Enable the use of Spack environments (default: `false`).
+
 `spack.cacheDir`
 : Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
 
@@ -1554,12 +1560,12 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_DISABLE_PARAMS_TYPE_DETECTION`
 : :::{versionadded} 23.07.0-edge
-:::
+  :::
 : Disables the automatic type detection of command line parameters.
 
 `NXF_DISABLE_WAVE_SERVICE`
 : :::{versionadded} 23.08.0-edge
-:::
+  :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
 `NXF_ENABLE_SECRETS`
@@ -1571,6 +1577,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 22.05.0-edge
   :::
 : Enable Nextflow *strict* execution mode (default: `false`)
+
+`NXF_ENABLE_STRICT_CONFIG`
+: :::{versionadded} 23.09.0-edge
+  :::
+: When `true`, log a warning (or throw an error in strict mode) if an unrecognized config option is specified (default: `false`).
 
 `NXF_EXECUTOR`
 : Defines the default process executor e.g. `sge`

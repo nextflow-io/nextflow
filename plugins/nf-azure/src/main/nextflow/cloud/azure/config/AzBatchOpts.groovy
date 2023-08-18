@@ -22,6 +22,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import nextflow.cloud.CloudTransferOptions
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.StringUtils
 
@@ -32,6 +33,21 @@ import nextflow.util.StringUtils
  */
 @CompileStatic
 class AzBatchOpts implements CloudTransferOptions {
+
+    static final private Set<String> VALID_OPTIONS = [
+        'accountKey',
+        'accountName',
+        'allowPoolCreation',
+        'autoPoolMode',
+        'copyToolInstallMode',
+        'deleteJobsOnCompletion',
+        'deletePoolsOnCompletion',
+        'deleteTasksOnCompletion',
+        'endpoint',
+        'location',
+        'pools',
+        'terminateJobsOnCompletion',
+    ]
 
     static final private Pattern ENDPOINT_PATTERN = ~/https:\/\/(\w+)\.(\w+)\.batch\.azure\.com/
 
@@ -57,6 +73,8 @@ class AzBatchOpts implements CloudTransferOptions {
 
     AzBatchOpts(Map config, Map<String,String> env=null) {
         assert config!=null
+        ConfigHelper.checkInvalidConfigOptions('azure.batch', config, VALID_OPTIONS)
+
         sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
         accountName = config.accountName ?: sysEnv.get('AZURE_BATCH_ACCOUNT_NAME')
         accountKey = config.accountKey ?: sysEnv.get('AZURE_BATCH_ACCOUNT_KEY')
@@ -78,7 +96,7 @@ class AzBatchOpts implements CloudTransferOptions {
     static Map<String,AzPoolOpts> parsePools(Map<String,Map> pools) {
         final result = new LinkedHashMap<String,AzPoolOpts>()
         for( Map.Entry<String,Map> entry : pools ) {
-            result[entry.key] = new AzPoolOpts( entry.value )
+            result[entry.key] = new AzPoolOpts( entry.value, entry.key )
         }
         if( !result.keySet().contains('auto') )
             result.put('auto', new AzPoolOpts())

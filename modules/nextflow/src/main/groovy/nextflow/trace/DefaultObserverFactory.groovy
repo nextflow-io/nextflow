@@ -3,6 +3,7 @@ package nextflow.trace
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.util.ConfigHelper
 
 /**
  * Creates Nextflow observes object
@@ -39,6 +40,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
      * Create workflow report file observer
      */
     protected void createReportObserver(Collection<TraceObserver> result) {
+        ConfigHelper.checkInvalidConfigOptions('report', config.report, ReportObserver.VALID_OPTIONS)
+
         Boolean isEnabled = config.navigate('report.enabled') as Boolean
         if( !isEnabled )
             return
@@ -57,6 +60,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
      * Create timeline report file observer
      */
     protected void createTimelineObserver(Collection<TraceObserver> result) {
+        ConfigHelper.checkInvalidConfigOptions('timeline', config.timeline, TimelineObserver.VALID_OPTIONS)
+
         Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
         if( !isEnabled )
             return
@@ -70,6 +75,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
     }
 
     protected void createDagObserver(Collection<TraceObserver> result) {
+        ConfigHelper.checkInvalidConfigOptions('dag', config.dag, GraphObserver.VALID_OPTIONS)
+
         Boolean isEnabled = config.navigate('dag.enabled') as Boolean
         if( !isEnabled )
             return
@@ -86,6 +93,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
      * create the execution trace observer
      */
     protected void createTraceFileObserver(Collection<TraceObserver> result) {
+        ConfigHelper.checkInvalidConfigOptions('trace', config.trace, TraceFileObserver.VALID_OPTIONS)
+
         Boolean isEnabled = config.navigate('trace.enabled') as Boolean
         if( !isEnabled )
             return

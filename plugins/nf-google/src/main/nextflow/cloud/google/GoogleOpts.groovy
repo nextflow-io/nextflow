@@ -25,6 +25,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 /**
  * Model Google config options
@@ -35,6 +36,17 @@ import nextflow.util.Duration
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class GoogleOpts {
+
+    static private final Set<String> VALID_OPTIONS = [
+        'enableRequesterPaysBuckets',
+        'httpConnectTimeout',
+        'httpReadTimeout',
+        'location',
+        'project',
+        // life sciences only
+        'region',
+        'zone',
+    ]
 
     static final public String DEFAULT_LOCATION = 'us-central1'
 
@@ -66,6 +78,8 @@ class GoogleOpts {
     }
 
     protected static GoogleOpts fromSession0(Map config) {
+        ConfigHelper.checkInvalidConfigOptions('google', config, VALID_OPTIONS)
+
         final result = new GoogleOpts()
         result.projectId = config.navigate("google.project") as String
         result.location = config.navigate("google.location") as String

@@ -19,6 +19,7 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.util.ConfigHelper
 import static nextflow.Const.DEFAULT_BRANCH
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 /**
@@ -34,22 +35,16 @@ class Manifest {
 
     Manifest() { target = Collections.emptyMap() }
 
-    Manifest(Map object) {
-        assert object != null
-        this.target = new HashMap(object.size())
-        final validFields = this.metaClass.properties.collect { it.name }.findAll { it!='class' }
-        object.each { key, value ->
-            if( validFields.contains(key) )
-                target.put(key, value)
-            else
-                log.warn("Invalid config manifest attribute `$key`")
-        }
+    Manifest(Map config) {
+        assert config != null
+        ConfigHelper.checkInvalidConfigOptions('manifest', config, this)
+
+        this.target = config
     }
 
     String getHomePage() {
         target.homePage
     }
-
 
     String getDefaultBranch() {
         target.defaultBranch ?: DEFAULT_BRANCH

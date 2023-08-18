@@ -41,6 +41,12 @@ import nextflow.processor.TaskProcessor
 @Slf4j
 class GraphObserver implements TraceObserver {
 
+    static public final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'file',
+        'overwrite'
+    ]
+
     static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.dot"
 
     private Path file

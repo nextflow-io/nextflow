@@ -17,6 +17,7 @@
 package nextflow.spack
 
 import groovy.transform.CompileStatic
+import nextflow.util.ConfigHelper
 
 /**
  * Model Spack configuration
@@ -26,6 +27,14 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class SpackConfig extends LinkedHashMap {
 
+    static private final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'cacheDir',
+        'checksum',
+        'createTimeout',
+        'parallelBuilds'
+    ]
+
     private Map<String,String> env
 
     /* required by Kryo deserialization -- do not remove */
@@ -33,6 +42,7 @@ class SpackConfig extends LinkedHashMap {
 
     SpackConfig(Map config, Map<String, String> env) {
         super(config)
+        ConfigHelper.checkInvalidConfigOptions('spack', config, VALID_OPTIONS)
         this.env = env
     }
 
