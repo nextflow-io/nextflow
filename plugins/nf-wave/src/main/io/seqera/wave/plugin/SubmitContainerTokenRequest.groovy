@@ -111,4 +111,9 @@ class SubmitContainerTokenRequest {
      */
     boolean freeze
 
+    /**
+     * Specify the format of the container file
+     */
+    String format
+
 }

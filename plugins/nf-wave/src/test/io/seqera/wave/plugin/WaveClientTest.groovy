@@ -231,6 +231,33 @@ class WaveClientTest extends Specification {
         !req.containerConfig.layers
     }
 
+    def 'should create request object with singularityfile' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def SINGULARITY_FILE =  'From foo:latest'
+        def wave = new WaveClient(session)
+        and:
+        def assets = new WaveAssets(null,
+                'linux/amd64',
+                null,
+                null,
+                SINGULARITY_FILE,
+                null,
+                null,
+                null,
+                true)
+        when:
+        def req = wave.makeRequest(assets)
+        then:
+        !req.containerImage
+        new String(req.containerFile.decodeBase64()) == SINGULARITY_FILE
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.format == 'sif'
+    }
+
     def 'should create request object with build and cache repos' () {
         given:
         def session = Mock(Session) { getConfig() >> [wave:[build:[repository:'some/repo',cacheRepository:'some/cache']]]}
@@ -347,11 +374,11 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         !assets.moduleResources
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -369,12 +396,12 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         assets.containerPlatform == 'linux/arm64'
         !assets.moduleResources
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -392,11 +419,11 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         assets.moduleResources == BUNDLE
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -416,7 +443,7 @@ class WaveClientTest extends Specification {
         WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         client.resolveContainerConfig(ARCH) >> CONTAINER_CONFIG
         and:
@@ -424,7 +451,7 @@ class WaveClientTest extends Specification {
         assets.moduleResources == BUNDLE
         assets.containerConfig == CONTAINER_CONFIG
         and:
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.condaFile
         !assets.spackFile
         !assets.projectResources
@@ -445,9 +472,9 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == 'FROM foo\nRUN this/that'
+        assets.containerFile == 'FROM foo\nRUN this/that'
         assets.moduleResources == BUNDLE
         !assets.containerImage
         !assets.containerConfig
@@ -468,9 +495,9 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
+        assets.containerFile == '''\
                 FROM mambaorg/micromamba:1.4.9
                 RUN \\
                     micromamba install -y -n base -c conda-forge -c defaults \\
@@ -496,9 +523,9 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
+        assets.containerFile == '''\
                 # Runner image
                 FROM {{spack_runner_image}}
                 
@@ -538,9 +565,9 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
+        assets.containerFile == '''\
                 FROM mambaorg/micromamba:1.4.9
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
@@ -571,9 +598,9 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
+        assets.containerFile == '''\
                 # Runner image
                 FROM {{spack_runner_image}}
                 
@@ -605,6 +632,78 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
+    // ==== singularity native build + conda ====
+
+    def 'should create asset with conda recipe and singularity native build' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.4.9
+                %post
+                    micromamba install -y -n base -c conda-forge -c defaults \\
+                    salmon=1.2.3 \\
+                    && micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.spackFile
+        !assets.projectResources
+    }
+
+    def 'should create asset with conda file and singularity native build' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def condaFile = folder.resolve('conda.yml'); condaFile.text = 'the-conda-recipe-here'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def task = Mock(TaskRun) {getConfig() >> [conda:condaFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.4.9
+                %files
+                    {{wave_context_dir}}/conda.yml /tmp/conda.yml
+                %post
+                    micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
+                '''.stripIndent()
+        and:
+        assets.condaFile == condaFile
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should create assets with project resources' () {
         given:
         def MODULE_RES = Mock(ResourcesBundle)
@@ -623,7 +722,7 @@ class WaveClientTest extends Specification {
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = wave.resolveAssets(task, 'image:latest')
+        def assets = wave.resolveAssets(task, 'image:latest', false)
         then:
         1 * wave.projectResources(BIN_DIR) >> PROJECT_RES
         and:
@@ -664,6 +763,23 @@ class WaveClientTest extends Specification {
         result = client.resolveConflicts([spack:'x',container:'z'], ['conda','spack'])
         then:
         result == [spack:'x']
+    }
+
+    def 'should patch strategy for singularity' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        expect:
+        client.patchStrategy(Collections.unmodifiableList(STRATEGY), SING) == EXPECTED
+
+        where:
+        STRATEGY                                            | SING      | EXPECTED
+        ['conda','dockerfile', 'spack']                     | false     | ['conda','dockerfile', 'spack']
+        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
+        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
+        ['conda','singularityfile','dockerfile', 'spack']   | true      | ['conda','singularityfile','dockerfile', 'spack']
     }
 
     def 'should check conflicts' () {
@@ -712,6 +828,25 @@ class WaveClientTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Process 'foo' declares both 'spack' and 'conda' directives that conflict each other"
+
+        // singularity file checks
+        when:
+        client.checkConflicts([conda:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle singularityfile that conflict each other"
+
+        when:
+        client.checkConflicts([container:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'container' directive and a module bundle singularityfile that conflict each other"
+
+        when:
+        client.checkConflicts([spack:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle singularityfile that conflict each other"
 
     }
 
@@ -762,7 +897,6 @@ class WaveClientTest extends Specification {
             assert (it[0] as SubmitContainerTokenRequest).towerWorkspaceId == 123
             assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
         }
-
     }
 
     def 'should send request with tower access token and refresh token' () {
