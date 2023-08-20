@@ -106,12 +106,31 @@ class ResourcesBundleTest extends Specification {
         then:
         bundle.fingerprint() == '7b2200ff24230f76cea22e5eb15b1701'
 
+    }
+
+    def 'should get singularityfile' () {
+        given:
+        def singularPath = folder.resolve('Singularityfile'); singularPath.text = "I'm the main file"
+        def bundlePath = folder.resolve('bundle')
+        and:
+        singularPath.setLastModified(LAST_MODIFIED)
+        singularPath.setPermissions(6,4,4)
         when:
-        // changing the last modified time, change the fingerprint
-        dockerPath.setLastModified(LAST_MODIFIED +100)
+        def bundle = ResourcesBundle.scan(bundlePath)
         then:
-        bundle.fingerprint() == '7b2200ff24230f76cea22e5eb15b1701'
-        
+        bundle.getSingularityfile() == singularPath
+        and:
+        bundle
+        !bundle.hasEntries()
+        and:
+        bundle.fingerprint() == '6933e9238f3363c8e013a35715fa0540'
+
+        when:
+        // changing file permissions, change the fingerprint
+        singularPath.setPermissions(6,0,0)
+        then:
+        bundle.fingerprint() == '3ffe7f16cd5ae17e6ba7485e01972b20'
+
     }
 
     def 'should check max file size'() {
