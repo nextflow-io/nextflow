@@ -36,10 +36,11 @@ class WaveAssets {
     final String containerPlatform
     final ResourcesBundle moduleResources
     final ContainerConfig containerConfig
-    final String dockerFileContent
+    final String containerFile
     final Path condaFile
     final Path spackFile
     final ResourcesBundle projectResources
+    final boolean singularity
 
     static fromImage(String containerImage,String containerPlatform=null) {
         new WaveAssets(containerImage, containerPlatform)
@@ -50,8 +51,8 @@ class WaveAssets {
     }
 
     String dockerFileEncoded() {
-        return dockerFileContent
-                ? dockerFileContent.bytes.encodeBase64()
+        return containerFile
+                ? containerFile.bytes.encodeBase64()
                 : null
     }
 
@@ -73,7 +74,7 @@ class WaveAssets {
         allMeta.add( this.containerImage )
         allMeta.add( this.moduleResources?.fingerprint() )
         allMeta.add( this.containerConfig?.fingerprint() )
-        allMeta.add( this.dockerFileContent )
+        allMeta.add( this.containerFile )
         allMeta.add( this.condaFile?.text )
         allMeta.add( this.spackFile?.text )
         allMeta.add( this.projectResources?.fingerprint() )
