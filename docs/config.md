@@ -1493,11 +1493,14 @@ In the above example, the `process.cpus` attribute is not correctly applied beca
 
 The following environment variables control the configuration of the Nextflow runtime and the underlying Java virtual machine.
 
+`NXF_ANSI_HIDE_NASCENT_PROCESSES`
+: When `true`, hide processes that haven't been executed yet (default: `false`).
+
 `NXF_ANSI_LOG`
-: Enables/disables ANSI console output (default `true` when ANSI terminal is detected).
+: Enables/disables ANSI console output (default: `true` when ANSI terminal is detected).
 
 `NXF_ANSI_SUMMARY`
-: Enables/disables ANSI completion summary: `true\|false` (default: print summary if execution last more than 1 minute).
+: Enables/disables ANSI completion summary (default: `true` if execution lasts more than 1 minute).
 
 `NXF_ASSETS`
 : Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)

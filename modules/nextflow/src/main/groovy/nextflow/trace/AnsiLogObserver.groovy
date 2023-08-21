@@ -93,6 +93,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
 
+    private Boolean hideNascentProcesses = System.getenv('NXF_ANSI_HIDE_NASCENT_PROCESSES') as Boolean
+
     private final int WARN_MESSAGE_TIMEOUT = 35_000
 
     private WorkflowStatsObserver statsObserver
@@ -264,7 +266,7 @@ class AnsiLogObserver implements TraceObserver {
 
         // render line
         for( ProgressRecord entry : processes ) {
-            if( entry.getTotalCount() == 0 )
+            if( hideNascentProcesses && entry.getTotalCount() == 0 )
                 continue
             term.a(line(entry))
             term.newline()
