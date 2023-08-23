@@ -32,6 +32,8 @@ class CondorExecutor extends AbstractGridExecutor {
 
     static final public String CMD_CONDOR = '.command.condor'
 
+    private String username = System.getenv('USER')
+
     final protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
         // creates the wrapper script
         final builder = new CondorWrapperBuilder(task)
@@ -113,18 +115,18 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        ["condor_q", "-nobatch"]
+        ['condor_history', username, '-af', 'ClusterId', 'JobStatus']
     }
 
 
     static protected Map<String,QueueStatus> DECODE_STATUS = [
-            'U': QueueStatus.PENDING,   // Unexpanded
-            'I': QueueStatus.PENDING,   // Idle
-            'R': QueueStatus.RUNNING,   // Running
-            'X': QueueStatus.ERROR,     // Removed
-            'C': QueueStatus.DONE,      // Completed
-            'H': QueueStatus.HOLD,      // Held
-            'E': QueueStatus.ERROR      // Error
+            '1': QueueStatus.PENDING, // Idle
+            '2': QueueStatus.RUNNING, // Running
+            '3': QueueStatus.ERROR,   // Removing
+            '4': QueueStatus.DONE,    // Completed
+            '5': QueueStatus.HOLD,    // Held
+            '6': QueueStatus.RUNNING, // Transferring Output
+            '7': QueueStatus.RUNNING  // Suspended
     ]
 
 
@@ -133,14 +135,9 @@ class CondorExecutor extends AbstractGridExecutor {
         final result = new LinkedHashMap<String, QueueStatus>()
         if( !text ) return result
 
-        boolean started = false
         def itr = text.readLines().iterator()
         while( itr.hasNext() ) {
             String line = itr.next()
-            if( !started ) {
-                started = line.startsWith(' ID ')
-                continue
-            }
 
             if( !line.trim() ) {
                 break
@@ -148,7 +145,7 @@ class CondorExecutor extends AbstractGridExecutor {
 
             def cols = line.tokenize(' ')
             def id = cols[0]
-            def st = cols[5]
+            def st = cols[1]
             result[id] = DECODE_STATUS[st]
         }
 
