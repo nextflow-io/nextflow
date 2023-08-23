@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyStore
+import static nextflow.util.StringUtils.formatHostName
 
 import groovy.util.logging.Slf4j
 import org.yaml.snakeyaml.Yaml
@@ -81,7 +81,7 @@ class ConfigDiscovery {
 
         final host = env.get('KUBERNETES_SERVICE_HOST')
         final port = env.get('KUBERNETES_SERVICE_PORT')
-        final server = host + ( port ? ":$port" : '' )
+        final server = formatHostName(host, port)
 
         final cert = path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt').bytes
         final token = path('/var/run/secrets/kubernetes.io/serviceaccount/token').text
@@ -169,21 +169,22 @@ class ConfigDiscovery {
         namespace ?= 'default'
         serviceAccount ?= 'default'
 
-        final cmd = "kubectl --context $context -n ${namespace} get secret `kubectl --context $context -n ${namespace} get serviceaccount ${serviceAccount} -o jsonpath='{.secrets[0].name}'` -o jsonpath='{.data.token}'"
-        final proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).redirectErrorStream(true).start()
+        final cmd = "kubectl --context $context -n ${namespace} get secret -o=jsonpath='{.items[?(@.metadata.annotations.kubernetes\\.io/service-account\\.name==\"$serviceAccount\")].data.token}'"
+        final proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).start()
         final status = proc.waitFor()
-        if( status==0 ) {
+        final text = proc.inputStream?.text
+        if( status==0 && text ) {
             try {
-                return new String(proc.text.trim().decodeBase64())
+                return new String(text.trim().decodeBase64())
             }
             catch( Exception e ) {
-                log.warn "Unable to read K8s cluster auth token -- cause: ${e.message}"
+                log.warn "Unable to decode K8s cluster auth token '$text' -- cause: ${e.message}"
             }
         }
         else {
-            final msg = proc.text
-            final cause = msg ? "-- cause:\n${msg.indent('  ')}" : ''
-            log.debug "[K8s] unable to fetch auth token ${cause}"
+            final cause = proc.errorStream?.text ?: text
+            final msg = cause ? "\n- cmd  : $cmd\n- exit : $status\n- cause:\n${cause.indent('  ')}" : ''
+            log.warn "[K8s] unable to fetch auth token ${msg}"
         }
         return null
     }

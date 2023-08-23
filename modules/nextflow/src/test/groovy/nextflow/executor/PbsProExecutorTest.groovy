@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,13 +147,40 @@ class PbsProExecutorTest extends Specification {
         ]
     }
 
+    def 'should ignore cpus and memory when clusterOptions contains -l option' () {
+        given:
+        def executor = Spy(PbsProExecutor)
+        def WORK_DIR = Paths.get('/foo/bar')
+
+        def task = Mock(TaskRun)
+        task.getWorkDir() >> WORK_DIR
+        task.getConfig() >> new TaskConfig([
+            clusterOptions: '-l select=1:ncpus=2:mem=8gb',
+            cpus: 2,
+            memory: '8 GB'
+        ])
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        1 * executor.getJobNameFor(task) >> 'foo'
+        1 * executor.quote( WORK_DIR.resolve(TaskRun.CMD_LOG)) >> '/foo/bar/.command.log'
+
+        result == [
+                '-l select=1:ncpus=2:mem=8gb', '',
+                '-N', 'foo',
+                '-o', '/foo/bar/.command.log',
+                '-j', 'oe'
+        ]
+    }
+
     def 'should return qstat command line' () {
         given:
         def executor = [:] as PbsProExecutor
 
         expect:
-		executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | egrep -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { egrep '(Job Id:|job_state =)' || true; }"]
-        executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { egrep '(Job Id:|job_state =)' || true; }"]
+		executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
 
@@ -215,7 +241,6 @@ class PbsProExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
     }

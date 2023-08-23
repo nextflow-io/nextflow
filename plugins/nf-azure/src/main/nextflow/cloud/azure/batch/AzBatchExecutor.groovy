@@ -27,6 +27,7 @@ import nextflow.cloud.azure.nio.AzPath
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -59,13 +60,18 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
+    @Override
     Path getWorkDir() {
         session.bucketDir ?: session.workDir
     }
 
     protected void validateWorkDir() {
         /*
-         * make sure the work dir is a S3 bucket
+         * make sure the work dir is an Azure bucket
          */
         if( !(workDir instanceof AzPath) ) {
             session.abort()
@@ -94,11 +100,15 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     protected void initBatchService() {
         config = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
-        // generate an account SAS token if missing
-        if( !config.storage().sasToken )
-            config.storage().sasToken = AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
 
-        Global.onCleanup((it)->batchService.close())
+        // Generate an account SAS token using either activeDirectory configs or storage account keys
+        if (!config.storage().sasToken) {
+            config.storage().sasToken = config.activeDirectory().isConfigured()
+                    ? AzHelper.generateContainerSasWithActiveDirectory(workDir, config.storage().tokenDuration)
+                    : AzHelper.generateAccountSasWithAccountKey(workDir, config.storage().tokenDuration)
+        }
+
+        Global.onCleanup((it) -> batchService.close())
     }
 
     /**
@@ -132,5 +142,10 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     Path getRemoteBinDir() { return remoteBinDir }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 
 }

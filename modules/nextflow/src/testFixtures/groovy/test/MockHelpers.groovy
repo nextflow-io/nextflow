@@ -16,14 +16,22 @@ import nextflow.script.ChannelOut
 import nextflow.script.ScriptRunner
 import nextflow.script.ScriptType
 
+@Slf4j
 class MockScriptRunner extends ScriptRunner {
 
     MockScriptRunner() {
         super(new MockSession())
+        log.debug "Creating MockScriptRunner"
     }
 
     MockScriptRunner(Map config) {
         super(new MockSession(config))
+        log.debug "Creating MockScriptRunner - config=$config"
+    }
+
+    MockScriptRunner(MockSession session) {
+        super(session)
+        log.debug "Creating MockScriptRunner - session=$session"
     }
 
     MockScriptRunner setScript(String str) {
@@ -71,20 +79,24 @@ class MockScriptRunner extends ScriptRunner {
 
 }
 
+@Slf4j
 class MockSession extends Session {
 
     @Override
     Session start() {
+        log.debug "MockSession - starting"
         this.executorFactory = new MockExecutorFactory()
         return super.start()
     }
 
     MockSession() {
         super()
+        log.debug "MockSession - creating"
     }
 
     MockSession(Map config) {
         super(config)
+        log.debug "MockSession - creating with config=$config"
     }
 }
 

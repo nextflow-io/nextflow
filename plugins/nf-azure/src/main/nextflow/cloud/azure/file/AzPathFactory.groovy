@@ -45,10 +45,17 @@ class AzPathFactory extends FileSystemPathFactory {
         if( !uri.startsWith('az://') )
             return null
 
-        final cfg = AzConfig.getConfig().storage()
+        if( uri.startsWith('az:///') )
+            throw new IllegalArgumentException("Invalid Azure path URI - make sure the schema prefix does not container more than two slash characters - offending value: $uri")
+
+        final storageConfigEnv = AzConfig.getConfig().storage().getEnv()
+
+        final activeDirectoryConfigEnv = AzConfig.getConfig().activeDirectory().getEnv()
+
+        final configEnv = storageConfigEnv + activeDirectoryConfigEnv
 
         // find the related file system
-        final fs = getFileSystem(uri0(uri), cfg.getEnv())
+        final fs = getFileSystem(uri0(uri), configEnv)
 
         // resulting az path
         return fs.getPath(uri.substring(4))
@@ -69,7 +76,7 @@ class AzPathFactory extends FileSystemPathFactory {
         //
         try {
             final loader = AzurePlugin.class.getClassLoader()
-            log.debug "+ Setting context class loader to=$loader - previous=$bak"
+            log.trace "+ Setting context class loader to=$loader - previous=$bak"
             Thread.currentThread().setContextClassLoader(loader)
             return FileHelper.getOrCreateFileSystemFor(uri, env)
         }

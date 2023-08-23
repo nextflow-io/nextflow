@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +48,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.util.Threads
 import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
@@ -63,6 +63,7 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -511,7 +512,9 @@ class Session implements ISession {
         registerSignalHandlers()
 
         // create tasks executor
-        execService = Executors.newFixedThreadPool(poolSize)
+        execService = Threads.useVirtual()
+                ? Executors.newVirtualThreadPerTaskExecutor()
+                : Executors.newFixedThreadPool(poolSize)
 
         // signal start to trace observers
         notifyFlowCreate()
@@ -769,8 +772,7 @@ class Session implements ISession {
         }
     }
 
-    @PackageScope
-    void forceTermination() {
+    protected void forceTermination() {
         terminated = true
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()
@@ -877,11 +879,12 @@ class Session implements ISession {
         def keys = (config.process as Map).keySet()
         for(String key : keys) {
             String name = null
-            if( key.startsWith('$') ) {
-                name = key.substring(1)
-            }
-            else if( key.startsWith('withName:') ) {
+            if( key.startsWith('withName:') ) {
                 name = key.substring('withName:'.length())
+            }
+            else if( key.startsWith('$') ) {
+                name = key.substring(1)
+                log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
             }
             if( name )
                 checkValidProcessName(processNames, name, result)
@@ -1055,11 +1058,11 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowCreate(this) }
     }
 
-    void notifyFilePublish(Path destination) {
+    void notifyFilePublish(Path destination, Path source=null) {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
             try {
-                observer.onFilePublish(destination)
+                observer.onFilePublish(destination, source)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on file publish: $observer", e
@@ -1154,37 +1157,61 @@ class Session implements ISession {
         return new CondaConfig(cfg, getSystemEnv())
     }
 
+    @Memoized
+    SpackConfig getSpackConfig() {
+        final cfg = config.spack as Map ?: Collections.emptyMap()
+        return new SpackConfig(cfg, getSystemEnv())
+    }
+
     /**
-     * @return A {@link ContainerConfig} object representing the container engine configuration defined in config object
+     * Get the container engine configuration for the specified engine. If no engine is specified
+     * if returns the one enabled in the configuration file. If no configuration is found
+     * defaults to {@code docker} engine.
+     *
+     * @param engine
+     *      The container engine name for which
+     * @return
+     *      A {@link ContainerConfig} object representing the container engine configuration defined in config object
      */
     @Memoized
-    ContainerConfig getContainerConfig() {
+    ContainerConfig getContainerConfig(String engine) {
 
-        def engines = new LinkedList<Map>()
-        getContainerConfig0('docker', engines)
-        getContainerConfig0('podman', engines)
-        getContainerConfig0('shifter', engines)
-        getContainerConfig0('udocker', engines)
-        getContainerConfig0('singularity', engines)
-        getContainerConfig0('charliecloud', engines)
+        final allEngines = new LinkedList<Map>()
+        getContainerConfig0('docker', allEngines)
+        getContainerConfig0('podman', allEngines)
+        getContainerConfig0('sarus', allEngines)
+        getContainerConfig0('shifter', allEngines)
+        getContainerConfig0('udocker', allEngines)
+        getContainerConfig0('singularity', allEngines)
+        getContainerConfig0('apptainer', allEngines)
+        getContainerConfig0('charliecloud', allEngines)
 
-        def enabled = engines.findAll { it.enabled?.toString() == 'true' }
+        if( engine ) {
+            final result = allEngines.find(it -> it.engine==engine) ?: [engine: engine]
+            return new ContainerConfig(result)
+        }
+
+        final enabled = allEngines.findAll { it.enabled?.toString() == 'true' }
         if( enabled.size() > 1 ) {
             def names = enabled.collect { it.engine }
             throw new IllegalConfigException("Cannot enable more than one container engine -- Choose either one of: ${names.join(', ')}")
         }
 
-        (enabled ? enabled.get(0) : ( engines ? engines.get(0) : [engine:'docker'] )) as ContainerConfig
+        (enabled ? enabled.get(0) : ( allEngines ? allEngines.get(0) : [engine:'docker'] )) as ContainerConfig
     }
 
+    ContainerConfig getContainerConfig() {
+        return getContainerConfig(null)
+    }
 
     private void getContainerConfig0(String engine, List<Map> drivers) {
-        def config = this.config?.get(engine)
-        if( config instanceof Map ) {
-            config.engine = engine
-            drivers << config
+        final entry = this.config?.get(engine)
+        if( entry instanceof Map ) {
+            final config0 = new LinkedHashMap((Map)entry)
+            config0.put('engine', engine)
+            drivers.add(config0)
         }
-        else if( config!=null ) {
+        else if( entry!=null ) {
             log.warn "Malformed configuration for container engine '$engine' -- One or more attributes should be provided"
         }
     }
@@ -1242,7 +1269,15 @@ class Session implements ISession {
              * look for `container` definition at process level
              */
             config.process.each { String name, value ->
-                if( name.startsWith('$') && value instanceof Map && value.container ) {
+                if( name.startsWith('withName:') ) {
+                    name = name.substring('withName:'.length())
+                }
+                else if( name.startsWith('$') ) {
+                    name = name.substring(1)
+                    log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
+                }
+
+                if( value instanceof Map && value.container ) {
                     result[name] = resolveClosure(value.container)
                 }
             }

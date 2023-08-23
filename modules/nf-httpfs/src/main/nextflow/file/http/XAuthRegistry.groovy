@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,4 +50,11 @@ class XAuthRegistry {
         return false
     }
 
+    boolean refreshToken(URLConnection connection) {
+        for( XAuthProvider it : providers ) {
+            if( it.refreshToken(connection) )
+                return true
+        }
+        return false
+    }
 }

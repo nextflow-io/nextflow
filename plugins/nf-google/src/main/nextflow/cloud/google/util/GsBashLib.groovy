@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.google.util
@@ -50,7 +49,7 @@ class GsBashLib extends BashFunLib<GsBashLib> {
         """
         # google storage helper
         gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=$parallelThreadCount' '-o' 'GSUtil:sliced_object_download_max_components=$downloadMaxComponents')
-        """.stripIndent()
+        """.stripIndent(true)
     }
 
     protected makeLib() {
@@ -84,7 +83,7 @@ class GsBashLib extends BashFunLib<GsBashLib> {
             local target=$2
             gsutil ${gs_opts[@]} cp -R "$name" "$target/$name"
         }
-        '''.stripIndent()
+        '''.stripIndent(true)
     }
 
     @Override

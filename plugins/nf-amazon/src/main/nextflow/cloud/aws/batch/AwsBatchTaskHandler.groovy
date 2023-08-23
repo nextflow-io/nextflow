@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
@@ -53,13 +53,13 @@ import com.amazonaws.services.batch.model.Volume
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
-import nextflow.executor.res.AcceleratorResource
+import nextflow.fusion.FusionAwareTask
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskHandler
@@ -248,8 +248,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
+            // take the exit code of the container, if 0 (successful) or missing
+            // take the exit code from the `.exitcode` file create by nextflow
+            // the rationale of this is that, in case of error, the exit code return
+            // by the batch API is more reliable.
+            task.exitStatus = job.container.exitCode ?: readExitFile()
             // finalize the task
-            task.exitStatus = readExitFile()
             task.stdout = outputFile
             if( job?.status == 'FAILED' ) {
                 task.error = new ProcessUnrecoverableException(errReason(job))
@@ -589,6 +593,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
      */
     protected String createJobDef(RegisterJobDefinitionRequest req) {
+        // add nextflow tags
+        req.addTagsEntry('nextflow.io/createdAt', Instant.now().toString())
+        req.addTagsEntry('nextflow.io/version', Const.APP_VER)
+        // create the job def
         final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName}:$res.revision"
     }
@@ -633,7 +641,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 : classicSubmitCli()
     }
 
-    protected maxSpotAttempts() {
+    protected int maxSpotAttempts() {
         return executor.awsOptions.maxSpotAttempts
     }
 
@@ -658,8 +666,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             result.setPropagateTags(true)
         }
         // set the share identifier
-        if( this.getAwsOptions().shareIdentifier )
+        if( this.getAwsOptions().shareIdentifier ) {
             result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
+            result.setSchedulingPriorityOverride(this.getAwsOptions().schedulingPriority)
+        }
 
         /*
          * retry on spot reclaim
@@ -704,8 +714,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( task.config.getCpus() > 1 )
             resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
-        if( task.config.getAccelerator() )
-            resources << createGpuResource(task.config.getAccelerator())
+        final accelerator = task.config.getAccelerator()
+        if( accelerator ) {
+            if( accelerator.type )
+                log.warn1 "Ignoring task ${task.lazyName()} accelerator type: ${accelerator.type} -- AWS Batch doesn't support accelerator type in job definition"
+            resources << new ResourceRequirement().withType(ResourceType.GPU).withValue(accelerator.request.toString())
+        }
 
         if( resources )
             container.withResourceRequirements(resources)
@@ -720,20 +734,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    protected ResourceRequirement createGpuResource(AcceleratorResource acc) {
-        final res = new ResourceRequirement()
-        final type = acc.type ?: 'GPU'
-        final count = acc.request?.toString() ?: '1'
-        res.setType(type.toUpperCase())
-        res.setValue(count)
-        return res
-    }
-
     /**
      * @return The list of environment variables to be defined in the Batch job execution context
      */
     protected List<KeyValuePair> getEnvironmentVars() {
-        def vars = []
+        List<KeyValuePair> vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
         if( this.getAwsOptions().retryMode && this.getAwsOptions().retryMode in AwsOptions.VALID_RETRY_MODES)

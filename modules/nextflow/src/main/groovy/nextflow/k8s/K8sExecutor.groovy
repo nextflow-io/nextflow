@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +21,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionHelper
 import nextflow.k8s.client.K8sClient
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -45,7 +44,7 @@ class K8sExecutor extends Executor {
      */
     private K8sClient client
 
-    @PackageScope K8sClient getClient() {
+    protected K8sClient getClient() {
         client
     }
 
@@ -53,8 +52,7 @@ class K8sExecutor extends Executor {
      * @return The `k8s` configuration scope in the nextflow configuration object
      */
     @Memoized
-    @PackageScope
-    K8sConfig getK8sConfig() {
+    protected K8sConfig getK8sConfig() {
         new K8sConfig( (Map<String,Object>)session.config.k8s )
     }
 
@@ -75,6 +73,11 @@ class K8sExecutor extends Executor {
      */
     boolean isContainerNative() {
         return true
+    }
+
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
     }
 
     /**

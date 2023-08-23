@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,6 +142,36 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should create pod spec with device and capabilities' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand('echo foo')
+                .withDevices(['/dev/fuse'])
+                .withCapabilities(add:['SYS_ADMIN'])
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command:['/bin/bash', '-c', 'echo foo'],
+                                    devices: ['/dev/fuse'],
+                                    securityContext: [capabilities: [add:['SYS_ADMIN']]]
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
     def 'should set namespace, labels and annotations' () {
 
         when:
@@ -252,6 +281,7 @@ class PodSpecBuilderTest extends Specification {
                 .withCpus(8)
                 .withAccelerator( new AcceleratorResource(request: 5, limit:10, type: 'foo.org') )
                 .withMemory('100Gi')
+                .withDisk('10Gi')
                 .build()
 
         then:
@@ -270,8 +300,9 @@ class PodSpecBuilderTest extends Specification {
                                             [name:'DELTA', value:'world']
                                     ],
                                     resources:[
-                                            requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi'],
-                                            limits:['foo.org/gpu':10, cpu:8, memory:'100Gi'] ]
+                                            requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi', 'ephemeral-storage':'10Gi'],
+                                            limits: ['foo.org/gpu':10, memory:'100Gi', 'ephemeral-storage':'10Gi']
+                                    ]
                                    ]
                            ]
                    ]
@@ -388,6 +419,75 @@ class PodSpecBuilderTest extends Specification {
 
         ]
 
+    }
+
+    def 'should get csi ephemeral mounts' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/path')
+                .withCommand(['echo'])
+                .withCsiEphemeral(new PodMountCsiEphemeral(csi: [driver: 'inline.storage.kubernetes.io', readOnly: true], mountPath: '/data'))
+                .build()
+        then:
+        spec ==  [
+                apiVersion: 'v1',
+                kind: 'Pod',
+                metadata: [name: 'foo', namespace: 'default'],
+                spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                                name: 'foo',
+                                image: 'busybox',
+                                command: ['echo'],
+                                workingDir: '/path',
+                                volumeMounts: [
+                                        [name: 'vol-1', mountPath: '/data', readOnly: true]
+                                ]
+                        ]],
+                        volumes: [
+                                [name: 'vol-1', csi: [driver: 'inline.storage.kubernetes.io', readOnly: true]]
+                        ]
+                ]
+        ]
+    }
+
+    def 'should get empty dir mounts' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/path')
+                .withCommand(['echo'])
+                .withEmptyDir(new PodMountEmptyDir(mountPath: '/scratch1', emptyDir: [medium: 'Disk']))
+                .withEmptyDir(new PodMountEmptyDir(mountPath: '/scratch2', emptyDir: [medium: 'Memory']))
+                .build()
+        then:
+        spec ==  [
+                apiVersion: 'v1',
+                kind: 'Pod',
+                metadata: [name: 'foo', namespace: 'default'],
+                spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                                name: 'foo',
+                                image: 'busybox',
+                                command: ['echo'],
+                                workingDir: '/path',
+                                volumeMounts: [
+                                        [name: 'vol-1', mountPath: '/scratch1'],
+                                        [name: 'vol-2', mountPath: '/scratch2']
+                                ]
+                        ]],
+                        volumes: [
+                                [name: 'vol-1', emptyDir: [medium: 'Disk']],
+                                [name: 'vol-2', emptyDir: [medium: 'Memory']]
+                        ]
+                ]
+        ]
     }
 
     def 'should consume env secrets' () {
@@ -734,16 +834,16 @@ class PodSpecBuilderTest extends Specification {
         res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type: 'foo.org'), [requests: [cpu: 2]])
         then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpus:2]
+        res.requests == [cpu: 2, 'foo.org/gpu': 5]
+        res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type: 'foo.org'), [requests: [cpu: 2]])
         then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpus:2, 'foo.org/gpu': 10]
+        res.requests == [cpu: 2, 'foo.org/gpu': 5]
+        res.limits == ['foo.org/gpu': 10]
 
         when:
         res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'example.com/fpga'), null)
@@ -752,10 +852,10 @@ class PodSpecBuilderTest extends Specification {
         res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'example.com/fpga'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type: 'example.com/fpga'), [requests: [cpu: 2]])
         then:
-        res.requests == ['example.com/fpga': 5]
-        res.limits == [cpus:2, 'example.com/fpga': 10]
+        res.requests == [cpu: 2, 'example.com/fpga': 5]
+        res.limits == ['example.com/fpga': 10]
     }
 
 
@@ -901,23 +1001,24 @@ class PodSpecBuilderTest extends Specification {
                 .buildAsJob()
 
         then:
-        spec ==  [ apiVersion: 'batch/v1',
-                    kind: 'Job',
-                    metadata: [name:'foo', namespace:'default'],
+        spec == [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: [name: 'foo', namespace: 'default'],
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: [name: 'foo', namespace: 'default'],
                     spec: [
-                            backoffLimit: 0,
-                            template: [
-                                    spec: [
-                                            restartPolicy:'Never',
-                                            containers:[
-                                                    [name:'foo',
-                                                     image:'busybox',
-                                                     command:['echo', 'hello'],
-                                                    ]
-                                            ]
-                                    ]
-                            ]
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'foo',
+                            image: 'busybox',
+                            command: ['echo', 'hello'],
+                        ]]
                     ]
+                ]
+            ]
         ]
     }
 
@@ -935,37 +1036,40 @@ class PodSpecBuilderTest extends Specification {
                 .withAnnotations([anno2: "val2", anno3: "val3"])
                 .buildAsJob()
 
+        def metadata = [
+            name: 'foo',
+            namespace: 'default',
+            labels: [
+                app: 'someApp',
+                runName: 'someName',
+                version: '3.8.1'
+            ],
+            annotations: [
+                anno1: "val1",
+                anno2: "val2",
+                anno3: "val3"
+            ]
+        ]
+
         then:
-        spec ==  [ apiVersion: 'batch/v1',
-                   kind: 'Job',
-                   metadata: [
-                           name:'foo',
-                           namespace:'default',
-                           labels: [
-                                   app: 'someApp',
-                                   runName: 'someName',
-                                   version: '3.8.1'
-                           ],
-                           annotations: [
-                                   anno1: "val1",
-                                   anno2: "val2",
-                                   anno3: "val3"
-                           ]
-                   ],
-                   spec: [
-                           backoffLimit: 0,
-                           template: [
-                                   spec: [
-                                           restartPolicy:'Never',
-                                           containers:[
-                                                   [name:'foo',
-                                                    image:'busybox',
-                                                    command:['echo', 'hello'],
-                                                   ]
-                                           ]
-                                   ]
-                           ]
-                   ]
+        spec == [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: metadata,
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: metadata,
+                    spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'foo',
+                            image: 'busybox',
+                            command: ['echo', 'hello'],
+                        ]]
+                    ]
+                ]
+            ]
         ]
     }
 
@@ -997,38 +1101,6 @@ class PodSpecBuilderTest extends Specification {
                    ]
         ]
 
-    }
-
-    def 'should create job spec with activeDeadlineSeconds' () {
-
-        when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withCommand(['echo', 'hello'])
-                .withActiveDeadline(100)
-                .buildAsJob()
-
-        then:
-        spec ==  [ apiVersion: 'batch/v1',
-                   kind: 'Job',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           backoffLimit: 0,
-                           template: [
-                                   spec: [
-                                           restartPolicy:'Never',
-                                           activeDeadlineSeconds: 100,
-                                           containers:[
-                                                   [name:'foo',
-                                                    image:'busybox',
-                                                    command:['echo', 'hello'],
-                                                   ]
-                                           ]
-                                   ]
-                           ]
-                   ]
-        ]
     }
 
 }

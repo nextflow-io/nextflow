@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ class TraceHelper {
             Files.newBufferedWriter(path, Charset.defaultCharset(), openOptions(overwrite))
         }
         catch (FileAlreadyExistsException e) {
-            throw new AbortOperationException("$type file already exists: ${path.toUriString()}", e)
+            throw new AbortOperationException("$type file already exists: ${path.toUriString()} -- enable the '${type.toLowerCase()}.overwrite' option in your config file to overwrite existing files", e)
         }
     }
 }

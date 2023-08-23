@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,14 @@
 package nextflow.util
 
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
-
 /**
  * Holder object for file transfer thread pool
  *
@@ -35,11 +35,13 @@ import nextflow.Session
 @CompileStatic
 class ThreadPoolManager {
 
-    final static private int DEFAULT_MIN_THREAD = 10
-    final static private int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
-    final static private int DEFAULT_QUEUE_SIZE = 10_000
-    final static private Duration DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
-    final static private Duration DEFAULT_MAX_AWAIT = Duration.of('12 hour')
+    private static final AtomicInteger poolCount = new AtomicInteger()
+    
+    final static public int DEFAULT_MIN_THREAD = 10
+    final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
+    final static public int DEFAULT_QUEUE_SIZE = 10_000
+    final static public Duration DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
+    final static public Duration DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
     private Integer minThreads = DEFAULT_MIN_THREAD
     private Integer maxThreads = DEFAULT_MAX_THREAD
@@ -47,37 +49,42 @@ class ThreadPoolManager {
     private Duration keepAlive = DEFAULT_KEEP_ALIVE
     private Boolean allowThreadTimeout
     private Duration maxAwait = DEFAULT_MAX_AWAIT
-    private ThreadPoolExecutor executorService
+    private ExecutorService executorService
     final private String name
 
     ThreadPoolManager(String name) {
         this.name = name
     }
 
-    @Deprecated
-    ThreadPoolManager(String name, Map config) {
-        this.name = name
-        withConfig(config)
+    ThreadPoolManager withMaxThreads(int maxThreads) {
+        if( maxThreads>0 )
+            this.maxThreads = maxThreads
+        return this
     }
 
     ThreadPoolManager withConfig(Map config) {
-        this.minThreads = config.navigate("threadPool.${name}.minThreads", DEFAULT_MIN_THREAD) as Integer
-        this.maxThreads = config.navigate("threadPool.${name}.maxThreads", DEFAULT_MAX_THREAD) as Integer
-        this.maxQueueSize = config.navigate("threadPool.${name}.maxQueueSize", DEFAULT_QUEUE_SIZE) as Integer
-        this.keepAlive = config.navigate("threadPool.${name}.keepAlive", DEFAULT_KEEP_ALIVE) as Duration
+        this.minThreads = config.navigate("threadPool.${name}.minThreads", minThreads) as Integer
+        this.maxThreads = config.navigate("threadPool.${name}.maxThreads", maxThreads) as Integer
+        this.maxQueueSize = config.navigate("threadPool.${name}.maxQueueSize", maxQueueSize) as Integer
+        this.keepAlive = config.navigate("threadPool.${name}.keepAlive", keepAlive) as Duration
         this.allowThreadTimeout = config.navigate("threadPool.${name}.allowThreadTimeout", false) as Boolean
-        this.maxAwait = config.navigate("threadPool.${name}.maxAwait", DEFAULT_MAX_AWAIT) as Duration
+        this.maxAwait = config.navigate("threadPool.${name}.maxAwait", maxAwait) as Duration
+        return this
+    }
 
+    ExecutorService create() {
         if( minThreads>maxThreads ) {
             log.debug("Thread pool '$name' minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
             minThreads = maxThreads
         }
 
-        return this
+        return executorService = Threads.useVirtual()
+                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
+                : legacyThreadPool()
     }
 
-    ExecutorService create() {
-        executorService = new ThreadPoolBuilder()
+    protected ExecutorService legacyThreadPool() {
+        new ThreadPoolBuilder()
                 .withName(name)
                 .withMinSize(minThreads)
                 .withMaxSize(maxThreads)
@@ -85,7 +92,6 @@ class ThreadPoolManager {
                 .withKeepAliveTime(keepAlive)
                 .withAllowCoreThreadTimeout(allowThreadTimeout)
                 .build()
-        return executorService
     }
 
     ExecutorService createAndRegisterShutdownCallback(Session session) {
@@ -117,4 +123,11 @@ class ThreadPoolManager {
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
     }
 
+    static ExecutorService create(String name, int maxThreads=0) {
+        final session = Global.session as Session
+        new ThreadPoolManager(name)
+            .withMaxThreads(maxThreads) // default max threads
+            .withConfig(session.config) // config can override maxThread specified above
+            .createAndRegisterShutdownCallback(session)
+    }
 }

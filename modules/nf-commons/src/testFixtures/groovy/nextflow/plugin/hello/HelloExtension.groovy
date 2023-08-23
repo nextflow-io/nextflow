@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,11 @@ import nextflow.plugin.extension.PluginExtensionPoint
 class HelloExtension extends PluginExtensionPoint {
 
     /*
+    * Flag to check if init was called
+     */
+    boolean initialized = false
+
+    /*
      * A session hold information about current execution of the script
      */
     private Session session
@@ -51,6 +56,7 @@ class HelloExtension extends PluginExtensionPoint {
     @Override
     protected void init(Session session) {
         this.session = session
+        this.initialized = true
     }
 
     /*
@@ -133,6 +139,7 @@ class HelloExtension extends PluginExtensionPoint {
      */
     @Function
     String sayHello(String lang='en'){
+        assert initialized, "PluginExtension was not initialized"
         // sayHello is the entrypoint where we can write all the logic or delegate to other classes, ...
         return functions.sayHello(lang)
     }

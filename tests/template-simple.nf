@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
+
+workflow {
+  channel.of( 'PF00389', 'PF03061', 'PF02826') | foo | view { it.text }
+}
 
 process foo {
   input:
-    val family from 'PF00389', 'PF03061', 'PF02826'
+    val family
   output:
-    file 'file.out' into results
+    file 'file.out'
 
   script:
   template 'bash-script.txt'
 }
 
-results.view { it.text }

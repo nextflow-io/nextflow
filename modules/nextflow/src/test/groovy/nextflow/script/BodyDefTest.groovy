@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +16,19 @@
 
 package nextflow.script
 
+import static test.TestParser.*
+
+import nextflow.processor.TaskProcessor
 import spock.lang.Timeout
+import test.Dsl2Spec
+import test.MockScriptRunner
 
-import static test.TestParser.parseAndReturnProcess
-
-import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
-class BodyDefTest extends Specification {
+class BodyDefTest extends Dsl2Spec {
 
     def 'should set script type properly' () {
 
@@ -69,7 +70,7 @@ class BodyDefTest extends Specification {
         String x = 1
 
         @Field
-        String = 'Ciao'
+        String y = 'Ciao'
 
         z = 'str'
 
@@ -79,6 +80,8 @@ class BodyDefTest extends Specification {
           println $x + $y + $z
           /
         }
+        
+        workflow { hola() }
         '''
         when:
         def process = parseAndReturnProcess(text)
@@ -93,8 +96,7 @@ class BodyDefTest extends Specification {
 
     def 'should return property names referenced in task body'() {
 
-        when:
-        def runner = new TestScriptRunner( process: [executor:'nope'] )
+        given:
         def script =
                 '''
                 class Foo { def foo() { return [x:1] };  }
@@ -109,7 +111,7 @@ class BodyDefTest extends Specification {
 
                 process simpleTask  {
                     input:
-                    val x from 'hola'
+                    val x
 
                     """
                     echo ${alpha}
@@ -122,10 +124,18 @@ class BodyDefTest extends Specification {
                     """
                 }
 
+                workflow { 
+                    simpleTask('hola')
+                }
                 '''
-        runner.setScript(script).execute()
+        and:
+        def config = [process: [executor:'nope']]
+
+        when:
+        new MockScriptRunner(config).setScript(script).execute()
+        def processor = TaskProcessor.currentProcessor()
         then:
-        runner.getScriptObj().getTaskProcessor().getTaskBody().getValNames() == ['alpha', 'params.beta', 'params.gamma.omega', 'params.zeta', 'delta', 'params', 'x'] as Set
+        processor.getTaskBody().getValNames() == ['alpha', 'params.beta', 'params.gamma.omega', 'params.zeta', 'delta', 'params', 'x'] as Set
 
     }
 

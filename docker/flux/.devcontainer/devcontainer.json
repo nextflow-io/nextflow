@@ -1,0 +1,33 @@
+{
+    // Python is provided as a courtesy (it comes with base container)
+    "name": "Nextflow with Flux Executor Python 3.6",
+
+    // This assumes copying this directory to the root of Nextflow
+    "dockerFile": "Dockerfile",
+    "context": ".",
+
+    "customizations": {
+      "vscode": {
+        "settings": {
+          "terminal.integrated.defaultProfile.linux": "bash",
+
+          // Ensure that Python autocomplete works out of the box
+          "python.autoComplete.extraPaths": [
+            "/usr/lib/flux/python3.8",
+            "/usr/lib/python3.8/site-packages",
+          ],
+          "python.analysis.extraPaths": [
+            "/usr/lib/flux/python3.8",
+            "/usr/lib/python3.8/site-packages",
+          ]
+        },
+        // Note to Flux Developers! We can add extensions here that you like
+        "extensions": [
+			"ms-python.python",
+			"vscjava.vscode-java-pack"
+		],
+      },
+    },
+    // Needed for git security feature
+    "postStartCommand": "git config --global --add safe.directory /workspaces/nextflow"
+  }

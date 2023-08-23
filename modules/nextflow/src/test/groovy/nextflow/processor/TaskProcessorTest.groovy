@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +42,8 @@ import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -777,9 +778,12 @@ class TaskProcessorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH'], true)
+        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH', HOLA: 'one|two'], true)
         then:
-        env.trim() == 'export PATH="foo:\\$PATH"'
+        env == '''\
+            export PATH="foo:\\$PATH"
+            export HOLA="one\\|two"
+            '''.stripIndent()
         env.charAt(env.size()-1) == '\n' as char
 
         when:
@@ -857,4 +861,83 @@ class TaskProcessorTest extends Specification {
         ]
     }
 
+    def 'should bind fair outputs' () {
+        given:
+        def processor = Spy(TaskProcessor)
+        processor.@config = Mock(ProcessConfig)
+        processor.@isFair0 = true
+        and:
+        def emission3 = new HashMap()
+        def task3 = Mock(TaskRun) { getIndex()>>3 }
+        and:
+        def emission2 = new HashMap()
+        def task2 = Mock(TaskRun) { getIndex()>>2 }
+        and:
+        def emission1 = new HashMap()
+        def task1 = Mock(TaskRun) { getIndex()>>1 }
+        and:
+        def emission5 = new HashMap()
+        def task5 = Mock(TaskRun) { getIndex()>>5 }
+        and:
+        def emission4 = new HashMap()
+        def task4 = Mock(TaskRun) { getIndex()>>4 }
+
+        when:
+        processor.fairBindOutputs0(emission3, task3)
+        then:
+        processor.@fairBuffers[2] == emission3
+        0 * processor.bindOutputs0(_)
+
+        when:
+        processor.fairBindOutputs0(emission2, task2)
+        then:
+        processor.@fairBuffers[1] == emission2
+        0 * processor.bindOutputs0(_)
+
+        when:
+        processor.fairBindOutputs0(emission5, task5)
+        then:
+        processor.@fairBuffers[4] == emission5
+        0 * processor.bindOutputs0(_)
+
+        when:
+        processor.fairBindOutputs0(emission1, task1)
+        then:
+        1 * processor.bindOutputs0(emission1)
+        then:
+        1 * processor.bindOutputs0(emission2)
+        then:
+        1 * processor.bindOutputs0(emission3)
+        and:
+        processor.@fairBuffers.size() == 2 
+        processor.@fairBuffers[0] == null
+        processor.@fairBuffers[1] == emission5
+
+        when:
+        processor.fairBindOutputs0(emission4, task4)
+        then:
+        1 * processor.bindOutputs0(emission4)
+        then:
+        1 * processor.bindOutputs0(emission5)
+        then:
+        processor.@fairBuffers.size()==0
+    }
+
+    def 'should parse env map' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+        def envFile = workDir.resolve(TaskRun.CMD_ENV)
+        envFile.text =  '''
+                        ALPHA=one
+                        DELTA=x=y
+                        OMEGA=
+                        '''.stripIndent()
+        and:
+        def processor = Spy(TaskProcessor)
+
+        when:
+        def result = processor.collectOutEnvMap(workDir)
+        then:
+        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
+    }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +58,7 @@ class DockerBuilderTest extends Specification {
         ENV                 | EXPECT
         'X=1'               | '-e "X=1"'
         [VAR_X:1, VAR_Y: 2] | '-e "VAR_X=1" -e "VAR_Y=2"'
-        'BAR'               | '${BAR:+-e "BAR=$BAR"}'
+        'BAR'               | '-e "BAR"'
     }
 
     def 'test docker create command line'() {
@@ -140,18 +139,18 @@ class DockerBuilderTest extends Specification {
         new DockerBuilder('fedora')
                 .setCpus(2)
                 .build()
-                .runCommand == 'docker run -i --cpus 2.0 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 2048 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(1.414)
+                .setCpus(1)
                 .build()
-                .runCommand == 'docker run -i --cpus 1.4 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 1024 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(2.5)
+                .setCpus(8)
                 .setCpuset('1,2')
                 .build()
-                .runCommand == 'docker run -i --cpus 2.5 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 8192 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
                 .params(legacy: true)
@@ -187,6 +186,11 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
 
+        new DockerBuilder('fedora')
+                .params(device: '/dev/fuse')
+                .params(capAdd: 'SYS_ADMIN')
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
     def 'test add mount'() {
@@ -212,14 +216,14 @@ class DockerBuilderTest extends Specification {
         then:
         docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
         docker.removeCommand == 'docker rm c1'
-        docker.killCommand == 'docker kill c1'
+        docker.killCommand == 'docker stop c1'
 
         when:
         docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true).build()
         then:
         docker.runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c2 busybox'
         docker.removeCommand == 'sudo docker rm c2'
-        docker.killCommand == 'sudo docker kill c2'
+        docker.killCommand == 'sudo docker stop c2'
 
 
         when:
@@ -227,7 +231,7 @@ class DockerBuilderTest extends Specification {
         then:
         docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
         docker.removeCommand == 'docker rm c3'
-        docker.killCommand == 'docker kill c3'
+        docker.killCommand == 'docker stop c3'
 
         when:
         docker =  new DockerBuilder('busybox').setName('c4').params(kill: 'SIGKILL').build()

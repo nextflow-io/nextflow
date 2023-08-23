@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,7 +121,7 @@ class SingularityCacheTest extends Specification {
         def cache = Spy(new SingularityCache(config))
 
         when:
-        def result = cache.downloadSingularityImage(IMAGE)
+        def result = cache.downloadContainerImage(IMAGE)
         then:
         1 * cache.localLibraryPath(IMAGE) >> null
         1 * cache.localCachePath(IMAGE) >> TARGET_FILE
@@ -152,7 +151,7 @@ class SingularityCacheTest extends Specification {
         def cache = Spy(SingularityCache)
 
         when:
-        def result = cache.downloadSingularityImage(IMAGE)
+        def result = cache.downloadContainerImage(IMAGE)
         then:
         1 * cache.localLibraryPath(IMAGE) >> null
         1 * cache.localCachePath(IMAGE) >> container
@@ -176,7 +175,7 @@ class SingularityCacheTest extends Specification {
         def cache = Spy(SingularityCache)
 
         when:
-        def result = cache.downloadSingularityImage(IMAGE)
+        def result = cache.downloadContainerImage(IMAGE)
         then:
         1 * cache.localLibraryPath(IMAGE) >> container
         0 * cache.localCachePath(IMAGE) >> null
@@ -203,7 +202,7 @@ class SingularityCacheTest extends Specification {
         when:
         def file = cache.getCachePathFor(IMAGE)
         then:
-        1 * cache.downloadSingularityImage(IMAGE) >> container
+        1 * cache.downloadContainerImage(IMAGE) >> container
         file == container
     }
 

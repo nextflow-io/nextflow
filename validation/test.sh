@@ -11,7 +11,7 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 export NXF_ANSI_LOG=false
 
 #
-# Integration test
+# Integration tests
 #
 if [[ $TEST_MODE == 'test_integration' ]]; then
 
@@ -38,17 +38,6 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     )
 
     #
-    # AMPA-NF
-    #
-    git clone https://github.com/cbcrg/ampa-nf
-    docker pull cbcrg/ampa-nf
-    (
-      cd ampa-nf;
-      $NXF_CMD run . -with-docker
-      $NXF_CMD run . -with-docker -resume
-    )
-
-    #
     # RNASEQ-NF
     #
     echo nextflow-io/rnaseq-nf
@@ -59,12 +48,12 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     exit 0
 fi
 
-
-if [[ $GITHUB_EVENT_NAME == pull_request ]]; then
-  echo "Skipping cloud integration tests on PR event"
-  exit 0
+if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+  if [ "$(jq -r '.pull_request.head.repo.fork' $GITHUB_EVENT_PATH)" = "true" ]; then
+    echo "Skipping cloud integration tests on external PR event"
+    exit 0
+  fi
 fi
-
 
 #
 # AWS Batch tests
@@ -100,4 +89,9 @@ if [[ $TEST_MODE == 'test_google' ]]; then
     else
       echo "Missing GOOGLE_SECRET variable -- Skipping Google LS tests"
     fi
+fi
+
+if [[ $TEST_MODE == 'test_wave' ]]; then
+      echo "Wave tests"
+      bash wave.sh
 fi

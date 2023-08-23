@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,6 +213,9 @@ class K8sDriverLauncherTest extends Specification {
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
 
+        and:
+        def metadata = [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']]
+
         when:
         def spec = driver.makeLauncherSpec()
         then:
@@ -222,11 +224,12 @@ class K8sDriverLauncherTest extends Specification {
         spec == [
             apiVersion: 'batch/v1', 
             kind: 'Job', 
-            metadata: [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']],
+            metadata: metadata,
             spec: [
-               backoffLimit: 0,
-               template: [
-                  spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: metadata,
+                    spec: [
                         restartPolicy: 'Never',
                         containers: [
                             [
@@ -250,8 +253,8 @@ class K8sDriverLauncherTest extends Specification {
                             [name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
                             [name:'vol-2', configMap:[name:'cfg-2']]
                         ]
-                  ]
-               ]
+                    ]
+                ]
             ]
         ]
     }
@@ -362,7 +365,7 @@ class K8sDriverLauncherTest extends Specification {
                         ],
                         resources: [
                             requests: [cpu: 2, memory: '200Mi'],
-                            limits: [cpu: 2, memory: '200Mi']
+                            limits: [memory: '200Mi']
                         ],
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/mnt/path/data'],
@@ -560,6 +563,17 @@ class K8sDriverLauncherTest extends Specification {
                 [volumeClaim:'bar', mountPath: '/mnt/bar']
         ])
 
+    }
+
+    def 'should add the plugin into the config' () {
+        given:
+        def cmd = new CmdKubeRun()
+        cmd.launcher = new Launcher(options: new CliOptions())
+
+        when:
+        def l = new K8sDriverLauncher(cmd: cmd, plugins: 'nf-cws@1.0.0', runName: 'bar')
+        then:
+        l.makeConfig( "/bar").get('plugins') == [ 'nf-cws@1.0.0' ]
     }
 
     def 'should make config - deprecated' () {

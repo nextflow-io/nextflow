@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,6 +103,24 @@ class ProcessConfigTest extends Specification {
         config.stageInMode == 'copy'
         config.stageOutMode == 'move'
 
+    }
+
+    @Unroll
+    def 'should set fair directive' () {
+        given:
+        def script = Mock(BaseScript)
+        def config = new ProcessConfig(script)
+
+        when:
+        config.fair = CONFIG
+        then:
+        config.getFair() == EXPECTED
+
+        where:
+        CONFIG      | EXPECTED
+        null        | false
+        false       | false
+        true        | true
     }
 
     def 'should parse properties'() {
@@ -661,6 +678,48 @@ class ProcessConfigTest extends Specification {
         process.accelerator == [request: 1, limit:5]
     }
 
+    def 'should apply disk config' () {
+
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.disk '100 GB'
+        then:
+        process.disk == [request: '100 GB']
+
+        when:
+        process.disk '375 GB', type: 'local-ssd'
+        then:
+        process.disk == [request: '375 GB', type: 'local-ssd']
+
+        when:
+        process.disk request: '375 GB', type: 'local-ssd'
+        then:
+        process.disk == [request: '375 GB', type: 'local-ssd']
+    }
+
+    def 'should apply architecture config' () {
+
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.arch 'linux/x86_64'
+        then:
+        process.arch == [name: 'linux/x86_64']
+
+        when:
+        process.arch 'linux/x86_64', target: 'zen3'
+        then:
+        process.arch == [name: 'linux/x86_64', target: 'zen3']
+
+        when:
+        process.arch name: 'linux/x86_64', target: 'zen3'
+        then:
+        process.arch == [name: 'linux/x86_64', target: 'zen3']
+    }
+
 
     def 'should get default config path' () {
         given:
@@ -717,5 +776,39 @@ class ProcessConfigTest extends Specification {
         p3.cpus == 4
         !p3.disk
 
+    }
+
+    def 'should throw exception for invalid error strategy' () {
+        when:
+        def process1 = new ProcessConfig(Mock(BaseScript))
+        process1.errorStrategy 'abort'
+
+        then:
+        def e1 = thrown(IllegalArgumentException)
+        e1.message == "Unknown error strategy 'abort' ― Available strategies are: terminate,finish,ignore,retry"
+
+    }
+
+    def 'should not throw exception for valid error strategy or closure' () {
+        when:
+        def process1 = new ProcessConfig(Mock(BaseScript))
+        process1.errorStrategy 'retry'
+
+        then:
+        def e1 = noExceptionThrown()
+
+        when:
+        def process2 = new ProcessConfig(Mock(BaseScript))
+        process2.errorStrategy 'terminate'
+
+        then:
+        def e2 = noExceptionThrown()
+
+        when:
+        def process3 = new ProcessConfig(Mock(BaseScript))
+        process3.errorStrategy { task.exitStatus==14 ? 'retry' : 'terminate' }
+
+        then:
+        def e3 = noExceptionThrown()
     }
 }

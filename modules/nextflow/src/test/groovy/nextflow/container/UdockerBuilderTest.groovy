@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,14 +107,14 @@ class UdockerBuilderTest extends Specification {
         def result = builder.build().getRunCommand()
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
             udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest")
             '''
             .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should append the run command line with launcher' () {
@@ -125,14 +124,14 @@ class UdockerBuilderTest extends Specification {
         def result = builder.build().getRunCommand('bwa --this --that')
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
             udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") bwa --this --that
             '''
                 .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
 
 
         when:
@@ -140,14 +139,14 @@ class UdockerBuilderTest extends Specification {
         result = builder.build().getRunCommand('bwa --this --that')
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
             udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") /bin/bash -c "bwa --this --that"
             '''
                 .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
 }

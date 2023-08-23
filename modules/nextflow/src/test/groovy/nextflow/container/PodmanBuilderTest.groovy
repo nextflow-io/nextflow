@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +62,7 @@ class PodmanBuilderTest extends Specification {
         ENV                 | EXPECT
         'X=1'               | '-e "X=1"'
         [VAR_X:1, VAR_Y: 2] | '-e "VAR_X=1" -e "VAR_Y=2"'
-        'BAR'               | '${BAR:+-e "BAR=$BAR"}'
+        'BAR'               | '-e "BAR"'
     }
 
     def 'test podman create command line'() {
@@ -131,6 +130,11 @@ class PodmanBuilderTest extends Specification {
                 .build()
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
 
+        new PodmanBuilder('fedora')
+                .params(device: '/dev/fuse')
+                .params(capAdd: 'SYS_ADMIN')
+                .build()
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
     def 'test add mount'() {
@@ -156,14 +160,14 @@ class PodmanBuilderTest extends Specification {
         then:
         podman.runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
         podman.removeCommand == 'podman rm c1'
-        podman.killCommand == 'podman kill c1'
+        podman.killCommand == 'podman stop c1'
 
         when:
         podman = new PodmanBuilder('busybox').setName('c3').params(remove: true).build()
         then:
         podman.runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
         podman.removeCommand == 'podman rm c3'
-        podman.killCommand == 'podman kill c3'
+        podman.killCommand == 'podman stop c3'
 
         when:
         podman = new PodmanBuilder('busybox').setName('c4').params(kill: 'SIGKILL').build()
@@ -222,7 +226,7 @@ class PodmanBuilderTest extends Specification {
         new PodmanBuilder('fedora')
                 .setCpus(3)
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpus 3.0 fedora'
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 3072 fedora'
 
         new PodmanBuilder('fedora')
                 .setMemory(new MemoryUnit('100m'))
@@ -230,10 +234,10 @@ class PodmanBuilderTest extends Specification {
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --memory 100m fedora'
 
         new PodmanBuilder('fedora')
-                .setCpus(1.414)
+                .setCpus(1)
                 .setMemory(new MemoryUnit('400m'))
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpus 1.4 --memory 400m fedora'
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 1024 --memory 400m fedora'
 
     }
 }

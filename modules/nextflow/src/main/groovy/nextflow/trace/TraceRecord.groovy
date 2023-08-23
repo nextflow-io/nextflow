@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,7 +100,8 @@ class TraceRecord implements Serializable {
             error_action:'str',
             vol_ctxt: 'num',
             inv_ctxt: 'num',
-            hostname: 'str'
+            hostname: 'str',
+            cpu_model:  'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -447,6 +447,10 @@ class TraceRecord implements Serializable {
                     // these fields are provided in KB, so they are normalized to bytes
                     def val = parseLong(value, file, name) * 1024
                     this.put(name, val)
+                    break
+
+                case 'cpu_model':
+                    this.put(name, value)
                     break
 
                 default:

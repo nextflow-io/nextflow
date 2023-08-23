@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,13 +67,13 @@ class GraphObserver implements TraceObserver {
     @Override
     void onFlowCreate(Session session) {
         this.dag = session.dag
-        // check file existance
+        // check file existence
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
             if( overwrite && (attrs.isDirectory() || !file.delete()) )
                 throw new AbortOperationException("Unable to overwrite existing DAG file: ${file.toUriString()}")
             else if( !overwrite )
-                throw new AbortOperationException("DAG file already exists: ${file.toUriString()}")
+                throw new AbortOperationException("DAG file already exists: ${file.toUriString()} -- enable `dag.overwrite` in your config file to overwrite existing DAG files")
         }
     }
 

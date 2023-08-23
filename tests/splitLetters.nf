@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,34 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 params.str = 'Hello world!'
 
 process splitLetters {
 
     output:
-    file 'chunk_*' into letters mode flatten
+    file 'chunk_*'
 
     """
     printf '${params.str}' | split -b 6 - chunk_
     """
 }
 
-
 process massage {
 
     input:
-    file x from letters
+    file x
 
     output:
-    stdout result
+    stdout
 
     """
     cat $x | tr '[a-z]' '[A-Z]'
     """
 }
 
-result.subscribe {
-    println it.trim()
+workflow {
+  splitLetters \
+  | flatten \
+  | massage \
+  | view { it.trim() }
 }
+
