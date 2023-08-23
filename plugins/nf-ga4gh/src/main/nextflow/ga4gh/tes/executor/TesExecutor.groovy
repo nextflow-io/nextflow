@@ -17,9 +17,11 @@
 package nextflow.ga4gh.tes.executor
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.extension.FilesEx
 import nextflow.ga4gh.tes.client.ApiClient
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
 import nextflow.processor.TaskHandler
@@ -29,6 +31,8 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
+
+import java.nio.file.Path
 
 /**
  * Experimental TES executor
@@ -44,14 +48,15 @@ class TesExecutor extends Executor implements ExtensionPoint {
 
     private TaskServiceApi client
 
+    /**
+     * A path accessible to TES where executable scripts need to be uploaded
+     */
+    private Path remoteBinDir = null
+
     @Override
     protected void register() {
-        if( session.binDir && !session.binDir.empty() ) {
-            session.abort()
-            throw new AbortOperationException("ERROR: TES executor does not allow the use of custom scripts in the `bin` folder")
-        }
-
         super.register()
+        uploadBinDir()
 
         client = new TaskServiceApi( new ApiClient(basePath: getEndPoint()) )
     }
@@ -62,6 +67,22 @@ class TesExecutor extends Executor implements ExtensionPoint {
 
     TaskServiceApi getClient() {
         client
+    }
+
+    @PackageScope
+    Path getRemoteBinDir() {
+        remoteBinDir
+    }
+
+    protected void uploadBinDir() {
+        /*
+         * upload local binaries
+         */
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
+            def tempBin = getTempDir()
+            log.info "Uploading local `bin` scripts folder to ${tempBin.toUriString()}/bin"
+            remoteBinDir = FilesEx.copyTo(session.binDir, tempBin)
+        }
     }
 
     protected String getEndPoint() {

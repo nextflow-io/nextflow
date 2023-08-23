@@ -1312,7 +1312,7 @@ result = 15
 ```
 
 :::{tip}
-A common use case for this operator is to use the first paramter as an accumulator and the second parameter as the `i-th` item to be processed.
+A common use case for this operator is to use the first parameter as an accumulator and the second parameter as the `i-th` item to be processed.
 :::
 
 Optionally you can specify an initial value for the accumulator as shown below:
@@ -1705,7 +1705,7 @@ Available options:
 : The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).
 
 `file`
-: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 
 `keepHeader`
 : Parses the first line as header and prepends it to each emitted chunk.

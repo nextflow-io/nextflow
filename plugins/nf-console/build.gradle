@@ -37,11 +37,11 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.7'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
-    api("org.codehaus.groovy:groovy-console:3.0.17") { transitive=false }
-    api("org.codehaus.groovy:groovy-swing:3.0.17")  { transitive=false }
+    api("org.codehaus.groovy:groovy-console:3.0.19") { transitive=false }
+    api("org.codehaus.groovy:groovy-swing:3.0.19")  { transitive=false }
 
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.17"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.17"
+    testImplementation "org.codehaus.groovy:groovy:3.0.19"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.19"
 }
 

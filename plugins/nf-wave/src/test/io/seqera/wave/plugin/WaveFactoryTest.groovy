@@ -18,6 +18,8 @@
 package io.seqera.wave.plugin
 
 import nextflow.Session
+import nextflow.SysEnv
+import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -46,5 +48,36 @@ class WaveFactoryTest extends Specification {
         [wave:[enabled:true]]       | [wave:[enabled:true]]     | 0
         [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]] | 1
     }
+
+    def 'should fail when wave is disabled' () {
+        given:
+        def CONFIG = [wave:[:], fusion:[enabled:true]]
+        def session = Mock(Session) { getConfig() >> CONFIG }
+        def factory = new WaveFactory()
+
+        when:
+        factory.create(session)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Fusion feature requires enabling Wave service'
+    }
+
+    def 'should not fail when wave is disabled' () {
+        given:
+        SysEnv.push(NXF_DISABLE_WAVE_SERVICE: 'true')
+        def CONFIG = [wave:[:], fusion:[enabled:true]]
+        def session = Mock(Session) { getConfig() >> CONFIG }
+        def factory = new WaveFactory()
+
+        when:
+        factory.create(session)
+        then:
+        noExceptionThrown()
+        and:
+        0 * session.setDisableRemoteBinDir(true) >> null
+        and:
+        CONFIG == [wave:[:], fusion:[enabled:true]]
+    }
+
 
 }

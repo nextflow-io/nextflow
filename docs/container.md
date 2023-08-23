@@ -66,6 +66,10 @@ Unlike Docker, Nextflow does not automatically mount host paths in the container
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Apptainer installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
+:::{versionchanged} 23.07.0-edge
+Nextflow no longer mounts the home directory when launching an Apptainer container. To re-enable the old behavior, set the environment variable `NXF_APPTAINER_HOME_MOUNT` to `true`.
+:::
+
 ### Multiple containers
 
 It is possible to specify a different Apptainer image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Apptainer images specifying them in the `nextflow.config` file as shown below::
@@ -573,6 +577,10 @@ Unlike Docker, Nextflow does not automatically mount host paths in the container
 
 :::{warning}
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Singularity installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
+:::
+
+:::{versionchanged} 23.07.0-edge
+Nextflow no longer mounts the home directory when launching a Singularity container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_HOME_MOUNT` to `true`.
 :::
 
 ### Multiple containers

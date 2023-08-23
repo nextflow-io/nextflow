@@ -23,19 +23,18 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
-import java.time.Instant
+import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
-import java.util.regex.Pattern
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
@@ -45,7 +44,6 @@ import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import io.seqera.wave.plugin.adapter.InstantAdapter
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -59,6 +57,7 @@ import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.SysHelper
+import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -71,7 +70,14 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
-    private static final Pattern CONTAINER_PATH = ~/(\S+)\/wt\/([a-z0-9]+)\/\S+/
+    final static private String[] REQUEST_HEADERS =  new String[]{
+                        'Content-Type','application/json',
+                        'Accept','application/json',
+                        'Accept','application/vnd.oci.image.index.v1+json',
+                        'Accept','application/vnd.oci.image.manifest.v1+json',
+                        'Accept','application/vnd.docker.distribution.manifest.v1+prettyjws',
+                        'Accept','application/vnd.docker.distribution.manifest.v2+json',
+                        'Accept','application/vnd.docker.distribution.manifest.list.v2+json' }
 
     private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
 
@@ -112,7 +118,7 @@ class WaveClient {
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
-        log.debug "Wave server endpoint: ${endpoint}"
+        log.debug "Wave endpoint: ${endpoint}; config: $config"
         this.packer = new Packer()
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
@@ -123,12 +129,20 @@ class WaveClient {
         // the cookie manager
         cookieManager = new CookieManager()
         // create http client
-        this.httpClient = HttpClient.newBuilder()
+        this.httpClient = newHttpClient()
+    }
+
+    protected HttpClient newHttpClient() {
+        final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .cookieHandler(cookieManager)
                 .connectTimeout(config.httpOpts().connectTimeout())
-                .build()
+        // use virtual threads executor if enabled
+        if( Threads.useVirtual() )
+            builder.executor(Executors.newVirtualThreadPerTaskExecutor())
+        // build and return the new client
+        return builder.build()
     }
 
     WaveConfig config() { return config }
@@ -151,10 +165,10 @@ class WaveClient {
             containerConfig.prependLayer(makeLayer(assets.projectResources))
         }
 
-        if( !assets.containerImage && !assets.dockerFileContent )
+        if( !assets.containerImage && !assets.containerFile )
             throw new IllegalArgumentException("Wave container request requires at least a image or container file to build")
 
-        if( assets.containerImage && assets.dockerFileContent )
+        if( assets.containerImage && assets.containerFile )
             throw new IllegalArgumentException("Wave container image and container file cannot be specified in the same request")
 
         return new SubmitContainerTokenRequest(
@@ -167,7 +181,9 @@ class WaveClient {
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
-                fingerprint: assets.fingerprint()
+                fingerprint: assets.fingerprint(),
+                freeze: config.freezeMode(),
+                format: assets.singularity ? 'sif' : null
         )
     }
 
@@ -189,7 +205,9 @@ class WaveClient {
                 towerAccessToken: tower.accessToken,
                 towerWorkspaceId: tower.workspaceId,
                 towerEndpoint: tower.endpoint,
-                workflowId: tower.workflowId)
+                workflowId: tower.workflowId,
+                freeze: config.freezeMode()
+        )
         return sendRequest(request)
     }
 
@@ -294,23 +312,28 @@ class WaveClient {
     }
 
     protected void checkConflicts(Map<String,String> attrs, String name) {
-        if( attrs.dockerfile && attrs.conda ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle dockerfile that conflict each other")
-        }
-        if( attrs.container && attrs.dockerfile ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle dockerfile that conflict each other")
-        }
         if( attrs.container && attrs.conda ) {
             throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'conda' directives that conflict each other")
-        }
-        if( attrs.dockerfile && attrs.spack ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'spack' directive and a module bundle dockerfile that conflict each other")
         }
         if( attrs.container && attrs.spack ) {
             throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'spack' directives that conflict each other")
         }
         if( attrs.spack && attrs.conda ) {
             throw new IllegalArgumentException("Process '${name}' declares both 'spack' and 'conda' directives that conflict each other")
+        }
+        checkConflicts0(attrs, name, 'dockerfile')
+        checkConflicts0(attrs, name, 'singularityfile')
+    }
+
+    protected void checkConflicts0(Map<String,String> attrs, String name, String fileType) {
+        if( attrs.get(fileType) && attrs.conda ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle $fileType that conflict each other")
+        }
+        if( attrs.container && attrs.get(fileType) ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle $fileType that conflict each other")
+        }
+        if( attrs.get(fileType) && attrs.spack ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'spack' directive and a module bundle $fileType that conflict each other")
         }
     }
 
@@ -324,6 +347,21 @@ class WaveClient {
         return result
     }
 
+    protected List<String> patchStrategy(List<String> strategy, boolean singularity) {
+        if( !singularity )
+            return strategy
+        // when singularity is enabled, replaces `dockerfile` with `singularityfile`
+        // in the strategy if not specified explicitly
+        final p = strategy.indexOf('dockerfile')
+        if( p!=-1 && !strategy.contains('singularityfile') ) {
+            final result = new ArrayList(strategy)
+            result.remove(p)
+            result.add(p, 'singularityfile')
+            return Collections.<String>unmodifiableList(result)
+        }
+        return strategy
+    }
+
     static Architecture defaultArch() {
         try {
             return new Architecture(SysHelper.getArch())
@@ -335,7 +373,7 @@ class WaveClient {
     }
 
     @Memoized
-    WaveAssets resolveAssets(TaskRun task, String containerImage) {
+    WaveAssets resolveAssets(TaskRun task, String containerImage, boolean singularity) {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the Spack architecture
@@ -350,49 +388,60 @@ class WaveClient {
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text
         }
+        if( bundle!=null && bundle.singularityfile ) {
+            attrs.singularityfile = bundle.singularityfile.text
+        }
 
         // validate request attributes
-        if( config().strategy() )
-            attrs = resolveConflicts(attrs, config().strategy())
+        final strategy = config().strategy()
+        if( strategy )
+            attrs = resolveConflicts(attrs, patchStrategy(strategy, singularity))
         else
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, dockerArch, spackArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, String dockerArch, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackArch) {
 
-        String dockerScript = attrs.dockerfile
+        final scriptType = singularity ? 'singularityfile' : 'dockerfile'
+        String containerScript = attrs.get(scriptType)
         final containerImage = attrs.container
 
         /*
-         * If 'conda' directive is specified use it to create a Dockefile
+         * If 'conda' directive is specified use it to create a container file
          * to assemble the target container
          */
         Path condaFile = null
         if( attrs.conda ) {
-            if( dockerScript )
-                throw new IllegalArgumentException("Unexpected conda and dockerfile conflict while resolving wave container")
+            if( containerScript )
+                throw new IllegalArgumentException("Unexpected conda and $scriptType conflict while resolving wave container")
 
             // map the recipe to a dockerfile
             if( isCondaLocalFile(attrs.conda) ) {
                 condaFile = Path.of(attrs.conda)
-                dockerScript = condaFileToDockerFile(config.condaOpts())
+                containerScript = singularity
+                        ? condaFileToSingularityFile(config.condaOpts())
+                        : condaFileToDockerFile(config.condaOpts())
             }
             // 'conda' attributes is resolved as the conda packages to be used
             else {
-                dockerScript = condaPackagesToDockerFile(attrs.conda, condaChannels, config.condaOpts())
+                containerScript = singularity
+                        ? condaPackagesToSingularityFile(attrs.conda, condaChannels, config.condaOpts())
+                        : condaPackagesToDockerFile(attrs.conda, condaChannels, config.condaOpts())
             }
         }
 
         /*
-         * If 'spack' directive is specified use it to create a Dockefile
+         * If 'spack' directive is specified use it to create a container file
          * to assemble the target container
          */
         Path spackFile = null
         if( attrs.spack ) {
-            if( dockerScript )
+            if( singularity )
+                throw new IllegalArgumentException("Wave containers do not support (yet) the resolution of Spack package with Singularity")
+            if( containerScript )
                 throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
 
             if( isSpackFile(attrs.spack) ) {
@@ -403,14 +452,14 @@ class WaveClient {
                 // create a minimal spack file with package spec from user input
                 spackFile = spackPackagesToSpackFile(attrs.spack, config.spackOpts())
             }
-            dockerScript = spackFileToDockerFile(config.spackOpts())
+            containerScript = spackFileToDockerFile(config.spackOpts())
         }
 
         /*
          * The process should declare at least a container image name via 'container' directive
          * or a dockerfile file to build, otherwise there's no job to be done by wave
          */
-        if( !dockerScript && !containerImage ) {
+        if( !containerScript && !containerImage ) {
             return null
         }
 
@@ -434,10 +483,11 @@ class WaveClient {
                     platform,
                     bundle,
                     containerConfig,
-                    dockerScript,
+                    containerScript,
                     condaFile,
                     spackFile,
-                    projectRes)
+                    projectRes,
+                    singularity)
     }
 
     @Memoized
@@ -456,6 +506,13 @@ class WaveClient {
             final key = assets.fingerprint()
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
+            if( config.freezeMode() )  {
+                if( response.buildId ) {
+                    // await the image to be available when a new image is being built
+                    awaitImage(response.targetImage)
+                }
+                return new ContainerInfo(assets.containerImage, response.containerImage, key)
+            }
             // assemble the container info response
             return new ContainerInfo(assets.containerImage, response.targetImage, key)
         }
@@ -464,7 +521,30 @@ class WaveClient {
         }
     }
 
+    protected URI imageToManifestUri(String image) {
+        final p = image.indexOf('/')
+        if( p==-1 ) throw new IllegalArgumentException("Invalid container name: $image")
+        final result = 'https://' + image.substring(0,p) + '/v2' + image.substring(p).replace(':','/manifests/')
+        return new URI(result)
+    }
 
+    protected void awaitImage(String image) {
+        final manifest = imageToManifestUri(image)
+        final req = HttpRequest.newBuilder()
+                .uri(manifest)
+                .headers(REQUEST_HEADERS)
+                .timeout(Duration.ofMinutes(5))
+                .GET()
+                .build()
+        final begin = System.currentTimeMillis()
+        final resp = httpSend(req)
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container available in ${nextflow.util.Duration.of(System.currentTimeMillis()-begin)}: [$code] ${resp.body()}"
+        }
+        else
+            throw new BadResponseException("Unexpected response for \'$manifest\': [${resp.statusCode()}] ${resp.body()}")
+    }
 
     static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )
@@ -526,64 +606,6 @@ class WaveClient {
         return null
     }
 
-    String resolveSourceContainer(String container) {
-        final token = getWaveToken(container)
-        if( !token )
-            return container
-        final resp = fetchContainerInfo(token)
-        final describe = jsonToDescribeContainerResponse(resp)
-        return describe.source.digest==describe.wave.digest
-                ? digestImage(describe.source)      // when the digest are equals, return the source because it's a stable name
-                : digestImage(describe.wave)        // otherwise returns the wave container name
-    }
-
-    protected String digestImage(DescribeContainerResponse.ContainerInfo info) {
-        if( !info.digest )
-            return info.image
-        final p = info.image.lastIndexOf(':')
-        return p!=-1
-            ? info.image.substring(0,p) + '@' + info.digest
-            : info.image + '@' + info.digest
-    }
-
-    protected String getWaveToken(String name) {
-        if( !name )
-            return null
-        final matcher = CONTAINER_PATH.matcher(name)
-        if( !matcher.find() )
-            return null
-        return matcher.group(1)==waveRegistry
-                ? matcher.group(2)
-                : null
-    }
-
-    @Memoized
-    protected String fetchContainerInfo(String token) {
-        final uri = new URI("$endpoint/container-token/$token")
-        log.trace "Wave request container info: $uri"
-        final req = HttpRequest.newBuilder()
-                .uri(uri)
-                .headers('Content-Type','application/json')
-                .GET()
-                .build()
-
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        final code = resp.statusCode()
-        if( code>=200 && code<400 ) {
-            log.debug "Wave container config info: [$code] ${resp.body()}"
-            return resp.body()
-        }
-        throw new BadResponseException("Unexpected response for \'$uri\': [${resp.statusCode()}] ${resp.body()}")
-    }
-
-    protected DescribeContainerResponse jsonToDescribeContainerResponse(String json) {
-        final gson = new GsonBuilder()
-                .registerTypeAdapter(Instant.class, new InstantAdapter())
-                .create();
-        final type = new TypeToken<DescribeContainerResponse>(){}.getType()
-        return gson.fromJson(json, type)
-    }
-
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
         final cfg = config.retryOpts()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
@@ -607,7 +629,16 @@ class WaveClient {
         return Failsafe.with(policy).get(action)
     }
 
+    static private final List<Integer> SERVER_ERRORS = [429,502,503,504]
+
     protected HttpResponse<String> httpSend(HttpRequest req)  {
-        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        return safeApply(() -> {
+            final resp=httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+            if( resp.statusCode() in SERVER_ERRORS) {
+                // throws an IOException so that the condition is handled by the retry policy
+                throw new IOException("Unexpected server response code ${resp.statusCode()} - message: ${resp.body()}")
+            }
+            return resp
+        })
     }
 }
