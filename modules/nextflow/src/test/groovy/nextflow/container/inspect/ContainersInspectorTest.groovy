@@ -58,42 +58,6 @@ class ContainersInspectorTest extends Specification {
         ]
     }
 
-    def 'should render config output' () {
-        when:
-        def observer = new ContainersInspector(Mock(DAG))
-        def containers = [
-            'proc1': 'container1',
-            'proc2': 'container2',
-        ]
-        then:
-        observer.renderConfig(containers) == '''\
-            process { withName: 'proc1' { container = 'container1' } }
-            process { withName: 'proc2' { container = 'container2' } }
-            '''.stripIndent()
-    }
-
-    def 'should render json output' () {
-        when:
-        def observer = new ContainersInspector(Mock(DAG))
-        def containers = [
-            'proc1': 'container1',
-            'proc2': 'container2',
-        ]
-        then:
-        observer.renderJson(containers) == '''\
-            [
-                {
-                    "name": "proc1",
-                    "container": "container1"
-                },
-                {
-                    "name": "proc2",
-                    "container": "container2"
-                }
-            ]
-            '''.stripIndent(true)
-    }
-
     def 'should render containers as json' () {
         given:
         def dag = Mock(DAG)
