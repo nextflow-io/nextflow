@@ -18,6 +18,7 @@
 package nextflow.cli
 
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.container.inspect.ContainersInspector
@@ -27,6 +28,7 @@ import nextflow.container.inspect.ContainersInspector
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Parameters(commandDescription = "Inspect process settings in a pipeline project")
 class CmdInspect extends CmdBase {
 
     @Override
@@ -34,27 +36,27 @@ class CmdInspect extends CmdBase {
         return 'inspect'
     }
 
-    @Parameter(names=['-profile'], description = 'Choose a configuration profile')
-    String profile
-
-    @Parameter(names=['-format'], description = "Inspect output format. Either 'json' or 'config'")
-    String format = 'json'
-
-    @Parameter(names=['-c','-config'], hidden = true )
+    @Parameter(names=['-c','-config'], hidden = true)
     List<String> runConfig
 
-    @Parameter(names=['-i'], description = 'Ignore error while inspecting the pipeline configuration' )
+    @Parameter(names=['-format'], description = "Inspect output format. Can be 'json' or 'config'")
+    String format = 'json'
+
+    @Parameter(names=['-i','-ignore-errors'], description = 'Ignore errors while inspecting the pipeline')
     boolean ignoreErrors
 
-    @Parameter(names=['-w'], description = 'Await resources to be accessible' )
+    @Parameter(names=['-profile'], description = 'Use the given configuration profile(s)')
+    String profile
+
+    @Parameter(names=['-w','-await'], description = 'Wait for container images to be available when building images with Wave')
     boolean awaitMode = false
 
     @Parameter(description = 'Project name or repository url')
     List<String> args
 
     {
-        // enable quite by default
-        CliOptions.quiteDefault = true
+        // enable quiet by default
+        CliOptions.quietDefault = true
     }
 
     @Override
@@ -76,10 +78,12 @@ class CmdInspect extends CmdBase {
         if( session.config.wave instanceof Map )
             configAwaitMode(session.config.wave as Map)
         // run the inspector
-        new ContainersInspector(session.dag)
+        final result = new ContainersInspector(session.dag)
                 .withFormat(format)
                 .withIgnoreErrors(ignoreErrors)
-                .printContainers()
+                .inspect()
+        if( result )
+            print result
     }
 
     protected void configAwaitMode(Map waveConfig) {

@@ -31,7 +31,7 @@ import org.fusesource.jansi.Ansi
 @Slf4j
 class CliOptions {
 
-    static @PackageScope boolean quiteDefault = false
+    static @PackageScope boolean quietDefault = false
 
     /**
      * The packages to debug
@@ -76,7 +76,7 @@ class CliOptions {
     boolean help
 
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
-    boolean quiet = quiteDefault
+    boolean quiet = quietDefault
 
     @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
     boolean background

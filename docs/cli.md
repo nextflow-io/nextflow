@@ -643,6 +643,37 @@ $ nextflow info nextflow-io/hello
     v1.2 [t]
 ```
 
+### inspect
+
+:::{versionadded} 23.09.0-edge
+:::
+
+Inspect process settings in a pipeline project. Currently only supports the `container` directive.
+
+**Usage**
+
+```console
+$ nextflow inspect [options] [project]
+```
+
+**Description**
+
+The `inspect` command allows you to determine the container for each process in a pipeline without running the pipeline. It prints to stdout a listing of containers for each process, formatted either as JSON or Nextflow configuration.
+
+**Options**
+
+`-format` (`json`)
+: Inspect output format. Can be `json` or `config`.
+
+`-i, -ignore-errors`
+: Ignore errors while inspecting the pipeline.
+
+`-profile`
+: Use the given configuration profile(s).
+
+`-w, -await`
+: Wait for containers to be available when resolving dynamic containers with Wave.
+
 ### kuberun
 
 Launch a Nextflow pipeline on a Kubernetes cluster.
@@ -1071,11 +1102,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : :::{versionadded} 22.06.0-edge
   :::
 : Run the workflow script skipping the execution of all processes.
-
-`-preview-containers` (`json`)
-: :::{versionadded} 23.08.0-edge
-  :::
-: Print a preview of the containers used for each process to stdout (implicitly enables `-preview`). An optional argument specifies the output format, can be `config` or `json`.
 
 `-process.<key>=<value>`
 : Set process config options.

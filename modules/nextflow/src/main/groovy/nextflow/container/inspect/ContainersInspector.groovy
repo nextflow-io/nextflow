@@ -50,27 +50,19 @@ class ContainersInspector {
     }
 
     ContainersInspector withIgnoreErrors(boolean ignore) {
-        if( format !in ['config', 'json'] )
-            throw new IllegalArgumentException("Invalid format for container preview: '${format}' -- should be 'config' or 'json'")
         this.ignoreErrors = ignore
         return this
     }
 
-    String computeContainers() {
+    String inspect() {
         log.debug "Rendering container preview"
         final containers = getContainers()
         if( format == 'config' )
             return renderConfig(containers)
-        if( format == 'json' )
+        else if( format == 'json' )
             return renderJson(containers)
         else
             throw new IllegalStateException("Unknown containers preview format: $format")
-    }
-
-    void printContainers() {
-        final result = computeContainers()
-        if( result )
-            print result
     }
 
     protected Map<String,String> getContainers() {
@@ -86,7 +78,7 @@ class ContainersInspector {
                 // get container preview
                 containers[process.name] = process.inspectableTaskRun().getContainer()
             }
-            catch (Exception e) {
+            catch( Exception e ) {
                 if( ignoreErrors )
                     log.warn "Unable to inspect container for task `$process.name` - cause: ${e.message}"
                 else
