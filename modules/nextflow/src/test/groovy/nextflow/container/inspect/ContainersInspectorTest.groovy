@@ -91,7 +91,7 @@ class ContainersInspectorTest extends Specification {
                     "container": "container2"
                 }
             ]
-            '''.stripIndent().trim()
+            '''.stripIndent(true)
     }
 
     def 'should render containers as json' () {

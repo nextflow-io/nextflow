@@ -17,14 +17,17 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.container.inspect.ContainersInspector
+import nextflow.util.LoggerHelper
 
 /**
- *
+ * Implement `inspect` command
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -51,21 +54,31 @@ class CmdInspect extends CmdBase {
     @Parameter(names=['-w','-await'], description = 'Wait for container images to be available when building images with Wave')
     boolean awaitMode = false
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
+    String revision
+
+    @DynamicParameter(names = '--', hidden = true)
+    Map<String,String> params = new LinkedHashMap<>()
+
+    @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
+    String paramsFile
+
     @Parameter(description = 'Project name or repository url')
     List<String> args
 
-    {
-        // enable quiet by default
-        CliOptions.quietDefault = true
-    }
-
     @Override
     void run() {
+        // configure quiet mode
+        LoggerHelper.setQuiet(true)
+        // setup the target run command
         final target = new CmdRun()
         target.launcher = this.launcher
         target.args = args
         target.profile = this.profile
+        target.revision = this.revision
         target.runConfig = this.runConfig
+        target.params = this.params
+        target.paramsFile = this.paramsFile
         target.preview = true
         target.previewAction = this.&applyInspect
         target.ansiLog = false

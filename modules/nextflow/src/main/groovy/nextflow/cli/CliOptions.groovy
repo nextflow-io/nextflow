@@ -18,11 +18,9 @@ package nextflow.cli
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
-
 /**
  * Main application command line options
  *
@@ -30,8 +28,6 @@ import org.fusesource.jansi.Ansi
  */
 @Slf4j
 class CliOptions {
-
-    static @PackageScope boolean quietDefault = false
 
     /**
      * The packages to debug
@@ -76,7 +72,7 @@ class CliOptions {
     boolean help
 
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
-    boolean quiet = quietDefault
+    boolean quiet
 
     @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
     boolean background
