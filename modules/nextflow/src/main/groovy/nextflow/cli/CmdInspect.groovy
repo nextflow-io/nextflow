@@ -40,6 +40,9 @@ class CmdInspect extends CmdBase {
         return 'inspect'
     }
 
+    @Parameter(names=['-concretize'], description = "Build the container images resolved by the inspect command")
+    boolean concretize
+
     @Parameter(names=['-c','-config'], hidden = true)
     List<String> runConfig
 
@@ -49,20 +52,17 @@ class CmdInspect extends CmdBase {
     @Parameter(names=['-i','-ignore-errors'], description = 'Ignore errors while inspecting the pipeline')
     boolean ignoreErrors
 
-    @Parameter(names=['-profile'], description = 'Use the given configuration profile(s)')
-    String profile
-
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
-    String revision
-
     @DynamicParameter(names = '--', hidden = true)
     Map<String,String> params = new LinkedHashMap<>()
 
     @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
-    @Parameter(names=['-concretize'], description = "Build the container images resolved by the inspect command")
-    boolean concretize
+    @Parameter(names=['-profile'], description = 'Use the given configuration profile(s)')
+    String profile
+
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
+    String revision
 
     @Parameter(description = 'Project name or repository url')
     List<String> args

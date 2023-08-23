@@ -662,17 +662,37 @@ The `inspect` command allows you to determine the container for each process in 
 
 **Options**
 
+`-concretize`
+: Build the container images resolved by the inspect command.
+
 `-format` (`json`)
 : Inspect output format. Can be `json` or `config`.
 
 `-i, -ignore-errors`
 : Ignore errors while inspecting the pipeline.
 
+`-params-file`
+: Load script parameters from a JSON/YAML file.
+
 `-profile`
 : Use the given configuration profile(s).
 
-`-w, -await`
-: Wait for containers to be available when resolving dynamic containers with Wave.
+`-r, revision`
+: Revision of the project to inspect (either a git branch, tag or commit SHA number).
+
+**Examples**
+
+Get the list of containers used by a pipeline.
+
+```console
+$ nextflow inspect nextflow-io/hello
+```
+
+Specify parameters as with the `run` command:
+
+```console
+$ nextflow inspect main.nf --alpha 1 --beta foo
+```
 
 ### kuberun
 
