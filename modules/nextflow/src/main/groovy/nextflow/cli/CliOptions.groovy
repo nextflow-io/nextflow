@@ -21,6 +21,7 @@ import com.beust.jcommander.Parameter
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
+
 /**
  * Main application command line options
  *
