@@ -22,6 +22,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.dag.DAG
+import nextflow.exception.AbortOperationException
 import org.codehaus.groovy.util.ListHashMap
 /**
  * Preview the list of containers used by a pipeline.
@@ -44,7 +45,7 @@ class ContainersInspector {
 
     ContainersInspector withFormat(String format) {
         if( format !in ['config', 'json'] )
-            throw new IllegalArgumentException("Invalid format for container preview: '${format}' -- should be 'config' or 'json'")
+            throw new AbortOperationException("Invalid format for containers inspect '${format}' -- should be 'config' or 'json'")
         this.format = format
         return this
     }
@@ -54,15 +55,21 @@ class ContainersInspector {
         return this
     }
 
-    String inspect() {
+    String renderContainers() {
         log.debug "Rendering container preview"
         final containers = getContainers()
         if( format == 'config' )
             return renderConfig(containers)
-        else if( format == 'json' )
+        if( format == 'json' )
             return renderJson(containers)
         else
             throw new IllegalStateException("Unknown containers preview format: $format")
+    }
+
+    void printContainers() {
+        final result = renderContainers()
+        if( result )
+            print result
     }
 
     protected Map<String,String> getContainers() {
@@ -94,13 +101,12 @@ class ContainersInspector {
         for( Map.Entry<String,String> entry : containers ) {
             result.append("process { withName: '${entry.key}' { container = '${entry.value}' } }\n")
         }
-
         return result.toString()
     }
 
     protected String renderJson(Map<String,String> containers) {
         final list = containers.collect( (k, v) -> [name: k, container: v] )
-        return JsonOutput.prettyPrint(new JsonBuilder(list).toString())
+        return JsonOutput.prettyPrint(new JsonBuilder(list).toString()) + '\n'
     }
 
 }

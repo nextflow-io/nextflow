@@ -94,4 +94,50 @@ class ContainersInspectorTest extends Specification {
             '''.stripIndent().trim()
     }
 
+    def 'should render containers as json' () {
+        given:
+        def dag = Mock(DAG)
+        dag.vertices >> [
+                makeVertex(dag, 'proc1', 'container1'),
+                makeVertex(dag, 'proc2', 'container2')
+        ]
+
+        when:
+        def result = new ContainersInspector(dag)
+                .withFormat('json')
+                .renderContainers()
+        then:
+        result == '''\
+            [
+                {
+                    "name": "proc2",
+                    "container": "container2"
+                },
+                {
+                    "name": "proc1",
+                    "container": "container1"
+                }
+            ]
+            '''.stripIndent(true)
+    }
+
+    def 'should render containers as nextflow config' () {
+        given:
+        def dag = Mock(DAG)
+        dag.vertices >> [
+                makeVertex(dag, 'proc1', 'container1'),
+                makeVertex(dag, 'proc2', 'container2')
+        ]
+
+        when:
+        def result = new ContainersInspector(dag)
+                .withFormat('config')
+                .renderContainers()
+        then:
+        result == '''\
+            process { withName: 'proc2' { container = 'container2' } }
+            process { withName: 'proc1' { container = 'container1' } }
+            '''.stripIndent(true)
+    }
+
 }

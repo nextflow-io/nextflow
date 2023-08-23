@@ -78,12 +78,10 @@ class CmdInspect extends CmdBase {
         if( session.config.wave instanceof Map )
             configAwaitMode(session.config.wave as Map)
         // run the inspector
-        final result = new ContainersInspector(session.dag)
+        new ContainersInspector(session.dag)
                 .withFormat(format)
                 .withIgnoreErrors(ignoreErrors)
-                .inspect()
-        if( result )
-            print result
+                .printContainers()
     }
 
     protected void configAwaitMode(Map waveConfig) {
