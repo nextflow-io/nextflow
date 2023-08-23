@@ -165,13 +165,11 @@ class ScriptParser {
         return new GroovyShell(classLoader, binding, getConfig())
     }
 
-    ScriptParser parse(String scriptText, GroovyShell interpreter) {
-        final String clazzName = computeClassName(scriptText)
+    ScriptParser parse(def script, GroovyShell interpreter) {
         try {
-            final parsed = interpreter.parse(scriptText, clazzName)
-            if( parsed !instanceof BaseScript ){
+            final parsed = parse0(script, interpreter)
+            if( parsed !instanceof BaseScript )
                throw new CompilationFailedException(0, null)
-            }
             script = (BaseScript)parsed
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
@@ -193,30 +191,15 @@ class ScriptParser {
         }
     }
 
-    ScriptParser parse(Path scriptFile, GroovyShell interpreter) {
-        try {
-            final parsed = interpreter.parse(scriptFile.toUri())
-            if( parsed !instanceof BaseScript ){
-                throw new CompilationFailedException(0, null)
-            }
-            script = (BaseScript)parsed
-            final meta = ScriptMeta.get(script)
-            meta.setScriptPath(scriptPath)
-            meta.setModule(module)
-            meta.validate()
-            return this
-        }
-        catch (CompilationFailedException e) {
-            String type = module ? "Module" : "Script"
-            String header = "$type compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
-            String msg = e.message ?: header
-            msg = msg != 'startup failed' ? msg : header
-            msg = msg.replaceAll(/startup failed:\n/,'')
-            msg = msg.replaceAll(~/$scriptFile.name(: \d+:\b*)?/, header+'\n- cause:')
-            throw new ScriptCompilationException(msg, e)
-        }
-    }
+    def parse0(def script, GroovyShell interpreter) {
+        if( script instanceof Path )
+            return interpreter.parse(script.toUri())
 
+        if( script instanceof CharSequence )
+            return interpreter.parse(scriptText, computeClassName(scriptText))
+
+        throw new IllegalArgumentException("Unknown script type: ${script?.getClass()?.getName()}")
+    }
 
     ScriptParser parse(String scriptText) {
         def interpreter = getInterpreter()
@@ -225,15 +208,9 @@ class ScriptParser {
 
     ScriptParser parse(Path scriptPath) {
         this.scriptPath = scriptPath
-        def interpreter = getInterpreter()
-        parse(scriptPath, interpreter)
-    }
-
-    ScriptParser runScript(Path scriptPath) {
-        this.scriptPath = scriptPath
         try {
-            parse(scriptPath)
-            runScript()
+            def interpreter = getInterpreter()
+            parse(scriptPath, interpreter)
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
@@ -243,6 +220,12 @@ class ScriptParser {
 
     ScriptParser runScript(String scriptText) {
         parse(scriptText)
+        runScript()
+        return this
+    }
+
+    ScriptParser runScript(Path scriptPath) {
+        parse(scriptPath)
         runScript()
         return this
     }
