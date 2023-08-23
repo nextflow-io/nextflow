@@ -12,20 +12,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.trace
-
-import java.nio.file.Path
+package nextflow.container.inspect
 
 import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
 import nextflow.dag.DAG
 import org.codehaus.groovy.util.ListHashMap
-
 /**
  * Preview the list of containers used by a pipeline.
  *
@@ -33,37 +30,47 @@ import org.codehaus.groovy.util.ListHashMap
  */
 @Slf4j
 @CompileStatic
-class PreviewContainersObserver implements TraceObserver {
+class ContainersInspector {
 
-    protected DAG dag
+    private DAG dag
 
-    protected String format
+    private String format
 
-    PreviewContainersObserver(String format = 'json') {
+    private boolean ignoreErrors
+
+    ContainersInspector(DAG dag) {
+        this.dag = dag
+    }
+
+    ContainersInspector withFormat(String format) {
         if( format !in ['config', 'json'] )
             throw new IllegalArgumentException("Invalid format for container preview: '${format}' -- should be 'config' or 'json'")
-
         this.format = format
+        return this
     }
 
-    @Override
-    void onFlowCreate(Session session) {
-        this.dag = session.dag
+    ContainersInspector withIgnoreErrors(boolean ignore) {
+        if( format !in ['config', 'json'] )
+            throw new IllegalArgumentException("Invalid format for container preview: '${format}' -- should be 'config' or 'json'")
+        this.ignoreErrors = ignore
+        return this
     }
 
-    @Override
-    void onFlowBegin() {
+    String computeContainers() {
         log.debug "Rendering container preview"
-        try {
-            final containers = getContainers()
-            if( format == 'config' )
-                println renderConfig(containers)
-            else if( format == 'json' )
-                println renderJson(containers)
-        }
-        catch( Exception e ) {
-            log.warn "Failed to preview containers -- see the log file for details", e
-        }
+        final containers = getContainers()
+        if( format == 'config' )
+            return renderConfig(containers)
+        if( format == 'json' )
+            return renderJson(containers)
+        else
+            throw new IllegalStateException("Unknown containers preview format: $format")
+    }
+
+    void printContainers() {
+        final result = computeContainers()
+        if( result )
+            print result
     }
 
     protected Map<String,String> getContainers() {
@@ -75,12 +82,15 @@ class PreviewContainersObserver implements TraceObserver {
             if( !process )
                 continue
 
-            // get container preview
             try {
-                containers[process.name] = process.getPreviewTask().getContainer()
+                // get container preview
+                containers[process.name] = process.inspectableTaskRun().getContainer()
             }
-            catch( Exception e ) {
-                log.warn1 "Unable to preview container for process `${process.name}`: ${e}"
+            catch (Exception e) {
+                if( ignoreErrors )
+                    log.warn "Unable to inspect container for task `$process.name` - cause: ${e.message}"
+                else
+                    throw e
             }
         }
 
@@ -89,7 +99,7 @@ class PreviewContainersObserver implements TraceObserver {
 
     protected String renderConfig(Map<String,String> containers) {
         final result = new StringBuilder()
-        for( def entry : containers ) {
+        for( Map.Entry<String,String> entry : containers ) {
             result.append("process { withName: '${entry.key}' { container = '${entry.value}' } }\n")
         }
 

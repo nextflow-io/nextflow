@@ -12,9 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.trace
+package nextflow.container.inspect
+
 
 import nextflow.dag.DAG
 import nextflow.processor.TaskProcessor
@@ -24,12 +26,12 @@ import spock.lang.Specification
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class PreviewContainersObserverTest extends Specification {
+class ContainersInspectorTest extends Specification {
 
     def makeVertex(DAG dag, String name, String container) {
         final processor = Mock(TaskProcessor)
         processor.name >> name
-        processor.getPreviewTask() >> Mock(TaskRun) {
+        processor.inspectableTaskRun() >> Mock(TaskRun) {
             getContainer() >> container
         }
 
@@ -48,7 +50,7 @@ class PreviewContainersObserverTest extends Specification {
         ]
 
         when:
-        def observer = new PreviewContainersObserver(dag: dag)
+        def observer = new ContainersInspector(dag)
         then:
         observer.getContainers() == [
             'proc1': 'container1',
@@ -58,7 +60,7 @@ class PreviewContainersObserverTest extends Specification {
 
     def 'should render config output' () {
         when:
-        def observer = new PreviewContainersObserver()
+        def observer = new ContainersInspector(Mock(DAG))
         def containers = [
             'proc1': 'container1',
             'proc2': 'container2',
@@ -72,7 +74,7 @@ class PreviewContainersObserverTest extends Specification {
 
     def 'should render json output' () {
         when:
-        def observer = new PreviewContainersObserver()
+        def observer = new ContainersInspector(Mock(DAG))
         def containers = [
             'proc1': 'container1',
             'proc2': 'container2',

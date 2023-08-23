@@ -25,7 +25,6 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
-        createPreviewContainersObserver(result)
         return result
     }
 
@@ -100,17 +99,6 @@ class DefaultObserverFactory implements TraceObserverFactory {
         config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
         config.navigate('trace.overwrite') { observer.overwrite = it }
         result << observer
-    }
-
-    /**
-     * Create preview report file observer
-     */
-    protected void createPreviewContainersObserver(Collection<TraceObserver> result) {
-        final format = config.previewContainers
-        if( !format )
-            return
-
-        result << new PreviewContainersObserver(format)
     }
 
 }

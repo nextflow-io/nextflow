@@ -102,7 +102,8 @@ class Launcher {
                 new CmdHelp(),
                 new CmdSelfUpdate(),
                 new CmdPlugins(),
-                new CmdPlugin()
+                new CmdPlugin(),
+                new CmdInspect()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -293,11 +294,6 @@ class Launcher {
 
             else if( current == '-with-fusion' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
-            }
-
-            else if( current == '-preview-containers' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << '-'
-                normalized.add(0, '-quiet')
             }
 
             else if( (current == '-dsl2') && (i==args.size() || args[i].startsWith('-'))) {

@@ -507,7 +507,7 @@ class WaveClient {
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             if( config.freezeMode() )  {
-                if( response.buildId ) {
+                if( response.buildId && config.awaitMode() ) {
                     // await the image to be available when a new image is being built
                     awaitImage(response.targetImage)
                 }

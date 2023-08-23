@@ -261,9 +261,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
     boolean preview
 
-    @Parameter(names=['-preview-containers'], description = "Print a preview of the containers used for each process to stdout (implicitly enables `-preview`). Output format can be `config` or `json`.")
-    String previewContainers
-
     @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
 
@@ -275,6 +272,8 @@ class CmdRun extends CmdBase implements HubOptions {
                 ?  disableJobsCancellation
                 : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
+
+    Closure<Void> previewAction
 
     @Override
     String getName() { NAME }
@@ -346,12 +345,11 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
-        runner.setPreview(this.preview)
+        runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
-        runner.session.quiet = previewContainers != null
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         if( isTowerEnabled || log.isTraceEnabled() )

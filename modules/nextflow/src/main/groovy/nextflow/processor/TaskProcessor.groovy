@@ -370,7 +370,7 @@ class TaskProcessor {
     /**
      * Get a preview task config.
      */
-    TaskRun getPreviewTask() {
+    TaskRun inspectableTaskRun() {
         final task = new TaskRun(
                 processor: this,
                 type: scriptType,
