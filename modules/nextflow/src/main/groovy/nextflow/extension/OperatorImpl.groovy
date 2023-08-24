@@ -43,6 +43,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.JsonSplitter
 import nextflow.splitter.TextSplitter
+import nextflow.util.Duration
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
@@ -1243,6 +1244,17 @@ class OperatorImpl {
         new MultiMapOp(source, action)
                 .apply()
                 .getOutput()
+    }
+
+    DataflowWriteChannel timeout( DataflowReadChannel source, String duration ) {
+        timeout(source, Duration.of(duration))
+    }
+
+    DataflowWriteChannel timeout( DataflowReadChannel source, Duration duration ) {
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException("Operator `timeout` cannot be applied to a value channel")
+
+        new TimeoutOp(source, duration).apply()
     }
 
 }

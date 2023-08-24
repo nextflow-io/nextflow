@@ -1812,6 +1812,8 @@ Channel
 Square: 91
 ```
 
+(operator-take)=
+
 ## take
 
 *Returns: queue channel*
@@ -1872,6 +1874,28 @@ Log 2: aa
 Log 2: bb
 Log 2: cc
 ```
+
+(operator-timeout)=
+
+## timeout
+
+:::{versionadded} 23.09.0-edge
+:::
+
+*Returns: queue channel*
+
+The `timeout` operator forwards the items from a source channel until a given amount of time has passed. It is particularly useful for sources that can run forever, such as {ref}`channel-interval` and {ref}`channel-watchpath`. For example:
+
+```groovy
+Channel
+    .watchPath( '/path/*.fa' )
+    .timeout( '1h' )
+    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```
+
+The above snippet will watch the given path for new files, printing each new file to the console, until 1 hour has passed.
+
+See also: [take](#take), [until](#until).
 
 ## toInteger
 
@@ -2028,6 +2052,8 @@ Channel
 1
 4
 ```
+
+(operator-until)=
 
 ## until
 
