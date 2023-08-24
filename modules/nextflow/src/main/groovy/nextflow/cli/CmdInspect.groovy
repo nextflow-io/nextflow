@@ -21,18 +21,22 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.container.inspect.ContainersInspector
+import nextflow.exception.AbortOperationException
 import nextflow.util.LoggerHelper
-
 /**
  * Implement `inspect` command
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Inspect process settings in a pipeline project")
 class CmdInspect extends CmdBase {
+
+    private static final String YES = 'Y'
 
     @Override
     String getName() {
@@ -63,6 +67,9 @@ class CmdInspect extends CmdBase {
     @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
+    @Parameter(names=['-y','-yes'], description = "Automatically reply with 'yes' when prompt for confirmation")
+    String assumeYes
+
     @Parameter(description = 'Project name or repository url')
     List<String> args
 
@@ -89,7 +96,7 @@ class CmdInspect extends CmdBase {
     protected void applyInspect(Session session) {
         // disable wave await mode when running
         if( session.config.wave instanceof Map )
-            configAwaitMode(session.config.wave as Map)
+            checkWaveConfig(session.config.wave as Map)
         // run the inspector
         new ContainersInspector(session.dag)
                 .withFormat(format)
@@ -97,7 +104,25 @@ class CmdInspect extends CmdBase {
                 .printContainers()
     }
 
-    protected void configAwaitMode(Map waveConfig) {
-        waveConfig.awaitMode = awaitMode
+    protected void checkWaveConfig(Map wave) {
+        if( !wave.enabled || !wave.freeze )
+            return 
+        if( !assumeYes ) {
+            final reply = promptConfirmation()
+            if( reply != YES )
+                throw new AbortOperationException("Inspect command aborted")
+        }
+        wave.awaitMode = awaitMode
+    }
+
+    protected String promptConfirmation() {
+        final console = System.console()
+        if( !console ) {
+            log.debug "Unable to acquire system console"
+            return YES
+        }
+
+        print "This command may trigger the build of the container images using Wave. Please confirm the operation [$YES/n]: "
+        return console.readLine()
     }
 }
