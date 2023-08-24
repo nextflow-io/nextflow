@@ -106,7 +106,8 @@ class ContainersInspector {
 
     protected String renderJson(Map<String,String> containers) {
         final list = containers.collect( (k, v) -> [name: k, container: v] )
-        return JsonOutput.prettyPrint(new JsonBuilder(list).toString()) + '\n'
+        final result = Map.of("processes", list)
+        return JsonOutput.prettyPrint(new JsonBuilder(result).toString()) + '\n'
     }
 
 }

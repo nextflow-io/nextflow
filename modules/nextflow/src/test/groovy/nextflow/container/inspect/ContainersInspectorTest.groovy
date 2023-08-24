@@ -72,16 +72,18 @@ class ContainersInspectorTest extends Specification {
                 .renderContainers()
         then:
         result == '''\
-            [
-                {
-                    "name": "proc2",
-                    "container": "container2"
-                },
-                {
-                    "name": "proc1",
-                    "container": "container1"
-                }
-            ]
+            {
+                "processes": [
+                    {
+                        "name": "proc2",
+                        "container": "container2"
+                    },
+                    {
+                        "name": "proc1",
+                        "container": "container1"
+                    }
+                ]
+            }
             '''.stripIndent(true)
     }
 
