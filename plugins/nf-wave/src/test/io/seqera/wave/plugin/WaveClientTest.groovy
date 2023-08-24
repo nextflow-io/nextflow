@@ -166,6 +166,7 @@ class WaveClientTest extends Specification {
         !req.spackFile
         !req.containerConfig.layers
         !req.freeze
+        !req.dryRun
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
@@ -188,6 +189,28 @@ class WaveClientTest extends Specification {
         !req.containerConfig.layers
         and:
         req.freeze
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with dry-run mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[dryRun:true]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.dryRun
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
