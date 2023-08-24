@@ -246,12 +246,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
 
-    @Parameter(names=['-dsl1'], description = 'Execute the workflow using DSL1 syntax')
-    boolean dsl1
-
-    @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
-    boolean dsl2
-
     @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
     String mainScript
 
@@ -310,9 +304,6 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
-
-        if( dsl1 && dsl2 )
-            throw new AbortOperationException("Command line options `-dsl1` and `-dsl2` cannot be specified at the same time")
 
         checkRunName()
 
