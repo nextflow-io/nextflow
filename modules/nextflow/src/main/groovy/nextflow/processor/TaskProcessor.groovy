@@ -368,9 +368,15 @@ class TaskProcessor {
     boolean hasErrors() { errorCount>0 }
 
     /**
-     * Get a preview task config.
+     * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
+     * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.
+     *
+     * Note this returns an "eventually" task configuration object. Also Inputs ane output parameters are NOT
+     * resolved by this method.
+     *
+     * @return A {@link TaskRun} object holding a reference to the associated {@link TaskConfig}
      */
-    TaskRun inspectableTaskRun() {
+    TaskRun createTaskPreview() {
         final task = new TaskRun(
                 processor: this,
                 type: scriptType,

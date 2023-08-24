@@ -83,7 +83,7 @@ class ContainersInspector {
 
             try {
                 // get container preview
-                containers[process.name] = process.inspectableTaskRun().getContainer()
+                containers[process.name] = process.createTaskPreview().getContainer()
             }
             catch( Exception e ) {
                 if( ignoreErrors )

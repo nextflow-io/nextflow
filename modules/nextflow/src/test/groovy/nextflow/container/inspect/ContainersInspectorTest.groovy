@@ -31,7 +31,7 @@ class ContainersInspectorTest extends Specification {
     def makeVertex(DAG dag, String name, String container) {
         final processor = Mock(TaskProcessor)
         processor.name >> name
-        processor.inspectableTaskRun() >> Mock(TaskRun) {
+        processor.createTaskPreview() >> Mock(TaskRun) {
             getContainer() >> container
         }
 
