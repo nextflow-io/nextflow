@@ -207,6 +207,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void print(Object object) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(object?.toString())
         else
@@ -215,6 +218,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println() {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info("")
         else
@@ -223,6 +229,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println(Object object) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(object?.toString())
         else
@@ -231,6 +240,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object arg) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(String.printf(msg, arg))
         else
@@ -239,6 +251,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object[] args) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(String.printf(msg, args))
         else

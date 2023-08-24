@@ -116,4 +116,9 @@ class SubmitContainerTokenRequest {
      */
     String format
 
+    /**
+     * When {@code true} build requests are carried out in dry-run mode.
+     */
+    Boolean dryRun
+
 }

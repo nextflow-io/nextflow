@@ -643,6 +643,57 @@ $ nextflow info nextflow-io/hello
     v1.2 [t]
 ```
 
+### inspect
+
+:::{versionadded} 23.09.0-edge
+:::
+
+Inspect process settings in a pipeline project. Currently only supports the `container` directive.
+
+**Usage**
+
+```console
+$ nextflow inspect [options] [project]
+```
+
+**Description**
+
+The `inspect` command allows you to determine the container for each process in a pipeline without running the pipeline. It prints to stdout a listing of containers for each process, formatted either as JSON or Nextflow configuration.
+
+**Options**
+
+`-concretize`
+: Build the container images resolved by the inspect command.
+
+`-format` (`json`)
+: Inspect output format. Can be `json` or `config`.
+
+`-i, -ignore-errors`
+: Ignore errors while inspecting the pipeline.
+
+`-params-file`
+: Load script parameters from a JSON/YAML file.
+
+`-profile`
+: Use the given configuration profile(s).
+
+`-r, revision`
+: Revision of the project to inspect (either a git branch, tag or commit SHA number).
+
+**Examples**
+
+Get the list of containers used by a pipeline.
+
+```console
+$ nextflow inspect nextflow-io/hello
+```
+
+Specify parameters as with the `run` command:
+
+```console
+$ nextflow inspect main.nf --alpha 1 --beta foo
+```
+
 ### kuberun
 
 Launch a Nextflow pipeline on a Kubernetes cluster.
@@ -1070,7 +1121,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-preview`
 : :::{versionadded} 22.06.0-edge
   :::
-: Run the workflow script skipping the execution of all processes
+: Run the workflow script skipping the execution of all processes.
 
 `-process.<key>=<value>`
 : Set process config options.
@@ -1106,7 +1157,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
-`-with-dag` (`dag.dot`)
+`-with-dag` (`dag-<timestamp>.dot`)
 : Create pipeline DAG file.
 
 `-with-docker`
@@ -1118,7 +1169,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-podman`
 : Enable process execution in a Podman container.
 
-`-with-report` (`report.html`)
+`-with-report` (`report-<timestamp>.html`)
 : Create workflow execution HTML report.
 
 `-with-singularity`
@@ -1127,19 +1178,19 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-spack`
 : Use the specified Spack environment package or file (must end with `.yaml`)
 
-`-with-timeline` (`timeline.html`)
+`-with-timeline` (`timeline-<timestamp>.html`)
 : Create workflow execution timeline.
 
-`-with-tower`
+`-with-tower` (`https://api.tower.nf`)
 : Monitor workflow execution with [Tower](https://cloud.tower.nf/).
 
-`-with-trace` (`trace.txt`)
+`-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
 
-`-with-wave`
+`-with-wave` (`https://wave.seqera.io`)
 : Enable the use of Wave containers.
 
-`-with-weblog`
+`-with-weblog` (`http://localhost`)
 : Send workflow status messages via HTTP to target URL.
 
 `-without-conda`

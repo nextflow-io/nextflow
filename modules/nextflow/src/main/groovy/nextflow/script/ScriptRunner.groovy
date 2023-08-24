@@ -63,6 +63,11 @@ class ScriptRunner {
     private boolean preview
 
     /**
+     * Optional callback to perform a custom action on a preview event
+     */
+    private Closure previewAction
+
+    /**
      * Instantiate the runner object creating a new session
      */
     ScriptRunner( ) {
@@ -86,8 +91,9 @@ class ScriptRunner {
         return this
     }
 
-    ScriptRunner setPreview(boolean  value ) {
+    ScriptRunner setPreview(boolean  value, Closure<Void> action) {
         this.preview = value
+        this.previewAction = action
         return this
     }
 
@@ -229,8 +235,10 @@ class ScriptRunner {
     }
 
     protected await() {
-        if( preview )
+        if( preview ) {
+            previewAction?.call(session)
             return
+        }
         log.debug "> Awaiting termination "
         session.await()
     }

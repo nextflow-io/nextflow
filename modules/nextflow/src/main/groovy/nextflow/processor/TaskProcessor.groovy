@@ -367,6 +367,29 @@ class TaskProcessor {
 
     boolean hasErrors() { errorCount>0 }
 
+    /**
+     * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
+     * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.
+     *
+     * Note this returns an "eventually" task configuration object. Also Inputs ane output parameters are NOT
+     * resolved by this method.
+     *
+     * @return A {@link TaskRun} object holding a reference to the associated {@link TaskConfig}
+     */
+    TaskRun createTaskPreview() {
+        final task = new TaskRun(
+                processor: this,
+                type: scriptType,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this)
+        )
+        task.config.context = task.context
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
+
+        return task
+    }
+
     protected void checkWarn(String msg, Map opts=null) {
         if( NF.isStrictMode() )
             throw new ProcessUnrecoverableException(msg)

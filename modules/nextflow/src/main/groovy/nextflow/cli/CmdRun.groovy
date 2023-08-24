@@ -273,6 +273,11 @@ class CmdRun extends CmdBase implements HubOptions {
                 : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
 
+    /**
+     * Optional closure modelling an action to be invoked when the preview mode is enabled
+     */
+    Closure<Void> previewAction
+
     @Override
     String getName() { NAME }
 
@@ -343,7 +348,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
-        runner.setPreview(this.preview)
+        runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
