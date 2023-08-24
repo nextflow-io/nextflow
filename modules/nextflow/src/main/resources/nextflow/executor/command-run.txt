@@ -100,7 +100,7 @@ nxf_fs_fcp() {
 
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
-    printf $exit_status {{exit_file}}
+    printf -- $exit_status {{exit_file}}
     set +u
     {{cleanup_cmd}}
     {{sync_cmd}}
