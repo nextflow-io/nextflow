@@ -24,7 +24,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.container.inspect.ContainersInspector
-import nextflow.exception.AbortOperationException
 import nextflow.util.LoggerHelper
 /**
  * Implement `inspect` command
@@ -35,8 +34,6 @@ import nextflow.util.LoggerHelper
 @CompileStatic
 @Parameters(commandDescription = "Inspect process settings in a pipeline project")
 class CmdInspect extends CmdBase {
-
-    private static final String YES = 'Y'
 
     @Override
     String getName() {
@@ -55,9 +52,6 @@ class CmdInspect extends CmdBase {
     @Parameter(names=['-profile'], description = 'Use the given configuration profile(s)')
     String profile
 
-    @Parameter(names=['-w','-await'], description = 'Wait for container images to be available when building images with Wave')
-    boolean awaitMode = false
-
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
     String revision
 
@@ -67,8 +61,8 @@ class CmdInspect extends CmdBase {
     @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
-    @Parameter(names=['-y','-yes'], description = "Automatically reply with 'yes' when prompt for confirmation")
-    String assumeYes
+    @Parameter(names=['-concretize'], description = "Build the container images resolved by the inspect command")
+    boolean concretize
 
     @Parameter(description = 'Project name or repository url')
     List<String> args
@@ -105,24 +99,8 @@ class CmdInspect extends CmdBase {
     }
 
     protected void checkWaveConfig(Map wave) {
-        if( !wave.enabled || !wave.freeze )
-            return 
-        if( !assumeYes ) {
-            final reply = promptConfirmation()
-            if( reply != YES )
-                throw new AbortOperationException("Inspect command aborted")
-        }
-        wave.awaitMode = awaitMode
+        if( wave.enabled && wave.freeze )
+            wave.dryRun = !concretize
     }
 
-    protected String promptConfirmation() {
-        final console = System.console()
-        if( !console ) {
-            log.debug "Unable to acquire system console"
-            return YES
-        }
-
-        print "This command may trigger the build of the container images using Wave. Please confirm the operation [$YES/n]: "
-        return console.readLine()
-    }
 }

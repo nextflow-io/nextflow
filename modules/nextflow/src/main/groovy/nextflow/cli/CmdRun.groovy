@@ -273,6 +273,9 @@ class CmdRun extends CmdBase implements HubOptions {
                 : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
 
+    /**
+     * Optional closure modelling an action to be invoked when the preview mode is enabled
+     */
     Closure<Void> previewAction
 
     @Override

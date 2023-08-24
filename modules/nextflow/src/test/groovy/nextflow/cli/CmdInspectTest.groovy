@@ -17,45 +17,38 @@
 
 package nextflow.cli
 
-import nextflow.exception.AbortOperationException
+
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdInspectTest extends Specification {
 
+    @Unroll
     def 'should ask for confirmation' () {
         given:
-        def cmd = Spy(new CmdInspect(awaitMode: AWAIT))
+        def cmd = Spy(new CmdInspect(concretize: CONCRETIZE))
         Map wave
 
         when:
-        wave = CONFIG
+        wave = WAVE
         cmd.checkWaveConfig(wave)
         then:
-        INVOCTIONS * cmd.promptConfirmation() >> REPLY
-        and:
         wave == EXPECTED
 
         where:
-        CONFIG                              | INVOCTIONS    | REPLY     | AWAIT     | EXPECTED
-        [:]                                 | 0             | null      | false     | [:]
-        [enabled: true]                     | 0             | null      | false     | [enabled: true]
-        [enabled: true, freeze: true]       | 1             | 'Y'       | false     | [enabled: true, freeze: true, awaitMode: false]
-        [enabled: true, freeze: true]       | 1             | 'Y'       | true      | [enabled: true, freeze: true, awaitMode: true]
-
-    }
-
-    def 'should abort the operation' () {
-        given:
-        def cmd = Spy(CmdInspect)
-
-        when:
-        cmd.checkWaveConfig([enabled:true,freeze: true])
-        then:
-        1 * cmd.promptConfirmation() >> 'n'
+        WAVE                            | CONCRETIZE    | EXPECTED
+        [:]                             | false         | [:]
+        [:]                             | true          | [:]
         and:
-        thrown(AbortOperationException)
+        [enabled:true]                  | false         | [enabled:true]
+        [enabled:true]                  | true          | [enabled:true]
+        and:
+        [enabled:true, freeze: true]    | false         | [enabled:true, freeze:true, dryRun: true]
+        [enabled:true, freeze: true]    | true          | [enabled:true, freeze:true, dryRun: false]
+
     }
+
 }
