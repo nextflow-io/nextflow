@@ -48,11 +48,13 @@ class WaveConfig {
     final private RetryOpts retryOpts
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
+    final private Boolean dryRunMode
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.freezeMode = opts.freeze as Boolean
+        this.dryRunMode = opts.navigate('dryRun', false)
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
@@ -83,6 +85,8 @@ class WaveConfig {
     List<String> strategy() { this.strategy }
 
     boolean freezeMode() { return this.freezeMode }
+
+    boolean dryRun() { return this.dryRunMode }
 
     boolean bundleProjectResources() { bundleProjectResources }
 

@@ -183,7 +183,8 @@ class WaveClient {
                 timestamp: OffsetDateTime.now().toString(),
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
-                format: assets.singularity ? 'sif' : null
+                format: assets.singularity ? 'sif' : null,
+                dryRun: config.dryRun()
         )
     }
 
@@ -206,7 +207,8 @@ class WaveClient {
                 towerWorkspaceId: tower.workspaceId,
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
-                freeze: config.freezeMode()
+                freeze: config.freezeMode(),
+                dryRun: config.dryRun(),
         )
         return sendRequest(request)
     }
@@ -507,7 +509,7 @@ class WaveClient {
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             if( config.freezeMode() )  {
-                if( response.buildId ) {
+                if( response.buildId && !config.dryRun() ) {
                     // await the image to be available when a new image is being built
                     awaitImage(response.targetImage)
                 }

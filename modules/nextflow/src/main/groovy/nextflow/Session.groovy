@@ -179,6 +179,11 @@ class Session implements ISession {
     boolean disableRemoteBinDir
 
     /**
+     * Suppress all output from pipeline script
+     */
+    boolean quiet
+
+    /**
      * Local path where script generated classes are saved
      */
     private Path classesDir

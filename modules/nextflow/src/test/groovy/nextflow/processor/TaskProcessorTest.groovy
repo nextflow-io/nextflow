@@ -40,6 +40,7 @@ import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -939,5 +940,21 @@ class TaskProcessorTest extends Specification {
         def result = processor.collectOutEnvMap(workDir)
         then:
         result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
+    }
+
+    def 'should create a task preview' () {
+        given:
+        def config = new ProcessConfig([cpus: 10, memory: '100 GB'])
+        def EXEC = Mock(Executor) { getName()>>'exec-name'}
+        def BODY = Mock(BodyDef) { getType()>>ScriptType.SCRIPTLET }
+        def processor = new TaskProcessor(config: config, name: 'proc-name', executor: EXEC, taskBody: BODY)
+
+        when:
+        def result = processor.createTaskPreview()
+        then:
+        result.config.process == 'proc-name'
+        result.config.executor == 'exec-name'
+        result.config.getCpus() == 10
+        result.config.getMemory() == MemoryUnit.of('100 GB')
     }
 }
