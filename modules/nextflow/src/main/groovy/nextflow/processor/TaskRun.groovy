@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +19,9 @@ package nextflow.processor
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 
 import com.google.common.hash.HashCode
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -56,6 +55,8 @@ import nextflow.spack.SpackCache
 
 @Slf4j
 class TaskRun implements Cloneable {
+
+    final private ConcurrentHashMap<String,?> cache0 = new ConcurrentHashMap()
 
     /**
      * Task unique id
@@ -338,6 +339,7 @@ class TaskRun implements Cloneable {
         taskClone.context = context.clone()
         taskClone.config = config.clone()
         taskClone.config.setContext(taskClone.context)
+        taskClone.cache0.clear()
         return taskClone
     }
 
@@ -447,8 +449,11 @@ class TaskRun implements Cloneable {
      *  output name
      *
      */
-    @Memoized
     List<String> getOutputFilesNames() {
+        cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
+    }
+
+    private List<String> getOutputFilesNames0() {
         def result = []
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
@@ -457,7 +462,6 @@ class TaskRun implements Cloneable {
 
         return result.unique()
     }
-
 
     /**
      * Get the map of *input* objects by the given {@code InParam} type
@@ -548,6 +552,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_EXIT = '.exitcode'
     static final public String CMD_START = '.command.begin'
     static final public String CMD_RUN = '.command.run'
+    static final public String CMD_STAGE = '.command.stage'
     static final public String CMD_TRACE = '.command.trace'
     static final public String CMD_ENV = '.command.env'
 
@@ -585,8 +590,11 @@ class TaskRun implements Cloneable {
         return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
     }
 
-    @Memoized
     Path getCondaEnv() {
+        cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
+    }
+
+    private Path getCondaEnv0() {
         if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
             return null
 
@@ -594,17 +602,25 @@ class TaskRun implements Cloneable {
         cache.getCachePathFor(config.conda as String)
     }
 
-    @Memoized
     Path getSpackEnv() {
+        cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
+    }
+
+    private Path getSpackEnv0() {
         if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
             return null
 
+        final String arch = config.getArchitecture()?.spackArch
+
         final cache = new SpackCache(processor.session.getSpackConfig())
-        cache.getCachePathFor(config.spack as String)
+        cache.getCachePathFor(config.spack as String, arch)
     }
 
-    @Memoized
-    protected ContainerInfo getContainerInfo0() {
+    protected ContainerInfo containerInfo() {
+        cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
+    }
+
+    private ContainerInfo containerInfo0() {
         // fetch the container image from the config
         def configImage = config.getContainer()
         // the boolean `false` literal can be provided
@@ -623,12 +639,12 @@ class TaskRun implements Cloneable {
      * The name of a docker container where the task is supposed to run when provided
      */
     String getContainer() {
-        final info = getContainerInfo0()
+        final info = containerInfo()
         return info?.target
     }
 
     String getContainerFingerprint() {
-        final info = getContainerInfo0()
+        final info = containerInfo()
         return info?.hashKey
     }
 
@@ -805,7 +821,7 @@ class TaskRun implements Cloneable {
         return engine.result
     }
 
-    protected placeholderChar() {
+    protected char placeholderChar() {
         (config.placeholder ?: '!') as char
     }
 

@@ -1,5 +1,829 @@
 [
   {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 8192,
+    "name": "Standard_D2a_v4",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 51200
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 16384,
+    "name": "Standard_D4a_v4",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 102400
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 32768,
+    "name": "Standard_D8a_v4",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 204800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D16a_v4",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 409600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D32a_v4",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 819200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D48a_v4",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_D64a_v4",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1638400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_D96a_v4",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 8192,
+    "name": "Standard_D2as_v4",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 16384
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 16384,
+    "name": "Standard_D4as_v4",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 32768
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 32768,
+    "name": "Standard_D8as_v4",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 65536
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D16as_v4",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 131072
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D32as_v4",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 262144
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D48as_v4",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 393216
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_D64as_v4",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 524288
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_D96as_v4",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 786432
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 16384,
+    "name": "Standard_E2a_v4",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 51200
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4a_v4",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 102400
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8a_v4",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 204800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16a_v4",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 409600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 163840,
+    "name": "Standard_E20a_v4",
+    "numberOfCores": 20,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 512000
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32a_v4",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 819200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_E48a_v4",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64a_v4",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1638400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96a_v4",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 16384,
+    "name": "Standard_E2as_v4",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 32768
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4-2as_v4",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 65536
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4as_v4",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 65536
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8-2as_v4",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 131072
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8-4as_v4",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 131072
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8as_v4",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 131072
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16-4as_v4",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 262144
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16-8as_v4",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 262144
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16as_v4",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 262144
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 163840,
+    "name": "Standard_E20as_v4",
+    "numberOfCores": 20,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 327680
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32-8as_v4",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 524288
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32-16as_v4",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 524288
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32as_v4",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 524288
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_E48as_v4",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 786432
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64-16as_v4",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 884736
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64-32as_v4",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 884736
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64as_v4",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 884736
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96-24as_v4",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1376256
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96-48as_v4",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1376256
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96as_v4",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1376256
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 8192,
+    "name": "Standard_D2as_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 16384,
+    "name": "Standard_D4as_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 32768,
+    "name": "Standard_D8as_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D16as_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D32as_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D48as_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_D64as_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_D96as_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 16384,
+    "name": "Standard_E2as_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4-2as_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4as_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8-2as_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8-4as_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8as_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16-4as_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16-8as_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16as_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 163840,
+    "name": "Standard_E20as_v5",
+    "numberOfCores": 20,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32-8as_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32-16as_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32as_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_E48as_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64-16as_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64-32as_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64as_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96-24as_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96-48as_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96as_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMb": 688128,
+    "name": "Standard_E112ias_v5",
+    "numberOfCores": 112,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 8192,
+    "name": "Standard_D2ads_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 76800
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 16384,
+    "name": "Standard_D4ads_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 153600
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 32768,
+    "name": "Standard_D8ads_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D16ads_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D32ads_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D48ads_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1843200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_D64ads_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_D96ads_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 16384,
+    "name": "Standard_E2ads_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 76800
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4-2ads_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 153600
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4ads_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 153600
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8-2ads_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8-4ads_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8ads_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16-4ads_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16-8ads_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16ads_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 163840,
+    "name": "Standard_E20ads_v5",
+    "numberOfCores": 20,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 768000
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32-8ads_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32-16ads_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 262144,
+    "name": "Standard_E32ads_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 393216,
+    "name": "Standard_E48ads_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1843200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64-16ads_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64-32ads_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 524288,
+    "name": "Standard_E64ads_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96-24ads_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96-48ads_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 688128,
+    "name": "Standard_E96ads_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 3686400
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMb": 688128,
+    "name": "Standard_E112iads_v5",
+    "numberOfCores": 112,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 3891200
+  },
+  {
     "maxDataDiskCount": 2,
     "memoryInMb": 2048,
     "name": "Standard_A1_v2",
@@ -2424,6 +3248,134 @@
     "resourceDiskSizeInMb": 2457600
   },
   {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 4096,
+    "name": "Standard_D2ls_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 8192,
+    "name": "Standard_D4ls_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 16384,
+    "name": "Standard_D8ls_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 32768,
+    "name": "Standard_D16ls_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D32ls_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 98304,
+    "name": "Standard_D48ls_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D64ls_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D96ls_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 4096,
+    "name": "Standard_D2lds_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 76800
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 8192,
+    "name": "Standard_D4lds_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 153600
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 16384,
+    "name": "Standard_D8lds_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 32768,
+    "name": "Standard_D16lds_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D32lds_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 98304,
+    "name": "Standard_D48lds_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1843200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D64lds_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D96lds_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 3686400
+  },
+  {
     "maxDataDiskCount": 16,
     "memoryInMb": 65536,
     "name": "Standard_L8s_v2",
@@ -2713,11 +3665,11 @@
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMb": 1024000,
+    "memoryInMb": 1048576,
     "name": "Standard_M64s",
     "numberOfCores": 64,
     "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2048000
+    "resourceDiskSizeInMb": 2097152
   },
   {
     "maxDataDiskCount": 64,
@@ -2785,827 +3737,51 @@
   },
   {
     "maxDataDiskCount": 4,
-    "memoryInMb": 8192,
-    "name": "Standard_D2a_v4",
-    "numberOfCores": 2,
+    "memoryInMb": 56320,
+    "name": "Standard_NV6ads_A10_v5",
+    "numberOfCores": 6,
     "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 51200
+    "resourceDiskSizeInMb": 184320
   },
   {
     "maxDataDiskCount": 8,
-    "memoryInMb": 16384,
-    "name": "Standard_D4a_v4",
-    "numberOfCores": 4,
+    "memoryInMb": 112640,
+    "name": "Standard_NV12ads_A10_v5",
+    "numberOfCores": 12,
     "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 102400
+    "resourceDiskSizeInMb": 368640
   },
   {
     "maxDataDiskCount": 16,
-    "memoryInMb": 32768,
-    "name": "Standard_D8a_v4",
-    "numberOfCores": 8,
+    "memoryInMb": 225280,
+    "name": "Standard_NV18ads_A10_v5",
+    "numberOfCores": 18,
     "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 204800
+    "resourceDiskSizeInMb": 737280
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMb": 65536,
-    "name": "Standard_D16a_v4",
-    "numberOfCores": 16,
+    "memoryInMb": 901120,
+    "name": "Standard_NV36adms_A10_v5",
+    "numberOfCores": 36,
     "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 409600
+    "resourceDiskSizeInMb": 2949120
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_D32a_v4",
-    "numberOfCores": 32,
+    "memoryInMb": 450560,
+    "name": "Standard_NV36ads_A10_v5",
+    "numberOfCores": 36,
     "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 819200
+    "resourceDiskSizeInMb": 1474560
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMb": 196608,
-    "name": "Standard_D48a_v4",
-    "numberOfCores": 48,
+    "memoryInMb": 901120,
+    "name": "Standard_NV72ads_A10_v5",
+    "numberOfCores": 72,
     "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1228800
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_D64a_v4",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1638400
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_D96a_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMb": 8192,
-    "name": "Standard_D2as_v4",
-    "numberOfCores": 2,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 16384
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 16384,
-    "name": "Standard_D4as_v4",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 32768
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 32768,
-    "name": "Standard_D8as_v4",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 65536
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 65536,
-    "name": "Standard_D16as_v4",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 131072
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_D32as_v4",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 262144
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 196608,
-    "name": "Standard_D48as_v4",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 393216
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_D64as_v4",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 524288
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_D96as_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 786432
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMb": 16384,
-    "name": "Standard_E2a_v4",
-    "numberOfCores": 2,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 51200
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 32768,
-    "name": "Standard_E4a_v4",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 102400
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8a_v4",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 204800
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16a_v4",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 409600
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 163840,
-    "name": "Standard_E20a_v4",
-    "numberOfCores": 20,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 512000
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32a_v4",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 819200
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_E48a_v4",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1228800
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64a_v4",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1638400
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96a_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMb": 16384,
-    "name": "Standard_E2as_v4",
-    "numberOfCores": 2,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 32768
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 32768,
-    "name": "Standard_E4-2as_v4",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 65536
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 32768,
-    "name": "Standard_E4as_v4",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 65536
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8-2as_v4",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 131072
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8-4as_v4",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 131072
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8as_v4",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 131072
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16-4as_v4",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 262144
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16-8as_v4",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 262144
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16as_v4",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 262144
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 163840,
-    "name": "Standard_E20as_v4",
-    "numberOfCores": 20,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 327680
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32-8as_v4",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 524288
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32-16as_v4",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 524288
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32as_v4",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 524288
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_E48as_v4",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 786432
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64-16as_v4",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 884736
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64-32as_v4",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 884736
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64as_v4",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 884736
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96-24as_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1376256
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96-48as_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1376256
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96as_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1376256
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMb": 8192,
-    "name": "Standard_D2as_v5",
-    "numberOfCores": 2,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 16384,
-    "name": "Standard_D4as_v5",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 32768,
-    "name": "Standard_D8as_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 65536,
-    "name": "Standard_D16as_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_D32as_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 196608,
-    "name": "Standard_D48as_v5",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_D64as_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_D96as_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMb": 16384,
-    "name": "Standard_E2as_v5",
-    "numberOfCores": 2,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 32768,
-    "name": "Standard_E4-2as_v5",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 32768,
-    "name": "Standard_E4as_v5",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8-2as_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8-4as_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8as_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16-4as_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16-8as_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16as_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 163840,
-    "name": "Standard_E20as_v5",
-    "numberOfCores": 20,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32-8as_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32-16as_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32as_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_E48as_v5",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64-16as_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64-32as_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64as_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96-24as_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96-48as_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96as_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMb": 688128,
-    "name": "Standard_E112ias_v5",
-    "numberOfCores": 112,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMb": 8192,
-    "name": "Standard_D2ads_v5",
-    "numberOfCores": 2,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 76800
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 16384,
-    "name": "Standard_D4ads_v5",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 153600
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 32768,
-    "name": "Standard_D8ads_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 307200
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 65536,
-    "name": "Standard_D16ads_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 614400
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_D32ads_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1228800
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 196608,
-    "name": "Standard_D48ads_v5",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1843200
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_D64ads_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_D96ads_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMb": 16384,
-    "name": "Standard_E2ads_v5",
-    "numberOfCores": 2,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 76800
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 32768,
-    "name": "Standard_E4-2ads_v5",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 153600
-  },
-  {
-    "maxDataDiskCount": 8,
-    "memoryInMb": 32768,
-    "name": "Standard_E4ads_v5",
-    "numberOfCores": 4,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 153600
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8-2ads_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 307200
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8-4ads_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 307200
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMb": 65536,
-    "name": "Standard_E8ads_v5",
-    "numberOfCores": 8,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 307200
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16-4ads_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 614400
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16-8ads_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 614400
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 131072,
-    "name": "Standard_E16ads_v5",
-    "numberOfCores": 16,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 614400
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 163840,
-    "name": "Standard_E20ads_v5",
-    "numberOfCores": 20,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 768000
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32-8ads_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1228800
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32-16ads_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1228800
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 262144,
-    "name": "Standard_E32ads_v5",
-    "numberOfCores": 32,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1228800
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 393216,
-    "name": "Standard_E48ads_v5",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1843200
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64-16ads_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64-32ads_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 524288,
-    "name": "Standard_E64ads_v5",
-    "numberOfCores": 64,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96-24ads_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96-48ads_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 2457600
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 688128,
-    "name": "Standard_E96ads_v5",
-    "numberOfCores": 96,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 3686400
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMb": 688128,
-    "name": "Standard_E112iads_v5",
-    "numberOfCores": 112,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 3891200
+    "resourceDiskSizeInMb": 2949120
   },
   {
     "maxDataDiskCount": 12,
@@ -3638,6 +3814,54 @@
     "numberOfCores": 24,
     "osDiskSizeInMb": 1047552,
     "resourceDiskSizeInMb": 1376256
+  },
+  {
+    "maxDataDiskCount": 12,
+    "memoryInMb": 114688,
+    "name": "Standard_NV6s_v2",
+    "numberOfCores": 6,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 344064
+  },
+  {
+    "maxDataDiskCount": 24,
+    "memoryInMb": 229376,
+    "name": "Standard_NV12s_v2",
+    "numberOfCores": 12,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 688128
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 458752,
+    "name": "Standard_NV24s_v2",
+    "numberOfCores": 24,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1376256
+  },
+  {
+    "maxDataDiskCount": 12,
+    "memoryInMb": 114688,
+    "name": "Standard_NV12s_v3",
+    "numberOfCores": 12,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 344064
+  },
+  {
+    "maxDataDiskCount": 24,
+    "memoryInMb": 229376,
+    "name": "Standard_NV24s_v3",
+    "numberOfCores": 24,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 688128
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 458752,
+    "name": "Standard_NV48s_v3",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 3018752
   },
   {
     "maxDataDiskCount": 32,
@@ -3704,54 +3928,6 @@
     "resourceDiskSizeInMb": 819200
   },
   {
-    "maxDataDiskCount": 12,
-    "memoryInMb": 114688,
-    "name": "Standard_NV6s_v2",
-    "numberOfCores": 6,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 344064
-  },
-  {
-    "maxDataDiskCount": 24,
-    "memoryInMb": 229376,
-    "name": "Standard_NV12s_v2",
-    "numberOfCores": 12,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 688128
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 458752,
-    "name": "Standard_NV24s_v2",
-    "numberOfCores": 24,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1376256
-  },
-  {
-    "maxDataDiskCount": 12,
-    "memoryInMb": 114688,
-    "name": "Standard_NV12s_v3",
-    "numberOfCores": 12,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 344064
-  },
-  {
-    "maxDataDiskCount": 24,
-    "memoryInMb": 229376,
-    "name": "Standard_NV24s_v3",
-    "numberOfCores": 24,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 688128
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMb": 458752,
-    "name": "Standard_NV48s_v3",
-    "numberOfCores": 48,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 1376256
-  },
-  {
     "maxDataDiskCount": 32,
     "memoryInMb": 896000,
     "name": "Standard_M32ms_v2",
@@ -3777,25 +3953,9 @@
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMb": 3985408,
-    "name": "Standard_M128ms_v2",
-    "numberOfCores": 128,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 64,
     "memoryInMb": 2097152,
     "name": "Standard_M128s_v2",
     "numberOfCores": 128,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 0
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMb": 4194304,
-    "name": "Standard_M192ims_v2",
-    "numberOfCores": 192,
     "osDiskSizeInMb": 1047552,
     "resourceDiskSizeInMb": 0
   },
@@ -3833,14 +3993,6 @@
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMb": 3985408,
-    "name": "Standard_M128dms_v2",
-    "numberOfCores": 128,
-    "osDiskSizeInMb": 1047552,
-    "resourceDiskSizeInMb": 4194304
-  },
-  {
-    "maxDataDiskCount": 64,
     "memoryInMb": 2097152,
     "name": "Standard_M128ds_v2",
     "numberOfCores": 128,
@@ -3849,16 +4001,40 @@
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMb": 4194304,
-    "name": "Standard_M192idms_v2",
+    "memoryInMb": 2097152,
+    "name": "Standard_M192ids_v2",
     "numberOfCores": 192,
     "osDiskSizeInMb": 1047552,
     "resourceDiskSizeInMb": 4194304
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMb": 2097152,
-    "name": "Standard_M192ids_v2",
+    "memoryInMb": 3985408,
+    "name": "Standard_M128ms_v2",
+    "numberOfCores": 128,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMb": 4194304,
+    "name": "Standard_M192ims_v2",
+    "numberOfCores": 192,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMb": 3985408,
+    "name": "Standard_M128dms_v2",
+    "numberOfCores": 128,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 4194304
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMb": 4194304,
+    "name": "Standard_M192idms_v2",
     "numberOfCores": 192,
     "osDiskSizeInMb": 1047552,
     "resourceDiskSizeInMb": 4194304
@@ -3918,5 +4094,325 @@
     "numberOfCores": 80,
     "osDiskSizeInMb": 1047552,
     "resourceDiskSizeInMb": 819200
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 4096,
+    "name": "Standard_D2plds_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 76800
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 8192,
+    "name": "Standard_D4plds_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 153600
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 16384,
+    "name": "Standard_D8plds_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 32768,
+    "name": "Standard_D16plds_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D32plds_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 98304,
+    "name": "Standard_D48plds_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1843200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D64plds_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 4096,
+    "name": "Standard_D2pls_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 8192,
+    "name": "Standard_D4pls_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 16384,
+    "name": "Standard_D8pls_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 32768,
+    "name": "Standard_D16pls_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D32pls_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 98304,
+    "name": "Standard_D48pls_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D64pls_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 8192,
+    "name": "Standard_D2pds_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 76800
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 16384,
+    "name": "Standard_D4pds_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 153600
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 32768,
+    "name": "Standard_D8pds_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D16pds_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D32pds_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D48pds_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1843200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 212992,
+    "name": "Standard_D64pds_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 2457600
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 8192,
+    "name": "Standard_D2ps_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 16384,
+    "name": "Standard_D4ps_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 32768,
+    "name": "Standard_D8ps_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 65536,
+    "name": "Standard_D16ps_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_D32ps_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 196608,
+    "name": "Standard_D48ps_v5",
+    "numberOfCores": 48,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 212992,
+    "name": "Standard_D64ps_v5",
+    "numberOfCores": 64,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 16384,
+    "name": "Standard_E2pds_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 76800
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4pds_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 153600
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8pds_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 307200
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16pds_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 614400
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 163840,
+    "name": "Standard_E20pds_v5",
+    "numberOfCores": 20,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 768000
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 212992,
+    "name": "Standard_E32pds_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 1228800
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMb": 16384,
+    "name": "Standard_E2ps_v5",
+    "numberOfCores": 2,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMb": 32768,
+    "name": "Standard_E4ps_v5",
+    "numberOfCores": 4,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMb": 65536,
+    "name": "Standard_E8ps_v5",
+    "numberOfCores": 8,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 131072,
+    "name": "Standard_E16ps_v5",
+    "numberOfCores": 16,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 163840,
+    "name": "Standard_E20ps_v5",
+    "numberOfCores": 20,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMb": 212992,
+    "name": "Standard_E32ps_v5",
+    "numberOfCores": 32,
+    "osDiskSizeInMb": 1047552,
+    "resourceDiskSizeInMb": 0
   }
 ]

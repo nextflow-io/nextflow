@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +39,6 @@ import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
-import nextflow.trace.WebLogObserver
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -679,7 +677,7 @@ class ConfigBuilder {
             if( cmdRun.withWebLog != '-' )
                 config.weblog.url = cmdRun.withWebLog
             else if( !config.weblog.url )
-                config.weblog.url = WebLogObserver.DEF_URL
+                config.weblog.url = 'http://localhost'
         }
 
         // -- sets tower options
@@ -709,16 +707,6 @@ class ConfigBuilder {
             if( !(config.fusion instanceof Map) )
                 config.fusion = [:]
             config.fusion.enabled = cmdRun.withFusion == 'true'
-        }
-
-        // -- nextflow setting
-        if( cmdRun.dsl1 || cmdRun.dsl2 ) {
-            if( config.nextflow !instanceof Map )
-                config.nextflow = [:]
-            if( cmdRun.dsl1 )
-                config.nextflow.enable.dsl = 1
-            if( cmdRun.dsl2 )
-                config.nextflow.enable.dsl = 2
         }
 
         // -- add the command line parameters to the 'taskConfig' object
@@ -789,8 +777,8 @@ class ConfigBuilder {
                 return true
 
             def result = process
-                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
-                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
+                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
 
             return result as boolean
         }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +40,7 @@ import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -779,9 +779,12 @@ class TaskProcessorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH'], true)
+        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH', HOLA: 'one|two'], true)
         then:
-        env.trim() == 'export PATH="foo:\\$PATH"'
+        env == '''\
+            export PATH="foo:\\$PATH"
+            export HOLA="one\\|two"
+            '''.stripIndent()
         env.charAt(env.size()-1) == '\n' as char
 
         when:
@@ -937,5 +940,21 @@ class TaskProcessorTest extends Specification {
         def result = processor.collectOutEnvMap(workDir)
         then:
         result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
+    }
+
+    def 'should create a task preview' () {
+        given:
+        def config = new ProcessConfig([cpus: 10, memory: '100 GB'])
+        def EXEC = Mock(Executor) { getName()>>'exec-name'}
+        def BODY = Mock(BodyDef) { getType()>>ScriptType.SCRIPTLET }
+        def processor = new TaskProcessor(config: config, name: 'proc-name', executor: EXEC, taskBody: BODY)
+
+        when:
+        def result = processor.createTaskPreview()
+        then:
+        result.config.process == 'proc-name'
+        result.config.executor == 'exec-name'
+        result.config.getCpus() == 10
+        result.config.getMemory() == MemoryUnit.of('100 GB')
     }
 }

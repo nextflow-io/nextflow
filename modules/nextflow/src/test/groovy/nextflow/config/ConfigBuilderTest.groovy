@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +27,6 @@ import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.TraceHelper
-import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -679,14 +677,14 @@ class ConfigBuilderTest extends Specification {
         when:
         file.text =
                 '''
-                process.$test.container = 'busybox'
+                process.'withName:test'.container = 'busybox'
                 '''
         def opt = new CliOptions(config: [file.toFile().canonicalPath])
         def run = new CmdRun(withDocker: '-')
         def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
-        config.process.$test.container == 'busybox'
+        config.process.'withName:test'.container == 'busybox'
 
         when:
         file.text =
@@ -711,7 +709,7 @@ class ConfigBuilderTest extends Specification {
         when:
         file.text =
                 '''
-                process.$test.tag = 'tag'
+                process.'withName:test'.tag = 'tag'
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
@@ -779,6 +777,7 @@ class ConfigBuilderTest extends Specification {
         !config.hasContainerDirective([foo: 1, bar: 2])
         !config.hasContainerDirective([foo: 1, bar: 2, baz: [container: 'user/repo']])
         config.hasContainerDirective([foo: 1, bar: 2, $baz: [container: 'user/repo']])
+        config.hasContainerDirective([foo: 1, bar: 2, 'withName:baz': [container: 'user/repo']])
 
     }
 
@@ -1001,7 +1000,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.weblog instanceof Map
         config.weblog.enabled
-        config.weblog.url == WebLogObserver.DEF_URL
+        config.weblog.url == 'http://localhost'
 
     }
 

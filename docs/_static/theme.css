@@ -19,3 +19,40 @@
     margin-top: 0.5rem;
     width: 60%;
 }
+
+/* Version change admonitions */
+div.deprecated, div.versionadded, div.versionchanged {
+    border-left: 0.2rem solid;
+    border-radius: 0.25rem;
+    box-shadow: 0 0.2rem 0.5rem var(--pst-color-shadow),0 0 0.0625rem var(--pst-color-shadow)!important;
+    margin: 1rem auto;
+    overflow: hidden;
+    padding: 0.2rem 0.6rem;
+    page-break-inside: avoid;
+    position: relative;
+    transition: color .25s,background-color .25s,border-color .25s;
+    vertical-align: middle;
+}
+div.deprecated>p, div.versionadded>p, div.versionchanged>p {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+div.deprecated>p:first-child::before, div.versionadded>p:first-child::before, div.versionchanged>p:first-child::before {
+    font-family: FontAwesome;
+    display: inline-block;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1;
+    text-decoration: inherit;
+    margin-right: 0.5rem;
+    content: "";
+    -webkit-font-smoothing: antialiased;
+    padding: 0.4rem 0.6rem;
+    margin: -0.2rem 0rem -0.2rem -0.6rem;
+}
+div.versionadded                         { border-color: #1abc9c; background-color: #dbfaf4; }
+div.versionadded p:first-child::before   { color: #1abc9c; }
+div.versionchanged                       { border-color: #f0b37e; background-color: #ffedcc; }
+div.versionchanged p:first-child::before { color: #f0b37e; }
+div.deprecated                           { border-color: #f29f97; background-color: #fdf3f2; }
+div.deprecated p:first-child::before     { color: #f29f97; }

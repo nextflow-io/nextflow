@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -247,7 +246,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             result << '-e "' << env << '"'
         }
         else if( env instanceof String ) {
-            result << "\${$env:+-e \"$env=\$$env\"}"
+            result << "-e \"$env\""
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")

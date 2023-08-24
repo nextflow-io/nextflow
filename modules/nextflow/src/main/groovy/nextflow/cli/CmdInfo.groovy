@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +31,7 @@ import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
+import nextflow.util.Threads
 import org.yaml.snakeyaml.Yaml
 /**
  * CLI sub-command INFO
@@ -218,6 +218,8 @@ class CmdInfo extends CmdBase {
             final os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
             result << BLANK << "Process: ${ManagementFactory.getRuntimeMXBean().getName()} " << getLocalAddress() << NEWLINE
             result << BLANK << "CPUs: ${os.availableProcessors} - Mem: ${totMem(os)} (${freeMem(os)}) - Swap: ${totSwap(os)} (${freeSwap(os)})"
+            if( Threads.useVirtual() )
+                result << " - Virtual threads ON"
         }
 
         if( level == 0  )

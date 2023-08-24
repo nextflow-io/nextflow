@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +30,7 @@ import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import nextflow.Global
-import nextflow.ISession
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -313,24 +311,6 @@ class FileHelperTest extends Specification {
     }
 
 
-    def 'get env map'() {
-
-        given:
-        def sess = Global.session = Mock(ISession)
-        def env = [:]
-        env.put('AWS_ACCESS_KEY','a1')
-        env.put('AWS_SECRET_KEY','s1')
-
-        expect:
-        // properties have priority over the environment map
-        FileHelper.envFor0('s3', env).access_key == 'a1'
-        FileHelper.envFor0('s3', env).secret_key == 's1'
-
-        // any other return just the session
-        FileHelper.envFor0('dx', env).session == sess
-
-    }
-
     def 'cached path'() {
 
         given:
@@ -483,18 +463,26 @@ class FileHelperTest extends Specification {
         Files.createSymbolicLink(
                 folder.resolve('file4.fa'),
                 folder.resolve('file3.bam'))
+        and:
+        folder.resolve('subdir_real').mkdirs()
+        folder.resolve('subdir_real/file5.fa').text = 'file 5'
+        and:
+        Files.createSymbolicLink(
+                folder.resolve('subdir_link'),
+                folder.resolve('subdir_real'))
 
         when:
         def result = []
-        FileHelper.visitFiles(folder, '*.fa', relative: true) { result << it.toString() }
+        FileHelper.visitFiles(folder, '**.fa', relative: true) { result << it.toString() }
         then:
-        result.sort() == ['file2.fa','file4.fa']
+        result.sort() == ['file2.fa','file4.fa','subdir_link/file5.fa', 'subdir_real/file5.fa']
 
         when:
         result = []
-        FileHelper.visitFiles(folder, '*.fa', relative: true, followLinks: false) { result << it.toString() }
+        FileHelper.visitFiles(folder, '**.fa', relative: true, followLinks: false) { result << it.toString() }
         then:
-        result.sort() == ['file2.fa']
+        // note: "file4.fa" is included in the result because it matches the name of the symlink file
+        result.sort() == ['file2.fa','file4.fa','subdir_real/file5.fa']
 
         cleanup:
         folder?.deleteDir()
@@ -963,24 +951,61 @@ class FileHelperTest extends Specification {
         EXPECTED    | STR
         'ftp'       | 'ftp://abc.com'
         's3'        | 's3://bucket/abc'
-        null        | '3s://bucket/abc'
-        null        | 'abc:xyz'
-        null        | '/a/bc/'
+        'file'      | 'file:/foo/bar'       // <-- this is a valid protocol scheme, representing the absolute path `/foo/bar`
+        'file'      | 'file://foo.io/bar'   // <-- file path representing the file `/bar` located in the host `foo.io`
+        'file'      | 'file:///foo/bar'     // <-- file path representing the absolute path `/foo/bar` with an empty host name
+        and:
+        null        | 's3:/bucket/abc'      // <-- null because is missing a slash
+        null        | '3s://bucket/abc'     // <-- null because uri cannot start with a digit
+        null        | 'abc:xyz'             // <-- null because is an invalid scheme prefix
+        null        | '/a/bc/'              // <-- null because there's no scheme
     }
 
     @Unroll
-    def 'should add max error retry' () {
-
+    def 'should find base url #STR' () {
         expect:
-        FileHelper.checkDefaultErrorRetry(SOURCE, ENV) == EXPECTED
+        FileHelper.baseUrl(STR) == BASE
 
         where:
-        SOURCE                          | ENV                   | EXPECTED
-        null                            | null                  | [max_error_retry: '5']
-        [foo: 1]                        | [:]                   | [max_error_retry: '5', foo: 1]
-        [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
-        [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
-        [:]                             | [:]                   | [max_error_retry: '5']
+        BASE                | STR
+        null                | null
+        'http://foo.com'    | 'http://foo.com'
+        'http://foo.com'    | 'http://foo.com/abc'
+        'http://foo.com'    | 'http://foo.com/abc/mskd0fs =ds0f'
+        and:
+        'https://foo.com'    | 'https://foo.com'
+        'https://foo.com'    | 'https://foo.com/abc'
+        'https://foo.com'    | 'https://foo.com/abc/mskd0fs =ds0f'
+        and:
+        'https://foo.com'    | 'HTTPS://FOO.COM'
+        'https://foo.com'    | 'HTTPS://FOO.COM/ABC'
+        'https://foo.com'    | 'HTTPS://FOO.COM/ABC/MSKD0FS =DS0F'
+        and:
+        'https://foo.com:80' | 'https://foo.com:80'
+        'https://foo.com:80' | 'https://foo.com:80/abc'
+        'https://foo.com:80' | 'https://foo.com:80/abc/mskd0fs =ds0f'
+        and:
+        'file:/'             | 'file:/'
+        'file:/'             | 'file:/foo/bar'
+        'file:///'           | 'file:///'
+        'file:///'           | 'file:///foo/bar/baz/'
+        'file://foo'         | 'file://foo/bar/baz/'    // <-- `foo` in this case is considered the host name
+        and:
+        'ftp://foo.com:80'   | 'ftp://foo.com:80'
+        'ftp://foo.com:80'   | 'ftp://foo.com:80/abc'
+        's3://foo.com:80'    | 's3://foo.com:80/abc'
+        and:
+        'dx://project-123'   | 'dx://project-123'
+        'dx://project-123:'  | 'dx://project-123:'
+        'dx://project-123:'  | 'dx://project-123:/abc'
+        and:
+        null                 | 'blah'
+        null                 | '/blah'
+        null                 | 'file:'
+        null                 | 'file://'
+        null                 | 'http:/xyz.com'
+        null                 | '1234://xyz'
+        null                 | '1234://xyz.com/abc'
     }
 
     def 'should check symlink status'() {
@@ -1002,5 +1027,66 @@ class FileHelperTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should return file base dir'() {
+        given:
+        SysEnv.push(NXF_FILE_ROOT: BASE_DIR)
+        expect:
+        FileHelper.fileRootDir() == EXPECTED
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        BASE_DIR            | EXPECTED
+        null                | null
+        '/foo/bar'          | Paths.get('/foo/bar')
+        'http://foo/bar'    | Paths.get(new URI('http://foo/bar'))
+    }
+
+    def 'should convert to canonical path' () {
+        expect:
+        FileHelper.toCanonicalPath(VALUE) == EXPECTED
+
+        where:
+        VALUE                       | EXPECTED
+        null                        | null
+        'file.txt'                  | Paths.get('file.txt').toAbsolutePath()
+        Paths.get('file.txt')       | Paths.get('file.txt').toAbsolutePath()
+        and:
+        '/file.txt'                 | Paths.get('/file.txt')
+        Paths.get('/file.txt')      | Paths.get('/file.txt')
+        and:
+        'http://foo/file.txt'       | Paths.get(new URI('http://foo/file.txt'))
+        Paths.get(new URI('http://foo/file.txt'))      | Paths.get(new URI('http://foo/file.txt'))
+
+    }
+
+    @Unroll
+    def 'should convert to canonical path with base' () {
+        given:
+        SysEnv.push(NXF_FILE_ROOT: 'http://host.com/work')
+
+        expect:
+        FileHelper.toCanonicalPath(VALUE) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        VALUE                       | EXPECTED
+        null                        | null
+        'file.txt'                  | Paths.get(new URI('http://host.com/work/file.txt'))
+        Paths.get('file.txt')       |  Paths.get(new URI('http://host.com/work/file.txt'))
+        and:
+        './file.txt'                | Paths.get(new URI('http://host.com/work/file.txt'))
+        '.'                         | Paths.get(new URI('http://host.com/work'))
+        './'                        | Paths.get(new URI('http://host.com/work'))
+        '../file.txt'               | Paths.get(new URI('http://host.com/file.txt'))
+        and:
+        '/file.txt'                 | Paths.get('/file.txt')
+        Paths.get('/file.txt')      | Paths.get('/file.txt')
+
     }
 }
