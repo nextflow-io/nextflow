@@ -25,5 +25,5 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class ProcessStartTimeoutException extends ProcessException {
+class ProcessSubmitTimeoutException extends ProcessException {
 }

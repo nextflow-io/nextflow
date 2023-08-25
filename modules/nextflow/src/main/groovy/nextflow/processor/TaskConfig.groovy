@@ -298,7 +298,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         return getDuration0('maxAwait')
     }
 
-
     boolean hasCpus() {
         get('cpus') != null
     }
@@ -414,6 +413,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         else {
             return CmdLineHelper.splitter( opts.toString() )
         }
+    }
+
+    Integer getSubmitAttempt() {
+        get('submitAttempt') as Integer ?: 1
     }
 
     Integer getAttempt() {

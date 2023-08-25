@@ -16,9 +16,6 @@
 
 package nextflow.processor
 
-import nextflow.exception.ProcessStartTimeoutException
-
-import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -29,6 +26,7 @@ import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
@@ -613,9 +611,10 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // check if it is terminated
-        def timeout=false
+        boolean timeout=false
         if( handler.checkIfCompleted() || (timeout=handler.isSubmitTimeout()) ) {
-            log.debug "Task ${timeout ? 'timed-out' : 'completed'} > $handler"
+            final state = timeout ? 'timed-out' : 'completed'
+            log.debug "Task $state > $handler"
             // decrement forks count
             handler.decProcessForks()
 
@@ -624,8 +623,8 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // check if submit timeout is reached
             if( timeout ) {
-                try { handler.kill() } catch( Throwable t ) { log.warn "Unable to cancel task $handler.task.name", t }
-                handler.task.error = new ProcessStartTimeoutException("Task could not start within specified 'maxAwait' time: ${handler.task.config.getMaxAwait()}")
+                try { handler.kill() } catch( Throwable t ) { log.warn("Unable to cancel task ${handler.task.lazyName()}", t) }
+                handler.task.error = new ProcessSubmitTimeoutException("Task '${handler.task.lazyName()}' could not be submitted within specified 'maxAwait' time: ${handler.task.config.getMaxAwait()}")
             }
 
             // finalize the tasks execution
