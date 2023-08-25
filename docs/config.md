@@ -189,7 +189,7 @@ The following settings are available:
 : Max number of downloads attempts from S3 (default: `1`).
 
 `aws.batch.retryMode`
-: The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`)
+: The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`, other options: `legacy`, `adaptive`); this handling is delegated to AWS. To have Nextflow handle retries instead, use `built-in`.
 
 `aws.batch.schedulingPriority`
 : :::{versionadded} 23.01.0-edge
