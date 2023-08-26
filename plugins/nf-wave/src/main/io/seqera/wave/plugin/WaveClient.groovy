@@ -421,17 +421,25 @@ class WaveClient {
                 throw new IllegalArgumentException("Unexpected conda and $scriptType conflict while resolving wave container")
 
             // map the recipe to a dockerfile
-            if( isCondaLocalFile(attrs.conda) ) {
-                condaFile = Path.of(attrs.conda)
-                containerScript = singularity
-                        ? condaFileToSingularityFile(config.condaOpts())
-                        : condaFileToDockerFile(config.condaOpts())
-            }
-            // 'conda' attributes is resolved as the conda packages to be used
-            else {
+            if( isCondaRemoteFile(attrs.conda) ) {
                 containerScript = singularity
                         ? condaPackagesToSingularityFile(attrs.conda, condaChannels, config.condaOpts())
                         : condaPackagesToDockerFile(attrs.conda, condaChannels, config.condaOpts())
+            }
+            else {
+                if( isCondaLocalFile(attrs.conda) ) {
+                    // 'conda' attribute is the path to the local conda environment
+                    // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
+                    condaFile = condaFileFromPath(attrs.conda, null, config.condaOpts())
+                }
+                else {
+                    // 'conda' attributes is resolved as the conda packages to be used
+                    condaFile = condaFileFromPackages(attrs.conda, condaChannels, config.condaOpts())
+                }
+                // create the container file to build the container
+                containerScript = singularity
+                        ? condaFileToSingularityFile(config.condaOpts())
+                        : condaFileToDockerFile(config.condaOpts())
             }
         }
 
@@ -554,6 +562,10 @@ class WaveClient {
         if( value.startsWith('http://') || value.startsWith('https://') )
             return false
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
+    }
+
+    static protected boolean isCondaRemoteFile(String value) {
+        value.startsWith('http://') || value.startsWith('https://')
     }
 
     protected boolean isSpackFile(String value) {
