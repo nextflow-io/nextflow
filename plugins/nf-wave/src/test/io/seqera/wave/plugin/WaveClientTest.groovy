@@ -522,9 +522,43 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 FROM mambaorg/micromamba:1.4.9
+                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
+                RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba clean -a -y
+                USER root
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - conda-forge
+                - defaults
+                dependencies:
+                - salmon=1.2.3
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with conda lock file' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'https://host.com/conda-lock.yml'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, false)
+        then:
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.4.9
                 RUN \\
                     micromamba install -y -n base -c conda-forge -c defaults \\
-                    salmon=1.2.3 \\
+                    -f https://host.com/conda-lock.yml \\
                     && micromamba clean -a -y
                 USER root
                     '''.stripIndent()
@@ -671,9 +705,49 @@ class WaveClientTest extends Specification {
         assets.containerFile == '''\
                 BootStrap: docker
                 From: mambaorg/micromamba:1.4.9
+                %files
+                    {{wave_context_dir}}/conda.yml /tmp/conda.yml
+                %post
+                    micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - conda-forge
+                - defaults
+                dependencies:
+                - salmon=1.2.3
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with conda remote lock file and singularity native build' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'https://host.com/lock-file.yaml'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.4.9
                 %post
                     micromamba install -y -n base -c conda-forge -c defaults \\
-                    salmon=1.2.3 \\
+                    -f https://host.com/lock-file.yaml \\
                     && micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
@@ -1030,6 +1104,20 @@ class WaveClientTest extends Specification {
         'foo.txt'           | true
         'foo\nbar.yml'      | false
         'http://foo.com'    | false
+    }
+
+    def 'should check is remote conda file' () {
+        expect:
+        WaveClient.isCondaRemoteFile(CONTENT) == EXPECTED
+
+        where:
+        CONTENT             | EXPECTED
+        'foo'               | false
+        'foo.yml'           | false
+        'foo.txt'           | false
+        'foo\nbar.yml'      | false
+        'http://foo.com'    | true
+        'https://foo.com'   | true
     }
 
 }
