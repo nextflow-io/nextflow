@@ -441,16 +441,13 @@ class WaveClient {
          */
         Path spackFile = null
         if( attrs.spack ) {
-            if( singularity )
-                throw new IllegalArgumentException("Wave containers do not support (yet) the resolution of Spack package with Singularity")
             if( containerScript )
                 throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
 
             if( isSpackFile(attrs.spack) ) {
                 // parse the attribute as a spack file path *and* append the base packages if any
                 spackFile = addPackagesToSpackFile(attrs.spack, config.spackOpts())
-            }
-            else {
+            } else {
                 // create a minimal spack file with package spec from user input
                 spackFile = spackPackagesToSpackFile(attrs.spack, config.spackOpts())
             }
