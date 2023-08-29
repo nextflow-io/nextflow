@@ -584,11 +584,11 @@ Nextflow no longer mounts the home directory when launching a Singularity contai
 :::
 
 :::{versionchanged} 23.09.0-edge
-As of 23.09.0-edge, Nextflow automatically mounts the required host paths in the container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_AUTO_MOUNTS` to `false` or set `singularity.autoMounts=false` in the Nextflow configuration file.
+Nextflow automatically mounts the required host paths in the container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_AUTO_MOUNTS` to `false` or set `singularity.autoMounts=false` in the Nextflow configuration file.
 :::
 
 :::{versionchanged} 23.09.0-edge
-As of 23.09.0-edge, Nextflow uses the command `run` to carry out the execution of Singularity containers instead of the `exec` command.
+Nextflow uses the command `run` to carry out the execution of Singularity containers instead of the `exec` command.
 To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_RUN_COMMAND` to `exec`.
 :::
 
