@@ -55,6 +55,8 @@ class EscapeTest extends Specification {
         Escape.path("hello<3.txt") == "hello\\<3.txt"
         Escape.path("hello>3.txt") == "hello\\>3.txt"
         Escape.path("hello`3.txt") == "hello\\`3.txt"
+        Escape.path('hello:3.txt') == "hello\\:3.txt"
+        Escape.path('hello;3.txt') == "hello\\;3.txt"
         Escape.path("/some'5/data'3/with/quote's/file's.txt") == "/some\\'5/data\\'3/with/quote\\'s/file\\'s.txt"
         Escape.path("Hello '$world'") == "Hello\\ \\'world\\'"
 

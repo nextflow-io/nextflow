@@ -6,21 +6,30 @@
 
 Nextflow uses the [AWS security credentials](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html) to make programmatic calls to AWS services.
 
-You can provide your AWS access keys using the standard AWS variables shown below:
+The AWS credentials are selected from the following sources, in order of descending priority:
 
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_DEFAULT_REGION`
+1. Nextflow configuration file - `aws.accessKey` and `aws.secretKey`. See {ref}`AWS configuration<config-aws>` for more details.
 
-If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not defined in the environment, Nextflow will attempt to
-retrieve credentials from your `~/.aws/credentials` and `~/.aws/config` files. The `default` profile can be
-overridden via the environmental variable `AWS_PROFILE` (or `AWS_DEFAULT_PROFILE`).
+2. A custom profile in `$HOME/.aws/credentials` and/or `$HOME/.aws/config`. The profile can be supplied from the `aws.profile` config option, or the `AWS_PROFILE` or `AWS_DEFAULT_PROFILE` environmental variables.
 
-Alternatively AWS credentials and profile can be specified in the Nextflow configuration file. See {ref}`AWS configuration<config-aws>` for more details.
+3. Environment variables - `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
-:::{note}
-Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that it spares you from managing/distributing AWS keys explicitly. Read the [IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) documentation and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
-:::
+4. The `default` profile in `~/.aws/credentials` and/or `~/.aws/config`.
+
+5. Single Sign-On (SSO) credentials. See the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
+
+   :::{versionadded} 23.07.0-edge
+   :::
+
+6. EC2 instance profile credentials. See the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
+
+The AWS region is selected from the following sources, in order of descending priority:
+
+1. Nextflow configuration file - `aws.region`
+2. Environment variables - `AWS_REGION` or `AWS_DEFAULT_REGION`
+3. EC2 instance metadata (if Nextflow is running in an EC2 instance)
+
+SSO credentials and instance profile credentials are the most recommended because they don't require you to manage and distribute AWS keys explicitly. SSO credentials are ideal for launching pipelines from outside of AWS (e.g. your laptop), while instance profile credentials are ideal for launching pipelines within AWS (e.g. an EC2 instance).
 
 ## AWS IAM policies
 
@@ -30,7 +39,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 - To use AWS Batch:
 
-  ```
+  ```json
   "batch:DescribeJobQueues"
   "batch:CancelJob"
   "batch:SubmitJob"
@@ -44,7 +53,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 - To view [EC2](https://aws.amazon.com/ec2/) instances:
 
-  ```
+  ```json
   "ecs:DescribeTasks"
   "ec2:DescribeInstances"
   "ec2:DescribeInstanceTypes"
@@ -55,7 +64,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 - To pull container images from [ECR](https://aws.amazon.com/ecr/) repositories:
 
-  ```
+  ```json
   "ecr:GetAuthorizationToken"
   "ecr:BatchCheckLayerAvailability"
   "ecr:GetDownloadUrlForLayer"
@@ -251,10 +260,11 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 
 ### Create your custom AMI
 
-From the EC2 Dashboard, select **Launch Instance**, then select **AWS Marketplace** in the left-hand pane and search for "ECS". In the result list, select **Amazon ECS-Optimized Amazon Linux 2 AMI**, then continue as usual to configure and launch the instance.
+From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select 
+**AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}
-The selected instance has a bootstrap volume of 8GB and a second EBS volume of 30GB for scratch storage, which is not enough for real genomic workloads. Make sure to specify an additional volume with enough storage for your pipeline execution.
+The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
 :::
 
 When the instance is running, SSH into it (or connect with the Session Manager service), install the AWS CLI, and install any other tool that may be required (see following sections).
@@ -294,7 +304,7 @@ Afterwards, verify that the AWS CLI package works correctly:
 
 ```console
 $ ./miniconda/bin/aws --version
-aws-cli/1.19.79 Python/3.8.5 Linux/4.14.231-173.361.amzn2.x86_64 botocore/1.20.79
+aws-cli/1.29.20 Python/3.11.4 Linux/4.14.318-241.531.amzn2.x86_64 botocore/1.31.20
 ```
 
 :::{note}
@@ -319,7 +329,7 @@ The grandparent directory of the `aws` tool will be mounted into the container a
 
 ### Docker installation
 
-Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-Optimized Amazon Linux 2** AMI has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
+Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
 
 The following snippet shows how to install Docker on an Amazon EC2 instance:
 
@@ -344,7 +354,7 @@ These steps must be done *before* creating the AMI from the current EC2 instance
 
 The [ECS container agent](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html) is a component of Amazon Elastic Container Service (Amazon ECS) and is responsible for managing containers on behalf of ECS. AWS Batch uses ECS to execute containerized jobs, therefore it requires the agent to be installed on EC2 instances within your Compute Environments.
 
-The ECS agent is included in the **Amazon ECS-Optimized Amazon Linux 2** AMI. If you use a different AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
+The ECS agent is included in the **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** . If you use a different base AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
 
 To install the agent, follow these steps:
 
@@ -362,6 +372,10 @@ curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
 
 :::{note}
 The `AmazonEC2ContainerServiceforEC2Role` policy must be attached to the instance role in order to be able to connect the EC2 instance created by the Compute Environment to the ECS container.
+:::
+
+:::{note}
+The `AmazonEC2ContainerRegistryReadOnly` policy should be attached to the instance role in order to get read-only access to Amazon EC2 Container Registry repositories.
 :::
 
 ## Jobs & Execution

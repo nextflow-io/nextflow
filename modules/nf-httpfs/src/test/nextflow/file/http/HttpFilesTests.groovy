@@ -112,7 +112,7 @@ class HttpFilesTests extends Specification {
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
         then:
         lines.size()>0
-        lines[0] == '<html>'
+        lines[0] == '<!DOCTYPE html>'
 
     }
 
