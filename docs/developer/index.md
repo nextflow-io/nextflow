@@ -44,6 +44,8 @@ Links between classes denote one of the following relationships:
 - Composition: `A` contains `B`
 - Instantiation: `A` creates instance(s) of `B` at runtime via `A::f()`
 
+See {ref}`packages-page` for the list of Nextflow packages.
+
 ```{warning}
 Class diagrams are manually curated, so they might not always reflect the latest version of the source code.
 ```

@@ -14,8 +14,7 @@ Some classes may be excluded from the above diagram for brevity.
 
 ## Notes
 
-The Nextflow scripting language is essentially Groovy with some AST transformations. Every
-Nextflow script is syntactically (but not semantically) valid Groovy.
+The Nextflow scripting language is essentially Groovy with some extensions, implemented as transformations to the abstract syntax tree (AST). Every Nextflow script is syntactically (but not semantically) valid Groovy.
 
 You can see the effect of Nextflow's AST transforms by using the Nextflow console:
 
