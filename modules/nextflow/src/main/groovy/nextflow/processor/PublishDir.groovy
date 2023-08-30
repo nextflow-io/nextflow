@@ -483,6 +483,9 @@ class PublishDir {
         catch( FileAlreadyExistsException e ) {
             // ignore
         }
+        catch( Exception e ) {
+            log.warn "Failed to create directory for publishing file: ${dir.toUriString()}"
+        }
         finally {
             makeCache.put(dir,true)
         }
