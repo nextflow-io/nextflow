@@ -9,10 +9,10 @@ classDiagram
         executor : Executor
         id : int
         name : String
+        operator : DataflowProcessor
         taskBody : BodyDef
     }
-    TaskProcessor --> TaskRun : run
-    TaskProcessor --> TaskHandler : run
+    TaskProcessor --> TaskRun : invokeTask
     TaskProcessor --> PublishDir : finalizeTask
 
     class TaskRun {
@@ -41,25 +41,4 @@ classDiagram
         holder : Map
         script : Script
         name : String
-    }
-
-    class TaskHandler {
-        task : TaskRun
-    }
-
-    TaskMonitor <|-- TaskPollingMonitor
-
-    class TaskPollingMonitor {
-        capacity : int
-        submitRateLimit : RateLimiter
-        pollIntervalMillis : long
-        dumpInterval : Duration
-    }
-
-    TaskPollingMonitor <|-- LocalPollingMonitor
-    TaskPollingMonitor <|-- ParallelPollingMonitor
-
-    class LocalPollingMonitor {
-        maxCpus : int
-        maxMemory : long
     }

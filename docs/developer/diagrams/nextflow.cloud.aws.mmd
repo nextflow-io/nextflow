@@ -15,5 +15,7 @@ classDiagram
     AwsBatchExecutor --> AwsBatchTaskHandler : submit
     AwsBatchTaskHandler --> AwsBatchScriptLauncher : submit
 
+    %% TaskPollingMonitor <|-- ParallelPollingMonitor
+
     SimpleFileCopyStrategy <|-- AwsBatchFileCopyStrategy
     AwsBatchScriptLauncher --* AwsBatchFileCopyStrategy

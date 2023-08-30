@@ -8,12 +8,16 @@ classDiagram
     CacheDB --* CacheStore
 
     CacheStore <|-- DefaultCacheStore
+    CacheStore <|-- CloudCacheStore
 
     class DefaultCacheStore {
-        db : DB
         uniqueId : UUID
         runName : String
         baseDir : Path
-        dataDir : Path
-        indexFile : Path
+    }
+
+    class CloudCacheStore {
+        uniqueId : UUID
+        runName : String
+        basePath : Path
     }
