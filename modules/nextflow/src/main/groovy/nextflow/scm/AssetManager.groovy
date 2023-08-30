@@ -629,7 +629,7 @@ class AssetManager {
              */
             catch ( RefNotFoundException e ) {
                 def ref = checkoutRemoteBranch(revision)
-                return "checkout-out at ${ref.getObjectId().name()}"
+                return "checked out at ${ref?.getObjectId()?.name()}"
             }
         }
 
@@ -943,12 +943,18 @@ class AssetManager {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
             }
             fetch.call()
-            git.checkout()
-                    .setCreateBranch(true)
-                    .setName(revision)
-                    .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
-                    .setStartPoint("origin/" + revision)
-                    .call()
+
+            try {
+                git.checkout()
+                        .setCreateBranch(true)
+                        .setName(revision)
+                        .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
+                        .setStartPoint("origin/" + revision)
+                        .call()
+            }
+            catch (RefNotFoundException e) {
+                git.checkout() .setName(revision) .call()
+            }
         }
         catch (RefNotFoundException e) {
             throw new AbortOperationException("Cannot find revision `$revision` -- Make sure that it exists in the remote repository `$repositoryUrl`", e)
