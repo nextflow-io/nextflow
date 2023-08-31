@@ -17,6 +17,7 @@
 package nextflow.cli
 
 import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
@@ -31,6 +32,7 @@ import org.yaml.snakeyaml.Yaml
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
 class CmdInfoTest extends Specification {
 
