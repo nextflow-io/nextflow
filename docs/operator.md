@@ -236,7 +236,7 @@ See also: [buffer](#buffer) operator.
 
 *Returns: value channel*
 
-The `collect` operator collects all the items emitted by a channel to a `List` and return the resulting object as a sole emission. For example:
+The `collect` operator collects all the items emitted by a channel to a `List` and return the resulting object as a sole emission, maintaining the order of the items. For example:
 
 ```groovy
 Channel
@@ -276,7 +276,7 @@ See also: [toList](#tolist) and [toSortedList](#tosortedlist) operator.
 
 *Returns: queue channel*
 
-The `collectFile` operator allows you to gather the items emitted by a channel and save them to one or more files. The operator returns a new channel that emits the collected file(s).
+The `collectFile` operator allows you to gather the items emitted by a channel and save them to one or more files, maintaining the order of the files. The operator returns a new channel that emits the collected file(s).
 
 In the simplest case, just specify the name of a file where the entries have to be stored. For example:
 
@@ -1200,7 +1200,7 @@ The items emitted by the resulting mixed channel may appear in any order, regard
 
 *Returns: map of queue channels*
 
-The `multiMap` operator allows you to forward the items emitted by a source channel to two or more output channels, mapping each input value as a separate element.
+The `multiMap` operator allows you to forward the items emitted by a source channel to two or more output channels, mapping each input value as a separate element, maintaining the order of the items.
 
 The mapping criteria is defined with a {ref}`closure <script-closure>` that specifies the target channels (labelled with a unique identifier) followed by an expression that maps each item from the input channel to the target channel.
 
@@ -1895,7 +1895,7 @@ You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numeric
 
 *Returns: value channel*
 
-The `toList` operator collects all the items emitted by a channel to a `List` object and emits the resulting collection as a single item. For example:
+The `toList` operator collects all the items emitted by a channel to a `List` object and emits the resulting collection as a single item, maintaining the order of the items. For example:
 
 ```groovy
 Channel
