@@ -41,7 +41,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 class CondaCache {
-    static final private Object condaLock = new Object();
+    static final private Object condaLock = new Object()
     
     /**
      * Cache the prefix path for each Conda environment
