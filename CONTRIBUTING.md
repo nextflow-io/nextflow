@@ -77,29 +77,73 @@ Signed-off-by: Random J Developer <random@developer.example.org>
 
 The process is automatically managed by the [Probot](https://probot.github.io/apps/dco/) app for GitHub.
 
+## Building from source
 
-## IDE settings
+Nextflow is written in [Groovy](http://groovy-lang.org). a scripting language for the JVM. A pre-compiled, ready-to-run package is available at the [Github releases page](https://github.com/nextflow-io/nextflow/releases), thus it is not necessary to compile it in order to use it.
 
-The suggested development environment is [IntelliJ IDEA](https://www.jetbrains.com/idea/download/). See the [README](https://github.com/nextflow-io/nextflow/#intellij-idea) for a short primer on how to import
-and configure Nextflow to work with it.
+If you are interested in modifying the source code, you only need Java 11 or later to build Nextflow from source. Nextflow uses the [Gradle](http://www.gradle.org/) build automation system, but you do not need to install Gradle to build Nextflow.
 
-Nextflow does not impose a strict code formatting style, however the following settings should be applied:
+You can build Nextflow with the following command:
 
-* Use spaces for indentation
-* Tab size: 4
-* Indent: 4
-* Use single class import
-* Class count to use import with `*`: 99
-* Names count to use static import with `*`: 99
-* Imports layout:
-    * \<blank line>
-    * `import org.junit.*`
-    * `import spock.lang.*`
-    * \<blank line>
-    * `import java.*`
-    * `import javax.*`
-    * \<blank line>
-    * *all other imports*
-    * *all other static imports*
+```bash
+make compile
+```
+
+The first time you run it, it will automatically download all of the necessary libraries required by the build process, which may take several minutes.
+
+Once complete, you can run your local build of Nextflow using the `launch.sh` script in place of the `nextflow` command.
+
+A self-contained executable Nextflow package can be created with the following command:
+
+```bash
+make pack
+```
+
+Again, use `launch.sh` in place of the `nextflow` command to use your local build.
+
+The compiled packages can be installed using the following command:
+
+```bash
+make install
+```
+
+Note that this command will overwrite any existing Nextflow packages with the same version. The `nextflow` command will use the locally built packages instead.
+
+## IntelliJ IDEA
+
+The suggested development environment is [IntelliJ IDEA](https://www.jetbrains.com/idea/download/). Nextflow development with IntelliJ IDEA requires a recent version of the IDE (2019.1.2 or later).
+
+After installing IntelliJ IDEA, use the following steps to use it with Nextflow:
+
+1. Clone the Nextflow repository to a directory in your computer.
+
+2. Open IntelliJ IDEA and go to **File > New > Project from Existing Sources...**.
+
+3. Select the Nextflow project root directory in your computer and click **OK**.
+
+4. Select **Import project from external model > Gradle** and click **Finish**.
+
+5. After the import process completes, select **File > Project Structure...**.
+
+6. Select **Project**, and make sure that the **SDK** field contains Java 11 (or later).
+
+7. Go to **File > Settings > Editor > Code Style > Groovy** and apply the following settings:
+
+   * Use spaces for indentation
+   * Tab size: 4
+   * Indent: 4
+   * Use single class import
+   * Class count to use import with `*`: 99
+   * Names count to use static import with `*`: 99
+   * Imports layout:
+      * *blank line*
+      * `import org.junit.*`
+      * `import spock.lang.*`
+      * *blank line*
+      * `import java.*`
+      * `import javax.*`
+      * *blank line*
+      * *all other imports*
+      * *all other static imports*
 
 New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/e8945e8b6fc355d3f2eec793d8f288515db2f409/modules/nextflow/src/main/groovy/nextflow/Const.groovy#L1-L15)).
