@@ -238,8 +238,7 @@ class TraceRecord implements Serializable {
     }
 
 
-    @PackageScope
-    Map<String,Object> store
+    public Map<String,Object> store
 
     @Memoized
     Set<String> keySet() {
