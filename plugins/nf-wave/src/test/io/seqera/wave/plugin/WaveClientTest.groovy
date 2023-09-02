@@ -513,7 +513,7 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3'] }
+        def task = Mock(TaskRun) {getConfig() >> [conda:"bioconda::rseqc=3.0.1 'conda-forge::r-base>=3.5'"] }
         and:
         def client = new WaveClient(session)
 
@@ -539,7 +539,8 @@ class WaveClientTest extends Specification {
                 - conda-forge
                 - defaults
                 dependencies:
-                - salmon=1.2.3
+                - bioconda::rseqc=3.0.1
+                - conda-forge::r-base>=3.5
                 '''.stripIndent(true)
     }
 
@@ -575,7 +576,7 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3', arch:'amd64'] }
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
         and:
         def client = new WaveClient(session)
 
@@ -607,8 +608,13 @@ class WaveClientTest extends Specification {
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
-        assets.spackFile
         !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
     }
 
     def 'should create asset with conda file' () {
