@@ -182,6 +182,7 @@ class BashWrapperBuilder {
         result.append('\n')
         result.append('# capture process environment\n')
         result.append('set +u\n')
+        result.append('cd "$NXF_TASK_WORKDIR"\n')
         for( int i=0; i<names.size(); i++) {
             final key = names[i]
             result.append "echo $key=\${$key[@]} "
@@ -466,7 +467,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${interpreter} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
@@ -581,6 +582,8 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        // export task work directory
+        builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
         if( isTraceRequired() )
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
@@ -588,10 +591,6 @@ class BashWrapperBuilder {
         // add the user owner variable in order to patch root owned files problem
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
-
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)

@@ -26,7 +26,7 @@ import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 /**
  * Implements a xform that captures variable names declared
- * in task tamplate
+ * in task template
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

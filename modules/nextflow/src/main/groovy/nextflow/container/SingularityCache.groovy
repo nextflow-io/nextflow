@@ -224,7 +224,7 @@ class SingularityCache {
             return libraryPath
         }
 
-        // check for the image in teh cache dir
+        // check for the image in the cache dir
         // if the image does not exist in the cache dir, download it
         final localPath = localCachePath(imageUrl)
         if( localPath.exists() ) {

@@ -488,6 +488,16 @@ workflow {
 }
 ```
 
+:::{note}
+Process `path` inputs have nearly the same interface as described in {ref}`script-file-io`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
+
+```groovy
+path x, stageAs: 'my-dir/*'
+```
+
+In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
+:::
+
 ### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a Groovy list, and you can use it as such.
@@ -1314,6 +1324,10 @@ The `clusterOptions` directive allows the usage of any native configuration opti
 This directive is only used by grid executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
 :::
 
+:::{warning}
+While you can use the `clusterOptions` directive to specify options that are supported as process directives (`queue`, `memory`, `time`, etc), you should not use both at the same time, as it will cause undefined behavior. Most HPC schedulers will either fail or simply ignore one or the other.
+:::
+
 (process-conda)=
 
 ### conda
@@ -2121,8 +2135,18 @@ process my_task {
 
 The limits and the syntax of the corresponding cloud provider should be taken into consideration when using resource labels.
 
-:::{note}
-Resource labels are currently only supported by the {ref}`awsbatch-executor`, {ref}`google-lifesciences-executor`, Google Cloud Batch and {ref}`k8s-executor` executors.
+Resource labels are currently supported by the following executors:
+
+- {ref}`awsbatch-executor`
+- {ref}`azurebatch-executor`
+- {ref}`google-batch-executor`
+- {ref}`google-lifesciences-executor`
+- {ref}`k8s-executor`
+
+:::{versionadded} 23.09.0-edge
+Resource labels are supported for Azure Batch when using automatic pool creation.
+
+Resource labels in Azure are added to pools, rather than jobs, in order to facilitate cost analysis. A new pool will be created for each new set of resource labels, therefore it is recommended to also set `azure.batch.deletePoolsOnCompletion = true` when using process-specific resource labels.
 :::
 
 See also: [label](#label)

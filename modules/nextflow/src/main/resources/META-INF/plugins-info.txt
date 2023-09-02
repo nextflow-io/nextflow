@@ -1,9 +1,9 @@
 nf-amazon@2.1.1
-nf-azure@1.2.0
-nf-cloudcache@0.1.0
+nf-azure@1.3.0
+nf-cloudcache@0.2.0
 nf-codecommit@0.1.5
 nf-console@1.0.6
 nf-ga4gh@1.1.0
 nf-google@1.8.1
-nf-tower@1.6.0
-nf-wave@0.11.1
+nf-tower@1.6.1
+nf-wave@0.11.2

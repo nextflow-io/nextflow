@@ -269,7 +269,7 @@ nxf_fs_fcp() {
 
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
-    printf $exit_status > {{folder}}/.exitcode
+    printf -- $exit_status > {{folder}}/.exitcode
     set +u
     sync || true
     exit $exit_status
@@ -281,7 +281,7 @@ on_term() {
 }
 
 nxf_launch() {
-    /bin/bash {{folder}}/.command.run nxf_trace
+    /bin/bash -ue {{folder}}/.command.run nxf_trace
 }
 
 nxf_stage() {
@@ -305,6 +305,7 @@ nxf_main() {
     set +u
     set -u
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
     nxf_stage
 
     set +e
