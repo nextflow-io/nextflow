@@ -578,15 +578,28 @@ class Launcher {
      */
     private void setupEnvironment() {
 
-        setProxy('HTTP',System.getenv())
-        setProxy('HTTPS',System.getenv())
-        setProxy('FTP',System.getenv())
+        final env = System.getenv()
+        setProxy('HTTP',env)
+        setProxy('HTTPS',env)
+        setProxy('FTP',env)
 
-        setProxy('http',System.getenv())
-        setProxy('https',System.getenv())
-        setProxy('ftp',System.getenv())
+        setProxy('http',env)
+        setProxy('https',env)
+        setProxy('ftp',env)
 
-        setNoProxy(System.getenv())
+        setNoProxy(env)
+
+        setHttpClientProperties(env)
+    }
+
+    static void setHttpClientProperties(Map<String,String> env) {
+        // Set the httpclient connection pool timeout to 10 seconds.
+        // This required because the default is 20 minutes, which cause the error
+        // "HTTP/1.1 header parser received no bytes" when in some circumstances
+        // https://github.com/nextflow-io/nextflow/issues/3983#issuecomment-1702305137
+        System.setProperty("jdk.httpclient.keepalive.timeout", env.getOrDefault("NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT","10"))
+        if( env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE") )
+            System.setProperty("jdk.httpclient.connectionPoolSize", env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE"))
     }
 
     /**
@@ -650,7 +663,6 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
-
         final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)
