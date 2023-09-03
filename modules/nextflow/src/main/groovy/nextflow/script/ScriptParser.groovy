@@ -147,7 +147,7 @@ class ScriptParser {
 
         if( script instanceof CharSequence ) {
             final hash = Hashing
-                    .murmur3_32()
+                    .sipHash24()
                     .newHasher()
                     .putUnencodedChars(script.toString())
                     .hash()
@@ -169,7 +169,11 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
-            final parsed = interpreter.parse(scriptText, clazzName)
+//            final code = new GroovyCodeSource(scriptPath.toUri())
+//            final name = GroovyCodeSource.getDeclaredField('name')
+//            name.setAccessible(true)
+//            name.set(code, clazzName)
+            final parsed = interpreter.parse(scriptPath.toUri())
             if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
@@ -196,7 +200,7 @@ class ScriptParser {
 
 
     ScriptParser parse(String scriptText) {
-        def interpreter = getInterpreter()
+        final interpreter = getInterpreter()
         return parse(scriptText, interpreter)
     }
 
