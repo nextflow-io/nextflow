@@ -1294,7 +1294,10 @@ The `singularity` scope controls how [Singularity](https://sylabs.io/singularity
 The following settings are available:
 
 `singularity.autoMounts`
-: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `false`).
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `true`).
+: :::{versionchanged} 23.09.0-edge
+  Default value was changed from `false` to `true`.
+  :::
 
 `singularity.cacheDir`
 : The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.

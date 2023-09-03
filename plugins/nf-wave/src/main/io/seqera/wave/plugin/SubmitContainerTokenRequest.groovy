@@ -111,4 +111,14 @@ class SubmitContainerTokenRequest {
      */
     boolean freeze
 
+    /**
+     * Specify the format of the container file
+     */
+    String format
+
+    /**
+     * When {@code true} build requests are carried out in dry-run mode.
+     */
+    Boolean dryRun
+
 }
