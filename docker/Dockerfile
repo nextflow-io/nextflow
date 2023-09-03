@@ -1,5 +1,5 @@
 FROM amazoncorretto:17.0.8
-RUN yum install -y procps-ng shadow-utils
+RUN yum install -y procps-ng shadow-utils which
 
 ENV NXF_HOME=/.nextflow
 ARG TARGETPLATFORM=linux/amd64
