@@ -73,7 +73,7 @@ azure {
         // ...
 
         fileShares {
-          rnaseqresources38 {
+          rnaseqResources {
                 mountPath = "/mnt/mydata/myresources"
             }
         }
