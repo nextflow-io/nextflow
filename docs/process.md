@@ -1314,6 +1314,10 @@ The `clusterOptions` directive allows the usage of any native configuration opti
 This directive is only used by grid executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
 :::
 
+:::{warning}
+While you can use the `clusterOptions` directive to specify options that are supported as process directives (`queue`, `memory`, `time`, etc), you should not use both at the same time, as it will cause undefined behavior. Most HPC schedulers will either fail or simply ignore one or the other.
+:::
+
 (process-conda)=
 
 ### conda
