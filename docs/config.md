@@ -1542,9 +1542,6 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable the use of Conda recipes defined by using the {ref}`process-conda` directive. (default: `false`).
 
-`NXF_DEBUG`
-: Defines scripts debugging level: `1` dump task environment variables in the task log file; `2` enables command script execution tracing; `3` enables command wrapper execution tracing.
-
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge
   :::
