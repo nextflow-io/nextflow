@@ -85,6 +85,17 @@ function get() {
     fi
 }
 
+function get_ver() {
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$1"
+    elif command -v wget &>/dev/null; then
+        wget "$1" >/dev/null 2>&1
+    else
+        echo_red "ERROR: Cannot find 'curl' nor 'wget' utility --  please install one of them"
+        exit 1
+    fi
+}
+
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXXX" || exit $?
@@ -111,7 +122,7 @@ function resolve_link() {
 }
 
 function current_ver() {
-  [[ $NXF_EDGE == 1 ]] && printf 'edge' || printf 'latest'
+  [[ $NXF_EDGE == 1 || $NXF_VER == *"-edge" ]] && printf 'edge' || printf 'latest'
 }
 
 function install() {
@@ -129,6 +140,15 @@ function install() {
     echo -e $'- you may complete the installation by moving it to a directory in your $PATH'
     fi
     echo ''
+}
+
+function check_latest() {
+    [[ $cmd != run ]] && return 0
+    [[ $NXF_OFFLINE == true || $NXF_DISABLE_CHECK_LATEST == true ]] && return 0
+    local latest=$(get_ver "$NXF_BASE/$(current_ver)/version?current=$NXF_VER")
+    if [[ -n "$latest" && "$latest" != $NXF_VER ]]; then
+      echo_yellow "Nextflow $latest is available - Please consider updating your version to it"
+    fi
 }
 
 function launch_nextflow() {
@@ -445,5 +465,7 @@ else
 
 fi
 
+# check for latest version
+check_latest
 # finally run it
 launch_nextflow

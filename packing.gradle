@@ -327,6 +327,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
     def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
+    def versionFile = file('VERSION').absoluteFile
 
     def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
     def edge = version ==~ /^.+(-edge|-EDGE)$/
@@ -350,6 +351,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
         aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
+        aws s3 cp $versionFile s3://www2.nextflow.io/releases/edge/version $s3CmdOpts
         """.stripIndent()
         
     else if( isLatest )
@@ -361,6 +363,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
         aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
+        aws s3 cp $versionFile s3://www2.nextflow.io/releases/latest/version $s3CmdOpts
         """.stripIndent()
 
     def temp = File.createTempFile('upload',null)
