@@ -15,22 +15,30 @@
  */
 
 package nextflow.cli
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.plugin.Plugins
-
 /**
  * Implements `fs` command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
+@Slf4j
 class CmdFs extends CmdBase implements UsageAware {
 
     static final public NAME = 'fs'
@@ -158,6 +166,16 @@ class CmdFs extends CmdBase implements UsageAware {
         return NAME
     }
 
+    private Session createSession() {
+        // create the config
+        final config = new ConfigBuilder()
+                .setOptions(getLauncher().getOptions())
+                .setBaseDir(Paths.get('.'))
+                .build()
+
+        return new Session(config)
+    }
+
     @Override
     void run() {
         if( !args ) {
@@ -166,11 +184,18 @@ class CmdFs extends CmdBase implements UsageAware {
         }
 
         Plugins.setup()
+        final session = createSession()
         try {
             run0()
         }
         finally {
-            Plugins.stop()
+            try {
+                session.destroy()
+                Global.cleanUp()
+                Plugins.stop()
+            } catch (Throwable t) {
+                log.warn "Unexpected error while destroying the session object - cause: ${t.message}"
+            }
         }
     }
 
