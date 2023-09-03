@@ -85,7 +85,7 @@ function get() {
     fi
 }
 
-function gget() {
+function get_ver() {
     if command -v curl &>/dev/null; then
         curl -fsSL "$1"
     elif command -v wget &>/dev/null; then
@@ -143,10 +143,11 @@ function install() {
 }
 
 function check_latest() {
+    [[ $cmd != run ]] && return 0
     [[ $NXF_OFFLINE == true || $NXF_DISABLE_CHECK_LATEST == true ]] && return 0
-    local latest=$(gget "$NXF_BASE/$(current_ver)/version?current=$NXF_VER")
+    local latest=$(get_ver "$NXF_BASE/$(current_ver)/version?current=$NXF_VER")
     if [[ -n "$latest" && "$latest" != $NXF_VER ]]; then
-      echo_yellow "Nextflow version $latest is available - consider update it"
+      echo_yellow "Nextflow $latest is available - Please consider updating your version to it"
     fi
 }
 
@@ -464,7 +465,7 @@ else
 
 fi
 
-# check for update
+# check for latest version
 check_latest
 # finally run it
 launch_nextflow
