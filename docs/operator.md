@@ -1385,8 +1385,8 @@ Channel
     .view { row -> "${row.col1} - ${row.col2} - ${row.col3}" }
 ```
 :::{note}
-- If the header option is not used, .splitCsv() returns each row as a List.
-- If header: true is used, or if a list of strings is provided for the header, then .splitCsv() returns each row as a LinkedHashMap
+- By default, the `splitCsv` operator returns each row as a *list* object. Items are accessed by using the 0-based column index.
+- When the `header` is specified each row is returned as a *map* object (also known as dictionary). Items are accessed via the corresponding column name. 
 :::
 
 Available options:
