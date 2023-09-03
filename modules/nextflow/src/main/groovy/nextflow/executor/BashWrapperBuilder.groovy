@@ -593,10 +593,6 @@ class BashWrapperBuilder {
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
 
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
-
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)
         }
