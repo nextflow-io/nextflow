@@ -81,7 +81,7 @@ azure {
 }
 ```
 
-The task can access the File share in `/mnt/mydata/myresources`.
+The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount. 
 
 :::{warning}
 Azure File shares do not support authentication and management with Active Directory. The storage account key must be 
