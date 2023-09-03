@@ -11,7 +11,6 @@ COPY nextflow /usr/local/bin/nextflow
 
 # download runtime
 RUN mkdir /.nextflow \
- && touch /.nextflow/dockerized \
  && chmod 755 /usr/local/bin/nextflow \
  && chmod 755 /usr/local/bin/entry.sh \
  && nextflow info
