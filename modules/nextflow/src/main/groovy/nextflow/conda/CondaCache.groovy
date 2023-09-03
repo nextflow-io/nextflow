@@ -41,7 +41,8 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 class CondaCache {
-
+    static final private Object condaLock = new Object()
+    
     /**
      * Cache the prefix path for each Conda environment
      */
@@ -273,7 +274,6 @@ class CondaCache {
 
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
-
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
@@ -296,7 +296,13 @@ class CondaCache {
         }
 
         try {
-            runCommand( cmd )
+            // Parallel execution of conda causes data and package corruption.
+            // https://github.com/nextflow-io/nextflow/issues/4233
+            // https://github.com/conda/conda/issues/13037
+            // Should be removed as soon as the upstream bug is fixed and released.
+            synchronized(condaLock) {
+                runCommand( cmd )
+            }
             log.debug "'${binaryName}' create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
