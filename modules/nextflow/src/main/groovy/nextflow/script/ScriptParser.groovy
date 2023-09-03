@@ -125,7 +125,10 @@ class ScriptParser {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
-        if( session && session.classesDir )
+        if( session?.debug )
+            config.debug = true
+
+        if( session?.classesDir )
             config.setTargetDirectory(session.classesDir.toFile())
 
         return config
