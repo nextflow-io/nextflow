@@ -468,7 +468,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${interpreter} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
@@ -592,10 +592,6 @@ class BashWrapperBuilder {
         // add the user owner variable in order to patch root owned files problem
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
-
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)

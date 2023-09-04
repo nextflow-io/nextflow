@@ -1384,6 +1384,10 @@ Channel
     .splitCsv(header: ['col1', 'col2', 'col3'], skip: 1 )
     .view { row -> "${row.col1} - ${row.col2} - ${row.col3}" }
 ```
+:::{note}
+- By default, the `splitCsv` operator returns each row as a *list* object. Items are accessed by using the 0-based column index.
+- When the `header` is specified each row is returned as a *map* object (also known as dictionary). Items are accessed via the corresponding column name. 
+:::
 
 Available options:
 
