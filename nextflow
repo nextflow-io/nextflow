@@ -24,6 +24,7 @@ NXF_TEMP=${NXF_TEMP:-$TMPDIR}
 NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
+NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 
 export NXF_CLI
 export NXF_ORG
@@ -91,7 +92,7 @@ function get_ver() {
     elif command -v wget &>/dev/null; then
         wget "$1" >/dev/null 2>&1
     else
-        echo_red "ERROR: Cannot find 'curl' nor 'wget' utility --  please install one of them"
+        echo_red "ERROR: Cannot find 'curl' nor 'wget' utility -- please install one of them"
         exit 1
     fi
 }
@@ -154,7 +155,7 @@ function check_latest() {
 function launch_nextflow() {
     # the launch command line
     local cmdline=()
-    # remove leading and trailing double-quotes 
+    # remove leading and trailing double-quotes
     for x in "${launcher[@]}"; do
         x="${x%\"}"
         x="${x#\"}"
@@ -211,6 +212,10 @@ while [[ $# != 0 ]]; do
       ;;
     -bg)
       bg=1
+      ;;
+    -remote-debug)
+      echo_yellow "Enabling script debugging - continue the execution launching the remote VM debugger in your favourite IDE using port $NXF_REMOTE_DEBUG_PORT"
+      remote_debug=1
       ;;
     -download)
       if [[ ! "$cmd" ]]; then
@@ -385,7 +390,7 @@ EOF
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
 LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
 
-if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
+if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ] && [[ "$remote_debug" -ne 1 ]]; then
     declare -a launcher="($(cat "$LAUNCH_FILE"))"
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
@@ -400,8 +405,11 @@ else
     cmd_base=(${BASH_REMATCH[1]})
     cmd_tail=(${BASH_REMATCH[2]})
 
+    launcher="${cmd_base[@]}"
+    [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+    [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
+
     if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19|20) ]]; then
-      launcher="${cmd_base[@]}"
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
@@ -419,14 +427,11 @@ else
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
-      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
         [[ "$JAVA_VER" =~ ^(19|20) ]] && launcher+=(--enable-preview) || die "Virtual threads requires Java 19 or later - current version $JAVA_VER"
       fi
       launcher+=("${cmd_tail[@]}")
     else
-      launcher="${cmd_base[@]}"
-      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cmd_tail[@]}")
     fi
 
@@ -434,7 +439,7 @@ else
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
         STR=''
         for x in "${launcher[@]}"; do
-        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && STR+="$x "
+        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && [[ ! "$x" == *"-agentlib:jdwp"* ]] && STR+="$x "
         done
         printf "$STR">"$LAUNCH_FILE"
     else

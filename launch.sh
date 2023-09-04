@@ -83,6 +83,7 @@ NXF_PLUGINS_DEFAULT=${NXF_PLUGINS_DEFAULT:-true}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_OPTS=${NXF_OPTS:-}
 NXF_CLI="$0 $@"
+NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 export NXF_CLI
 export COLUMNS
 export NXF_PLUGINS_DIR
@@ -115,8 +116,8 @@ while [ "$*" != "" ]; do
     fi
 
   elif [ "$1" == '-remote-debug' ]; then
-    DEBUG='-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8010'
-
+    DEBUG="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT"
+    args+=("$1")
   else
    args+=("$1")
   fi

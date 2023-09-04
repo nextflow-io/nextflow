@@ -184,6 +184,11 @@ class Session implements ISession {
     boolean quiet
 
     /**
+     * Enable debugging mode
+     */
+    boolean debug
+
+    /**
      * Local path where script generated classes are saved
      */
     private Path classesDir
