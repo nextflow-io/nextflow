@@ -147,7 +147,7 @@ class ScriptParser {
 
         if( script instanceof CharSequence ) {
             final hash = Hashing
-                    .sipHash24()
+                    .murmur3_32()
                     .newHasher()
                     .putUnencodedChars(script.toString())
                     .hash()
@@ -157,7 +157,7 @@ class ScriptParser {
         throw new IllegalArgumentException("Unknown script type: ${script?.getClass()?.getName()}")
     }
 
-    GroovyShell getInterpreter() {
+    private GroovyShell getInterpreter() {
         if( !binding && session )
             binding = session.binding
         if( !binding )
@@ -166,14 +166,13 @@ class ScriptParser {
         return new GroovyShell(classLoader, binding, getConfig())
     }
 
-    ScriptParser parse(String scriptText, GroovyShell interpreter) {
-        final String clazzName = computeClassName(scriptText)
+    private ScriptParser parse0(String scriptText, Path scriptPath, GroovyShell interpreter) {
+        this.scriptPath = scriptPath
+        final String className = computeClassName(scriptText)
         try {
-//            final code = new GroovyCodeSource(scriptPath.toUri())
-//            final name = GroovyCodeSource.getDeclaredField('name')
-//            name.setAccessible(true)
-//            name.set(code, clazzName)
-            final parsed = interpreter.parse(scriptPath.toUri())
+            final parsed = scriptPath && session.debug
+                    ? interpreter.parse(scriptPath.toFile())
+                    : interpreter.parse(scriptText, className)
             if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
@@ -190,7 +189,7 @@ class ScriptParser {
             String msg = e.message ?: header
             msg = msg != 'startup failed' ? msg : header
             msg = msg.replaceAll(/startup failed:\n/,'')
-            msg = msg.replaceAll(~/$clazzName(: \d+:\b*)?/, header+'\n- cause:')
+            msg = msg.replaceAll(~/$className(: \d+:\b*)?/, header+'\n- cause:')
             if( msg.contains "Unexpected input: '{'" ) {
                 msg += "\nNOTE: If this is the beginning of a process or workflow, there may be a syntax error in the body, such as a missing or extra comma, for which a more specific error message could not be produced."
             }
@@ -198,16 +197,13 @@ class ScriptParser {
         }
     }
 
-
     ScriptParser parse(String scriptText) {
-        final interpreter = getInterpreter()
-        return parse(scriptText, interpreter)
+        return parse0(scriptText, null, getInterpreter())
     }
 
     ScriptParser parse(Path scriptPath) {
-        this.scriptPath = scriptPath
         try {
-            parse(scriptPath.text)
+            parse0(scriptPath.text, scriptPath, getInterpreter())
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
