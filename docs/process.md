@@ -488,6 +488,16 @@ workflow {
 }
 ```
 
+:::{note}
+Process `path` inputs have nearly the same interface as described in {ref}`script-file-io`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
+
+```groovy
+path x, stageAs: 'my-dir/*'
+```
+
+In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
+:::
+
 ### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a Groovy list, and you can use it as such.
