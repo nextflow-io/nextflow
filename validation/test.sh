@@ -9,6 +9,7 @@ export NXF_IGNORE_WARN_DSL2=true
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 # disable ansi log to make log more readable
 export NXF_ANSI_LOG=false
+export NXF_DISABLE_CHECK_LATEST=true
 
 #
 # Integration tests
