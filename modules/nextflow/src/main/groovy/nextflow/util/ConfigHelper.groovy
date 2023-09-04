@@ -42,7 +42,7 @@ class ConfigHelper {
             result = config['$'+execName][propName]
         }
 
-        if( result==null && config instanceof Map && config[propName] ) {
+        if( result==null && config instanceof Map && config[propName] != null ) {
             result = config[propName]
         }
 
