@@ -640,7 +640,7 @@ The following settings are available:
 : Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
 
 `executor.queueSize`
-: The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
+: The number of tasks the executor will handle in a parallel manner. A queue size of zero corresponds to no limit. Default varies for each executor (see below).
 
 `executor.queueStatInterval`
 : Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.
