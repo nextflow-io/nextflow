@@ -42,6 +42,9 @@ Available options:
 `-q, -quiet`
 : Do not print information messages.
 
+`-remote-debug`
+: Enable JVM interactive remote debugging (experimental).
+
 `-syslog`
 : Send logs to syslog server (e.g. localhost:514).
 
