@@ -238,7 +238,12 @@ class TraceRecord implements Serializable {
     }
 
 
-    public Map<String,Object> store
+    @PackageScope
+    Map<String,Object> store
+
+    Map<String,Object> getStore() {
+        new LinkedHashMap(store)
+    }
 
     @Memoized
     Set<String> keySet() {
