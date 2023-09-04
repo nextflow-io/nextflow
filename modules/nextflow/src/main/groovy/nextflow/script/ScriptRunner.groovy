@@ -91,7 +91,7 @@ class ScriptRunner {
         return this
     }
 
-    ScriptRunner setPreview(boolean  value, Closure<Void> action) {
+    ScriptRunner setPreview(boolean value, Closure<Void> action) {
         this.preview = value
         this.previewAction = action
         return this
