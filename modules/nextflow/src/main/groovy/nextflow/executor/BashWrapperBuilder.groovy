@@ -75,9 +75,8 @@ class BashWrapperBuilder {
         /*
          * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
          * - 0: no debug
-         * - 1: dump current environment in the `.command.log` file
-         * - 2: trace the execution of user script adding the `set -x` flag
-         * - 3: trace the execution of wrapper scripts
+         * - 1: dump current environment in the `.command.log` file and trace the execution of user script
+         * - 2: trace the execution of wrapper scripts
          */
         def str = System.getenv('NXF_DEBUG')
         try {
