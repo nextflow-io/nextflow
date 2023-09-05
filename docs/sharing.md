@@ -461,7 +461,7 @@ This mix of technologies makes it possible to write self-contained and truly rep
 
 In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)). 
 
-In cases where you do not wish to modify the execution environment(s), executable scripts can be included in the `bin` directory in the workflow repository root. This can be useful to make changes that affect task execution across all environments with a single change.
+In cases where you do not wish to modify the execution environment(s), executable scripts can be included in the `bin/` directory in the workflow repository root. This can be useful to make changes that affect task execution across all environments with a single change.
 
 To ensure your scripts can be made available to the task:
 
