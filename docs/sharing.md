@@ -481,7 +481,7 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 
 ### Using bundled executables in the workflow 
 
-Nextflow will automatically add the `bin` folder to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
+Nextflow will automatically add the `bin/` directory to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
 
 ### System environment
 
