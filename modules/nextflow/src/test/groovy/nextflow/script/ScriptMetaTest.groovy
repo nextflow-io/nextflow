@@ -209,7 +209,9 @@ class ScriptMetaTest extends Dsl2Spec {
         def work2 = new WorkflowDef(name: 'work1')
         meta2.addDefinition(proc2, func2, work2)
 
-        meta1.addModule(meta2, null, null)
+        meta1.addModule(meta2, 'func1', null)
+        meta1.addModule(meta2, 'proc1', null)
+        meta1.addModule(meta2, 'work1', null)
 
         // attempt to define duplicate components in main script
         def func1 = new FunctionDef(name: 'func1', alias: 'func1')
