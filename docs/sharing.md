@@ -465,7 +465,7 @@ In cases where you do not wish to modify the execution environment(s), executabl
 
 To ensure your scripts can be made available to the task:
 
-1. Write scripts in the `./bin` directory (relative to the project repository root)
+1. Write scripts in the `bin/` directory (relative to the project repository root)
 2. Specify a portable shebang (see note below for details).
 3. Ensure the scripts are executable. For example: `chmod a+x bin/my_script.py`
 
