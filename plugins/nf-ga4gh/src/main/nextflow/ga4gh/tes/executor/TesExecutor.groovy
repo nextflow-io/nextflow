@@ -62,7 +62,10 @@ class TesExecutor extends Executor implements ExtensionPoint {
         super.register()
         uploadBinDir()
 
-        client = new TaskServiceApi( new ApiClient(basePath: getEndpoint(), authentications: getAuthentications()) )
+        client = new TaskServiceApi( new ApiClient(
+                basePath: getEndpoint(),
+                debugging: log.isTraceEnabled(),
+                authentications: getAuthentications()) )
     }
 
     protected String getDisplayName() {
