@@ -24,6 +24,10 @@ import nextflow.executor.Executor
 import nextflow.extension.FilesEx
 import nextflow.ga4gh.tes.client.ApiClient
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
+import nextflow.ga4gh.tes.client.auth.ApiKeyAuth
+import nextflow.ga4gh.tes.client.auth.Authentication
+import nextflow.ga4gh.tes.client.auth.HttpBasicAuth
+import nextflow.ga4gh.tes.client.auth.OAuth
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -58,11 +62,11 @@ class TesExecutor extends Executor implements ExtensionPoint {
         super.register()
         uploadBinDir()
 
-        client = new TaskServiceApi( new ApiClient(basePath: getEndPoint()) )
+        client = new TaskServiceApi( new ApiClient(basePath: getEndpoint(), authentications: getAuthentications()) )
     }
 
     protected String getDisplayName() {
-        return "$name [${getEndPoint()}]"
+        return "$name [${getEndpoint()}]"
     }
 
     TaskServiceApi getClient() {
@@ -85,7 +89,7 @@ class TesExecutor extends Executor implements ExtensionPoint {
         }
     }
 
-    protected String getEndPoint() {
+    protected String getEndpoint() {
         def result = session.getConfigAttribute('executor.tes.endpoint', null)
         if( result )
             log.warn 'Config option `executor.tes.endpoint` is deprecated, use `tes.endpoint` instead'
@@ -93,6 +97,33 @@ class TesExecutor extends Executor implements ExtensionPoint {
             result = session.config.navigate('tes.endpoint', 'http://localhost:8000')
 
         log.debug "[TES] endpoint=$result"
+        return result
+    }
+
+    protected Map<String, Authentication> getAuthentications() {
+        def result = [:] as Map<String, Authentication>
+
+        // basic
+        def username = session.config.navigate('tes.basicUsername')
+        def password = session.config.navigate('tes.basicPassword')
+        if( username && password )
+            result['basic'] = new HttpBasicAuth(username: username, password: password)
+
+        // API key
+        def apiKeyParamMode = session.config.navigate('tes.apiKeyParamMode', 'query') as String
+        def apiKeyParamName = session.config.navigate('tes.apiKeyParamName') as String
+        def apiKey = session.config.navigate('tes.apiKey') as String
+        if( apiKeyParamName && apiKey ) {
+            def auth = new ApiKeyAuth(apiKeyParamMode, apiKeyParamName)
+            auth.setApiKey(apiKey)
+            result['apikey'] = auth
+        }
+
+        // OAuth
+        def oauthToken = session.config.navigate('tes.oauthToken')
+        if( oauthToken )
+            result['oauth'] = new OAuth(accessToken: oauthToken)
+
         return result
     }
 

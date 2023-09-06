@@ -144,6 +144,22 @@ tes.endpoint = '<endpoint>'
 
 The default endpoint is `http://localhost:8000`. It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will not be normalized and the requests to TES will fail.
 
+The TES API supports multiple forms of authentication:
+
+```groovy
+// basic
+tes.basicUsername = '<username>'
+tes.basicPassword = '<password>'
+
+// API key
+tes.apiKeyParamMode = '<mode>' // 'query' or 'header'
+tes.apiKeyParamName = '<param-name>'
+tes.apiKey = '<key>'
+
+// OAuth
+tes.oauthToken = '<token>'
+```
+
 :::{tip}
 You can deploy a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following command:
 
