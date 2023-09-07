@@ -1859,7 +1859,7 @@ See also: [cpus](#cpus), [memory](#memory), [time](#time)
 
 ### pod
 
-The `pod` directive allows the definition of pods specific settings, such as environment variables, secrets and config maps when using the {ref}`k8s-executor` executor.
+The `pod` directive allows the definition of pod specific settings, such as environment variables, secrets, and config maps, when using the {ref}`k8s-executor` executor.
 
 For example:
 
@@ -1873,9 +1873,9 @@ process your_task {
 }
 ```
 
-The above snippet defines an environment variable named `FOO` which value is `bar`.
+The above snippet defines an environment variable named `FOO` whose value is `bar`.
 
-When defined in the Nextflow configuration file, a pod setting can be defined using the canonical associative array syntax. For example:
+When defined in the Nextflow configuration file, pod settings should be defined as maps. For example:
 
 ```groovy
 process {
@@ -1883,106 +1883,159 @@ process {
 }
 ```
 
-When more than one setting needs to be provides they must be enclosed in a list definition as shown below:
+Multiple pod settings can be provided as a list of maps:
 
 ```groovy
 process {
-  pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
+  pod = [
+      [env: 'FOO', value: 'bar'],
+      [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
+  ]
 }
 ```
 
-The `pod` directive supports the following options:
+The following options are available:
 
-`affinity: <V>`
+`affinity: <config>`
 : :::{versionadded} 22.01.0-edge
   :::
-: Specifies affinity for which nodes the process should run on. See [Kubernetes affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for details.
+: Specifies the pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) with the given configuration.
 
-`annotation: <K>, value: <V>`
+`annotation: '<name>', value: '<value>'`
 : *Can be specified multiple times*
-: Defines a pod annotation with key `K` and value `V`.
+: Defines a pod [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) with the given name and value.
 
-`automountServiceAccountToken: <V>`
+`automountServiceAccountToken: true | false`
 : :::{versionadded} 22.01.0-edge
   :::
-: Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) into process pods. If `V` is true, service account token is automounted into task pods (default).
+: Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting) into the pod (default: `true`).
 
-`config: <C/K>, mountPath: </absolute/path>`
+`config: '<configMap>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
-: Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.
+: Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name and optional key to the given path. If the key is omitted, the path is interpreted as a directory and all entries in the `ConfigMap` are exposed in that path.
 
-`csi: <V>, mountPath: </absolute/path>`
+`csi: '<name>', mountPath: '</absolute/path>'`
 : :::{versionadded} 22.11.0-edge
   :::
 : *Can be specified multiple times*
-: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with config `V`to the path `/absolute/path`.
+: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) by name to the given path.
 
-`emptyDir: <V>, mountPath: </absolute/path>`
+`emptyDir: <config>, mountPath: '</absolute/path>'`
 : :::{versionadded} 22.11.0-edge
   :::
 : *Can be specified multiple times*
-: Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with configuration `V` to the path `/absolute/path`.
+: Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with the given configuration to the given path.
 
-`env: <E>, config: <C/K>`
+`env: '<name>', config: '<configMap>/<key>'`
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C`.
+: Defines an environment variable whose value is defined by the given [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) and key.
 
-`env: <E>, fieldPath: <V>`
+`env: '<name>', fieldPath: '<fieldPath>'`
 : :::{versionadded} 21.09.1-edge
   :::
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the `V` [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/).
+: Defines an environment variable whose value is defined by the given [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-pod-fields-as-values-for-environment-variables) value.
 
-`env: <E>, secret: <S/K>`
+: For example, the following pod option:
+
+  ```groovy
+  pod = [env: 'MY_NODE_NAME', fieldPath: 'spec.nodeName']
+  ```
+
+  Maps to the following pod spec:
+
+  ```yaml
+  env:
+    - name: MY_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+  ```
+
+`env: '<name>', secret: '<secret>/<key>'`
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S`.
+: Defines an environment variable whose value is defined by the given [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) and key.
 
-`env: <E>, value: <V>`
+`env: '<name>', value: '<value>'`
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the `V` string.
+: Defines an environment variable with the given name and value.
 
-`imagePullPolicy: <V>`
-: Specifies the strategy to be used to pull the container image e.g. `imagePullPolicy: 'Always'`.
+`imagePullPolicy: 'IfNotPresent' | 'Always' | 'Never'`
+: Specifies the [image pull policy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) used by the pod to pull the container image.
 
-`imagePullSecret: <V>`
-: Specifies the secret name to access a private container image registry. See [Kubernetes documentation](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) for details.
+`imagePullSecret: '<name>'`
+: Specifies the [image pull secret](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) used to access a private container image registry.
 
-`label: <K>, value: <V>`
+`label: '<name>', value: '<value>'`
 : *Can be specified multiple times*
-: Defines a pod label with key `K` and value `V`.
+: Defines a pod [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) with the given name and value.
 
-`nodeSelector: <V>`
-: Specifies which node the process will run on. See [Kubernetes nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) for details.
+`nodeSelector: <config>`
+: Specifies the [node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) with the given configuration.
 
-`priorityClassName: <V>`
+: The configuration can be a map or a string:
+
+  ```groovy
+  // map
+  pod = [nodeSelector: [disktype: 'ssd', cpu: 'intel']]
+
+  // string
+  pod = [nodeSelector: 'disktype=ssd,cpu=intel']
+  ```
+
+`priorityClassName: '<name>'`
 : :::{versionadded} 22.01.0-edge
   :::
 : Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.
 
-`privileged: <B>`
+`privileged: true | false`
 : :::{versionadded} 22.05.0-edge
   :::
-: Whether the process task should run as a *privileged* container (default: `false`)
+: Specifies whether the pod should run as a *privileged* container (default: `false`).
 
-`runAsUser: <UID>`
-: Specifies the user ID to be used to run the container. Shortcut for the `securityContext` option.
+`runAsUser: '<uid>'`
+: Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
-`secret: <S/K>, mountPath: </absolute/path>`
+`secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
-: Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.
+: Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name and optional key to the given path. If the key is omitted, the path is interpreted as a directory and all entries in the `Secret` are exposed in that path.
 
-`securityContext: <V>`
-: Specifies the pod security context. See [Kubernetes security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.
+`securityContext: <config>`
+: Specifies the pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) with the given configuration.
 
-`toleration: <V>`
+`toleration: <config>`
 : :::{versionadded} 22.04.0
   :::
 : *Can be specified multiple times*
-: Specifies a toleration for a node taint. See [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for details.
+: Specifies the pod [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) with the given configuration.
 
-`volumeClaim: <V>, mountPath: </absolute/path>`
+: The configuration should be a map corresponding to a single toleration rule. For example, the following pod options:
+
+  ```groovy
+  pod = [
+      [toleration: [key: 'key1', operator: 'Equal', value: 'value1', effect: 'NoSchedule']],
+      [toleration: [key: 'key1', operator: 'Exists', effect: 'NoSchedule']],
+  ]
+  ```
+
+  Maps to the following pod spec:
+
+  ```yaml
+  tolerations:
+    - key: "key1"
+      operator: "Equal"
+      value: "value1"
+      effect: "NoSchedule"
+    - key: "key1"
+      operator: "Exists"
+      effect: "NoSchedule"
+  ```
+
+`volumeClaim: '<name>', mountPath: '</absolute/path>' [, subPath: '<path>', readOnly: true | false]`
 : *Can be specified multiple times*
-: Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with name `V` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
+: Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with the given name to the given path.
+: The `subPath` option can be used to mount a sub-directory of the volume instead of its root.
+: The `readOnly` option can be used to mount the volume as read-only (default: `false`)
 
 (process-publishdir)=
 
