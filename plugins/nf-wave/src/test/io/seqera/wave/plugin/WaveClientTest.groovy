@@ -807,6 +807,95 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should create assets with spack recipe for singularity' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[commands: ['cmd-foo','cmd-bar']]]]]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                Bootstrap: docker
+                From: {{spack_runner_image}}
+                stage: final
+                 
+                %files from build
+                    /opt/spack-env /opt/spack-env
+                    /opt/software /opt/software
+                    /opt/._view /opt/._view
+                    /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                 
+                %post
+                    cmd-foo
+                    cmd-bar
+                '''.stripIndent()
+
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with spack file for singularity' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def spackFile = folder.resolve('spack.yml');
+        spackFile.text = '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+        and:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[basePackages: 'nano@1.2.3']]]]}
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                    Bootstrap: docker
+                    From: {{spack_runner_image}}
+                    stage: final
+                     
+                    %files from build
+                        /opt/spack-env /opt/spack-env
+                        /opt/software /opt/software
+                        /opt/._view /opt/._view
+                        /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                     
+                    %post
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.projectResources
+        !assets.condaFile
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5, nano@1.2.3]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should create assets with project resources' () {
         given:
         def MODULE_RES = Mock(ResourcesBundle)
