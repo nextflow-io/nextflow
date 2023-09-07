@@ -85,7 +85,7 @@ public class TaskServiceApi {
         Object localVarPostBody = null;
         
         // create path and map variables
-        String localVarPath = "/tasks/{id}:cancel"
+        String localVarPath = "/v1/tasks/{id}:cancel"
             .replaceAll("\\{" + "id" + "\\}", apiClient.escapeString(id.toString()));
 
         List<Pair> localVarQueryParams = new ArrayList<Pair>();
@@ -210,7 +210,7 @@ public class TaskServiceApi {
         Object localVarPostBody = body;
         
         // create path and map variables
-        String localVarPath = "/tasks";
+        String localVarPath = "/v1/tasks";
 
         List<Pair> localVarQueryParams = new ArrayList<Pair>();
         List<Pair> localVarCollectionQueryParams = new ArrayList<Pair>();
@@ -451,7 +451,7 @@ public class TaskServiceApi {
         Object localVarPostBody = null;
         
         // create path and map variables
-        String localVarPath = "/tasks/{id}"
+        String localVarPath = "/v1/tasks/{id}"
             .replaceAll("\\{" + "id" + "\\}", apiClient.escapeString(id.toString()));
 
         List<Pair> localVarQueryParams = new ArrayList<Pair>();
@@ -587,7 +587,7 @@ public class TaskServiceApi {
         Object localVarPostBody = null;
         
         // create path and map variables
-        String localVarPath = "/tasks";
+        String localVarPath = "/v1/tasks";
 
         List<Pair> localVarQueryParams = new ArrayList<Pair>();
         List<Pair> localVarCollectionQueryParams = new ArrayList<Pair>();
