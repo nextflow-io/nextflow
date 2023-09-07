@@ -288,14 +288,14 @@ class TraceRecordTest extends Specification {
         when:
         rec.env = 'aws_key=1234'
         then:
-        rec.store.env == 'aws_key=[secure]'
+        rec.@store.env == 'aws_key=[secure]'
     }
 
     def 'should retrieve safe env' () {
         given:
         def rec = new TraceRecord()
         when:
-        rec.store.env = 'aws_key=1234'
+        rec.@store.env = 'aws_key=1234'
         then:
         rec.env == 'aws_key=[secure]'
     }
