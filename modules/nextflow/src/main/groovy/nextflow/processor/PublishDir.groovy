@@ -384,11 +384,10 @@ class PublishDir {
             if( checkSourcePathConflicts(destination))
                 return
             
-            if( !overwrite )
-                return
-
-            FileHelper.deletePath(destination)
-            processFileImpl(source, destination)
+            if( overwrite ) {
+                FileHelper.deletePath(destination)
+                processFileImpl(source, destination)
+            }
         }
 
         notifyFilePublish(destination, source)
