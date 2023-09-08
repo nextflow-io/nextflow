@@ -68,7 +68,7 @@ import nextflow.ga4gh.tes.client.auth.OAuth;
 
 public class ApiClient {
 
-    private String basePath = "/ga4gh/tes/v1";
+    private String basePath = "http://localhost";
     private boolean debugging = false;
     private Map<String, String> defaultHeaderMap = new HashMap<String, String>();
     private String tempFolderPath = null;
