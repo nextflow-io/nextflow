@@ -106,23 +106,23 @@ class NextflowDSLImpl implements ASTTransformation {
 
     @Override
     void visit(ASTNode[] astNodes, SourceUnit unit) {
-        createVisitor(unit).visitClass((ClassNode)astNodes[1])
+        final node = (ClassNode)astNodes[1]
+        createVisitor(unit, node.getName()).visitClass(node)
     }
 
     /*
      * create the code visitor
      */
-    protected ClassCodeVisitorSupport createVisitor( SourceUnit unit ) {
-        new DslCodeVisitor(unit)
+    protected ClassCodeVisitorSupport createVisitor( SourceUnit unit, String className ) {
+        new DslCodeVisitor(unit, className)
     }
 
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
-
         final private SourceUnit unit
 
-        private String className
+        final private String className
 
         private String currentTaskName
 
@@ -141,15 +141,9 @@ class NextflowDSLImpl implements ASTTransformation {
         protected SourceUnit getSourceUnit() { unit }
 
 
-        DslCodeVisitor(SourceUnit unit) {
+        DslCodeVisitor(SourceUnit unit, String className) {
             this.unit = unit
-        }
-
-        @Override
-        void visitClass(ClassNode node) {
-            if( !className )
-                className = node.name
-            super.visitClass(node)
+            this.className = className
         }
 
         @Override
@@ -263,7 +257,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 stm.setExpression(loadCall)
             }
             if( isInvalidVariableAssignment(stm) ) {
-                syntaxError(stm, 'Cannot declare a script variable with the same name as the script')
+                syntaxError(stm, 'Cannot declare a variable identifier with the same name as the script file')
             }
             super.visitExpressionStatement(stm)
         }

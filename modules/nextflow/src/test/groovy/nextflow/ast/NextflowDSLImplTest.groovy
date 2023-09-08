@@ -133,7 +133,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
     }
 
     @Unroll
-    def 'should throw illegal name exception' () {
+    def 'should throw illegal name exception when a variable has the same name as the script file' () {
 
         given:
         def config = new CompilerConfiguration()
@@ -149,7 +149,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
         new GroovyShell(config).parse(scriptPath.toFile())
         then:
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.contains 'Cannot declare a script variable with the same name as the script'
+        e.message.contains 'Cannot declare a variable identifier with the same name as the script file'
 
         when:
         scriptPath.text = '''
@@ -163,7 +163,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
         new GroovyShell(config).parse(scriptPath.toFile())
         then:
         e = thrown(MultipleCompilationErrorsException)
-        e.message.contains 'Cannot declare a script variable with the same name as the script'
+        e.message.contains 'Cannot declare a variable identifier with the same name as the script file'
 
         when:
         scriptPath.text = '''
