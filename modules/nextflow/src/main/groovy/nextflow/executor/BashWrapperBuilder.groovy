@@ -198,7 +198,7 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
