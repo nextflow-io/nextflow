@@ -162,6 +162,7 @@ class CloudCacheStore implements CacheStore {
     }
 
     private Path getCachePath(HashCode key) {
-        dataPath.resolve(key.toString())
+        final keyStr = key.toString()
+        dataPath.resolve(keyStr.substring(0, 2)).resolve(keyStr.substring(2))
     }
 }
