@@ -39,22 +39,10 @@ class DiskResource {
     }
 
     DiskResource( Map opts ) {
-        this.request = toMemoryUnit(opts.request)
+        this.request = MemoryUnit.of(opts.request)
 
         if( opts.type )
             this.type = opts.type as String
-    }
-
-    private static MemoryUnit toMemoryUnit( value ) {
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
-
-        try {
-            return new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new IllegalArgumentException("Not a valid disk value: $value")
-        }
     }
 
 }

@@ -49,12 +49,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'arch',
             'beforeScript',
             'cache',
-            'conda',
-            'cpus',
-            'container',
-            'containerOptions',
             'cleanup',
             'clusterOptions',
+            'conda',
+            'container',
+            'containerOptions',
+            'cpus',
             'debug',
             'disk',
             'echo', // deprecated
@@ -62,9 +62,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'executor',
             'ext',
             'fair',
-            'machineType',
-            'queue',
             'label',
+            'machineType',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -73,9 +72,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
+            'queue',
+            'resourceLabels',
+            'resourceLimits',
             'scratch',
+            'secret',
             'shell',
             'spack',
+            'stageInMode',
+            'stageOutMode',
             'storeDir',
             'tag',
             'time',
@@ -85,12 +90,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'val',
             'each',
             'env',
-            'secret',
             'stdin',
             'stdout',
-            'stageInMode',
-            'stageOutMode',
-            'resourceLabels'
     ]
 
     /**
@@ -986,6 +987,16 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('arch', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    ProcessConfig resourceLimits( Map entries ) {
+        final validDirectives = ['cpus', 'memory', 'disk', 'time']
+        for( entry in entries )
+            if( entry.key !in validDirectives )
+                throw new IllegalArgumentException("Not a valid directive in `resourceLimits`: $entry.key")
+
+        configProperties.put('resourceLimits', entries)
         return this
     }
 

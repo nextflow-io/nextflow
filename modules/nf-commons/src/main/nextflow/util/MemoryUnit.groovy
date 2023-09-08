@@ -172,6 +172,15 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
         new MemoryUnit(value)
     }
 
+    static MemoryUnit of( value ) {
+        if( !value )
+            return null
+
+        return value instanceof MemoryUnit
+            ? value
+            : new MemoryUnit(value.toString().trim())
+    }
+
     boolean asBoolean() {
         return size != 0
     }
