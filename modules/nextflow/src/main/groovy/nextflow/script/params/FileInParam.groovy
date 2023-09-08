@@ -87,6 +87,22 @@ class FileInParam extends BaseInParam implements PathQualifier {
         return this
     }
 
+    boolean stageAsByClosure(){
+        Object value = null
+
+        if( filePattern != null  ) {
+            value = filePattern
+        }else if( bindObject instanceof Map ) {
+            assert !pathQualifier
+            def entry = bindObject.entrySet().first()
+            value = entry?.value
+        } else if( bindObject != null ) {
+            value = bindObject
+        }
+
+        return value instanceof Closure
+    }
+
     String getFilePattern(Map ctx = null) {
 
         if( filePattern != null  )

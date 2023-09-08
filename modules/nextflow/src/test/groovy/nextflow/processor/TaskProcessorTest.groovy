@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import nextflow.script.params.FileInParam
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -58,6 +60,12 @@ class TaskProcessorTest extends Specification {
         }
 
         @Override protected void createOperator() { }
+    }
+
+    FileInParam getInputParam( Object value ){
+        FileInParam inParam = new FileInParam(Mock(Binding), [])
+        inParam.bind( value )
+        return inParam
     }
 
 
@@ -209,8 +217,8 @@ class TaskProcessorTest extends Specification {
          * an index number is added to the specified name
          */
         when:
-        def list1 = processor.expandWildcards('file_name', [FileHolder.get('x')])
-        def list2 = processor.expandWildcards('file_name', [FileHolder.get('x'), FileHolder.get('y')] )
+        def list1 = processor.expandWildcards( getInputParam('file_name'), [FileHolder.get('x')])
+        def list2 = processor.expandWildcards( getInputParam('file_name'), [FileHolder.get('x'), FileHolder.get('y')] )
         then:
         list1 *. stageName  == ['file_name']
         list2 *. stageName  == ['file_name1', 'file_name2']
@@ -221,8 +229,8 @@ class TaskProcessorTest extends Specification {
          * When a collection of files is provided, the name is expanded to the index number
          */
         when:
-        list1 = processor.expandWildcards('file*.fa', [FileHolder.get('x')])
-        list2 = processor.expandWildcards('file_*.fa', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        list1 = processor.expandWildcards( getInputParam('file*.fa'), [FileHolder.get('x')])
+        list2 = processor.expandWildcards( getInputParam('file_*.fa'), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
         list1 instanceof ArrayBag
         list2 instanceof ArrayBag
@@ -236,9 +244,9 @@ class TaskProcessorTest extends Specification {
         def p0 = [FileHolder.get('0')]
         def p1_p4 = (1..4).collect { FileHolder.get(it.toString()) }
         def p1_p12 = (1..12).collect { FileHolder.get(it.toString()) }
-        list1 = processor.expandWildcards('file?.fa', p0 )
-        list2 = processor.expandWildcards('file_???.fa', p1_p4 )
-        def list3 = processor.expandWildcards('file_?.fa', p1_p12 )
+        list1 = processor.expandWildcards( getInputParam('file?.fa'), p0 )
+        list2 = processor.expandWildcards( getInputParam('file_???.fa'), p1_p4 )
+        def list3 = processor.expandWildcards( getInputParam('file_?.fa'), p1_p12 )
         then:
         list1 instanceof ArrayBag
         list2 instanceof ArrayBag
@@ -248,8 +256,8 @@ class TaskProcessorTest extends Specification {
         list3 *. stageName == ['file_1.fa', 'file_2.fa', 'file_3.fa', 'file_4.fa', 'file_5.fa', 'file_6.fa', 'file_7.fa', 'file_8.fa', 'file_9.fa', 'file_10.fa', 'file_11.fa', 'file_12.fa']
 
         when:
-        list1 = processor.expandWildcards('*', [FileHolder.get('a')])
-        list2 = processor.expandWildcards('*', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        list1 = processor.expandWildcards( getInputParam('*'), [FileHolder.get('a')])
+        list2 = processor.expandWildcards( getInputParam('*'), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
         list1 instanceof ArrayBag
         list2 instanceof ArrayBag
@@ -257,8 +265,8 @@ class TaskProcessorTest extends Specification {
         list2 *. stageName == ['x','y','z']
 
         when:
-        list1 = processor.expandWildcards('dir1/*', [FileHolder.get('a')])
-        list2 = processor.expandWildcards('dir2/*', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        list1 = processor.expandWildcards( getInputParam('dir1/*'), [FileHolder.get('a')])
+        list2 = processor.expandWildcards( getInputParam('dir2/*'), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
         list1 instanceof ArrayBag
         list2 instanceof ArrayBag
@@ -266,8 +274,8 @@ class TaskProcessorTest extends Specification {
         list2 *. stageName == ['dir2/x','dir2/y','dir2/z']
 
         when:
-        list1 = processor.expandWildcards('/dir/file*.fa', [FileHolder.get('x')])
-        list2 = processor.expandWildcards('dir/file_*.fa', [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        list1 = processor.expandWildcards( getInputParam('/dir/file*.fa'), [FileHolder.get('x')])
+        list2 = processor.expandWildcards( getInputParam('dir/file_*.fa'), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
         then:
         list1 instanceof ArrayBag
         list2 instanceof ArrayBag
@@ -275,39 +283,174 @@ class TaskProcessorTest extends Specification {
         list2 *. stageName == ['dir/file_1.fa', 'dir/file_2.fa', 'dir/file_3.fa']
 
         when:
-        list1 = processor.expandWildcards('dir/*', [FileHolder.get('file.fa')])
-        list2 = processor.expandWildcards('dir/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        list1 = processor.expandWildcards( getInputParam('dir/*'), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam('dir/*'), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
         then:
         list1 *. stageName == ['dir/file.fa']
         list2 *. stageName == ['dir/titi.fa', 'dir/toto.fa']
 
         when:
-        list1 = processor.expandWildcards('dir/*/*', [FileHolder.get('file.fa')])
-        list2 = processor.expandWildcards('dir/*/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        list1 = processor.expandWildcards( getInputParam('dir/*/*'), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam('dir/*/*'), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
         then:
         list1 *. stageName == ['dir/1/file.fa']
         list2 *. stageName == ['dir/1/titi.fa', 'dir/2/toto.fa']
 
         when:
-        list1 = processor.expandWildcards('dir/foo*/*', [FileHolder.get('file.fa')])
-        list2 = processor.expandWildcards('dir/foo*/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        list1 = processor.expandWildcards( getInputParam('dir/foo*/*'), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam('dir/foo*/*'), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
         then:
         list1 *. stageName == ['dir/foo1/file.fa']
         list2 *. stageName == ['dir/foo1/titi.fa', 'dir/foo2/toto.fa']
 
         when:
-        list1 = processor.expandWildcards('dir/??/*', [FileHolder.get('file.fa')])
-        list2 = processor.expandWildcards('dir/??/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        list1 = processor.expandWildcards( getInputParam('dir/??/*'), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam('dir/??/*'), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
         then:
         list1 *. stageName == ['dir/01/file.fa']
         list2 *. stageName == ['dir/01/titi.fa', 'dir/02/toto.fa']
 
         when:
-        list1 = processor.expandWildcards('dir/bar??/*', [FileHolder.get('file.fa')])
-        list2 = processor.expandWildcards('dir/bar??/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        list1 = processor.expandWildcards( getInputParam('dir/bar??/*'), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam('dir/bar??/*'), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
         then:
         list1 *. stageName == ['dir/bar01/file.fa']
         list2 *. stageName == ['dir/bar01/titi.fa', 'dir/bar02/toto.fa']
+
+    }
+
+    def 'should expand wildcards Closures same behavior'() {
+
+        setup:
+        def processor = [:] as TaskProcessor
+
+        /*
+         * The name do not contain any wildcards *BUT* when multiple files are provide
+         * an index number is added to the specified name
+         */
+        when:
+        def list1 = processor.expandWildcards( getInputParam({ 'file_name' }), [FileHolder.get('x')])
+        def list2 = processor.expandWildcards( getInputParam({ 'file_name' }), [FileHolder.get('x'), FileHolder.get('y')] )
+        then:
+        list1 *. stageName  == ['file_name']
+        list2 *. stageName  == ['file_name1', 'file_name2']
+
+
+        /*
+         * The star wildcard: when a single item is provided, it is simply ignored
+         * When a collection of files is provided, the name is expanded to the index number
+         */
+        when:
+        list1 = processor.expandWildcards( getInputParam({ 'file*.fa' }), [FileHolder.get('x')])
+        list2 = processor.expandWildcards( getInputParam({ 'file_*.fa' }), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        then:
+        list1 instanceof ArrayBag
+        list2 instanceof ArrayBag
+        list1 *. stageName == ['file.fa']
+        list2 *. stageName == ['file_1.fa', 'file_2.fa', 'file_3.fa']
+
+        /*
+         * The question mark wildcards *always* expand to an index number
+         */
+        when:
+        def p0 = [FileHolder.get('0')]
+        def p1_p4 = (1..4).collect { FileHolder.get(it.toString()) }
+        def p1_p12 = (1..12).collect { FileHolder.get(it.toString()) }
+        list1 = processor.expandWildcards( getInputParam({ 'file?.fa' }), p0 )
+        list2 = processor.expandWildcards( getInputParam({ 'file_???.fa' }), p1_p4 )
+        def list3 = processor.expandWildcards( getInputParam({ 'file_?.fa' }), p1_p12 )
+        then:
+        list1 instanceof ArrayBag
+        list2 instanceof ArrayBag
+        list3 instanceof ArrayBag
+        list1 *. stageName == ['file1.fa']
+        list2 *. stageName == ['file_001.fa', 'file_002.fa', 'file_003.fa', 'file_004.fa']
+        list3 *. stageName == ['file_1.fa', 'file_2.fa', 'file_3.fa', 'file_4.fa', 'file_5.fa', 'file_6.fa', 'file_7.fa', 'file_8.fa', 'file_9.fa', 'file_10.fa', 'file_11.fa', 'file_12.fa']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ '*' }), [FileHolder.get('a')])
+        list2 = processor.expandWildcards( getInputParam({ '*' }), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        then:
+        list1 instanceof ArrayBag
+        list2 instanceof ArrayBag
+        list1 *. stageName == ['a']
+        list2 *. stageName == ['x','y','z']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ 'dir1/*' }), [FileHolder.get('a')])
+        list2 = processor.expandWildcards( getInputParam({ 'dir2/*' }), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        then:
+        list1 instanceof ArrayBag
+        list2 instanceof ArrayBag
+        list1 *. stageName == ['dir1/a']
+        list2 *. stageName == ['dir2/x','dir2/y','dir2/z']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ '/dir/file*.fa' }), [FileHolder.get('x')])
+        list2 = processor.expandWildcards( getInputParam({ 'dir/file_*.fa' }), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        then:
+        list1 instanceof ArrayBag
+        list2 instanceof ArrayBag
+        list1 *. stageName == ['dir/file.fa']
+        list2 *. stageName == ['dir/file_1.fa', 'dir/file_2.fa', 'dir/file_3.fa']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ 'dir/*' }), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam({ 'dir/*' }), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/file.fa']
+        list2 *. stageName == ['dir/titi.fa', 'dir/toto.fa']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ 'dir/*/*' }), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam({ 'dir/*/*' }), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/1/file.fa']
+        list2 *. stageName == ['dir/1/titi.fa', 'dir/2/toto.fa']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ 'dir/foo*/*' }), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam({ 'dir/foo*/*' }), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/foo1/file.fa']
+        list2 *. stageName == ['dir/foo1/titi.fa', 'dir/foo2/toto.fa']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ 'dir/??/*' }), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam({ 'dir/??/*' }), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/01/file.fa']
+        list2 *. stageName == ['dir/01/titi.fa', 'dir/02/toto.fa']
+
+        when:
+        list1 = processor.expandWildcards( getInputParam({ 'dir/bar??/*' }), [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards( getInputParam({ 'dir/bar??/*' }), [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/bar01/file.fa']
+        list2 *. stageName == ['dir/bar01/titi.fa', 'dir/bar02/toto.fa']
+    }
+
+    def 'should expand wildcards Closures for naming'() {
+
+        setup:
+        def processor = [:] as TaskProcessor
+
+        when:
+        def list1 = processor.expandWildcards(getInputParam({ storePath.name * 2 }), [FileHolder.get('x'), FileHolder.get('y'), FileHolder.get('z')])
+        then:
+        list1*.stageName == ['xx','yy','zz']
+
+        when:
+        list1 = processor.expandWildcards(getInputParam({ storePath.parent.name + "/" + storePath.name }), [FileHolder.get('a/x/a.txt'), FileHolder.get('b/y/a.txt'), FileHolder.get('c/z/a.txt')])
+        def list2 = processor.expandWildcards(getInputParam('*'), [FileHolder.get('x/a.txt'), FileHolder.get('y/a.txt'), FileHolder.get('z/a.txt')])
+        then:
+        list1*.stageName == ['x/a.txt','y/a.txt','z/a.txt']
+        list2*.stageName == ['a.txt','a.txt','a.txt']
+
+        when:
+        list1 = processor.expandWildcards(getInputParam({ storePath.name }), [FileHolder.get('a.txt'), FileHolder.get('a.txt'), FileHolder.get('b.txt'), FileHolder.get('b.txt')])
+        then:
+        list1*.stageName == ['a.txt1','a.txt2','b.txt1','b.txt2']
     }
 
     @Unroll

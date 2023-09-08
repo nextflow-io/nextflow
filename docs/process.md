@@ -587,6 +587,26 @@ In most cases, you won't need to use dynamic file names, because each task is ex
 An example of when you may have to deal with that is when you have many input files in a task, and some of these files may have the same filename. In this case, a solution would be to use the `stageAs` option.
 :::
 
+### Dynamic input multiple file names
+
+In some cases, it might be necessary to stage in multiple files, but keep a folder hierarchy or change the
+naming for each file individually.
+Therefore, you can access the sourceObj and storePath of each input file.:
+
+```groovy
+fasta = Channel.fromPath( "/root/*/*.fa" ).buffer(size:10, remainder: true)
+process blastThemAll {
+
+    input:
+    file {"${sourceObj.parent}/${sourceObj.name}.fa"} from fasta
+
+    """
+    find . -name "*"
+    """
+
+}
+```
+
 ### Input type `env`
 
 The `env` qualifier allows you to define an environment variable in the process execution context based on the input value. For example:

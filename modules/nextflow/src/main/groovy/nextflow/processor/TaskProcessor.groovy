@@ -1891,30 +1891,45 @@ class TaskProcessor {
      * @return
      */
     @CompileStatic
-    protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
+    protected List<FileHolder> expandWildcards( FileInParam fileInParam, List<FileHolder> files, TaskContext ctx = null ) {
         assert files != null
 
         // use an unordered so that cache hash key is not affected by file entries order
         final result = new ArrayBag(files.size())
         if( files.size()==0 ) { return result }
 
-        if( !name || name == '*' ) {
-            result.addAll(files)
-            return result
-        }
-
-        if( !name.contains('*') && !name.contains('?') && files.size()>1 ) {
-            /*
-             * When name do not contain any wildcards *BUT* multiple files are provide
-             * it is managed like having a 'star' at the end of the file name
-             */
-            name += '*'
-        }
-
+        List<String> names = []
+        Map<String,Integer> namesMap = [:]
         for( int i=0; i<files.size(); i++ ) {
-            def holder = files[i]
-            def newName = expandWildcards0(name, holder.stageName, i+1, files.size())
-            result << holder.withName( newName )
+            FileHolder holder = files[i]
+            Map tmp = [storePath:holder.storePath,sourceObj:holder.sourceObj]
+            String newName = fileInParam.getFilePattern( ctx ? ctx as Map + tmp : tmp ) ?: '*'
+            //Count occurrence
+            namesMap.put( newName, (namesMap.get( newName ) ?: 0) + 1 )
+            names << newName
+        }
+
+        //replace for every name
+        Map<String,Integer> namesMapIndex = [:]
+        for( int i=0; i<files.size(); i++ ) {
+            FileHolder holder = files[i]
+            String newName = names[i]
+            String newNameWithoutStar = newName
+            if ( newName != '*' ) {
+                if (!newName.contains('*') && !newName.contains('?') && namesMap.get(newName) > 1) {
+                    /*
+                     * When name do not contain any wildcards *BUT* multiple files are provide
+                     * it is managed like having a 'star' at the end of the file name
+                     */
+                    newName += '*'
+                }
+                int cindex = namesMapIndex.getOrDefault(newNameWithoutStar, 0) + 1
+                newName = expandWildcards0(newName, holder.stageName, cindex, namesMap.get(newNameWithoutStar))
+                namesMapIndex.put( newNameWithoutStar, cindex )
+                result << holder.withName( newName )
+            } else {
+                result << holder
+            }
         }
 
         return result
@@ -2053,7 +2068,7 @@ class TaskProcessor {
             final val = entry.getValue()
             final fileParam = param as FileInParam
             final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
-            final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
+            final resolved = expandWildcards( fileParam, normalized, ctx )
             ctx.put( param.name, singleItemOrList(resolved, task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
