@@ -170,7 +170,7 @@ class ScriptParser {
         this.scriptPath = scriptPath
         final String className = computeClassName(scriptText)
         try {
-            final parsed = scriptPath && session.debug
+            final parsed = scriptPath
                     ? interpreter.parse(scriptPath.toFile())
                     : interpreter.parse(scriptText, className)
             if( parsed !instanceof BaseScript ){

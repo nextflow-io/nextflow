@@ -47,6 +47,7 @@ import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.expr.ListExpression
@@ -121,6 +122,8 @@ class NextflowDSLImpl implements ASTTransformation {
 
         final private SourceUnit unit
 
+        private String className
+
         private String currentTaskName
 
         private String currentLabel
@@ -140,6 +143,13 @@ class NextflowDSLImpl implements ASTTransformation {
 
         DslCodeVisitor(SourceUnit unit) {
             this.unit = unit
+        }
+
+        @Override
+        void visitClass(ClassNode node) {
+            if( !className )
+                className = node.name
+            super.visitClass(node)
         }
 
         @Override
@@ -252,7 +262,22 @@ class NextflowDSLImpl implements ASTTransformation {
                 final loadCall = new MethodCallExpression(methodCall, 'load0', new ArgumentListExpression(new VariableExpression('params')))
                 stm.setExpression(loadCall)
             }
+            if( isInvalidVariableAssignment(stm) ) {
+                syntaxError(stm, 'Cannot declare a script variable with the same name as the script')
+            }
             super.visitExpressionStatement(stm)
+        }
+
+        protected boolean isInvalidVariableAssignment(ExpressionStatement stm) {
+            if( stm.expression !instanceof BinaryExpression || stm.expression instanceof DeclarationExpression )
+                return false
+
+            def expr = (BinaryExpression)stm.expression
+            if( expr.leftExpression !instanceof VariableExpression )
+                return false
+
+            def variable = (VariableExpression)expr.leftExpression
+            return expr.operation.type == Types.ASSIGN && variable.name == className
         }
 
         protected void convertIncludeDef(MethodCallExpression call) {

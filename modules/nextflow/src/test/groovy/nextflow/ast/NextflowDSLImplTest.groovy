@@ -1,16 +1,21 @@
 package nextflow.ast
 
+import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
+import nextflow.script.ScriptParser
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import test.BaseSpec
+import spock.lang.Unroll
+import test.Dsl2Spec
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowDSLImplTest extends BaseSpec {
+class NextflowDSLImplTest extends Dsl2Spec {
 
     def 'should fetch method names' () {
 
@@ -127,14 +132,70 @@ class NextflowDSLImplTest extends BaseSpec {
         e.message.contains 'Process and workflow names cannot contain colon character'
     }
 
-    def 'should set process name in the script meta' () {
+    @Unroll
+    def 'should throw illegal name exception' () {
+
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def scriptPath = FileHelper.getLocalTempPath().resolve('hello.nf')
+
+        when:
+        scriptPath.text = '''
+            hello = 1
+            println hello
+            '''
+        new GroovyShell(config).parse(scriptPath.toFile())
+        then:
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains 'Cannot declare a script variable with the same name as the script'
+
+        when:
+        scriptPath.text = '''
+            def hello() {
+                hello = 1
+                println hello
+            }
+            
+            hello()
+            '''
+        new GroovyShell(config).parse(scriptPath.toFile())
+        then:
+        e = thrown(MultipleCompilationErrorsException)
+        e.message.contains 'Cannot declare a script variable with the same name as the script'
+
+        when:
+        scriptPath.text = '''
+            def hello = 1
+            println hello
+            '''
+        new GroovyShell(config).parse(scriptPath.toFile())
+        then:
+        noExceptionThrown()
+
+        when:
+        scriptPath.text = '''
+            def hello() {
+                def hello = 1
+                println hello
+            }
+            
+            hello()
+            '''
+        new GroovyShell(config).parse(scriptPath.toFile())
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        scriptPath.delete()
+    }
+
+    def 'should set process name in the script meta' () {
+        given:
+        def parser = new ScriptParser(new Session())
 
         def SCRIPT = '''
-                    
             process alpha {
               /hello/
             }
@@ -142,14 +203,14 @@ class NextflowDSLImplTest extends BaseSpec {
             process beta {
               /world/
             }
-
-        '''
+            
+            workflow {}
+            '''
 
         when:
-        def script = new GroovyShell(config).parse(SCRIPT)
+        parser.runScript(SCRIPT)
         then:
-        ScriptMeta.get(script).getDsl1ProcessNames() == ['alpha', 'beta']
-        ScriptMeta.get(script).getProcessNames() == ['alpha', 'beta'] as Set
+        ScriptMeta.get(parser.getScript()).getProcessNames() == ['alpha', 'beta'] as Set
     }
 
 }
