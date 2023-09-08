@@ -127,6 +127,7 @@ class TesExecutor extends Executor implements ExtensionPoint {
         if( oauthToken )
             result['oauth'] = new OAuth(accessToken: oauthToken)
 
+        log.debug "[TES] Authentication methods: ${result.keySet()}"
         return result
     }
 
