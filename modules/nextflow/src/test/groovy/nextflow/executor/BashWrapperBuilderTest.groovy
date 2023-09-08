@@ -566,19 +566,24 @@ class BashWrapperBuilderTest extends Specification {
         when:
         binding = newBashWrapperBuilder(statsEnabled: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
         binding.unstage_controls == null
         binding.containsKey('unstage_controls')
 
         when:
         binding = newBashWrapperBuilder(statsEnabled: true, scratch: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
         binding.unstage_controls == '''\
                         cp .command.out /work/dir/.command.out || true
                         cp .command.err /work/dir/.command.err || true
                         cp .command.trace /work/dir/.command.trace || true
                         '''.stripIndent()
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/usr/local/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/usr/local/bin/bash -ue /work/dir/.command.run nxf_trace'
 
     }
 
@@ -1041,6 +1046,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            shell >> BashWrapperBuilder.BASH
         }
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
