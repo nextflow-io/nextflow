@@ -37,13 +37,15 @@ class ArityParamTest extends Specification {
         then:
         param.arity.min == MIN
         param.arity.max == MAX
+        param.isNullable() == NULLABLE
         param.isSingle() == SINGLE
 
         where:
-        VALUE  | SINGLE | MIN | MAX
-        '1'    | true   | 1   | 1
-        '1..*' | false  | 1   | Integer.MAX_VALUE
-        '0..*' | false  | 0   | Integer.MAX_VALUE
+        VALUE  | NULLABLE | SINGLE | MIN | MAX
+        '1'    | false    | true   | 1   | 1
+        '0..1' | true     | true   | 0   | 1
+        '1..*' | false    | false  | 1   | Integer.MAX_VALUE
+        '0..*' | false    | false  | 0   | Integer.MAX_VALUE
     }
 
     @Unroll
@@ -58,6 +60,7 @@ class ArityParamTest extends Specification {
         where:
         MIN | MAX               | TWO   | STRING
         1   | 1                 | false | '1'
+        0   | 1                 | false | '0..1'
         1   | Integer.MAX_VALUE | true  | '1..*'
     }
 

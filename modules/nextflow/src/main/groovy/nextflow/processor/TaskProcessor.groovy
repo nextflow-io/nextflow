@@ -105,6 +105,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.Escape
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
+import nextflow.util.NullPath
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -1595,6 +1596,10 @@ class TaskProcessor {
                 def path = param.glob ? splitter.strip(filePattern) : filePattern
                 def file = workDir.resolve(path)
                 def exists = checkFileExists(file, param.followLinks)
+                if( !exists && param.isNullable() ) {
+                    file = new NullPath(path)
+                    exists = true
+                }
                 if( exists )
                     result = [file]
                 else
@@ -1612,7 +1617,7 @@ class TaskProcessor {
             }
         }
 
-        if( !param.isValidArity(allFiles.size()) )
+        if( !param.isValidArity(allFiles) )
             throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
 
         task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
@@ -1816,7 +1821,10 @@ class TaskProcessor {
         return new FileHolder(source, result)
     }
 
-    protected Path normalizeToPath( obj ) {
+    protected Path normalizeToPath( obj, boolean nullable=false ) {
+        if( obj instanceof NullPath && !nullable )
+            throw new ProcessUnrecoverableException("Path value cannot be null")
+
         if( obj instanceof Path )
             return obj
 
@@ -1839,7 +1847,7 @@ class TaskProcessor {
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, boolean nullable, FilePorter.Batch batch ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1849,7 +1857,7 @@ class TaskProcessor {
         for( def item : allItems ) {
 
             if( item instanceof Path || coerceToPath ) {
-                def path = normalizeToPath(item)
+                def path = normalizeToPath(item, nullable)
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
                 def holder = new FileHolder(target)
                 files << holder
@@ -2063,11 +2071,15 @@ class TaskProcessor {
             final param = entry.getKey()
             final val = entry.getValue()
             final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
+            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), param.isNullable(), batch)
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
 
-            if( !param.isValidArity(resolved.size()) )
-                throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
+            if( !param.isValidArity(resolved) ) {
+                final msg = param.isNullable()
+                        ? "expected a nullable file (0..1) but a list was provided"
+                        : "expected ${param.arity}, found ${resolved.size()}"
+                throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- ${msg}")
+            }
 
             ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
             count += resolved.size()

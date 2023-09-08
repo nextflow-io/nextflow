@@ -839,7 +839,7 @@ class TaskProcessorTest extends Specification {
         def proc = new TaskProcessor(); proc.executor = executor
 
         when:
-        def result = proc.normalizeInputToFiles(PATH.toString(), 0, true, batch)
+        def result = proc.normalizeInputToFiles(PATH.toString(), 0, true, false, batch)
         then:
         1 * executor.isForeignFile(PATH) >> false
         0 * batch.addToForeign(PATH) >> null
@@ -1043,7 +1043,7 @@ class TaskProcessorTest extends Specification {
 
         where:
         FILE_NAME       | FILE_VALUE                                | ARITY     | ERROR
-        'file.txt'      | []                                        | '0'       | 'Path arity max value must be greater or equals to 1'
+        'file.txt'      | []                                        | '0'       | 'Path arity max value must be at least 1'
         'file.txt'      | []                                        | '1'       | 'Incorrect number of input files for process `foo` -- expected 1, found 0'
         'f*'            | []                                        | '1..*'    | 'Incorrect number of input files for process `foo` -- expected 1..*, found 0'
         'f*'            | '/some/file.txt'                          | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'

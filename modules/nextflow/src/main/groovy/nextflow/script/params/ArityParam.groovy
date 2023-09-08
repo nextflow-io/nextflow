@@ -56,14 +56,34 @@ trait ArityParam {
     }
 
     /**
+     * Determine whether a null file is allowed.
+     */
+    boolean isNullable() {
+        return arity && arity.min == 0 && arity.max == 1
+    }
+
+    /**
      * Determine whether a single output file should be unwrapped.
      */
     boolean isSingle() {
         return !arity || arity.max == 1
     }
 
-    boolean isValidArity(int size) {
-        return !arity || arity.contains(size)
+    /**
+     * Determine whether a collection of files has valid arity.
+     *
+     * If the param is nullable, there should be exactly one file (either
+     * a real file or a null file)
+     *
+     * @param files
+     */
+    boolean isValidArity(Collection files) {
+        if( !arity )
+            return true
+
+        return isNullable()
+            ? files.size() == 1
+            : arity.contains(files.size())
     }
 
     @EqualsAndHashCode
@@ -72,12 +92,10 @@ trait ArityParam {
         int max
 
         Range(int min, int max) {
-            if( min<0 )
-                throw new IllegalArityException("Path arity min value must be greater or equals to 0")
-            if( max<1 )
-                throw new IllegalArityException("Path arity max value must be greater or equals to 1")
-            if( min==0 && max==1 )
-                throw new IllegalArityException("Path arity 0..1 is not allowed")
+            if( min < 0 )
+                throw new IllegalArityException("Path arity min value must be at least 0")
+            if( max < 1 )
+                throw new IllegalArityException("Path arity max value must be at least 1")
             this.min = min
             this.max = max
         }
