@@ -303,8 +303,13 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     int getCpus() {
-        final value = get('cpus')
-        value ? value as int : 1  // note: always return at least 1 cpus
+        def value = get('cpus')
+        if( !value )
+            return 1 // always return at least 1 cpus
+        value = value as int
+        if( value < 0 )
+            throw new AbortOperationException("Not a valid `cpus` value in process definition: $value")
+        return value
     }
 
     int getMaxRetries() {
