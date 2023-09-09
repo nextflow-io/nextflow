@@ -553,7 +553,7 @@ class AzFileSystem extends FileSystem {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException || t instanceof TimeoutException)
+        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException || t instanceof TimeoutException || t.cause instanceof TimeoutException)
         return Failsafe.with(policy).get(action)
     }
 }
