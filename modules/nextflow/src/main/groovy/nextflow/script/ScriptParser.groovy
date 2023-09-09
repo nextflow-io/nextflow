@@ -147,7 +147,7 @@ class ScriptParser {
 
         if( script instanceof CharSequence ) {
             final hash = Hashing
-                    .murmur3_32()
+                    .sipHash24()
                     .newHasher()
                     .putUnencodedChars(script.toString())
                     .hash()
