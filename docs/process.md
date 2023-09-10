@@ -483,12 +483,9 @@ Available options:
       path('one.txt', arity: '1')         // exactly one file is expected
       path('pair_*.txt', arity: '2')      // exactly two files are expected
       path('many_*.txt', arity: '1..*')   // one or more files are expected
-      path('optional.txt', arity: '0..1') // zero or one file is expected
   ```
 
   When a task is created, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
-
-  An input is *nullable* if the arity is exactly `0..1`. Nullable inputs can accept "null" files from nullable `path` outputs.
 
 `stageAs`
 : Specify how the file should be named in the task work directory:
@@ -954,12 +951,11 @@ Available options:
       path('one.txt', arity: '1')         // exactly one file is expected
       path('pair_*.txt', arity: '2')      // exactly two files are expected
       path('many_*.txt', arity: '1..*')   // one or more files are expected
-      path('optional.txt', arity: '0..1') // zero or one file is expected
   ```
 
-  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not. If the arity is *single* (i.e. either `1` or `0..1`), a single file will be emitted. Otherwise, a list will always be emitted, even if only one file is produced.
-
-  An output is *nullable* if the arity is exactly `0..1`. Whereas optional outputs emit nothing if the output file does not exist, nullable outputs emit a "null" file that can only be accepted by a nullable `path` input.
+  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity,
+  and fail if they do not. If the arity is `1`, a sole file object will be emitted. Otherwise, a list will always be emitted,
+  even if only one file is produced.
 
 `followLinks`
 : When `true` target files are return in place of any matching symlink (default: `true`)
