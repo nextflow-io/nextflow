@@ -16,7 +16,6 @@
 
 package nextflow.processor
 
-
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -27,6 +26,7 @@ import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
@@ -611,13 +611,21 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // check if it is terminated
-        if( handler.checkIfCompleted() ) {
-            log.debug "Task completed > $handler"
+        boolean timeout=false
+        if( handler.checkIfCompleted() || (timeout=handler.isSubmitTimeout()) ) {
+            final state = timeout ? 'timed-out' : 'completed'
+            log.debug "Task $state > $handler"
             // decrement forks count
             handler.decProcessForks()
 
             // since completed *remove* the task from the processing queue
             evict(handler)
+
+            // check if submit timeout is reached
+            if( timeout ) {
+                try { handler.kill() } catch( Throwable t ) { log.warn("Unable to cancel task ${handler.task.lazyName()}", t) }
+                handler.task.error = new ProcessSubmitTimeoutException("Task '${handler.task.lazyName()}' could not be submitted within specified 'maxAwait' time: ${handler.task.config.getMaxSubmitAwait()}")
+            }
 
             // finalize the tasks execution
             final fault = handler.task.processor.finalizeTask(handler.task)

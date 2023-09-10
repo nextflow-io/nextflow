@@ -269,8 +269,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         getDiskResource()?.getRequest()
     }
 
-    Duration getTime() {
-        def value = get('time')
+    private Duration getDuration0(String key) {
+        def value = get(key)
 
         if( !value )
             return null
@@ -285,8 +285,17 @@ class TaskConfig extends LazyMap implements Cloneable {
             new Duration(value.toString().trim())
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+            throw new AbortOperationException("Not a valid `$key` value in process definition: $value")
         }
+
+    }
+
+    Duration getTime() {
+        return getDuration0('time')
+    }
+
+    Duration getMaxSubmitAwait() {
+        return getDuration0('maxSubmitAwait')
     }
 
     boolean hasCpus() {
@@ -404,6 +413,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         else {
             return CmdLineHelper.splitter( opts.toString() )
         }
+    }
+
+    Integer getSubmitAttempt() {
+        get('submitAttempt') as Integer ?: 1
     }
 
     Integer getAttempt() {

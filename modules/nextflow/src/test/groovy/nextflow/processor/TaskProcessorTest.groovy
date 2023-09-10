@@ -483,19 +483,19 @@ class TaskProcessorTest extends Specification {
         task = new TaskRun()
         task.config = new TaskConfig()
         then:
-        proc.checkErrorStrategy(task, error, 1,1) == ErrorStrategy.TERMINATE
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.TERMINATE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'ignore')
         then:
-        proc.checkErrorStrategy(task, error, 10, 10) == ErrorStrategy.IGNORE
+        proc.checkErrorStrategy(task, error, 10, 10, 0) == ErrorStrategy.IGNORE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'finish')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.FINISH
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.FINISH
 
     }
 
@@ -509,19 +509,19 @@ class TaskProcessorTest extends Specification {
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'retry')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.TERMINATE
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.TERMINATE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'ignore')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.TERMINATE
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.TERMINATE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'finish')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.FINISH
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.FINISH
 
     }
 
@@ -540,23 +540,30 @@ class TaskProcessorTest extends Specification {
 
         when:
         task = new TaskRun(context: new TaskContext(holder: [:]))
-        task.config = new TaskConfig(errorStrategy:'retry', maxErrors: max_errors, maxRetries: max_retries )
+        task.config = new TaskConfig(errorStrategy: 'retry', maxErrors: MAX_ERRORS, maxRetries: MAX_RETRIES )
         then:
-        proc.checkErrorStrategy(task, error, task_err_count , proc_err_count) == strategy
+        proc.checkErrorStrategy(task, error, TASK_ERR_COUNT , PROC_ERR_COUNT, SUBMIT_RETRIES) == EXPECTED
 
         where:
-        max_retries | max_errors    |   task_err_count  |  proc_err_count   | strategy
-                1   |        3      |               0   |               0   | ErrorStrategy.RETRY
-                1   |        3      |               1   |               0   | ErrorStrategy.RETRY
-                1   |        3      |               2   |               0   | ErrorStrategy.TERMINATE
-                1   |        3      |               0   |               1   | ErrorStrategy.RETRY
-                1   |        3      |               0   |               2   | ErrorStrategy.RETRY
-                1   |        3      |               0   |               3   | ErrorStrategy.TERMINATE
-                3   |       -1      |               0   |               0   | ErrorStrategy.RETRY
-                3   |       -1      |               1   |               1   | ErrorStrategy.RETRY
-                3   |       -1      |               2   |               2   | ErrorStrategy.RETRY
-                3   |       -1      |               3   |               9   | ErrorStrategy.RETRY
-                3   |       -1      |               4   |               9   | ErrorStrategy.TERMINATE
+        MAX_RETRIES | MAX_ERRORS    |   TASK_ERR_COUNT  |  PROC_ERR_COUNT   | SUBMIT_RETRIES    | EXPECTED
+                1   |        3      |               0   |               0   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               1   |               0   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               2   |               0   | 0                 | ErrorStrategy.TERMINATE
+                1   |        3      |               0   |               1   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               0   |               2   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               0   |               3   | 0                 | ErrorStrategy.TERMINATE
+                3   |       -1      |               0   |               0   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               1   |               1   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               2   |               2   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               3   |               9   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               4   |               9   | 0                 | ErrorStrategy.TERMINATE
+         and:
+         // terminates when the submit retries is greater than the max retries
+                1   |       -1      |               0   |               0   | 1                 | ErrorStrategy.RETRY
+                1   |       -1      |               0   |               0   | 2                 | ErrorStrategy.TERMINATE
+                3   |       -1      |               0   |               0   | 2                 | ErrorStrategy.RETRY
+                3   |       -1      |               0   |               0   | 2                 | ErrorStrategy.RETRY
+                3   |       -1      |               0   |               0   | 4                 | ErrorStrategy.TERMINATE
 
     }
 

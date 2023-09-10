@@ -246,4 +246,21 @@ abstract class TaskHandler {
         task.processor.forksCount?.decrement()
     }
 
+    /**
+     * Check if the task submit could not be accomplished with the time specified via the
+     * `maxWait` directive
+     *
+     * @return
+     *      {@code true} if the task is in `submit` status after the amount of time specified
+     *      via {@code maxAwait} directive has passed, otherwise {@code false} is returned.
+     */
+    boolean isSubmitTimeout() {
+        final maxAwait = task.config.getMaxSubmitAwait()
+        if( !maxAwait )
+            return false
+        final now = System.currentTimeMillis()
+        if( isSubmitted() && now-submitTimeMillis>maxAwait.millis )
+            return true
+        return false
+    }
 }
