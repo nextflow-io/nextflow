@@ -18,6 +18,7 @@ package nextflow.script.params
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import nextflow.exception.IllegalArityException
 
 /**
  * Implements an arity option for process inputs and outputs.
@@ -51,7 +52,7 @@ trait ArityParam {
             }
         }
 
-        throw new IllegalArgumentException("Path arity should be a number (e.g. '1') or a range (e.g. '1..*')")
+        throw new IllegalArityException("Path arity should be a number (e.g. '1') or a range (e.g. '1..*')")
     }
 
     /**
@@ -72,11 +73,11 @@ trait ArityParam {
 
         Range(int min, int max) {
             if( min<0 )
-                throw new IllegalArgumentException("Path arity min value must be greater or equals to 0")
+                throw new IllegalArityException("Path arity min value must be greater or equals to 0")
             if( max<1 )
-                throw new IllegalArgumentException("Path arity max value must be greater or equals to 1")
+                throw new IllegalArityException("Path arity max value must be greater or equals to 1")
             if( min==0 && max==1 )
-                throw new IllegalArgumentException("Path arity 0..1 is not allowed")
+                throw new IllegalArityException("Path arity 0..1 is not allowed")
             this.min = min
             this.max = max
         }

@@ -26,6 +26,7 @@ import groovyx.gpars.agent.Agent
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
+import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
@@ -1037,7 +1038,7 @@ class TaskProcessorTest extends Specification {
 
         processor.makeTaskContextStage2(task, [(param):FILE_VALUE], 0 )
         then:
-        def e = thrown(IllegalArgumentException)
+        def e = thrown(IllegalArityException)
         e.message == ERROR
 
         where:
@@ -1095,6 +1096,7 @@ class TaskProcessorTest extends Specification {
         '*'             | []                                        | true      | false     | '0..*'        | []
     }
 
+    @Unroll
     def 'should report output error' () {
         given:
         def executor = Mock(Executor)
@@ -1123,17 +1125,18 @@ class TaskProcessorTest extends Specification {
         processor.fetchResultFiles(_,_,_) >> RESULTS
         processor.checkFileExists(_,_) >> EXISTS
         and:
-        thrown(ERROR)
+        def e = thrown(EXCEPTION)
+        e.message == ERROR
 
         where:
-        FILE_NAME       | RESULTS                                   | EXISTS    | OPTIONAL  | ARITY         | ERROR
-        'file.txt'      | null                                      | false     | false     | null          | MissingFileException
-        '*'             | []                                        | true      | false     | null          | MissingFileException
+        FILE_NAME       | RESULTS                                   | EXISTS    | OPTIONAL  | ARITY         | EXCEPTION             | ERROR
+        'file.txt'      | null                                      | false     | false     | null          | MissingFileException  | "Missing output file(s) `file.txt` expected by process `foo`"
+        '*'             | []                                        | true      | false     | null          | MissingFileException  | "Missing output file(s) `*` expected by process `foo`"
         and:
-        'file.txt'      | null                                      | true      | false     | '2'           | IllegalArgumentException
-        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2'           | IllegalArgumentException
-        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2..*'        | IllegalArgumentException
-        '*'             | []                                        | true      | true      | '1..*'        | IllegalArgumentException
+        'file.txt'      | null                                      | true      | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2..*, found 1"
+        '*'             | []                                        | true      | true      | '1..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 1..*, found 0"
 
     }
 

@@ -57,6 +57,7 @@ import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
+import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
@@ -1612,7 +1613,7 @@ class TaskProcessor {
         }
 
         if( !param.isValidArity(allFiles.size()) )
-            throw new IllegalArgumentException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
+            throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
 
         task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
 
@@ -2066,7 +2067,7 @@ class TaskProcessor {
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
 
             if( !param.isValidArity(resolved.size()) )
-                throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
+                throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
 
             ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
             count += resolved.size()
