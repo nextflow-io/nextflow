@@ -54,7 +54,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return inChannel
     }
 
-    BaseInParam(ProcessConfig config ) {
+    BaseInParam( ProcessConfig config ) {
         this(config.getOwnerScript().getBinding(), config.getInputs())
     }
 

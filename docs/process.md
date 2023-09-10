@@ -471,22 +471,41 @@ workflow {
 }
 ```
 
-The `stageAs` option allows you to control how the file should be named in the task work directory. You can provide a specific name or a pattern as described in the [Multiple input files](#multiple-input-files) section:
+Available options:
 
-```groovy
-process foo {
+`arity`
+: :::{versionadded} 23.09.0-edge
+  :::
+: Specify the number of expected files. Can be a number or a range:
+
+  ```groovy
   input:
-  path x, stageAs: 'data.txt'
+      path('one.txt', arity: '1')         // exactly one file is expected
+      path('pair_*.txt', arity: '2')      // exactly two files are expected
+      path('many_*.txt', arity: '1..*')   // one or more files are expected
+  ```
 
-  """
-  your_command --in data.txt
-  """
-}
+  When a task is created, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
 
-workflow {
-  foo('/some/data/file.txt')
-}
-```
+`stageAs`
+: Specify how the file should be named in the task work directory:
+
+  ```groovy
+  process foo {
+    input:
+    path x, stageAs: 'data.txt'
+
+    """
+    your_command --in data.txt
+    """
+  }
+
+  workflow {
+    foo('/some/data/file.txt')
+  }
+  ```
+
+  Can be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
 
 :::{note}
 Process `path` inputs have nearly the same interface as described in {ref}`script-file-io`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
@@ -921,6 +940,22 @@ workflow {
 In the above example, the `randomNum` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
 
 Available options:
+
+`arity`
+: :::{versionadded} 23.09.0-edge
+  :::
+: Specify the number of expected files. Can be a number or a range:
+
+  ```groovy
+  output:
+      path('one.txt', arity: '1')         // exactly one file is expected
+      path('pair_*.txt', arity: '2')      // exactly two files are expected
+      path('many_*.txt', arity: '1..*')   // one or more files are expected
+  ```
+
+  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity,
+  and fail if they do not. If the arity is `1`, a sole file object will be emitted. Otherwise, a list will always be emitted,
+  even if only one file is produced.
 
 `followLinks`
 : When `true` target files are return in place of any matching symlink (default: `true`)
