@@ -61,8 +61,8 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessRetryableException
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
@@ -1570,7 +1570,6 @@ class TaskProcessor {
         task.setOutput(param, stdout)
     }
 
-
     protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir, Map context ) {
 
         final List<Path> allFiles = []
@@ -1594,11 +1593,7 @@ class TaskProcessor {
             else {
                 def path = param.glob ? splitter.strip(filePattern) : filePattern
                 def file = workDir.resolve(path)
-                def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
-                if( !exists && param.isNullable() ) {
-                    file = null
-                    exists = true
-                }
+                def exists = checkFileExists(file, param.followLinks)
                 if( exists )
                     result = [file]
                 else
@@ -1623,6 +1618,9 @@ class TaskProcessor {
 
     }
 
+    protected boolean checkFileExists(Path file, boolean followLinks) {
+        followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+    }
 
     protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
 
@@ -1840,7 +1838,7 @@ class TaskProcessor {
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, boolean nullable, FilePorter.Batch batch ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1848,8 +1846,6 @@ class TaskProcessor {
         // use a bag so that cache hash key is not affected by file entries order
         def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
-            if( item == null && nullable )
-                continue
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
@@ -2065,8 +2061,9 @@ class TaskProcessor {
         for( Map.Entry<FileInParam,?> entry : secondPass.entrySet() ) {
             final param = entry.getKey()
             final val = entry.getValue()
-            final normalized = normalizeInputToFiles(val, count, param.isPathQualifier(), param.isNullable(), batch)
-            final resolved = expandWildcards( param.getFilePattern(ctx), normalized )
+            final fileParam = param as FileInParam
+            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
+            final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
 
             if( !param.isValidArity(resolved.size()) )
                 throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")

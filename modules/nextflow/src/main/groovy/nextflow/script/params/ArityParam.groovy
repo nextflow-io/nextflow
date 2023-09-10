@@ -38,10 +38,10 @@ trait ArityParam {
             return this
         }
 
-        def tokens = value.tokenize('..')
+        final tokens = value.tokenize('..')
         if( tokens.size() == 2 ) {
-            def min = tokens[0]
-            def max = tokens[1]
+            final min = tokens[0]
+            final max = tokens[1]
             if( min.isInteger() && (max == '*' || max.isInteger()) ) {
                 this.arity = new Range(
                     min.toInteger(),
@@ -52,13 +52,6 @@ trait ArityParam {
         }
 
         throw new IllegalArgumentException("Path arity should be a number (e.g. '1') or a range (e.g. '1..*')")
-    }
-
-    /**
-     * Determine whether a null file is allowed.
-     */
-    boolean isNullable() {
-        return arity && arity.min == 0 && arity.max == 1
     }
 
     /**
@@ -78,6 +71,12 @@ trait ArityParam {
         int max
 
         Range(int min, int max) {
+            if( min<0 )
+                throw new IllegalArgumentException("Path arity min value must be greater or equals to 0")
+            if( max<1 )
+                throw new IllegalArgumentException("Path arity max value must be greater or equals to 1")
+            if( min==0 && max==1 )
+                throw new IllegalArgumentException("Path arity 0..1 is not allowed")
             this.min = min
             this.max = max
         }

@@ -508,7 +508,7 @@ Available options:
   }
   ```
 
-  Cab be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
+  Can be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
 
 :::{note}
 Process `path` inputs have nearly the same interface as described in {ref}`script-file-io`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
