@@ -198,7 +198,9 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
+        // see https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
