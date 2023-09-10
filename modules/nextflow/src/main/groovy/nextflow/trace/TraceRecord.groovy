@@ -237,9 +237,10 @@ class TraceRecord implements Serializable {
         }
     }
 
-
     @PackageScope
     Map<String,Object> store
+
+    Map<String,Object> getStore() { store }
 
     @Memoized
     Set<String> keySet() {
@@ -401,7 +402,7 @@ class TraceRecord implements Serializable {
     }
 
     String toString() {
-        "${this.class.simpleName} ${store}"
+        "${this.class.simpleName} ${this.store}"
     }
 
 
