@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+2.1.2 - 10 Sep
+- Disable staging script for remote work dir (#4282) [80f7cd46]
+- Allow setting shell directive when using the trace file. (#4210) [7d6ad624]
+- Bump groovy 3.0.19 [cb411208]
+
 2.1.1 - 5 Aug 2023
 - Fix glob resolution for remove files [19a72c40]
 - Fix Option fixOwnership traverse parent directories [f2a2ea35]
