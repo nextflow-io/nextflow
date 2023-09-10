@@ -57,12 +57,13 @@ import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
+import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessRetryableException
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
@@ -1570,7 +1571,6 @@ class TaskProcessor {
         task.setOutput(param, stdout)
     }
 
-
     protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir, Map context ) {
 
         final List<Path> allFiles = []
@@ -1594,7 +1594,7 @@ class TaskProcessor {
             else {
                 def path = param.glob ? splitter.strip(filePattern) : filePattern
                 def file = workDir.resolve(path)
-                def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+                def exists = checkFileExists(file, param.followLinks)
                 if( exists )
                     result = [file]
                 else
@@ -1604,7 +1604,7 @@ class TaskProcessor {
             if( result )
                 allFiles.addAll(result)
 
-            else if( !param.optional ) {
+            else if( !param.optional && (!param.arity || param.arity.min > 0) ) {
                 def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
                 if( inputsRemovedFlag )
                     msg += " (note: input files are not included in the default matching set)"
@@ -1612,10 +1612,16 @@ class TaskProcessor {
             }
         }
 
-        task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
+        if( !param.isValidArity(allFiles.size()) )
+            throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
+
+        task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
 
     }
 
+    protected boolean checkFileExists(Path file, boolean followLinks) {
+        followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+    }
 
     protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
 
@@ -1814,7 +1820,7 @@ class TaskProcessor {
         if( obj instanceof Path )
             return obj
 
-        if( !obj == null )
+        if( obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
         
         if( !(obj instanceof CharSequence) )
@@ -1856,10 +1862,10 @@ class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items, ScriptType type ) {
+    protected singleItemOrList( List<FileHolder> items, boolean single, ScriptType type ) {
         assert items != null
 
-        if( items.size() == 1 ) {
+        if( items.size() == 1 && single ) {
             return makePath(items[0],type)
         }
 
@@ -2059,7 +2065,11 @@ class TaskProcessor {
             final fileParam = param as FileInParam
             final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx.put( param.name, singleItemOrList(resolved, task.type) )
+
+            if( !param.isValidArity(resolved.size()) )
+                throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
+
+            ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1

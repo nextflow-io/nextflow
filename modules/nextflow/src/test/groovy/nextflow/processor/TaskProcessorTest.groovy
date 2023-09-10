@@ -26,6 +26,8 @@ import groovyx.gpars.agent.Agent
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
+import nextflow.exception.IllegalArityException
+import nextflow.exception.MissingFileException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -37,6 +39,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
@@ -44,7 +47,6 @@ import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -186,13 +188,19 @@ class TaskProcessorTest extends Specification {
 
         when:
         def list = [ FileHolder.get(path1, 'x_file_1') ]
-        def result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
+        def result = processor.singleItemOrList(list, true, ScriptType.SCRIPTLET)
         then:
         result.toString() == 'x_file_1'
 
         when:
+        list = [ FileHolder.get(path1, 'x_file_1') ]
+        result = processor.singleItemOrList(list, false, ScriptType.SCRIPTLET)
+        then:
+        result*.toString() == ['x_file_1']
+
+        when:
         list = [ FileHolder.get(path1, 'x_file_1'), FileHolder.get(path2, 'x_file_2'), FileHolder.get(path3, 'x_file_3') ]
-        result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
+        result = processor.singleItemOrList(list, false, ScriptType.SCRIPTLET)
         then:
         result*.toString() == [ 'x_file_1',  'x_file_2',  'x_file_3']
 
@@ -964,4 +972,172 @@ class TaskProcessorTest extends Specification {
         result.config.getCpus() == 10
         result.config.getMemory() == MemoryUnit.of('100 GB')
     }
+
+    @Unroll
+    def 'should validate inputs arity' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+
+        when:
+        def param = new FileInParam(new Binding(), [])
+                .setPathQualifier(true)
+                .bind(FILE_NAME) as FileInParam
+        if( ARITY )
+            param.setArity(ARITY)
+
+        processor.makeTaskContextStage2(task, [(param):FILE_VALUE], 0 )
+        then:
+        context.get(FILE_NAME) == EXPECTED
+
+        where:
+        FILE_NAME       | FILE_VALUE                                | ARITY     | EXPECTED
+        'file.txt'      | '/some/file.txt'                          | null      | Path.of('/some/file.txt')
+        'file.*'        | '/some/file.txt'                          | null      | Path.of('/some/file.txt')
+        'file.*'        | ['/some/file1.txt','/some/file2.txt']     | null      | [Path.of('/some/file1.txt'), Path.of('/some/file2.txt')]
+        '*'             | ['/some/file1.txt','/some/file2.txt']     | null      | [Path.of('/some/file1.txt'), Path.of('/some/file2.txt')]
+        '*'             | []                                        | null      | []
+
+        and:
+        'file.txt'      | '/some/file.txt'                          | '1'      | Path.of('/some/file.txt')
+        'f*'            | '/some/file.txt'                          | '1'      | Path.of('/some/file.txt')
+        'f*'            | '/some/file.txt'                          | '1..2'   | [Path.of('/some/file.txt')]
+        'f*'            | '/some/file.txt'                          | '1..*'   | [Path.of('/some/file.txt')]
+        'f*'            | '/some/file.txt'                          | '1..*'   | [Path.of('/some/file.txt')]
+        'f*'            | ['/some/file.txt']                        | '1..*'   | [Path.of('/some/file.txt')]
+        'f*'            | ['/some/file1.txt', '/some/file2.txt']    | '1..*'   | [Path.of('/some/file1.txt'), Path.of('/some/file2.txt')]
+    }
+
+    def 'should throw an arity error' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+
+        when:
+        def param = new FileInParam(new Binding(), [])
+                .setPathQualifier(true)
+                .bind(FILE_NAME) as FileInParam
+        if( ARITY )
+            param.setArity(ARITY)
+
+        processor.makeTaskContextStage2(task, [(param):FILE_VALUE], 0 )
+        then:
+        def e = thrown(IllegalArityException)
+        e.message == ERROR
+
+        where:
+        FILE_NAME       | FILE_VALUE                                | ARITY     | ERROR
+        'file.txt'      | []                                        | '0'       | 'Path arity max value must be greater or equals to 1'
+        'file.txt'      | []                                        | '1'       | 'Incorrect number of input files for process `foo` -- expected 1, found 0'
+        'f*'            | []                                        | '1..*'    | 'Incorrect number of input files for process `foo` -- expected 1..*, found 0'
+        'f*'            | '/some/file.txt'                          | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
+        'f*'            | ['/some/file.txt']                        | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
+        'f*'            | ['/a','/b']                               | '3'       | 'Incorrect number of input files for process `foo` -- expected 3, found 2'
+    }
+
+    def 'should validate collect output files' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+        and:
+        def workDir = Path.of('/work')
+
+        when:
+        def param = new FileOutParam(new Binding(), [])
+                .setPathQualifier(true)
+                .optional(OPTIONAL)
+                .bind(FILE_NAME) as FileOutParam
+        if( ARITY )
+            param.setArity(ARITY)
+        and:
+        processor.collectOutFiles(task, param, workDir, context)
+        then:
+        processor.fetchResultFiles(_,_,_) >> RESULTS
+        processor.checkFileExists(_,_) >> EXISTS
+        and:
+        task.getOutputs().get(param) == EXPECTED
+
+        where:
+        FILE_NAME       | RESULTS                                   | EXISTS    | OPTIONAL  | ARITY         | EXPECTED
+        'file.txt'      | null                                      | true      | false     | null          | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | null          | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | true      | false     | null          | [Path.of('/work/A'), Path.of('/work/B')]
+        '*'             | []                                        | true      | true      | null          | []
+        and:
+        'file.txt'      | null                                      | true      | false     | '1'           | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '1'           | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '1..*'        | [Path.of('/work/file.txt')]
+        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | true      | false     | '2'           | [Path.of('/work/A'), Path.of('/work/B')]
+        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | true      | false     | '1..*'        | [Path.of('/work/A'), Path.of('/work/B')]
+        '*'             | []                                        | true      | false     | '0..*'        | []
+    }
+
+    @Unroll
+    def 'should report output error' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+        and:
+        def workDir = Path.of('/work')
+
+        when:
+        def param = new FileOutParam(new Binding(), [])
+                .setPathQualifier(true)
+                .optional(OPTIONAL)
+                .bind(FILE_NAME) as FileOutParam
+        if( ARITY )
+            param.setArity(ARITY)
+        and:
+        processor.collectOutFiles(task, param, workDir, context)
+        then:
+        processor.fetchResultFiles(_,_,_) >> RESULTS
+        processor.checkFileExists(_,_) >> EXISTS
+        and:
+        def e = thrown(EXCEPTION)
+        e.message == ERROR
+
+        where:
+        FILE_NAME       | RESULTS                                   | EXISTS    | OPTIONAL  | ARITY         | EXCEPTION             | ERROR
+        'file.txt'      | null                                      | false     | false     | null          | MissingFileException  | "Missing output file(s) `file.txt` expected by process `foo`"
+        '*'             | []                                        | true      | false     | null          | MissingFileException  | "Missing output file(s) `*` expected by process `foo`"
+        and:
+        'file.txt'      | null                                      | true      | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2..*, found 1"
+        '*'             | []                                        | true      | true      | '1..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 1..*, found 0"
+
+    }
+
 }
