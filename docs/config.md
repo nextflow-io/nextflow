@@ -640,7 +640,7 @@ The following settings are available:
 : Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
 
 `executor.queueSize`
-: The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
+: The number of tasks the executor will handle in a parallel manner. A queue size of zero corresponds to no limit. Default varies for each executor (see below).
 
 `executor.queueStatInterval`
 : Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.
@@ -1294,7 +1294,10 @@ The `singularity` scope controls how [Singularity](https://sylabs.io/singularity
 The following settings are available:
 
 `singularity.autoMounts`
-: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `false`).
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `true`).
+: :::{versionchanged} 23.09.0-edge
+  Default value was changed from `false` to `true`.
+  :::
 
 `singularity.cacheDir`
 : The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
@@ -1538,9 +1541,6 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 22.08.0-edge
   :::
 : Enable the use of Conda recipes defined by using the {ref}`process-conda` directive. (default: `false`).
-
-`NXF_DEBUG`
-: Defines scripts debugging level: `1` dump task environment variables in the task log file; `2` enables command script execution tracing; `3` enables command wrapper execution tracing.
 
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge

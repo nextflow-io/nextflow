@@ -75,9 +75,8 @@ class BashWrapperBuilder {
         /*
          * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
          * - 0: no debug
-         * - 1: dump current environment in the `.command.log` file
-         * - 2: trace the execution of user script adding the `set -x` flag
-         * - 3: trace the execution of wrapper scripts
+         * - 1: dump current environment in the `.command.log` file and trace the execution of user script
+         * - 2: trace the execution of wrapper scripts
          */
         def str = System.getenv('NXF_DEBUG')
         try {
@@ -199,7 +198,9 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
+        // see https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
@@ -468,7 +469,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${interpreter} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
@@ -592,10 +593,6 @@ class BashWrapperBuilder {
         // add the user owner variable in order to patch root owned files problem
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
-
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)

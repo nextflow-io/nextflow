@@ -392,20 +392,30 @@ Mark = Williams
 Sudha = Kumari
 ```
 
-A closure has two other important features. First, it can access variables in the scope where it is defined, so that it can interact with them.
-
-Second, a closure can be defined in an anonymous manner, meaning that it is not given a name, and is defined in the place where it needs to be used.
-
-As an example showing both these features, see the following code fragment:
+Closures can also access variables outside of their scope, and they can be used anonymously, that is without assigning them to a variable. Here is an example that demonstrates both of these things:
 
 ```groovy
-myMap = ["China": 1 , "India" : 2, "USA" : 3]
+myMap = ["China": 1, "India": 2, "USA": 3]
 
 result = 0
-myMap.keySet().each( { result+= myMap[it] } )
+myMap.keySet().each { result += myMap[it] }
 
 println result
 ```
+
+A closure can also declare local variables that exist only for the lifetime of the closure:
+
+```groovy
+result = 0
+myMap.keySet().each {
+  def count = myMap[it]
+  result += count
+}
+```
+
+:::{warning}
+Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a race condition.
+:::
 
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
 
