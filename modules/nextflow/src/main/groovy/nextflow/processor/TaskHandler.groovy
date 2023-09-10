@@ -255,7 +255,7 @@ abstract class TaskHandler {
      *      via {@code maxAwait} directive has passed, otherwise {@code false} is returned.
      */
     boolean isSubmitTimeout() {
-        final maxAwait = task.config.getMaxAwait()
+        final maxAwait = task.config.getMaxSubmitAwait()
         if( !maxAwait )
             return false
         final now = System.currentTimeMillis()

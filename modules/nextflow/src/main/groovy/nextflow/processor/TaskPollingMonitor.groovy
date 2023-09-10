@@ -624,7 +624,7 @@ class TaskPollingMonitor implements TaskMonitor {
             // check if submit timeout is reached
             if( timeout ) {
                 try { handler.kill() } catch( Throwable t ) { log.warn("Unable to cancel task ${handler.task.lazyName()}", t) }
-                handler.task.error = new ProcessSubmitTimeoutException("Task '${handler.task.lazyName()}' could not be submitted within specified 'maxAwait' time: ${handler.task.config.getMaxAwait()}")
+                handler.task.error = new ProcessSubmitTimeoutException("Task '${handler.task.lazyName()}' could not be submitted within specified 'maxAwait' time: ${handler.task.config.getMaxSubmitAwait()}")
             }
 
             // finalize the tasks execution

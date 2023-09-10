@@ -212,7 +212,7 @@ class TaskHandlerTest extends Specification {
         def handler = Spy(TaskHandler)
         handler.status = TaskStatus.SUBMITTED
         handler.task = Mock(TaskRun) {
-            getConfig() >> Mock(TaskConfig) { getMaxAwait() >> Duration.of('500ms') }
+            getConfig() >> Mock(TaskConfig) { getMaxSubmitAwait() >> Duration.of('500ms') }
         }
 
         when:

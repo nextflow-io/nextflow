@@ -294,8 +294,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         return getDuration0('time')
     }
 
-    Duration getMaxAwait() {
-        return getDuration0('maxAwait')
+    Duration getMaxSubmitAwait() {
+        return getDuration0('maxSubmitAwait')
     }
 
     boolean hasCpus() {
