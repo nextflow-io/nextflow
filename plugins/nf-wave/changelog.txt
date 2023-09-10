@@ -1,5 +1,15 @@
 nf-wave changelog
 ==================
+0.12.0 - 10 Sep 2023
+- Add support for Spack to Singularity builds [23c4ec1d]
+- Add inspect command (#4069) [090c31ce]
+- Add support for Wave native build for singularity [8a434893]
+- Fix Wave build when Conda package name is quoted [d19cb0b7]
+- Fix Wave build for Singularity files [a60ef72b]
+- Improve Wave handing of Conda envs [736ab9bb]
+- Deprecated Wave report feature [80c5cb27]
+- Bump groovy 3.0.19 [cb411208]
+
 0.11.2 - 17 Aug 2023
 - Use root user in Wave container based on micromamba (#4038) [ci fast] [a3a75ea2]
 - Add 429 http status code to Wave retriable errors [8eb5f305]
