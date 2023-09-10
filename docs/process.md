@@ -1705,6 +1705,33 @@ process foo {
 
 See also: [cpus](#cpus) and [memory](#memory).
 
+(process-maxsubmitawait)=
+
+### maxSubmitAwait (experimental)
+
+The `maxSubmitAwait` directives allows you to specify how long a task can remain in submission queue without being executed.
+Elapsed this time the task execution will fail.
+
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
+resource requirement. For example:
+
+```groovy
+process foo {
+  errorStrategy 'retry'
+  maxSubmitAwait '10 mins'
+  maxRetries 3
+  queue "${task.submitAttempt==1 : 'spot-compute' : 'on-demand-compute'}"
+  script:
+  '''
+  your_job --here
+  '''
+}
+```
+
+In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
+task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
+queue named `on-demand-compute`. 
+
 (process-maxerrors)=
 
 ### maxErrors

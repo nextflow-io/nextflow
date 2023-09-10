@@ -61,6 +61,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
@@ -1037,8 +1038,11 @@ class TaskProcessor {
                 return RETRY
             }
 
-            final int taskErrCount = task ? ++task.failCount : 0
-            final int procErrCount = ++errorCount
+            final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
+            final submitErrMsg = submitTimeout ? error.cause.message : null
+            final int submitRetries = submitTimeout ? ++task.submitRetries : 0
+            final int taskErrCount = !submitTimeout && task ? ++task.failCount : 0
+            final int procErrCount = !submitTimeout ? ++errorCount : errorCount
 
             // -- when is a task level error and the user has chosen to ignore error,
             //    just report and error message and DO NOT stop the execution
@@ -1048,11 +1052,11 @@ class TaskProcessor {
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
 
-                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
+                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
-                    def msg = "[$task.hashLog] NOTE: $error.message"
+                    def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
                     if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
+                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
                     log.info msg
                     task.failed = true
                     task.errorAction = errorStrategy
@@ -1107,7 +1111,7 @@ class TaskProcessor {
                 : name
     }
 
-    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
+    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final submitRetries ) {
 
         final action = task.config.getErrorStrategy()
 
@@ -1126,11 +1130,12 @@ class TaskProcessor {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
 
-            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
+            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries && submitRetries <= maxRetries ) {
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit({
                     try {
                         taskCopy.config.attempt = taskErrCount+1
+                        taskCopy.config.submitAttempt = submitRetries+1
                         taskCopy.runType = RunType.RETRY
                         taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
