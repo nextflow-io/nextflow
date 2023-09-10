@@ -84,8 +84,8 @@ class CliOptions {
     @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
     boolean selfUpdate
 
-    @Parameter(names = ['-d','-dockerize'], description = 'Launch nextflow via Docker (experimental)', arity = 0)
-    boolean dockerize
+    @Parameter(names=['-remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
+    boolean remoteDebug
 
     Boolean ansiLog
 

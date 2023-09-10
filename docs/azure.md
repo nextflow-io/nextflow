@@ -63,7 +63,7 @@ azure {
 }
 ```
 
-The files in the File share are available to the task in the directory: `<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>`.
+The files in the File share are available to the task in the directory: `<YOUR MOUNT DESTINATION>`.
 
 For instance, given the following configuration:
 
@@ -73,15 +73,20 @@ azure {
         // ...
 
         fileShares {
-            dir1 {
-                mountPath = "/mnt/mydata/"
+          rnaseqResources {
+                mountPath = "/mnt/mydata/myresources"
             }
         }
     }
 }
 ```
 
-The task can access the File share in `/mnt/mydata/dir1`.
+The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount. 
+
+:::{warning}
+Azure File shares do not support authentication and management with Active Directory. The storage account key must be 
+set in the configuration if a share is mounted.
+:::
 
 (azure-batch)=
 

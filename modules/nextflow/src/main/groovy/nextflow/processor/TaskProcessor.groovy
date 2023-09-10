@@ -61,6 +61,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
@@ -366,6 +367,29 @@ class TaskProcessor {
     int getMaxForks() { maxForks }
 
     boolean hasErrors() { errorCount>0 }
+
+    /**
+     * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
+     * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.
+     *
+     * Note this returns an "eventually" task configuration object. Also Inputs ane output parameters are NOT
+     * resolved by this method.
+     *
+     * @return A {@link TaskRun} object holding a reference to the associated {@link TaskConfig}
+     */
+    TaskRun createTaskPreview() {
+        final task = new TaskRun(
+                processor: this,
+                type: scriptType,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this)
+        )
+        task.config.context = task.context
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
+
+        return task
+    }
 
     protected void checkWarn(String msg, Map opts=null) {
         if( NF.isStrictMode() )
@@ -1014,8 +1038,11 @@ class TaskProcessor {
                 return RETRY
             }
 
-            final int taskErrCount = task ? ++task.failCount : 0
-            final int procErrCount = ++errorCount
+            final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
+            final submitErrMsg = submitTimeout ? error.cause.message : null
+            final int submitRetries = submitTimeout ? ++task.submitRetries : 0
+            final int taskErrCount = !submitTimeout && task ? ++task.failCount : 0
+            final int procErrCount = !submitTimeout ? ++errorCount : errorCount
 
             // -- when is a task level error and the user has chosen to ignore error,
             //    just report and error message and DO NOT stop the execution
@@ -1025,11 +1052,11 @@ class TaskProcessor {
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
 
-                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
+                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
-                    def msg = "[$task.hashLog] NOTE: $error.message"
+                    def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
                     if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
+                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
                     log.info msg
                     task.failed = true
                     task.errorAction = errorStrategy
@@ -1084,7 +1111,7 @@ class TaskProcessor {
                 : name
     }
 
-    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
+    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final submitRetries ) {
 
         final action = task.config.getErrorStrategy()
 
@@ -1103,11 +1130,12 @@ class TaskProcessor {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
 
-            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
+            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries && submitRetries <= maxRetries ) {
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit({
                     try {
                         taskCopy.config.attempt = taskErrCount+1
+                        taskCopy.config.submitAttempt = submitRetries+1
                         taskCopy.runType = RunType.RETRY
                         taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
@@ -2400,7 +2428,9 @@ class TaskProcessor {
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "<${name}> Before run -- messages: ${messages}"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
@@ -2415,12 +2445,15 @@ class TaskProcessor {
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            log.trace "<${name}> After run"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After run"
             currentTask.remove()
         }
 
         @Override
         Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2432,6 +2465,7 @@ class TaskProcessor {
 
         @Override
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2441,7 +2475,9 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                log.trace "<${name}> Poison pill arrived; port: $index"
+                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+                if( log.isTraceEnabled() )
+                    log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
             }
@@ -2451,7 +2487,9 @@ class TaskProcessor {
 
         @Override
         void afterStop(final DataflowProcessor processor) {
-            log.trace "<${name}> After stop"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After stop"
         }
 
         /**
