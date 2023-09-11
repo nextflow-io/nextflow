@@ -459,7 +459,9 @@ class WaveClient {
                 // create a minimal spack file with package spec from user input
                 spackFile = spackPackagesToSpackFile(attrs.spack, config.spackOpts())
             }
-            containerScript = spackFileToDockerFile(config.spackOpts())
+            containerScript = singularity?
+                    spackFileToSingularityFile(config.spackOpts())
+                    :spackFileToDockerFile(config.spackOpts())
         }
 
         /*
