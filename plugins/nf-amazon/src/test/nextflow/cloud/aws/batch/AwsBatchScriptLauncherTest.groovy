@@ -235,7 +235,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent().leftTrim()
 
-        binding.launch_cmd == '/bin/bash -ue .command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash .command.run nxf_trace'
         
         binding.task_env == ''
 
