@@ -281,7 +281,7 @@ on_term() {
 }
 
 nxf_launch() {
-    /bin/bash -ue {{folder}}/.command.run nxf_trace
+    /bin/bash {{folder}}/.command.run nxf_trace
 }
 
 nxf_stage() {
