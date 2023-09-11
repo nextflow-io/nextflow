@@ -566,14 +566,14 @@ class BashWrapperBuilderTest extends Specification {
         when:
         binding = newBashWrapperBuilder(statsEnabled: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
         binding.unstage_controls == null
         binding.containsKey('unstage_controls')
 
         when:
         binding = newBashWrapperBuilder(statsEnabled: true, scratch: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
         binding.unstage_controls == '''\
                         cp .command.out /work/dir/.command.out || true
                         cp .command.err /work/dir/.command.err || true
