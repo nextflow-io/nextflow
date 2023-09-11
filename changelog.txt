@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.09.1-edge - 11 Sep 2023
+- Revert "Allow setting shell directive when using the trace file (#4210)" [9f9edcdc]
+
 23.09.0-edge - 10 Sep 2023
 - Add check for latest version (#4194) [3e8cd488]
 - Add inspect command (#4069) [090c31ce]
