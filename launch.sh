@@ -118,6 +118,12 @@ while [ "$*" != "" ]; do
   elif [ "$1" == '-remote-debug' ]; then
     DEBUG="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT"
     args+=("$1")
+  elif [ "$1" == '-enable-checkpoint' ]; then
+    mkdir -p crac-files
+    JVM_ARGS+=" -XX:CRaCCheckpointTo=$PWD/crac-files"
+  elif [ "$1" == '-checkpoint' ]; then
+    jcmd $CLASSPATH JDK.checkpoint
+    exit 0
   else
    args+=("$1")
   fi
