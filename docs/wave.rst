@@ -39,7 +39,7 @@ Wave can be used in any Nextflow pipeline by adding the following snippet to you
 .. note::
   The use of the Tower access token is not mandatory, however, it's recommended to enable the access of private container repositories
   and to allow the pull of public containers without being affected by service rate limits.
-  Credentials should be made available to Wave using the `credentials manager feature <https://help.tower.nf/latest/credentials/registry_credentials/>`_
+  Credentials should be made available to Wave using the `credentials manager feature <https://help.tower.nf/latest/credentials/overview>`_
   in your Tower account.
 
 Use cases
