@@ -143,8 +143,8 @@ class TaskCleanupObserver implements TraceObserver {
      */
     void onProcessCreate( TaskProcessor process ) {
         // check for incompatible publish modes
-        final taskConfig = process.getPreviewConfig()
-        final publishDirs = taskConfig.getPublishDir()
+        final task = process.createTaskPreview()
+        final publishDirs = task.config.getPublishDir()
 
         if( publishDirs.any( p -> p.mode in INVALID_PUBLISH_MODES ) )
             log.warn "Process `${process.name}` is publishing files as symlinks, which may be invalidated by eager cleanup -- consider using 'copy' or 'link' instead"

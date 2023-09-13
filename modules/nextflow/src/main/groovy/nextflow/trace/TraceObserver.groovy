@@ -76,7 +76,7 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
 
@@ -86,7 +86,7 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onProcessStart(TaskHandler handler, TraceRecord trace){}
 
@@ -96,7 +96,7 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onProcessComplete(TaskHandler handler, TraceRecord trace){}
 
@@ -123,7 +123,7 @@ trait TraceObserver {
      * @param handler
      *      The {@link TaskHandler} instance for the current task.
      * @param trace
-     *      The associated {@link TraceRecord} fot the current task.
+     *      The associated {@link TraceRecord} for the current task.
      */
     void onFlowError(TaskHandler handler, TraceRecord trace){}
 

@@ -62,7 +62,7 @@ class PodmanBuilderTest extends Specification {
         ENV                 | EXPECT
         'X=1'               | '-e "X=1"'
         [VAR_X:1, VAR_Y: 2] | '-e "VAR_X=1" -e "VAR_Y=2"'
-        'BAR'               | '${BAR:+-e "BAR=$BAR"}'
+        'BAR'               | '-e "BAR"'
     }
 
     def 'test podman create command line'() {

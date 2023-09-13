@@ -63,6 +63,11 @@ class ScriptRunner {
     private boolean preview
 
     /**
+     * Optional callback to perform a custom action on a preview event
+     */
+    private Closure previewAction
+
+    /**
      * Instantiate the runner object creating a new session
      */
     ScriptRunner( ) {
@@ -86,8 +91,9 @@ class ScriptRunner {
         return this
     }
 
-    ScriptRunner setPreview(boolean  value ) {
+    ScriptRunner setPreview(boolean value, Closure<Void> action) {
         this.preview = value
+        this.previewAction = action
         return this
     }
 
@@ -125,9 +131,14 @@ class ScriptRunner {
         session.start()
         try {
             // parse the script
-            parseScript(scriptFile, entryName)
-            // run the code
-            run()
+            try {
+                parseScript(scriptFile, entryName)
+                // run the code
+                run()
+            }
+            finally {
+                log.debug "Parsed script files:${scriptFiles0()}"
+            }
             // await completion
             await()
             // shutdown session
@@ -142,6 +153,13 @@ class ScriptRunner {
             throw new AbortRunException()
         }
 
+        return result
+    }
+
+    protected String scriptFiles0() {
+        def result = ''
+        for( Map.Entry<String,Path> it : ScriptMeta.allScriptNames() )
+            result += "\n  ${it.key}: ${it.value.toUriString()}"
         return result
     }
 
@@ -229,8 +247,10 @@ class ScriptRunner {
     }
 
     protected await() {
-        if( preview )
+        if( preview ) {
+            previewAction?.call(session)
             return
+        }
         log.debug "> Awaiting termination "
         session.await()
     }
