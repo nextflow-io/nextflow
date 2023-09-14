@@ -17,6 +17,7 @@
 package nextflow.trace
 
 import java.nio.file.Path
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -31,6 +32,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
+import nextflow.util.ThreadPoolManager
 /**
  * Delete task directories once they are no longer needed.
  *
@@ -42,9 +44,7 @@ class TaskCleanupObserver implements TraceObserver {
 
     private CleanupStrategy strategy
 
-    private DAG dag
-
-    private CacheDB cache
+    private Session session
 
     private Map<String,ProcessState> processes = [:]
 
@@ -56,14 +56,18 @@ class TaskCleanupObserver implements TraceObserver {
 
     private Lock sync = new ReentrantLock()
 
+    private ExecutorService threadPool
+
     TaskCleanupObserver(CleanupStrategy strategy) {
         this.strategy = strategy
     }
 
     @Override
     void onFlowCreate(Session session) {
-        this.dag = session.dag
-        this.cache = session.cache
+        this.session = session
+        this.threadPool = new ThreadPoolManager('TaskCleanup')
+            .withConfig(session.config)
+            .create()
     }
 
     /**
@@ -74,6 +78,7 @@ class TaskCleanupObserver implements TraceObserver {
     void onFlowBegin() {
 
         // construct process lookup
+        final dag = session.dag
         final withIncludeInputs = [] as Set
 
         for( def processNode : dag.vertices ) {
@@ -163,8 +168,7 @@ class TaskCleanupObserver implements TraceObserver {
         final task = handler.task
         final inputs = task.getInputFilesMap().values()
 
-        sync.lock()
-        try {
+        sync.withLock {
             // add task to the task state map
             tasks[task] = new TaskState()
 
@@ -177,9 +181,6 @@ class TaskCleanupObserver implements TraceObserver {
                     pathState.consumers << task
                 }
             }
-        }
-        finally {
-            sync.unlock()
         }
     }
 
@@ -214,8 +215,7 @@ class TaskCleanupObserver implements TraceObserver {
 
         log.trace "[${task.name}] will publish the following files: ${publishOutputs*.toUriString()}"
 
-        sync.lock()
-        try {
+        sync.withLock {
             // mark task as completed
             tasks[task].completed = true
 
@@ -239,9 +239,6 @@ class TaskCleanupObserver implements TraceObserver {
                 paths[path] = pathState
             }
         }
-        finally {
-            sync.unlock()
-        }
     }
 
     /**
@@ -252,13 +249,9 @@ class TaskCleanupObserver implements TraceObserver {
      * @param task
      */
     void handleTaskFailure(TaskRun task) {
-        sync.lock()
-        try {
+        sync.withLock {
             // mark task as completed
             tasks[task].completed = true
-        }
-        finally {
-            sync.unlock()
         }
     }
 
@@ -274,8 +267,7 @@ class TaskCleanupObserver implements TraceObserver {
      */
     @Override
     void onFilePublish(Path destination, Path source) {
-        sync.lock()
-        try {
+        sync.withLock {
             // get the corresponding task
             final pathState = paths[source]
             if( pathState ) {
@@ -300,9 +292,6 @@ class TaskCleanupObserver implements TraceObserver {
                 publishedOutputs << source
             }
         }
-        finally {
-            sync.unlock()
-        }
     }
 
     /**
@@ -313,13 +302,9 @@ class TaskCleanupObserver implements TraceObserver {
      */
     @Override
     void onProcessClose(TaskProcessor process) {
-        sync.lock()
-        try {
+        sync.withLock {
             processes[process.name].closed = true
             cleanup0()
-        }
-        finally {
-            sync.unlock()
         }
     }
 
@@ -329,11 +314,14 @@ class TaskCleanupObserver implements TraceObserver {
      */
     @Override
     void onFlowComplete() {
-        if( strategy != CleanupStrategy.LAZY )
-            return
+        if( strategy == CleanupStrategy.LAZY && session.isSuccess() ) {
+            log.info 'Deleting task directories (this might take a moment)...'
 
-        for( TaskRun task : tasks.keySet() )
-            deleteTask(task)
+            for( TaskRun task : tasks.keySet() )
+                deleteTask(task)
+        }
+
+        threadPool.shutdown()
     }
 
     /**
@@ -387,15 +375,22 @@ class TaskCleanupObserver implements TraceObserver {
         log.trace "[${task.name}] Deleting task directory: ${task.workDir.toUriString()}"
 
         // delete task
+        threadPool.submit({
+            try {
+                FileHelper.deletePath(task.workDir)
+            }
+            catch( Exception e ) {}
+        } as Runnable)
+
+        // mark task as deleted
         final taskState = tasks[task]
-        FileHelper.deletePath(task.workDir)
         taskState.deleted = true
 
         // finalize task in the cache db
         final consumers = taskState.consumers
             .findAll( t -> t.isSuccess() )
             .collect( t -> t.hash )
-        cache.finalizeTaskAsync(task.hash, consumers)
+        session.cache.finalizeTaskAsync(task.hash, consumers)
     }
 
     /**
@@ -427,9 +422,8 @@ class TaskCleanupObserver implements TraceObserver {
     private void deleteFile(Path path) {
         final pathState = paths[path]
         final task = pathState.task
-        final taskState = tasks[task]
 
-        if( !taskState.deleted ) {
+        if( !tasks[task].deleted ) {
             log.trace "[${task.name}] Deleting file: ${path.toUriString()}"
             FileHelper.deletePath(path)
         }
