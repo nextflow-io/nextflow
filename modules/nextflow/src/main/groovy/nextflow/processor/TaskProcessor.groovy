@@ -808,22 +808,17 @@ class TaskProcessor {
         while( true ) {
             hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
-            Path resumeDir = null
-            boolean exists = false
             try {
-                final entry = session.cache.getTaskEntry(hash, processorLookup)
-                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-                if( resumeDir )
-                    exists = resumeDir.exists()
-
-                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                if( shouldTryCache && checkCachedOutput(task.clone(), hash, entry) )
+                if( shouldTryCache && checkCachedOutput(task.clone(), hash) )
                     break
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
             }
 
+            final entry = session.cache.getTaskEntry(hash, processorLookup)
+            Path resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+            boolean exists = resumeDir?.exists()
             if( exists ) {
                 tries++
                 continue
@@ -914,10 +909,9 @@ class TaskProcessor {
      *
      * @param seedTask
      * @param seedHash
-     * @param seedEntry
      * @return {@code true} if all outputs are available, {@code false} otherwise
      */
-    final boolean checkCachedOutput(TaskRun seedTask, HashCode seedHash, TaskEntry seedEntry) {
+    final boolean checkCachedOutput(TaskRun seedTask, HashCode seedHash) {
 
         // -- recursively check for cached outputs
         final queue = [ seedHash ]
@@ -931,18 +925,15 @@ class TaskProcessor {
                 continue
 
             // -- get cache entry
-            final entry = (hash == seedHash)
-                ? seedEntry
-                : session.cache.getTaskEntry(hash, processorLookup)
-            if( !entry ) {
-                log.trace "[${safeTaskName(seedTask)}] Missing cache entry for downstream hash=${hash} -- return false"
+            final entry = session.cache.getTaskEntry(hash, processorLookup)
+            if( !entry )
                 return false
-            }
 
             // -- get or create task run
             def task
             if( hash == seedHash ) {
                 task = seedTask
+                log.trace "[${safeTaskName(task)}] Cacheable task hash=${hash} entry=${entry}"
             }
             else if( entry.processor ) {
                 final params = entry.processor.createTaskStartParams()
@@ -969,7 +960,7 @@ class TaskProcessor {
             // -- verify the task exit code
             final exitCode = entry.trace.get('exit') as Integer
             if( task.type == ScriptType.SCRIPTLET && !task.isSuccess(exitCode) ) {
-                log.trace "[${safeTaskName(task)}] Exit code is not valid > $exitCode -- return false"
+                log.trace "[${safeTaskName(task)}] Exit code is not valid > ${exitCode} -- return false"
                 return false
             }
 
