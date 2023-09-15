@@ -257,18 +257,26 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
         return pipelineParams
     }
 
-    String launcherCli
-
-    CliOptions launcherOptions
-
     @Override
     String getLauncherCli() {
-        launcherCli ?: launcher.cliString
+        launcher.cliString
     }
 
     @Override
     CliOptions getLauncherOptions() {
-        launcherOptions ?: launcher.options
+        launcher.options
+    }
+
+    void setLauncher(Launcher launcher) {
+        this.launcher = launcher
+    }
+
+    void setArgs(List<String> args) {
+        this.pipelineArgs = args
+    }
+
+    void setParams(Map<String,String> params) {
+        this.pipelineParams = params
     }
 
     @Override

@@ -110,7 +110,19 @@ class InspectCmd extends AbstractCmd implements CmdInspect.Options {
 
     @Override
     void run() {
-        new CmdInspect(this).run()
+        final opts = new RunCmd()
+        opts.launcher = launcher
+        opts.ansiLog = false
+        opts.preview = true
+        opts.pipeline = pipeline
+        opts.args = args
+        opts.params = params
+        opts.paramsFile = paramsFile
+        opts.profile = profile
+        opts.revision = revision
+        opts.runConfig = runConfig
+
+        new CmdInspect(this).run(opts)
     }
 
 }

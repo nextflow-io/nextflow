@@ -119,8 +119,6 @@ class CmdRun {
         String getLauncherCli()
         CliOptions getLauncherOptions()
 
-        void setLauncherCli(String launcherCli)
-        void setLauncherOptions(CliOptions launcherOptions)
         void setRunName(String runName)
     }
 
@@ -344,18 +342,14 @@ class CmdRun {
             args.size() > 1 ? args[1..-1] : []
         }
 
-        String launcherCli
-
-        CliOptions launcherOptions
-
         @Override
         String getLauncherCli() {
-            launcherCli ?: launcher.cliString
+            launcher.cliString
         }
 
         @Override
         CliOptions getLauncherOptions() {
-            launcherOptions ?: launcher.options
+            launcher.options
         }
 
         @Override

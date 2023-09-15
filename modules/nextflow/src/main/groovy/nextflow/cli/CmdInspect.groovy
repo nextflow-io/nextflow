@@ -108,7 +108,18 @@ class CmdInspect {
 
         @Override
         void run() {
-            new CmdInspect(this).run()
+            final opts = new CmdRun.V1()
+            opts.launcher = launcher
+            opts.ansiLog = false
+            opts.preview = true
+            opts.args = args
+            opts.params = params
+            opts.paramsFile = paramsFile
+            opts.profile = profile
+            opts.revision = revision
+            opts.runConfig = runConfig
+
+            new CmdInspect(this).run(opts)
         }
 
     }
@@ -123,21 +134,10 @@ class CmdInspect {
     /* For testing purposes only */
     CmdInspect() {}
 
-    void run() {
+    void run(CmdRun.Options opts) {
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command
-        final opts = new CmdRun.V1()
-        opts.launcherCli = this.launcherCli
-        opts.launcherOptions = this.launcherOptions
-        opts.args = this.args
-        opts.profile = this.profile
-        opts.revision = this.revision
-        opts.runConfig = this.runConfig
-        opts.params = this.params
-        opts.paramsFile = this.paramsFile
-        opts.preview = true
-        opts.ansiLog = false
         final target = new CmdRun(opts)
         target.previewAction = this.&applyInspect
         // run it
