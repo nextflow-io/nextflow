@@ -27,13 +27,17 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
+import org.crac.Context
+import org.crac.Core
+import org.crac.Resource
+
 /**
  * Implements the cloud cache store
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class CloudCacheStore implements CacheStore {
+class CloudCacheStore implements CacheStore, Resource {
 
     private final int KEY_SIZE
 
@@ -65,6 +69,8 @@ class CloudCacheStore implements CacheStore {
         this.basePath = basePath ?: defaultBasePath()
         this.dataPath = this.basePath.resolve("$uniqueId")
         this.indexPath = dataPath.resolve("index.$runName")
+        // register this resource in CRaC handler
+        Core.getGlobalContext().register(this);
     }
 
     private Path defaultBasePath() {
@@ -163,5 +169,15 @@ class CloudCacheStore implements CacheStore {
 
     private Path getCachePath(HashCode key) {
         dataPath.resolve(key.toString())
+    }
+
+    @Override
+    void beforeCheckpoint(Context<? extends Resource> context) throws Exception {
+        close()
+    }
+
+    @Override
+    void afterRestore(Context<? extends Resource> context) throws Exception {
+        open()
     }
 }
