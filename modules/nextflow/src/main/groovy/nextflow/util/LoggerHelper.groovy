@@ -69,6 +69,9 @@ import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowBinding
 import nextflow.script.WorkflowDef
 import org.apache.commons.lang.exception.ExceptionUtils
+import org.crac.Context
+import org.crac.Core
+import org.crac.Resource
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker
@@ -79,7 +82,7 @@ import org.slf4j.MarkerFactory
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class LoggerHelper {
+class LoggerHelper implements Resource {
 
     static private Logger log = LoggerFactory.getLogger(LoggerHelper)
 
@@ -355,12 +358,24 @@ class LoggerHelper {
                 .setRolling(true)
                 .setSyslog(launcher.options.syslog)
                 .setup()
+        // Register CRaC resource
+        Core.getGlobalContext().register(INSTANCE)
     }
 
     static setQuiet(boolean quiet) {
         if( INSTANCE==null )
             throw new IllegalStateException("Method 'LoggerHelper.setQuiet' must be called after the invocation of 'LoggerHelper.configureLogger'")
         INSTANCE.setQuiet0(quiet)
+    }
+
+    @Override
+    void beforeCheckpoint(Context<? extends Resource> context) throws Exception {
+        fileAppender.stop()
+    }
+
+    @Override
+    void afterRestore(Context<? extends Resource> context) throws Exception {
+        fileAppender.start()
     }
 
     /*
