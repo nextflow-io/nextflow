@@ -2109,7 +2109,7 @@ class TaskProcessor {
 
     final protected HashCode createTaskHashKey(TaskRun task) {
 
-        List keys = [ session.uniqueId, name, task.source ]
+        List keys = [ session.uniqueId, task.source ]
 
         if( task.isContainerEnabled() )
             keys << task.getContainerFingerprint()
