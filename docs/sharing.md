@@ -195,6 +195,8 @@ The following configuration properties are supported for each provider configura
 : *Required only for private SCM servers*
 : SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
+## SCM providers
+
 ### BitBucket credentials
 
 Create a `bitbucket` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and app password, as shown below:
@@ -306,6 +308,8 @@ providers {
 :::{tip}
 The Personal access token can be generated in the repository `Clone Repository` dialog.
 :::
+
+(aws-codecommit)=
 
 ### AWS CodeCommit credentials
 
@@ -436,11 +440,52 @@ The use of a code management system is important to keep together all the depend
 
 Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should have ideally no dependencies on the hosting environment. By using Nextflow you can achieve this goal following these methods:
 
-### Third party scripts
+### Binary applications
 
-Any third party script that does not need to be compiled (Bash, Python, Perl, etc) can be included in the pipeline project repository, so that they are distributed with it.
+Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.
 
-Grant the execute permission to these files and copy them into a folder named `bin/` in the root directory of your project repository. Nextflow will automatically add this folder to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
+In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available in the [Docker Hub](https://hub.docker.com).
+
+Then declare in the `nextflow.config` file, that you will include in your project, the name of the Docker image you have created. For example:
+
+```groovy
+process.container = 'my-docker-image'
+docker.enabled = true
+```
+
+In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run your tasks.
+
+Read the {ref}`container-page` page to learn more on how to use containers with Nextflow.
+
+This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
+
+[^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.
+
+### Bundling executables in the workflow
+
+In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)). 
+
+In cases where you do not wish to modify the execution environment(s), executable scripts can be included in the `bin/` directory in the workflow repository root. This can be useful to make changes that affect task execution across all environments with a single change.
+
+To ensure your scripts can be made available to the task:
+
+1. Write scripts in the `bin/` directory (relative to the project repository root)
+2. Specify a portable shebang (see note below for details).
+3. Ensure the scripts are executable. For example: `chmod a+x bin/my_script.py`
+
+:::{tip}
+To maximize portability of your bundled script, it is recommended to avoid hard-coding the interpreter path in the shebang line. 
+
+For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` both hard-code specific paths to the python interpreter. To improve portability, rely on `env` to dynamically resolve the path to the interpreter. An example of the recommended approach is:
+
+```bash
+#!/usr/bin/env python
+```
+:::
+
+### Using bundled executables in the workflow 
+
+Nextflow will automatically add the `bin/` directory to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
 
 ### System environment
 
@@ -491,23 +536,3 @@ The actual parameter values can be provided when launching the script execution 
 nextflow run <your pipeline> --my_input /path/to/input/file --my_output /other/path --my_flag true
 ```
 
-### Binary applications
-
-Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.
-
-In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available in the [Docker registry](https://registry.hub.docker.com).
-
-Then declare in the `nextflow.config` file, that you will include in your project, the name of the Docker image you have created. For example:
-
-```groovy
-process.container = 'my-docker-image'
-docker.enabled = true
-```
-
-In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run your tasks.
-
-Read the {ref}`container-page` page to learn more on how to use containers with Nextflow.
-
-This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
-
-[^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.

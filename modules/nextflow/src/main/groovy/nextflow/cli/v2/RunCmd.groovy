@@ -232,72 +232,13 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     private Map<String,String> pipelineParams = null
 
     /**
-     * Parse the pipeline args and params from the positional
-     * args parsed by picocli. This method assumes that the first
-     * positional arg that starts with '--' is the first param,
-     * and parses the remaining args as params.
-     *
-     * NOTE: While the double-dash ('--') notation can be used to
-     * distinguish pipeline params from CLI options, it cannot be
-     * used to distinguish pipeline params from pipeline args.
-     */
-    private void parseArgs() {
-        // parse pipeline args
-        int i = args.findIndexOf { it.startsWith('--') }
-        pipelineArgs = i == -1 ? args : args[0..<i]
-
-        for( String arg : pipelineArgs )
-            if( arg.startsWith('-') )
-                log.warn "Possible legacy command line argument: $arg -- did you mean -$arg ?"
-
-        // parse pipeline params
-        pipelineParams = [:]
-
-        if( i == -1 )
-            return
-
-        while( i < args.size() ) {
-            String current = args[i++]
-            if( !current.startsWith('--') ) {
-                throw new IllegalArgumentException("Invalid argument '${current}' -- unable to parse it as a pipeline arg, pipeline param, or CLI option")
-            }
-
-            String key
-            String value
-
-            // parse '--param=value'
-            if( current.contains('=') ) {
-                int split = current.indexOf('=')
-                key = current.substring(2, split)
-                value = current.substring(split+1)
-            }
-
-            // parse '--param value'
-            else if( i < args.size() && !args[i].startsWith('--') ) {
-                key = current.substring(2)
-                value = args[i++]
-            }
-
-            // parse '--param1 --param2 ...' as '--param1 true --param2 ...'
-            else {
-                key = current.substring(2)
-                value = 'true'
-            }
-
-            pipelineParams.put(key, value)
-        }
-
-        log.trace "Parsing pipeline args from CLI: $pipelineArgs"
-        log.trace "Parsing pipeline params from CLI: $pipelineParams"
-    }
-
-    /**
      * Get the list of pipeline args.
      */
     @Override
     List<String> getArgs() {
         if( pipelineArgs == null ) {
-            parseArgs()
+            pipelineArgs = ParamsHelper.parseArgs(args)
+            pipelineParams = ParamsHelper.parseParams(args, pipelineArgs)
         }
 
         return pipelineArgs
@@ -309,20 +250,25 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Override
     Map<String,String> getParams() {
         if( pipelineParams == null ) {
-            parseArgs()
+            pipelineArgs = ParamsHelper.parseArgs(args)
+            pipelineParams = ParamsHelper.parseParams(args, pipelineArgs)
         }
 
         return pipelineParams
     }
 
+    String launcherCli
+
+    CliOptions launcherOptions
+
     @Override
-    String getLauncherCliString() {
-        launcher.cliString
+    String getLauncherCli() {
+        launcherCli ?: launcher.cliString
     }
 
     @Override
     CliOptions getLauncherOptions() {
-        launcher.options
+        launcherOptions ?: launcher.options
     }
 
     @Override

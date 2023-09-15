@@ -50,14 +50,14 @@ class CliOptionsV2 extends CliOptions {
     @Option(names = ['--debug'], split = ',', paramLabel = '<package>', description = 'Enable DEBUG level logging for the specified package name', hidden = true)
     List<String> debug
 
-    @Option(names = ['-d','--dockerize'], arity = '0', description = 'Launch Nextflow via Docker (experimental)')
-    boolean dockerize
-
     @Option(names = ['--log'], paramLabel = '<file>', description = 'Set the log file path')
     String logFile
 
     @Option(names = ['-q','--quiet'], description = 'Do not print information messages')
     boolean quiet
+
+    @Option(names = ['-remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
+    boolean remoteDebug
 
     @Option(names = ['--self-update'], arity = '0', description = 'Update Nextflow to the latest version', hidden = true)
     boolean selfUpdate

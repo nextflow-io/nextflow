@@ -17,8 +17,8 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.CmdClean
 import nextflow.cli.CliOptions
+import nextflow.cli.CmdClean
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters

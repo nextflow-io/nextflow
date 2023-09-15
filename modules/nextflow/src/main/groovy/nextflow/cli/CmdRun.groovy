@@ -116,9 +116,11 @@ class CmdRun {
         String getWithWebLog()
         String getWorkDir()
 
-        String getLauncherCliString()
+        String getLauncherCli()
         CliOptions getLauncherOptions()
 
+        void setLauncherCli(String launcherCli)
+        void setLauncherOptions(CliOptions launcherOptions)
         void setRunName(String runName)
     }
 
@@ -342,14 +344,18 @@ class CmdRun {
             args.size() > 1 ? args[1..-1] : []
         }
 
+        String launcherCli
+
+        CliOptions launcherOptions
+
         @Override
-        String getLauncherCliString() {
-            launcher.cliString
+        String getLauncherCli() {
+            launcherCli ?: launcher.cliString
         }
 
         @Override
         CliOptions getLauncherOptions() {
-            launcher.options
+            launcherOptions ?: launcher.options
         }
 
         @Override
@@ -366,6 +372,11 @@ class CmdRun {
 
     @Delegate
     private Options options
+
+    /**
+     * Optional closure modelling an action to be invoked when the preview mode is enabled
+     */
+    Closure<Void> previewAction
 
     CmdRun(Options options) {
         this.options = options
@@ -411,9 +422,6 @@ class CmdRun {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
-        if( dsl1 && dsl2 )
-            throw new AbortOperationException("Command line options `-dsl1` and `-dsl2` cannot be specified at the same time")
-
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
@@ -448,10 +456,11 @@ class CmdRun {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
-        runner.setPreview(this.preview)
+        runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
-        runner.session.commandLine = launcherCliString
+        runner.session.commandLine = launcherCli
         runner.session.ansiLog = launcherOptions.ansiLog
+        runner.session.debug = launcherOptions.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
@@ -471,7 +480,7 @@ class CmdRun {
         log.debug( '\n'+info )
 
         // -- add this run to the local history
-        runner.verifyAndTrackHistory(launcherCliString, runName)
+        runner.verifyAndTrackHistory(launcherCli, runName)
 
         // -- run it!
         runner.execute(args, this.entryName)
@@ -734,9 +743,9 @@ class CmdRun {
         if ( str.toLowerCase() == 'true') return Boolean.TRUE
         if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
 
-        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
-        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
     }

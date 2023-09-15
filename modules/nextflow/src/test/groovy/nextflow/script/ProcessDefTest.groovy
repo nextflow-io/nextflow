@@ -44,7 +44,7 @@ class ProcessDefTest extends Specification {
         def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT)
 
         then:
-        true
+        ScriptMeta.get(script).getProcessNames() == ['foo','bar'] as Set
 
     }
 

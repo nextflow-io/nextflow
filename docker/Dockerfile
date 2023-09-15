@@ -1,5 +1,5 @@
-FROM amazoncorretto:17.0.7
-RUN yum install -y procps-ng shadow-utils
+FROM amazoncorretto:17.0.8
+RUN yum install -y procps-ng shadow-utils which
 
 ENV NXF_HOME=/.nextflow
 ARG TARGETPLATFORM=linux/amd64
@@ -11,7 +11,6 @@ COPY nextflow /usr/local/bin/nextflow
 
 # download runtime
 RUN mkdir /.nextflow \
- && touch /.nextflow/dockerized \
  && chmod 755 /usr/local/bin/nextflow \
  && chmod 755 /usr/local/bin/entry.sh \
  && nextflow info

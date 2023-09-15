@@ -15,25 +15,31 @@
  */
 
 package nextflow.cli
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.plugin.Plugins
-
 /**
  * Implements `fs` command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Slf4j
 class CmdFs {
 
     static final public NAME = 'fs'
@@ -46,8 +52,12 @@ class CmdFs {
         REMOVE
     }
 
+    interface Options {
+        CliOptions getLauncherOptions()
+    }
+
     @Parameters(commandDescription = 'Perform basic filesystem operations')
-    static class V1 extends CmdBase implements UsageAware {
+    static class V1 extends CmdBase implements UsageAware, Options {
 
         trait SubCmd {
             abstract int getArity()
@@ -155,6 +165,11 @@ class CmdFs {
         List<String> args = []
 
         @Override
+        CliOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
         String getName() {
             return NAME
         }
@@ -174,7 +189,7 @@ class CmdFs {
             if( args.size() - 1 != cmd.getArity() )
                 throw new AbortOperationException(cmd.usage())
 
-            new CmdFs().run(cmd.getCommand(), args.drop(1))
+            new CmdFs(this).run(cmd.getCommand(), args.drop(1))
         }
 
         private SubCmd findCmd( String name ) {
@@ -218,14 +233,37 @@ class CmdFs {
 
     }
 
+    @Delegate
+    private Options options
+
+    CmdFs(Options options) {
+        this.options = options
+    }
+
+    private Session createSession() {
+        // create the config
+        final config = new ConfigBuilder()
+                .setOptions(getLauncherOptions())
+                .setBaseDir(Paths.get('.'))
+                .build()
+
+        return new Session(config)
+    }
+
     void run(Command command, List<String> args) {
         Plugins.setup()
-
+        final session = createSession()
         try {
             run0(command, args)
         }
         finally {
-            Plugins.stop()
+            try {
+                session.destroy()
+                Global.cleanUp()
+                Plugins.stop()
+            } catch (Throwable t) {
+                log.warn "Unexpected error while destroying the session object - cause: ${t.message}"
+            }
         }
     }
 

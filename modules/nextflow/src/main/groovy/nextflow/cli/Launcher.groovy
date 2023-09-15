@@ -79,24 +79,25 @@ class Launcher {
 
     protected void init() {
         allCommands = (List<CmdBase>)[
-            new CmdClean.V1(),
-            new CmdClone.V1(),
-            new CmdConfig.V1(),
-            new CmdConsole.V1(),
-            new CmdDrop.V1(),
-            new CmdFs.V1(),
-            new CmdHelp(),
-            new CmdInfo.V1(),
-            new CmdKubeRun(),
-            new CmdList.V1(),
-            new CmdLog.V1(),
-            new CmdNode.V1(),
-            new CmdPlugin.V1(),
-            new CmdPlugins(),
-            new CmdPull.V1(),
-            new CmdRun.V1(),
-            new CmdSelfUpdate(),
-            new CmdView.V1()
+                new CmdClean.V1(),
+                new CmdClone.V1(),
+                new CmdConfig.V1(),
+                new CmdConsole.V1(),
+                new CmdDrop.V1(),
+                new CmdFs.V1(),
+                new CmdHelp(),
+                new CmdInfo.V1(),
+                new CmdInspect.V1(),
+                new CmdKubeRun(),
+                new CmdList.V1(),
+                new CmdLog.V1(),
+                new CmdNode.V1(),
+                new CmdPlugin.V1(),
+                new CmdPlugins(),
+                new CmdPull.V1(),
+                new CmdRun.V1(),
+                new CmdSelfUpdate(),
+                new CmdView.V1()
         ]
 
         if( SecretsLoader.isEnabled() )
@@ -564,7 +565,6 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
-
         final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)

@@ -246,7 +246,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             result << '-e "' << env << '"'
         }
         else if( env instanceof String ) {
-            result << "\${$env:+-e \"$env=\$$env\"}"
+            result << "-e \"$env\""
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")

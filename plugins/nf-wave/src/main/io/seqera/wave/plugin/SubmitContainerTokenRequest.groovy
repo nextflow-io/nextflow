@@ -52,7 +52,7 @@ class SubmitContainerTokenRequest {
     String towerEndpoint
 
     /**
-     * The ID of the executed container
+     * The ID of the workflow that submitted this container request
      */
     String workflowId
 
@@ -110,5 +110,15 @@ class SubmitContainerTokenRequest {
      * Enable freeze container mode
      */
     boolean freeze
+
+    /**
+     * Specify the format of the container file
+     */
+    String format
+
+    /**
+     * When {@code true} build requests are carried out in dry-run mode.
+     */
+    Boolean dryRun
 
 }

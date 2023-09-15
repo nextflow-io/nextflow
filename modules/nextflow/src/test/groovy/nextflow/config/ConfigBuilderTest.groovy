@@ -677,14 +677,14 @@ class ConfigBuilderTest extends Specification {
         when:
         file.text =
                 '''
-                process.$test.container = 'busybox'
+                process.'withName:test'.container = 'busybox'
                 '''
         def opt = new CliOptions.V1(config: [file.toFile().canonicalPath])
         def run = new CmdRun( Mock(CmdRun.Options) { withDocker >> '-' })
         def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
-        config.process.$test.container == 'busybox'
+        config.process.'withName:test'.container == 'busybox'
 
         when:
         file.text =
@@ -709,7 +709,7 @@ class ConfigBuilderTest extends Specification {
         when:
         file.text =
                 '''
-                process.$test.tag = 'tag'
+                process.'withName:test'.tag = 'tag'
                 '''
         opt = new CliOptions.V1(config: [file.toFile().canonicalPath])
         run = new CmdRun( Mock(CmdRun.Options) { withDocker >> '-' })
@@ -781,6 +781,7 @@ class ConfigBuilderTest extends Specification {
         !config.hasContainerDirective([foo: 1, bar: 2])
         !config.hasContainerDirective([foo: 1, bar: 2, baz: [container: 'user/repo']])
         config.hasContainerDirective([foo: 1, bar: 2, $baz: [container: 'user/repo']])
+        config.hasContainerDirective([foo: 1, bar: 2, 'withName:baz': [container: 'user/repo']])
 
     }
 

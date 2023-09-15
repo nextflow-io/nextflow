@@ -58,6 +58,7 @@ import picocli.CommandLine.ParseResult
         FsCmd.class,
         HelpCommand.class,
         InfoCmd.class,
+        InspectCmd.class,
         ListCmd.class,
         LogCmd.class,
         NodeCmd.class,

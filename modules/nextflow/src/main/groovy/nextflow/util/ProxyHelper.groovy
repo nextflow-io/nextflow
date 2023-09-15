@@ -24,7 +24,6 @@ import groovy.util.logging.Slf4j
  * Helper methods for proxy configuration.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -43,15 +42,28 @@ class ProxyHelper {
      */
     static void setupEnvironment() {
 
-        setProxy('HTTP', System.getenv())
-        setProxy('HTTPS', System.getenv())
-        setProxy('FTP', System.getenv())
+        final env = System.getenv()
+        setProxy('HTTP',env)
+        setProxy('HTTPS',env)
+        setProxy('FTP',env)
 
-        setProxy('http', System.getenv())
-        setProxy('https', System.getenv())
-        setProxy('ftp', System.getenv())
+        setProxy('http',env)
+        setProxy('https',env)
+        setProxy('ftp',env)
 
-        setNoProxy(System.getenv())
+        setNoProxy(env)
+
+        setHttpClientProperties(env)
+    }
+
+    static void setHttpClientProperties(Map<String,String> env) {
+        // Set the httpclient connection pool timeout to 10 seconds.
+        // This required because the default is 20 minutes, which cause the error
+        // "HTTP/1.1 header parser received no bytes" when in some circumstances
+        // https://github.com/nextflow-io/nextflow/issues/3983#issuecomment-1702305137
+        System.setProperty("jdk.httpclient.keepalive.timeout", env.getOrDefault("NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT","10"))
+        if( env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE") )
+            System.setProperty("jdk.httpclient.connectionPoolSize", env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE"))
     }
 
     /**
@@ -62,7 +74,7 @@ class ProxyHelper {
      *
      * @param env
      */
-    static void setNoProxy(Map<String,String> env) {
+    private static void setNoProxy(Map<String,String> env) {
         final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
         if(noProxy) {
             System.setProperty('http.nonProxyHosts', noProxy.tokenize(',').join('|'))
@@ -79,7 +91,7 @@ class ProxyHelper {
      * @param qualifier Either {@code http/HTTP} or {@code https/HTTPS}.
      * @param env The environment variables system map
      */
-    static void setProxy(String qualifier, Map<String,String> env ) {
+    private static void setProxy(String qualifier, Map<String,String> env) {
         assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
         def str = null
         def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')

@@ -330,20 +330,31 @@ The following settings are available:
 `azure.batch.copyToolInstallMode`
 : Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
 
-`azure.batch.terminateJobsOnCompletion`
-: Enables the Batch Job to automatically terminate a job once all tasks have completed (default: `true`).
-
 `azure.batch.deleteJobsOnCompletion`
-: Enable the automatic deletion of jobs created by the pipeline execution (default: `true`).
+: Delete all jobs when the workflow completes (default: `false`).
+: :::{versionchanged} 23.08.0-edge
+  Default value was changed from `true` to `false`.
+  :::
 
 `azure.batch.deletePoolsOnCompletion`
-: Enable the automatic deletion of compute node pools upon pipeline completion (default: `false`).
+: Delete all compute node pools when the workflow completes (default: `false`).
+
+`azure.batch.deleteTasksOnCompletion`
+: :::{versionadded} 23.08.0-edge
+  :::
+: Delete each task when it completes (default: `true`).
+: Although this setting is enabled by default, failed tasks will not be deleted unless it is explicitly enabled. This way, the default behavior is that successful tasks are deleted while failed tasks are preserved for debugging purposes.
 
 `azure.batch.endpoint`
 : The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
 
 `azure.batch.location`
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
+
+`azure.batch.terminateJobsOnCompletion`
+: :::{versionadded} 23.05.0-edge
+  :::
+: When the workflow completes, set all jobs to terminate on task completion. (default: `true`).
 
 `azure.batch.pools.<name>.autoScale`
 : Enable autoscaling feature for the pool identified with `<name>`.
@@ -629,7 +640,7 @@ The following settings are available:
 : Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
 
 `executor.queueSize`
-: The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
+: The number of tasks the executor will handle in a parallel manner. A queue size of zero corresponds to no limit. Default varies for each executor (see below).
 
 `executor.queueStatInterval`
 : Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.
@@ -1162,6 +1173,10 @@ process {
 }
 ```
 
+:::{note}
+The `withName` selector applies to a process even when it is included from a module under an alias. For example, `withName: hello` will apply to any process originally defined as `hello`, regardless of whether it is included under an alias. Similarly, it will not apply to any process not originally defined as `hello`, even if it is included under the alias `hello`.
+:::
+
 :::{tip}
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
 :::
@@ -1279,7 +1294,10 @@ The `singularity` scope controls how [Singularity](https://sylabs.io/singularity
 The following settings are available:
 
 `singularity.autoMounts`
-: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `false`).
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `true`).
+: :::{versionchanged} 23.09.0-edge
+  Default value was changed from `false` to `true`.
+  :::
 
 `singularity.cacheDir`
 : The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
@@ -1524,9 +1542,6 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable the use of Conda recipes defined by using the {ref}`process-conda` directive. (default: `false`).
 
-`NXF_DEBUG`
-: Defines scripts debugging level: `1` dump task environment variables in the task log file; `2` enables command script execution tracing; `3` enables command wrapper execution tracing.
-
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge
   :::
@@ -1542,8 +1557,8 @@ The following environment variables control the configuration of the Nextflow ru
 :::
 : Disables the automatic type detection of command line parameters.
 
-`NXF_DISABLE_WAVE_REQUIREMENT`
-: :::{versionadded} 23.07.0-edge
+`NXF_DISABLE_WAVE_SERVICE`
+: :::{versionadded} 23.08.0-edge
 :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
@@ -1593,6 +1608,11 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
+
+`NXF_PLUGINS_TEST_REPOSITORY`
+: :::{versionadded} 23.04.0
+  :::
+: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See {ref}`testing-plugins` for more information.
 
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0
@@ -1693,11 +1713,11 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
   - When merging params from a config file with params from the command line, Nextflow will fail if a param is specified from both sources but with different types
 
-  - When using the `join` operator, the `failOnDuplicate` option is `true` by default
+  - When using the `join` operator, the `failOnDuplicate` option is `true` regardless of any user setting
 
-  - When using the `join` operator, the `failOnMismatch` option is `true` by default (unless `remainder` is also `true`)
+  - When using the `join` operator, the `failOnMismatch` option is `true` (unless `remainder` is also `true`) regardless of any user setting
 
-  - When using the `publishDir` process directive, the `failOnError` option is `true` by default
+  - When using the `publishDir` process directive, the `failOnError` option is `true` regardless of any user setting
 
   - In a process definition, Nextflow will fail if an input or output tuple has only one element
 

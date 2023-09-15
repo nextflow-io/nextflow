@@ -17,8 +17,8 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.CmdConfig
 import nextflow.cli.CliOptions
+import nextflow.cli.CmdConfig
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -56,6 +56,9 @@ class ConfigCmd extends AbstractCmd implements CmdConfig.Options {
 
     @Option(names = ['--sort'], description = 'Sort config attributes')
     boolean sort
+
+    @Option(names = ['--value'], description = 'Print the value of a config option, or fail if the option is not defined')
+    String printValue
 
     @Override
     CliOptions getLauncherOptions() {

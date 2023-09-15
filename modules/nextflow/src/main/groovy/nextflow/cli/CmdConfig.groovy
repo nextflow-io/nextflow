@@ -46,6 +46,7 @@ class CmdConfig {
         String getProfile()
         boolean getPrintProperties()
         boolean getPrintFlatten()
+        String getPrintValue()
         boolean getSort()
 
         CliOptions getLauncherOptions()
@@ -71,6 +72,9 @@ class CmdConfig {
 
         @Parameter(names = '-sort', description = 'Sort config attributes')
         boolean sort
+
+        @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
+        String printValue
 
         @Override
         String getPipeline() {
@@ -117,6 +121,12 @@ class CmdConfig {
         if( printProperties && printFlatten )
             throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
 
+        if ( printValue && printFlatten )
+            throw new AbortOperationException("Option `-value` and `-flat` conflicts")
+
+        if ( printValue && printProperties )
+            throw new AbortOperationException("Option `-value` and `-properties` conflicts")
+
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
                 .showMissingVariables(true)
@@ -132,6 +142,9 @@ class CmdConfig {
         else if( printFlatten ) {
             printFlatten0(config, stdout)
         }
+        else if( printValue ) {
+            printValue0(config, printValue, stdout)
+        }
         else {
             printCanonical0(config, stdout)
         }
@@ -142,7 +155,7 @@ class CmdConfig {
 
     /**
      * Prints a {@link ConfigObject} using Java {@link Properties} in canonical format
-     * ie. any nested config object is printed withing curly brackets
+     * ie. any nested config object is printed within curly brackets
      *
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
@@ -159,6 +172,21 @@ class CmdConfig {
      */
     @PackageScope void printProperties0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toPropertiesString(config, sort)
+    }
+
+    /**
+     * Prints a property of a {@link ConfigObject}.
+     *
+     * @param config The {@link ConfigObject} representing the parsed workflow configuration
+     * @param name The {@link String} representing the property name using dot notation
+     * @param output The stream where output the formatted configuration notation
+     */
+    @PackageScope void printValue0(ConfigObject config, String name, OutputStream output) {
+        final map = config.flatten()
+        if( !map.containsKey(name) )
+            throw new AbortOperationException("Configuration option '$name' not found")
+
+        output << map.get(name).toString() << '\n'
     }
 
     /**

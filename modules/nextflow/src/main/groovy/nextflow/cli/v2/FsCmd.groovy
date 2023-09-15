@@ -17,9 +17,11 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
+import nextflow.cli.CliOptions
 import nextflow.cli.CmdFs
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
+import picocli.CommandLine.ParentCommand
 
 /**
  * CLI `fs` sub-command (v2)
@@ -31,38 +33,46 @@ import picocli.CommandLine.Parameters
     name = 'fs',
     description = 'Perform basic filesystem operations'
 )
-class FsCmd extends AbstractCmd {
+class FsCmd extends AbstractCmd implements CmdFs.Options {
+
+    @ParentCommand
+    private Launcher launcher
+
+    @Override
+    CliOptions getLauncherOptions() {
+        launcher.options
+    }
 
     @Command(description = 'Copy a file')
     void copy(
             @Parameters(paramLabel = '<source>') String source,
             @Parameters(paramLabel = '<target>') String target) {
-        new CmdFs().run(CmdFs.Command.COPY, [ source, target ])
+        new CmdFs(this).run(CmdFs.Command.COPY, [ source, target ])
     }
 
     @Command(description = 'Move a file')
     void move(
             @Parameters(paramLabel = '<source>') String source,
             @Parameters(paramLabel = '<target>') String target) {
-        new CmdFs().run(CmdFs.Command.MOVE, [ source, target ])
+        new CmdFs(this).run(CmdFs.Command.MOVE, [ source, target ])
     }
 
     @Command(description = 'List the contents of a folder')
     void list(
             @Parameters(paramLabel = '<source>') String source) {
-        new CmdFs().run(CmdFs.Command.LIST, [ source ])
+        new CmdFs(this).run(CmdFs.Command.LIST, [ source ])
     }
 
     @Command(description = 'Print a file to stdout')
     void cat(
             @Parameters(paramLabel = '<source>') String source) {
-        new CmdFs().run(CmdFs.Command.CAT, [ source ])
+        new CmdFs(this).run(CmdFs.Command.CAT, [ source ])
     }
 
     @Command(description = 'Remove a file')
     void remove(
             @Parameters(paramLabel = '<source>') String source) {
-        new CmdFs().run(CmdFs.Command.REMOVE, [ source ])
+        new CmdFs(this).run(CmdFs.Command.REMOVE, [ source ])
     }
 
 }

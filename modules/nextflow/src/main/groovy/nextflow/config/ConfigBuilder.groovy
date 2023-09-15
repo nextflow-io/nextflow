@@ -709,16 +709,6 @@ class ConfigBuilder {
             config.fusion.enabled = cmdRun.withFusion == 'true'
         }
 
-        // -- nextflow setting
-        if( cmdRun.dsl1 || cmdRun.dsl2 ) {
-            if( config.nextflow !instanceof Map )
-                config.nextflow = [:]
-            if( cmdRun.dsl1 )
-                config.nextflow.enable.dsl = 1
-            if( cmdRun.dsl2 )
-                config.nextflow.enable.dsl = 2
-        }
-
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.hasParams() )
             config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
@@ -787,8 +777,8 @@ class ConfigBuilder {
                 return true
 
             def result = process
-                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
-                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
+                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
 
             return result as boolean
         }

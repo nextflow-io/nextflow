@@ -16,12 +16,11 @@
 
 package nextflow.cli
 
-import spock.lang.Specification
-
 import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import spock.lang.Specification
 import test.OutputCapture
 /**
  *
@@ -44,7 +43,6 @@ class LauncherTest extends Specification {
         then:
         assert launcher.options.version
         assert launcher.fullVersion
-
 
     }
 
@@ -150,7 +148,7 @@ class LauncherTest extends Specification {
 
         given:
         def script = Files.createTempFile('file',null)
-        def launcher = [:] as Launcher
+        def launcher = new Launcher()
         launcher.allCommands = [ new CmdRun.V1(), new CmdInfo.V1() ]
 
         expect:

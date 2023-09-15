@@ -15,33 +15,17 @@
  *
  */
 
-package io.seqera.wave.config
+package nextflow.exception
 
-import spock.lang.Specification
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 
 /**
+ * Exception thrown when input/output arity check fails
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOptsTest extends Specification {
-
-    def 'check conda options' () {
-        when:
-        def opts = new CondaOpts([:])
-        then:
-        opts.mambaImage == CondaOpts.DEFAULT_MAMBA_IMAGE
-        !opts.basePackages
-        !opts.commands
-
-        when:
-        opts = new CondaOpts([
-                mambaImage:'foo:latest',
-                commands: ['this','that'],
-                basePackages: 'some::more-package'
-        ])
-        then:
-        opts.mambaImage == 'foo:latest'
-        opts.basePackages == 'some::more-package'
-        opts.commands == ['this','that']
-    }
+@CompileStatic
+@InheritConstructors
+class IllegalArityException extends ProcessUnrecoverableException {
 }

@@ -583,6 +583,15 @@ When a process input is a *symbolic link* file, make sure the linked file is sto
 Nextflow no longer mounts the home directory when launching a Singularity container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_HOME_MOUNT` to `true`.
 :::
 
+:::{versionchanged} 23.09.0-edge
+Nextflow automatically mounts the required host paths in the container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_AUTO_MOUNTS` to `false` or set `singularity.autoMounts=false` in the Nextflow configuration file.
+:::
+
+:::{versionchanged} 23.09.0-edge
+Nextflow uses the command `run` to carry out the execution of Singularity containers instead of the `exec` command.
+To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_RUN_COMMAND` to `exec`.
+:::
+
 ### Multiple containers
 
 It is possible to specify a different Singularity image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Singularity images specifying them in the `nextflow.config` file as shown below:
