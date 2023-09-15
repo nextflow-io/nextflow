@@ -19,6 +19,8 @@ package nextflow
 
 import java.nio.file.Paths
 
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -44,6 +46,15 @@ class S3NextflowTest extends Specification {
 
         cleanup:
         SysEnv.pop()
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+    def 'should resolve list of files' () {
+        when:
+        def result = Nextflow.files('s3://ngi-igenomes/*')
+        then:
+        result.size() == 3
     }
 
 }

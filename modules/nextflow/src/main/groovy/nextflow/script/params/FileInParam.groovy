@@ -28,7 +28,7 @@ import nextflow.script.TokenVar
  */
 @Slf4j
 @InheritConstructors
-class FileInParam extends BaseInParam implements PathQualifier {
+class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
 
     protected filePattern
 

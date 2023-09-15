@@ -244,7 +244,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
+        final containerOpts = task.config.getContainerOptions()
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
         // create an inline script to launch the job execution
         return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
     }
@@ -413,7 +414,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             /*
              * Since working with NFS it may happen that the file exists BUT it is empty due to network latencies,
-             * before retuning an invalid exit code, wait some seconds.
+             * before returning an invalid exit code, wait some seconds.
              *
              * More in detail:
              * 1) the very first time that arrive here initialize the 'exitTimestampMillis' to the current timestamp

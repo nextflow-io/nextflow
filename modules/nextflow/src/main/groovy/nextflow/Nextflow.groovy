@@ -18,6 +18,7 @@ package nextflow
 
 import static nextflow.file.FileHelper.*
 
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -60,7 +61,8 @@ class Nextflow {
     static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
 
         final scheme = splitter.scheme
-        final folder = toCanonicalPath(splitter.parent)
+        final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
+        final folder = toCanonicalPath(target)
         final pattern = splitter.fileName
 
         if( opts == null ) opts = [:]

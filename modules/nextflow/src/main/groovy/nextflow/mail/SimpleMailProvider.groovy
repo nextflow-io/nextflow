@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2020-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,22 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package nextflow.mail
 
 /**
- * Conda build options
+ * Send a mail using the `mail` sys tool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOpts {
+class SimpleMailProvider extends BaseMailProvider {
 
-    final public static String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.4.2'
-
-    final String mambaImage
-    final List<String> commands
-    final String basePackages
-
-    CondaOpts(Map opts) {
-        this.mambaImage = opts.mambaImage ?: DEFAULT_MAMBA_IMAGE
-        this.commands = opts.commands as List<String>
-        this.basePackages = opts.basePackages
+    @Override
+    String name() {
+        return 'mail'
     }
 
+    @Override
+    boolean textOnly() {
+        return true
+    }
 }

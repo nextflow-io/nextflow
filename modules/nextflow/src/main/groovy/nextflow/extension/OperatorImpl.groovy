@@ -41,6 +41,7 @@ import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
+import nextflow.splitter.JsonSplitter
 import nextflow.splitter.TextSplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
@@ -725,23 +726,26 @@ class OperatorImpl {
 
         final listeners = []
         final target = CH.create()
+        final stopOnFirst = source instanceof DataflowExpression
 
-        if( source instanceof DataflowExpression ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                    processor.bindOutput( Channel.STOP )
+        listeners << new DataflowEventAdapter() {
+            @Override
+            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                if( stopOnFirst )
                     processor.terminate()
-                }
+            }
 
-                boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    OperatorImpl.log.error("@unknown", e)
-                    session.abort(e)
-                    return true;
-                }
+            @Override
+            void afterStop(final DataflowProcessor processor) {
+                processor.bindOutput(Channel.STOP)
+            }
+
+            boolean onException(final DataflowProcessor processor, final Throwable e) {
+                OperatorImpl.log.error("@unknown", e)
+                session.abort(e)
+                return true;
             }
         }
-
 
         newOperator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
 
@@ -1048,7 +1052,7 @@ class OperatorImpl {
     static private final Map PARAMS_VIEW = [newLine: Boolean]
 
     /**
-     * Print out the channel content retuning a new channel emitting the identical content as the original one
+     * Print out the channel content returning a new channel emitting the identical content as the original one
      *
      * @param source
      * @param closure

@@ -42,11 +42,12 @@ dependencies {
     api 'com.google.cloud:google-cloud-batch:0.10.0'
     api 'com.google.cloud:google-cloud-logging:3.8.0'
     api 'com.google.cloud:google-cloud-nio:0.124.8'
+    api 'com.google.cloud:google-cloud-storage:2.9.3'
     api 'com.google.code.gson:gson:2.10.1'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.17"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.17"
+    testImplementation "org.codehaus.groovy:groovy:3.0.19"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.19"
 }
 
 test {

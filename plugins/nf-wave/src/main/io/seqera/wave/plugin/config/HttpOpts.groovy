@@ -17,31 +17,26 @@
 
 package io.seqera.wave.plugin.config
 
-import spock.lang.Specification
-
+import groovy.transform.CompileStatic
+import groovy.transform.ToString
+import nextflow.util.Duration
 /**
+ * Model the HTTP client settings to connect the Wave service
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOptsTest extends Specification {
+@ToString(includeNames = true, includePackage = false)
+@CompileStatic
+class HttpOpts {
 
-    def 'check conda options' () {
-        when:
-        def opts = new CondaOpts([:])
-        then:
-        opts.mambaImage == CondaOpts.DEFAULT_MAMBA_IMAGE
-        !opts.basePackages
-        !opts.commands
+    final private Duration connectTimeout
 
-        when:
-        opts = new CondaOpts([
-                mambaImage:'foo:latest',
-                commands: ['this','that'],
-                basePackages: 'some::more-package'
-        ])
-        then:
-        opts.mambaImage == 'foo:latest'
-        opts.basePackages == 'some::more-package'
-        opts.commands == ['this','that']
+    HttpOpts(Map opts) {
+        connectTimeout = opts.connectTimeout as Duration ?: Duration.of('30s')
     }
+
+    java.time.Duration connectTimeout() {
+        return java.time.Duration.ofMillis(connectTimeout.toMillis())
+    }
+
 }

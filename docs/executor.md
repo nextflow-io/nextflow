@@ -28,6 +28,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-queue`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
@@ -55,6 +56,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-machineType`
 - {ref}`process-memory`
 - {ref}`process-queue`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
@@ -158,7 +160,13 @@ Make sure the TES backend can access the Nextflow work directory when data is ex
 ### Known Limitations
 
 - Automatic deployment of workflow scripts in the `bin` folder is not supported.
+
+  :::{versionchanged} 23.07.0-edge
+  Automatic upload of the `bin` directory is now supported.
+  :::
+
 - Process output directories are not supported. For details see [#76](https://github.com/ga4gh/task-execution-schemas/issues/76).
+
 - Glob patterns in process output declarations are not supported. For details see [#77](https://github.com/ga4gh/task-execution-schemas/issues/77).
 
 (google-batch-executor)=
@@ -185,8 +193,8 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-disk`
 - {ref}`process-machineType`
 - {ref}`process-memory`
-- {ref}`process-time`
 - {ref}`process-resourcelabels`
+- {ref}`process-time`
 
 See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
 
@@ -212,6 +220,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-disk`
 - {ref}`process-machineType`
 - {ref}`process-memory`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`Google Life Sciences <google-lifesciences>` page for further configuration details.
@@ -306,6 +315,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-disk`
 - {ref}`process-memory`
 - {ref}`process-pod`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cluster to run Nextflow pipelines.
@@ -507,6 +517,10 @@ Resource requests and other job characteristics can be controlled via the follow
 SLURM partitions can be specified with the `queue` directive.
 :::
 
-:::{tip}
+:::{note}
 Nextflow does not provide direct support for SLURM multi-clusters. If you need to submit workflow executions to a cluster other than the current one, specify it with the `SLURM_CLUSTERS` variable in the launch environment.
+:::
+
+:::{versionadded} 23.07.0-edge
+Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::
