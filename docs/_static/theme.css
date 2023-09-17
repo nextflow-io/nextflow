@@ -1,6 +1,18 @@
 
 /* navbar -- Seqera logo */
 
+.wy-side-nav-search {
+    background-color: #27ae60;
+}
+
+.wy-menu-vertical p.caption {
+    color: #27ae60;
+}
+
+.wy-menu-vertical a:active {
+    background-color: #27ae60;
+}
+
 .nav-footer-logo {
     width: 300px;
     margin-top: 2rem;

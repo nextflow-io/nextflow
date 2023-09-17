@@ -1,0 +1,31 @@
+classDiagram
+    %%
+    %% nextflow.cloud.aws.nio
+    %%
+    S3FileSystemProvider --> S3FileSystem : newFileSystem
+
+    class S3FileSystem {
+        client : S3Client
+        endpoint : String
+    }
+    S3FileSystem --* S3Client
+
+    class S3Client {
+        client : AmazonS3
+        cannedAcl : CannedAccessControlList
+        kmsKeyId : String
+        storageEncryption : SSEAlgorithm
+        transferManager : TransferManager
+        transferPool : ExecutorService
+        uploadChunkSize : Long
+        uploadMaxThreads : Integer
+    }
+
+    Path <|-- S3Path
+
+    class S3Path {
+        bucket : String
+        parts : List~String~
+        fileSystem : S3FileSystem
+    }
+    S3Path --* S3FileSystem

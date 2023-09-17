@@ -1,0 +1,13 @@
+classDiagram
+    %%
+    %% nextflow.cloud.google
+    %%
+    Executor <|-- GoogleBatchExecutor
+    TaskHandler <|-- GoogleBatchTaskHandler
+    BashWrapperBuilder <|-- GoogleBatchScriptLauncher
+
+    GoogleBatchExecutor --* BatchConfig
+
+    GoogleBatchExecutor --> TaskPollingMonitor : init
+    GoogleBatchExecutor --> GoogleBatchTaskHandler : submit
+    GoogleBatchTaskHandler --> GoogleBatchScriptLauncher : submit

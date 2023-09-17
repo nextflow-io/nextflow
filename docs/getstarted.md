@@ -1,6 +1,6 @@
 (getstarted-page)=
 
-# Get started
+# Getting started
 
 (getstarted-requirement)=
 

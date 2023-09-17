@@ -1,0 +1,28 @@
+classDiagram
+    %%
+    %% nextflow.extension
+    %%
+    direction LR
+
+    ChannelEx --> DumpOp : dump
+    Nextflow --> GroupKey : groupKey
+
+    OperatorImpl --> BranchOp : branch
+    OperatorImpl --> BufferOp : buffer
+    OperatorImpl --> CollectFileOp : collectFile
+    OperatorImpl --> CollectOp : collect
+    OperatorImpl --> CombineOp : combine
+    OperatorImpl --> ConcatOp : concat
+    OperatorImpl --> CrossOp : cross
+    OperatorImpl --> GroupTupleOp : groupTuple
+    OperatorImpl --> JoinOp : join
+    OperatorImpl --> MapOp : map
+    OperatorImpl --> MergeOp : merge
+    OperatorImpl --> MixOp : mix
+    OperatorImpl --> MultiMapOp : multiMap
+    OperatorImpl --> RandomSampleOp : randomSample
+    OperatorImpl --> SplitOp : splitCsv, splitFasta, splitFastq, splitText
+    OperatorImpl --> TakeOp : take
+    OperatorImpl --> ToListOp : toList, toSortedList
+    OperatorImpl --> TransposeOp : transpose
+    OperatorImpl --> UntilOp : until
