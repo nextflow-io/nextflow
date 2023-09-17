@@ -41,9 +41,9 @@ class LoggerHelperTest extends Specification {
         given:
         final pwd = System.getProperty("user.dir")
         Map<String,Path> names = [
-                'Script_f1bbc0ef': Paths.get('/some/path/main.nf'),
-                'Script_1b751fe9': Paths.get('/other/path/module.nf'),
-                'Script_12345678': Paths.get("$pwd/foo/script.nf")
+                'Script_f1bbc0eff1bbc0ef': Paths.get('/some/path/main.nf'),
+                'Script_1b751fe91b751fe9': Paths.get('/other/path/module.nf'),
+                'Script_1234567812345678': Paths.get("$pwd/foo/script.nf")
         ]
 
         expect:
@@ -53,11 +53,11 @@ class LoggerHelperTest extends Specification {
         EXPECTED                        | LINE
         null                            | 'at nextflow.script.ScriptRunner.run(ScriptRunner.groovy:289)'
         null                            | 'at nextflow.script.BaseScript.run(BaseScript.groovy:151)'
-        ['/some/path/main.nf', '63']    | 'at Script_f1bbc0ef.runScript(Script_f1bbc0ef:63)'
-        null                            | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe9)'
-        ['/other/path/module.nf', '10'] | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe9:10)'
-        ['foo/script.nf', '55']         | 'at Script_12345678.runScript(Script_12345678:55)'
-        null                            | 'at Script_12345678.runScript(Script_xxxxxxxx:63)'
+        ['/some/path/main.nf', '63']    | 'at Script_f1bbc0ef.runScript(Script_f1bbc0eff1bbc0ef:63)'
+        null                            | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe91b751fe9)'
+        ['/other/path/module.nf', '10'] | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe91b751fe9:10)'
+        ['foo/script.nf', '55']         | 'at Script_12345678.runScript(Script_1234567812345678:55)'
+        null                            | 'at Script_12345678.runScript(Script_xxxxxxxxxxxxxxxx:63)'
     }
 
 

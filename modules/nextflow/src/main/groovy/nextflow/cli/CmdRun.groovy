@@ -246,12 +246,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
 
-    @Parameter(names=['-dsl1'], description = 'Execute the workflow using DSL1 syntax')
-    boolean dsl1
-
-    @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
-    boolean dsl2
-
     @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
     String mainScript
 
@@ -272,6 +266,11 @@ class CmdRun extends CmdBase implements HubOptions {
                 ?  disableJobsCancellation
                 : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
+
+    /**
+     * Optional closure modelling an action to be invoked when the preview mode is enabled
+     */
+    Closure<Void> previewAction
 
     @Override
     String getName() { NAME }
@@ -305,9 +304,6 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
-
-        if( dsl1 && dsl2 )
-            throw new AbortOperationException("Command line options `-dsl1` and `-dsl2` cannot be specified at the same time")
 
         checkRunName()
 
@@ -343,10 +339,11 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
-        runner.setPreview(this.preview)
+        runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
@@ -629,9 +626,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if ( str.toLowerCase() == 'true') return Boolean.TRUE
         if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
 
-        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
-        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
     }
