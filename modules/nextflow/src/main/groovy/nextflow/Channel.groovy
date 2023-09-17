@@ -105,6 +105,7 @@ class Channel  {
     static private String nth(int i) {
         if( i==1 ) return '1-st'
         if( i==2 ) return '2-nd'
+        if( i==3 ) return '3-rd'
         return "$i-th"
     }
 
