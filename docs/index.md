@@ -43,27 +43,27 @@ secrets
 container
 conda
 spack
+wave
 ```
 
 ```{toctree}
-:caption: Infrastructure
+:caption: Compute & storage platforms
 :maxdepth: 1
 
 aws
 amazons3
 azure
-flux
+fusion
 google
-ignite
 kubernetes
 ```
 
 ```{toctree}
-:caption: Additional software
+:caption: Additional integrations
 :maxdepth: 1
 
-wave
-fusion
+flux
+ignite
 ```
 
 ```{toctree}
