@@ -597,7 +597,7 @@ class LoggerHelper {
         }
     }
 
-    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{8}):(\d*)\)$/
+    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{16}):(\d*)\)$/
 
     @PackageScope
     static List<String> getErrorLine( String str, Map<String,Path> allNames ) {
