@@ -20,6 +20,7 @@ package io.seqera.tower.plugin
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cli.PluginAbstractExec
 /**
  * Implements nextflow cache and restore commands
@@ -46,7 +47,13 @@ class CacheCommand implements PluginAbstractExec {
 
     protected void cacheBackup() {
         log.debug "Running Nextflow cache backup"
-        new CacheManager(System.getenv()).saveCacheFiles()
+        if( !SysEnv.get('NXF_CLOUDCACHE_PATH')) {
+            // legacy cache manager
+            new CacheManager(System.getenv()).saveCacheFiles()
+        }
+        else {
+            new LogsHandler(getSession(), System.getenv()).saveFiles()
+        }
     }
 
     protected void archiveLogs(Session sess) {
@@ -62,8 +69,15 @@ class CacheCommand implements PluginAbstractExec {
     }
 
     protected void cacheRestore() {
-        log.debug "Running Nextflow cache restore"
-        new CacheManager(System.getenv()).restoreCacheFiles()
+        if( !SysEnv.get('NXF_CLOUDCACHE_PATH')) {
+            log.debug "Running Nextflow cache restore"
+            // legacy cache manager
+            new CacheManager(System.getenv()).restoreCacheFiles()
+        }
+        else {
+            // this command is only kept for backward compatibility
+            log.debug "Running Nextflow cache restore - DO NOTHING"
+        }
     }
 
 }

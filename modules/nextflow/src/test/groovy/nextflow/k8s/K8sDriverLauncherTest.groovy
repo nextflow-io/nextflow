@@ -138,7 +138,6 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
-        pod.getAutomountServiceAccountToken() >> true
 
         def k8s = Mock(K8sConfig)
         k8s.getNextflowImageName() >> 'the-image'
@@ -163,6 +162,7 @@ class K8sDriverLauncherTest extends Specification {
             kind: 'Pod',
             metadata: [name:'foo-boo', namespace:'foo', labels:[app:'nextflow', runName:'foo-boo']],
             spec: [
+                automountServiceAccountToken: false,
                 restartPolicy: 'Never',
                 containers: [
                     [
@@ -197,7 +197,6 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
-        pod.getAutomountServiceAccountToken() >> true
 
         def k8s = Mock(K8sConfig)
         k8s.getNextflowImageName() >> 'the-image'
@@ -213,6 +212,9 @@ class K8sDriverLauncherTest extends Specification {
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
 
+        and:
+        def metadata = [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']]
+
         when:
         def spec = driver.makeLauncherSpec()
         then:
@@ -221,11 +223,13 @@ class K8sDriverLauncherTest extends Specification {
         spec == [
             apiVersion: 'batch/v1', 
             kind: 'Job', 
-            metadata: [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']],
+            metadata: metadata,
             spec: [
-               backoffLimit: 0,
-               template: [
-                  spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: metadata,
+                    spec: [
+                        automountServiceAccountToken: false,
                         restartPolicy: 'Never',
                         containers: [
                             [
@@ -249,8 +253,8 @@ class K8sDriverLauncherTest extends Specification {
                             [name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
                             [name:'vol-2', configMap:[name:'cfg-2']]
                         ]
-                  ]
-               ]
+                    ]
+                ]
             ]
         ]
     }
@@ -261,7 +265,6 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
-        pod.getAutomountServiceAccountToken() >> true
 
         def k8s = Mock(K8sConfig)
         k8s.getLaunchDir() >> '/the/user/dir'
@@ -277,40 +280,11 @@ class K8sDriverLauncherTest extends Specification {
         driver.@headImage = 'foo/bar'
 
         when:
-        def spec = driver.makeLauncherSpec()
+        def result = driver.makeLauncherSpec()
         then:
         driver.getLaunchCli() >> 'nextflow run foo'
-
-        spec == [
-            apiVersion: 'v1',
-            kind: 'Pod',
-            metadata: [name:'foo-boo', namespace:'foo', labels:[app:'nextflow', runName:'foo-boo']],
-            spec: [
-                restartPolicy: 'Never',
-                containers: [
-                    [
-                        name: 'foo-boo',
-                        image: 'foo/bar',
-                        command: ['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
-                        env: [
-                            [name:'NXF_WORK', value:'/the/work/dir'],
-                            [name:'NXF_ASSETS', value:'/the/project/dir'],
-                            [name:'NXF_EXECUTOR', value:'k8s'],
-                            [name:'NXF_ANSI_LOG', value: 'false']
-                        ],
-                        volumeMounts: [
-                            [name:'vol-1', mountPath:'/mnt/path/data'],
-                            [name:'vol-2', mountPath:'/mnt/path/cfg']
-                        ]
-                    ]
-                ],
-                serviceAccountName: 'bar',
-                volumes: [
-                    [name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
-                    [name:'vol-2', configMap:[name:'cfg-2'] ]
-                ]
-            ]
-        ]
+        and:
+        result.spec.containers[0].image == 'foo/bar'
 
     }
 
@@ -320,9 +294,9 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
-        pod.getAutomountServiceAccountToken() >> true
 
         def k8s = Mock(K8sConfig)
+        k8s.getNextflowImageName() >> 'the-image'
         k8s.getLaunchDir() >> '/the/user/dir'
         k8s.getWorkDir() >> '/the/work/dir'
         k8s.getProjectDir() >> '/the/project/dir'
@@ -333,48 +307,17 @@ class K8sDriverLauncherTest extends Specification {
         driver.@runName = 'foo-boo'
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
-        driver.@headImage = 'foo/bar'
         driver.@headCpus = 2
         driver.@headMemory = '200Mi'
 
         when:
-        def spec = driver.makeLauncherSpec()
+        def result = driver.makeLauncherSpec()
         then:
         driver.getLaunchCli() >> 'nextflow run foo'
-
-        spec == [
-            apiVersion: 'v1',
-            kind: 'Pod',
-            metadata: [name:'foo-boo', namespace:'foo', labels:[app:'nextflow', runName:'foo-boo']],
-            spec: [
-                restartPolicy: 'Never',
-                containers: [
-                    [
-                        name: 'foo-boo',
-                        image: 'foo/bar',
-                        command: ['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
-                        env: [
-                            [name:'NXF_WORK', value:'/the/work/dir'],
-                            [name:'NXF_ASSETS', value:'/the/project/dir'],
-                            [name:'NXF_EXECUTOR', value:'k8s'],
-                            [name:'NXF_ANSI_LOG', value: 'false']
-                        ],
-                        resources: [
-                            requests: [cpu: 2, memory: '200Mi'],
-                            limits: [memory: '200Mi']
-                        ],
-                        volumeMounts: [
-                            [name:'vol-1', mountPath:'/mnt/path/data'],
-                            [name:'vol-2', mountPath:'/mnt/path/cfg']
-                        ]
-                    ]
-                ],
-                serviceAccountName: 'bar',
-                volumes: [
-                    [name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
-                    [name:'vol-2', configMap:[name:'cfg-2'] ]
-                ]
-            ]
+        and:
+        result.spec.containers[0].resources == [
+            requests: [cpu: 2, memory: '200Mi'],
+            limits: [memory: '200Mi']
         ]
 
     }

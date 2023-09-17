@@ -248,6 +248,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         runner.session.fault.error instanceof ProcessUnrecoverableException
         runner.session.fault.error.cause instanceof MissingPropertyException
         runner.session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
+        // if this fails, likely there's something wrong in the LoggerHelper#getErrorLine method
         runner.session.fault.report =~ /No such variable: HELLO -- .*/
 
     }

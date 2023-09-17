@@ -20,6 +20,7 @@ package io.seqera.wave.plugin
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.config.ReportOpts
 import nextflow.Session
 import nextflow.file.FileHelper
@@ -30,6 +31,7 @@ import nextflow.trace.TraceRecord
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class WaveObserver implements TraceObserver {
 
@@ -41,12 +43,14 @@ class WaveObserver implements TraceObserver {
         this.client = new WaveClient(session)
     }
 
+    @Override
+    void onFlowCreate(Session session) {
+        log.warn "Wave report feature has been deprecated in favour of the new 'nextflow inspect' command"
+    }
+
     protected void apply(TaskHandler handler) {
         final process = handler.task.getProcessor().getName()
-        containers.computeIfAbsent(process, (String it) -> {
-            final container = handler.task.getContainer()
-            return client.resolveSourceContainer(container)
-        })
+        containers.computeIfAbsent(process, (String it) -> handler.task.getContainer())
     }
 
     void onProcessComplete(TaskHandler handler, TraceRecord trace){
