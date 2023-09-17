@@ -589,6 +589,10 @@ class TraceRecord implements Serializable {
         store.status == 'CACHED'
     }
 
+    boolean isCompleted() {
+        store.status == 'COMPLETED'
+    }
+
     String getExecutorName() {
         return executorName
     }

@@ -793,13 +793,13 @@ class TaskProcessor {
             Path resumeDir = null
             boolean exists = false
             try {
-                def entry = session.cache.getTaskEntry(hash, this)
+                final entry = session.cache.getTaskEntry(hash, this)
                 resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
                 if( resumeDir )
                     exists = resumeDir.exists()
 
                 log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
+                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
             }
