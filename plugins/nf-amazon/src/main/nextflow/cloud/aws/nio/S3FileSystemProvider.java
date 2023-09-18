@@ -62,9 +62,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -79,11 +77,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import nextflow.cloud.aws.AwsClientFactory;
+import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.cloud.aws.nio.util.IOUtils;
 import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.nio.util.S3ObjectSummaryLookup;
-import nextflow.cloud.aws.AwsClientFactory;
-import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.extension.FilesEx;
 import nextflow.file.CopyOptions;
 import nextflow.file.FileHelper;
@@ -833,16 +831,9 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		ClientConfiguration clientConfig = createClientConfig(props);
 
 		final String bucketName = S3Path.bucketName(uri);
-		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
-		if( anonymous ) {
-			log.debug("Creating AWS S3 client with anonymous credentials");
-			client = new S3Client(new AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
-		}
-		else {
-			final boolean global = bucketName!=null;
-			final AwsClientFactory factory = new AwsClientFactory(awsConfig, Regions.US_EAST_1.getName());
-			client = new S3Client(factory.getS3Client(clientConfig, global));
-		}
+		final boolean global = bucketName!=null;
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, Regions.US_EAST_1.getName());
+		client = new S3Client(factory.getS3Client(clientConfig, global));
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
