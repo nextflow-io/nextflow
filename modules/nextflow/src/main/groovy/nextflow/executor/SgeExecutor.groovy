@@ -120,8 +120,14 @@ class SgeExecutor extends AbstractGridExecutor {
             if( entry.toString().isLong() )
                 return entry
 
+            if( (id=entry.tokenize('.').get(0)).isLong() )
+                return id
+
             if( entry.startsWith('Your job') && entry.endsWith('has been submitted') && (id=entry.tokenize().get(2)) )
                 return id
+
+            if( entry.startsWith('Your job array') && entry.endsWith('has been submitted') && (id=entry.tokenize().get(3)) )
+                return id.tokenize('.').get(0)
         }
 
         throw new IllegalStateException("Invalid SGE submit response:\n$text\n\n")
