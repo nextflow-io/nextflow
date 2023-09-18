@@ -84,6 +84,16 @@ class ChannelEx {
     }
 
     /**
+     * Close a dataflow queue channel binding a {@link Channel#STOP} item
+     *
+     * @param source The source dataflow channel to be closed.
+     */
+    @Deprecated
+    static DataflowWriteChannel close(DataflowWriteChannel source) {
+        throw new DeprecationException("Channel `close` method is not supported anymore")
+    }
+
+    /**
      * INTERNAL ONLY API
      * <p>
      * Add the {@code update} method to an {@code Agent} so that it call implicitly

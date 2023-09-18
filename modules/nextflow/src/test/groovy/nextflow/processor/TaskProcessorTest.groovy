@@ -592,14 +592,14 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setType('file')
+        param.type = 'file'
         result = fetchResultFiles(processor, param, '*.fa', folder)
         then:
         result  == ['file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setType('dir')
+        param.type = 'dir'
         result = fetchResultFiles(processor, param, '*.fa', folder)
         then:
         result == []
@@ -612,14 +612,14 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setFollowLinks(false)
+        param.followLinks = false
         result = fetchResultFiles(processor, param, '**.fa', folder)
         then:
         result == ['dir1/dir2/file4.fa', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setMaxDepth(1)
+        param.maxDepth = 1
         result = fetchResultFiles(processor, param, '**.fa', folder)
         then:
         result == ['file2.fa']
@@ -632,22 +632,22 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setType('dir')
+        param.type = 'dir'
         result = fetchResultFiles(processor, param, '*', folder)
         then:
         result == ['dir1', 'dir_link']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setType('file')
+        param.type = 'file'
         result = fetchResultFiles(processor, param, '*', folder)
         then:
         result == ['file1.txt', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setType('file')
-        param.setHidden(true)
+        param.type = 'file'
+        param.hidden = true
         result = fetchResultFiles(processor, param, '*', folder)
         then:
         result == ['.hidden.fa', 'file1.txt', 'file2.fa']
@@ -684,25 +684,25 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setType('dir')
+        param.type = 'dir'
         then:
         processor.visitOptions(param,'dir-name') == [type:'dir', followLinks: true, maxDepth: null, hidden: false, relative: false]
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setHidden(true)
+        param.hidden = true
         then:
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: null, hidden: true, relative: false]
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setFollowLinks(false)
+        param.followLinks = false
         then:
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: false, maxDepth: null, hidden: false, relative: false]
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.setMaxDepth(5)
+        param.maxDepth = 5
         then:
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: 5, hidden: false, relative: false]
     }

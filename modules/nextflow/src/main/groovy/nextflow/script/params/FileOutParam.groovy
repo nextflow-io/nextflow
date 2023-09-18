@@ -92,6 +92,47 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
      */
     boolean isDynamic() { dynamicObj || gstring != null }
 
+    @Deprecated
+    FileOutParam separatorChar( String value ) {
+        throw new DeprecationException("Option `separatorChar is not supported anymore")
+    }
+
+    @Deprecated
+    FileOutParam includeInputs( boolean flag ) {
+        throw new DeprecationException("Deprecated syntax error - replace `includeInputs $flag` with `, includeInputs: $flag` ")
+    }
+
+    @Deprecated
+    FileOutParam includeHidden( boolean flag ) {
+        throw new DeprecationException("Deprecated syntax error - replace `includeHidden $flag` with `, includeHidden: $flag`")
+    }
+
+    @Deprecated
+    FileOutParam hidden( boolean flag ) {
+        throw new DeprecationException("Deprecated syntax error - replace `hidden $flag` with use `, hidden: $flag`")
+    }
+
+    @Deprecated
+    FileOutParam type( String value ) {
+        throw new DeprecationException("Deprecated syntax error - replace `type $value` with `, type: $value`")
+        return this
+    }
+
+    @Deprecated
+    FileOutParam maxDepth( int value ) {
+        throw new DeprecationException("Deprecated syntax error - replace `maxDepth $value` with `, maxDepth: $value`")
+    }
+
+    @Deprecated
+    FileOutParam followLinks( boolean value ) {
+        throw new DeprecationException("Deprecated syntax error - replace `followLinks $value` with `, followLinks: $value`")
+    }
+
+    @Deprecated
+    FileOutParam glob( boolean value ) {
+        throw new DeprecationException("Deprecated syntax error - replace `glob $value` with `, glob: $value` ")
+    }
+
     @Override
     BaseOutParam bind( obj ) {
 
