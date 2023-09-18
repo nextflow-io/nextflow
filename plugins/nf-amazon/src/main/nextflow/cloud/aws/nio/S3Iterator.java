@@ -29,7 +29,7 @@ import com.google.common.base.Preconditions;
 
 /**
  * S3 iterator over folders at first level.
- * Future verions of this class should be return the elements
+ * Future versions of this class should be return the elements
  * in a incremental way when the #next() method is called.
  */
 public class S3Iterator implements Iterator<Path> {
