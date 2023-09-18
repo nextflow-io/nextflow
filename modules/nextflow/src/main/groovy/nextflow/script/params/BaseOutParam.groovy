@@ -150,6 +150,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return this
     }
 
+    BaseOutParam into( def value ) {
+        throw new ScriptRuntimeException("Process clause `into` is no longer supported in DSL2")
+    }
+
+    BaseOutParam into( TokenVar... vars ) {
+        throw new ScriptRuntimeException("Process clause `into` is no longer supported in DSL2")
+    }
+
     void setInto( Object obj ) {
         intoObj = obj
     }
@@ -157,6 +165,12 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     DataflowWriteChannel getOutChannel() {
         init()
         return outChannels ? outChannels.get(0) : null
+    }
+
+    @Deprecated
+    List<DataflowWriteChannel> getOutChannels() {
+        init()
+        return outChannels
     }
 
     String getName() {

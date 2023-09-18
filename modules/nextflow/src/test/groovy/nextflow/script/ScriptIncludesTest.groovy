@@ -1158,7 +1158,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains "Invalid include statement -- the correct syntax is `include { ... } from '...'`"
+        e.message.contains "Not a valid include statement -- the correct syntax is `include { ... } from '...'`"
 
     }
 

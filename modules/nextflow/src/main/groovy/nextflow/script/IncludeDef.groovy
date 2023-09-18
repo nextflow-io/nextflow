@@ -57,6 +57,17 @@ class IncludeDef {
     @PackageScope Map addedParams
     private Session session
 
+    @Deprecated
+    IncludeDef( String module ) {
+        throw new DeprecationException("Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`")
+    }
+
+    @Deprecated
+    IncludeDef(TokenVar token, String alias=null) {
+        def component = token.name; if(alias) component += " as $alias"
+        throw new DeprecationException("Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`")
+    }
+
     protected IncludeDef(List<Module> modules) {
         this.modules = new ArrayList<>(modules)
     }

@@ -49,20 +49,22 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'afterScript',
             'beforeScript',
             'cache',
-            'cleanup',
-            'clusterOptions',
             'conda',
+            'cpus',
             'container',
             'containerOptions',
-            'cpus',
+            'cleanup',
+            'clusterOptions',
             'debug',
             'disk',
+            'echo', // deprecated
             'errorStrategy',
             'executor',
             'ext',
             'fair',
-            'label',
             'machineType',
+            'queue',
+            'label',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -71,24 +73,24 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
-            'queue',
-            'resourceLabels',
             'scratch',
-            'secret',
             'shell',
             'spack',
-            'stageInMode',
-            'stageOutMode',
             'storeDir',
             'tag',
             'time',
             // input-output qualifiers
             'file',
+            'set',
             'val',
             'each',
             'env',
+            'secret',
             'stdin',
-            'stdout'
+            'stdout',
+            'stageInMode',
+            'stageOutMode',
+            'resourceLabels'
     ]
 
     /**
@@ -533,6 +535,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new EachInParam(this).bind(obj)
     }
 
+    InParam _in_set( Object... obj ) {
+        throw new DeprecationException("Input of type `set` is deprecated -- Use `tuple` instead")
+    }
+
     InParam _in_tuple( Object... obj ) {
         new TupleInParam(this).bind(obj)
     }
@@ -595,6 +601,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                     .setOptions(opts)
                     .bind(obj)
         }
+    }
+
+    OutParam _out_set( Object... obj ) {
+        throw new DeprecationException("Output of type `set` is deprecated -- Use `tuple` instead")
     }
 
     OutParam _out_tuple( Object... obj ) {
