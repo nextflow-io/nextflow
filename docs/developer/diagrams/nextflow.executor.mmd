@@ -1,0 +1,82 @@
+classDiagram
+    %%
+    %% nextflow.executor
+    %%
+    ProcessDef --> Executor : run
+    %% ExecutorFactory --> Executor : getExecutor
+
+    TaskProcessor --* Executor
+
+    %% class Executor {
+    %%     name : String
+    %%     monitor : TaskMonitor
+    %% }
+    %% Executor --* TaskMonitor
+    %% Executor --> TaskHandler : submit
+
+    %% TaskMonitor <|-- TaskPollingMonitor
+
+    class TaskPollingMonitor {
+        capacity : int
+        submitRateLimit : RateLimiter
+        pollIntervalMillis : long
+        dumpInterval : Duration
+    }
+
+    %% TaskPollingMonitor <|-- LocalPollingMonitor
+
+    class LocalPollingMonitor {
+        maxCpus : int
+        maxMemory : long
+    }
+
+    %% class TaskHandler {
+    %%     task : TaskRun
+    %% }
+
+    Executor <|-- AbstractGridExecutor
+    Executor <|-- LocalExecutor
+    %% Executor <|-- NopeExecutor
+    %% AbstractGridExecutor <|-- CondorExecutor
+    %% AbstractGridExecutor <|-- HyperQueueExecutor
+    %% AbstractGridExecutor <|-- LsfExecutor
+    %% AbstractGridExecutor <|-- MoabExecutor
+    %% AbstractGridExecutor <|-- NqsiiExecutor
+    %% AbstractGridExecutor <|-- OarExecutor
+    %% AbstractGridExecutor <|-- PbsExecutor
+    %% AbstractGridExecutor <|-- SgeExecutor
+    %% AbstractGridExecutor <|-- SlurmExecutor
+    %% PbsExecutor <|-- PbsProExecutor
+    %% SgeExecutor <|-- CrgExecutor
+
+    LocalExecutor --> LocalPollingMonitor : init
+    LocalExecutor --> LocalTaskHandler : submit
+    LocalExecutor --> NativeTaskHandler : submit
+    LocalTaskHandler --> BashWrapperBuilder : submit
+
+    AbstractGridExecutor --> TaskPollingMonitor : init
+    AbstractGridExecutor --> GridTaskHandler : submit
+    GridTaskHandler --> BashWrapperBuilder : submit
+
+    %% TaskHandler <|-- CachedTaskHandler
+    %% TaskHandler <|-- GridTaskHandler
+    %% TaskHandler <|-- LocalTaskHandler
+    %% TaskHandler <|-- NativeTaskHandler
+    %% TaskHandler <|-- NopeTaskHandler
+    %% TaskHandler <|-- StoredTaskHandler
+
+    class BashWrapperBuilder {
+        bean : TaskBean
+        copyStrategy : ScriptFileCopyStrategy
+    }
+    BashWrapperBuilder --* TaskBean
+    BashWrapperBuilder --* ScriptFileCopyStrategy
+
+    ScriptFileCopyStrategy <|-- SimpleFileCopyStrategy
+
+    class SimpleFileCopyStrategy {
+        stageinMode : String
+        stageoutMode : String
+        targetDir : Path
+        workDir : Path
+    }

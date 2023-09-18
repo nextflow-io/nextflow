@@ -150,20 +150,15 @@ class ScriptMeta {
     }
 
     void checkComponentName(ComponentDef component, String name) {
-        if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+        if( component !instanceof WorkflowDef && component !instanceof ProcessDef && component !instanceof FunctionDef ) {
             return
         }
-        if (functionsCount.get(name)) {
-            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        if( functionsCount.get(name) ) {
+            throw new DuplicateModuleFunctionException("A function named '$name' is already defined or included in script: $scriptPath")
         }
-        if (imports.get(name)) {
-            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        final existing = imports.get(name)
+        if( existing != null ) {
+            throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined or included in script: $scriptPath")
         }
     }
 

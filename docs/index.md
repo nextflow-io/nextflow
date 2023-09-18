@@ -13,29 +13,33 @@ The Nextflow runtime integrates with many popular execution platforms (HPC sched
 
 ```{toctree}
 :hidden:
+:caption: Introduction
+:maxdepth: 1
 
 getstarted
 basic
+```
+
+```{toctree}
+:hidden:
+:caption: Language
+:maxdepth: 1
+
 script
 process
 channel
 operator
-executor
 config
 dsl2
+```
+
+```{toctree}
+:hidden:
+:caption: Execution
+:maxdepth: 1
+
 cli
-container
-conda
-spack
-wave
-fusion
-aws
-amazons3
-azure
-flux
-google
-ignite
-kubernetes
+executor
 tracing
 metrics
 sharing
@@ -43,4 +47,46 @@ metadata
 mail
 plugins
 secrets
+```
+
+```{toctree}
+:hidden:
+:caption: Software dependencies
+:maxdepth: 1
+
+container
+conda
+spack
+wave
+```
+
+```{toctree}
+:hidden:
+:caption: Compute & storage platforms
+:maxdepth: 1
+
+aws
+amazons3
+azure
+fusion
+google
+kubernetes
+```
+
+```{toctree}
+:hidden:
+:caption: Additional integrations
+:maxdepth: 1
+
+flux
+ignite
+```
+
+```{toctree}
+:hidden:
+:caption: Contributing
+:maxdepth: 1
+
+developer/index
+developer/packages
 ```

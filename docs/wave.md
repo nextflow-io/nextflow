@@ -43,9 +43,11 @@ The Tower access token is not mandatory, but it is recommended in order to acces
 
 ## Use cases
 
+(wave-authenticate-private-repos)=
+
 ### Authenticate private repositories
 
-Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Nextflow Tower credentials](https://help.tower.nf/22.2/credentials/overview/).
+Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Tower credentials](https://help.tower.nf/latest/credentials/overview/).
 
 Once the credentials have been created, simply specify your [Tower account access token](https://help.tower.nf/22.2/api/overview/#authentication) in your pipeline configuration file. If the credentials were created in a Tower organization workspace, specify the workspace ID as well in the config file as shown below:
 
@@ -120,6 +122,36 @@ In order to request the build of containers that are optimised for a specific CP
 If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
 :::
 
+### Build Singularity native images
+
+As of version `23.09.0-edge`, Nextflow can build Singularity native images on-demand either using `Singularityfile`,
+Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
+of your choice and stored as a [ORAS artefact](https://oras.land/).
+
+:::{note}
+This feature requires of Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
+:::
+
+For example to enable the provisioning of Singularity images in your pipeline use the following configuration snippet:
+
+```
+singularity.enabled = true
+wave.enabled = true
+wave.freeze = true
+wave.strategy = ['conda']
+wave.build.repository = 'docker.io/user/repo'
+```
+
+In the above configuration replace `docker.io/user/repo` with a repository of your choice where Singularity image files
+should be uploaded.
+
+:::{note}
+When using a private repository, the repository access keys must be provider via Tower credentials manager (see {ref}`above <wave-authenticate-private-repos>`).
+
+Moreover the access to the repository must be granted in the compute nodes by using the command `singularity remote login <registry>`.
+Please see Singularity documentation for further details.
+:::
+
 ### Push to a private repository
 
 Containers built by Wave are uploaded to the Wave default repository hosted on AWS ECR at `195996028523.dkr.ecr.eu-west-1.amazonaws.com/wave/build`. The images in this repository are automatically deleted 1 week after the date of their push.
@@ -153,6 +185,14 @@ The following configuration options are available:
 
 `wave.endpoint`
 : The Wave service endpoint (default: `https://wave.seqera.io`).
+
+`wave.freeze`
+: :::{versionadded} 22.09.0-edge
+  :::
+: When enabling the container freeze mode, Wave will provision an non-ephemeral container image
+that will be pushed to a container repository your choice. It requires the use of the `wave.build.repository` setting.
+It is also suggested to specify a custom cache repository via the setting `wave.build.cacheRepository`. Note: when using
+container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.    
 
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).

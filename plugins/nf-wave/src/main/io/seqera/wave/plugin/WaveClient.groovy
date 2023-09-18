@@ -449,8 +449,6 @@ class WaveClient {
          */
         Path spackFile = null
         if( attrs.spack ) {
-            if( singularity )
-                throw new IllegalArgumentException("Wave containers do not support (yet) the resolution of Spack package with Singularity")
             if( containerScript )
                 throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
 
@@ -462,7 +460,10 @@ class WaveClient {
                 // create a minimal spack file with package spec from user input
                 spackFile = spackPackagesToSpackFile(attrs.spack, config.spackOpts())
             }
-            containerScript = spackFileToDockerFile(config.spackOpts())
+            // create the container file to build the container
+            containerScript = singularity
+                    ? spackFileToSingularityFile(config.spackOpts())
+                    : spackFileToDockerFile(config.spackOpts())
         }
 
         /*
@@ -571,7 +572,7 @@ class WaveClient {
     protected boolean isSpackFile(String value) {
         if( value.contains('\n') )
             return false
-        return value.endsWith('.yaml')
+        return value.endsWith('.yaml') || value.endsWith('.yml')
     }
 
     protected boolean refreshJwtToken0(String refresh) {
