@@ -78,6 +78,9 @@ class CmdPull {
         this.options = options
     }
 
+    /* only for testing purpose */
+    CmdPull() {}
+
     void run() {
 
         if( !all && !pipeline )
