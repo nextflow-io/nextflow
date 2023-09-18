@@ -16,12 +16,12 @@
 
 package nextflow.cli
 
-import spock.lang.Specification
-
 import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import spock.lang.Specification
+import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
 import test.OutputCapture
 /**
@@ -425,6 +425,27 @@ class LauncherTest extends Specification {
         [NO_PROXY: '127.0.0.1' ]    | '127.0.0.1'
         [NO_PROXY:'localhost,127.0.0.1,.localdomain.com']  | 'localhost|127.0.0.1|.localdomain.com'
 
+    }
+
+    @RestoreSystemProperties
+    @Unroll
+    def 'should set http client timeout' () {
+        when:
+        Launcher.setHttpClientProperties(ENV)
+        then:
+        System.getProperty('jdk.httpclient.keepalive.timeout') == TIMEOUT
+        and:
+        System.getProperty('jdk.httpclient.connectionPoolSize') == POOLSIZE
+
+        where:
+        ENV                                             | TIMEOUT   | POOLSIZE
+        [:]                                             | '10'      | null
+        and:
+        [NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT: '1']     | '1'       | null
+        [NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT: '100']   | '100'     | null
+        and:
+        [NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE: '0']    | '10'      | '0'
+        [NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE: '99']   | '10'      | '99'
     }
 
     def 'should make cli' () {

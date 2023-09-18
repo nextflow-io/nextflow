@@ -508,6 +508,38 @@ Channel
 // -> 4
 ```
 
+(operator-countfasta)=
+
+## countFasta
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTA files, equivalent to `splitFasta | count`. See [splitFasta](#splitfasta) for the list of available options.
+
+(operator-countfastq)=
+
+## countFastq
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of FASTQ files, equivalent to `splitFastq | count`. See [splitFastq](#splitfastq) for the list of available options.
+
+(operator-countjson)=
+
+## countJson
+
+*Returns: value channel*
+
+Counts the total number of records in a channel of JSON files, equivalent to `splitJson | count`. See [splitJson](#splitjson) for the list of available options.
+
+(operator-countlines)=
+
+## countLines
+
+*Returns: value channel*
+
+Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
+
 (operator-cross)=
 
 ## cross
@@ -822,6 +854,28 @@ Channel
 [[3], D]
 ```
 
+By default, if you don't specify a size, the `groupTuple` operator will not emit any groups until *all* inputs have been received. If possible, you should always try to specify the number of expected elements in each group using the `size` option, so that each group can be emitted as soon as it's ready. In cases where the size of each group varies based on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key with an associated size:
+
+```groovy
+chr_frequency = [ "chr1": 2, "chr2": 3 ]
+
+Channel.of(
+        [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
+        [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
+        [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
+        [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
+        [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ]
+    )
+    .map { region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf ) }
+    .groupTuple()
+    .view()
+```
+
+```
+[chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
+[chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
+```
+
 Available options:
 
 `by`
@@ -841,41 +895,6 @@ Available options:
   - `hash`: Order the grouped items by the hash number associated to each entry.
   - `deep`: Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.
   - A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
-
-:::{tip}
-You should always specify the number of expected elements in each tuple with the `size` attribute, so that the `groupTuple` operator can stream each collected value as soon as possible. In cases where the size of each tuple may vary depending on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key object with an associated size.
-
-Here are some examples:
-
-```groovy
-Channel
-    .from([ 'A', ['foo', 'bar']], ['B', ['lorem', 'ipsum', 'dolor', 'sit']])
-    .map { key, words -> tuple( groupKey(key, words.size()), words ) }
-    .view()
-```
-
-```groovy
-chr_frequency = [ "chr1": 2, "chr2": 3 ]
-
-data_ch = Channel.of(
-    [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
-    [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
-    [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
-    [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
-    [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ] )
-
-data_ch
-    .map { region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf ) }
-    .groupTuple()
-    .view()
-```
-
-The last example will output:
-```
-[chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
-[chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
-```
-:::
 
 (operator-ifempty)=
 
@@ -1293,7 +1312,7 @@ result = 15
 ```
 
 :::{tip}
-A common use case for this operator is to use the first paramter as an accumulator and the second parameter as the `i-th` item to be processed.
+A common use case for this operator is to use the first parameter as an accumulator and the second parameter as the `i-th` item to be processed.
 :::
 
 Optionally you can specify an initial value for the accumulator as shown below:
@@ -1321,6 +1340,8 @@ my_channel = Channel.of(10, 20, 30)
 ```
 
 However the `set` operator is more idiomatic in Nextflow scripting, since it can be used at the end of a chain of operator transformations, thus resulting in a more fluent and readable operation.
+
+(operator-splitcsv)=
 
 ## splitCsv
 
@@ -1363,6 +1384,10 @@ Channel
     .splitCsv(header: ['col1', 'col2', 'col3'], skip: 1 )
     .view { row -> "${row.col1} - ${row.col2} - ${row.col3}" }
 ```
+:::{note}
+- By default, the `splitCsv` operator returns each row as a *list* object. Items are accessed by using the 0-based column index.
+- When the `header` is specified each row is returned as a *map* object (also known as dictionary). Items are accessed via the corresponding column name. 
+:::
 
 Available options:
 
@@ -1395,6 +1420,8 @@ Available options:
 
 `strip`
 : Removes leading and trailing blanks from values (default: `false`)
+
+(operator-splitfasta)=
 
 ## splitFasta
 
@@ -1466,9 +1493,9 @@ Available options:
 `size`
 : Defines the size in memory units of the expected chunks e.g. `1.MB`.
 
-:::{tip}
-You can also use `countFasta` to count the number of entries in the FASTA file(s).
-:::
+See also: [countFasta](#countfasta)
+
+(operator-splitfastq)=
 
 ## splitFastq
 
@@ -1551,9 +1578,9 @@ Available options:
   - `qualityHeader`: Base quality header (it may be empty)
   - `qualityString`: Quality values for the sequence
 
-:::{tip}
-You can also use `countFastq` to count the number of entries in the FASTQ file(s).
-:::
+See also: [countFastq](#countfastq)
+
+(operator-splitjson)=
 
 ## splitJson
 
@@ -1618,9 +1645,9 @@ Available options:
 `path`
 : Define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to [JSONPath](https://goessner.net/articles/JsonPath/). The empty string is the document root (default). An integer in brackets is the 0-based index in a JSON array. A string preceded by a dot `.` is the key in a JSON object.
 
-:::{tip}
-You can also use `countJson` to count the number of elements in a JSON array or object.
-:::
+See also: [countJson](#countjson)
+
+(operator-splittext)=
 
 ## splitText
 
@@ -1682,7 +1709,7 @@ Available options:
 : The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).
 
 `file`
-: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 
 `keepHeader`
 : Parses the first line as header and prepends it to each emitted chunk.
@@ -1690,9 +1717,7 @@ Available options:
 `limit`
 : Limits the number of retrieved lines for each file to the specified value.
 
-:::{tip}
-You can also use `countLines` to count the number of lines in the text file(s).
-:::
+See also: [countLines](#countlines)
 
 (operator-subscribe)=
 

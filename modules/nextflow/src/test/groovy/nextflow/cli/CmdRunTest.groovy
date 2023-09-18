@@ -19,6 +19,7 @@ package nextflow.cli
 
 import java.nio.file.Files
 
+import nextflow.SysEnv
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import org.junit.Rule
@@ -48,9 +49,13 @@ class CmdRunTest extends Specification {
         'false'     | false
         'foo'       | 'foo'
         '10'        | 10i
+        '-10'       | -10i
         '20.00'     | 20i
+        '-20.00'    | -20i
         '3000000000'| 3000000000l
         '20.33'     | 20.33d
+        '-20.33'    | -20.33d
+        '-foo'      | '-foo'
         '--foo'     | '--foo'
         '20x0'      | '20x0'
         '20.d'      | '20.d'
@@ -58,6 +63,19 @@ class CmdRunTest extends Specification {
         '20..0'     | '20..0'
         '20..'      | '20..'
         '..20'      | '..20'
+    }
+
+    def 'should not detect params type' () {
+        given:
+        SysEnv.push(NXF_DISABLE_PARAMS_TYPE_DETECTION: 'true')
+
+        expect:
+        CmdRun.parseParamValue('true')  == 'true'
+        CmdRun.parseParamValue('1000')  == '1000'
+        CmdRun.parseParamValue('hola')  == 'hola'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should parse nested params' () {

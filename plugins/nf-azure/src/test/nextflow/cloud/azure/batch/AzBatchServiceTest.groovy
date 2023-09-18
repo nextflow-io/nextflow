@@ -338,6 +338,7 @@ class AzBatchServiceTest extends Specification {
                 getMemory() >> MEM
                 getCpus() >> CPUS
                 getMachineType() >> TYPE
+                getResourceLabels() >> [foo: 'bar']
             }
         }
 
@@ -346,12 +347,12 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-ddb1223ab79edfe07c0af2be7fceeb13-Standard_X1'
+        spec.poolId == 'nf-pool-9022a3fbfb5f93028d78fefaea5e21ab-Standard_X1'
+        spec.metadata == [foo: 'bar']
 
     }
 
-
-    def 'should cleanup jobs by default' () {
+    def 'should set jobs to automatically terminate by default' () {
         given:
         def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -359,12 +360,12 @@ class AzBatchServiceTest extends Specification {
         when:
         svc.close()
         then:
-        1 * svc.cleanupJobs() >> null
+        1 * svc.terminateJobs() >> null
     }
 
-    def 'should cleanup jobs no cleanup jobs' () {
+    def 'should not cleanup jobs by default' () {
         given:
-        def CONFIG = [batch:[deleteJobsOnCompletion: false]]
+        def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
@@ -373,7 +374,18 @@ class AzBatchServiceTest extends Specification {
         0 * svc.cleanupJobs() >> null
     }
 
-    def 'should cleanup not cleanup pools by default' () {
+    def 'should cleanup jobs if specified' () {
+        given:
+        def CONFIG = [batch:[deleteJobsOnCompletion: true]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        when:
+        svc.close()
+        then:
+        1 * svc.cleanupJobs() >> null
+    }
+
+    def 'should not cleanup pools by default' () {
         given:
         def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -395,7 +407,7 @@ class AzBatchServiceTest extends Specification {
         1 * svc.cleanupPools() >> null
     }
 
-    def 'should cleanup cleanup pools with allowPoolCreation' () {
+    def 'should cleanup pools with allowPoolCreation' () {
         given:
         def CONFIG = [batch:[allowPoolCreation: true, deletePoolsOnCompletion: true]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }

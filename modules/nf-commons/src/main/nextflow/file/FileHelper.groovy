@@ -258,8 +258,7 @@ class FileHelper {
 
         Path base
         if( !result.isAbsolute() && (base=fileRootDir()) ) {
-            final rel = result.toString()
-            result = rel!='.' ? base.resolve(rel) : base
+            result = base.resolve(result.toString())
         }
 
         return result.toAbsolutePath().normalize()
@@ -366,7 +365,7 @@ class FileHelper {
                 throw new IllegalArgumentException("Malformed file URI: $uri -- It must start either with a `file:/` or `file:///` prefix")
 
             if( !uri.path )
-                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolue path prefix i.e. `file:/`")
+                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolute path prefix i.e. `file:/`")
         }
         else if( !uri.path ) {
             throw new IllegalArgumentException("URI path cannot be empty")
@@ -796,14 +795,15 @@ class FileHelper {
         assert filePattern
         assert action
 
-        final type = options?.type ?: 'any'
-        final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
-        final int maxDepth = getMaxDepth(options?.maxDepth, filePattern)
-        final includeHidden = options?.hidden as Boolean ?: filePattern.startsWith('.')
+        if( options==null ) options = Map.of()
+        final type = options.type ?: 'any'
+        final walkOptions = options.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final int maxDepth = getMaxDepth(options.maxDepth, filePattern)
+        final includeHidden = options.hidden as Boolean ?: filePattern.startsWith('.')
         final includeDir = type in ['dir','any']
         final includeFile = type in ['file','any']
-        final syntax = options?.syntax ?: 'glob'
-        final relative = options?.relative == true
+        final syntax = options.syntax ?: 'glob'
+        final relative = options.relative == true
 
         final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
@@ -829,7 +829,7 @@ class FileHelper {
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
-                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
+                if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
                     def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }

@@ -18,6 +18,7 @@ package nextflow
 
 import static nextflow.file.FileHelper.*
 
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -60,7 +61,8 @@ class Nextflow {
     static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
 
         final scheme = splitter.scheme
-        final folder = toCanonicalPath(splitter.parent)
+        final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
+        final folder = toCanonicalPath(target)
         final pattern = splitter.fileName
 
         if( opts == null ) opts = [:]
@@ -160,6 +162,7 @@ class Nextflow {
      * @param obj The object to be managed as a FASTQ
      * @return An instance of {@link FastqSplitter
      */
+    @Deprecated
     static FastqSplitter fastq( obj ) {
         (FastqSplitter)new FastqSplitter('fastq').target(obj)
     }
@@ -170,6 +173,7 @@ class Nextflow {
      * @param obj The object to be managed as a FASTA
      * @return An instance of {@link FastqSplitter
      */
+    @Deprecated
     static FastaSplitter fasta( obj ) {
         (FastaSplitter)new FastaSplitter('fasta').target(obj)
     }
@@ -188,6 +192,7 @@ class Nextflow {
      * @param exitCode The exit code to be returned
      * @param message The message that will be reported in the log file (optional)
      */
+    @Deprecated
     static void exit(int exitCode, String message = null) {
         if( session.aborted ) {
             log.debug "Ignoring exit because execution is already aborted -- message=$message"
@@ -208,6 +213,7 @@ class Nextflow {
      *
      * @param message The message that will be reported in the log file
      */
+    @Deprecated
     static void exit( String message ) {
         exit(0, message)
     }
@@ -229,6 +235,7 @@ class Nextflow {
      *
      * @return The {@code Path} to the cached directory or a newly created folder for the specified key
      */
+    @Deprecated
     static Path cacheableDir( Object key ) {
         assert key, "Please specify the 'key' argument on 'cacheableDir' method"
 
@@ -254,6 +261,7 @@ class Nextflow {
      * @param name
      * @return
      */
+    @Deprecated
     static Path cacheableFile( Object key, String name = null ) {
 
         // the cacheability is guaranteed by the folder

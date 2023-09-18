@@ -9,13 +9,14 @@ configurations {
     azure.extendsFrom defaultCfg
     legacy.extendsFrom defaultCfg
     tower.extendsFrom defaultCfg
+    wave.extendsFrom defaultCfg
 }
 
 dependencies {
     api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.5.1"
-    // default cfg = runtime + httpfs + amazon + tower client
+    // default cfg = runtime + httpfs + amazon + tower client + wave client
     defaultCfg project(':nf-httpfs')
     // Capsule manages the fat jar building process
     capsule 'io.nextflow:capsule:1.1.1'
@@ -26,6 +27,7 @@ dependencies {
     amazon  project(':plugins:nf-amazon')
     azure   project(':plugins:nf-azure')
     tower   project(':plugins:nf-tower')
+    wave    project(':plugins:nf-wave')
 }
 
 
@@ -134,7 +136,7 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.amazon + configurations.google + configurations.tower)
+    from (configurations.amazon + configurations.google + configurations.tower + configurations.wave)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
@@ -291,7 +293,6 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
     COPY entry.sh /usr/local/bin/entry.sh
     COPY dist/docker /usr/local/bin/docker
     ENV NXF_HOME=/.nextflow
-    RUN touch /.nextflow/dockerized && rm -rf /.nextflow/launch-classpath
     RUN chmod +x /usr/local/bin/nextflow /usr/local/bin/entry.sh
     RUN nextflow info
     ENTRYPOINT ["/usr/local/bin/entry.sh"]
@@ -325,6 +326,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
     def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
+    def versionFile = file('VERSION').absoluteFile
 
     def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
     def edge = version ==~ /^.+(-edge|-EDGE)$/
@@ -348,6 +350,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
         aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
+        aws s3 cp $versionFile s3://www2.nextflow.io/releases/edge/version $s3CmdOpts
         """.stripIndent()
         
     else if( isLatest )
@@ -359,6 +362,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
         aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
+        aws s3 cp $versionFile s3://www2.nextflow.io/releases/latest/version $s3CmdOpts
         """.stripIndent()
 
     def temp = File.createTempFile('upload',null)

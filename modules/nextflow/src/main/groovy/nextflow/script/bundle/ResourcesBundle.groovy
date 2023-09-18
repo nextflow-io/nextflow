@@ -45,13 +45,15 @@ class ResourcesBundle {
     private Path root
     private LinkedHashMap<String,Path> content = new LinkedHashMap<>(100)
     private Path dockerfile
+    private Path singularityfile
     private MemoryUnit maxFileSize = MAX_FILE_SIZE
     private MemoryUnit maxBundleSize = MAX_BUNDLE_SIZE
     private String baseDirectory
 
     ResourcesBundle(Path root) {
         this.root = root
-        this.dockerfile = dockefile0(root.resolveSibling('Dockerfile'))
+        this.dockerfile = pathIfExists0(root.resolveSibling('Dockerfile'))
+        this.singularityfile = pathIfExists0(root.resolveSibling('Singularityfile'))
     }
 
     ResourcesBundle withMaxFileSize(MemoryUnit mem) {
@@ -68,7 +70,7 @@ class ResourcesBundle {
 
     Map<String,Path> content() { content }
 
-    static private Path dockefile0(Path path) {
+    static private Path pathIfExists0(Path path) {
         return path?.exists() ? path : null
     }
 
@@ -100,6 +102,10 @@ class ResourcesBundle {
         return dockerfile
     }
 
+    Path getSingularityfile() {
+        return singularityfile
+    }
+
     Set<Path> getPaths() {
         return new HashSet<Path>(content.values())
     }
@@ -125,7 +131,7 @@ class ResourcesBundle {
     }
 
     boolean asBoolean() {
-        return content.size() || dockerfile
+        return content.size() || dockerfile || singularityfile
     }
 
     /**
@@ -188,6 +194,9 @@ class ResourcesBundle {
         }
         if( dockerfile ) {
             allMeta.add(fileMeta(dockerfile.name, dockerfile))
+        }
+        if( singularityfile ) {
+            allMeta.add(fileMeta(singularityfile.name, singularityfile))
         }
 
         return CacheHelper.hasher(allMeta).hash().toString()

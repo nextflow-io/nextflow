@@ -31,12 +31,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.conda.CondaConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.spack.SpackConfig
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -44,7 +42,6 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -168,6 +165,52 @@ class WaveClientTest extends Specification {
         !req.condaFile
         !req.spackFile
         !req.containerConfig.layers
+        !req.freeze
+        !req.dryRun
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with freeze mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[freeze:true]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.freeze
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with dry-run mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[dryRun:true]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.dryRun
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
@@ -209,6 +252,33 @@ class WaveClientTest extends Specification {
         !req.condaFile
         !req.spackFile
         !req.containerConfig.layers
+    }
+
+    def 'should create request object with singularityfile' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def SINGULARITY_FILE =  'From foo:latest'
+        def wave = new WaveClient(session)
+        and:
+        def assets = new WaveAssets(null,
+                'linux/amd64',
+                null,
+                null,
+                SINGULARITY_FILE,
+                null,
+                null,
+                null,
+                true)
+        when:
+        def req = wave.makeRequest(assets)
+        then:
+        !req.containerImage
+        new String(req.containerFile.decodeBase64()) == SINGULARITY_FILE
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.format == 'sif'
     }
 
     def 'should create request object with build and cache repos' () {
@@ -317,359 +387,21 @@ class WaveClientTest extends Specification {
         req.containerConfig.layers[1] == MODULE_LAYER
     }
 
-    def 'should create dockerfile content from conda recipe' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [:]}
-        def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:1.4.2
-                RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    bwa=0.7.15 salmon=1.1.1 \\
-                    && micromamba clean -a -y
-                '''.stripIndent()
-    }
-
-    def 'should create dockerfile with base packages' () {
-        given:
-        def CONDA_OPTS = [basePackages: 'foo::one bar::two']
-        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
-        def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:1.4.2
-                RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    bwa=0.7.15 salmon=1.1.1 \\
-                    && micromamba install -y -n base foo::one bar::two \\
-                    && micromamba clean -a -y
-                '''.stripIndent()
-    }
-
-    def 'should create dockerfile content from spack recipe' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [:]}
-        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
-        def ARCH = 'x86_64'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.spackRecipeToDockerFile(RECIPE, ARCH) == '''\
-# Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
-
-RUN mkdir -p /opt/spack-env \\
-&&  spack env create -d /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
-&& spack add bwa@0.7.15 salmon@1.1.1 \\
-&& spack config add config:install_tree:/opt/software \\
-&& spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[x86_64] \\
-&& echo -e "\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
-
-# Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
-&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
-    xargs file -i | \\
-    grep 'charset=binary' | \\
-    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
-    awk -F: '{print \$1}' | xargs strip -s
-
-RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
-    rm -rf /opt/view
-
-# Runner image
-FROM ubuntu:22.04
-
-COPY --from=builder /opt/spack-env /opt/spack-env
-COPY --from=builder /opt/software /opt/software
-COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
-
-# Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \\
-    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-# Entrypoint for Docker
-RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-
-
-ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-CMD [ "/bin/bash" ]
-'''//.stripIndent()
-    }
-
-    def 'should create dockerfile content with custom channels' () {
-        given:
-        def session = Mock(Session) {
-            getConfig() >> [:]
-            getCondaConfig() >> new CondaConfig([channels:'foo,bar'], [:])
-        }
-        def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:1.4.2
-                RUN \\
-                    micromamba install -y -n base -c foo -c bar \\
-                    bwa=0.7.15 salmon=1.1.1 \\
-                    && micromamba clean -a -y
-                '''.stripIndent()
-    }
-
-    def 'should create dockerfile content with custom conda config' () {
-        given:
-        def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y nano']]
-        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
-        def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM my-base:123
-                RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    bwa=0.7.15 salmon=1.1.1 \\
-                    && micromamba clean -a -y
-                USER my-user
-                RUN apt-get update -y && apt-get install -y nano
-                '''.stripIndent()
-    }
-
-
-    def 'should create dockerfile content with remote conda lock' () {
-        given:
-        def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
-        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
-        def RECIPE = 'https://foo.com/some/conda-lock.yml'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM my-base:123
-                RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    -f https://foo.com/some/conda-lock.yml \\
-                    && micromamba clean -a -y
-                USER my-user
-                RUN apt-get update -y && apt-get install -y procps
-                '''.stripIndent()
-    }
-
-    def 'should create dockerfile content with custom spack config' () {
-        given:
-        def SPACK_OPTS = [ checksum:false, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', commands:['USER hola'] ]
-        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
-        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
-        def ARCH = 'nextcpu'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.spackRecipeToDockerFile(RECIPE, ARCH) == '''\
-# Builder image
-FROM spack/foo:1 as builder
-
-RUN mkdir -p /opt/spack-env \\
-&&  spack env create -d /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -foo\\n      cxxflags: -foo2\\n      fflags: -foo3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
-&& spack add bwa@0.7.15 salmon@1.1.1 \\
-&& spack config add config:install_tree:/opt/software \\
-&& spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[nextcpu] \\
-&& echo -e "\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
-
-# Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack concretize -f \\
-&& spack install --fail-fast -n && spack gc -y \\
-&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
-    xargs file -i | \\
-    grep 'charset=binary' | \\
-    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
-    awk -F: '{print \$1}' | xargs strip -s
-
-RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
-    rm -rf /opt/view
-
-# Runner image
-FROM ubuntu/foo
-
-COPY --from=builder /opt/spack-env /opt/spack-env
-COPY --from=builder /opt/software /opt/software
-COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1 libfoo && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp libfoo && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1 libfoo && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash libfoo && rm -rf /var/cache/apk )
-
-# Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \\
-    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-# Entrypoint for Docker
-RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-
-USER hola
-
-ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-CMD [ "/bin/bash" ]
-'''//.stripIndent()
-    }
-
-    def 'should create dockerfile content from conda file' () {
-        given:
-        def CONDA_OPTS = [basePackages: 'conda-forge::procps-ng']
-        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:1.4.2
-                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-                RUN micromamba install -y -n base -f /tmp/conda.yml && \\
-                    micromamba install -y -n base conda-forge::procps-ng && \\
-                    micromamba clean -a -y
-                '''.stripIndent()
-    }
-
-    def 'should create dockerfile content from conda file and base packages' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [:]}
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:1.4.2
-                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-                RUN micromamba install -y -n base -f /tmp/conda.yml && \\
-                    micromamba clean -a -y
-                '''.stripIndent()
-    }
-
-    def 'should create dockerfile content from spack file' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [:]}
-        def ARCH = 'x86_64'
-        when:
-        def client = new WaveClient(session)
-        then:
-        client.spackFileToDockerFile(ARCH)== '''\
-# Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
-COPY spack.yaml /tmp/spack.yaml
-
-RUN mkdir -p /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
-&& spack config add config:install_tree:/opt/software \\
-&& spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[x86_64] \\
-&& echo -e "\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
-
-# Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
-&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
-    xargs file -i | \\
-    grep 'charset=binary' | \\
-    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
-    awk -F: '{print \$1}' | xargs strip -s
-
-RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
-    rm -rf /opt/view
-
-# Runner image
-FROM ubuntu:22.04
-
-COPY --from=builder /opt/spack-env /opt/spack-env
-COPY --from=builder /opt/software /opt/software
-COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
-
-# Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \\
-    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-# Entrypoint for Docker
-RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-
-
-ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-CMD [ "/bin/bash" ]
-'''//.stripIndent()
-
-    }
 
     def 'should create asset with image' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) { getConfig() >> [:] }
+        def task = Mock(TaskRun) { getConfig() >> [arch:'amd64'] }
         def IMAGE = 'foo:latest'
         and:
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         !assets.moduleResources
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -687,12 +419,12 @@ CMD [ "/bin/bash" ]
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         assets.containerPlatform == 'linux/arm64'
         !assets.moduleResources
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -710,11 +442,11 @@ CMD [ "/bin/bash" ]
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         assets.moduleResources == BUNDLE
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -734,7 +466,7 @@ CMD [ "/bin/bash" ]
         WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         client.resolveContainerConfig(ARCH) >> CONTAINER_CONFIG
         and:
@@ -742,7 +474,7 @@ CMD [ "/bin/bash" ]
         assets.moduleResources == BUNDLE
         assets.containerConfig == CONTAINER_CONFIG
         and:
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.condaFile
         !assets.spackFile
         !assets.projectResources
@@ -763,9 +495,9 @@ CMD [ "/bin/bash" ]
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == 'FROM foo\nRUN this/that'
+        assets.containerFile == 'FROM foo\nRUN this/that'
         assets.moduleResources == BUNDLE
         !assets.containerImage
         !assets.containerConfig
@@ -781,19 +513,55 @@ CMD [ "/bin/bash" ]
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3'] }
+        def task = Mock(TaskRun) {getConfig() >> [conda:"bioconda::rseqc=3.0.1 'conda-forge::r-base>=3.5'"] }
         and:
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
-                FROM mambaorg/micromamba:1.4.2
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.4.9
+                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
+                RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba clean -a -y
+                USER root
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - conda-forge
+                - defaults
+                dependencies:
+                - bioconda::rseqc=3.0.1
+                - conda-forge::r-base>=3.5
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with conda lock file' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'https://host.com/conda-lock.yml'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, false)
+        then:
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.4.9
                 RUN \\
                     micromamba install -y -n base -c conda-forge -c defaults \\
-                    salmon=1.2.3 \\
+                    -f https://host.com/conda-lock.yml \\
                     && micromamba clean -a -y
+                USER root
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -808,82 +576,45 @@ CMD [ "/bin/bash" ]
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3'] }
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
         and:
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
-# Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
+        assets.containerFile == '''\
+                # Runner image
+                FROM {{spack_runner_image}}
+                
+                COPY --from=builder /opt/spack-env /opt/spack-env
+                COPY --from=builder /opt/software /opt/software
+                COPY --from=builder /opt/._view /opt/._view
+                
+                # Entrypoint for Singularity
+                RUN mkdir -p /.singularity.d/env && \\
+                    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                # Entrypoint for Docker
+                RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
+                    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+                
+                
+                ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
+                CMD [ "/bin/bash" ]
+                '''.stripIndent()
 
-RUN mkdir -p /opt/spack-env \\
-&&  spack env create -d /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed -i '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
-&& spack add salmon@1.2.3 \\
-&& spack config add config:install_tree:/opt/software \\
-&& spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[x86_64] \\
-&& echo -e "\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
-
-# Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
-&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
-    xargs file -i | \\
-    grep 'charset=binary' | \\
-    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
-    awk -F: '{print \$1}' | xargs strip -s
-
-RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
-    rm -rf /opt/view
-
-# Runner image
-FROM ubuntu:22.04
-
-COPY --from=builder /opt/spack-env /opt/spack-env
-COPY --from=builder /opt/software /opt/software
-COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
-
-# Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \\
-    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-# Entrypoint for Docker
-RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-
-
-ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-CMD [ "/bin/bash" ]
-'''//.stripIndent()
         and:
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
-        !assets.spackFile
         !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
     }
 
     def 'should create asset with conda file' () {
@@ -897,13 +628,14 @@ CMD [ "/bin/bash" ]
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
-                FROM mambaorg/micromamba:1.4.2
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.4.9
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-                RUN micromamba install -y -n base -f /tmp/conda.yml && \\
-                    micromamba clean -a -y
+                RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba clean -a -y
+                USER root
                     '''.stripIndent()
         and:
         assets.condaFile == condaFile
@@ -924,74 +656,32 @@ CMD [ "/bin/bash" ]
         def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
         and:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString(), arch: 'amd64'] }
         and:
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
-# Builder image
-FROM spack/ubuntu-jammy:v0.19.2 as builder
-COPY spack.yaml /tmp/spack.yaml
-
-RUN mkdir -p /opt/spack-env \\
-&&  sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
-&& cd /opt/spack-env && spack env activate . \\
-&& spack config add config:install_tree:/opt/software \\
-&& spack config add concretizer:unify:true \\
-&& spack config add concretizer:reuse:false \\
-&& spack config add packages:all:target:[x86_64] \\
-&& echo -e "\\
-  view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
-
-# Install packages, clean afterwards, finally strip binaries
-RUN cd /opt/spack-env && spack env activate . \\
-&& spack concretize -f \\
-&& spack install --fail-fast && spack gc -y \\
-&& find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
-    xargs file -i | \\
-    grep 'charset=binary' | \\
-    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
-    awk -F: '{print \$1}' | xargs strip -s
-
-RUN cd /opt/spack-env && \\
-    spack env activate --sh -d . >> /opt/spack-env/z10_spack_environment.sh && \\
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
-    sed -i "s;/view/;/\$original_view/;" /opt/spack-env/z10_spack_environment.sh && \\
-    echo "# Needed for Perl applications" >>/opt/spack-env/z10_spack_environment.sh && \\
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/opt/spack-env/z10_spack_environment.sh && \\
-    rm -rf /opt/view
-
-# Runner image
-FROM ubuntu:22.04
-
-COPY --from=builder /opt/spack-env /opt/spack-env
-COPY --from=builder /opt/software /opt/software
-COPY --from=builder /opt/._view /opt/._view
-
-# Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
-
-# Entrypoint for Singularity
-RUN mkdir -p /.singularity.d/env && \\
-    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-# Entrypoint for Docker
-RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-
-
-ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-CMD [ "/bin/bash" ]
-'''//.stripIndent()
+        assets.containerFile == '''\
+                # Runner image
+                FROM {{spack_runner_image}}
+                
+                COPY --from=builder /opt/spack-env /opt/spack-env
+                COPY --from=builder /opt/software /opt/software
+                COPY --from=builder /opt/._view /opt/._view
+                
+                # Entrypoint for Singularity
+                RUN mkdir -p /.singularity.d/env && \\
+                    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                # Entrypoint for Docker
+                RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
+                    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
+                
+                
+                ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
+                CMD [ "/bin/bash" ]
+                '''.stripIndent()
         and:
         assets.spackFile == spackFile
         and:
@@ -1000,6 +690,207 @@ CMD [ "/bin/bash" ]
         !assets.containerConfig
         !assets.condaFile
         !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    // ==== singularity native build + conda ====
+
+    def 'should create asset with conda recipe and singularity native build' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.4.9
+                %files
+                    {{wave_context_dir}}/conda.yml /scratch/conda.yml
+                %post
+                    micromamba install -y -n base -f /scratch/conda.yml \\
+                    && micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - conda-forge
+                - defaults
+                dependencies:
+                - salmon=1.2.3
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with conda remote lock file and singularity native build' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'https://host.com/lock-file.yaml'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.4.9
+                %post
+                    micromamba install -y -n base -c conda-forge -c defaults \\
+                    -f https://host.com/lock-file.yaml \\
+                    && micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.spackFile
+        !assets.projectResources
+    }
+
+    def 'should create asset with conda file and singularity native build' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def condaFile = folder.resolve('conda.yml'); condaFile.text = 'the-conda-recipe-here'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def task = Mock(TaskRun) {getConfig() >> [conda:condaFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.4.9
+                %files
+                    {{wave_context_dir}}/conda.yml /scratch/conda.yml
+                %post
+                    micromamba install -y -n base -f /scratch/conda.yml \\
+                    && micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
+                '''.stripIndent()
+        and:
+        assets.condaFile == condaFile
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create assets with spack recipe for singularity' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[commands: ['cmd-foo','cmd-bar']]]]]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                Bootstrap: docker
+                From: {{spack_runner_image}}
+                stage: final
+                 
+                %files from build
+                    /opt/spack-env /opt/spack-env
+                    /opt/software /opt/software
+                    /opt/._view /opt/._view
+                    /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                 
+                %post
+                    cmd-foo
+                    cmd-bar
+                '''.stripIndent()
+
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with spack file for singularity' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def spackFile = folder.resolve('spack.yml');
+        spackFile.text = '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+        and:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[basePackages: 'nano@1.2.3']]]]}
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                    Bootstrap: docker
+                    From: {{spack_runner_image}}
+                    stage: final
+                     
+                    %files from build
+                        /opt/spack-env /opt/spack-env
+                        /opt/software /opt/software
+                        /opt/._view /opt/._view
+                        /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                     
+                    %post
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.projectResources
+        !assets.condaFile
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5, nano@1.2.3]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
 
         cleanup:
         folder?.deleteDir()
@@ -1023,7 +914,7 @@ CMD [ "/bin/bash" ]
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = wave.resolveAssets(task, 'image:latest')
+        def assets = wave.resolveAssets(task, 'image:latest', false)
         then:
         1 * wave.projectResources(BIN_DIR) >> PROJECT_RES
         and:
@@ -1064,6 +955,23 @@ CMD [ "/bin/bash" ]
         result = client.resolveConflicts([spack:'x',container:'z'], ['conda','spack'])
         then:
         result == [spack:'x']
+    }
+
+    def 'should patch strategy for singularity' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        expect:
+        client.patchStrategy(Collections.unmodifiableList(STRATEGY), SING) == EXPECTED
+
+        where:
+        STRATEGY                                            | SING      | EXPECTED
+        ['conda','dockerfile', 'spack']                     | false     | ['conda','dockerfile', 'spack']
+        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
+        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
+        ['conda','singularityfile','dockerfile', 'spack']   | true      | ['conda','singularityfile','dockerfile', 'spack']
     }
 
     def 'should check conflicts' () {
@@ -1112,6 +1020,25 @@ CMD [ "/bin/bash" ]
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Process 'foo' declares both 'spack' and 'conda' directives that conflict each other"
+
+        // singularity file checks
+        when:
+        client.checkConflicts([conda:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle singularityfile that conflict each other"
+
+        when:
+        client.checkConflicts([container:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'container' directive and a module bundle singularityfile that conflict each other"
+
+        when:
+        client.checkConflicts([spack:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle singularityfile that conflict each other"
 
     }
 
@@ -1162,7 +1089,6 @@ CMD [ "/bin/bash" ]
             assert (it[0] as SubmitContainerTokenRequest).towerWorkspaceId == 123
             assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
         }
-
     }
 
     def 'should send request with tower access token and refresh token' () {
@@ -1274,4 +1200,19 @@ CMD [ "/bin/bash" ]
         'foo\nbar.yml'      | false
         'http://foo.com'    | false
     }
+
+    def 'should check is remote conda file' () {
+        expect:
+        WaveClient.isCondaRemoteFile(CONTENT) == EXPECTED
+
+        where:
+        CONTENT             | EXPECTED
+        'foo'               | false
+        'foo.yml'           | false
+        'foo.txt'           | false
+        'foo\nbar.yml'      | false
+        'http://foo.com'    | true
+        'https://foo.com'   | true
+    }
+
 }
