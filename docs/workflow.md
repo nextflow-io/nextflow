@@ -41,7 +41,7 @@ The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
 Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
-## Invoking processes
+## Process invocation
 
 A process can be invoked like a function in a workflow definition, passing the expected input channels like function arguments. For example:
 
@@ -77,12 +77,12 @@ workflow {
 ```
 
 :::{warning}
-A process can be only be invoked once in a single workflow, unless using {ref}`module-aliases`.
+A process can be only be invoked once in a single workflow, however you can get around this restriction by using {ref}`module-aliases`.
 :::
 
 ### Process composition
 
-Processes with matching input/output declarations can be composed so that the output of the first process is passed as input to the second process. Taking in consideration the previous example, it's possible to write the following:
+Processes with matching input/output declarations can be composed so that the output of the first process is passed as input to the second process. The previous example can be rewritten as follows:
 
 ```groovy
 workflow {
@@ -131,6 +131,14 @@ process foo {
 workflow {
     foo()
     foo.out.samples_bam.view()
+}
+```
+
+When referencing a named output directly from the process invocation, you can use a more concise syntax:
+
+```groovy
+workflow {
+    ch_samples = foo().samples_bam
 }
 ```
 

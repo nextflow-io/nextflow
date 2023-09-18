@@ -26,7 +26,6 @@ nextflow.enable.dsl=1
 params.str = 'Hello world!'
 
 process splitLetters {
-
     output:
     file 'chunk_*' into letters
 
@@ -36,7 +35,6 @@ process splitLetters {
 }
 
 process convertToUpper {
-
     input:
     file x from letters.flatten()
 
@@ -55,35 +53,8 @@ To migrate this code to DSL2, you need to move all of your channel logic through
 
 Refer to the {ref}`workflow-page` page to learn how to define a workflow. The DSL2 version of the above script is duplicated here for your convenience:
 
-```groovy
-params.str = 'Hello world!'
-
-process splitLetters {
-
-    output:
-    path 'chunk_*'
-
-    """
-    printf '${params.str}' | split -b 6 - chunk_
-    """
-}
-
-process convertToUpper {
-
-    input:
-    path x
-
-    output:
-    stdout
-
-    """
-    cat $x | tr '[a-z]' '[A-Z]'
-    """
-}
-
-workflow {
-    splitLetters | flatten | convertToUpper | view { it.trim() }
-}
+```{literalinclude} snippets/your-first-script.nf
+:language: groovy
 ```
 
 ## Channel forking
@@ -95,7 +66,7 @@ In DSL2, channels are automatically forked when connecting two or more consumers
 For example, this would not work in DSL1 but is not a problem in DSL2:
 
 ```groovy
-channel
+Channel
     .from('Hello','Hola','Ciao')
     .set{ cheers }
 
@@ -115,6 +86,10 @@ Similarly, process outputs can be consumed by multiple consumers automatically, 
 In DSL1, the entire Nextflow pipeline must be defined in a single file (e.g. `main.nf`). This restriction becomes quite cumbersome as a pipeline becomes larger, and it hinders the sharing and reuse of pipeline components.
 
 DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2 by any means, modules can help you organize a large pipeline into multiple smaller files, and take advantage of modules created by others. Check out the {ref}`module-page` to get started.
+
+:::{note}
+With DSL2, the Groovy shell used by Nextflow also imposes a 64KB size limit on pipeline scripts, so if your DSL1 script is very large, you may need to split your script into modules anyway to avoid this limit.
+:::
 
 ## Deprecations
 

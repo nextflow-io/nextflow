@@ -30,7 +30,7 @@ Nextflow implicitly looks for the script file `./some/module.nf`, resolving the 
 Module includes are subject to the following rules:
 
 - Relative paths must begin with the `./` prefix.
-- Include statements are not allowed from within a worklfow. They must occur at the script level.
+- Include statements are not allowed from within a workflow. They must occur at the script level.
 
 (module-directory)=
 
