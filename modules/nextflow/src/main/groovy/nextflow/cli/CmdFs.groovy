@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.file.FileHelper.toCanonicalPath
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -233,14 +235,14 @@ class CmdFs extends CmdBase implements UsageAware {
         def splitter = FilePatternSplitter.glob().parse(source)
         if( splitter.isPattern() ) {
             final scheme = splitter.scheme
-            final folder = splitter.parent
+            final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
+            final folder = toCanonicalPath(target)
             final pattern = splitter.fileName
-            final fs = FileHelper.fileSystemForScheme(scheme)
 
             def opts = [:]
-            opts.type = 'file'
+            opts.type = 'any'
 
-            FileHelper.visitFiles(opts, fs.getPath(folder), pattern, op)
+            FileHelper.visitFiles(opts, folder, pattern, op)
         }
         else {
             def normalised = splitter.strip(source)
