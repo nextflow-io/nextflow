@@ -21,6 +21,7 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
@@ -256,9 +257,10 @@ class AwsClientFactory {
         else
             builder.withRegion(region)
 
-        final credentials = new S3CredentialsProvider(getCredentialsProvider0())
-        if( credentials )
-            builder.withCredentials(credentials)
+        final credentials = config.s3Config.anonymous
+                ? new AWSStaticCredentialsProvider(new AnonymousAWSCredentials())
+                : new S3CredentialsProvider(getCredentialsProvider0())
+        builder.withCredentials(credentials)
 
         if( clientConfig )
             builder.withClientConfiguration(clientConfig)

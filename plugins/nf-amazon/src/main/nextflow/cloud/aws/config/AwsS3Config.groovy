@@ -46,6 +46,8 @@ class AwsS3Config {
 
     private Boolean pathStyleAccess
 
+    private Boolean anonymous
+
     AwsS3Config(Map opts) {
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
@@ -53,6 +55,7 @@ class AwsS3Config {
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
         this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
+        this.anonymous = opts.anonymous as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
     }
 
@@ -103,5 +106,9 @@ class AwsS3Config {
 
     Boolean getPathStyleAccess() {
         return pathStyleAccess
+    }
+
+    Boolean getAnonymous() {
+        return anonymous
     }
 }
