@@ -480,6 +480,9 @@ The `conda` scope controls the creation of a Conda environment by the Conda pack
 
 The following settings are available:
 
+`conda.enabled`
+: Enable Conda execution (default: `false`).
+
 `conda.cacheDir`
 : Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
 
