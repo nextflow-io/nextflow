@@ -255,7 +255,7 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      */
     private Map getNodeTree(Map<DAG.Vertex,Node> nodeLookup) {
-        // infer subgraphs of operator nodess
+        // infer subgraphs of operator nodes
         final inferredKeys = inferSubgraphKeys(nodeLookup)
 
         // construct node tree

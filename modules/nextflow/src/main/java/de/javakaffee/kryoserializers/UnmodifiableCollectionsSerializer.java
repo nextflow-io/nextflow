@@ -78,7 +78,7 @@ public class UnmodifiableCollectionsSerializer extends Serializer<Object> {
     public void write(final Kryo kryo, final Output output, final Object object) {
         try {
             final UnmodifiableCollection unmodifiableCollection = UnmodifiableCollection.valueOfType( object.getClass() );
-            // the ordinal could be replaced by s.th. else (e.g. a explicitely managed "id")
+            // the ordinal could be replaced by s.th. else (e.g. a explicitly managed "id")
             output.writeInt( unmodifiableCollection.ordinal(), true );
             kryo.writeClassAndObject( output, unmodifiableCollection.sourceCollectionField.get( object ) );
         } catch ( final RuntimeException e ) {
