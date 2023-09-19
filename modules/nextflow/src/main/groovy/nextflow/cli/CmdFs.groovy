@@ -22,6 +22,7 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.attribute.BasicFileAttributes
 
 import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
@@ -53,6 +54,7 @@ class CmdFs extends CmdBase implements UsageAware {
         commands << new CmdList()
         commands << new CmdCat()
         commands << new CmdRemove()
+        commands << new CmdStat()
     }
 
     trait SubCmd {
@@ -139,6 +141,34 @@ class CmdFs extends CmdBase implements UsageAware {
                 println line
         }
 
+    }
+
+    static class CmdStat implements SubCmd {
+        @Override
+        int getArity() { 1 }
+
+        @Override
+        String getName() { 'stat' }
+
+        @Override
+        String getDescription() { 'Print file to meta info' }
+
+        @Override
+        void apply(Path source, Path target) {
+            try {
+                final attr = Files.readAttributes(source, BasicFileAttributes)
+                print """\
+                    name          : ${source.name}
+                    size          : ${attr.size()}
+                    is directory  : ${attr.isDirectory()}
+                    last modified : ${attr.lastModifiedTime() ?: '-'}
+                    creation time : ${attr.creationTime() ?: '-'}                    
+                    """.stripIndent()
+            }
+            catch (IOException e) {
+                log.warn "Unable to read attributes for file: ${source.toUriString()} - cause: $e.message", e
+            }
+        }
     }
 
     static class CmdRemove implements SubCmd {
