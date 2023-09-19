@@ -40,6 +40,7 @@ class TesTaskHandlerTest extends Specification {
         task.getName() >> 'tes-task'
         task.getWorkDir() >> Paths.get(".")
         task.getConfig() >> new TaskConfig(memory: '2GB', cpus: 4, disk: '10GB')
+        task.getContainer() >> 'foo'
         def handler = new TesTaskHandler(task, executor)
 
 

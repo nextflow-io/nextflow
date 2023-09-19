@@ -37,31 +37,52 @@ import com.google.gson.stream.JsonWriter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.IOException;
 /**
- * CreateTaskResponse describes a response from the CreateTask endpoint. It will include the task ID that can be used to look up the status of the job.
+ * Organization providing the service
  */
-@Schema(description = "CreateTaskResponse describes a response from the CreateTask endpoint. It will include the task ID that can be used to look up the status of the job.")
+@Schema(description = "Organization providing the service")
 @javax.annotation.Generated(value = "io.swagger.codegen.v3.generators.java.JavaClientCodegen", date = "2023-08-15T14:10:09.878Z[GMT]")
 
-public class TesCreateTaskResponse {
-  @SerializedName("id")
-  private String id = null;
+public class ServiceOrganization {
+  @SerializedName("name")
+  private String name = null;
 
-  public TesCreateTaskResponse id(String id) {
-    this.id = id;
+  @SerializedName("url")
+  private String url = null;
+
+  public ServiceOrganization name(String name) {
+    this.name = name;
     return this;
   }
 
    /**
-   * Task identifier assigned by the server.
-   * @return id
+   * Name of the organization responsible for the service
+   * @return name
   **/
-  @Schema(required = true, description = "Task identifier assigned by the server.")
-  public String getId() {
-    return id;
+  @Schema(example = "My organization", required = true, description = "Name of the organization responsible for the service")
+  public String getName() {
+    return name;
   }
 
-  public void setId(String id) {
-    this.id = id;
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public ServiceOrganization url(String url) {
+    this.url = url;
+    return this;
+  }
+
+   /**
+   * URL of the website of the organization (RFC 3986 format)
+   * @return url
+  **/
+  @Schema(example = "https://example.com", required = true, description = "URL of the website of the organization (RFC 3986 format)")
+  public String getUrl() {
+    return url;
+  }
+
+  public void setUrl(String url) {
+    this.url = url;
   }
 
 
@@ -73,22 +94,24 @@ public class TesCreateTaskResponse {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TesCreateTaskResponse tesCreateTaskResponse = (TesCreateTaskResponse) o;
-    return Objects.equals(this.id, tesCreateTaskResponse.id);
+    ServiceOrganization serviceOrganization = (ServiceOrganization) o;
+    return Objects.equals(this.name, serviceOrganization.name) &&
+        Objects.equals(this.url, serviceOrganization.url);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id);
+    return Objects.hash(name, url);
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class TesCreateTaskResponse {\n");
+    sb.append("class ServiceOrganization {\n");
     
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
+    sb.append("    name: ").append(toIndentedString(name)).append("\n");
+    sb.append("    url: ").append(toIndentedString(url)).append("\n");
     sb.append("}");
     return sb.toString();
   }
