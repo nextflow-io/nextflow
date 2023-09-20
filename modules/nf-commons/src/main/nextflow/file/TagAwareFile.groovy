@@ -18,7 +18,7 @@
 package nextflow.file
 
 /**
- * Defines the interface for annotate a file with one ore more tags
+ * Defines the interface for annotate a file with one or more tags
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

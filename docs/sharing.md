@@ -110,7 +110,7 @@ The `pull` command allows you to download a project from a GitHub repository or 
 nextflow pull nextflow-io/examples
 ```
 
-Altenatively, you can use the repository URL as the name of the project to pull:
+Alternatively, you can use the repository URL as the name of the project to pull:
 
 ```bash
 nextflow pull https://github.com/nextflow-io/examples
