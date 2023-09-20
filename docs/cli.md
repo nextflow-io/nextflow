@@ -31,6 +31,8 @@ Available options:
 : Add the specified file to configuration set.
 
 `-d, -dockerize`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Launch nextflow via Docker (experimental).
 
 `-h`
@@ -1075,9 +1077,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL2 syntax.
 
 `-dump-channels`
