@@ -487,6 +487,8 @@ class WaveClient {
          */
         final platform = dockerArch
 
+        // check is a valid container image
+        WaveAssets.validateContainerRepo(containerImage)
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig(platform)
         return new WaveAssets(

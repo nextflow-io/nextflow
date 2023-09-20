@@ -30,8 +30,6 @@ import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
 import nextflow.processor.TaskRun
-import nextflow.util.StringUtils
-
 /**
  * Implement Wave container resolve logic
  *
@@ -108,7 +106,6 @@ class WaveContainerResolver implements ContainerResolver {
      *      when the task does not request any container or dockerfile to build
      */
     protected ContainerInfo waveContainer(TaskRun task, String container, boolean singularity) {
-        validateContainerRepo(container)
         final assets = client().resolveAssets(task, container, singularity)
         if( assets ) {
             return client().fetchContainerImage(assets)
@@ -116,14 +113,6 @@ class WaveContainerResolver implements ContainerResolver {
         // no container and no dockerfile, wave cannot do anything
         log.trace "No container image or build recipe defined for task ${task.processor.name}"
         return null
-    }
-
-    static protected void validateContainerRepo(String name) {
-        if( !name )
-            return 
-        final scheme = StringUtils.getUrlProtocol(name)
-        if( scheme )
-            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
     }
 
 }
