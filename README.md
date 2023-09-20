@@ -3,7 +3,7 @@
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
 <br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
 
-![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)
+[![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)](https://github.com/nextflow-io/nextflow/actions/workflows/build.yml?query=branch%3Amaster+event%3Apush)
 [![Nextflow version](https://img.shields.io/github/release/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://github.com/nextflow-io/nextflow/releases/latest)
 [![Nextflow Twitter](https://img.shields.io/twitter/url/https/nextflowio.svg?colorB=26af64&&label=%40nextflow&style=popout)](https://twitter.com/nextflowio)
 [![Nextflow Publication](https://img.shields.io/badge/Published-Nature%20Biotechnology-26af64.svg?colorB=26af64&style=popout)](https://www.nature.com/articles/nbt.3820)
@@ -42,12 +42,12 @@ or the Nextflow [Slack community chat](https://www.nextflow.io/slack-invite.html
 
 Nextflow also hosts a yearly workshop showcasing researcher's workflows and advancements in the language. Talks from the past workshops are available on the [Nextflow YouTube Channel](https://www.youtube.com/@Nextflow)
 
-The [nf-core](https://nf-co.re/) project is a community effort aggregating high quality Nextflow workflows which can be used by the community.
+The [nf-core](https://nf-co.re/) project is a community effort aggregating high quality Nextflow workflows which can be used by everyone.
 
 Contributing
 ============
 
-Contributions are more than welcome. See the [contribution docs](CONTRIBUTING.md) file for details.
+Contributions are more than welcome. See the [contributing docs](https://nextflow.io/docs/latest/developer/) for details.
 
 License
 =======
@@ -64,7 +64,7 @@ P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nat
 Credits
 =======
 
-Nextflow is built on two excellent open source software projects: <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
-and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>.
+Nextflow is built on two excellent open source software projects, <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
+and <a href='http://www.gpars.org/' target='_blank'>GPars</a>.
 
 <a href='http://www.yourkit.com' target='_blank'>YourKit</a> is kindly supporting Nextflow with its fully-featured Java Profiler.

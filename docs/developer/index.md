@@ -1,8 +1,85 @@
 # Overview
 
-This section is intended to explain the Nextflow source code at a high level for users who want to understand or contribute to it. Rather than a comprehensive API documentation, these docs simply provide a conceptual map to help you understand the key concepts of the Nextflow implementation, and to quickly find code sections of interest for further investigation.
+This section documents the many ways to contribute to Nextflow, how to set up a development environment for contributing code, and a high-level overview of the Nextflow source code for users who want to understand or contribute to it. Rather than a comprehensive API documentation, these docs simply provide a conceptual map to help you understand the key concepts of the Nextflow implementation, and to quickly find code sections of interest for further investigation.
 
-## Programming Languages
+## How to Contribute
+
+Contributing to Nextflow doesn't just mean writing code. Helping new users on the mailing list, testing releases and bug fixes, and improving documentation are all essential and valuable contributions. In fact, helping in these ways is an excellent way to become an effective contributor and gain credibility within the community, which makes it easier to make larger contributions like code changes and new features.
+
+### Helping Other Users
+
+A great way to contribute to Nextflow is to help answer user questions on the [discussion forum](https://github.com/nextflow-io/nextflow/discussions), or the [Slack channel](https://www.nextflow.io/slack-invite.html). Contributors should ideally subscribe to these channels and follow them to keep up with the latest developments in the Nextflow community. There are always many new Nextflow users, so taking a few minutes to help answer a question is a valuable community service and a great way to demonstrate your expertise.
+
+### Documentation Changes
+
+Propose changes to the [Nextflow documentation](https://nextflow.io/docs/latest/) by editing the source files in the [docs](https://github.com/nextflow-io/nextflow/tree/master/docs) directory. The README in that directory shows how to build and preview the docs locally. Finally, open a pull request with the proposed changes.
+
+### Bug Reports
+
+Submitting a bug report is one of the simplest and most useful ways to contribute, as it helps us to quickly identify and fix issues and thereby make Nextflow more stable.
+
+Report a bug using the **New issue** button on the [issues page](https://github.com/nextflow-io/nextflow/issues). A good bug report should include a minimal test case that can replicate the reported bug. Please follow the instructions in the [issue template](https://github.com/nextflow-io/nextflow/blob/master/.github/issue_template.md) when submitting a bug report.
+
+### Bug Fixes
+
+Contributing bug fixes is the best way to gain experience with the Nextflow codebase and credibility within the community as a project contributor.
+
+If you are new to the Nextflow codebase, check out issues marked as [help wanted](https://github.com/nextflow-io/nextflow/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) or [good first issue](https://github.com/nextflow-io/nextflow/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22+) to get started. Feel free to ask for help if you get stuck while trying to implement a fix!
+
+### New Features
+
+Before contributing a new feature, please submit a new feature proposal on the [issues page](https://github.com/nextflow-io/nextflow/issues) and discuss it with the community.
+
+Submitting a proposal helps identify possible overlaps with other planned features and avoid potential misunderstandings, conflicts, and wasted effort.
+
+### Code Changes
+
+When submitting a contribution, you will be required to sign a [Developer Certificate of Origin (DCO)](https://developercertificate.org/) to certify that you are the author of the source code or otherwise have the right to submit it to the project.
+
+Contributor signatures are provided by adding a `Signed-off-by` line to the commit message
+as shown below, or by using the `-s` option with [`git commit`](https://help.github.com/articles/signing-commits/). For example:
+
+```
+This is my commit message
+
+Signed-off-by: Random J Developer <random@developer.example.org>
+```
+
+The process is automatically managed by the [Probot](https://probot.github.io/apps/dco/) app for GitHub.
+
+## IntelliJ IDEA
+
+The suggested development environment is [IntelliJ IDEA](https://www.jetbrains.com/idea/download/). Nextflow development with IntelliJ IDEA requires a recent version of the IDE (2019.1.2 or later).
+
+After installing IntelliJ IDEA, use the following steps to use it with Nextflow:
+
+1. Clone the Nextflow repository to a directory in your computer.
+
+2. Open IntelliJ IDEA and go to **File > New > Project from Existing Sources...**.
+
+3. Select the Nextflow project root directory in your computer and click **OK**.
+
+4. Select **Import project from external model > Gradle** and click **Finish**.
+
+5. After the import process completes, select **File > Project Structure...**.
+
+6. Select **Project**, and make sure that the **SDK** field contains Java 11 (or later).
+
+7. Go to **File > Settings > Editor > Code Style > Groovy > Imports** and apply the following settings:
+
+   * Use single class import
+   * Class count to use import with '*': `99`
+   * Names count to use static import with '*': `99`
+   * Imports layout:
+      * `import java.*`
+      * `import javax.*`
+      * *blank line*
+      * all other imports
+      * all other static imports
+
+New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/e8945e8b6fc355d3f2eec793d8f288515db2f409/modules/nextflow/src/main/groovy/nextflow/Const.groovy#L1-L15)).
+
+## Groovy
 
 Nextflow is written in [Groovy](http://groovy-lang.org/), which is itself a programming language based on [Java](https://www.java.com/). Groovy is designed to be highly interoperable with Java -- Groovy programs compile to Java bytecode, and nearly any Java program is also a valid Groovy program. However, Groovy adds several language features (e.g. closures, list and map literals, optional typing, optional semicolons, meta-programming) and standard libraries (e.g. JSON and XML parsing) that greatly improve the overall experience of developing for the Java virtual machine.
 
@@ -50,41 +127,57 @@ See {ref}`packages-page` for the list of Nextflow packages.
 Class diagrams are manually curated, so they might not always reflect the latest version of the source code.
 ```
 
-## Building and Testing
+## Building from source
 
-The only dependency that you need to build Nextflow is Java. In other words, if you can run Nextflow, then you can probably build it too!
+If you are interested in modifying the source code, you only need Java 11 or later to build Nextflow from source. Nextflow uses the [Gradle](http://www.gradle.org/) build automation system, but you do not need to install Gradle to build Nextflow. In other words, if you can run Nextflow, then you can probably build it too!
 
-Build and test locally from a branch (useful for testing PRs):
+To build locally from a branch (useful for testing PRs):
 
 ```bash
-# build
 git clone -b <branch> git@github.com:nextflow-io/nextflow.git
 cd nextflow
 make compile
+```
 
-# test
+The build system will automatically download all of the necessary dependencies on the first run, which may take several minutes.
+
+Once complete, you can run your local build of Nextflow using the `launch.sh` script in place of the `nextflow` command:
+
+```bash
 ./launch.sh run <script> ...
 ```
 
-Run tests locally:
+A self-contained executable Nextflow package can be created with the following command:
+
+```bash
+make pack
+```
+
+Again, use `launch.sh` in place of the `nextflow` command to use your local build.
+
+## Testing
+
+To run the unit tests:
 
 ```bash
 # run all tests
 make test
 
 # run individual test
-make test module=<nextflow|plugins:nf-amazon|...> class=<package>.<class>
+make test module=<nextflow|plugins:nf-amazon|...> class=<package>.<class>.<method>
 
-# view the Makefile for all build rules
+# refer to the Makefile for all build rules
 ```
 
-When a test fails, it will give you a report that you can open in your browser to view the stack trace for each failed test. The "Standard output" tab is particularly useful as it shows the console output of each test. You also can view this console output in the terminal by adding `--info` to the `./gradlew` command generated by the Makefile.
+When a test fails, it will give you a report that you can open in your browser to view the reason for each failed test. The **Standard output** tab is particularly useful as it shows the console output of each test.
+
+Refer to the [build.yml](https://github.com/nextflow-io/nextflow/tree/master/.github/workflows/build.yml) configuration to see how to run integration tests locally, if you are interested.
 
 ## Installing from source
 
 The `nextflow` command is just a Bash script that downloads and executes the Nextflow JAR. When you install Nextflow using `get.nextflow.io`, it only downloads this launcher script, while the Nextflow JAR is downloaded on the first Nextflow run.
 
-You can run `make install` to install a local build of the Nextflow JAR to `$NXF_HOME`. Note that it will overwrite any existing JAR with the same version. This approach is useful for testing non-core plugins with a local build of Nextflow.
+You can run `make install` to install a local build of the Nextflow JAR to `$NXF_HOME`. Note that this command will overwrite any existing Nextflow packages with the same version. This approach is useful for testing non-core plugins with a local build of Nextflow.
 
 If you need to test changes to the `nextflow` launcher script, you can run it directly as `./nextflow`, or you can install it using `cp nextflow $(which nextflow)` and then run it as `nextflow`.
 

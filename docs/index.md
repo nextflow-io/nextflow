@@ -89,4 +89,5 @@ ignite
 
 developer/index
 developer/packages
+developer/plugins
 ```
