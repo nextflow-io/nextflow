@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +59,8 @@ class CmdConfig extends CmdBase {
     @Parameter(names = '-sort', description = 'Sort config attributes')
     boolean sort
 
+    @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
+    String printValue
 
     @Override
     String getName() { NAME }
@@ -80,6 +81,12 @@ class CmdConfig extends CmdBase {
         if( printProperties && printFlatten )
             throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
 
+        if ( printValue && printFlatten )
+            throw new AbortOperationException("Option `-value` and `-flat` conflicts")
+
+        if ( printValue && printProperties )
+            throw new AbortOperationException("Option `-value` and `-properties` conflicts")
+
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
                 .showMissingVariables(true)
@@ -95,6 +102,9 @@ class CmdConfig extends CmdBase {
         else if( printFlatten ) {
             printFlatten0(config, stdout)
         }
+        else if( printValue ) {
+            printValue0(config, printValue, stdout)
+        }
         else {
             printCanonical0(config, stdout)
         }
@@ -105,7 +115,7 @@ class CmdConfig extends CmdBase {
 
     /**
      * Prints a {@link ConfigObject} using Java {@link Properties} in canonical format
-     * ie. any nested config object is printed withing curly brackets
+     * ie. any nested config object is printed within curly brackets
      *
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
@@ -122,6 +132,21 @@ class CmdConfig extends CmdBase {
      */
     @PackageScope void printProperties0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toPropertiesString(config, sort)
+    }
+
+    /**
+     * Prints a property of a {@link ConfigObject}.
+     *
+     * @param config The {@link ConfigObject} representing the parsed workflow configuration
+     * @param name The {@link String} representing the property name using dot notation
+     * @param output The stream where output the formatted configuration notation
+     */
+    @PackageScope void printValue0(ConfigObject config, String name, OutputStream output) {
+        final map = config.flatten()
+        if( !map.containsKey(name) )
+            throw new AbortOperationException("Configuration option '$name' not found")
+
+        output << map.get(name).toString() << '\n'
     }
 
     /**

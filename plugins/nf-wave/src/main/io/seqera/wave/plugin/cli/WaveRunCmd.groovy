@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,12 +39,19 @@ class WaveRunCmd {
 
     private Map containerParams
 
+    private List<Path> containerMounts
+
     private Set<String> environment = new HashSet<>()
 
     WaveRunCmd(Session session) { this.session=session }
 
     WaveRunCmd withContainerParams(Map params) {
         this.containerParams = params
+        return this
+    }
+
+    WaveRunCmd withMounts(List<Path> path) {
+        this.containerMounts = path
         return this
     }
 
@@ -67,6 +74,7 @@ class WaveRunCmd {
         final containerBuilder = new DockerBuilder(image)
                 .addMountWorkDir(false)
                 .addRunOptions('--rm')
+                .addMounts(containerMounts)
                 .params(containerConfig)
                 .params(containerParams)
 
@@ -103,6 +111,6 @@ class WaveRunCmd {
         final target = resolveTargetImage(image)
         log.info """\
                 Source container: $image
-                Waved  container: $target""".stripIndent()
+                Waved  container: $target""".stripIndent(true)
     }
 }

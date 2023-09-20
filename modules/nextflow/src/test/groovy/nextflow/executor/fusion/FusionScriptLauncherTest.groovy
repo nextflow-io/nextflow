@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,37 @@ class FusionScriptLauncherTest extends Specification {
         fusion.fusionEnv() == [
                 FUSION_WORK: '/fusion/http/foo/work',
                 FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+        ]
+    }
+
+    def 'should get fusion logs env' () {
+        given:
+        Global.config = [fusion: [logLevel:'debug', logOutput:'stdout', tags: false]]
+        and:
+        def fusion = new FusionScriptLauncher(
+                scheme: 'http',
+                remoteWorkDir: XPath.get('http://foo/work'))
+
+        expect:
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_LOG_LEVEL: 'debug',
+                FUSION_LOG_OUTPUT: 'stdout'
+        ]
+    }
+
+    def 'should get fusion with custom tags' () {
+        given:
+        Global.config = [fusion: [tags: 'custom-tags-pattern-here']]
+        and:
+        def fusion = new FusionScriptLauncher(
+                scheme: 'http',
+                remoteWorkDir: XPath.get('http://foo/work'))
+
+        expect:
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_TAGS: 'custom-tags-pattern-here'
         ]
     }
 

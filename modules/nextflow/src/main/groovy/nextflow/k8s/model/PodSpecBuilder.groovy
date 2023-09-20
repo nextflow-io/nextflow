@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -565,30 +564,18 @@ class PodSpecBuilder {
     Map buildAsJob() {
         final pod = build()
 
-        // job metadata
-        final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
-        metadata.namespace = this.namespace ?: 'default'
-
-        // job spec
-        final spec = new LinkedHashMap<String,Object>()
-        spec.backoffLimit = 0
-        spec.template = [spec: pod.spec]
-
-        if( labels )
-            metadata.labels = sanitize(labels, MetaType.LABEL)
-
-        if( annotations )
-            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
-
-        final result = [
-                apiVersion: 'batch/v1',
-                kind: 'Job',
-                metadata: metadata,
-                spec: spec ]
-
-        return result
-
+        return [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: pod.metadata,
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: pod.metadata,
+                    spec: pod.spec
+                ]
+            ]
+        ]
     }
 
     @PackageScope

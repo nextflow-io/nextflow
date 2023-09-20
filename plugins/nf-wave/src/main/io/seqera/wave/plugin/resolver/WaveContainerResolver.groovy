@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,17 +57,19 @@ class WaveContainerResolver implements ContainerResolver {
         if( !client().enabled() )
             return defaultResolver.resolveImage(task, imageName)
 
+        final freeze = client().config().freezeMode()
+        final engine= task.getContainerConfig().getEngine()
+        final nativeSingularityBuild = freeze && engine in SINGULARITY_LIKE
         if( !imageName ) {
-            // when no image name is provider the module bundle should include a
-            // Dockerfile or a Conda recipe to build an image on-fly with an
-            // automatically assigned name
-            return waveContainer(task, null)
+            // when no image name is provided the module bundle should include a
+            // Dockerfile or a Conda recipe or a Spack recipe to build
+            // an image on-fly with an automatically assigned name
+            return waveContainer(task, null, nativeSingularityBuild)
         }
 
-        final engine= task.getContainerConfig().getEngine()
         if( engine in DOCKER_LIKE ) {
             final image = defaultResolver.resolveImage(task, imageName)
-            return waveContainer(task, image.target)
+            return waveContainer(task, image.target, false)
         }
         else if( engine in SINGULARITY_LIKE ) {
             // remove any `docker://` prefix if any
@@ -78,12 +80,12 @@ class WaveContainerResolver implements ContainerResolver {
                 return defaultResolver.resolveImage(task, imageName)
             }
             // fetch the wave container name
-            final image = waveContainer(task, imageName)
-            // then adapt it to singularity format
+            final image = waveContainer(task, imageName, nativeSingularityBuild)
+            // oras prefixed container are served directly
+            if( image && image.target.startsWith("oras://") )
+                return image
+            // otherwise adapt it to singularity format
             return defaultResolver.resolveImage(task, image.target)
-        }
-        else if ( engine == 'sarus' ) {
-            return defaultResolver.resolveImage(task, imageName)
         }
         else
             throw new IllegalArgumentException("Wave does not support '$engine' container engine")
@@ -98,13 +100,13 @@ class WaveContainerResolver implements ContainerResolver {
      *      An instance of {@link TaskRun} task representing the current task
      * @param container
      *      The container image name specified by the task. Can be {@code null} if the task
-     *      provides a Dockerfile or a Conda recipe
+     *      provides a Dockerfile or a Conda recipe or a Spack recipe
      * @return
      *      The container image name returned by the Wave backend or {@code null}
      *      when the task does not request any container or dockerfile to build
      */
-    protected ContainerInfo waveContainer(TaskRun task, String container) {
-        final assets = client().resolveAssets(task, container)
+    protected ContainerInfo waveContainer(TaskRun task, String container, boolean singularity) {
+        final assets = client().resolveAssets(task, container, singularity)
         if( assets ) {
             return client().fetchContainerImage(assets)
         }

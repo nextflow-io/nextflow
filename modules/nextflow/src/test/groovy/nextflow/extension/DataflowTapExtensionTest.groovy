@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +40,7 @@ class DataflowTapExtensionTest extends Specification {
     def 'should `tap` item to a new channel' () {
 
         when:
-        def result = Channel.from( 4,7,9 ) .tap { first }.map { it+1 }
+        def result = Channel.of( 4,7,9 ) .tap { first }.map { it+1 }
         then:
         session.binding.first.val == 4
         session.binding.first.val == 7
@@ -60,7 +59,7 @@ class DataflowTapExtensionTest extends Specification {
     def 'should `tap` item to more than one channel' () {
 
         when:
-        def result = Channel.from( 4,7,9 ) .tap { foo; bar }.map { it+1 }
+        def result = Channel.of( 4,7,9 ) .tap { foo; bar }.map { it+1 }
         then:
         session.binding.foo.val == 4
         session.binding.foo.val == 7
@@ -84,7 +83,7 @@ class DataflowTapExtensionTest extends Specification {
 
         when:
         def target = Channel.create()
-        def result = Channel.from( 8,2,5 ) .tap(target).map { it+1 }
+        def result = Channel.of( 8,2,5 ) .tap(target).map { it+1 }
         then:
         result instanceof DataflowQueue
         target instanceof DataflowQueue

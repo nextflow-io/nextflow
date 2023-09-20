@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -149,20 +148,15 @@ class ScriptMeta {
     }
 
     void checkComponentName(ComponentDef component, String name) {
-        if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+        if( component !instanceof WorkflowDef && component !instanceof ProcessDef && component !instanceof FunctionDef ) {
             return
         }
-        if (functionsCount.get(component.name)) {
-            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        if( functionsCount.get(name) ) {
+            throw new DuplicateModuleFunctionException("A function named '$name' is already defined or included in script: $scriptPath")
         }
-        if (imports.get(component.name)) {
-            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        final existing = imports.get(name)
+        if( existing != null ) {
+            throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined or included in script: $scriptPath")
         }
     }
 
@@ -217,15 +211,18 @@ class ScriptMeta {
     }
 
     WorkflowDef getWorkflow(String name) {
-        (WorkflowDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof WorkflowDef ? result : null
     }
 
     ProcessDef getProcess(String name) {
-        (ProcessDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof ProcessDef ? result : null
     }
 
     FunctionDef getFunction(String name) {
-        (FunctionDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof FunctionDef ? result : null
     }
 
     Set<String> getAllNames() {
@@ -238,6 +235,21 @@ class ScriptMeta {
         // processes from imports
         for( def item: imports.values() ) {
             if( item.name )
+                result.add(item.name)
+        }
+        return result
+    }
+
+    Set<String> getWorkflowNames() {
+        final result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item instanceof WorkflowDef )
+                result.add(item.name)
+        }
+        // processes from imports
+        for( def item: imports.values() ) {
+            if( item instanceof WorkflowDef )
                 result.add(item.name)
         }
         return result
@@ -283,16 +295,12 @@ class ScriptMeta {
 
     void addModule(ScriptMeta script, String name, String alias) {
         assert script
-        if( name ) {
-            // include a specific
-            def item = script.getComponent(name)
-            if( !item )
-                throw new MissingModuleComponentException(script, name)
-            addModule0(item, alias)
-        }
-        else for( def item : script.getDefinitions() ) {
-            addModule0(item)
-        }
+        assert name
+        // include a specific
+        def item = script.getComponent(name)
+        if( !item )
+            throw new MissingModuleComponentException(script, name)
+        addModule0(item, alias)
     }
 
     protected void addModule0(ComponentDef component, String alias=null) {
@@ -312,8 +320,6 @@ class ScriptMeta {
     ResourcesBundle getModuleBundle() {
         if( !scriptPath )
             throw new IllegalStateException("Module scriptPath has not been defined yet")
-        if( scriptPath.getName()!='main.nf' )
-            return null
         final bundlePath = scriptPath.resolveSibling('resources')
         return ResourcesBundle.scan(bundlePath)
     }

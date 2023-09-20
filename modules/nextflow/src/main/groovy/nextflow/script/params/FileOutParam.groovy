@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +33,7 @@ import nextflow.util.BlankSeparatedList
  */
 @Slf4j
 @InheritConstructors
-class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, PathQualifier {
+class FileOutParam extends BaseOutParam implements OutParam, ArityParam, OptionalParam, PathQualifier {
 
     /**
      * ONLY FOR TESTING DO NOT USE

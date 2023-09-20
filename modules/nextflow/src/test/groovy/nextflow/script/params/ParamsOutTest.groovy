@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -932,7 +931,8 @@ class ParamsOutTest extends Dsl2Spec {
                 separatorChar: '#',
                 glob: false,
                 optional: false,
-                includeInputs: false
+                includeInputs: false,
+                arity: '1'
                 
               path y, 
                 maxDepth:5,
@@ -942,7 +942,8 @@ class ParamsOutTest extends Dsl2Spec {
                 separatorChar: ':',
                 glob: true,
                 optional: true,
-                includeInputs: true
+                includeInputs: true,
+                arity: '0..*'
 
               return ''
             }
@@ -964,6 +965,7 @@ class ParamsOutTest extends Dsl2Spec {
         !out0.getGlob()
         !out0.getOptional()
         !out0.getIncludeInputs()
+        out0.getArity() == new ArityParam.Range(1, 1)
 
         and:
         out1.getMaxDepth() == 5
@@ -974,6 +976,7 @@ class ParamsOutTest extends Dsl2Spec {
         out1.getGlob()
         out1.getOptional()
         out1.getIncludeInputs()
+        out1.getArity() == new ArityParam.Range(0, Integer.MAX_VALUE)
     }
 
     def 'should set file options' () {

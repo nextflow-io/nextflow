@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,17 @@
  */
 
 package io.seqera.wave.plugin.config
+
+import groovy.transform.CompileStatic
+import groovy.transform.ToString
+
 /**
  * Model Tower config accessed by Wave
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ToString(includeNames = true, includePackage = false)
+@CompileStatic
 class TowerConfig {
 
     final String accessToken
@@ -31,11 +37,14 @@ class TowerConfig {
 
     final String endpoint
 
+    final String workflowId
+
     TowerConfig(Map opts, Map<String,String> env) {
         this.accessToken = accessToken0(opts, env)
         this.refreshToken = refreshToken0(opts, env)
         this.workspaceId = workspaceId0(opts, env) as Long
         this.endpoint = endpoint0(opts, env)
+        this.workflowId = env.get('TOWER_WORKFLOW_ID')
     }
 
     private String endpoint0(Map opts, Map<String,String> env) {

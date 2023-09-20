@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022, Seqera Labs.
+ * Copyright 2013-2023, Seqera Labs
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -38,6 +38,8 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import nextflow.util.Threads
+
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -281,7 +283,7 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceCreate
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
         final ret = parseTowerResponse(resp)
@@ -354,13 +356,13 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceBegin
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
-        this.sender = Thread.start('Tower-thread', this.&sendTasks0)
+        this.sender = Threads.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Nextflow Tower using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
@@ -650,7 +652,7 @@ class TowerClient implements TraceObserver {
             def map = obj as Map
             return map.collect { k,v -> "$k:$v" }.join(',')
         }
-        throw new IllegalArgumentException("Illegal container attribut type: ${obj.getClass().getName()} = ${obj}" )
+        throw new IllegalArgumentException("Illegal container attribute type: ${obj.getClass().getName()} = ${obj}" )
     }
 
     protected Map makeTaskMap0(TraceRecord trace) {
@@ -727,7 +729,7 @@ class TowerClient implements TraceObserver {
                 Failed to send message to ${endpoint} -- received 
                 - status code : $resp.code
                 - response msg: $resp.message
-                """.stripIndent()
+                """.stripIndent(true)
             // append separately otherwise formatting get broken
             msg += "- error cause : ${cause ?: '-'}"
             log.warn(msg)
@@ -746,7 +748,7 @@ class TowerClient implements TraceObserver {
                 - endpoint url: $endpoint
                 - status code : $resp.code
                 - response msg: ${resp.message} 
-                """.stripIndent()
+                """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
         throw new Exception(msg)

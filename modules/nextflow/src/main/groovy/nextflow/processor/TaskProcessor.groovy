@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,11 +57,13 @@ import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
+import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessRetryableException
+import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
@@ -82,6 +83,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -100,6 +102,7 @@ import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
+import nextflow.util.Escape
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly
@@ -146,7 +149,7 @@ class TaskProcessor {
     /**
      * Unique task index number (run)
      */
-    final protected indexCount = new AtomicInteger()
+    final protected AtomicInteger indexCount = new AtomicInteger()
 
     /**
      * The current workflow execution session
@@ -366,6 +369,29 @@ class TaskProcessor {
 
     boolean hasErrors() { errorCount>0 }
 
+    /**
+     * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
+     * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.
+     *
+     * Note this returns an "eventually" task configuration object. Also Inputs and output parameters are NOT
+     * resolved by this method.
+     *
+     * @return A {@link TaskRun} object holding a reference to the associated {@link TaskConfig}
+     */
+    TaskRun createTaskPreview() {
+        final task = new TaskRun(
+                processor: this,
+                type: scriptType,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this)
+        )
+        task.config.context = task.context
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
+
+        return task
+    }
+
     protected void checkWarn(String msg, Map opts=null) {
         if( NF.isStrictMode() )
             throw new ProcessUnrecoverableException(msg)
@@ -378,7 +404,7 @@ class TaskProcessor {
     /**
      * Launch the 'script' define by the code closure as a local bash script
      *
-     * @param code A {@code Closure} retuning a bash script e.g.
+     * @param code A {@code Closure} returning a bash script e.g.
      *          <pre>
      *              {
      *                 """
@@ -644,7 +670,7 @@ class TaskProcessor {
      * @return A string 'she-bang' formatted to the added on top script to be executed.
      * The interpreter to be used define bu the *taskConfig* property {@code shell}
      */
-    static shebangLine(shell) {
+    static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
 
         String result = shell instanceof List ? shell.join(' ') : shell
@@ -672,7 +698,7 @@ class TaskProcessor {
         result << '\n'
 
         if( result[0] != '#' || result[1] != '!') {
-            result.insert(0, shebangLine(shell) +'\n')
+            result.insert(0, shebangLine(shell) + '\n')
         }
 
         return result.toString()
@@ -767,13 +793,13 @@ class TaskProcessor {
             Path resumeDir = null
             boolean exists = false
             try {
-                def entry = session.cache.getTaskEntry(hash, this)
+                final entry = session.cache.getTaskEntry(hash, this)
                 resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
                 if( resumeDir )
                     exists = resumeDir.exists()
 
                 log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
+                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
             }
@@ -985,7 +1011,7 @@ class TaskProcessor {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
-        final message = []
+        final List<String> message = []
         try {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
@@ -1013,8 +1039,11 @@ class TaskProcessor {
                 return RETRY
             }
 
-            final int taskErrCount = task ? ++task.failCount : 0
-            final int procErrCount = ++errorCount
+            final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
+            final submitErrMsg = submitTimeout ? error.cause.message : null
+            final int submitRetries = submitTimeout ? ++task.submitRetries : 0
+            final int taskErrCount = !submitTimeout && task ? ++task.failCount : 0
+            final int procErrCount = !submitTimeout ? ++errorCount : errorCount
 
             // -- when is a task level error and the user has chosen to ignore error,
             //    just report and error message and DO NOT stop the execution
@@ -1024,11 +1053,11 @@ class TaskProcessor {
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
 
-                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
+                errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
-                    def msg = "[$task.hashLog] NOTE: $error.message"
+                    def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
                     if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
+                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
                     log.info msg
                     task.failed = true
                     task.errorAction = errorStrategy
@@ -1083,7 +1112,7 @@ class TaskProcessor {
                 : name
     }
 
-    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
+    protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount, final submitRetries ) {
 
         final action = task.config.getErrorStrategy()
 
@@ -1102,11 +1131,12 @@ class TaskProcessor {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
 
-            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries ) {
+            if( (procErrCount < maxErrors || maxErrors == -1) && taskErrCount <= maxRetries && submitRetries <= maxRetries ) {
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit({
                     try {
                         taskCopy.config.attempt = taskErrCount+1
+                        taskCopy.config.submitAttempt = submitRetries+1
                         taskCopy.runType = RunType.RETRY
                         taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
@@ -1367,6 +1397,7 @@ class TaskProcessor {
 
             case EnvOutParam:
             case ValueOutParam:
+            case DefaultOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add(value)
                 break
@@ -1434,7 +1465,12 @@ class TaskProcessor {
         final x = values.size() == 1 ? values[0] : values
         final ch = param.getOutChannel()
         if( ch != null ) {
-            ch.bind(x)
+            // create a copy of the output list of operation made by a downstream task
+            // can modify the list which is used internally by the task processor
+            // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
+            final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
+            // emit the final value
+            ch.bind(copy)
         }
     }
 
@@ -1467,6 +1503,10 @@ class TaskProcessor {
 
                 case EnvOutParam:
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
+                    break
+
+                case DefaultOutParam:
+                    task.setOutput(param, DefaultOutParam.Completion.DONE)
                     break
 
                 default:
@@ -1531,7 +1571,6 @@ class TaskProcessor {
         task.setOutput(param, stdout)
     }
 
-
     protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir, Map context ) {
 
         final List<Path> allFiles = []
@@ -1555,9 +1594,9 @@ class TaskProcessor {
             else {
                 def path = param.glob ? splitter.strip(filePattern) : filePattern
                 def file = workDir.resolve(path)
-                def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+                def exists = checkFileExists(file, param.followLinks)
                 if( exists )
-                    result = [file]
+                    result = List.of(file)
                 else
                     log.debug "Process `${safeTaskName(task)}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
             }
@@ -1565,7 +1604,7 @@ class TaskProcessor {
             if( result )
                 allFiles.addAll(result)
 
-            else if( !param.optional ) {
+            else if( !param.optional && (!param.arity || param.arity.min > 0) ) {
                 def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
                 if( inputsRemovedFlag )
                     msg += " (note: input files are not included in the default matching set)"
@@ -1573,10 +1612,16 @@ class TaskProcessor {
             }
         }
 
-        task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
+        if( !param.isValidArity(allFiles.size()) )
+            throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
+
+        task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
 
     }
 
+    protected boolean checkFileExists(Path file, boolean followLinks) {
+        followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+    }
 
     protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
 
@@ -1607,7 +1652,7 @@ class TaskProcessor {
         assert namePattern
         assert workDir
 
-        List files = []
+        List<Path> files = []
         def opts = visitOptions(param, namePattern)
         // scan to find the file with that name
         try {
@@ -1690,8 +1735,9 @@ class TaskProcessor {
     protected List<Path> getBinDirs() {
         final result = new ArrayList(10)
         // module bundle bin dir have priority, add before
-        if( moduleBundle!=null && session.enableModuleBinaries() )
-            result.addAll(moduleBundle.getBinDirs())
+        final bundle = session.enableModuleBinaries() ? getModuleBundle() : null
+        if( bundle!=null )
+            result.addAll(bundle.getBinDirs())
         // then add project bin dir
         if( executor.binDir )
             result.add(executor.binDir)
@@ -1774,7 +1820,7 @@ class TaskProcessor {
         if( obj instanceof Path )
             return obj
 
-        if( !obj == null )
+        if( obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
         
         if( !(obj instanceof CharSequence) )
@@ -1816,10 +1862,10 @@ class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items, ScriptType type ) {
+    protected singleItemOrList( List<FileHolder> items, boolean single, ScriptType type ) {
         assert items != null
 
-        if( items.size() == 1 ) {
+        if( items.size() == 1 && single ) {
             return makePath(items[0],type)
         }
 
@@ -1961,7 +2007,7 @@ class TaskProcessor {
             }
             else {
                 // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${value.replace('$','\\$')}"/
+                script << /export $name="${Escape.variable(value)}"/
             }
         }
         script << ''
@@ -2019,7 +2065,11 @@ class TaskProcessor {
             final fileParam = param as FileInParam
             final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx.put( param.name, singleItemOrList(resolved, task.type) )
+
+            if( !param.isValidArity(resolved.size()) )
+                throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
+
+            ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1
@@ -2094,8 +2144,14 @@ class TaskProcessor {
         }
 
         final spack = task.getSpackEnv()
+        final arch = task.getConfig().getArchitecture()
+
         if( spack ) {
             keys.add(spack)
+
+            if( arch ) {
+                keys.add(arch)
+            }
         }
 
         if( session.stubRun ) {
@@ -2130,7 +2186,7 @@ class TaskProcessor {
      */
     @Memoized
     protected List<Path> getTaskBinEntries(String script) {
-        def result = []
+        List<Path> result = []
         def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
             def token = tokenizer.nextToken()
@@ -2138,7 +2194,7 @@ class TaskProcessor {
             if( path )
                 result.add(path)
         }
-        return result;
+        return result
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
@@ -2355,7 +2411,7 @@ class TaskProcessor {
                 control.bind(Boolean.TRUE)
             }
 
-            return message;
+            return message
         }
     }
 
@@ -2370,7 +2426,9 @@ class TaskProcessor {
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            log.trace "<${name}> Before run -- messages: ${messages}"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
@@ -2385,12 +2443,15 @@ class TaskProcessor {
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            log.trace "<${name}> After run"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After run"
             currentTask.remove()
         }
 
         @Override
         Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2402,6 +2463,7 @@ class TaskProcessor {
 
         @Override
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2411,7 +2473,9 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                log.trace "<${name}> Poison pill arrived; port: $index"
+                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+                if( log.isTraceEnabled() )
+                    log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
             }
@@ -2421,7 +2485,9 @@ class TaskProcessor {
 
         @Override
         void afterStop(final DataflowProcessor processor) {
-            log.trace "<${name}> After stop"
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
+            if( log.isTraceEnabled() )
+                log.trace "<${name}> After stop"
         }
 
         /**

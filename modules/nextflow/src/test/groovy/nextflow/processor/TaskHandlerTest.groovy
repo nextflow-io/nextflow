@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -208,4 +207,25 @@ class TaskHandlerTest extends Specification {
         handler.task.processor.getForksCount().intValue() == COUNTER -1
     }
 
+    def 'should validate is submit timeout' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = TaskStatus.SUBMITTED
+        handler.task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) { getMaxSubmitAwait() >> Duration.of('500ms') }
+        }
+
+        when:
+        def timeout = handler.isSubmitTimeout()
+        then:
+        !timeout
+
+        when:
+        sleep 1_000
+        and:
+        timeout = handler.isSubmitTimeout()
+        then:
+        timeout
+
+    }
 }

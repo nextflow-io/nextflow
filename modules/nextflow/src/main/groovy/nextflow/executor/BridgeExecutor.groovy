@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  * Copyright 2022, CEA-CNRGH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,12 +56,12 @@ class BridgeExecutor extends AbstractGridExecutor {
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG)) 
 
         // number of cores per parallel task to allocate 
-        if( task.config.cpus > 1 ) {
-            result << '-c' << task.config.cpus.toString()
+        if( task.config.getCpus() > 1 ) {
+            result << '-c' << task.config.getCpus().toString()
         }
 
         // maximum walltime of the batch job in seconds
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             result << '-T' << task.config.getTime().toSeconds().toString() 
         }
 

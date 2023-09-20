@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +66,7 @@ class CountFastqOpTest extends Specification {
 
 
         when:
-        def result = Channel.from( READS, READS2 ).countFastq()
+        def result = Channel.of( READS, READS2 ).countFastq()
         then:
         result.val == 7
 
@@ -123,7 +122,7 @@ class CountFastqOpTest extends Specification {
 
 
         when:
-        def result = Channel.from(file1, file2).countFastq()
+        def result = Channel.of(file1, file2).countFastq()
         then:
         result.val == 9
 

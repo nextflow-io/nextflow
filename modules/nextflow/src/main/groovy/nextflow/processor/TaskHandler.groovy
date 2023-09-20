@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,8 @@ import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
 /**
@@ -33,6 +34,7 @@ import nextflow.trace.TraceRecord
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 abstract class TaskHandler {
 
     protected TaskHandler(TaskRun task) {
@@ -156,6 +158,7 @@ abstract class TaskHandler {
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */
+    @CompileDynamic
     TraceRecord getTraceRecord() {
         def record = new TraceRecord()
         record.task_id = task.id
@@ -243,4 +246,21 @@ abstract class TaskHandler {
         task.processor.forksCount?.decrement()
     }
 
+    /**
+     * Check if the task submit could not be accomplished with the time specified via the
+     * `maxWait` directive
+     *
+     * @return
+     *      {@code true} if the task is in `submit` status after the amount of time specified
+     *      via {@code maxAwait} directive has passed, otherwise {@code false} is returned.
+     */
+    boolean isSubmitTimeout() {
+        final maxAwait = task.config.getMaxSubmitAwait()
+        if( !maxAwait )
+            return false
+        final now = System.currentTimeMillis()
+        if( isSubmitted() && now-submitTimeMillis>maxAwait.millis )
+            return true
+        return false
+    }
 }

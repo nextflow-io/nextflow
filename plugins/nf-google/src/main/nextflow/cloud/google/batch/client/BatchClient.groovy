@@ -116,4 +116,8 @@ class BatchClient {
     void shutdown() {
         batchServiceClient.close()
     }
+
+    String getLocation() {
+        return location
+    }
 }

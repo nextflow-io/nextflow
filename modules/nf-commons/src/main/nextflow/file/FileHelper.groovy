@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +43,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
@@ -58,7 +58,9 @@ import nextflow.util.Escape
 @CompileStatic
 class FileHelper {
 
-    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*)\:\\/\\/.+/
+    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
+
+    static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
     static final private Path localTempBasePath
 
@@ -234,6 +236,34 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
+    static Path toCanonicalPath(value) {
+        if( value==null )
+            return null
+
+        Path result = null
+        if( value instanceof String || value instanceof GString ) {
+            result = asPath(value.toString())
+        }
+        else if( value instanceof Path ) {
+            result = (Path)value
+        }
+        else {
+            throw new IllegalArgumentException("Unexpected path value: '$value' [${value.getClass().getName()}]")
+        }
+
+        if( result.fileSystem != FileSystems.default ) {
+            // remote file paths are expected to be absolute by definition
+            return result
+        }
+
+        Path base
+        if( !result.isAbsolute() && (base=fileRootDir()) ) {
+            result = base.resolve(result.toString())
+        }
+
+        return result.toAbsolutePath().normalize()
+    }
+
     /**
      * Given an hierarchical file URI path returns a {@link Path} object
      * eventually creating the associated file system if required.
@@ -258,6 +288,10 @@ class FileHelper {
             return Paths.get(str)
         }
 
+        return asPath0(str)
+    }
+
+    static private Path asPath0(String str) {
         def result = FileSystemPathFactory.parse(str)
         if( result )
             return result
@@ -274,7 +308,7 @@ class FileHelper {
         return asPath(toPathURI(str))
     }
 
-    static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
 
     static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
 
@@ -331,7 +365,7 @@ class FileHelper {
                 throw new IllegalArgumentException("Malformed file URI: $uri -- It must start either with a `file:/` or `file:///` prefix")
 
             if( !uri.path )
-                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolue path prefix i.e. `file:/`")
+                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolute path prefix i.e. `file:/`")
         }
         else if( !uri.path ) {
             throw new IllegalArgumentException("URI path cannot be empty")
@@ -510,38 +544,17 @@ class FileHelper {
      * @return A map holding the current session
      */
     @Memoized
+    @Deprecated
     static protected Map envFor(String scheme) {
         envFor0(scheme, System.getenv())
     }
 
     @PackageScope
+    @Deprecated
     static Map envFor0(String scheme, Map env) {
         def result = new LinkedHashMap(10)
         if( scheme?.toLowerCase() == 's3' ) {
-
-            List credentials = Global.getAwsCredentials(env)
-            if( credentials ) {
-                // S3FS expect the access - secret keys pair in lower notation
-                result.access_key = credentials[0]
-                result.secret_key = credentials[1]
-                if (credentials.size() == 3) {
-                    result.session_token = credentials[2]
-                    log.debug "Using AWS temporary session token for S3FS."
-                }
-            }
-
-            // AWS region
-            final region = Global.getAwsRegion()
-            if( region ) result.region = region
-
-            // -- remaining client config options
-            def config = Global.getAwsClientConfig() ?: new HashMap<>(10)
-            config = checkDefaultErrorRetry(config, env)
-            if( config ) {
-                result.putAll(config)
-            }
-
-            log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
+            throw new UnsupportedOperationException()
         }
         else {
             if( !Global.session )
@@ -549,40 +562,6 @@ class FileHelper {
             result.session = Global.session
         }
         return result
-    }
-
-    @PackageScope
-    static Map checkDefaultErrorRetry(Map result, Map env) {
-        if( result == null )
-            result = new HashMap(10)
-
-        if( result.max_error_retry==null ) {
-            result.max_error_retry = env?.AWS_MAX_ATTEMPTS
-        }
-        // fallback to default
-        if( result.max_error_retry==null ) {
-            result.max_error_retry = '5'
-        }
-        // make sure that's a string value as it's expected by the client
-        else {
-            result.max_error_retry = result.max_error_retry.toString()
-        }
-
-        return result
-    }
-
-    static private String dumpAwsConfig( Map<String,String> config ) {
-        def result = new HashMap(config)
-        if( config.access_key && config.access_key.size()>6 )
-            result.access_key = "${config.access_key.substring(0,6)}.."
-
-        if( config.secret_key && config.secret_key.size()>6 )
-            result.secret_key = "${config.secret_key.substring(0,6)}.."
-
-        if( config.session_token && config.session_token.size()>6 )
-            result.session_token = "${config.session_token.substring(0,6)}.."
-
-        return result.toString()
     }
 
     /**
@@ -650,13 +629,17 @@ class FileHelper {
     /**
      * Acquire or create the file system for the given {@link URI}
      *
-     * @param uri A {@link URI} locating a file into a file system
-     * @param env An option environment specification that may be used to instantiate the underlying file system.
-     *          As defined by {@link FileSystemProvider#newFileSystem(java.net.URI, java.util.Map)}
-     * @return The corresponding {@link FileSystem} object
-     * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
+     * @param uri
+     *      A {@link URI} locating a file into a file system
+     * @param config
+     *      A {@link Map} object representing the file system configuration. The structure of this object is entirely
+     *      delegate to the file system implementation
+     * @return
+     *      The corresponding {@link FileSystem} object
+     * @throws
+     *      IllegalArgumentException if does not exist a valid provider for the given URI scheme
      */
-    static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
+    static FileSystem getOrCreateFileSystemFor( URI uri, Map config = null ) {
         assert uri
 
         /*
@@ -669,27 +652,28 @@ class FileHelper {
         /*
          * check if already exists a file system for it
          */
-        FileSystem fs
-        try { fs = provider.getFileSystem(uri) }
-        catch( FileSystemNotFoundException e ) { fs=null }
-        if( fs )
-            return fs
+        try {
+            final fs = provider.getFileSystem(uri)
+            if( fs )
+                return fs
+        }
+        catch( FileSystemNotFoundException e ) {
+            // fallback in following synchronised block
+        }
 
         /*
          * since the file system does not exist, create it a protected block
          */
-        Bolts.withLock(_fs_lock) {
-
+        return Bolts.withLock(_fs_lock) {
+            FileSystem fs
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
                 log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
-                fs = provider.newFileSystem(uri, env ?: envFor(uri.scheme))
+                fs = provider.newFileSystem(uri, config!=null ? config : envFor(uri.scheme))
             }
-            fs
+            return fs
         }
-
-        return fs
     }
 
     static FileSystem getOrCreateFileSystemFor( String scheme, Map env = null ) {
@@ -811,14 +795,15 @@ class FileHelper {
         assert filePattern
         assert action
 
-        final type = options?.type ?: 'any'
-        final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
-        final int maxDepth = getMaxDepth(options?.maxDepth, filePattern)
-        final includeHidden = options?.hidden as Boolean ?: filePattern.startsWith('.')
+        if( options==null ) options = Map.of()
+        final type = options.type ?: 'any'
+        final walkOptions = options.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final int maxDepth = getMaxDepth(options.maxDepth, filePattern)
+        final includeHidden = options.hidden as Boolean ?: filePattern.startsWith('.')
         final includeDir = type in ['dir','any']
         final includeFile = type in ['file','any']
-        final syntax = options?.syntax ?: 'glob'
-        final relative = options?.relative == true
+        final syntax = options.syntax ?: 'glob'
+        final relative = options.relative == true
 
         final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
@@ -844,7 +829,7 @@ class FileHelper {
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
-                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
+                if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
                     def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
@@ -1059,7 +1044,7 @@ class FileHelper {
 
     static Path checkIfExists(Path path, Map opts) throws NoSuchFileException {
 
-        final result = FilesEx.complete(path)
+        final result = toCanonicalPath(path)
         final checkIfExists = opts?.checkIfExists as boolean
         final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
         if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
@@ -1093,8 +1078,44 @@ class FileHelper {
     }
 
     static String getUrlProtocol(String str) {
+        if( !str )
+            return null
+        // note: `file:/foo` is a valid file pseudo-protocol, and represents absolute
+        // `/foo` path with no remote hostname specified
+        if( str.startsWith('file:/'))
+            return 'file'
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
+    }
+
+    static Path fileRootDir() {
+        if( !SysEnv.get('NXF_FILE_ROOT') )
+            return null
+        final base = SysEnv.get('NXF_FILE_ROOT')
+        if( base.startsWith('/') )
+            return Paths.get(base)
+        final scheme = getUrlProtocol(base)
+        if( !scheme )
+            throw new IllegalArgumentException("Invalid NXF_FILE_ROOT environment value - It must be an absolute path or a valid path URI - Offending value: '$base'")
+        return asPath0(base)
+    }
+
+    static String baseUrl(String url) {
+        if( !url )
+            return null
+        final m = BASE_URL.matcher(url)
+        if( m.matches() )
+            return m.group(1).toLowerCase()
+        if( url.startsWith('file:///')) {
+            return 'file:///'
+        }
+        if( url.startsWith('file://')) {
+            return url.length()>7 ? url.substring(7).tokenize('/')[0] : null
+        }
+        if( url.startsWith('file:/')) {
+            return 'file:/'
+        }
+        return null
     }
 
 }

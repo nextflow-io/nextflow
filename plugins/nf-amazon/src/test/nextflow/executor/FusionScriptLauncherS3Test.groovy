@@ -22,6 +22,8 @@ class FusionScriptLauncherS3Test extends Specification {
 
     def 'should get container mount' () {
         given:
+        Global.config = Collections.emptyMap()
+        and:
         def fusion = new FusionScriptLauncher(scheme: 's3')
 
         when:
