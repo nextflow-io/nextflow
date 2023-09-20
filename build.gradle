@@ -24,7 +24,7 @@ plugins {
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
 if (groovyVer) {
     def repo = groovyVer.startsWith('com.github.apache:') ? 'https://jitpack.io' : 'https://oss.jfrog.org/oss-snapshot-local/'
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer - repository: $repo"
+    logger.lifecycle "Overridden Groovy dependency to use $groovyVer - repository: $repo"
     allprojects {
         repositories {
             maven { url repo }

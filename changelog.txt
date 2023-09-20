@@ -164,7 +164,7 @@ NEXTFLOW CHANGE-LOG
 - Add Wave containers reports (preview) [9d9e2758]
 - Add disk resource with type option for google batch (#3861) [166b3638]
 - Add httpConnectTimeout and httpReadTimeout to Google options (#3974) [49fa15f7]
-- Add plugin cmd help descrption [d3788f9f]
+- Add plugin cmd help description [d3788f9f]
 - Add retry policy on Az blob operations [295bc1ff]
 - Add retry policy to Wave http client [1daebeef]
 - Add support for AWS SES as mail sending provider [df85d443]
@@ -188,7 +188,7 @@ NEXTFLOW CHANGE-LOG
 - Improve description of channels and channel types (#4120) [8975734d]
 - Improve "Unexpected input: '{'" error message (#4122) [ef9d3cf0]
 - Minor change in Wave config [4da0442a]
-- Prevent null exit code when Google batch is unable to acces exit status [f68a39ec]
+- Prevent null exit code when Google batch is unable to access exit status [f68a39ec]
 - Refactor Conda and Spack support for Wave to Java [36b9e226]
 - Remove `--no-home` default option from charliecloud builder (#3956) [915074a4]
 - Update workflow.revision max length to match the one in Tower (#4010) [1433a903]
@@ -225,7 +225,7 @@ NEXTFLOW CHANGE-LOG
 - Enable static compilation to missing classes (#3906) [c3c4b2f0]
 - Fix -with-conda option in the docs (#3867) [9b350ba8]
 - Fix AWS SSE env propagation to Fusion [e24608c3]
-- Fix Apptainer rendering by removing superflous space [36607ed1]
+- Fix Apptainer rendering by removing superfluous space [36607ed1]
 - Fix Azure jobs correctly deleted after completion (#3927) [b173a983]
 - Fix Azure pool creation when using scaling formula (#3868) [79984a87]
 - Fix DSL2 support in nextflow console (#3864) [0253f8d7]
@@ -787,7 +787,7 @@ NEXTFLOW CHANGE-LOG
 - Fix unit test setting explicit permissions for test files [1c821139] <Jorge Aguilera>
 - Fix Default plugins are overridden by config plugins [46cf3bfa] <Paolo Di Tommaso>
 - Fix S3 transfer download directory [b7bf9fe5]
-- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix NPE while setting S3 ObjectMetadata #3031 [d6163431] <Jorge Aguilera>
 - Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b]
 - Fix AWS Batch job definition conflict (#3048) [e5084418]
 - Fix JAVA_TOOL_OPTIONS breaking launch #1716 [0e7b416d]
@@ -847,7 +847,7 @@ NEXTFLOW CHANGE-LOG
 - Add DirWatcher v2 [209c82cd]
 - Add Moriondo in the list of random names [e0abca58]
 - Add preview CLI option (#2914) [aa8f1aa4]
-- Fix Git config resultion error [64436697]
+- Fix Git config resolution error [64436697]
 - Fix StackOverflowError when dump all profiles (#2922) [28cd11a2] <Jorge Aguilera>
 - Fix gradle warning message in nf-sqldb (#2921) [b09ceabe] <Jorge Aguilera>
 - Fix log for LsfExecutror perTaskReserve attribute [7c3ec874] <Prete>
@@ -862,14 +862,14 @@ NEXTFLOW CHANGE-LOG
 - Add Hyperqueue executor (#2896) [ffa5712e] <Henrik Nortamo>
 - Add support for K8s Job resource [c70eb12d] <xhejtman>
 - Add support for time process directive in GLS executor (#2880) [1402e183] <Florian De Temmerman>
-- Add support for priviledge option for K8s containers [7ffe3a02]
+- Add support for privilege option for K8s containers [7ffe3a02]
 - Add DSL1 option to docs (#2836) [d30841a5] <Jose Espinosa-Carrasco>
 - Add support for container options to Azure Batch [3f4f00f9] 
 - Add support for move operation to AWS S3 [8c0ddfd5] 
 - Add K8s execution hostname in the trace file (#2828) [ebaef92a] <Fabian Lehmann>
-- Add support for AWS S3 encyption using a custom KMS key [c1e45aa9] <Paolo Di Tommaso>
+- Add support for AWS S3 encryption using a custom KMS key [c1e45aa9] <Paolo Di Tommaso>
 - Add support for Micromamba [383e023f]
-- Add jaxb-api dependecy to nf-amazon [c1a09f87]
+- Add jaxb-api dependency to nf-amazon [c1a09f87]
 - Add strict mode config setting [696e70b5]
 - Add -head-prescript option to kuberun (#2830) [9e387055] 
 - Fix missing err message on submit failure [233e67f0] (#2899)
@@ -974,7 +974,7 @@ NEXTFLOW CHANGE-LOG
 - Prevent invalid use of large maxForks values [5de0c200]
 - Prevent race condition on thread pool creation [3e707a1d]
 - Refactor AWS batch job unique token generation [d64f5a21]
-- Decrese log verbosity [9237d587] [d1a5e5a8]
+- Decrease log verbosity [9237d587] [d1a5e5a8]
 - Throw an error if a required secret is missing [8e5129d6]
 - Wait for pod to stop running before shutdown (#2667) [505c5ad6]) <kfrancisdev>
 - Restore AZ tests [858a4568]
@@ -985,7 +985,7 @@ NEXTFLOW CHANGE-LOG
 22.02.0-edge - 25 Feb 2022
 - Fix Prevent S3 tagging with empty list [ae7db466]
 - Fix Azure repos tests [856aacf0]
-- Fix isse on includeConfig resolution #2675 [6591a9e1]
+- Fix issue on includeConfig resolution #2675 [6591a9e1]
 - Fix NPE when accessing not existing Git file [6c79f8fd]
 - Fix Batch Job name exceed max allowed size [e8b70ca3]
 - Fix detect and skip bom mark in files (#2645) [02b06ba3] <Jorge Aguilera>
@@ -1145,7 +1145,7 @@ NEXTFLOW CHANGE-LOG
 - Fix verbose logging [92b113134]
 - Fix docker image url [ed24a475d]
 - Fix Temporary directories not deleted in on_exit #2406 [181bdf528] <Lukas Jelonek>
-- Fix implict authentication for resources served by Tower [e30310b4f]
+- Fix implicit authentication for resources served by Tower [e30310b4f]
 - Fix No more of 255 channels can be defined into a workflow context #2417 [7f91ecb39]
 - Add tip about escaping variables in env scope #2366 <Ben Shealy>
 - Add K8s env fieldPath option to pod directive #2363 <Ben Shealy>
@@ -1233,7 +1233,7 @@ NEXTFLOW CHANGE-LOG
 21.06.0-edge - 3 Jul 2021
 - Add Keep alive option to Google LS executor [994222074]
 - Add support for FTP proxy and proxy servers authentication [8ec33b04d]
-- Add support for plugins groupping [aa5bc7d34]
+- Add support for plugins grouping [aa5bc7d34]
 - Add More details about the reason why a AWS Batch job has failed #2146 [27a4e88b2]
 - Add support for extensions priority [ae083f1aa]
 - Add stubRun attribute to workflow metadata #2164 [86cfc66fd]
@@ -1298,7 +1298,7 @@ NEXTFLOW CHANGE-LOG
 - Add readOnly flag to k8s volume mounts (#2013) [33bd24ac]
 - Add Start default plugins on-demand #1964 [cf2a9d73]
 - Add support for tower workspaceId [e2977688]
-- Improve suppor for BitBucket server repos [eb946e27]
+- Improve support for BitBucket server repos [eb946e27]
 - Fix toInt/Long/Float/Double operator hangs with value channel [7c35d985]
 - Fix regression caused by nested params handling #1923 [b25af49b]
 - Fix Cache invalidation when repo is cloned between runs #1989 [ac526f38]
@@ -1444,7 +1444,7 @@ NEXTFLOW CHANGE-LOG
 - Remove unneeded parentheses from stdout declaration [dc029c04]
 - Merge execution logs command docs [577ec744]
 - Passing exact memory to TES executor in GiB #1696 [c8a15545]
-- Improve docs replacing suscribe{println it} with view() [f84ccb6f] [cb2d607d]
+- Improve docs replacing subscribe{println it} with view() [f84ccb6f] [cb2d607d]
 - Use current environment Bash #1598 #1614 [e70ef87a]
 - Include GA4GH support into the standalone binary (make pack) #1666 [e2175d45]
 - Update Bitbucket docs [b9b57f83]
@@ -1884,7 +1884,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed remote bin directory when using bucketDir option [6d796783]
 - Fixed foreign file system detection [1489cc72]
 - Fixed Ansi logger division by zero [ae2b1380]
-- Fixed Unparseable Data format on http file #962
+- Fixed Unparsable Data format on http file #962
 - Fixed Log command history #405
 - Fixed Too long process tag name can cause SLURM failure #941
 - Fixed LSF can return an inconsistent jobs status #927
@@ -1936,7 +1936,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed remote bin directory when using buckerDir option [6d796783]
 - Fixed foreign file system detection [1489cc72]
 - Fixed Ansi logger division by zero [ae2b1380]
-- Fixed Unparseable Data format on http file #962
+- Fixed Unparsable Data format on http file #962
 - Fixed Log command history #405
 - Fixed Too long process tag name can cause SLURM failure #941
 - Fixed LSF can return an inconsistent jobs status #927
@@ -2438,7 +2438,7 @@ NEXTFLOW CHANGE-LOG
 0.23.3 - 9 Feb 2017
 - Fixed Job termination is not recognised if the starter file is not created #268
 - Fixed Allow NF console to resume process executions (second take) #280
-- Fixed PublishDir may throw a FileAlredyExistsException #283
+- Fixed PublishDir may throw a FileAlreadyExistsException #283
 - Increased logger file appender buffer size to 64kb
 - Updated Logback to version 1.1.10
 - Updated copyright info

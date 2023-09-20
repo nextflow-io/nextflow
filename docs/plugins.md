@@ -10,6 +10,7 @@ The following functionalities are provided via plugin components, and they make 
 
 - `nf-amazon`: Support for Amazon cloud.
 - `nf-azure`: Support for Azure cloud.
+- `nf-cloudcache`: Support for the cloud cache (see `NXF_CLOUDCACHE_PATH` under {ref}`config-env-vars`).
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
 - `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
 - `nf-google`: Support for Google cloud.

@@ -24,6 +24,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
+import nextflow.util.StringUtils
+
 /**
  * Hold assets required to fulfill wave container image build
  * 
@@ -80,5 +82,14 @@ class WaveAssets {
         allMeta.add( this.projectResources?.fingerprint() )
         allMeta.add( this.containerPlatform )
         return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+
+    static void validateContainerRepo(String name) {
+        if( !name )
+            return
+        final scheme = StringUtils.getUrlProtocol(name)
+        if( scheme )
+            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
     }
 }
