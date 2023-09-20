@@ -39,7 +39,7 @@ class WorkflowNotifier {
     private Map config
 
     /**
-    * A map representing the variables defined in the script golab scope
+    * A map representing the variables defined in the script global scope
      */
     private Map variables
 
