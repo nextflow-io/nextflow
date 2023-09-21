@@ -52,7 +52,7 @@ Contributions are more than welcome. See the [contribution docs](CONTRIBUTING.md
 License
 =======
 
-Nextflow is released under the Apache 2.0 license.
+Nextflow is released under the Apache 2.0 license. Nextflow is a [registered trademark](https://github.com/nextflow-io/trademark).
 
 Citations
 =========
