@@ -234,7 +234,7 @@ class CmdFs extends CmdBase implements UsageAware {
     private void run0() {
         final cmd = findCmd(args[0])
         if( !cmd ) {
-            throw new AbortOperationException("Unknown file system command: `$cmd`")
+            throw new AbortOperationException("Unknown fs sub-command: `$cmd`")
         }
 
         Path target
@@ -311,7 +311,7 @@ class CmdFs extends CmdBase implements UsageAware {
             if( sub )
                 println sub.usage()
             else {
-                throw new AbortOperationException("Unknown cloud sub-command: ${args[0]}")
+                throw new AbortOperationException("Unknown fs sub-command: ${args[0]}")
             }
         }
 
