@@ -47,7 +47,7 @@ The [nf-core](https://nf-co.re/) project is a community effort aggregating high 
 Contributing
 ============
 
-Contributions are more than welcome. See the [CONTRIBUTING](CONTRIBUTING.md) file for details.
+Contributions are more than welcome. See the [contribution docs](CONTRIBUTING.md) file for details.
 
 License
 =======
