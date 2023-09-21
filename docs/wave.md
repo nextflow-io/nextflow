@@ -124,7 +124,10 @@ If using a Spack YAML file to provide the required packages, you should avoid ed
 
 ### Build Singularity native images
 
-As of version `23.09.0-edge`, Nextflow can build Singularity native images on-demand either using `Singularityfile`,
+:::{versionadded} 23.09.0-edge
+:::
+
+Nextflow can build Singularity native images on-demand either using `Singularityfile`,
 Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
 of your choice and stored as a [ORAS artefact](https://oras.land/).
 
@@ -134,7 +137,7 @@ This feature requires of Singularity (or Apptainer) version supporting the pull 
 
 For example to enable the provisioning of Singularity images in your pipeline use the following configuration snippet:
 
-```
+```groovy
 singularity.enabled = true
 wave.enabled = true
 wave.freeze = true
@@ -187,7 +190,7 @@ The following configuration options are available:
 : The Wave service endpoint (default: `https://wave.seqera.io`).
 
 `wave.freeze`
-: :::{versionadded} 22.09.0-edge
+: :::{versionadded} 23.07.0-edge
   :::
 : When enabling the container freeze mode, Wave will provision an non-ephemeral container image
 that will be pushed to a container repository your choice. It requires the use of the `wave.build.repository` setting.

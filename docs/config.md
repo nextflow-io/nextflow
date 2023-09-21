@@ -1560,6 +1560,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
+`NXF_DISABLE_CHECK_LATEST`
+: :::{versionadded} 23.09.0-edge
+  :::
+: Nextflow automatically checks for a newer version of itself unless this option is enabled (default: `false`).
+
 `NXF_DISABLE_JOBS_CANCELLATION`
 : :::{versionadded} 21.12.0-edge
   :::
@@ -1567,12 +1572,12 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_DISABLE_PARAMS_TYPE_DETECTION`
 : :::{versionadded} 23.07.0-edge
-:::
+  :::
 : Disables the automatic type detection of command line parameters.
 
 `NXF_DISABLE_WAVE_SERVICE`
 : :::{versionadded} 23.08.0-edge
-:::
+  :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
 `NXF_ENABLE_SECRETS`
@@ -1607,6 +1612,9 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_OFFLINE`
 : When `true` disables the project automatic download and update from remote repositories (default: `false`).
+: :::{versionchanged} 23.09.0-edge
+  This option also disables the automatic version check (see `NXF_DISABLE_CHECK_LATEST`).
+  :::
 
 `NXF_OPTS`
 : Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of `-Dkey[=value]` properties.
