@@ -524,6 +524,7 @@ class WaveClientTest extends Specification {
                 FROM mambaorg/micromamba:1.4.9
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
                     '''.stripIndent()
@@ -558,8 +559,8 @@ class WaveClientTest extends Specification {
         assets.containerFile == '''\
                 FROM mambaorg/micromamba:1.4.9
                 RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    -f https://host.com/conda-lock.yml \\
+                    micromamba install -y -n base -c conda-forge -c defaults -f https://host.com/conda-lock.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
                     '''.stripIndent()
@@ -634,6 +635,7 @@ class WaveClientTest extends Specification {
                 FROM mambaorg/micromamba:1.4.9
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
                     '''.stripIndent()
@@ -714,8 +716,9 @@ class WaveClientTest extends Specification {
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
-                    micromamba install -y -n base -f /scratch/conda.yml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
@@ -752,9 +755,9 @@ class WaveClientTest extends Specification {
                 BootStrap: docker
                 From: mambaorg/micromamba:1.4.9
                 %post
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    -f https://host.com/lock-file.yaml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -c conda-forge -c defaults -f https://host.com/lock-file.yaml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
@@ -788,8 +791,9 @@ class WaveClientTest extends Specification {
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
-                    micromamba install -y -n base -f /scratch/conda.yml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
                 '''.stripIndent()
