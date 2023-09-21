@@ -183,10 +183,27 @@ If you need to test changes to the `nextflow` launcher script, you can run it di
 
 ## Debugging
 
+### Groovy REPL
+
 The `groovysh` command provides a command-line REPL that you can use to play around with Groovy code independently of Nextflow. The `groovyConsole` command provides a graphical REPL similar to `nextflow console`. These commands require a standalone Groovy distribution, which can be installed as described for Java in {ref}`Getting started <getstarted-requirement>`.
 
 :::{note}
 If you are using WSL, you must also install an X server for Windows, such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](http://www.straightrunning.com/XmingNotes/), in order to use these commands.
 :::
 
-For more advanced Groovy debugging capabilities, consider using [IntelliJ IDEA](https://www.jetbrains.com/idea/).
+### IntelliJ IDEA
+
+:::{versionadded} 23.09.0-edge
+:::
+
+You can perform limited breakpoint debugging on a Nextflow script using IntelliJ IDEA.
+
+1. Set a breakpoint in your Nextflow script by clicking on a line number.
+
+2. Run `nextflow -remote-debug run <script>`
+
+3. Select the **Run / Debug Configurations** dropdown, select **Edit Configurations...**, and create a new configuration of type **Remote JVM Debug**. Set the port that appeared in the terminal when you launched your Nextflow script. Click **OK**.
+
+4. Select the green bug icon to begin the remote debug session. The Debug window will appear and allow you to step through and inspect your script as it runs.
+
+Note that this approach can only be used to debug the *script* execution, which does not include the *pipeline* execution.
