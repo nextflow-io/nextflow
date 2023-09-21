@@ -71,10 +71,10 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes.size() == 2
         volumes[0].getGcs().getRemotePath() == 'alpha'
         volumes[0].getMountPath() == '/mnt/disks/alpha'
-        volumes[0].getMountOptionsList() == ['-o rw,allow_other', '-implicit-dirs']
+        volumes[0].getMountOptionsList() == ['-o rw', '-implicit-dirs']
         volumes[1].getGcs().getRemotePath() == 'omega'
         volumes[1].getMountPath() == '/mnt/disks/omega'
-        volumes[1].getMountOptionsList() == ['-o rw,allow_other', '-implicit-dirs']
+        volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs']
     }
 
 }

@@ -134,7 +134,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
                             .setRemotePath(it)
                     )
                     .setMountPath( "${MOUNT_ROOT}/${it}".toString() )
-                    .addAllMountOptions( ['-o rw,allow_other', '-implicit-dirs'] )
+                    .addAllMountOptions( ['-o rw', '-implicit-dirs'] )
                     .build()
             )
         }
