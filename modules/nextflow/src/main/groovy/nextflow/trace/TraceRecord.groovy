@@ -98,8 +98,8 @@ class TraceRecord implements Serializable {
             time:       'time',
             env:        'str',
             error_action:'str',
-            vol_ctxt: 'num',
-            inv_ctxt: 'num',
+            vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
+            inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
             cpu_model:  'str'
     ]
