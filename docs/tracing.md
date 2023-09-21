@@ -282,10 +282,10 @@ The following table shows the fields that can be included in the execution repor
 : Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
 
 `vol_ctxt`
-: Number of voluntary context switches.
+: Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
 
 `inv_ctxt`
-: Number of involuntary context switches.
+: Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
 
 `env`
 : The variables defined in task execution environment.
