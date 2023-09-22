@@ -10,10 +10,9 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=26af64&style=popout)](http://bioconda.github.io/recipes/nextflow/README.html)
 [![Nextflow license](https://img.shields.io/github/license/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://github.com/nextflow-io/nextflow/blob/master/COPYING)
 
-Nextflow is a workflow manager for developing scalable, portable, and reproducible workflows. It can deploy workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch, Azure Batch, Google Cloud Batch, and Kubernetes. Additionally, it supports many ways to manage your software dependencies, including Conda, Spack, Docker, Podman, Singularity, and more.
+Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. It is based on the dataflow programming model, which greatly simplifies the writing of parallel and distributed pipelines, allowing you to focus on the flow of data and computation. Nextflow can deploy workflows on a variety of execution platforms, including your local machine, HPC schedulers, AWS Batch, Azure Batch, Google Cloud Batch, and Kubernetes. Additionally, it supports many ways to manage your software dependencies, including Conda, Spack, Docker, Podman, Singularity, and more.
 
-Quick start
-===========
+## Quick start
 
 Install Nextflow with a single command:
 
@@ -29,13 +28,11 @@ Nextflow can also be installed from Bioconda:
 conda install -c bioconda nextflow
 ```
 
-Documentation
-=============
+## Documentation
 
 Nextflow's documentation is available at https://nextflow.io/docs/latest/.
 
-Community
-=========
+## Community
 
 You can post questions, or report problems by using the Nextflow [discussions](https://github.com/nextflow-io/nextflow/discussions)
 or the Nextflow [Slack community chat](https://www.nextflow.io/slack-invite.html).
@@ -44,25 +41,21 @@ Nextflow also hosts a yearly workshop showcasing researcher's workflows and adva
 
 The [nf-core](https://nf-co.re/) project is a community effort aggregating high quality Nextflow workflows which can be used by everyone.
 
-Contributing
-============
+## Contributing
 
-Contributions are more than welcome. See the [contributing docs](https://nextflow.io/docs/latest/developer/) for details.
+Contributions are more than welcome. See the [CONTRIBUTING](CONTRIBUTING.md) file for details.
 
-License
-=======
+## License
 
 Nextflow is released under the Apache 2.0 license. Nextflow is a [registered trademark](https://github.com/nextflow-io/trademark).
 
-Citations
-=========
+## Citations
 
 If you use Nextflow in your work, please cite:
 
 P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319 (2017) doi:[10.1038/nbt.3820](http://www.nature.com/nbt/journal/v35/n4/full/nbt.3820.html)
 
-Credits
-=======
+## Credits
 
 Nextflow is built on two excellent open source software projects, <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
 and <a href='http://www.gpars.org/' target='_blank'>GPars</a>.
