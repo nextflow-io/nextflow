@@ -20,7 +20,7 @@ import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
-import nextflow.dag.CytoscapeHtmlRenderer
+import nextflow.dag.MermaidHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.DotRenderer
 import nextflow.dag.GraphvizRenderer
@@ -112,16 +112,17 @@ class GraphObserverTest extends Specification {
 
         then:
         def result = file.text
-
         // is html
         result.contains('<html>')
         result.contains('</html>')
-
-        // contains some of the expected json
-        result.contains("label: 'Source'")
-        result.contains("label: 'Process 1'")
-        result.contains("label: 'Filter'")
-        result.contains("label: 'Process 2'")
+        // is mermaid
+        result.contains('flowchart')
+        // contains expected nodes
+        result.contains('Source')
+        result.contains('Process 1')
+        result.contains('Process 2')
+        // contains at least one edge
+        result.contains('-->')
 
         cleanup:
         file.delete()
@@ -180,7 +181,7 @@ class GraphObserverTest extends Specification {
         file.delete()
     }
 
-    def 'should output a dot file when no extension is specified' () {
+    def 'should output an html file when no extension is specified' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file = folder.resolve('nope')
@@ -192,15 +193,17 @@ class GraphObserverTest extends Specification {
 
         then:
         def result = file.text
-        // is dot
-        result.contains("digraph \"${file.baseName}\" {")
+        // is html
+        result.contains('<html>')
+        result.contains('</html>')
+        // is mermaid
+        result.contains('flowchart')
         // contains expected nodes
-        result.contains('label="Source"')
-        result.contains('label="Process 1"')
-        result.contains('label="Filter"')
-        result.contains('label="Process 2"')
+        result.contains('Source')
+        result.contains('Process 1')
+        result.contains('Process 2')
         // contains at least one edge
-        result.contains('->')
+        result.contains('-->')
 
         cleanup:
         folder.deleteDir()
@@ -223,7 +226,7 @@ class GraphObserverTest extends Specification {
         then:
         observer.name == 'TheGraph'
         observer.format == 'html'
-        observer.createRender() instanceof CytoscapeHtmlRenderer
+        observer.createRender() instanceof MermaidHtmlRenderer
 
         when:
         observer = new GraphObserver(Paths.get('/path/to/TheGraph.mmd'))
@@ -243,7 +246,7 @@ class GraphObserverTest extends Specification {
         observer = new GraphObserver(Paths.get('/path/to/anonymous'))
         then:
         observer.name == 'anonymous'
-        observer.format == 'dot'
-        observer.createRender() instanceof DotRenderer
+        observer.format == 'html'
+        observer.createRender() instanceof MermaidHtmlRenderer
     }
 }
