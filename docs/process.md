@@ -1320,11 +1320,17 @@ When combined with the {ref}`container directive <process-container>`, the `befo
 
 ### cache
 
-The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any following attempt to execute the process, along with the same inputs, will cause the process execution to be skipped, producing the stored data as the actual results.
+The `cache` directive allows you to store process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, the cached results of previously completed tasks are used and only failed or pending tasks are executed. This saves time when testing or modifying your pipeline, as the pipeline is not executed from scratch with every run.
 
-The caching feature generates a unique key by indexing the process script and inputs. This key is used to identify univocally the outputs produced by the process execution.
+:::{versionadded} 23.07.0-edge :::
 
-The cache is enabled by default, you can disable it for a specific process by setting the `cache` directive to `false`. For example:
+The nf-cloudcache plugin allows you to store the process results cache in a cloud storage location. Specify a cloud storage path (e.g., `s3://my-bucket/my-cache`) in your Nextflow configuration with the {ref}`NXF_CLOUDCACHE_PATH <config-environment-variables>` environment variable. This allows for persistent caching in the event of Nextflow head node termination.
+
+Nextflow requires {ref}`access <amazons3-security-credentials>` to your cloud storage for cloud caching to be enabled. 
+
+The caching feature generates a unique key by indexing the process script and inputs. This key is used to identify the outputs produced by the process execution.
+
+The cache is enabled by default. To disable cache for a specific process, set the `cache` directive to `false`. For example:
 
 ```groovy
 process noCacheThis {
