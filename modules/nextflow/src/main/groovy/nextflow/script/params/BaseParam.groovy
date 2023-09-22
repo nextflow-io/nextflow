@@ -43,7 +43,7 @@ abstract class BaseParam implements Cloneable {
     /**
      * The nested index of tuple composed parameters or -1 when it's a top level param ie. not a tuple element
      */
-    final short mapIndex
+    final short innerIndex
 
     private boolean initialized
 
@@ -53,11 +53,11 @@ abstract class BaseParam implements Cloneable {
 
         /*
          * by default the index is got from 'holder' current size
-         * and the mapIndex is =1 (not defined)
+         * and the innerIndex is =1 (not defined)
          */
         if( ownerIndex == -1 ) {
             index = holder.size()
-            mapIndex = -1
+            innerIndex = -1
         }
 
         /*
@@ -66,7 +66,7 @@ abstract class BaseParam implements Cloneable {
          */
         else {
             index = ownerIndex
-            mapIndex = holder.size()
+            innerIndex = holder.size()
         }
 
         // add the the param to the holder list
@@ -81,7 +81,7 @@ abstract class BaseParam implements Cloneable {
     }
 
     String toString() {
-        def p = mapIndex == -1 ? index : "$index:$mapIndex"
+        def p = innerIndex == -1 ? index : "$index:$innerIndex"
         return "${getTypeSimpleName()}<$p>"
     }
 
@@ -139,7 +139,7 @@ abstract class BaseParam implements Cloneable {
     }
 
     boolean isNestedParam() {
-        return mapIndex >= 0
+        return innerIndex >= 0
     }
 
     /**

@@ -400,7 +400,7 @@ class ParamsInTest extends Dsl2Spec {
         in1.inner.size() == 1
         in1.inner.get(0) instanceof ValueInParam
         in1.inner.get(0).index == 0
-        in1.inner.get(0).mapIndex == 0
+        in1.inner.get(0).innerIndex == 0
         in1.inner.get(0).name == 'p'
         in1.inChannel.val == 'Hola mundo'
 
@@ -408,51 +408,51 @@ class ParamsInTest extends Dsl2Spec {
         in2.inner.get(0) instanceof ValueInParam
         in2.inner.get(0).name == 'p'
         in2.inner.get(0).index == 1
-        in2.inner.get(0).mapIndex == 0
+        in2.inner.get(0).innerIndex == 0
         in2.inner.get(1) instanceof ValueInParam
         in2.inner.get(1).name == 'q'
         in2.inner.get(1).index == 1
-        in2.inner.get(1).mapIndex == 1
+        in2.inner.get(1).innerIndex == 1
         in2.inChannel.val == 'Hola mundo'
 
         in3.inner.size() == 2
         in3.inner.get(0) instanceof ValueInParam
         in3.inner.get(0).name == 'v'
         in3.inner.get(0).index == 2
-        in3.inner.get(0).mapIndex == 0
+        in3.inner.get(0).innerIndex == 0
         in3.inner.get(1) instanceof FileInParam
         in3.inner.get(1).name == 'file_name.fa'
         in3.inner.get(1).filePattern == 'file_name.fa'
         in3.inner.get(1).index == 2
-        in3.inner.get(1).mapIndex == 1
+        in3.inner.get(1).innerIndex == 1
         in3.inChannel.val == 'str'
 
         in4.inner.size() == 3
         in4.inner.get(0) instanceof ValueInParam
         in4.inner.get(0).name == 'p'
         in4.inner.get(0).index == 3
-        in4.inner.get(0).mapIndex == 0
+        in4.inner.get(0).innerIndex == 0
         in4.inner.get(1) instanceof FileInParam
         in4.inner.get(1).name == 'file_name.txt'
         in4.inner.get(1).filePattern == 'file_name.txt'
         in4.inner.get(1).index == 3
-        in4.inner.get(1).mapIndex == 1
+        in4.inner.get(1).innerIndex == 1
         in4.inner.get(2) instanceof StdInParam
         in4.inner.get(2).name == '-'
         in4.inner.get(2).index == 3
-        in4.inner.get(2).mapIndex == 2
+        in4.inner.get(2).innerIndex == 2
         in4.inChannel.val == 'ciao'
 
         in5.inner.size() == 2
         in5.inner.get(0) instanceof ValueInParam
         in5.inner.get(0).name == 't'
         in5.inner.get(0).index == 4
-        in5.inner.get(0).mapIndex == 0
+        in5.inner.get(0).innerIndex == 0
         in5.inner.get(1) instanceof FileInParam
         in5.inner.get(1).name == 'file'
         in5.inner.get(1).filePattern == 'file.fa'
         in5.inner.get(1).index == 4
-        in5.inner.get(1).mapIndex == 1
+        in5.inner.get(1).innerIndex == 1
         in5.inChannel.val == 0
 
     }
@@ -550,39 +550,39 @@ class ParamsInTest extends Dsl2Spec {
         in0.inner.size() == 3
         in0.inner.get(0) instanceof ValueInParam
         in0.inner.get(0).name == 'a'
-        in0.inner.get(0).mapIndex == 0
+        in0.inner.get(0).innerIndex == 0
         in0.inner.get(1) instanceof FileInParam
         in0.inner.get(1).name == 'x'
         in0.inner.get(1).filePattern == '*'
-        in0.inner.get(1).mapIndex == 1
+        in0.inner.get(1).innerIndex == 1
         in0.inner.get(2) instanceof ValueInParam
         in0.inner.get(2).name == 'b'
-        in0.inner.get(2).mapIndex == 2
+        in0.inner.get(2).innerIndex == 2
 
         in1.inner.get(0) instanceof ValueInParam
         in1.inner.get(0).name == 'p'
-        in1.inner.get(0).mapIndex == 0
+        in1.inner.get(0).innerIndex == 0
         in1.inner.get(1) instanceof FileInParam
         in1.inner.get(1).name == 'txt'
         in1.inner.get(1).filePattern == 'txt'
-        in1.inner.get(1).mapIndex == 1
+        in1.inner.get(1).innerIndex == 1
         in1.inner.get(2) instanceof EnvInParam
         in1.inner.get(2).name == 'q'
-        in1.inner.get(2).mapIndex == 2
+        in1.inner.get(2).innerIndex == 2
 
         in2.inner.get(0) instanceof ValueInParam
         in2.inner.get(0).name == 'v'
-        in2.inner.get(0).mapIndex == 0
+        in2.inner.get(0).innerIndex == 0
         in2.inner.get(1) instanceof FileInParam
         in2.inner.get(1).name == 'xx'
         in2.inner.get(1).filePattern == 'yy'
-        in2.inner.get(1).mapIndex == 1
+        in2.inner.get(1).innerIndex == 1
         in2.inner.get(2) instanceof StdInParam
         in2.inner.get(2).name == '-'
-        in2.inner.get(2).mapIndex == 2
+        in2.inner.get(2).innerIndex == 2
         in2.inner.get(3) instanceof EnvInParam
         in2.inner.get(3).name == 'W'
-        in2.inner.get(3).mapIndex == 3
+        in2.inner.get(3).innerIndex == 3
 
     }
 
@@ -879,29 +879,29 @@ class ParamsInTest extends Dsl2Spec {
         in0.inner.size() == 2
         in0.inner.get(0) instanceof ValueInParam
         in0.inner.get(0).name == 'a'
-        in0.inner.get(0).mapIndex == 0
+        in0.inner.get(0).innerIndex == 0
         in0.inner.get(1) instanceof FileInParam
         in0.inner.get(1).name == 'x'
         in0.inner.get(1).filePattern == '*'
-        in0.inner.get(1).mapIndex == 1
+        in0.inner.get(1).innerIndex == 1
         in0.inner.get(1).isPathQualifier()
 
         in1.inner.get(0) instanceof ValueInParam
         in1.inner.get(0).name == 'p'
-        in1.inner.get(0).mapIndex == 0
+        in1.inner.get(0).innerIndex == 0
         in1.inner.get(1) instanceof FileInParam
         in1.inner.get(1).name == 'txt'
         in1.inner.get(1).filePattern == 'txt'
-        in1.inner.get(1).mapIndex == 1
+        in1.inner.get(1).innerIndex == 1
         in1.inner.get(1).isPathQualifier()
 
         in2.inner.get(0) instanceof ValueInParam
         in2.inner.get(0).name == 'v'
-        in2.inner.get(0).mapIndex == 0
+        in2.inner.get(0).innerIndex == 0
         in2.inner.get(1) instanceof FileInParam
         in2.inner.get(1).name == 'xx'
         in2.inner.get(1).filePattern == 'yy'
-        in2.inner.get(1).mapIndex == 1
+        in2.inner.get(1).innerIndex == 1
         in2.inner.get(1).isPathQualifier()
 
     }

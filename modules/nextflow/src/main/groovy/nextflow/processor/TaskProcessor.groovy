@@ -93,6 +93,8 @@ import nextflow.script.params.InParam
 import nextflow.script.params.MissingParam
 import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
+import nextflow.script.params.RecordInParam
+import nextflow.script.params.RecordOutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.TupleInParam
@@ -749,8 +751,10 @@ class TaskProcessor {
          * initialize the inputs/outputs for this task instance
          */
         config.getInputs().each { InParam param ->
-            if( param instanceof TupleInParam )
-                param.inner.each { task.setInput(it)  }
+            if( param instanceof RecordInParam )
+                param.inner.each { task.setInput(it) }
+            else if( param instanceof TupleInParam )
+                param.inner.each { task.setInput(it) }
             else if( param instanceof EachInParam )
                 task.setInput(param.inner)
             else
@@ -758,9 +762,10 @@ class TaskProcessor {
         }
 
         config.getOutputs().each { OutParam param ->
-            if( param instanceof TupleOutParam ) {
+            if( param instanceof RecordOutParam ) {
                 param.inner.each { task.setOutput(it) }
-            }
+            else if( param instanceof TupleOutParam )
+                param.inner.each { task.setOutput(it) }
             else
                 task.setOutput(param)
         }
@@ -1462,7 +1467,9 @@ class TaskProcessor {
 
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
-        final x = values.size() == 1 ? values[0] : values
+        final x = param instanceof RecordOutParam
+            ? ((RecordOutParam)param).makeRecord(values)
+            : values.size() == 1 ? values[0] : values
         final ch = param.getOutChannel()
         if( ch != null ) {
             // create a copy of the output list of operation made by a downstream task

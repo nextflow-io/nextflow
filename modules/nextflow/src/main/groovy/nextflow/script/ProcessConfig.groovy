@@ -556,6 +556,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new EnvInParam(this).bind(obj)
     }
 
+    InParam _in_record( Map opts, Class clazz ) {
+        new RecordInParam(this).bind(opts, clazz)
+    }
+
 
     /// output parameters
 
@@ -634,6 +638,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             result.into(obj)
         }
         result
+    }
+
+    OutParam _out_record( Map opts, Class clazz ) {
+        new RecordOutParam(this).bind(opts, clazz)
     }
 
     /**

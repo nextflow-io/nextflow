@@ -937,7 +937,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def nested = methodCall.objectExpression instanceof MethodCallExpression
                 log.trace "convert > input method: $methodName"
 
-                if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
+                if( methodName in ['val','env','file','each','set','stdin','path','tuple','record'] ) {
                     //this methods require a special prefix
                     if( !nested )
                         methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
@@ -1017,7 +1017,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','file','set','stdout','path','tuple','record'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
@@ -1051,7 +1051,7 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixMethodCall( MethodCallExpression methodCall ) {
             final name = methodCall.methodAsString
 
-            withinTupleMethod = name == '_in_set' || name == '_out_set' || name == '_in_tuple' || name == '_out_tuple'
+            withinTupleMethod = name in ['_in_record', '_out_record', '_in_set', '_out_set', '_in_tuple', '_out_tuple']
             withinEachMethod = name == '_in_each'
 
             try {
@@ -1124,6 +1124,13 @@ class NextflowDSLImpl implements ASTTransformation {
                 for( Expression item : list ) {
                     list[i++] = varToStrX(item)
                 }
+
+                return expr
+            }
+
+            if( expr instanceof MapExpression ) {
+                for( MapEntryExpression entry : expr.getMapEntryExpressions() )
+                    entry.valueExpression = varToStrX(entry.valueExpression)
 
                 return expr
             }
@@ -1203,6 +1210,13 @@ class NextflowDSLImpl implements ASTTransformation {
                 for( Expression item : list )  {
                     list[i++] = varToConstX(item)
                 }
+                return expr
+            }
+
+            if( expr instanceof MapExpression ) {
+                for( MapEntryExpression entry : expr.getMapEntryExpressions() )
+                    entry.valueExpression = varToConstX(entry.valueExpression)
+
                 return expr
             }
 
