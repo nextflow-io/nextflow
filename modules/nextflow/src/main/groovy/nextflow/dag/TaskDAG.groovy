@@ -140,7 +140,7 @@ class TaskDAG {
         Map<String,Path> inputs
         Set<Path> outputs
 
-        String getSlug() { "t${index}" }
+        String getName() { "t${index}" }
 
         @Override
         String toString() { label }

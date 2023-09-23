@@ -24,6 +24,7 @@ import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.processor.TaskRun
 import nextflow.script.WorkflowMetadata
 /**
  * Render the DAG using the Mermaid format to the specified file.
@@ -498,7 +499,15 @@ class MermaidRenderer implements DagRenderer {
 
     @Override
     void renderTaskGraph(TaskDAG dag, Path file) {
-        def lines = []
+        file.text = renderNetwork(dag)
+    }
+
+    String renderNetwork(TaskDAG dag) {
+        // construct task tree
+        final taskTree = getTaskTree(dag.vertices)
+
+        // render diagram
+        def lines = [] as List<String>
         lines << "flowchart TD"
 
         // render workflow inputs
@@ -512,29 +521,30 @@ class MermaidRenderer implements DagRenderer {
                     return
 
                 inputs[path] = "in${inputs.size()}".toString()
-                lines << "    ${inputs[path]}[\"${normalizePath(path)}\"]"
+                lines << "    ${inputs[path]}[\"${normalizePath(path)}\"]".toString()
             }
         }
 
         lines << "    end"
 
         // render tasks
+        renderTaskTree(lines, null, taskTree)
+
+        // render task inputs
         final taskOutputs = [] as Set<Path>
 
         dag.vertices.each { task, vertex ->
-            lines << "    ${vertex.getSlug()}([\"${vertex.label}\"])"
-
             vertex.inputs.each { name, path ->
                 // render task input from predecessor task
                 final pred = dag.getProducerVertex(path)
                 if( pred != null ) {
-                    lines << "    ${pred.getSlug()} -->|${path.name}| ${vertex.getSlug()}"
+                    lines << "    ${pred.name} -->|${path.name}| ${vertex.name}".toString()
                     taskOutputs << path
                 }
 
-                // render task input from source node
+                // render task input from workflow input
                 else {
-                    lines << "    ${inputs[path]} --> ${vertex.getSlug()}"
+                    lines << "    ${inputs[path]} --> ${vertex.name}".toString()
                 }
             }
         }
@@ -548,7 +558,7 @@ class MermaidRenderer implements DagRenderer {
                     return
 
                 outputs[path] = "out${outputs.size()}".toString()
-                lines << "    ${vertex.getSlug()} --> ${outputs[path]}"
+                lines << "    ${vertex.name} --> ${outputs[path]}".toString()
             }
         }
 
@@ -556,12 +566,12 @@ class MermaidRenderer implements DagRenderer {
         lines << "    subgraph \" \""
 
         outputs.each { path, label ->
-            lines << "    ${label}[${path.name}]"
+            lines << "    ${label}[${path.name}]".toString()
         }
 
         lines << "    end"
 
-        file.text = lines.join('\n')
+        return lines.join('\n')
     }
 
     String normalizePath(Path path) {
@@ -569,5 +579,72 @@ class MermaidRenderer implements DagRenderer {
             .replace(metadata.workDir.toUriString(), '/work')
             .replace(metadata.projectDir.toUriString(), '')
             .replace(metadata.launchDir.toUriString(), '')
+    }
+
+    /**
+     * Construct a task tree with a subgraph for each subworkflow.
+     *
+     * @param vertices
+     */
+    private Map getTaskTree(Map<TaskRun,TaskDAG.Vertex> vertices) {
+        def taskTree = [:]
+
+        for( def entry : vertices ) {
+            def task = entry.key
+            def vertex = entry.value
+
+            // infer subgraph keys from fully qualified process name
+            final result = getSubgraphKeys(task.processor.name)
+            final keys = (List)result[0]
+
+            // update vertex label
+            final hash = task.hash.toString()
+            final name = task.name.replace(task.processor.name, (String)result[1])
+            vertex.label = "[${hash.substring(0,2)}/${hash.substring(2,8)}] ${name}"
+
+            // navigate to given subgraph
+            def subgraph = taskTree
+            for( def key : keys ) {
+                if( key !in subgraph )
+                    subgraph[key] = [:]
+                subgraph = subgraph[key]
+            }
+
+            // add vertex to tree
+            subgraph[vertex.name] = vertex
+        }
+
+        return taskTree
+    }
+
+    /**
+     * Render a tree of tasks and subgraphs.
+     *
+     * @param lines
+     * @param name
+     * @param taskTree
+     */
+    private void renderTaskTree(List<String> lines, String name, Map<String,Object> taskTree) {
+        if( name )
+            lines << "    subgraph ${name}".toString()
+
+        taskTree.each { key, value ->
+            if( value instanceof Map )
+                renderTaskTree(lines, key, value)
+            else if( value instanceof TaskDAG.Vertex )
+                lines << "    ${renderTask(value)}".toString()
+        }
+
+        if( name )
+            lines << "    end"
+    }
+
+    /**
+     * Render a task.
+     *
+     * @param vertex
+     */
+    private String renderTask(TaskDAG.Vertex vertex) {
+        return "${vertex.name}([\"${vertex.label}\"])"
     }
 }
