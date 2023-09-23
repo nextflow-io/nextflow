@@ -25,6 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         java_version: [11, 17, 19]
+
     steps:
       - name: Environment
         run: env | sort
@@ -55,7 +56,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: ${{matrix.java_version}}
-          distribution: temurin
+          distribution: 'temurin'
           architecture: x64
           cache: gradle
 
@@ -118,7 +119,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: ${{matrix.java_version}}
-          distribution: temurin
+          distribution: 'temurin'
           architecture: x64
           cache: gradle
 
