@@ -864,13 +864,12 @@ class TaskProcessorTest extends Specification {
         config.setContext( foo: 'DDDD', bar: 'OOOO' )
 
         when:
-        def result = processor.getTaskDirectiveVars(task)
+        def result = processor.getTaskExtensionDirectiveVars(task)
         then:
         1 * task.getVariableNames() >> {[ 'task.cpus', 'task.ext.alpha', 'task.ext.delta', 'task.ext.omega' ] as Set}
         1 * task.getConfig() >> config
         then:
         result == [
-                'task.cpus': 4,
                 'task.ext.alpha': 'AAAA',
                 'task.ext.delta': 'DDDD',
                 'task.ext.omega': 'OOOO',
