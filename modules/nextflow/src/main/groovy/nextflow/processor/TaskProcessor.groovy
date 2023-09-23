@@ -131,12 +131,6 @@ class TaskProcessor {
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
 
-    @Memoized
-    static boolean getInvalidateCacheOnTaskDirectiveChange() {
-        final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
-        return value==null || value =='true'
-    }
-
     @TestOnly private static volatile TaskProcessor currentProcessor0
 
     @TestOnly static TaskProcessor currentProcessor() { currentProcessor0 }
@@ -2210,19 +2204,17 @@ class TaskProcessor {
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         final result = task.getGlobalVars(ownerScript.binding)
-        if( invalidateCacheOnTaskDirectiveChange ) {
-            final directives = getTaskDirectiveVars(task)
-            result.putAll(directives)
-        }
+        final directives = getTaskExtensionDirectiveVars(task)
+        result.putAll(directives)
         return result
     }
 
-    protected Map<String,Object> getTaskDirectiveVars(TaskRun task) {
+    protected Map<String,Object> getTaskExtensionDirectiveVars(TaskRun task) {
         final variableNames = task.getVariableNames()
         final result = new HashMap(variableNames.size())
         final taskConfig = task.config
         for( String key : variableNames ) {
-            if( !key.startsWith('task.') ) continue
+            if( !key.startsWith('task.ext.') ) continue
             final value = taskConfig.eval(key.substring(5))
             result.put(key, value)
         }
