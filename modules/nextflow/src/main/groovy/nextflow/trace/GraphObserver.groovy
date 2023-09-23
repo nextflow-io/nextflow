@@ -82,7 +82,7 @@ class GraphObserver implements TraceObserver {
         this.dag = session.dag
         this.taskDag = session.taskDag
 
-        // check file existance
+        // check file existence
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
             if( overwrite && (attrs.isDirectory() || !file.delete()) )

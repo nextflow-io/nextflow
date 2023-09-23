@@ -24,7 +24,7 @@ plugins {
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
 if (groovyVer) {
     def repo = groovyVer.startsWith('com.github.apache:') ? 'https://jitpack.io' : 'https://oss.jfrog.org/oss-snapshot-local/'
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer - repository: $repo"
+    logger.lifecycle "Overridden Groovy dependency to use $groovyVer - repository: $repo"
     allprojects {
         repositories {
             maven { url repo }
@@ -82,6 +82,8 @@ allprojects {
         mavenCentral()
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+        maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases" }
+        maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots" }
     }
 
     configurations {
@@ -100,8 +102,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.18"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.18"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.19"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.19"
     }
 
     test {

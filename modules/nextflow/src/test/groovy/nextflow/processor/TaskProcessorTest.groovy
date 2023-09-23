@@ -26,6 +26,8 @@ import groovyx.gpars.agent.Agent
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
+import nextflow.exception.IllegalArityException
+import nextflow.exception.MissingFileException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -37,13 +39,14 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -185,13 +188,19 @@ class TaskProcessorTest extends Specification {
 
         when:
         def list = [ FileHolder.get(path1, 'x_file_1') ]
-        def result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
+        def result = processor.singleItemOrList(list, true, ScriptType.SCRIPTLET)
         then:
         result.toString() == 'x_file_1'
 
         when:
+        list = [ FileHolder.get(path1, 'x_file_1') ]
+        result = processor.singleItemOrList(list, false, ScriptType.SCRIPTLET)
+        then:
+        result*.toString() == ['x_file_1']
+
+        when:
         list = [ FileHolder.get(path1, 'x_file_1'), FileHolder.get(path2, 'x_file_2'), FileHolder.get(path3, 'x_file_3') ]
-        result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
+        result = processor.singleItemOrList(list, false, ScriptType.SCRIPTLET)
         then:
         result*.toString() == [ 'x_file_1',  'x_file_2',  'x_file_3']
 
@@ -482,19 +491,19 @@ class TaskProcessorTest extends Specification {
         task = new TaskRun()
         task.config = new TaskConfig()
         then:
-        proc.checkErrorStrategy(task, error, 1,1) == ErrorStrategy.TERMINATE
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.TERMINATE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'ignore')
         then:
-        proc.checkErrorStrategy(task, error, 10, 10) == ErrorStrategy.IGNORE
+        proc.checkErrorStrategy(task, error, 10, 10, 0) == ErrorStrategy.IGNORE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'finish')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.FINISH
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.FINISH
 
     }
 
@@ -508,19 +517,19 @@ class TaskProcessorTest extends Specification {
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'retry')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.TERMINATE
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.TERMINATE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'ignore')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.TERMINATE
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.TERMINATE
 
         when:
         task = new TaskRun()
         task.config = new TaskConfig(errorStrategy: 'finish')
         then:
-        proc.checkErrorStrategy(task, error, 1, 1) == ErrorStrategy.FINISH
+        proc.checkErrorStrategy(task, error, 1, 1, 0) == ErrorStrategy.FINISH
 
     }
 
@@ -539,23 +548,30 @@ class TaskProcessorTest extends Specification {
 
         when:
         task = new TaskRun(context: new TaskContext(holder: [:]))
-        task.config = new TaskConfig(errorStrategy:'retry', maxErrors: max_errors, maxRetries: max_retries )
+        task.config = new TaskConfig(errorStrategy: 'retry', maxErrors: MAX_ERRORS, maxRetries: MAX_RETRIES )
         then:
-        proc.checkErrorStrategy(task, error, task_err_count , proc_err_count) == strategy
+        proc.checkErrorStrategy(task, error, TASK_ERR_COUNT , PROC_ERR_COUNT, SUBMIT_RETRIES) == EXPECTED
 
         where:
-        max_retries | max_errors    |   task_err_count  |  proc_err_count   | strategy
-                1   |        3      |               0   |               0   | ErrorStrategy.RETRY
-                1   |        3      |               1   |               0   | ErrorStrategy.RETRY
-                1   |        3      |               2   |               0   | ErrorStrategy.TERMINATE
-                1   |        3      |               0   |               1   | ErrorStrategy.RETRY
-                1   |        3      |               0   |               2   | ErrorStrategy.RETRY
-                1   |        3      |               0   |               3   | ErrorStrategy.TERMINATE
-                3   |       -1      |               0   |               0   | ErrorStrategy.RETRY
-                3   |       -1      |               1   |               1   | ErrorStrategy.RETRY
-                3   |       -1      |               2   |               2   | ErrorStrategy.RETRY
-                3   |       -1      |               3   |               9   | ErrorStrategy.RETRY
-                3   |       -1      |               4   |               9   | ErrorStrategy.TERMINATE
+        MAX_RETRIES | MAX_ERRORS    |   TASK_ERR_COUNT  |  PROC_ERR_COUNT   | SUBMIT_RETRIES    | EXPECTED
+                1   |        3      |               0   |               0   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               1   |               0   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               2   |               0   | 0                 | ErrorStrategy.TERMINATE
+                1   |        3      |               0   |               1   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               0   |               2   | 0                 | ErrorStrategy.RETRY
+                1   |        3      |               0   |               3   | 0                 | ErrorStrategy.TERMINATE
+                3   |       -1      |               0   |               0   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               1   |               1   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               2   |               2   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               3   |               9   | 0                 | ErrorStrategy.RETRY
+                3   |       -1      |               4   |               9   | 0                 | ErrorStrategy.TERMINATE
+         and:
+         // terminates when the submit retries is greater than the max retries
+                1   |       -1      |               0   |               0   | 1                 | ErrorStrategy.RETRY
+                1   |       -1      |               0   |               0   | 2                 | ErrorStrategy.TERMINATE
+                3   |       -1      |               0   |               0   | 2                 | ErrorStrategy.RETRY
+                3   |       -1      |               0   |               0   | 2                 | ErrorStrategy.RETRY
+                3   |       -1      |               0   |               0   | 4                 | ErrorStrategy.TERMINATE
 
     }
 
@@ -848,13 +864,12 @@ class TaskProcessorTest extends Specification {
         config.setContext( foo: 'DDDD', bar: 'OOOO' )
 
         when:
-        def result = processor.getTaskDirectiveVars(task)
+        def result = processor.getTaskExtensionDirectiveVars(task)
         then:
         1 * task.getVariableNames() >> {[ 'task.cpus', 'task.ext.alpha', 'task.ext.delta', 'task.ext.omega' ] as Set}
         1 * task.getConfig() >> config
         then:
         result == [
-                'task.cpus': 4,
                 'task.ext.alpha': 'AAAA',
                 'task.ext.delta': 'DDDD',
                 'task.ext.omega': 'OOOO',
@@ -940,4 +955,188 @@ class TaskProcessorTest extends Specification {
         then:
         result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
     }
+
+    def 'should create a task preview' () {
+        given:
+        def config = new ProcessConfig([cpus: 10, memory: '100 GB'])
+        def EXEC = Mock(Executor) { getName()>>'exec-name'}
+        def BODY = Mock(BodyDef) { getType()>>ScriptType.SCRIPTLET }
+        def processor = new TaskProcessor(config: config, name: 'proc-name', executor: EXEC, taskBody: BODY)
+
+        when:
+        def result = processor.createTaskPreview()
+        then:
+        result.config.process == 'proc-name'
+        result.config.executor == 'exec-name'
+        result.config.getCpus() == 10
+        result.config.getMemory() == MemoryUnit.of('100 GB')
+    }
+
+    @Unroll
+    def 'should validate inputs arity' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+
+        when:
+        def param = new FileInParam(new Binding(), [])
+                .setPathQualifier(true)
+                .bind(FILE_NAME) as FileInParam
+        if( ARITY )
+            param.setArity(ARITY)
+
+        processor.makeTaskContextStage2(task, [(param):FILE_VALUE], 0 )
+        then:
+        context.get(FILE_NAME) == EXPECTED
+
+        where:
+        FILE_NAME       | FILE_VALUE                                | ARITY     | EXPECTED
+        'file.txt'      | '/some/file.txt'                          | null      | Path.of('/some/file.txt')
+        'file.*'        | '/some/file.txt'                          | null      | Path.of('/some/file.txt')
+        'file.*'        | ['/some/file1.txt','/some/file2.txt']     | null      | [Path.of('/some/file1.txt'), Path.of('/some/file2.txt')]
+        '*'             | ['/some/file1.txt','/some/file2.txt']     | null      | [Path.of('/some/file1.txt'), Path.of('/some/file2.txt')]
+        '*'             | []                                        | null      | []
+
+        and:
+        'file.txt'      | '/some/file.txt'                          | '1'      | Path.of('/some/file.txt')
+        'f*'            | '/some/file.txt'                          | '1'      | Path.of('/some/file.txt')
+        'f*'            | '/some/file.txt'                          | '1..2'   | [Path.of('/some/file.txt')]
+        'f*'            | '/some/file.txt'                          | '1..*'   | [Path.of('/some/file.txt')]
+        'f*'            | '/some/file.txt'                          | '1..*'   | [Path.of('/some/file.txt')]
+        'f*'            | ['/some/file.txt']                        | '1..*'   | [Path.of('/some/file.txt')]
+        'f*'            | ['/some/file1.txt', '/some/file2.txt']    | '1..*'   | [Path.of('/some/file1.txt'), Path.of('/some/file2.txt')]
+    }
+
+    def 'should throw an arity error' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+
+        when:
+        def param = new FileInParam(new Binding(), [])
+                .setPathQualifier(true)
+                .bind(FILE_NAME) as FileInParam
+        if( ARITY )
+            param.setArity(ARITY)
+
+        processor.makeTaskContextStage2(task, [(param):FILE_VALUE], 0 )
+        then:
+        def e = thrown(IllegalArityException)
+        e.message == ERROR
+
+        where:
+        FILE_NAME       | FILE_VALUE                                | ARITY     | ERROR
+        'file.txt'      | []                                        | '0'       | 'Path arity max value must be greater or equals to 1'
+        'file.txt'      | []                                        | '1'       | 'Incorrect number of input files for process `foo` -- expected 1, found 0'
+        'f*'            | []                                        | '1..*'    | 'Incorrect number of input files for process `foo` -- expected 1..*, found 0'
+        'f*'            | '/some/file.txt'                          | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
+        'f*'            | ['/some/file.txt']                        | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
+        'f*'            | ['/a','/b']                               | '3'       | 'Incorrect number of input files for process `foo` -- expected 3, found 2'
+    }
+
+    def 'should validate collect output files' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+        and:
+        def workDir = Path.of('/work')
+
+        when:
+        def param = new FileOutParam(new Binding(), [])
+                .setPathQualifier(true)
+                .optional(OPTIONAL)
+                .bind(FILE_NAME) as FileOutParam
+        if( ARITY )
+            param.setArity(ARITY)
+        and:
+        processor.collectOutFiles(task, param, workDir, context)
+        then:
+        processor.fetchResultFiles(_,_,_) >> RESULTS
+        processor.checkFileExists(_,_) >> EXISTS
+        and:
+        task.getOutputs().get(param) == EXPECTED
+
+        where:
+        FILE_NAME       | RESULTS                                   | EXISTS    | OPTIONAL  | ARITY         | EXPECTED
+        'file.txt'      | null                                      | true      | false     | null          | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | null          | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | true      | false     | null          | [Path.of('/work/A'), Path.of('/work/B')]
+        '*'             | []                                        | true      | true      | null          | []
+        and:
+        'file.txt'      | null                                      | true      | false     | '1'           | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '1'           | Path.of('/work/file.txt')
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '1..*'        | [Path.of('/work/file.txt')]
+        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | true      | false     | '2'           | [Path.of('/work/A'), Path.of('/work/B')]
+        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | true      | false     | '1..*'        | [Path.of('/work/A'), Path.of('/work/B')]
+        '*'             | []                                        | true      | false     | '0..*'        | []
+    }
+
+    @Unroll
+    def 'should report output error' () {
+        given:
+        def executor = Mock(Executor)
+        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
+        def processor = Spy(new TaskProcessor(session:session, executor:executor))
+        and:
+        def context = new TaskContext(holder: new HashMap<String, Object>())
+        def task = new TaskRun(
+                name: 'foo',
+                type: ScriptType.SCRIPTLET,
+                context: context,
+                config: new TaskConfig())
+        and:
+        def workDir = Path.of('/work')
+
+        when:
+        def param = new FileOutParam(new Binding(), [])
+                .setPathQualifier(true)
+                .optional(OPTIONAL)
+                .bind(FILE_NAME) as FileOutParam
+        if( ARITY )
+            param.setArity(ARITY)
+        and:
+        processor.collectOutFiles(task, param, workDir, context)
+        then:
+        processor.fetchResultFiles(_,_,_) >> RESULTS
+        processor.checkFileExists(_,_) >> EXISTS
+        and:
+        def e = thrown(EXCEPTION)
+        e.message == ERROR
+
+        where:
+        FILE_NAME       | RESULTS                                   | EXISTS    | OPTIONAL  | ARITY         | EXCEPTION             | ERROR
+        'file.txt'      | null                                      | false     | false     | null          | MissingFileException  | "Missing output file(s) `file.txt` expected by process `foo`"
+        '*'             | []                                        | true      | false     | null          | MissingFileException  | "Missing output file(s) `*` expected by process `foo`"
+        and:
+        'file.txt'      | null                                      | true      | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
+        '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2..*, found 1"
+        '*'             | []                                        | true      | true      | '1..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 1..*, found 0"
+
+    }
+
 }

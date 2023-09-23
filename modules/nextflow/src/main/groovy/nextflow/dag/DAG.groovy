@@ -426,7 +426,7 @@ class DAG {
         /**
          * @return The unique name for this node
          */
-        String getName() { "p${getOrder()}" }
+        String getName() { "v${getOrder()}" }
 
         boolean isActive() {
             operators?.any { DataflowHelper.isProcessorActive(it) }

@@ -197,10 +197,10 @@ public class TesExecutor {
   }
 
    /**
-   * Enviromental variables to set within the container.
+   * Environmental variables to set within the container.
    * @return env
   **/
-  @ApiModelProperty(value = "Enviromental variables to set within the container.")
+  @ApiModelProperty(value = "Environmental variables to set within the container.")
   public Map<String, String> getEnv() {
     return env;
   }

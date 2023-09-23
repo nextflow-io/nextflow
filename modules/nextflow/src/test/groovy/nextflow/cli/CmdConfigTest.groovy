@@ -16,11 +16,11 @@
 
 package nextflow.cli
 
-import nextflow.plugin.Plugins
-import spock.lang.IgnoreIf
-
 import java.nio.file.Files
 
+import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 /**
  *
@@ -166,6 +166,32 @@ class CmdConfigTest extends Specification {
 
     }
 
+    def 'should print the value of a config option' () {
+
+        given:
+        def cmd = new CmdConfig()
+        and:
+        def config = new ConfigObject()
+        config.process.executor = 'slurm'
+        config.process.queue = 'long'
+        config.docker.enabled = true
+        and:
+        def buffer
+
+        when:
+        buffer = new ByteArrayOutputStream()
+        cmd.printValue0(config, 'process.executor', buffer)
+        then:
+        buffer.toString() == 'slurm\n'
+
+        when:
+        buffer = new ByteArrayOutputStream()
+        cmd.printValue0(config, 'does.not.exist', buffer)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Configuration option 'does.not.exist' not found"
+
+    }
 
     def 'should parse config file' () {
         given:

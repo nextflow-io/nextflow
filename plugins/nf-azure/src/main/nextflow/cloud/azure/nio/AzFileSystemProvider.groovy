@@ -440,7 +440,7 @@ class AzFileSystemProvider extends FileSystemProvider {
             // 409 (CONFLICT) is returned when the path already
             // exists, ignore it
             if( e.statusCode!=409 )
-                throw e
+                throw new IOException("Unable to create Azure blob directory: ${dir.toUriString()} - cause: ${e.message}", e)
         }
     }
 

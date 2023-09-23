@@ -23,7 +23,6 @@ import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
 import nextflow.processor.TaskRun
 import spock.lang.Specification
-
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -41,6 +40,7 @@ class MermaidRendererTest extends Specification {
         def ch2 = new DataflowQueue()
         def ch3 = new DataflowQueue()
 
+        def session = new Session([dag: [verbose: true]])
         def dag = new DAG()
         dag.addOperatorNode('Op1', ch1, ch2)
         dag.addOperatorNode('Op2', ch2, ch3)
@@ -53,15 +53,19 @@ class MermaidRendererTest extends Specification {
         file.text ==
             '''
             flowchart TD
-                p0(( ))
-                p1([Op1])
-                p2([Op2])
-                p3(( ))
-                p0 --> p1
-                p1 --> p2
-                p2 --> p3
+                subgraph " "
+                v0[" "]
+                end
+                v1([Op1])
+                v2([Op2])
+                subgraph " "
+                v3[" "]
+                end
+                v0 --> v1
+                v1 --> v2
+                v2 --> v3
             '''
-            .stripIndent().leftTrim()
+            .stripIndent().trim()
 
         cleanup:
         file.delete()
@@ -106,7 +110,7 @@ class MermaidRendererTest extends Specification {
                 t1 -->|data.foo| t2
                 t2 -->|data.bar| o1(( ))
             '''
-            .stripIndent().leftTrim()
+            .stripIndent().trim()
 
         cleanup:
         file.delete()

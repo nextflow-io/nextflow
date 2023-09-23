@@ -1,0 +1,23 @@
+classDiagram
+    %%
+    %% nextflow.cache
+    %%
+    Session --* CacheDB
+    %% CacheFactory --> CacheDB : createInstance
+
+    CacheDB --* CacheStore
+
+    CacheStore <|-- DefaultCacheStore
+    CacheStore <|-- CloudCacheStore
+
+    class DefaultCacheStore {
+        uniqueId : UUID
+        runName : String
+        baseDir : Path
+    }
+
+    class CloudCacheStore {
+        uniqueId : UUID
+        runName : String
+        basePath : Path
+    }

@@ -27,6 +27,7 @@ import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
 
@@ -56,6 +57,7 @@ import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.SysHelper
+import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -127,12 +129,20 @@ class WaveClient {
         // the cookie manager
         cookieManager = new CookieManager()
         // create http client
-        this.httpClient = HttpClient.newBuilder()
+        this.httpClient = newHttpClient()
+    }
+
+    protected HttpClient newHttpClient() {
+        final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .cookieHandler(cookieManager)
                 .connectTimeout(config.httpOpts().connectTimeout())
-                .build()
+        // use virtual threads executor if enabled
+        if( Threads.useVirtual() )
+            builder.executor(Executors.newVirtualThreadPerTaskExecutor())
+        // build and return the new client
+        return builder.build()
     }
 
     WaveConfig config() { return config }
@@ -155,10 +165,10 @@ class WaveClient {
             containerConfig.prependLayer(makeLayer(assets.projectResources))
         }
 
-        if( !assets.containerImage && !assets.dockerFileContent )
+        if( !assets.containerImage && !assets.containerFile )
             throw new IllegalArgumentException("Wave container request requires at least a image or container file to build")
 
-        if( assets.containerImage && assets.dockerFileContent )
+        if( assets.containerImage && assets.containerFile )
             throw new IllegalArgumentException("Wave container image and container file cannot be specified in the same request")
 
         return new SubmitContainerTokenRequest(
@@ -172,7 +182,9 @@ class WaveClient {
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
                 fingerprint: assets.fingerprint(),
-                freeze: config.freezeMode()
+                freeze: config.freezeMode(),
+                format: assets.singularity ? 'sif' : null,
+                dryRun: config.dryRun()
         )
     }
 
@@ -195,7 +207,8 @@ class WaveClient {
                 towerWorkspaceId: tower.workspaceId,
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
-                freeze: config.freezeMode()
+                freeze: config.freezeMode(),
+                dryRun: config.dryRun(),
         )
         return sendRequest(request)
     }
@@ -301,23 +314,28 @@ class WaveClient {
     }
 
     protected void checkConflicts(Map<String,String> attrs, String name) {
-        if( attrs.dockerfile && attrs.conda ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle dockerfile that conflict each other")
-        }
-        if( attrs.container && attrs.dockerfile ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle dockerfile that conflict each other")
-        }
         if( attrs.container && attrs.conda ) {
             throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'conda' directives that conflict each other")
-        }
-        if( attrs.dockerfile && attrs.spack ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'spack' directive and a module bundle dockerfile that conflict each other")
         }
         if( attrs.container && attrs.spack ) {
             throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'spack' directives that conflict each other")
         }
         if( attrs.spack && attrs.conda ) {
             throw new IllegalArgumentException("Process '${name}' declares both 'spack' and 'conda' directives that conflict each other")
+        }
+        checkConflicts0(attrs, name, 'dockerfile')
+        checkConflicts0(attrs, name, 'singularityfile')
+    }
+
+    protected void checkConflicts0(Map<String,String> attrs, String name, String fileType) {
+        if( attrs.get(fileType) && attrs.conda ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle $fileType that conflict each other")
+        }
+        if( attrs.container && attrs.get(fileType) ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle $fileType that conflict each other")
+        }
+        if( attrs.get(fileType) && attrs.spack ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'spack' directive and a module bundle $fileType that conflict each other")
         }
     }
 
@@ -331,6 +349,21 @@ class WaveClient {
         return result
     }
 
+    protected List<String> patchStrategy(List<String> strategy, boolean singularity) {
+        if( !singularity )
+            return strategy
+        // when singularity is enabled, replaces `dockerfile` with `singularityfile`
+        // in the strategy if not specified explicitly
+        final p = strategy.indexOf('dockerfile')
+        if( p!=-1 && !strategy.contains('singularityfile') ) {
+            final result = new ArrayList(strategy)
+            result.remove(p)
+            result.add(p, 'singularityfile')
+            return Collections.<String>unmodifiableList(result)
+        }
+        return strategy
+    }
+
     static Architecture defaultArch() {
         try {
             return new Architecture(SysHelper.getArch())
@@ -342,7 +375,7 @@ class WaveClient {
     }
 
     @Memoized
-    WaveAssets resolveAssets(TaskRun task, String containerImage) {
+    WaveAssets resolveAssets(TaskRun task, String containerImage, boolean singularity) {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the Spack architecture
@@ -357,49 +390,66 @@ class WaveClient {
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text
         }
+        if( bundle!=null && bundle.singularityfile ) {
+            attrs.singularityfile = bundle.singularityfile.text
+        }
 
         // validate request attributes
-        if( config().strategy() )
-            attrs = resolveConflicts(attrs, config().strategy())
+        final strategy = config().strategy()
+        if( strategy )
+            attrs = resolveConflicts(attrs, patchStrategy(strategy, singularity))
         else
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, dockerArch, spackArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, String dockerArch, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackArch) {
 
-        String dockerScript = attrs.dockerfile
+        final scriptType = singularity ? 'singularityfile' : 'dockerfile'
+        String containerScript = attrs.get(scriptType)
         final containerImage = attrs.container
 
         /*
-         * If 'conda' directive is specified use it to create a Dockefile
+         * If 'conda' directive is specified use it to create a container file
          * to assemble the target container
          */
         Path condaFile = null
         if( attrs.conda ) {
-            if( dockerScript )
-                throw new IllegalArgumentException("Unexpected conda and dockerfile conflict while resolving wave container")
+            if( containerScript )
+                throw new IllegalArgumentException("Unexpected conda and $scriptType conflict while resolving wave container")
 
             // map the recipe to a dockerfile
-            if( isCondaLocalFile(attrs.conda) ) {
-                condaFile = Path.of(attrs.conda)
-                dockerScript = condaFileToDockerFile(config.condaOpts())
+            if( isCondaRemoteFile(attrs.conda) ) {
+                containerScript = singularity
+                        ? condaPackagesToSingularityFile(attrs.conda, condaChannels, config.condaOpts())
+                        : condaPackagesToDockerFile(attrs.conda, condaChannels, config.condaOpts())
             }
-            // 'conda' attributes is resolved as the conda packages to be used
             else {
-                dockerScript = condaPackagesToDockerFile(attrs.conda, condaChannels, config.condaOpts())
+                if( isCondaLocalFile(attrs.conda) ) {
+                    // 'conda' attribute is the path to the local conda environment
+                    // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
+                    condaFile = condaFileFromPath(attrs.conda, null, config.condaOpts())
+                }
+                else {
+                    // 'conda' attributes is resolved as the conda packages to be used
+                    condaFile = condaFileFromPackages(attrs.conda, condaChannels, config.condaOpts())
+                }
+                // create the container file to build the container
+                containerScript = singularity
+                        ? condaFileToSingularityFile(config.condaOpts())
+                        : condaFileToDockerFile(config.condaOpts())
             }
         }
 
         /*
-         * If 'spack' directive is specified use it to create a Dockefile
+         * If 'spack' directive is specified use it to create a container file
          * to assemble the target container
          */
         Path spackFile = null
         if( attrs.spack ) {
-            if( dockerScript )
+            if( containerScript )
                 throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
 
             if( isSpackFile(attrs.spack) ) {
@@ -410,14 +460,17 @@ class WaveClient {
                 // create a minimal spack file with package spec from user input
                 spackFile = spackPackagesToSpackFile(attrs.spack, config.spackOpts())
             }
-            dockerScript = spackFileToDockerFile(config.spackOpts())
+            // create the container file to build the container
+            containerScript = singularity
+                    ? spackFileToSingularityFile(config.spackOpts())
+                    : spackFileToDockerFile(config.spackOpts())
         }
 
         /*
          * The process should declare at least a container image name via 'container' directive
          * or a dockerfile file to build, otherwise there's no job to be done by wave
          */
-        if( !dockerScript && !containerImage ) {
+        if( !containerScript && !containerImage ) {
             return null
         }
 
@@ -434,6 +487,8 @@ class WaveClient {
          */
         final platform = dockerArch
 
+        // check is a valid container image
+        WaveAssets.validateContainerRepo(containerImage)
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig(platform)
         return new WaveAssets(
@@ -441,10 +496,11 @@ class WaveClient {
                     platform,
                     bundle,
                     containerConfig,
-                    dockerScript,
+                    containerScript,
                     condaFile,
                     spackFile,
-                    projectRes)
+                    projectRes,
+                    singularity)
     }
 
     @Memoized
@@ -464,7 +520,7 @@ class WaveClient {
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             if( config.freezeMode() )  {
-                if( response.buildId ) {
+                if( response.buildId && !config.dryRun() ) {
                     // await the image to be available when a new image is being built
                     awaitImage(response.targetImage)
                 }
@@ -511,10 +567,14 @@ class WaveClient {
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
     }
 
+    static protected boolean isCondaRemoteFile(String value) {
+        value.startsWith('http://') || value.startsWith('https://')
+    }
+
     protected boolean isSpackFile(String value) {
         if( value.contains('\n') )
             return false
-        return value.endsWith('.yaml')
+        return value.endsWith('.yaml') || value.endsWith('.yml')
     }
 
     protected boolean refreshJwtToken0(String refresh) {
@@ -586,7 +646,7 @@ class WaveClient {
         return Failsafe.with(policy).get(action)
     }
 
-    static private List<Integer> SERVER_ERRORS = [502,503,504]
+    static private final List<Integer> SERVER_ERRORS = [429,502,503,504]
 
     protected HttpResponse<String> httpSend(HttpRequest req)  {
         return safeApply(() -> {

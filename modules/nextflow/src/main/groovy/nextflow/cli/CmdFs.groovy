@@ -15,22 +15,33 @@
  */
 
 package nextflow.cli
+
+import static nextflow.file.FileHelper.toCanonicalPath
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.attribute.BasicFileAttributes
 
 import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.plugin.Plugins
-
 /**
  * Implements `fs` command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
+@Slf4j
 class CmdFs extends CmdBase implements UsageAware {
 
     static final public NAME = 'fs'
@@ -43,6 +54,7 @@ class CmdFs extends CmdBase implements UsageAware {
         commands << new CmdList()
         commands << new CmdCat()
         commands << new CmdRemove()
+        commands << new CmdStat()
     }
 
     trait SubCmd {
@@ -131,6 +143,34 @@ class CmdFs extends CmdBase implements UsageAware {
 
     }
 
+    static class CmdStat implements SubCmd {
+        @Override
+        int getArity() { 1 }
+
+        @Override
+        String getName() { 'stat' }
+
+        @Override
+        String getDescription() { 'Print file to meta info' }
+
+        @Override
+        void apply(Path source, Path target) {
+            try {
+                final attr = Files.readAttributes(source, BasicFileAttributes)
+                print """\
+                    name          : ${source.name}
+                    size          : ${attr.size()}
+                    is directory  : ${attr.isDirectory()}
+                    last modified : ${attr.lastModifiedTime() ?: '-'}
+                    creation time : ${attr.creationTime() ?: '-'}                    
+                    """.stripIndent()
+            }
+            catch (IOException e) {
+                log.warn "Unable to read attributes for file: ${source.toUriString()} - cause: $e.message", e
+            }
+        }
+    }
+
     static class CmdRemove implements SubCmd {
 
         @Override
@@ -158,6 +198,16 @@ class CmdFs extends CmdBase implements UsageAware {
         return NAME
     }
 
+    private Session createSession() {
+        // create the config
+        final config = new ConfigBuilder()
+                .setOptions(getLauncher().getOptions())
+                .setBaseDir(Paths.get('.'))
+                .build()
+
+        return new Session(config)
+    }
+
     @Override
     void run() {
         if( !args ) {
@@ -166,18 +216,25 @@ class CmdFs extends CmdBase implements UsageAware {
         }
 
         Plugins.setup()
+        final session = createSession()
         try {
             run0()
         }
         finally {
-            Plugins.stop()
+            try {
+                session.destroy()
+                Global.cleanUp()
+                Plugins.stop()
+            } catch (Throwable t) {
+                log.warn "Unexpected error while destroying the session object - cause: ${t.message}"
+            }
         }
     }
 
     private void run0() {
         final cmd = findCmd(args[0])
         if( !cmd ) {
-            throw new AbortOperationException("Unknown file system command: `$cmd`")
+            throw new AbortOperationException("Unknown fs sub-command: `$cmd`")
         }
 
         Path target
@@ -208,14 +265,14 @@ class CmdFs extends CmdBase implements UsageAware {
         def splitter = FilePatternSplitter.glob().parse(source)
         if( splitter.isPattern() ) {
             final scheme = splitter.scheme
-            final folder = splitter.parent
+            final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
+            final folder = toCanonicalPath(target)
             final pattern = splitter.fileName
-            final fs = FileHelper.fileSystemForScheme(scheme)
 
             def opts = [:]
-            opts.type = 'file'
+            opts.type = 'any'
 
-            FileHelper.visitFiles(opts, fs.getPath(folder), pattern, op)
+            FileHelper.visitFiles(opts, folder, pattern, op)
         }
         else {
             def normalised = splitter.strip(source)
@@ -254,7 +311,7 @@ class CmdFs extends CmdBase implements UsageAware {
             if( sub )
                 println sub.usage()
             else {
-                throw new AbortOperationException("Unknown cloud sub-command: ${args[0]}")
+                throw new AbortOperationException("Unknown fs sub-command: ${args[0]}")
             }
         }
 

@@ -226,7 +226,7 @@ public class S3Client {
 		if( cannedAcl != null ) {
 			req.withCannedAccessControlList(cannedAcl);
 		}
-		// getNewObjectMetada returns null if no object metadata has been specified.
+		// getNewObjectMetadata returns null if no object metadata has been specified.
 		ObjectMetadata meta = req.getNewObjectMetadata() != null ? req.getNewObjectMetadata() : new ObjectMetadata();
 		if( storageEncryption != null ) {
 			meta.setSSEAlgorithm(storageEncryption.toString());
