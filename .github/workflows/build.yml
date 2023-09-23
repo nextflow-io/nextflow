@@ -24,14 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 17, 21]
-        include:
-        - os: 11
-          distribution: temurin
-        - os: 17
-          distribution: temurin
-        - os: 21
-          distribution: oracle
+        java_version: [11, 17, 19]
     steps:
       - name: Environment
         run: env | sort
@@ -62,7 +55,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: ${{matrix.java_version}}
-          distribution: ${{matrix.distribution}}
+          distribution: temurin
           architecture: x64
           cache: gradle
 
@@ -125,7 +118,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: ${{matrix.java_version}}
-          distribution: ${{matrix.distribution}}
+          distribution: temurin
           architecture: x64
           cache: gradle
 
