@@ -85,4 +85,27 @@ class RepositoryProviderTest extends Specification {
         result == 'foo****:bar****'
 
     }
+
+    def 'should auth using credentials' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        and:
+        def conn = Mock(HttpURLConnection)
+
+        when:
+        provider.auth(conn)
+        then:
+        1 * provider.getUser() >> null
+        1 * provider.hasCredentials()
+        0 * conn.setRequestProperty('Authorization', _)
+
+        when:
+        provider.auth(conn)
+        then:
+        _ * provider.getUser() >> 'foo'
+        _ * provider.getPassword() >> 'bar'
+        1 * provider.hasCredentials()
+        and:
+        1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
+    }
 }
