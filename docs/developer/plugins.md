@@ -92,9 +92,7 @@ If a plugin is not locally available, Nextflow checks the repository index for t
 
 Since each Nextflow run can have a different set of plugins (and versions), each run keeps a local plugins directory called `.nextflow/plr/<session-id>` which links the exact set of plugins required for the given run.
 
-If no plugins are specified in the Nextflow configuration, the default plugins are automatically added. The set of default plugins is defined in the Nextflow resources file included in the distribution runtime `modules/nextflow/src/main/resources/META-INF/plugins-info.txt`.
-
-To disable the use of default plugins, set the environment variable `NXF_PLUGINS_DEFAULT=false`.
+Additionally, the "default plugins" (defined in the Nextflow resources file `modules/nextflow/src/main/resources/META-INF/plugins-info.txt`) are always made available for use. To disable the use of default plugins, set the environment variable `NXF_PLUGINS_DEFAULT=false`.
 
 ## Gradle Tasks
 

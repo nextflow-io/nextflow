@@ -1,4 +1,8 @@
-![Nextflow logo](https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg-bright.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg.png">
+  <img alt="Nextflow Logo" src="https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg.png">
+</picture>
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
 <br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
