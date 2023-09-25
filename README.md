@@ -36,7 +36,7 @@ Nextflow's documentation is available at https://nextflow.io/docs/latest/.
 
 You can post questions and get help in the [Nextflow community forum](https://community.seqera.io). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
 
-Nextflow also hosts a yearly workshop showcasing researcher's workflows and advancements in the language. Talks from the past workshops are available on the [Nextflow YouTube Channel](https://www.youtube.com/@Nextflow)
+The Nextflow community is highly active with regular community meetings, events, a podcast and more. You can view much of this material on the [Nextflow YouTube Channel](https://www.youtube.com/@Nextflow).
 
 The [nf-core](https://nf-co.re/) project is a community effort aggregating high quality Nextflow workflows which can be used by everyone.
 
