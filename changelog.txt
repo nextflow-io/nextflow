@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.04.4 - 25 Sep 2023
+- Fix use of GITHUB_TOKEN variable to access GitHub repo [108c6b55]
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [4895d547]
+- Fix Prevent false positive resumable task [aae87715]
+- Fix Always emit publish event for cached task outputs (#4227) [c4cd53c2]
+- Fix Too long Http connection pool timeout [ce5e9930]
+- Bump nf-google@1.7.3-patch1 [d881728c]
+
 23.04.3 - 11 Aug 2023
 - Increase Wave client max attempts [8c67610a]
 - Fix log typo [03e19ea2]
