@@ -34,7 +34,7 @@ Nextflow's documentation is available at https://nextflow.io/docs/latest/.
 
 ## Community
 
-You can post questions, or report problems by using the Nextflow [discussions](https://github.com/nextflow-io/nextflow/discussions)
+You can post questions and get help in the [Nextflow community forum](https://community.seqera.io). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
 
 Nextflow also hosts a yearly workshop showcasing researcher's workflows and advancements in the language. Talks from the past workshops are available on the [Nextflow YouTube Channel](https://www.youtube.com/@Nextflow)
 
