@@ -34,7 +34,7 @@ conda install -c bioconda nextflow
 
 ## Documentation
 
-Nextflow's documentation is available at https://nextflow.io/docs/latest/.
+Nextflow's documentation is available at <https://nextflow.io/docs/latest/>.
 
 ## Community
 
