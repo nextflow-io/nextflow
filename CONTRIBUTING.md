@@ -2,7 +2,7 @@
 
 This guide documents the various ways to contribute to Nextflow, including what is required before submitting a code change.
 
-Contributing to Nextflow doesn't just mean writing code. Helping new users on the mailing list, testing releases and bug fixes, and improving documentation are all essential and valuable contributions. In fact, helping in these ways is an excellent way to become an effective contributor and gain credibility within the community, which makes it easier to make larger contributions like code changes and new features.
+Contributing to Nextflow doesn't just mean writing code. Helping new users in the community, testing releases and bug fixes, and improving documentation are all essential and valuable contributions. Helping in these ways is an excellent way to become an effective contributor and gain credibility within the community, which makes it easier to make larger contributions like code changes and new features.
 
 ## Helping Other Users
 
