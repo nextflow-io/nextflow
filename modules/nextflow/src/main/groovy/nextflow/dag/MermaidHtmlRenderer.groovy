@@ -29,8 +29,8 @@ class MermaidHtmlRenderer implements DagRenderer {
     @Override
     void renderDocument(DAG dag, Path file) {
         final template = readTemplate()
-        final network = new MermaidRenderer().renderNetwork(dag).replaceAll(~/\$/, '')
-        file.text = template.replaceAll(~/\/\* REPLACE_WITH_NETWORK_DATA \*\//, network)
+        final network = new MermaidRenderer().renderNetwork(dag)
+        file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
     }
 
     private String readTemplate() {
