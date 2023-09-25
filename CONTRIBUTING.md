@@ -22,7 +22,7 @@ Report a bug using the **New issue** button on the [issues page](https://github.
 
 Contributing bug fixes is the best way to gain experience with the Nextflow codebase and credibility within the community as a project contributor.
 
-If you are new to the Nextflow codebase, check out issues marked as [help wanted](https://github.com/nextflow-io/nextflow/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) or [good first issue](https://github.com/nextflow-io/nextflow/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22+) to get started. Feel free to ask for help if you get stuck while trying to implement a fix!
+If you are new to the Nextflow codebase and want to get involved, check out issues marked as [`help wanted`](https://github.com/nextflow-io/nextflow/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) or [`good first issue`](https://github.com/nextflow-io/nextflow/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22+). Feel free to ask for help if you get stuck while trying to implement a fix!
 
 ## New Features
 
