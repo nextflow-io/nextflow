@@ -56,6 +56,19 @@ class PluginSpec implements CacheFunnel, Comparable<PluginSpec> {
         return new PluginSpec(id)
     }
 
+    /**
+     * Parse a plugin spec from a plugin directory name, e.g. nf-amazon-1.2.0
+     *
+     * @param dir
+     * @return A {@link PluginSpec} representing the plugin
+     */
+    static PluginSpec parseDirectory(String dir) {
+        final index = dir.lastIndexOf('-')
+        final id = dir.substring(0, index)
+        final version = dir.substring(index + 1)
+        return new PluginSpec(id, version)
+    }
+
     @Override
     Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
         hasher.putUnencodedChars(id)
