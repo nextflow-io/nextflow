@@ -10,7 +10,7 @@ A great way to contribute to Nextflow is to answer user questions on the [commun
 
 ## Documentation Changes
 
-Propose changes to the [Nextflow documentation](https://nextflow.io/docs/latest/) by editing the source files in the [docs](https://github.com/nextflow-io/nextflow/tree/master/docs) directory. The README in that directory shows how to build and preview the docs locally. Finally, open a pull request with the proposed changes.
+Propose changes to the [Nextflow documentation](https://nextflow.io/docs/latest/) by editing the source files in the [docs](https://github.com/nextflow-io/nextflow/tree/master/docs) directory. The `README.md` in that directory describes how to build and preview the docs locally. Finally, open a pull request with the proposed changes.
 
 ## Bug Reports
 
