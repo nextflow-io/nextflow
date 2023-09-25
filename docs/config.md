@@ -519,6 +519,12 @@ The following settings are available:
 : *Only supported by the HTML and Mermaid renderers.*
 : Controls the maximum depth at which to render sub-workflows (default: no limit).
 
+`dag.direction`
+: :::{versionadded} 23.10.0
+:::
+: *Only supported by the HTML and Mermaid renderers.*
+: Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
+
 `dag.file`
 : Graph file name (default: `dag-<timestamp>.html`).
 

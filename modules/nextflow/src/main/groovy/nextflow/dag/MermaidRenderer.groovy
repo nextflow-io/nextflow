@@ -42,6 +42,8 @@ class MermaidRenderer implements DagRenderer {
 
     private int depth = session.config.navigate('dag.depth', -1) as int
 
+    private String direction = session.config.navigate('dag.direction', 'TB')
+
     private boolean verbose = session.config.navigate('dag.verbose', false)
 
     @Override
@@ -70,7 +72,7 @@ class MermaidRenderer implements DagRenderer {
 
         // render diagram
         def lines = [] as List<String>
-        lines << "flowchart TD"
+        lines << "flowchart ${direction}".toString()
 
         // render nodes
         renderNodeTree(lines, null, nodeTree)
