@@ -16,7 +16,7 @@ Propose changes to the [Nextflow documentation](https://nextflow.io/docs/latest/
 
 Submitting a bug report is one of the simplest and most useful ways to contribute, as it helps us to quickly identify and fix issues and thereby make Nextflow more stable.
 
-Report a bug using the **New issue** button on the [issues page](https://github.com/nextflow-io/nextflow/issues). A good bug report should include a minimal test case that can replicate the reported bug. Please follow the instructions in the [issue template](https://github.com/nextflow-io/nextflow/blob/master/.github/issue_template.md) when submitting a bug report.
+Report a bug using the **New issue** button on the [issues page](https://github.com/nextflow-io/nextflow/issues). A good bug report should include a minimal test case that can replicate the reported bug. Please follow the instructions in the issue template when submitting a bug report.
 
 ## Bug Fixes
 
