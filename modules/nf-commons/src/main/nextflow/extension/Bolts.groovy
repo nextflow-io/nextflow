@@ -559,6 +559,13 @@ class Bolts {
         return result!=null ? result : defValue
     }
 
+    static def navigateDynamic(Map self, String key, binding, defValue = null) {
+        def result = navigate(self, key, defValue)
+        return result instanceof Closure
+            ? cloneWith(result, binding).call()
+            : result
+    }
+
     /**
      * Converts {@code ConfigObject}s to a plain {@code Map}
      *

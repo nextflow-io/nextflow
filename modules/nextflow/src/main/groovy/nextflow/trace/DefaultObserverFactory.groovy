@@ -43,7 +43,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('report.file')
+        String fileName = config.navigateDynamic('report.file', session.binding)
         def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
         if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
         def report = (fileName as Path).complete()
@@ -61,7 +61,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('timeline.file')
+        String fileName = config.navigateDynamic('timeline.file', session.binding)
         if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TimelineObserver(traceFile)
@@ -74,7 +74,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('dag.file')
+        String fileName = config.navigateDynamic('dag.file', session.binding)
         if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new GraphObserver(traceFile)
@@ -90,7 +90,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('trace.file')
+        String fileName = config.navigateDynamic('trace.file', session.binding)
         if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TraceFileObserver(traceFile)

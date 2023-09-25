@@ -390,13 +390,17 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observers = createObservers()
-        this.statsEnabled = observers.any { it.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
-        // configure script params
+        // configure script binding
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
+        binding.setVariable( 'nextflow', NextflowMeta.instance )
+        binding.setVariable( 'workflow', workflowMetadata )
+
+        // configure observers
+        this.observers = createObservers()
+        this.statsEnabled = observers.any { it.enableMetrics() }
 
         cache = CacheFactory.create(uniqueId,runName).open()
 

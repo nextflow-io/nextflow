@@ -519,7 +519,7 @@ The following settings are available:
 : Controls the maximum depth at which to render sub-workflows (default: no limit; only supported by the Mermaid render).
 
 `dag.file`
-: Graph file name (default: `dag-<timestamp>.dot`).
+: Graph file name or closure returning the file name (default: `dag-<timestamp>.dot`).
 
 `dag.overwrite`
 : When `true` overwrites any existing DAG file with the same name (default: `false`).
@@ -1258,7 +1258,7 @@ The following settings are available:
 : If `true` it create the workflow execution report.
 
 `report.file`
-: The path of the created execution report file (default: `report-<timestamp>.html`).
+: Report file name or closure returning the file name (default: `report-<timestamp>.html`).
 
 `report.overwrite`
 : When `true` overwrites any existing report file with the same name.
@@ -1374,7 +1374,7 @@ The following settings are available:
 : When `true` enables the generation of the timeline report file (default: `false`).
 
 `timeline.file`
-: Timeline file name (default: `timeline-<timestamp>.html`).
+: Timeline file name or closure returning the file name (default: `timeline-<timestamp>.html`).
 
 `timeline.overwrite`
 : When `true` overwrites any existing timeline file with the same name.
@@ -1418,7 +1418,7 @@ The following settings are available:
 : Comma separated list of fields to be included in the report. The available fields are listed at {ref}`this page <trace-fields>`.
 
 `trace.file`
-: Trace file name (default: `trace-<timestamp>.txt`).
+: Trace file name or closure returning the file name (default: `trace-<timestamp>.txt`).
 
 `trace.overwrite`
 : When `true` overwrites any existing trace file with the same name.
