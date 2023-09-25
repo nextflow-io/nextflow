@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.7.3-patch1 - 25 Sep 2023
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [4895d547]
+
 1.7.3 - 15 Apr 2023
 - Bump gson:2.10.1 [83ca1e32]
 
