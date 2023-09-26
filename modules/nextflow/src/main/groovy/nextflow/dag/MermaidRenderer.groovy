@@ -44,7 +44,14 @@ class MermaidRenderer implements DagRenderer {
 
     private String direction = session.config.navigate('dag.direction', 'TB')
 
-    private boolean verbose = session.config.navigate('dag.verbose', false)
+    private boolean verbose = session.config.navigate('dag.verbose', false);
+
+    {
+        if( direction !in ['TB','LR'] ) {
+            log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
+            this.direction = 'TB'
+        }
+    }
 
     @Override
     void renderDocument(DAG dag, Path file) {
