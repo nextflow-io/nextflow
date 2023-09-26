@@ -38,6 +38,7 @@ import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
+import nextflow.fusion.FusionHelper
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -282,6 +283,12 @@ class PublishDir {
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
         this.taskName = task.name
+
+        // resolve Fusion symlinks
+        if( FusionHelper.isFusionEnabled(Global.session as Session) ) {
+            final inputFiles = task.getInputFilesMap()
+            files = files.collect { inputFiles.getOrDefault(it.name, it) } as Set<Path>
+        }
 
         apply0(files)
     }
