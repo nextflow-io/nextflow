@@ -238,6 +238,8 @@ baseDir
         └── P7-template.sh
 ```
 
+(module-binaries)=
+
 ## Module binaries
 
 :::{versionadded} 22.10.0
