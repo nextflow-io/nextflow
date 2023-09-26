@@ -379,7 +379,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( state in TERMINATED ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; state=$state"
             // finalize the task
-            task.exitStatus = readExitFile()
+            task.exitStatus = getJobExitCode()
+            if( task.exitStatus == null )
+                task.exitStatus = readExitFile()
             if( state == 'FAILED' ) {
                 task.stdout = executor.logging.stdout(uid) ?: outputFile
                 task.stderr = executor.logging.stderr(uid) ?: errorFile
@@ -393,6 +395,15 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return false
+    }
+
+    protected Integer getJobExitCode() {
+        final status = client.getJobStatus(jobId)
+        final eventsCount = status.getStatusEventsCount()
+        final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+        log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}"
+
+        return lastEvent?.getTaskExecution()?.getExitCode()
     }
 
     @PackageScope Integer readExitFile() {
