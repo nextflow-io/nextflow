@@ -1211,9 +1211,21 @@ Directives are optional settings that affect the execution of the current proces
 
 They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
 
+```groovy
+// directive with simple value
+name value
+
+// directive with list value
+name arg1, arg2, arg3
+
+// directive with map value
+name key1: val1, key2: val2
+
+// directive with value and options
+name arg, opt1: val1, opt2: val2
 ```
-name value [, value2 [,..]]
-```
+
+By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 
 Some directives are generally available to all processes, while others depend on the `executor` currently defined.
 
