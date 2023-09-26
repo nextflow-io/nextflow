@@ -941,7 +941,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag-20221001.dot'
+        config.dag.file == 'dag-20221001.html'
     }
 
     def 'should set session weblog options' () {
