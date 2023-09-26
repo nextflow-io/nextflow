@@ -15,32 +15,31 @@
  */
 
 package nextflow.dag
+
 import java.nio.file.Path
 
 /**
- * Render the DAG in HTML using Cytoscape.js
- * to the specified file.
- * See http://js.cytoscape.org for more info.
+ * Render the DAG as a Mermaid diagram embedded in an HTML document.
+ * See https://mermaid.js.org/ for more info.
  *
- *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- * @author Mike Smoot <mes@aescon.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-class CytoscapeHtmlRenderer implements DagRenderer {
+class MermaidHtmlRenderer implements DagRenderer {
 
     @Override
     void renderDocument(DAG dag, Path file) {
-        String tmplPage = readTemplate()
-        String network = CytoscapeJsRenderer.renderNetwork(dag)
-        file.text = tmplPage.replaceAll(~/\/\* REPLACE_WITH_NETWORK_DATA \*\//, network)
+        final template = readTemplate()
+        final network = new MermaidRenderer().renderNetwork(dag)
+        file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
     }
 
     private String readTemplate() {
-        StringWriter writer = new StringWriter();
-        def res = CytoscapeHtmlRenderer.class.getResourceAsStream('cytoscape.js.dag.template.html')
+        final writer = new StringWriter()
+        final res = MermaidHtmlRenderer.class.getResourceAsStream('mermaid.dag.template.html')
         int ch
         while( (ch=res.read()) != -1 ) {
-            writer.append(ch as char);
+            writer.append(ch as char)
         }
-        writer.toString();
+        writer.toString()
     }
 }

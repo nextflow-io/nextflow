@@ -42,7 +42,16 @@ class MermaidRenderer implements DagRenderer {
 
     private int depth = session.config.navigate('dag.depth', -1) as int
 
-    private boolean verbose = session.config.navigate('dag.verbose', false)
+    private String direction = session.config.navigate('dag.direction', 'TB')
+
+    private boolean verbose = session.config.navigate('dag.verbose', false);
+
+    {
+        if( direction !in ['TB','LR'] ) {
+            log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
+            this.direction = 'TB'
+        }
+    }
 
     @Override
     void renderDocument(DAG dag, Path file) {
@@ -70,7 +79,7 @@ class MermaidRenderer implements DagRenderer {
 
         // render diagram
         def lines = [] as List<String>
-        lines << "flowchart TD"
+        lines << "flowchart ${direction}".toString()
 
         // render nodes
         renderNodeTree(lines, null, nodeTree)
@@ -254,23 +263,23 @@ class MermaidRenderer implements DagRenderer {
      *
      * @param nodeLookup
      */
-    private Map getNodeTree(Map<DAG.Vertex,Node> nodeLookup) {
+    private Map<String,Object> getNodeTree(Map<DAG.Vertex,Node> nodeLookup) {
         // infer subgraphs of operator nodes
         final inferredKeys = inferSubgraphKeys(nodeLookup)
 
         // construct node tree
-        def nodeTree = [:]
+        def nodeTree = [:] as Map<String,Object>
 
         for( def node : nodeLookup.values() ) {
             final vertex = node.vertex
 
             // determine the vertex subgraph
-            def keys = []
+            def keys = [] as List<String>
 
             if( vertex.type == DAG.Type.PROCESS ) {
                 // extract keys from fully qualified name
                 final result = getSubgraphKeys(vertex.label)
-                keys = (List)result[0]
+                keys = (List<String>)result[0]
                 node.label = (String)result[1]
             }
             else if( vertex.type == DAG.Type.OPERATOR ) {
@@ -306,7 +315,7 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      */
     private Map<Node,List> inferSubgraphKeys(Map<DAG.Vertex,Node> nodeLookup) {
-        def inferredKeys = [:]
+        def inferredKeys = [:] as Map<Node,List>
         def queue = nodeLookup
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
@@ -332,7 +341,7 @@ class MermaidRenderer implements DagRenderer {
 
             // extract keys from fully qualified process name
             final keys = process
-                ? getSubgraphKeys(process.vertex.label)[0]
+                ? getSubgraphKeys(process.vertex.label)[0] as List
                 : []
 
             // save inferred keys

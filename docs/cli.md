@@ -1226,8 +1226,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
-`-with-dag` (`dag-<timestamp>.dot`)
+`-with-dag` (`dag-<timestamp>.html`)
 : Create pipeline DAG file.
+: :::{versionchanged} 23.10.0
+  The default format was changed from `dot` to `html`.
+  :::
 
 `-with-docker`
 : Enable process execution in a Docker container.

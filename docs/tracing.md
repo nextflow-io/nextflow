@@ -100,7 +100,7 @@ Nextflow can create an HTML execution report: a single document which includes m
 To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-report [file name]
+nextflow run <pipeline> -with-report [file name]
 ```
 
 The report file name can be specified as an optional parameter following the report option.
@@ -151,7 +151,7 @@ Nextflow creates an execution tracing file that contains some useful information
 In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-trace
+nextflow run <pipeline> -with-trace
 ```
 
 It will create a file named `trace.txt` in the current directory. The content looks like the above example:
@@ -338,7 +338,7 @@ As each process can spawn many tasks, colors are used to identify those tasks be
 To enable the creation of the timeline report add the `-with-timeline` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-timeline [file name]
+nextflow run <pipeline> -with-timeline [file name]
 ```
 
 The report file name can be specified as an optional parameter following the timeline option.
@@ -347,45 +347,60 @@ The report file name can be specified as an optional parameter following the tim
 
 ## DAG visualisation
 
-A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data connections (i.e. channels) between them.
+A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e. channels) between them.
 
-The pipeline execution DAG can be outputted by adding the `-with-dag` option to the run command line. It creates a file named `dag.dot` containing a textual representation of the pipeline execution graph in the [DOT format](http://www.graphviz.org/content/dot-language).
+To render the workflow DAG, run your pipeline with the `-with-dag` option. By default, it creates a file named `dag-<timestamp>.html` with the workflow DAG rendered as a [Mermaid](https://mermaid.js.org/) diagram.
 
-The execution DAG can be rendered in a different format by specifying an output file name which has an extension corresponding to the required format. For example:
+The workflow DAG can be rendered in a different format by specifying an output file name with a different extension based on the desired format. For example:
 
 ```bash
-nextflow run <script-name> -with-dag flowchart.png
+nextflow run <pipeline> -with-dag flowchart.png
 ```
 
-List of supported file formats:
-
-| Extension | File format                     |
-| --------- | ------------------------------- |
-| dot       | Graphviz DOT file               |
-| html      | HTML file                       |
-| mmd       | Mermaid diagram                 |
-| pdf       | PDF file (\*)                   |
-| png       | PNG file (\*)                   |
-| svg       | SVG file (\*)                   |
-| gexf      | Graph Exchange XML file (Gephi) |
-
-:::{note}
-File formats marked with "\*" require the [Graphviz](http://www.graphviz.org) tool to be installed.
+:::{versionadded} 22.06.0-edge
+You can use the `-preview` option with `-with-dag` to render the workflow DAG without executing any tasks.
 :::
 
-The DAG produced by Nextflow for the [Unistrap](https://github.com/cbcrg/unistrap/) pipeline:
-
-```{image} images/dag.png
-```
-
-### Mermaid diagram
-
-:::{versionadded} 22.04.0
+:::{versionchanged} 23.10.0
+The default output format was changed from DOT to HTML.
 :::
 
-Nextflow can render the DAG as a [Mermaid](https://mermaid-js.github.io/) diagram. Mermaid diagrams are particularly useful because they can be embedded in [GitHub Flavored Markdown](https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/) without having to render them yourself. You can customize the diagram with CSS, and you can even add links! Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes) for details.
+The following file formats are supported:
+
+`dot`
+: Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
+
+`gexf`
+: Graph Exchange XML file (Gephi)
+
+`html`
+: HTML file with Mermaid diagram
+: :::{versionchanged} 23.10.0
+  The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
+  :::
+
+`mmd`
+: :::{versionadded} 22.04.0
+  :::
+: Mermaid diagram
+
+`pdf`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz PDF file
+
+`png`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz PNG file
+
+`svg`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz SVG file
 
 Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline (using the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) with the `default` theme):
+
+```bash
+nextflow run rnaseq-nf -preview -with-dag
+```
 
 ```{mermaid} images/dag.mmd
 ```
