@@ -204,7 +204,7 @@ container freeze mode, the container repository authentication needs to be manag
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
 `wave.build.conda.basePackages`
-: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
+: One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
 `wave.build.conda.commands`
 : One or more commands to be added to the Dockerfile used to build a Conda based image.

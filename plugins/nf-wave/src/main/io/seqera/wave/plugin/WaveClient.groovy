@@ -430,11 +430,11 @@ class WaveClient {
                 if( isCondaLocalFile(attrs.conda) ) {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
-                    condaFile = condaFileFromPath(attrs.conda, null, config.condaOpts())
+                    condaFile = condaFileFromPath(attrs.conda, null)
                 }
                 else {
                     // 'conda' attributes is resolved as the conda packages to be used
-                    condaFile = condaFileFromPackages(attrs.conda, condaChannels, config.condaOpts())
+                    condaFile = condaFileFromPackages(attrs.conda, condaChannels)
                 }
                 // create the container file to build the container
                 containerScript = singularity
