@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.8.2 - 28 Sep 2023
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [9b3741e3]
+
 1.8.1 - 22 Jul 2023
 - Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
 - Bump Groovy 3.0.18 [207eb535]
