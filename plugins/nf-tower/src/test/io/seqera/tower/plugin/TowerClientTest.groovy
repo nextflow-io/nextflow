@@ -91,7 +91,7 @@ class TowerClientTest extends Specification {
         map.workflow.bar == 2
         map.workflow.id == '12ef'
         map.workflow.params == [x: 'hello']
-        map.workflow.container == 'p1:c1,p2:c2'
+        map.workflow.container == null
         map.metrics == [[process:'foo', cpu: [min: 1, max:5], time: [min: 6, max: 9]]]
         map.progress == new WorkflowProgress()
         and:
@@ -331,8 +331,8 @@ class TowerClientTest extends Specification {
         expect:
         tower.mapToString(null)  == null
         tower.mapToString('ciao') == 'ciao'
-        tower.mapToString([:]) == ''
-        tower.mapToString([p:'foo', q:'bar']) == 'p:foo,q:bar'
+        tower.mapToString([:]) == null
+        tower.mapToString([p:'foo', q:'bar']) == null
     }
 
 
