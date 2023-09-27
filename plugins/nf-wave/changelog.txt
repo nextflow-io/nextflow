@@ -1,5 +1,12 @@
 nf-wave changelog
 ==================
+0.13.0 - 28 Sep 2023
+- Wave does not support 'null' container engine [f3eba3d7]
+- Default Conda basePackages to "conda-forge::procps-ng" [367af52f]
+- Add procps by default to Conda-based Wave builds [66b2d2d2]
+- Improve wave container name validation [73eb5a02]
+- Bump wave-utils@0.7.8 [d0c47d49]
+
 0.12.0 - 10 Sep 2023
 - Add support for Spack to Singularity builds [23c4ec1d]
 - Add inspect command (#4069) [090c31ce]
