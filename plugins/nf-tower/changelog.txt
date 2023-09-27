@@ -1,6 +1,10 @@
 nf-tower changelog
 ===================
-1.6.1 -17 Aug 2023
+1.6.2 - 28 Sep 2023
+- Disable Tower container field for multiple images [ci fast] [b53936b0]
+- Bump Apache 2.0 license to tower client [e4a878b6]
+
+1.6.1 - 17 Aug 2023
 - Fix checkpoint thread termination (#4166) [2b449daa]
 - Fix typos in source code comments (#4173) [ci fast] [e78bc37e]
 
