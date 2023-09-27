@@ -1201,13 +1201,18 @@ class Session implements ISession {
             return new ContainerConfig(result)
         }
 
-        final enabled = allEngines.findAll { it.enabled?.toString() == 'true' }
+        final enabled = allEngines.findAll(it -> it.enabled?.toString() == 'true')
         if( enabled.size() > 1 ) {
-            def names = enabled.collect { it.engine }
+            final names = enabled.collect(it -> it.engine)
             throw new IllegalConfigException("Cannot enable more than one container engine -- Choose either one of: ${names.join(', ')}")
         }
-
-        (enabled ? enabled.get(0) : ( allEngines ? allEngines.get(0) : [engine:'docker'] )) as ContainerConfig
+        if( enabled ) {
+            return new ContainerConfig(enabled.get(0))
+        }
+        if( allEngines ) {
+            return new ContainerConfig(allEngines.get(0))
+        }
+        return new ContainerConfig(engine:'docker')
     }
 
     ContainerConfig getContainerConfig() {
@@ -1215,9 +1220,11 @@ class Session implements ISession {
     }
 
     private void getContainerConfig0(String engine, List<Map> drivers) {
+        assert engine
         final entry = this.config?.get(engine)
         if( entry instanceof Map ) {
-            final config0 = new LinkedHashMap((Map)entry)
+            final config0 = new LinkedHashMap()
+            config0.putAll((Map)entry)
             config0.put('engine', engine)
             drivers.add(config0)
         }
