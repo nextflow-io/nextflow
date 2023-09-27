@@ -1186,6 +1186,8 @@ class Session implements ISession {
     @Memoized
     ContainerConfig getContainerConfig(String engine) {
 
+        log.debug "Fetching container config for '$engine' engine"
+
         final allEngines = new LinkedList<Map>()
         getContainerConfig0('docker', allEngines)
         getContainerConfig0('podman', allEngines)
@@ -1198,6 +1200,8 @@ class Session implements ISession {
 
         if( engine ) {
             final result = allEngines.find(it -> it.engine==engine) ?: [engine: engine]
+
+            log.debug "Container config for '$engine' engine: ${result}"
             return new ContainerConfig(result)
         }
 
@@ -1219,6 +1223,8 @@ class Session implements ISession {
         if( entry instanceof Map ) {
             final config0 = new LinkedHashMap((Map)entry)
             config0.put('engine', engine)
+
+            log.debug "Detected config for '$engine' engine: ${config0}"
             drivers.add(config0)
         }
         else if( entry!=null ) {
