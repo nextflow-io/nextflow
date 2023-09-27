@@ -655,8 +655,8 @@ class TowerClient implements TraceObserver {
         if( obj instanceof CharSequence )
             return obj.toString()
         if( obj instanceof Map ) {
-            def map = obj as Map
-            return map.collect { k,v -> "$k:$v" }.join(',')
+            // turn this off for multiple containers because the string representation is broken
+            return null
         }
         throw new IllegalArgumentException("Illegal container attribute type: ${obj.getClass().getName()} = ${obj}" )
     }
