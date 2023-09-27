@@ -101,4 +101,17 @@ class FusionConfigTest extends Specification {
         [tags:'[*.txt](x=1)']   | true      | '[*.txt](x=1)'
 
     }
+
+    def 'should check privileged flag' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.privileged() == EXPECTED
+
+        where:
+        OPTS                    | EXPECTED
+        [:]                     | true
+        [privileged:true]       | true
+        [privileged:false]      | false
+    }
 }
