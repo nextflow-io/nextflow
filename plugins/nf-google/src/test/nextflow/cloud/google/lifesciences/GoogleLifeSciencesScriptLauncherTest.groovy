@@ -82,7 +82,7 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
         def wrapper =  builder.buildNew0()
 
         then:
-        wrapper == load('bash-wrapper-gcp.txt', [folder: WORK_DIR.toString(), sync_cmd: 'sync || true' ])
+        wrapper == load('bash-wrapper-gcp.txt', [folder: WORK_DIR.toString()])
 
         cleanup:
         folder?.deleteDir()

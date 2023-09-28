@@ -425,6 +425,19 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should include sync command' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'true'])
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.sync_cmd == 'sync || true'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should unstage outputs' () {
 
         given:
@@ -486,6 +499,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('container_env')
         binding.task_env == null
         binding.container_env == null
+        binding.sync_cmd == null
 
         when:
         binding = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb']).makeBinding()
