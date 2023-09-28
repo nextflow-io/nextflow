@@ -98,6 +98,21 @@ class AwsS3ConfigTest extends Specification {
         [AWS_S3_ENDPOINT: 'http://foo'] | [endpoint: 'http://bar']      | 'http://bar'  // <-- config should have priority
     }
 
+    @Unroll
+    def 'should fail with invalid endpoint protocol' () {
+        when:
+        new AwsS3Config(CONFIG)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == EXPECTED
+
+        where:
+        CONFIG                          | EXPECTED
+        [endpoint: 'bar.com']           |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'bar.com'"
+        [endpoint: 'ftp://bar.com']     |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'ftp://bar.com'"
+
+    }
+
     def 'should get s3 legacy properties' () {
         given:
         SysEnv.push([:])
