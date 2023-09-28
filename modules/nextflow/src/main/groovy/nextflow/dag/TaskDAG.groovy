@@ -29,7 +29,7 @@ import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
 import nextflow.trace.TraceRecord
 /**
- * Model the task graph of a pipeline execution.
+ * Model the directed acyclic graph of the workflow definition.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

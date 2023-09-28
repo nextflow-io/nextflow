@@ -79,9 +79,9 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onFlowComplete() {
-            // -- normalise the DAG
-            dag.normalize()
-            // -- render it to a file
+        // -- normalise the DAG
+        dag.normalize()
+        // -- render it to a file
         createRender().renderDocument(dag,file)
     }
 

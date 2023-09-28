@@ -43,7 +43,7 @@ import nextflow.script.params.TupleOutParam
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Model a direct acyclic graph of the workflow definition.
+ * Model the directed acyclic graph of the workflow definition.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
