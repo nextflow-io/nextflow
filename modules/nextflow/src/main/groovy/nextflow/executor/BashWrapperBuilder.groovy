@@ -527,7 +527,7 @@ class BashWrapperBuilder {
     }
 
     String getSyncCmd() {
-        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+        if ( SysEnv.get( 'NXF_ENABLE_FS_SYNC' ) == "true" ) {
             return 'sync || true'
         }
         return null
