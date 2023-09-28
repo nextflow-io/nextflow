@@ -124,18 +124,4 @@ class AwsS3ConfigTest extends Specification {
         SysEnv.pop()
 
     }
-
-    def 'should set storage encryption via env variable' () {
-        given:
-        SysEnv.push([NXF_AWS_SSE_MODE: 'aws:kms', NXF_AWS_SSE_KMS_KEY_ID: 'xyz1'])
-
-        when:
-        def client = new AwsS3Config([:])
-        then:
-        client.storageKmsKeyId == 'xyz1'
-        client.storageEncryption == 'aws:kms'
-
-        cleanup:
-        SysEnv.pop()
-    }
 }

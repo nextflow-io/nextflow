@@ -28,7 +28,7 @@ import java.nio.file.Path
 class CytoscapeHtmlRenderer implements DagRenderer {
 
     @Override
-    void renderWorkflowGraph(DAG dag, Path file) {
+    void renderDocument(DAG dag, Path file) {
         String tmplPage = readTemplate()
         String network = CytoscapeJsRenderer.renderNetwork(dag)
         file.text = tmplPage.replaceAll(~/\/\* REPLACE_WITH_NETWORK_DATA \*\//, network)

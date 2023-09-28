@@ -45,7 +45,7 @@ class DotRenderer implements DagRenderer {
     static String normalise(String str) { str.replaceAll(/[^0-9_A-Za-z]/,'') }
 
     @Override
-    void renderWorkflowGraph(DAG dag, Path file) {
+    void renderDocument(DAG dag, Path file) {
         file.text = renderNetwork(dag)
     }
 

@@ -18,13 +18,11 @@ package nextflow.trace
 
 import java.nio.file.Path
 
-import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
-import nextflow.dag.TaskDAG
 import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
 import nextflow.dag.GexfRenderer
@@ -41,18 +39,13 @@ import nextflow.processor.TaskProcessor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@CompileStatic
 class GraphObserver implements TraceObserver {
 
     static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.dot"
 
     private Path file
 
-    private String type
-
     private DAG dag
-
-    private TaskDAG taskDag
 
     private String name
 
@@ -64,24 +57,16 @@ class GraphObserver implements TraceObserver {
 
     String getName() { name }
 
-    GraphObserver( Path file, String type='workflow', boolean overwrite=false ) {
+    GraphObserver( Path file ) {
         assert file
-
-        if( type !in ['workflow', 'task'] )
-            throw new IllegalArgumentException("Invalid DAG type '${type}', should be 'workflow' or 'task'")
-
         this.file = file
         this.name = file.baseName
         this.format = file.getExtension().toLowerCase() ?: 'dot'
-        this.type = type
-        this.overwrite = overwrite
     }
 
     @Override
     void onFlowCreate(Session session) {
         this.dag = session.dag
-        this.taskDag = session.taskDag
-
         // check file existence
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
@@ -94,19 +79,14 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onFlowComplete() {
-        if( type == 'workflow' ) {
             // -- normalise the DAG
             dag.normalize()
             // -- render it to a file
-            createRenderer().renderWorkflowGraph(dag, file)
-        }
-        else if( type == 'task' ) {
-            createRenderer().renderTaskGraph(taskDag, file)
-        }
+        createRender().renderDocument(dag,file)
     }
 
     @PackageScope
-    DagRenderer createRenderer() {
+    DagRenderer createRender() {
         if( format == 'dot' )
             new DotRenderer(name)
 
@@ -121,6 +101,28 @@ class GraphObserver implements TraceObserver {
 
         else
             new GraphvizRenderer(name, format)
+    }
+
+
+    @Override
+    void onProcessCreate(TaskProcessor process) {
+
+    }
+
+
+    @Override
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
+
+    }
+
+    @Override
+    void onProcessStart(TaskHandler handler, TraceRecord trace) {
+
+    }
+
+    @Override
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+
     }
 
     @Override

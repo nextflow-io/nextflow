@@ -23,19 +23,10 @@ import java.nio.file.Path
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
-trait DagRenderer {
+interface DagRenderer {
 
     /**
-     * Render a workflow DAG.
+     * Render the dag to the specified file.
      */
-    void renderWorkflowGraph(DAG dag, Path file) {
-        throw new UnsupportedOperationException("Workflow DAG rendering is not supported for this file format")
-    }
-
-    /**
-     * Render a task DAG.
-     */
-    void renderTaskGraph(TaskDAG dag, Path file) {
-        throw new UnsupportedOperationException("Task DAG rendering is not supported for this file format")
-    }
+    void renderDocument(DAG dag, Path file);
 }

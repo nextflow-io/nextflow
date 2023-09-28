@@ -17,11 +17,9 @@
 package nextflow.dag
 
 import java.nio.file.Files
-import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
-import nextflow.processor.TaskRun
 import spock.lang.Specification
 /**
  *
@@ -29,11 +27,7 @@ import spock.lang.Specification
  */
 class MermaidRendererTest extends Specification {
 
-    def setupSpec() {
-        new Session()
-    }
-
-    def 'should render a workflow graph using the `mmd` format' () {
+    def 'should render a graph using the `mmd` format' () {
         given:
         def file = Files.createTempFile('test', null)
         def ch1 = new DataflowQueue()
@@ -48,7 +42,7 @@ class MermaidRendererTest extends Specification {
         dag.normalize()
 
         when:
-        new MermaidRenderer().renderWorkflowGraph(dag, file)
+        new MermaidRenderer().renderDocument(dag, file)
         then:
         file.text ==
             '''
@@ -65,52 +59,7 @@ class MermaidRendererTest extends Specification {
                 v1 --> v2
                 v2 --> v3
             '''
-            .stripIndent().trim()
-
-        cleanup:
-        file.delete()
-    }
-
-    def 'should render a task graph using the `mmd` format' () {
-        given:
-        def file = Files.createTempFile('test', null)
-
-        def task1 = Mock(TaskRun)
-        def task2 = Mock(TaskRun)
-        def output1 = Paths.get('/work/012345/data.foo')
-        def v1 = new TaskDAG.Vertex(
-            index: 1,
-            label: 'foo',
-            inputs: [ 'data.txt': Paths.get('/inputs/data.txt') ],
-            outputs: [ output1 ]
-        )
-        def v2 = new TaskDAG.Vertex(
-            index: 2,
-            label: 'bar',
-            inputs: [ 'data.foo': output1 ],
-            outputs: [ Paths.get('/work/abcdef/data.bar') ]
-        )
-        def dag = Mock(TaskDAG) {
-            vertices >> [
-                (task1): v1,
-                (task2): v2
-            ]
-            getProducerVertex(output1) >> v1
-        }
-
-        when:
-        new MermaidRenderer().renderTaskGraph(dag, file)
-        then:
-        file.text ==
-            '''
-            flowchart TD
-                t1["foo"]
-                i1(( )) -->|/inputs/data.txt| t1
-                t2["bar"]
-                t1 -->|data.foo| t2
-                t2 -->|data.bar| o1(( ))
-            '''
-            .stripIndent().trim()
+            .stripIndent().leftTrim()
 
         cleanup:
         file.delete()

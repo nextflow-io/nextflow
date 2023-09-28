@@ -41,7 +41,7 @@ class GraphvizRenderer implements DagRenderer {
      * See http://www.graphviz.org for more info.
      */
     @Override
-    void renderWorkflowGraph(DAG dag, Path target) {
+    void renderDocument(DAG dag, Path target) {
         def result = Files.createTempFile('nxf-',".$format")
         def temp = Files.createTempFile('nxf-','.dot')
         // save the DAG as `dot` to a temp file
