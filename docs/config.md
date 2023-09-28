@@ -1588,6 +1588,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
+`NXF_ENABLE_FS_SYNC`
+: :::{versionadded} 23.10.0
+  :::
+: When enabled the job script will execute Linux `sync` command on job completion. This may be useful to synchronize the job state over shared file systems (default: `false`)
+
 `NXF_ENABLE_SECRETS`
 : :::{versionadded} 21.09.0-edge
   :::
