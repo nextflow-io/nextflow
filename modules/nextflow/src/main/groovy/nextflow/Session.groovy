@@ -1030,7 +1030,7 @@ class Session implements ISession {
 
         // save the completed task in the cache DB
         final trace = handler.safeTraceRecord()
-        taskDag.apply(handler.task, trace)
+        taskDag.saveToRecord(handler.task, trace)
         cache.putTaskAsync(handler, trace)
 
         // notify the event to the observers

@@ -29,7 +29,7 @@ import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
 import nextflow.trace.TraceRecord
 /**
- * Model the directed acyclic graph of the workflow definition.
+ * Model the directed acyclic graph of the workflow execution.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -51,14 +51,12 @@ class TaskDAG {
      * @param task
      */
     void addTask(TaskRun task) {
-        final hash = task.hash.toString()
-        final label = "[${hash.substring(0,2)}/${hash.substring(2,8)}] ${task.name}"
         final inputs = task.getInputFilesMap()
 
         sync.lock()
         try {
             // add new task to graph
-            vertices[task] = new Vertex(vertices.size(), label, inputs)
+            vertices[task] = new Vertex(inputs)
         }
         finally {
             sync.unlock()
@@ -114,7 +112,7 @@ class TaskDAG {
      * @param task
      * @param record
      */
-    void apply(TaskRun task, TraceRecord record) {
+    void saveToRecord(TaskRun task, TraceRecord record) {
         final vertex = vertices[task]
 
         record.inputs = vertex.inputs.collect { name, path ->
@@ -135,15 +133,8 @@ class TaskDAG {
 
     @TupleConstructor(excludes = 'outputs')
     static class Vertex {
-        int index
-        String label
         Map<String,Path> inputs
         Set<Path> outputs
-
-        String getName() { "t${index}" }
-
-        @Override
-        String toString() { label }
     }
 
 }

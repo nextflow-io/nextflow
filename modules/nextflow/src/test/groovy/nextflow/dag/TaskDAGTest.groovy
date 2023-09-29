@@ -31,8 +31,6 @@ class TaskDAGTest extends Specification {
 
         given:
         def task1 = Mock(TaskRun) {
-            getHash() >> HashCode.fromString('00112233')
-            getName() >> 'foo'
             getInputFilesMap() >> [
                 'data.txt': Paths.get('/inputs/data.txt')
             ]
@@ -41,8 +39,6 @@ class TaskDAGTest extends Specification {
             ]
         }
         def task2 = Mock(TaskRun) {
-            getHash() >> HashCode.fromString('aabbccdd')
-            getName() >> 'bar'
             getInputFilesMap() >> [
                 'data.foo': Paths.get('/work/00112233/data.foo')
             ]
@@ -58,13 +54,9 @@ class TaskDAGTest extends Specification {
         def v1 = dag.vertices[task1]
         def v2 = dag.vertices[task2]
         then:
-        v1.index == 0
-        v1.label == '[00/112233] foo'
         v1.inputs.size() == 1
         v1.inputs['data.txt'] == Paths.get('/inputs/data.txt')
         and:
-        v2.index == 1
-        v2.label == '[aa/bbccdd] bar'
         v2.inputs.size() == 1
         v2.inputs['data.foo'] == Paths.get('/work/00112233/data.foo')
 
