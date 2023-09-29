@@ -378,7 +378,7 @@ class PluginUpdater extends UpdateManager {
 
     private String getLastPluginReleaseOffline(String id) {
         final specs = FilesEx.list(pluginsStore)
-            .collect( dir -> PluginSpec.parseDirectory(dir) )
+            .collect( dir -> PluginSpec.parseDirName(dir) )
             .findAll( spec -> spec.id == id )
 
         if( !specs )

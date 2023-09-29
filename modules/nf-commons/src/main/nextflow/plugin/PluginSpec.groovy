@@ -62,7 +62,7 @@ class PluginSpec implements CacheFunnel, Comparable<PluginSpec> {
      * @param dir
      * @return A {@link PluginSpec} representing the plugin
      */
-    static PluginSpec parseDirectory(String dir) {
+    static PluginSpec parseDirName(String dir) {
         final index = dir.lastIndexOf('-')
         final id = dir.substring(0, index)
         final version = dir.substring(index + 1)
