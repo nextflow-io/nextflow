@@ -313,25 +313,26 @@ class PluginUpdater extends UpdateManager {
     private boolean load0(String id, String version) {
         assert id, "Missing plugin Id"
 
-        def pluginPath = null
-        if( SysEnv.get('NXF_OFFLINE')=='true' ) {
-            if( version == null )
-                version = getLastPluginReleaseOffline(id)
-            if( !version )
-                throw new IllegalStateException("Cannot find local version of $id plugin (offline mode)")
-
-            log.debug "Update disabled in offline mode -- using local version $version of $id plugin"
-            pluginPath = pluginsStore.resolve("$id-$version")
+        final offline = SysEnv.get('NXF_OFFLINE')=='true'
+        if( !version ) {
+            version = offline
+                ? getLastPluginReleaseOffline(id)
+                : getLastPluginRelease(id)?.version
         }
-        else {
-            if( version == null )
-                version = getLastPluginRelease(id)?.version
-            if( !version )
-                throw new IllegalStateException("Cannot find latest version of $id plugin")
 
-            pluginPath = pluginsStore.resolve("$id-$version")
-            if( !FilesEx.exists(pluginPath) )
-                pluginPath = safeDownload(id, version)
+        if( !version ) {
+            final msg = offline
+                ? "Cannot find local version of $id plugin (offline mode)"
+                : "Cannot find latest version of $id plugin"
+            throw new IllegalStateException(msg)
+        }
+
+        if( offline )
+            log.debug "Update disabled in offline mode -- using local version $version of $id plugin"
+
+        def pluginPath = pluginsStore.resolve("$id-$version")
+        if( !FilesEx.exists(pluginPath) ) {
+            pluginPath = safeDownload(id, version)
         }
 
         // verify the plugin install path contains the expected manifest path
