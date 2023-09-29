@@ -121,6 +121,8 @@ class PublishDir {
 
     private String taskName
 
+    private Map<String,Path> taskInputs
+
     @Lazy
     private ExecutorService threadPool = { def sess = Global.session as Session; sess.publishDirExecutorService() }()
 
@@ -284,44 +286,11 @@ class PublishDir {
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
         this.taskName = task.name
-
-        // resolve Fusion symlinks
-        if( FusionHelper.isFusionEnabled(Global.session as Session) ) {
-            final inputFiles = task.getInputFilesMap()
-            files = files.collect { file ->
-                file.name in inputFiles
-                    ? resolveFusionLink(inputFiles[file.name])
-                    : file
-            } as Set<Path>
-        }
+        this.taskInputs = task.getInputFilesMap()
 
         apply0(files)
     }
 
-    /**
-     * Resolve a Fusion symlink by following the .fusion.symlinks
-     * file in the task directory until the original file is reached.
-     *
-     * @param file
-     */
-    @CompileStatic
-    protected Path resolveFusionLink(Path file) {
-        while( file.name in getFusionLinks(file.parent) )
-            file = file.text.replace('/fusion/s3/', 's3://') as Path
-        return file
-    }
-
-    @CompileStatic
-    @Memoized
-    protected List<String> getFusionLinks(Path workDir) {
-        try {
-            final file = workDir.resolve('.fusion.symlinks')
-            return file.text.tokenize('\n')
-        }
-        catch( NoSuchFileException ) {
-            return []
-        }
-    }
 
     @CompileStatic
     protected void apply1(Path source, boolean inProcess ) {
@@ -400,6 +369,11 @@ class PublishDir {
     @CompileStatic
     protected void processFile( Path source, Path destination ) {
 
+        // resolve Fusion symlink if applicable
+        if( FusionHelper.isFusionEnabled(Global.session as Session) )
+            if( source.name in taskInputs )
+                source = resolveFusionLink(taskInputs[source.name])
+
         // create target dirs if required
         makeDirs(destination.parent)
 
@@ -421,6 +395,31 @@ class PublishDir {
         }
 
         notifyFilePublish(destination, source)
+    }
+
+    /**
+     * Resolve a Fusion symlink by following the .fusion.symlinks
+     * file in the task directory until the original file is reached.
+     *
+     * @param file
+     */
+    @CompileStatic
+    protected Path resolveFusionLink(Path file) {
+        while( file.name in getFusionLinks(file.parent) )
+            file = file.text.replace('/fusion/s3/', 's3://') as Path
+        return file
+    }
+
+    @CompileStatic
+    @Memoized
+    protected List<String> getFusionLinks(Path workDir) {
+        try {
+            final file = workDir.resolve('.fusion.symlinks')
+            return file.text.tokenize('\n')
+        }
+        catch( NoSuchFileException ) {
+            return []
+        }
     }
 
     private String real0(Path p) {
