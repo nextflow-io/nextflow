@@ -185,16 +185,20 @@ class PluginsFacade implements PluginStateListener {
 
     PluginManager getManager() { manager }
 
+    // Fix for plugins issue observed
     void init(boolean embedded=false) {
-        if( manager )
-            throw new IllegalArgumentException("Plugin system already setup")
+        if( manager ){
+            this.manager = manager
+        }
+        else {
+            this.manager = createManager(root)
+        }
 
         log.debug "Setting up plugin manager > mode=${mode}; embedded=$embedded; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
         // make sure plugins dir exists
         if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
 
-        this.manager = createManager(root)
         this.updater = createUpdater(root, manager)
         manager.loadPlugins()
         if( embedded ) {
@@ -204,12 +208,15 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void init(Path root, String mode, CustomPluginManager pluginManager) {
-        if( manager )
-            throw new IllegalArgumentException("Plugin system already setup")
+        // setup plugin manager
+        if( manager ){
+            this.manager = manager
+        }else {
+            this.manager = pluginManager
+        }
         this.root = root
         this.mode = mode
-        // setup plugin manager
-        this.manager = pluginManager
+
         this.manager.addPluginStateListener(this)
         // setup the updater
         this.updater = createUpdater(root, manager)
