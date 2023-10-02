@@ -47,9 +47,9 @@ class K8sResponseExceptionTest extends Specification {
         when:
         def resp = new K8sResponseException(
                 'Request /this/that failed',
-                new K8sResponseJson('Oops.. it crashed badly'))
+                new K8sResponseJson('Error: it crashed badly'))
         then:
-        resp.getMessage() == 'Request /this/that failed -- Oops.. it crashed badly'
+        resp.getMessage() == 'Request /this/that failed -- Error: it crashed badly'
     }
 
     def 'should contain the response object passed to it' () {
