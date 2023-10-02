@@ -33,6 +33,7 @@ import nextflow.trace.TraceRecord
  */
 @Slf4j
 @CompileStatic
+@Deprecated
 class WaveObserver implements TraceObserver {
 
     private WaveClient client
