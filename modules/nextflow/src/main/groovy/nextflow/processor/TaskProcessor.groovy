@@ -417,6 +417,22 @@ class TaskProcessor {
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
 
+        // -- check that multiple inputs with the same name are not defined
+        def inputNames = []
+        config.getInputs()
+            .collect { InParam param ->
+                param instanceof TupleInParam
+                    ? param.inner
+                    : param
+            }
+            .flatten()
+            .each { InParam param ->
+                if( param.name in inputNames )
+                    throw new IllegalArgumentException("Input '${param.name}' defined multiple times in process `$name`")
+                else
+                    inputNames << param.name
+            }
+
         // -- check that input set defines at least two elements
         def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
