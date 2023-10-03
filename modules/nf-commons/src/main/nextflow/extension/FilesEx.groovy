@@ -34,8 +34,8 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
-import java.security.MessageDigest
 
+import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.stc.ClosureParams
@@ -45,6 +45,7 @@ import nextflow.file.ETagAwareFile
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
 import nextflow.io.ByteBufferBackedInputStream
+import nextflow.util.CacheHelper
 import nextflow.util.CharsetHelper
 import nextflow.util.CheckHelper
 
@@ -1611,14 +1612,6 @@ class FilesEx {
             return path.getETag()
 
         // otherwise compute checksum manually
-        final is = Files.newInputStream(path)
-        final md = MessageDigest.getInstance('MD5')
-        final buf = new byte[16 << 10]
-
-        int len
-        while( (len=is.read(buf)) != -1 )
-            md.update(buf, 0, len)
-
-        new BigInteger(1, md.digest()).toString(16)
+        CacheHelper.hasher(Hashing.md5(), path, CacheHelper.HashMode.DEEP).hash().toString()
     }
 }
