@@ -2192,14 +2192,9 @@ class TaskProcessor {
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+        def collector = (item) -> "${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] ${item?.toString()?.replace('\n', '\\n')}"
 
-        def buffer = new StringBuilder()
-        buffer.append("[${safeTaskName(task)}] cache hash: ${hash}; mode: $mode; entries: \n")
-        for( Object item : entries ) {
-            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
-        }
-
-        log.info(buffer.toString())
+        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${entries.collect(collector).join(' | ')}"
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
