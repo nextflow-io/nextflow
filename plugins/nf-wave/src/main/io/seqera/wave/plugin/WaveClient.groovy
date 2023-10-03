@@ -118,7 +118,7 @@ class WaveClient {
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
-        log.debug "Wave endpoint: ${endpoint}; config: $config"
+        log.debug "Wave config: $config"
         this.packer = new Packer()
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
@@ -430,11 +430,11 @@ class WaveClient {
                 if( isCondaLocalFile(attrs.conda) ) {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
-                    condaFile = condaFileFromPath(attrs.conda, null, config.condaOpts())
+                    condaFile = condaFileFromPath(attrs.conda, null)
                 }
                 else {
                     // 'conda' attributes is resolved as the conda packages to be used
-                    condaFile = condaFileFromPackages(attrs.conda, condaChannels, config.condaOpts())
+                    condaFile = condaFileFromPackages(attrs.conda, condaChannels)
                 }
                 // create the container file to build the container
                 containerScript = singularity
@@ -487,6 +487,8 @@ class WaveClient {
          */
         final platform = dockerArch
 
+        // check is a valid container image
+        WaveAssets.validateContainerRepo(containerImage)
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig(platform)
         return new WaveAssets(

@@ -16,10 +16,13 @@
 
 package nextflow.cli
 
+import static nextflow.file.FileHelper.toCanonicalPath
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.attribute.BasicFileAttributes
 
 import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
@@ -51,6 +54,7 @@ class CmdFs extends CmdBase implements UsageAware {
         commands << new CmdList()
         commands << new CmdCat()
         commands << new CmdRemove()
+        commands << new CmdStat()
     }
 
     trait SubCmd {
@@ -139,6 +143,34 @@ class CmdFs extends CmdBase implements UsageAware {
 
     }
 
+    static class CmdStat implements SubCmd {
+        @Override
+        int getArity() { 1 }
+
+        @Override
+        String getName() { 'stat' }
+
+        @Override
+        String getDescription() { 'Print file to meta info' }
+
+        @Override
+        void apply(Path source, Path target) {
+            try {
+                final attr = Files.readAttributes(source, BasicFileAttributes)
+                print """\
+                    name          : ${source.name}
+                    size          : ${attr.size()}
+                    is directory  : ${attr.isDirectory()}
+                    last modified : ${attr.lastModifiedTime() ?: '-'}
+                    creation time : ${attr.creationTime() ?: '-'}                    
+                    """.stripIndent()
+            }
+            catch (IOException e) {
+                log.warn "Unable to read attributes for file: ${source.toUriString()} - cause: $e.message", e
+            }
+        }
+    }
+
     static class CmdRemove implements SubCmd {
 
         @Override
@@ -202,7 +234,7 @@ class CmdFs extends CmdBase implements UsageAware {
     private void run0() {
         final cmd = findCmd(args[0])
         if( !cmd ) {
-            throw new AbortOperationException("Unknown file system command: `$cmd`")
+            throw new AbortOperationException("Unknown fs sub-command: `$cmd`")
         }
 
         Path target
@@ -233,14 +265,14 @@ class CmdFs extends CmdBase implements UsageAware {
         def splitter = FilePatternSplitter.glob().parse(source)
         if( splitter.isPattern() ) {
             final scheme = splitter.scheme
-            final folder = splitter.parent
+            final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
+            final folder = toCanonicalPath(target)
             final pattern = splitter.fileName
-            final fs = FileHelper.fileSystemForScheme(scheme)
 
             def opts = [:]
-            opts.type = 'file'
+            opts.type = 'any'
 
-            FileHelper.visitFiles(opts, fs.getPath(folder), pattern, op)
+            FileHelper.visitFiles(opts, folder, pattern, op)
         }
         else {
             def normalised = splitter.strip(source)
@@ -279,7 +311,7 @@ class CmdFs extends CmdBase implements UsageAware {
             if( sub )
                 println sub.usage()
             else {
-                throw new AbortOperationException("Unknown cloud sub-command: ${args[0]}")
+                throw new AbortOperationException("Unknown fs sub-command: ${args[0]}")
             }
         }
 

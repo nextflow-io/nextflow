@@ -425,6 +425,19 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should include sync command' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'true'])
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.sync_cmd == 'sync || true'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should unstage outputs' () {
 
         given:
@@ -486,6 +499,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('container_env')
         binding.task_env == null
         binding.container_env == null
+        binding.sync_cmd == null
 
         when:
         binding = newBashWrapperBuilder(environment: [FOO:'aa', BAR:'bb']).makeBinding()
@@ -566,14 +580,14 @@ class BashWrapperBuilderTest extends Specification {
         when:
         binding = newBashWrapperBuilder(statsEnabled: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
         binding.unstage_controls == null
         binding.containsKey('unstage_controls')
 
         when:
         binding = newBashWrapperBuilder(statsEnabled: true, scratch: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
         binding.unstage_controls == '''\
                         cp .command.out /work/dir/.command.out || true
                         cp .command.err /work/dir/.command.err || true
@@ -977,7 +991,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'singularity'] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity run --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -991,7 +1005,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'singularity', entrypointOverride: true] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity run --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }

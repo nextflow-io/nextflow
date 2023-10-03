@@ -471,22 +471,41 @@ workflow {
 }
 ```
 
-The `stageAs` option allows you to control how the file should be named in the task work directory. You can provide a specific name or a pattern as described in the [Multiple input files](#multiple-input-files) section:
+Available options:
 
-```groovy
-process foo {
+`arity`
+: :::{versionadded} 23.09.0-edge
+  :::
+: Specify the number of expected files. Can be a number or a range:
+
+  ```groovy
   input:
-  path x, stageAs: 'data.txt'
+      path('one.txt', arity: '1')         // exactly one file is expected
+      path('pair_*.txt', arity: '2')      // exactly two files are expected
+      path('many_*.txt', arity: '1..*')   // one or more files are expected
+  ```
 
-  """
-  your_command --in data.txt
-  """
-}
+  When a task is created, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
 
-workflow {
-  foo('/some/data/file.txt')
-}
-```
+`stageAs`
+: Specify how the file should be named in the task work directory:
+
+  ```groovy
+  process foo {
+    input:
+    path x, stageAs: 'data.txt'
+
+    """
+    your_command --in data.txt
+    """
+  }
+
+  workflow {
+    foo('/some/data/file.txt')
+  }
+  ```
+
+  Can be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
 
 :::{note}
 Process `path` inputs have nearly the same interface as described in {ref}`script-file-io`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
@@ -922,6 +941,22 @@ In the above example, the `randomNum` process creates a file named `result.txt` 
 
 Available options:
 
+`arity`
+: :::{versionadded} 23.09.0-edge
+  :::
+: Specify the number of expected files. Can be a number or a range:
+
+  ```groovy
+  output:
+      path('one.txt', arity: '1')         // exactly one file is expected
+      path('pair_*.txt', arity: '2')      // exactly two files are expected
+      path('many_*.txt', arity: '1..*')   // one or more files are expected
+  ```
+
+  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity,
+  and fail if they do not. If the arity is `1`, a sole file object will be emitted. Otherwise, a list will always be emitted,
+  even if only one file is produced.
+
 `followLinks`
 : When `true` target files are return in place of any matching symlink (default: `true`)
 
@@ -1176,9 +1211,21 @@ Directives are optional settings that affect the execution of the current proces
 
 They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
 
+```groovy
+// directive with simple value
+name value
+
+// directive with list value
+name arg1, arg2, arg3
+
+// directive with map value
+name key1: val1, key2: val2
+
+// directive with value and options
+name arg, opt1: val1, opt2: val2
 ```
-name value [, value2 [,..]]
-```
+
+By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 
 Some directives are generally available to all processes, while others depend on the `executor` currently defined.
 
@@ -1704,6 +1751,33 @@ process foo {
 ```
 
 See also: [cpus](#cpus) and [memory](#memory).
+
+(process-maxsubmitawait)=
+
+### maxSubmitAwait (experimental)
+
+The `maxSubmitAwait` directives allows you to specify how long a task can remain in submission queue without being executed.
+Elapsed this time the task execution will fail.
+
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
+resource requirement. For example:
+
+```groovy
+process foo {
+  errorStrategy 'retry'
+  maxSubmitAwait '10 mins'
+  maxRetries 3
+  queue "${task.submitAttempt==1 : 'spot-compute' : 'on-demand-compute'}"
+  script:
+  '''
+  your_job --here
+  '''
+}
+```
+
+In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
+task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
+queue named `on-demand-compute`. 
 
 (process-maxerrors)=
 

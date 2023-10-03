@@ -60,7 +60,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     }
 
     private String defaultRunCommand() {
-        final result = SysEnv.get("NXF_${getBinaryName().toUpperCase()}_RUN_COMMAND", 'run')
+        final result = SysEnv.get("NXF_${getBinaryName().toUpperCase()}_RUN_COMMAND", 'exec')
         if( result !in ['run','exec'] )
             throw new IllegalArgumentException("Invalid singularity launch command '$result' - it should be either 'run' or 'exec'")
         return result

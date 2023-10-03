@@ -131,9 +131,14 @@ class ScriptRunner {
         session.start()
         try {
             // parse the script
-            parseScript(scriptFile, entryName)
-            // run the code
-            run()
+            try {
+                parseScript(scriptFile, entryName)
+                // run the code
+                run()
+            }
+            finally {
+                log.debug "Parsed script files:${scriptFiles0()}"
+            }
             // await completion
             await()
             // shutdown session
@@ -148,6 +153,13 @@ class ScriptRunner {
             throw new AbortRunException()
         }
 
+        return result
+    }
+
+    protected String scriptFiles0() {
+        def result = ''
+        for( Map.Entry<String,Path> it : ScriptMeta.allScriptNames() )
+            result += "\n  ${it.key}: ${it.value.toUriString()}"
         return result
     }
 

@@ -31,6 +31,8 @@ Available options:
 : Add the specified file to configuration set.
 
 `-d, -dockerize`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Launch nextflow via Docker (experimental).
 
 `-h`
@@ -546,6 +548,66 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 
 ```console
 $ nextflow drop nextflow-io/hello -f
+```
+
+### fs
+
+Perform basic filesystem operations.
+
+**Usage**
+
+```console
+$ nextflow fs [subcommands]
+```
+
+**Description**
+
+The `fs` command is used to perform filesystem operations like copy, move, delete, list directory, etc. Like the `file()` method, it can work with local files, remote URLs, and remote object storage. Storage credentials can be provided through the same manner as launching a pipeline (Nextflow config, environment vars, etc).
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Examples**
+
+List a directory.
+
+```console
+$ nextflow fs list <directory>
+```
+
+Print the contents of a file to standard output.
+
+```console
+$ nextflow fs cat <file>
+```
+
+Copy a file or directory.
+
+```console
+$ nextflow fs cp <source> <target>
+```
+
+Move a file or directory.
+
+```console
+$ nextflow fs mv <source> <target>
+```
+
+Delete a file or directory.
+
+```console
+$ nextflow fs rm <path>
+```
+
+:::{versionadded} 23.10.0
+:::
+
+Print file or directory attributes.
+
+```console
+$ nextflow fs stat <path>
 ```
 
 ### help
@@ -1075,9 +1137,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL2 syntax.
 
 `-dump-channels`
@@ -1160,8 +1226,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
-`-with-dag` (`dag-<timestamp>.dot`)
+`-with-dag` (`dag-<timestamp>.html`)
 : Create pipeline DAG file.
+: :::{versionchanged} 23.10.0
+  The default format was changed from `dot` to `html`.
+  :::
 
 `-with-docker`
 : Enable process execution in a Docker container.
