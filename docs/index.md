@@ -27,6 +27,7 @@ dsl2
 
 cli
 executor
+cache-and-resume
 tracing
 metrics
 sharing
