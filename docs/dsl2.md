@@ -183,6 +183,26 @@ workflow {
 Optional params for a process input/output are always prefixed with a comma, except for `stdout`. Because `stdout` does not have an associated name or value like other types, the first param should not be prefixed.
 :::
 
+### Process config
+
+:::{versionadded} 23.10.0
+:::
+
+A process can be configured with additional directives from a workflow by using the `config` attribute on a process. For example:
+
+```groovy
+include { foo ; foo as bar } from './module.nf'
+
+workflow {
+    foo()
+
+    bar.config.publishDir 'results', mode: 'copy'
+    bar()
+}
+```
+
+Process directives can be defined using the same syntax as in a process definition, and they are applied separately to different module aliases. In the above example, the `publishDir` directive is applied to process `bar` but not to process `foo`.
+
 ## Workflow
 
 ### Workflow definition

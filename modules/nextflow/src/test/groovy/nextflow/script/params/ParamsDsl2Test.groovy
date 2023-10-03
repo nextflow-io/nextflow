@@ -137,8 +137,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         def process = ScriptMeta.get(script).getProcess('alpha'); process.initialize()
 
         then:
-        def inputs = process.processConfig.getInputs()
-        def outputs = process.processConfig.getOutputs()
+        def inputs = process.config.getInputs()
+        def outputs = process.config.getOutputs()
         and:
         inputs.size() == 1
         inputs[0] instanceof StdInParam
@@ -178,8 +178,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         def process = ScriptMeta.get(script).getProcess('beta'); process.initialize()
 
         then:
-        def inputs = process.processConfig.getInputs()
-        def outputs = process.processConfig.getOutputs()
+        def inputs = process.config.getInputs()
+        def outputs = process.config.getOutputs()
         and:
         inputs.size() == 1
         and:

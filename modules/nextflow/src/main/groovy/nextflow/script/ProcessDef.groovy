@@ -145,7 +145,10 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     String getBaseName() { baseName }
 
-    ProcessConfig getProcessConfig() { processConfig }
+    ProcessConfig getConfig() {
+        if( processConfig == null ) initialize()
+        processConfig
+    }
 
     ChannelOut getOut() {
         if( output==null )
@@ -165,7 +168,8 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     @Override
     Object run(Object[] args) {
         // initialise process config
-        initialize()
+        if( processConfig == null )
+            initialize()
 
         // get params 
         final params = ChannelOut.spread(args)

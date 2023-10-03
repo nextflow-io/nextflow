@@ -98,7 +98,7 @@ class ProcessDefTest extends Specification {
         def copy = proc.clone()
         copy.initialize()
         then:
-        def cfg1 = copy.processConfig.createTaskConfig()
+        def cfg1 = copy.config.createTaskConfig()
         cfg1.getCpus()==2           // taken from the generic config
         cfg1.getMemory().giga == 3  // taken from the `foo` config
 
@@ -106,7 +106,7 @@ class ProcessDefTest extends Specification {
         copy = proc.cloneWithName('flow1:bar')
         copy.initialize()
         then:
-        def cfg2 = copy.processConfig.createTaskConfig()
+        def cfg2 = copy.config.createTaskConfig()
         cfg2.getCpus()==4           // taken from the `bar` config
         cfg2.getMemory().giga == 4  // taken from the `bar` config
 
@@ -115,7 +115,7 @@ class ProcessDefTest extends Specification {
         copy = proc.cloneWithName('flow1:flow2:flow3:bar')
         copy.initialize()
         then:
-        def cfg3 = copy.processConfig.createTaskConfig()
+        def cfg3 = copy.config.createTaskConfig()
         cfg3.getCpus()==4           // <-- taken from `withName: foo`
         cfg3.getMemory().giga == 8  // <-- taken from `withName: 'flow1:flow2:flow3:bar'`
     }
