@@ -23,6 +23,7 @@ import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
@@ -627,6 +628,7 @@ class TraceRecord implements Serializable {
     }
 
     @TupleConstructor
+    @ToString
     static class Input {
         String stageName
         Path storePath
@@ -634,6 +636,7 @@ class TraceRecord implements Serializable {
     }
 
     @TupleConstructor
+    @ToString
     static class Output {
         Path path
         long size

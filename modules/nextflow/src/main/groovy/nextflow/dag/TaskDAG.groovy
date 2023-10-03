@@ -129,6 +129,8 @@ class TaskDAG {
                 Files.size(path),
                 FilesEx.getChecksum(path))
         }
+
+        log.info "task ${task.name} ; inputs: ${record.inputs} ; outputs: ${record.outputs}"
     }
 
     @TupleConstructor(excludes = 'outputs')
