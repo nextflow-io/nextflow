@@ -1229,6 +1229,12 @@ By default, directives are evaluated when the process is defined. However, if th
 
 Some directives are generally available to all processes, while others depend on the `executor` currently defined.
 
+Process directives can also be defined in the Nextflow configuration using the {ref}`process <config-process>` scope.
+
+:::{versionadded} 23.10.0
+Process directives can also be defined for a particular process from the enclosing workflow. See {ref}`dsl2-process-config` for details.
+:::
+
 (process-accelerator)=
 
 ### accelerator
