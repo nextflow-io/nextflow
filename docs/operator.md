@@ -1989,6 +1989,47 @@ The above snippet prints:
 [3, D]
 ```
 
+If each element of the channel has more than 2 items, these will be flattened by the first item in the element and only emit an element when the element is complete:
+
+```groovy
+Channel.of(
+        [1, [1], ['A']],
+        [2, [1, 2], ['B', 'C']],
+        [3, [1, 2, 3], ['D', 'E']]
+    )
+    .transpose()
+    .view()
+```
+
+```
+[1, 1, A]
+[2, 1, B]
+[2, 2, C]
+[3, 1, D]
+[3, 2, E]
+```
+
+To emit all elements, use `remainder: true`:
+
+```groovy
+Channel.of(
+        [1, [1], ['A']],
+        [2, [1, 2], ['B', 'C']],
+        [3, [1, 2, 3], ['D', 'E']]
+    )
+    .transpose(remainder: true)
+    .view()
+```
+
+```
+[1, 1, A]
+[2, 1, B]
+[2, 2, C]
+[3, 1, D]
+[3, 2, E]
+[3, 3, null]
+```
+
 Available options:
 
 ` by`
