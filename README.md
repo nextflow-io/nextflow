@@ -34,11 +34,11 @@ conda install -c bioconda nextflow
 
 ## Documentation
 
-Nextflow's documentation is available at <https://nextflow.io/docs/latest/>.
+The Nextflow documentation is available for the latest [stable](https://nextflow.io/docs/latest/) and [edge](https://nextflow.io/docs/edge/) releases.
 
 ## Community
 
-You can post questions and get help in the [Nextflow community forum](https://community.seqera.io). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
+You can post questions and get help in the [Nextflow community forum](https://community.seqera.io) or the [Nextflow Slack](https://www.nextflow.io/slack-invite.html). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
 
 The Nextflow community is highly active with regular community meetings, events, a podcast and more. You can view much of this material on the [Nextflow](https://www.youtube.com/@Nextflow) and [nf-core](https://www.youtube.com/@nf-core) YouTube channels.
 

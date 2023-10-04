@@ -6,7 +6,7 @@ Contributing to Nextflow doesn't just mean writing code. Helping new users in th
 
 ## Helping Other Users
 
-A great way to contribute to Nextflow is to answer user questions on the [community forum](https://community.seqera.io). Contributors should ideally be active members here and keep up with the latest developments in the Nextflow community. There are always many new Nextflow users, so taking a few minutes to help answer a question is a valuable community service and a great way to demonstrate your expertise.
+A great way to contribute to Nextflow is to answer user questions on the [community forum](https://community.seqera.io) and the [Nextflow Slack](https://www.nextflow.io/slack-invite.html). Contributors should ideally be active members here and keep up with the latest developments in the Nextflow community. There are always many new Nextflow users, so taking a few minutes to help answer a question is a valuable community service and a great way to demonstrate your expertise.
 
 ## Documentation Changes
 
