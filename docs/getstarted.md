@@ -204,6 +204,8 @@ You will see that the execution of the process `splitLetters` is actually skippe
 The pipeline results are cached by default in the directory `$PWD/work`. Depending on your script, this folder can take up a lot of disk space. It's a good idea to clean this folder periodically, as long as you know you won't need to resume any pipeline runs.
 :::
 
+For more information, see the {ref}`cache-resume-page` page.
+
 (getstarted-params)=
 
 ### Pipeline parameters
