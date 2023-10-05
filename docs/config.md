@@ -1643,6 +1643,12 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
 
+`NXF_PLUGINS_DEFAULT`
+: Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
+
+`NXF_PLUGINS_DIR`
+: The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
+
 `NXF_PLUGINS_TEST_REPOSITORY`
 : :::{versionadded} 23.04.0
   :::

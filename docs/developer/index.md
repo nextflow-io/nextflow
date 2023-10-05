@@ -1,8 +1,42 @@
 # Overview
 
-This section is intended to explain the Nextflow source code at a high level for users who want to understand or contribute to it. Rather than a comprehensive API documentation, these docs simply provide a conceptual map to help you understand the key concepts of the Nextflow implementation, and to quickly find code sections of interest for further investigation.
+This section provides a high-level overview of the Nextflow source code for users who want to understand or contribute to it. Rather than a comprehensive API documentation, these docs simply provide a conceptual map to help you understand the key concepts of the Nextflow implementation, and to quickly find code sections of interest for further investigation.
 
-## Programming Languages
+Before you dive into code, be sure to check out the [CONTRIBUTING.md](https://github.com/nextflow-io/nextflow/blob/master/CONTRIBUTING.md) for Nextflow to learn about the many ways to contribute to the project.
+
+## IntelliJ IDEA
+
+The suggested development environment is [IntelliJ IDEA](https://www.jetbrains.com/idea/download/). Nextflow development with IntelliJ IDEA requires a recent version of the IDE (2019.1.2 or later).
+
+After installing IntelliJ IDEA, use the following steps to use it with Nextflow:
+
+1. Clone the Nextflow repository to a directory in your computer.
+
+2. Open IntelliJ IDEA and go to **File > New > Project from Existing Sources...**.
+
+3. Select the Nextflow project root directory in your computer and click **OK**.
+
+4. Select **Import project from external model > Gradle** and click **Finish**.
+
+5. After the import process completes, select **File > Project Structure...**.
+
+6. Select **Project**, and make sure that the **SDK** field contains Java 11 (or later).
+
+7. Go to **File > Settings > Editor > Code Style > Groovy > Imports** and apply the following settings:
+
+   * Use single class import
+   * Class count to use import with '*': `99`
+   * Names count to use static import with '*': `99`
+   * Imports layout:
+      * `import java.*`
+      * `import javax.*`
+      * *blank line*
+      * all other imports
+      * all other static imports
+
+New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/e8945e8b6fc355d3f2eec793d8f288515db2f409/modules/nextflow/src/main/groovy/nextflow/Const.groovy#L1-L15)).
+
+## Groovy
 
 Nextflow is written in [Groovy](http://groovy-lang.org/), which is itself a programming language based on [Java](https://www.java.com/). Groovy is designed to be highly interoperable with Java -- Groovy programs compile to Java bytecode, and nearly any Java program is also a valid Groovy program. However, Groovy adds several language features (e.g. closures, list and map literals, optional typing, optional semicolons, meta-programming) and standard libraries (e.g. JSON and XML parsing) that greatly improve the overall experience of developing for the Java virtual machine.
 
@@ -50,45 +84,63 @@ See {ref}`packages-page` for the list of Nextflow packages.
 Class diagrams are manually curated, so they might not always reflect the latest version of the source code.
 ```
 
-## Building and Testing
+## Building from source
 
-The only dependency that you need to build Nextflow is Java. In other words, if you can run Nextflow, then you can probably build it too!
+If you are interested in modifying the source code, you only need Java 11 or later to build Nextflow from source. Nextflow uses the [Gradle](http://www.gradle.org/) build automation system, but you do not need to install Gradle to build Nextflow. In other words, if you can run Nextflow, then you can probably build it too!
 
-Build and test locally from a branch (useful for testing PRs):
+To build locally from a branch (useful for testing PRs):
 
 ```bash
-# build
 git clone -b <branch> git@github.com:nextflow-io/nextflow.git
 cd nextflow
 make compile
+```
 
-# test
+The build system will automatically download all of the necessary dependencies on the first run, which may take several minutes.
+
+Once complete, you can run your local build of Nextflow using the `launch.sh` script in place of the `nextflow` command:
+
+```bash
 ./launch.sh run <script> ...
 ```
 
-Run tests locally:
+A self-contained executable Nextflow package can be created with the following command:
+
+```bash
+make pack
+```
+
+Again, use `launch.sh` in place of the `nextflow` command to use your local build.
+
+## Testing
+
+To run the unit tests:
 
 ```bash
 # run all tests
 make test
 
 # run individual test
-make test module=<nextflow|plugins:nf-amazon|...> class=<package>.<class>
+make test module=<nextflow|plugins:nf-amazon|...> class=<package>.<class>.<method>
 
-# view the Makefile for all build rules
+# refer to the Makefile for all build rules
 ```
 
-When a test fails, it will give you a report that you can open in your browser to view the stack trace for each failed test. The "Standard output" tab is particularly useful as it shows the console output of each test. You also can view this console output in the terminal by adding `--info` to the `./gradlew` command generated by the Makefile.
+When a test fails, it will give you a report that you can open in your browser to view the reason for each failed test. The **Standard output** tab is particularly useful as it shows the console output of each test.
+
+Refer to the [build.yml](https://github.com/nextflow-io/nextflow/tree/master/.github/workflows/build.yml) configuration to see how to run integration tests locally, if you are interested.
 
 ## Installing from source
 
 The `nextflow` command is just a Bash script that downloads and executes the Nextflow JAR. When you install Nextflow using `get.nextflow.io`, it only downloads this launcher script, while the Nextflow JAR is downloaded on the first Nextflow run.
 
-You can run `make install` to install a local build of the Nextflow JAR to `$NXF_HOME`. Note that it will overwrite any existing JAR with the same version. This approach is useful for testing non-core plugins with a local build of Nextflow.
+You can run `make install` to install a local build of the Nextflow JAR to `$NXF_HOME`. Note that this command will overwrite any existing Nextflow packages with the same version. This approach is useful for testing non-core plugins with a local build of Nextflow.
 
 If you need to test changes to the `nextflow` launcher script, you can run it directly as `./nextflow`, or you can install it using `cp nextflow $(which nextflow)` and then run it as `nextflow`.
 
 ## Debugging
+
+### Groovy REPL
 
 The `groovysh` command provides a command-line REPL that you can use to play around with Groovy code independently of Nextflow. The `groovyConsole` command provides a graphical REPL similar to `nextflow console`. These commands require a standalone Groovy distribution, which can be installed as described for Java in {ref}`Getting started <getstarted-requirement>`.
 
@@ -96,4 +148,19 @@ The `groovysh` command provides a command-line REPL that you can use to play aro
 If you are using WSL, you must also install an X server for Windows, such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](http://www.straightrunning.com/XmingNotes/), in order to use these commands.
 :::
 
-For more advanced Groovy debugging capabilities, consider using [IntelliJ IDEA](https://www.jetbrains.com/idea/).
+### IntelliJ IDEA
+
+:::{versionadded} 23.09.0-edge
+:::
+
+You can perform limited breakpoint debugging on a Nextflow script using IntelliJ IDEA.
+
+1. Set a breakpoint in your Nextflow script by clicking on a line number.
+
+2. Run `nextflow -remote-debug run <script>`
+
+3. Select the **Run / Debug Configurations** dropdown, select **Edit Configurations...**, and create a new configuration of type **Remote JVM Debug**. Set the port that appeared in the terminal when you launched your Nextflow script. Click **OK**.
+
+4. Select the green bug icon to begin the remote debug session. The Debug window will appear and allow you to step through and inspect your script as it runs.
+
+Note that this approach can only be used to debug the *script* execution, which does not include the *pipeline* execution.
