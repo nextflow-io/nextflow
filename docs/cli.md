@@ -230,6 +230,8 @@ The `-v` option prints out information about Nextflow, such as the version and b
 
 ## Commands
 
+(cli-clean)=
+
 ### clean
 
 Clean up *cache* and *work* directories.
@@ -886,6 +888,8 @@ $ nextflow list
 nextflow-io/hello
 nextflow-hub/fastqc
 ```
+
+(cli-log)=
 
 ### log
 

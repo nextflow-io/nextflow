@@ -461,6 +461,8 @@ This mix of technologies makes it possible to write self-contained and truly rep
 
 [^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.
 
+(bundling-executables)=
+
 ### Bundling executables in the workflow
 
 In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)). 
