@@ -4,7 +4,7 @@ nf-amazon changelog
 - Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
 - Fix List of S3 bucket for custom endpoint [4327fa58]
 - Fix support for S3 custom endpoint with anonymous access [03752815]
-- Fix Prevent multi attempts to retrive AWS creds [b30efe36]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
 
 2.1.2 - 10 Sep 2023
 - Disable staging script for remote work dir (#4282) [80f7cd46]

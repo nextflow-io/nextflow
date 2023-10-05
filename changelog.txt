@@ -16,7 +16,7 @@ NEXTFLOW CHANGE-LOG
 - Document when process directives are evaluated (#4217) [731a29a2]
 - Fix List of S3 bucket for custom endpoint [4327fa58]
 - Fix Prevent false positive resumable task [144e0a8a]
-- Fix Prevent multi attempts to retrive AWS creds [b30efe36]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
 - Fix allow_other vulnerability preventing google-batch submissions (#4332) [9b3741e3]
 - Fix fs list command [29ab2f24]
 - Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
