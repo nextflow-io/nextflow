@@ -170,7 +170,7 @@ class ClusterConfig  {
             return getClusterJoin().tokenize(':')[1]
         }
         catch (Throwable e) {
-            log.debug "Error: Cannot fetch cloud driver name", e
+            log.debug "Cannot fetch cloud driver name", e
             return null
         }
     }

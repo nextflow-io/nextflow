@@ -180,7 +180,7 @@ class Launcher {
             colsString.toShort()
         }
         catch( Exception e ) {
-            log.debug "Error: not a valid \$COLUMNS value: $colsString"
+            log.debug "Unexpected terminal \$COLUMNS value: $colsString"
             return 0
         }
     }

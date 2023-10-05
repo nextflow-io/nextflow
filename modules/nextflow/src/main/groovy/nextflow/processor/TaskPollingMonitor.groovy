@@ -43,7 +43,7 @@ import nextflow.util.Throttle
 class TaskPollingMonitor implements TaskMonitor {
 
     private static String RATE_FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]*)/
-
+    
     /**
      * The current session object
      */
@@ -452,7 +452,7 @@ class TaskPollingMonitor implements TaskMonitor {
             log.debug msg.join('\n')
         }
         catch (Throwable e) {
-            log.debug "Error: expected exception", e
+            log.debug "Unexpected exception dumping run queue", e
         }
     }
 
@@ -473,7 +473,7 @@ class TaskPollingMonitor implements TaskMonitor {
             log.debug msg.join('\n')
         }
         catch (Throwable e) {
-            log.debug "Error: unexpected exception", e
+            log.debug "Unexpected exception dumping submit queue", e
         }
     }
 

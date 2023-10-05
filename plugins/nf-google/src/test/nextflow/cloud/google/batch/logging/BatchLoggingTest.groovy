@@ -46,7 +46,7 @@ class BatchLoggingTest extends Specification {
         given:
         def OUT_ENTRY1 = LogEntry.newBuilder(StringPayload.of('No user sessions are running outdated binaries.\n')).setSeverity(Severity.INFO).build()
         def OUT_ENTRY2 = LogEntry.newBuilder(StringPayload.of('Hello world')).setSeverity(Severity.INFO).build()
-        def ERR_ENTRY1 = LogEntry.newBuilder(StringPayload.of('Error: something has failed. We are sorry.\n')).setSeverity(Severity.ERROR).build()
+        def ERR_ENTRY1 = LogEntry.newBuilder(StringPayload.of('Oops something has failed. We are sorry.\n')).setSeverity(Severity.ERROR).build()
         def ERR_ENTRY2 = LogEntry.newBuilder(StringPayload.of('blah blah')).setSeverity(Severity.ERROR).build()
         and:
         def client = new BatchLogging()
@@ -64,13 +64,13 @@ class BatchLoggingTest extends Specification {
         when:
         client.parseOutput(ERR_ENTRY1, stdout, stderr)
         then:
-        stderr.toString() == 'Error: something has failed. We are sorry.\n'
+        stderr.toString() == 'Oops something has failed. We are sorry.\n'
 
         when:
         client.parseOutput(ERR_ENTRY2, stdout, stderr)
         then:
         // the message is appended to the stderr because not prefix is provided
-        stderr.toString() == 'Error: something has failed. We are sorry.\nblah blah'
+        stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
         and:
         // no change to the stdout
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
@@ -82,7 +82,7 @@ class BatchLoggingTest extends Specification {
         stdout.toString() == 'No user sessions are running outdated binaries.\nHello world'
         and:
         // no change to the stderr
-        stderr.toString() == 'Error: something has failed. We are sorry.\nblah blah'
+        stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
 
     }
 
@@ -99,7 +99,7 @@ class BatchLoggingTest extends Specification {
 
         when:
         def imageUri = 'quay.io/nextflow/bash'
-        def cmd = ['/bin/bash','-c','echo "Hello world!" && echo "Error: something went wrong" >&2']
+        def cmd = ['/bin/bash','-c','echo "Hello world!" && echo "Oops something went wrong" >&2']
         def req = Job.newBuilder()
             .addTaskGroups(
                 TaskGroup.newBuilder()
@@ -144,7 +144,7 @@ class BatchLoggingTest extends Specification {
         log.debug "STDERR: $stderr"
         then:
         stdout.contains('Hello world!')
-        stderr.contains('Error: something went wrong')
+        stderr.contains('Oops something went wrong')
     }
 
 }

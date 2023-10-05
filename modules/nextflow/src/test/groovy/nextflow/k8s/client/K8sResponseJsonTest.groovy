@@ -61,9 +61,9 @@ class K8sResponseJsonTest extends Specification {
 
     def 'should create a response from an error message' () {
         when:
-        def resp = new K8sResponseJson('Error: this crashed')
+        def resp = new K8sResponseJson('Ooops .. this crashed')
         then:
-        resp.toString() == 'Error: this crashed'
+        resp.toString() == 'Ooops .. this crashed'
     }
 
     

@@ -62,9 +62,9 @@ class K8sClientTest extends Specification {
         0 * client.setupHttpsConn(_) >> null
         1 * HTTP_CONN.setRequestMethod('POST') >> null
         1 * HTTP_CONN.getResponseCode() >> 401
-        1 * HTTP_CONN.getErrorStream() >> { new ByteArrayInputStream('{"field_x":"Error:"}'.bytes) }
+        1 * HTTP_CONN.getErrorStream() >> { new ByteArrayInputStream('{"field_x":"oops.."}'.bytes) }
         def e = thrown(K8sResponseException)
-        e.response.field_x == 'Error:'
+        e.response.field_x == 'oops..'
 
     }
 
