@@ -88,18 +88,20 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         this.simpleName = name
         this.processName = name
         this.baseName = name
+
+        this.initialize0()
     }
 
     static String stripScope(String str) {
         str.split(Const.SCOPE_SEP).last()
     }
 
-    protected void initialize() {
+    protected void initialize0() {
         log.trace "Process config > $processName"
-        assert processConfig==null
-
-        // the config object
         processConfig = new ProcessConfig(owner,processName)
+    }
+
+    protected void initialize1() {
 
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
@@ -130,6 +132,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)
+        result.initialize0()
         return result
     }
 
@@ -145,10 +148,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     String getBaseName() { baseName }
 
-    ProcessConfig getConfig() {
-        if( processConfig == null ) initialize()
-        processConfig
-    }
+    ProcessConfig getConfig() { processConfig }
 
     ChannelOut getOut() {
         if( output==null )
@@ -168,8 +168,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     @Override
     Object run(Object[] args) {
         // initialise process config
-        if( processConfig == null )
-            initialize()
+        initialize1()
 
         // get params 
         final params = ChannelOut.spread(args)
