@@ -592,7 +592,7 @@ class LoggerHelper {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
         catch( Throwable t ) {
-            log.warn "Oops.. something went wrong while formatting the error stack trace | ${t.message ?: t}", e
+            log.warn "Something went wrong while formatting the error stack trace | ${t.message ?: t}", e
             return Collections.emptyList() as String[]
         }
     }

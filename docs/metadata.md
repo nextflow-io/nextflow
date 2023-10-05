@@ -164,7 +164,7 @@ The `onError` event handler is invoked by Nextflow when a runtime or process err
 
 ```groovy
 workflow.onError {
-    println "Oops... Pipeline execution stopped with the following message: ${workflow.errorMessage}"
+    println "Error: Pipeline execution stopped with the following message: ${workflow.errorMessage}"
 }
 ```
 
@@ -186,7 +186,7 @@ workflow.onComplete = {
 }
 
 workflow.onError = {
-    println "Oops .. something when wrong"
+    println "Error: something when wrong"
 }
 ```
 

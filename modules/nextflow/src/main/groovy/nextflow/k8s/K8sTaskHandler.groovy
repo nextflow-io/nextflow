@@ -473,7 +473,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 client.podDelete(podName)
         }
         else {
-            log.debug "[K8s] Oops.. invalid delete action"
+            log.debug "[K8s] Invalid delete action"
         }
     }
 
