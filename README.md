@@ -60,7 +60,7 @@ P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nat
 
 ## Credits
 
-Nextflow is built on two excellent open source software projects, <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
+Nextflow is built on two \*great* open-source software projects, <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
 and <a href='http://www.gpars.org/' target='_blank'>GPars</a>.
 
 <a href='http://www.yourkit.com' target='_blank'>YourKit</a> is kindly supporting Nextflow with its fully-featured Java Profiler.
