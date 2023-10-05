@@ -84,7 +84,7 @@ class ConfigHelper {
     }
 
     /**
-     * Given a list of paths looks for the files ending withe the extension '.jar' and return
+     * Given a list of paths looks for the files ending with the extension '.jar' and return
      * a list containing the original directories, plus the JARs paths
      *
      * @param dirs
