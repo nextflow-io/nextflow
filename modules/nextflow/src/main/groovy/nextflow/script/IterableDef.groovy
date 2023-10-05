@@ -52,7 +52,7 @@ trait IterableDef {
      * To support component recursion, the feedback channels must be used as the channel instances
      * for the outputs instead of creating new ones
      * 
-     * @return A list of output channels brining the process feedback
+     * @return A list of output channels bringing the process feedback
      */
     List<DataflowWriteChannel> getFeedbackChannels() { outputChannels }
 

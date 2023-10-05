@@ -176,7 +176,7 @@ class TraceRecord implements Serializable {
     }
 
     /**
-     * Coverts the value to a duration string.
+     * Converts the value to a duration string.
      *
      * See {@link Duration}
      * @param value

@@ -403,7 +403,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                 if (Files.exists(tempFile)) {
                     ObjectMetadata metadata = new ObjectMetadata();
                     metadata.setContentLength(Files.size(tempFile));
-                    // FIXME: #20 ServiceLoader cant load com.upplication.s3fs.util.FileTypeDetector when this library is used inside a ear :(
+                    // FIXME: #20 ServiceLoader can't load com.upplication.s3fs.util.FileTypeDetector when this library is used inside a ear :(
 					metadata.setContentType(Files.probeContentType(tempFile));
 
                     try (InputStream stream = Files.newInputStream(tempFile)) {
@@ -905,7 +905,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 	/**
 	 * Get the Control List, if the path not exists
-     * (because the path is a directory and this key isnt created at amazon s3)
+     * (because the path is a directory and this key isn't created at amazon s3)
      * then return the ACL of the first child.
      *
 	 * @param path {@link S3Path}

@@ -321,7 +321,7 @@ class ConfigBuilder {
     }
 
     protected Map configVars() {
-        // this is needed to make sure to re-use the same
+        // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
         return cacheableConfigVars(baseDir)

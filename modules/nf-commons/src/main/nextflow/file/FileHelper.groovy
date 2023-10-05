@@ -533,7 +533,7 @@ class FileHelper {
             return true
         }
         catch( IOException e ) {
-            log.trace "Cant read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
+            log.trace "Can't read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
             return false
         }
 

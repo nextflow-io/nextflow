@@ -71,7 +71,7 @@ class ASTHelpers {
 
     /**
      * Creates a new {@code ConstructorCallExpression} for the specified class and arguments
-     * specified using an open array. Te
+     * specified using an open array.
      *
      * @param clazz The {@code Class} for which the create a constructor call expression
      * @param args The arguments to be passed to the constructor, they will be wrapped by in a {@code ArgumentListExpression}
