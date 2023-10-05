@@ -662,7 +662,7 @@ class TaskProcessor {
 
     /**
      * @return A string 'she-bang' formatted to the added on top script to be executed.
-     * The interpreter to be used define bu the *taskConfig* property {@code shell}
+     * The interpreter to be used define by the *taskConfig* property {@code shell}
      */
     static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
