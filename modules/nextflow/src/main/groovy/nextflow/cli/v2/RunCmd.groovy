@@ -167,17 +167,11 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--with-conda'], arity = '0..1', fallbackValue = '-', paramLabel = '<name>|<file>', description = 'Use the specified Conda environment, package, or file (must end with .yml|.yaml suffix)')
     String withConda
 
-    @Option(names = ['--without-conda'], arity = '0', description = 'Disable the use of Conda environments')
-    Boolean withoutConda
-
     @Option(names = ['--with-dag'], arity = '0..1', fallbackValue = '-', paramLabel = '<filename>', description = 'Create pipeline DAG file')
     String withDag
 
     @Option(names = ['--with-docker'], arity = '0..1', fallbackValue = '-', paramLabel = '<container>', description = 'Enable process execution in a Docker container')
     String withDocker
-
-    @Option(names = ['--without-docker'], arity = '0', description = 'Disable process execution with Docker')
-    boolean withoutDocker
 
     @Option(names = ['--with-fusion'], hidden = true)
     String withFusion
@@ -191,9 +185,6 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--with-podman'], arity = '0..1', fallbackValue = '-', paramLabel = '<container>', description = 'Enable process execution in a Podman container')
     String withPodman
 
-    @Option(names = ['--without-podman'], arity = '0', description = 'Disable process execution in a Podman container')
-    boolean withoutPodman
-
     @Option(names = ['--with-report'], arity = '0..1', fallbackValue = '-', paramLabel = '<filename>', description = 'Create processes execution html report')
     String withReport
 
@@ -202,9 +193,6 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
 
     @Option(names = ['--with-spack'], arity = '0..1', fallbackValue = '-', paramLabel = '<name>|<file>', description = 'Use the specified Spack environment, package, or file (must end with .yaml suffix)')
     String withSpack
-
-    @Option(names = ['--without-spack'], arity = '0', description = 'Disable the use of Spack environments')
-    Boolean withoutSpack
 
     @Option(names = ['--with-timeline'], arity = '0..1', fallbackValue = '-', paramLabel = '<filename>', description = 'Create processes execution timeline file')
     String withTimeline
@@ -250,6 +238,11 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
 
         return pipelineParams
     }
+
+    @Override Boolean getWithoutConda() { false }
+    @Override boolean getWithoutDocker() { false }
+    @Override boolean getWithoutPodman() { false }
+    @Override Boolean getWithoutSpack() { false }
 
     @Override
     String getLauncherCli() {
