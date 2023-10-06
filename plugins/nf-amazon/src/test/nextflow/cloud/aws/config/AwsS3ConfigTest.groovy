@@ -38,6 +38,7 @@ class AwsS3ConfigTest extends Specification {
         !client.debug
         !client.s3Acl
         !client.pathStyleAccess
+        !client.anonymous
     }
 
     def 'should set config' () {
@@ -48,7 +49,8 @@ class AwsS3ConfigTest extends Specification {
                 storageKmsKeyId: 'key-1',
                 storageEncryption: 'AES256',
                 s3Acl: 'public-read',
-                s3PathStyleAccess: true
+                s3PathStyleAccess: true,
+                anonymous: true
         ]
 
         when:
@@ -60,6 +62,7 @@ class AwsS3ConfigTest extends Specification {
         client.storageEncryption == 'AES256'
         client.s3Acl == CannedAccessControlList.PublicRead
         client.pathStyleAccess
+        client.anonymous
     }
 
     def 'should use legacy upload storage class' () {
@@ -93,6 +96,21 @@ class AwsS3ConfigTest extends Specification {
         [AWS_S3_ENDPOINT: 'http://foo'] | [:]                           | 'http://foo'
         [:]                             | [endpoint: 'http://bar']      | 'http://bar'
         [AWS_S3_ENDPOINT: 'http://foo'] | [endpoint: 'http://bar']      | 'http://bar'  // <-- config should have priority
+    }
+
+    @Unroll
+    def 'should fail with invalid endpoint protocol' () {
+        when:
+        new AwsS3Config(CONFIG)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == EXPECTED
+
+        where:
+        CONFIG                          | EXPECTED
+        [endpoint: 'bar.com']           |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'bar.com'"
+        [endpoint: 'ftp://bar.com']     |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'ftp://bar.com'"
+
     }
 
     def 'should get s3 legacy properties' () {

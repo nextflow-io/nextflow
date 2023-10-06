@@ -1,6 +1,12 @@
 nf-amazon changelog
 ===================
-2.1.2 - 10 Sep
+2.1.3 - 28 Sep 2023
+- Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
+- Fix List of S3 bucket for custom endpoint [4327fa58]
+- Fix support for S3 custom endpoint with anonymous access [03752815]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
+
+2.1.2 - 10 Sep 2023
 - Disable staging script for remote work dir (#4282) [80f7cd46]
 - Allow setting shell directive when using the trace file. (#4210) [7d6ad624]
 - Bump groovy 3.0.19 [cb411208]
@@ -115,7 +121,7 @@ nf-amazon changelog
 
 1.9.0 - 1 Aug 2022
 - Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
-- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix NPE while setting S3 ObjectMetadata #3031 [d6163431] <Jorge Aguilera>
 - Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b] <Paolo Di Tommaso>
 - Fix AWS Batch job definition conflict (#3048) [e5084418] <Paolo Di Tommaso>
 - Improve S3 file upload/download via Transfer manager [7e8d2a5a] [b7bf9fe5] <Jorge Aguilera>

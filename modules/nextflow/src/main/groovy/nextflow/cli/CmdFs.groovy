@@ -16,10 +16,13 @@
 
 package nextflow.cli
 
+import static nextflow.file.FileHelper.toCanonicalPath
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.attribute.BasicFileAttributes
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -49,7 +52,8 @@ class CmdFs {
         MOVE,
         LIST,
         CAT,
-        REMOVE
+        REMOVE,
+        STAT
     }
 
     interface Options {
@@ -74,7 +78,6 @@ class CmdFs {
         }
 
         static class CmdCopy implements SubCmd {
-
             @Override
             int getArity() { 2 }
 
@@ -86,11 +89,9 @@ class CmdFs {
 
             @Override
             Command getCommand() { Command.COPY }
-
         }
 
         static class CmdMove implements SubCmd {
-
             @Override
             int getArity() { 2 }
 
@@ -102,11 +103,9 @@ class CmdFs {
 
             @Override
             Command getCommand() { Command.MOVE }
-
         }
 
         static class CmdList implements SubCmd {
-
             @Override
             int getArity() { 1 }
 
@@ -118,11 +117,9 @@ class CmdFs {
 
             @Override
             Command getCommand() { Command.LIST }
-
         }
 
         static class CmdCat implements SubCmd {
-
             @Override
             int getArity() { 1 }
 
@@ -134,11 +131,9 @@ class CmdFs {
 
             @Override
             Command getCommand() { Command.CAT }
-
         }
 
         static class CmdRemove implements SubCmd {
-
             @Override
             int getArity() { 1 }
 
@@ -150,7 +145,20 @@ class CmdFs {
 
             @Override
             Command getCommand() { Command.REMOVE }
+        }
 
+        static class CmdStat implements SubCmd {
+            @Override
+            int getArity() { 1 }
+
+            @Override
+            String getName() { 'stat' }
+
+            @Override
+            String getDescription() { 'Print file metadata' }
+
+            @Override
+            Command getCommand() { Command.STAT }
         }
 
         private List<SubCmd> commands = (List<SubCmd>)[
@@ -158,7 +166,8 @@ class CmdFs {
             new CmdMove(),
             new CmdList(),
             new CmdCat(),
-            new CmdRemove()
+            new CmdRemove(),
+            new CmdStat()
         ]
 
         @Parameter
@@ -284,6 +293,9 @@ class CmdFs {
             case REMOVE:
                 traverse(args[0]) { Path path -> remove(path) }
                 break
+            case STAT:
+                traverse(args[0]) { Path path -> stat(path) }
+                break
         }
     }
 
@@ -293,14 +305,14 @@ class CmdFs {
         def splitter = FilePatternSplitter.glob().parse(source)
         if( splitter.isPattern() ) {
             final scheme = splitter.scheme
-            final folder = splitter.parent
+            final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
+            final folder = toCanonicalPath(target)
             final pattern = splitter.fileName
-            final fs = FileHelper.fileSystemForScheme(scheme)
 
             def opts = [:]
-            opts.type = 'file'
+            opts.type = 'any'
 
-            FileHelper.visitFiles(opts, fs.getPath(folder), pattern, op)
+            FileHelper.visitFiles(opts, folder, pattern, op)
         }
         else {
             def normalised = splitter.strip(source)
@@ -330,6 +342,22 @@ class CmdFs {
 
     void remove(Path source) {
         Files.isDirectory(source) ? FilesEx.deleteDir(source) : FilesEx.delete(source)
+    }
+
+    void stat(Path source) {
+        try {
+            final attr = Files.readAttributes(source, BasicFileAttributes)
+            print """\
+                name          : ${source.name}
+                size          : ${attr.size()}
+                is directory  : ${attr.isDirectory()}
+                last modified : ${attr.lastModifiedTime() ?: '-'}
+                creation time : ${attr.creationTime() ?: '-'}                    
+                """.stripIndent()
+        }
+        catch (IOException e) {
+            log.warn "Unable to read attributes for file: ${source.toUriString()} - cause: $e.message", e
+        }
     }
 
 }

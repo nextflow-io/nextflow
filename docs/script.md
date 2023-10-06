@@ -414,7 +414,7 @@ myMap.keySet().each {
 ```
 
 :::{warning}
-Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a race condition.
+Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
 :::
 
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)

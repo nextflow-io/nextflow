@@ -30,8 +30,6 @@ import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
 import nextflow.processor.TaskRun
-import nextflow.util.StringUtils
-
 /**
  * Implement Wave container resolve logic
  *
@@ -54,13 +52,23 @@ class WaveContainerResolver implements ContainerResolver {
         return client0 = new WaveClient( Global.session as Session )
     }
 
+    private String getContainerEngine0(TaskRun task) {
+        final config = task.getContainerConfig()
+        final result = config.getEngine()
+        if( result )
+            return result
+        // fallback to docker by default
+        log.warn "Missing engine in container config - offending value: $config"
+        return 'docker'
+    }
+
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !client().enabled() )
             return defaultResolver.resolveImage(task, imageName)
 
         final freeze = client().config().freezeMode()
-        final engine= task.getContainerConfig().getEngine()
+        final engine = getContainerEngine0(task)
         final nativeSingularityBuild = freeze && engine in SINGULARITY_LIKE
         if( !imageName ) {
             // when no image name is provided the module bundle should include a
@@ -108,7 +116,6 @@ class WaveContainerResolver implements ContainerResolver {
      *      when the task does not request any container or dockerfile to build
      */
     protected ContainerInfo waveContainer(TaskRun task, String container, boolean singularity) {
-        validateContainerRepo(container)
         final assets = client().resolveAssets(task, container, singularity)
         if( assets ) {
             return client().fetchContainerImage(assets)
@@ -116,14 +123,6 @@ class WaveContainerResolver implements ContainerResolver {
         // no container and no dockerfile, wave cannot do anything
         log.trace "No container image or build recipe defined for task ${task.processor.name}"
         return null
-    }
-
-    static protected void validateContainerRepo(String name) {
-        if( !name )
-            return 
-        final scheme = StringUtils.getUrlProtocol(name)
-        if( scheme )
-            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
     }
 
 }

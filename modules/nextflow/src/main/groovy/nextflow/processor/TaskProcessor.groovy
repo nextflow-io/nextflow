@@ -131,12 +131,6 @@ class TaskProcessor {
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
 
-    @Memoized
-    static boolean getInvalidateCacheOnTaskDirectiveChange() {
-        final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
-        return value==null || value =='true'
-    }
-
     @TestOnly private static volatile TaskProcessor currentProcessor0
 
     @TestOnly static TaskProcessor currentProcessor() { currentProcessor0 }
@@ -373,7 +367,7 @@ class TaskProcessor {
      * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
      * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.
      *
-     * Note this returns an "eventually" task configuration object. Also Inputs ane output parameters are NOT
+     * Note this returns an "eventually" task configuration object. Also Inputs and output parameters are NOT
      * resolved by this method.
      *
      * @return A {@link TaskRun} object holding a reference to the associated {@link TaskConfig}
@@ -668,7 +662,7 @@ class TaskProcessor {
 
     /**
      * @return A string 'she-bang' formatted to the added on top script to be executed.
-     * The interpreter to be used define bu the *taskConfig* property {@code shell}
+     * The interpreter to be used define by the *taskConfig* property {@code shell}
      */
     static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
@@ -793,13 +787,13 @@ class TaskProcessor {
             Path resumeDir = null
             boolean exists = false
             try {
-                def entry = session.cache.getTaskEntry(hash, this)
+                final entry = session.cache.getTaskEntry(hash, this)
                 resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
                 if( resumeDir )
                     exists = resumeDir.exists()
 
                 log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
+                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
             }
@@ -1596,7 +1590,7 @@ class TaskProcessor {
                 def file = workDir.resolve(path)
                 def exists = checkFileExists(file, param.followLinks)
                 if( exists )
-                    result = [file]
+                    result = List.of(file)
                 else
                     log.debug "Process `${safeTaskName(task)}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
             }
@@ -2171,7 +2165,7 @@ class TaskProcessor {
             return CacheHelper.hasher(keys, mode).hash()
         }
         catch (Throwable e) {
-            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            final msg = "Something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
             throw new UnexpectedException(msg,e)
         }
     }
@@ -2210,19 +2204,17 @@ class TaskProcessor {
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         final result = task.getGlobalVars(ownerScript.binding)
-        if( invalidateCacheOnTaskDirectiveChange ) {
-            final directives = getTaskDirectiveVars(task)
-            result.putAll(directives)
-        }
+        final directives = getTaskExtensionDirectiveVars(task)
+        result.putAll(directives)
         return result
     }
 
-    protected Map<String,Object> getTaskDirectiveVars(TaskRun task) {
+    protected Map<String,Object> getTaskExtensionDirectiveVars(TaskRun task) {
         final variableNames = task.getVariableNames()
         final result = new HashMap(variableNames.size())
         final taskConfig = task.config
         for( String key : variableNames ) {
-            if( !key.startsWith('task.') ) continue
+            if( !key.startsWith('task.ext.') ) continue
             final value = taskConfig.eval(key.substring(5))
             result.put(key, value)
         }
@@ -2426,7 +2418,7 @@ class TaskProcessor {
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
@@ -2443,7 +2435,7 @@ class TaskProcessor {
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After run"
             currentTask.remove()
@@ -2451,7 +2443,7 @@ class TaskProcessor {
 
         @Override
         Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2463,7 +2455,7 @@ class TaskProcessor {
 
         @Override
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2473,7 +2465,7 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
                 if( log.isTraceEnabled() )
                     log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
@@ -2485,7 +2477,7 @@ class TaskProcessor {
 
         @Override
         void afterStop(final DataflowProcessor processor) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After stop"
         }

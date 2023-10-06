@@ -250,7 +250,7 @@ class BashWrapperBuilder {
         binding.helpers_script = getHelpersScript()
 
         if( runWithContainer ) {
-            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"'
+            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A | tr -d \'\\r\\n\')"'
             binding.container_helpers = containerBuilder.getScriptHelpers()
             binding.kill_cmd = containerBuilder.getKillCommand()
         }
@@ -527,7 +527,7 @@ class BashWrapperBuilder {
     }
 
     String getSyncCmd() {
-        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+        if ( SysEnv.get( 'NXF_ENABLE_FS_SYNC' ) == "true" ) {
             return 'sync || true'
         }
         return null

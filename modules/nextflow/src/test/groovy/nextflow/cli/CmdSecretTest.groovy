@@ -60,7 +60,7 @@ class CmdSecretTest extends Specification {
         tempDir?.deleteDir()
     }
 
-    def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {
+    def 'should validate #COMMAND does not accept #ARGUMENTS' () {
         when:
         new CmdSecret.V1(args: [COMMAND] + ARGUMENTS).run()
 

@@ -824,7 +824,7 @@ The above example executes the `bar` process three times because `x` is a value 
 ```
 
 :::{note}
-In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the `merge` operator, which is not recommended as it may lead to inputs being combined in a non-deterministic way.
+In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the {ref}`operator-merge` operator, which is not recommended as it may lead to {ref}`non-deterministic process inputs <cache-nondeterministic-inputs>`.
 :::
 
 See also: {ref}`channel-types`.
@@ -1211,9 +1211,21 @@ Directives are optional settings that affect the execution of the current proces
 
 They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
 
+```groovy
+// directive with simple value
+name value
+
+// directive with list value
+name arg1, arg2, arg3
+
+// directive with map value
+name key1: val1, key2: val2
+
+// directive with value and options
+name arg, opt1: val1, opt2: val2
 ```
-name value [, value2 [,..]]
-```
+
+By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 
 Some directives are generally available to all processes, while others depend on the `executor` currently defined.
 
@@ -1320,11 +1332,9 @@ When combined with the {ref}`container directive <process-container>`, the `befo
 
 ### cache
 
-The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any following attempt to execute the process, along with the same inputs, will cause the process execution to be skipped, producing the stored data as the actual results.
+The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any task executions that are already cached will be re-used. See the {ref}`cache-resume-page` page for more information about how the cache works.
 
-The caching feature generates a unique key by indexing the process script and inputs. This key is used to identify univocally the outputs produced by the process execution.
-
-The cache is enabled by default, you can disable it for a specific process by setting the `cache` directive to `false`. For example:
+The cache is enabled by default, but you can disable it for a specific process by setting the `cache` directive to `false`. For example:
 
 ```groovy
 process noCacheThis {
@@ -1335,19 +1345,20 @@ process noCacheThis {
 }
 ```
 
-The following values are available:
+The following options are available:
 
 `false`
 : Disable caching.
 
 `true` (default)
-: Enable caching. Cache keys are created indexing input files meta-data information (name, size and last update timestamp attributes).
+: Enable caching. Input file metadata (name, size, last updated timestamp) are included in the cache keys.
 
 `'deep'`
-: Enable caching. Cache keys are created indexing input files content.
+: Enable caching. Input file content is included in the cache keys.
 
 `'lenient'`
-: Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps).
+: Enable caching. Minimal input file metadata (name and size only) are included in the cache keys.
+: This strategy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent file timestamps.
 
 (process-clusteroptions)=
 

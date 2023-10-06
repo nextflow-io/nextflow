@@ -75,4 +75,10 @@ class FsCmd extends AbstractCmd implements CmdFs.Options {
         new CmdFs(this).run(CmdFs.Command.REMOVE, [ source ])
     }
 
+    @Command(description = 'Print file metadata')
+    void stat(
+            @Parameters(paramLabel = '<source>') String source) {
+        new CmdFs(this).run(CmdFs.Command.STAT, [ source ])
+    }
+
 }

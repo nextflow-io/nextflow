@@ -27,6 +27,7 @@ import nextflow.trace.TraceHelper
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
+@Deprecated
 class ReportOpts {
 
     final private Boolean enabled
