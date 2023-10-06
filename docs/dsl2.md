@@ -187,7 +187,7 @@ Optional params for a process input/output are always prefixed with a comma, exc
 
 ### Workflow definition
 
-The `workflow` keyword allows the definition of sub-workflow components that enclose the invocation of one or more processes and operators:
+The `workflow` keyword allows the definition of sub-workflow components that enclose the invocation of one or more processes and/or operators:
 
 ```groovy
 workflow my_pipeline {
