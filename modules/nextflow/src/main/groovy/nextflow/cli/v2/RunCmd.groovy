@@ -86,12 +86,6 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--disable-jobs-cancellation'], description = 'Do not cancel child jobs on workflow termination')
     Boolean disableJobsCancellation
 
-    @Option(names = ['--dsl1'], description = 'Execute the workflow using DSL1 syntax (no longer supported)')
-    boolean dsl1
-
-    @Option(names = ['--dsl2'], description = 'Execute the workflow using DSL2 syntax')
-    boolean dsl2
-
     @Option(names = ['--dump-channels'], arity = '0..1', fallbackValue = '*', paramLabel = '<channels>', description = 'Dump channels for debugging purposes')
     String dumpChannels
 

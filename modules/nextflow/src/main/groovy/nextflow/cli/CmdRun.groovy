@@ -67,8 +67,6 @@ class CmdRun {
         Map<String,String> getClusterOptions()
         Integer getDepth()
         Boolean getDisableJobsCancellation()
-        boolean getDsl1()
-        boolean getDsl2()
         String getDumpChannels()
         boolean getDumpHashes()
         String getEntryName()
@@ -310,12 +308,6 @@ class CmdRun {
 
         @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
         String entryName
-
-        @Parameter(names=['-dsl1'], description = 'Execute the workflow using DSL1 syntax')
-        boolean dsl1
-
-        @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
-        boolean dsl2
 
         @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
         String mainScript
