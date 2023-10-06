@@ -1276,13 +1276,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Disable process execution with Docker.
 
 `-without-podman`
-: Disable process execution in a Podman container.
+: Disable process execution with Podman.
 
 `-without-spack`
 : Disable process execution with Spack.
-
-`-without-wave`
-: Disable the use of Wave containers.
 
 `-w, -work-dir` (`work`)
 : Directory where intermediate result files are stored.
@@ -1512,3 +1509,21 @@ When a command line parameter includes one or more glob characters, i.e. wildcar
 nextflow run <my script> --files "*.fasta"
 ```
 :::
+
+(cli-v2)=
+
+## CLI v2
+
+:::{versionadded} 23.10.0
+:::
+
+Nextflow now has an alternative command-line interface called `nf`, which more closely follows conventions for CLI options. In particular, long options for `nf` have two dashes, i.e. `-resume` is now `--resume`.
+
+Pipeline parameters can be specified alongside CLI options as before, as long as they are named differently. If for some reason you have a conflicting param, you can use a double dash `--` to separate it from the CLI options.
+
+The `nf` command is a near drop-in replacement, by simply using double dashes for long options. The following minor changes were also introduced:
+
+- The `plugins` command was removed (use `plugin` instead)
+- The `secrets put` command was removed (use `secrets set` instead)
+- The `-deep` option was renamed to `--depth` for `clone`, `pull`, and `run`
+- The `-without-*` options were removed from the `run` command
