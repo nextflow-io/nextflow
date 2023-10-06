@@ -572,7 +572,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    String download(String revision=null, Integer deep=null) {
+    String download(String revision=null, Integer depth=null) {
         assert project
 
         /*
@@ -595,8 +595,8 @@ class AssetManager {
                 .setURI(cloneURL)
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
-            if( deep )
-                clone.setDepth(deep)
+            if( depth )
+                clone.setDepth(depth)
             clone.call()
 
             if( revision ) {
@@ -665,7 +665,7 @@ class AssetManager {
      * @param directory The folder when the pipeline will be cloned
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null, Integer deep=null) {
+    void clone(File directory, String revision = null, Integer depth=null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
@@ -683,8 +683,8 @@ class AssetManager {
 
         if( revision )
             clone.setBranch(revision)
-        if( deep )
-            clone.setDepth(deep)
+        if( depth )
+            clone.setDepth(depth)
         clone.call()
     }
 

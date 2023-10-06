@@ -36,7 +36,7 @@ class CmdClone {
     interface Options extends HubOptions {
         String getPipeline()
         String getTargetName()
-        Integer getDeep()
+        Integer getDepth()
         String getRevision()
     }
 
@@ -49,8 +49,8 @@ class CmdClone {
         @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
         String revision
 
-        @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-        Integer deep
+        @Parameter(names=['-d','-depth','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer depth
 
         @Override
         String getPipeline() { args[0] }
@@ -96,7 +96,7 @@ class CmdClone {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
-        manager.clone(target, revision, deep)
+        manager.clone(target, revision, depth)
         print "\r"
         println "${manager.project} cloned to: $target"
     }

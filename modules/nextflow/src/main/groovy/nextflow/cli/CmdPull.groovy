@@ -36,7 +36,7 @@ class CmdPull {
     interface Options extends HubOptions {
         String getPipeline()
         boolean getAll()
-        Integer getDeep()
+        Integer getDepth()
         String getRevision()
     }
 
@@ -52,8 +52,8 @@ class CmdPull {
         @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
         String revision
 
-        @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-        Integer deep
+        @Parameter(names=['-d','-depth','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer depth
 
         @Override
         String getPipeline() { args[0] }
@@ -104,7 +104,7 @@ class CmdPull {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision,deep)
+            def result = manager.download(revision,depth)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

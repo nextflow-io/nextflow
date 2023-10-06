@@ -65,7 +65,7 @@ class CmdRun {
         String getBucketDir()
         Boolean getCacheable()
         Map<String,String> getClusterOptions()
-        Integer getDeep()
+        Integer getDepth()
         Boolean getDisableJobsCancellation()
         boolean getDsl1()
         boolean getDsl2()
@@ -203,8 +203,8 @@ class CmdRun {
         @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
         String revision
 
-        @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-        Integer deep
+        @Parameter(names=['-d','-depth','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer depth
 
         @Parameter(names=['-latest'], description = 'Pull latest changes before run')
         boolean latest
@@ -634,7 +634,7 @@ class CmdRun {
             if( offline )
                 throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo ..."
-            def result = manager.download(revision,deep)
+            def result = manager.download(revision,depth)
             if( result )
                 log.info " $result"
             checkForUpdate = false

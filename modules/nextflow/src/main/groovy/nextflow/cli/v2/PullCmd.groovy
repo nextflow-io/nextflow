@@ -40,8 +40,8 @@ class PullCmd extends AbstractCmd implements CmdPull.Options, HubOptionsV2 {
     @Option(names = ['--all'], arity = '0', description = 'Update all downloaded projects')
     boolean all
 
-    @Option(names = ['-d','--deep'], description = 'Create a shallow clone of the specified depth')
-    Integer deep
+    @Option(names = ['-d','--depth'], description = 'Create a shallow clone of the specified depth')
+    Integer depth
 
     @Option(names = ['-r','--revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
