@@ -24,6 +24,7 @@ NXF_TEMP=${NXF_TEMP:-$TMPDIR}
 NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI=${NXF_CLI:-"$0 $@"}
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
+NXF_CLI_V2=""
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 
 export NXF_CLI
@@ -133,14 +134,21 @@ function install() {
     get "$NXF_BASE/$version/nextflow?$action" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
     chmod +x "$1" || exit $?
+    install_nf "$1" || exit $?
     bash "$1" -download || exit $?
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
-    echo -e $'- the executable file `nextflow` has been created in the folder:' $(dirname $1)
+    echo -e $'- the executable files `nextflow` and `nf` have been created in the folder:' $(dirname $1)
     if [[ ! "$PATH" =~ (^|:)"$(dirname $1)"(:|$) ]]; then
-    echo -e $'- you may complete the installation by moving it to a directory in your $PATH'
+    echo -e $'- you may complete the installation by moving them to a directory in your $PATH'
     fi
     echo ''
+}
+
+function install_nf() {
+    local nf="$(dirname $1)/nf"
+    sed 's/^NXF_CLI_V2=""$/NXF_CLI_V2="true"/' < $1 > $nf
+    chmod +x $nf
 }
 
 function check_latest() {
@@ -178,13 +186,15 @@ function launch_nextflow() {
 
 # check self-install
 if [ "$0" = "bash" ] || [[ "$0" =~ .*/bash ]]; then
-    if [ -d nextflow ]; then
-        echo 'Please note:'
-        echo "- The install procedure needs to create a file named 'nextflow' in this folder, but a directory with this name already exists."
-        echo "- Please renamed/delete that directory, or execute the Nextflow install procedure in another folder."
-        echo ''
-        exit 1
-    fi
+    for cmd in nextflow nf; do
+      if [ -d $cmd ]; then
+          echo 'Please note:'
+          echo "- The install procedure needs to create a file named '$cmd' in this folder, but a directory with this name already exists."
+          echo "- Please renamed/delete that directory, or execute the Nextflow install procedure in another folder."
+          echo ''
+          exit 1
+      fi
+    done
     install "$PWD/nextflow" install
     exit 0
 fi
