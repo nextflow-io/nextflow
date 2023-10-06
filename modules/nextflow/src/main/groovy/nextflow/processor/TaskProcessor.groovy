@@ -32,6 +32,7 @@ import java.util.regex.Pattern
 
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -2154,9 +2155,10 @@ class TaskProcessor {
 
         final mode = config.getHashMode()
         final hash = computeHash(keys, mode)
-        if( session.dumpHashes ) {
+        if( session.dumpHashes == 'json' )
+            traceInputsHashesJson(task, keys, mode, hash)
+        else if( session.dumpHashes )
             traceInputsHashes(task, keys, mode, hash)
-        }
         return hash
     }
 
@@ -2191,10 +2193,24 @@ class TaskProcessor {
         return result
     }
 
-    private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
-        def collector = (item) -> "${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] ${item?.toString()?.replace('\n', '\\n')}"
+    private void traceInputsHashesJson( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+        def collector = (item) -> [
+            hash: CacheHelper.hasher(item, mode).hash().toString(),
+            type: item?.getClass()?.getName(),
+            value: item?.toString()
+        ]
+        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${JsonOutput.toJson(entries.collect(collector))}"
+    }
 
-        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${entries.collect(collector).join(' | ')}"
+    private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+
+        def buffer = new StringBuilder()
+        buffer.append("[${safeTaskName(task)}] cache hash: ${hash}; mode: $mode; entries: \n")
+        for( Object item : entries ) {
+            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
+        }
+
+        log.info(buffer.toString())
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
