@@ -1071,6 +1071,19 @@ manifest {
 
 Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHub, BitBucket or GitLab.
 
+(config-nextflow)=
+
+### Scope `nextflow`
+
+The `nextflow` scope allows you to define some miscellaneous settings.
+
+The following settings are available:
+
+`nextflow.defaults.publishDir`
+: :::{versionadded} 23.10.0
+  :::
+: Default params for the {ref}`process-publishdir` directive. Every instance of this directive will use these defaults unless it overrides them for itself.
+
 (config-notification)=
 
 ### Scope `notification`

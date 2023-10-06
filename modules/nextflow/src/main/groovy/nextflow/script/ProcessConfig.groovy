@@ -21,6 +21,8 @@ import java.util.regex.Pattern
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.Global
+import nextflow.Session
 import nextflow.NF
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.ConfigParseException
@@ -842,7 +844,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('publishDir', dirs)
         }
 
-        dirs.add(params)
+        final session = Global.session as Session
+        final defaults = session.config.navigate('nextflow.defaults.publishDir', [:]) as Map
+        dirs.add(defaults + params)
         return this
     }
 
