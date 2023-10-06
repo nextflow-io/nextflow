@@ -662,7 +662,7 @@ class TaskProcessor {
 
     /**
      * @return A string 'she-bang' formatted to the added on top script to be executed.
-     * The interpreter to be used define bu the *taskConfig* property {@code shell}
+     * The interpreter to be used define by the *taskConfig* property {@code shell}
      */
     static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
@@ -2165,7 +2165,7 @@ class TaskProcessor {
             return CacheHelper.hasher(keys, mode).hash()
         }
         catch (Throwable e) {
-            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            final msg = "Something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
             throw new UnexpectedException(msg,e)
         }
     }

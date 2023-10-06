@@ -45,7 +45,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private BaseScript owner
 
-    // -- following attributes are mutable and instance dependant
+    // -- following attributes are mutable and instance dependent
     // -- therefore should not be cloned
 
     private ChannelOut output
