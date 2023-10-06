@@ -356,10 +356,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return jobState
     }
 
-    private List<String> RUNNING_AND_TERMINATED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
+    static private List<String> RUNNING_AND_TERMINATED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
-    private List<String> TERMINATED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
-
+    static private List<String> TERMINATED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
     @Override
     boolean checkIfRunning() {
@@ -408,7 +407,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     void kill() {
-        if( isSubmitted() ) {
+        if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
             client.deleteJob(jobId)
         }
