@@ -537,7 +537,9 @@ class WaveClientTest extends Specification {
         and:
         assets.condaFile.text == '''\
                 channels:
+                - seqera
                 - conda-forge
+                - bioconda
                 - defaults
                 dependencies:
                 - bioconda::rseqc=3.0.1
@@ -559,7 +561,7 @@ class WaveClientTest extends Specification {
         assets.containerFile == '''\
                 FROM mambaorg/micromamba:1.5.1
                 RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults -f https://host.com/conda-lock.yml \\
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/conda-lock.yml \\
                     && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
@@ -733,7 +735,9 @@ class WaveClientTest extends Specification {
         and:
         assets.condaFile.text == '''\
                 channels:
+                - seqera
                 - conda-forge
+                - bioconda
                 - defaults
                 dependencies:
                 - salmon=1.2.3
@@ -755,7 +759,7 @@ class WaveClientTest extends Specification {
                 BootStrap: docker
                 From: mambaorg/micromamba:1.5.1
                 %post
-                    micromamba install -y -n base -c conda-forge -c defaults -f https://host.com/lock-file.yaml
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/lock-file.yaml
                     micromamba install -y -n base conda-forge::procps-ng
                     micromamba clean -a -y
                 %environment
