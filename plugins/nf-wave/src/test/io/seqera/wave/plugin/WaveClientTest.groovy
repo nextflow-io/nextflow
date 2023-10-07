@@ -19,6 +19,7 @@ package io.seqera.wave.plugin
 
 import static java.nio.file.StandardOpenOption.*
 
+import java.net.http.HttpRequest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -1218,5 +1219,46 @@ class WaveClientTest extends Specification {
         'http://foo.com'    | true
         'https://foo.com'   | true
     }
+
+    def 'should retry http request' () {
+
+        given:
+        int requestCount=0
+        HttpHandler handler = { HttpExchange exchange ->
+            if( ++requestCount<3 ) {
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(503, 0)
+                exchange.getResponseBody().close()
+            }
+            else {
+                def body = 'Hello world!'
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(200, body.size())
+                exchange.getResponseBody().write(body.bytes)
+                exchange.getResponseBody().close()
+            }
+        }
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(9901), 0);
+        server.createContext("/", handler);
+        server.start()
+
+        def session = Mock(Session) {getConfig() >> [:] }
+        def client = new WaveClient(session)
+
+        when:
+        def request = HttpRequest.newBuilder().uri(new URI('http://localhost:9901/foo.txt')).build()
+        def response = client.httpSend(request)
+        then:
+        response.statusCode() == 200
+        response.body() == 'Hello world!'
+        and:
+        requestCount == 3
+        
+        cleanup:
+        server?.stop(0)
+
+    }
+
 
 }
