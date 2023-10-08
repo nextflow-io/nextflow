@@ -259,8 +259,6 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-ansi-log', 'true', '-x') == ['run', '-ansi-log','true', '-x']
         launcher.normalizeArgs('run','-ansi-log', 'false', '-x') == ['run', '-ansi-log','false', '-x']
 
-        launcher.normalizeArgs('run','-dsl2', '-x') == ['run', '-dsl2','true', '-x']
-
         launcher.normalizeArgs('run','-stub', '-x') == ['run', '-stub','true', '-x']
         launcher.normalizeArgs('run','-stub-run', '-x') == ['run', '-stub-run','true', '-x']
         launcher.normalizeArgs('run','-stub-run', 'true', '-x') == ['run', '-stub-run', 'true', '-x']
