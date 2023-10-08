@@ -709,6 +709,15 @@ class ConfigBuilder {
             config.fusion.enabled = cmdRun.withFusion == 'true'
         }
 
+        // -- set cloudcache options
+        if( cmdRun.cloudCachePath ) {
+            if( !(config.cloudcache instanceof Map) )
+                config.cloudcache = [:]
+            config.cloudcache.enabled = true
+            if( cmdRun.cloudCachePath != '-' )
+                config.cloudcache.path = cmdRun.cloudCachePath
+        }
+
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.hasParams() )
             config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
