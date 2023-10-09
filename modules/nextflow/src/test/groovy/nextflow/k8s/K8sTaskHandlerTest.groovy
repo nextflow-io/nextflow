@@ -967,7 +967,7 @@ class K8sTaskHandlerTest extends Specification {
         and:
         result.spec.containers[0].args == ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
         result.spec.containers[0].env == [[name:'FUSION_BUCKETS', value:'this,that']]
-        result.spec.containers[0].devices == ['/dev/fuse']
+        result.spec.containers[0].resources == [limits:['nextflow.io/fuse':1]]
         !result.spec.containers[0].securityContext
     }
 
