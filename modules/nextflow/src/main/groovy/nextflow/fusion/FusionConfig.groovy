@@ -21,7 +21,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Global
 import nextflow.SysEnv
-
 /**
  * Model Fusion config options
  *
@@ -90,8 +89,12 @@ class FusionConfig {
         url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file:/')
     }
 
-    @Memoized
     static FusionConfig getConfig() {
-        new FusionConfig(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+        return createConfig0(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+    }
+
+    @Memoized
+    static private FusionConfig createConfig0(Map config, Map env) {
+        new FusionConfig(config, env)
     }
 }
