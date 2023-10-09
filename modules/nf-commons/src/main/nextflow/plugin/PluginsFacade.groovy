@@ -252,7 +252,7 @@ class PluginsFacade implements PluginStateListener {
             return manager.getExtensions(type)
         }
         else {
-            // this should oly be used to load system extensions
+            // this should only be used to load system extensions
             // i.e. included in the app class path not provided by
             // a plugin extension
             log.debug "Using Default plugin manager"
@@ -369,6 +369,11 @@ class PluginsFacade implements PluginStateListener {
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
+        }
+
+        // add cloudcache plugin when cloudcache is enabled in the config
+        if( Bolts.navigate(config, 'cloudcache.enabled')==true ) {
+            specs << defaultPlugins.getPlugin('nf-cloudcache')
         }
 
         log.debug "Plugins resolved requirement=$specs"

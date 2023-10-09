@@ -39,6 +39,7 @@ class LogsCheckpoint implements TraceObserver {
     private Thread thread
     private Duration interval
     private LogsHandler handler
+    private volatile boolean terminated
 
     @Override
     void onFlowCreate(Session session) {
@@ -59,14 +60,14 @@ class LogsCheckpoint implements TraceObserver {
 
     @Override
     void onFlowComplete() {
-        thread.interrupt()
+        this.terminated = true
         thread.join()
     }
 
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !thread.isInterrupted() ) {
+            while( !terminated && !thread.isInterrupted() ) {
                 // just wait the declared delay
                 await(interval)
                 // checkpoint the logs

@@ -120,5 +120,26 @@ class GithubRepositoryProviderTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should auth using github token' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def provider = Spy(new GithubRepositoryProvider('foo',Mock(ProviderConfig)))
+        and:
+        def conn = Mock(HttpURLConnection)
+
+        when:
+        provider.auth(conn)
+        then:
+        _ * provider.getUser() 
+        _ * provider.getPassword()
+        1 * provider.hasCredentials()
+        and:
+        1 * conn.setRequestProperty('Authorization', "Basic ${'1234567890:x-oauth-basic'.bytes.encodeBase64()}".toString())
+
+        cleanup:
+        SysEnv.pop()
+    }
 }
 

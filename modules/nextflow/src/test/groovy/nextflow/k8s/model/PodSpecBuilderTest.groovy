@@ -17,6 +17,7 @@
 package nextflow.k8s.model
 
 import nextflow.executor.res.AcceleratorResource
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -41,19 +42,19 @@ class PodSpecBuilderTest extends Specification {
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command:['echo', 'hello'],
-                                    workingDir:'/some/work/dir'
-                                   ]
-                           ]
-                   ]
+        spec == [
+                apiVersion: 'v1',
+                kind: 'Pod',
+                metadata: [name:'foo', namespace:'default'],
+                spec: [
+                        restartPolicy:'Never',
+                        containers:[[
+                                name:'foo',
+                                image:'busybox',
+                                command:['echo', 'hello'],
+                                workingDir:'/some/work/dir'
+                        ]]
+                ]
         ]
 
     }
@@ -61,63 +62,35 @@ class PodSpecBuilderTest extends Specification {
     def 'should create pod spec with args' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/some/work/dir')
                 .withArgs(['echo', 'hello'])
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    args:['echo', 'hello'],
-                                    workingDir:'/some/work/dir'
-                                   ]
-                           ]
-                   ]
-        ]
+        pod.spec.containers[0].args == ['echo', 'hello']
 
     }
 
     def 'should create pod spec with args string' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/some/work/dir')
                 .withArgs('echo foo')
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    args:['/bin/bash', '-c', 'echo foo'],
-                                    workingDir:'/some/work/dir'
-                                   ]
-                           ]
-                   ]
-        ]
+        pod.spec.containers[0].args == ['/bin/bash', '-c', 'echo foo']
 
     }
 
     def 'should create pod spec with privileged' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
                 .withCommand('echo foo')
@@ -125,60 +98,45 @@ class PodSpecBuilderTest extends Specification {
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command:['/bin/bash', '-c', 'echo foo'],
-                                    securityContext: [privileged: true]
-                                   ]
-                           ]
-                   ]
-        ]
+        pod.spec.containers[0].securityContext == [privileged: true]
 
     }
 
-    def 'should create pod spec with device and capabilities' () {
-
+    def 'should create pod with resources limits' () {
         when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withCommand('echo foo')
-                .withDevices(['/dev/fuse'])
-                .withCapabilities(add:['SYS_ADMIN'])
-                .build()
+        def pod1 = new PodSpecBuilder()
+            .withPodName('foo')
+            .withImageName('busybox')
+            .withCommand('echo foo')
+            .withResourcesLimits('nextflow.io/fuse': 1)
+            .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command:['/bin/bash', '-c', 'echo foo'],
-                                    devices: ['/dev/fuse'],
-                                    securityContext: [capabilities: [add:['SYS_ADMIN']]]
-                                   ]
-                           ]
-                   ]
-        ]
+        pod1.spec.containers[0].resources == [limits:['nextflow.io/fuse':1]]
 
+
+        when:
+        def pod2 = new PodSpecBuilder()
+            .withPodName('foo')
+            .withImageName('busybox')
+            .withCommand('echo foo')
+            .withCpus(8)
+            .withMemory(MemoryUnit.of('10GB'))
+            .withResourcesLimits('nextflow.io/fuse': 1)
+            .build()
+
+        then:
+        pod2.spec.containers[0].resources == [
+                                                requests: ['cpu':8, 'memory':'10240Mi'],
+                                                limits: [memory:'10240Mi', 'nextflow.io/fuse':1] ]
     }
 
     def 'should set namespace, labels and annotations' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/some/work/dir')
                 .withCommand(['sh', '-c', 'echo hello'])
                 .withNamespace('xyz')
                 .withLabel('app','myApp')
@@ -189,81 +147,39 @@ class PodSpecBuilderTest extends Specification {
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [
-                           name:'foo',
-                           namespace:'xyz',
-                           labels: [
-                                   app: 'myApp',
-                                   runName: 'something',
-                                   version: '3.6.1'
-                           ],
-                           annotations: [
-                                   anno1: "value1",
-                                   anno2: "value2",
-                                   anno3: "value3"
-                           ]
-                   ],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command: ['sh', '-c', 'echo hello'],
-                                    workingDir:'/some/work/dir'
-                                   ]
-                           ]
-                   ]
+        pod.metadata.namespace == 'xyz'
+        pod.metadata.labels == [
+                app: 'myApp',
+                runName: 'something',
+                version: '3.6.1'
+        ]
+        pod.metadata.annotations == [
+                anno1: "value1",
+                anno2: "value2",
+                anno3: "value3"
         ]
     }
     
     def 'should truncate labels longer than 63 chars' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/some/work/dir')
                 .withCommand(['sh', '-c', 'echo hello'])
-                .withNamespace('xyz')
                 .withLabel('app','myApp')
                 .withLabel('runName','something')
                 .withLabel('tag','somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT')
                 .withLabels([tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT', tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT'])
-                .withAnnotation("anno1", "value1")
-                .withAnnotations([anno2: "value2", anno3: "value3"])
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [
-                           name:'foo',
-                           namespace:'xyz',
-                           labels: [
-                                   app: 'myApp',
-                                   runName: 'something',
-                                   tag: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
-                                   tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
-                                   tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend'
-                           ],
-                           annotations: [
-                                   anno1: "value1",
-                                   anno2: "value2",
-                                   anno3: "value3"
-                           ]
-                   ],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command: ['sh', '-c', 'echo hello'],
-                                    workingDir:'/some/work/dir'
-                                   ]
-                           ]
-                   ]
+        pod.metadata.labels == [
+                app: 'myApp',
+                runName: 'something',
+                tag: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend'
         ]
     }
 
@@ -271,11 +187,10 @@ class PodSpecBuilderTest extends Specification {
     def 'should set resources and env' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
                 .withCommand('echo hello')
-                .withWorkDir('/some/work/dir')
                 .withEnv(PodEnv.value('ALPHA','hello'))
                 .withEnv(PodEnv.value('DELTA', 'world'))
                 .withCpus(8)
@@ -285,64 +200,37 @@ class PodSpecBuilderTest extends Specification {
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command:['/bin/bash', '-c', 'echo hello'],
-                                    workingDir:'/some/work/dir',
-                                    env: [
-                                            [name:'ALPHA', value:'hello'],
-                                            [name:'DELTA', value:'world']
-                                    ],
-                                    resources:[
-                                            requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi', 'ephemeral-storage':'10Gi'],
-                                            limits: ['foo.org/gpu':10, memory:'100Gi', 'ephemeral-storage':'10Gi']
-                                    ]
-                                   ]
-                           ]
-                   ]
+        pod.spec.containers[0].env == [
+                [name:'ALPHA', value:'hello'],
+                [name:'DELTA', value:'world']
+        ]
+        pod.spec.containers[0].resources == [
+                requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi', 'ephemeral-storage':'10Gi'],
+                limits: ['foo.org/gpu':10, memory:'100Gi', 'ephemeral-storage':'10Gi']
         ]
     }
 
     def 'should get storage spec for volume claims' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                     .withPodName('foo')
                     .withImageName('busybox')
-                    .withWorkDir('/path')
                     .withCommand(['echo'])
                     .withVolumeClaim(new PodVolumeClaim('first','/work'))
                     .withVolumeClaim(new PodVolumeClaim('second', '/data', '/foo'))
                     .withVolumeClaim(new PodVolumeClaim('third', '/things', null, true))
                     .build()
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command: ['echo'],
-                                    workingDir:'/path',
-                                    volumeMounts:[
-                                            [name:'vol-1', mountPath:'/work'],
-                                            [name:'vol-2', mountPath:'/data', subPath: '/foo'],
-                                            [name:'vol-3', mountPath:'/things', readOnly: true]] ]
-                           ],
-                           volumes:[
-                                   [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
-                                   [name:'vol-2', persistentVolumeClaim:[claimName:'second']],
-                                   [name:'vol-3', persistentVolumeClaim:[claimName:'third']] ]
-                   ]
-
+        pod.spec.containers[0].volumeMounts == [
+                [name:'vol-1', mountPath:'/work'],
+                [name:'vol-2', mountPath:'/data', subPath: '/foo'],
+                [name:'vol-3', mountPath:'/things', readOnly: true]
+        ]
+        pod.spec.volumes == [
+                [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
+                [name:'vol-2', persistentVolumeClaim:[claimName:'second']],
+                [name:'vol-3', persistentVolumeClaim:[claimName:'third']]
         ]
 
     }
@@ -350,10 +238,9 @@ class PodSpecBuilderTest extends Specification {
     def 'should only define one volume per persistentVolumeClaim' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/path')
                 .withCommand(['echo'])
                 .withVolumeClaim(new PodVolumeClaim('first','/work'))
                 .withVolumeClaim(new PodVolumeClaim('first','/work2', '/bar'))
@@ -361,27 +248,15 @@ class PodSpecBuilderTest extends Specification {
                 .withVolumeClaim(new PodVolumeClaim('second', '/data2', '/fooz'))
                 .build()
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command: ['echo'],
-                                    workingDir:'/path',
-                                    volumeMounts:[
-                                            [name:'vol-1', mountPath:'/work'],
-                                            [name:'vol-1', mountPath:'/work2', subPath: '/bar'],
-                                            [name:'vol-2', mountPath:'/data', subPath: '/foo'],
-                                            [name:'vol-2', mountPath:'/data2', subPath: '/fooz']]]
-                           ],
-                           volumes:[
-                                   [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
-                                   [name:'vol-2', persistentVolumeClaim:[claimName:'second']] ]
-                   ]
-
+        pod.spec.containers[0].volumeMounts == [
+                [name:'vol-1', mountPath:'/work'],
+                [name:'vol-1', mountPath:'/work2', subPath: '/bar'],
+                [name:'vol-2', mountPath:'/data', subPath: '/foo'],
+                [name:'vol-2', mountPath:'/data2', subPath: '/fooz']
+        ]
+        pod.spec.volumes == [
+                [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
+                [name:'vol-2', persistentVolumeClaim:[claimName:'second']]
         ]
 
     }
@@ -389,34 +264,21 @@ class PodSpecBuilderTest extends Specification {
     def 'should get config map mounts' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/path')
                 .withCommand(['echo'])
                 .withConfigMap(new PodMountConfig(config: 'cfg1', mountPath: '/etc/config'))
                 .withConfigMap(new PodMountConfig(config: 'data2', mountPath: '/data/path'))
                 .build()
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command: ['echo'],
-                                    workingDir:'/path',
-                                    volumeMounts:[
-                                            [name:'vol-1', mountPath:'/etc/config'],
-                                            [name:'vol-2', mountPath:'/data/path']] ]
-                           ],
-                           volumes:[
-                                   [name:'vol-1', configMap:[name:'cfg1']],
-                                   [name:'vol-2', configMap:[name:'data2']] ]
-                   ]
-
+        pod.spec.containers[0].volumeMounts == [
+                [name:'vol-1', mountPath:'/etc/config'],
+                [name:'vol-2', mountPath:'/data/path']
+        ]
+        pod.spec.volumes == [
+                [name:'vol-1', configMap:[name:'cfg1']],
+                [name:'vol-2', configMap:[name:'data2']]
         ]
 
     }
@@ -424,76 +286,46 @@ class PodSpecBuilderTest extends Specification {
     def 'should get csi ephemeral mounts' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/path')
                 .withCommand(['echo'])
                 .withCsiEphemeral(new PodMountCsiEphemeral(csi: [driver: 'inline.storage.kubernetes.io', readOnly: true], mountPath: '/data'))
                 .build()
         then:
-        spec ==  [
-                apiVersion: 'v1',
-                kind: 'Pod',
-                metadata: [name: 'foo', namespace: 'default'],
-                spec: [
-                        restartPolicy: 'Never',
-                        containers: [[
-                                name: 'foo',
-                                image: 'busybox',
-                                command: ['echo'],
-                                workingDir: '/path',
-                                volumeMounts: [
-                                        [name: 'vol-1', mountPath: '/data', readOnly: true]
-                                ]
-                        ]],
-                        volumes: [
-                                [name: 'vol-1', csi: [driver: 'inline.storage.kubernetes.io', readOnly: true]]
-                        ]
-                ]
+        pod.spec.containers[0].volumeMounts == [
+                [name: 'vol-1', mountPath: '/data', readOnly: true]
+        ]
+        pod.spec.volumes == [
+                [name: 'vol-1', csi: [driver: 'inline.storage.kubernetes.io', readOnly: true]]
         ]
     }
 
     def 'should get empty dir mounts' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/path')
                 .withCommand(['echo'])
                 .withEmptyDir(new PodMountEmptyDir(mountPath: '/scratch1', emptyDir: [medium: 'Disk']))
                 .withEmptyDir(new PodMountEmptyDir(mountPath: '/scratch2', emptyDir: [medium: 'Memory']))
                 .build()
         then:
-        spec ==  [
-                apiVersion: 'v1',
-                kind: 'Pod',
-                metadata: [name: 'foo', namespace: 'default'],
-                spec: [
-                        restartPolicy: 'Never',
-                        containers: [[
-                                name: 'foo',
-                                image: 'busybox',
-                                command: ['echo'],
-                                workingDir: '/path',
-                                volumeMounts: [
-                                        [name: 'vol-1', mountPath: '/scratch1'],
-                                        [name: 'vol-2', mountPath: '/scratch2']
-                                ]
-                        ]],
-                        volumes: [
-                                [name: 'vol-1', emptyDir: [medium: 'Disk']],
-                                [name: 'vol-2', emptyDir: [medium: 'Memory']]
-                        ]
-                ]
+        pod.spec.containers[0].volumeMounts == [
+                [name: 'vol-1', mountPath: '/scratch1'],
+                [name: 'vol-2', mountPath: '/scratch2']
+        ]
+        pod.spec.volumes == [
+                [name: 'vol-1', emptyDir: [medium: 'Disk']],
+                [name: 'vol-2', emptyDir: [medium: 'Memory']]
         ]
     }
 
     def 'should consume env secrets' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo'])
@@ -503,29 +335,17 @@ class PodSpecBuilderTest extends Specification {
                 .build()
 
         then:
-        spec == [ apiVersion: 'v1',
-                  kind: 'Pod',
-                  metadata: [name:'foo', namespace:'default'],
-                  spec: [
-                          restartPolicy:'Never',
-                          containers:[
-                                  [name:'foo',
-                                   image:'busybox',
-                                   command: ['echo'],
-                                   env:[   [name: 'FOO', value: 'abc'],
-                                           [name:'VAR_X', valueFrom: [secretKeyRef: [name:'delta', key:'bar']]],
-                                           [name:'VAR_Y', valueFrom: [secretKeyRef: [name:'gamma', key:'VAR_Y']]] ]
-                                  ]
-                          ]
-                  ]
-
+        pod.spec.containers[0].env == [
+                [name: 'FOO', value: 'abc'],
+                [name: 'VAR_X', valueFrom: [secretKeyRef: [name:'delta', key:'bar']]],
+                [name: 'VAR_Y', valueFrom: [secretKeyRef: [name:'gamma', key:'VAR_Y']]]
         ]
     }
 
     def 'should consume env configMap' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo'])
@@ -535,29 +355,17 @@ class PodSpecBuilderTest extends Specification {
                 .build()
 
         then:
-        spec == [ apiVersion: 'v1',
-                  kind: 'Pod',
-                  metadata: [name:'foo', namespace:'default'],
-                  spec: [
-                          restartPolicy:'Never',
-                          containers:[
-                                  [name:'foo',
-                                   image:'busybox',
-                                   command: ['echo'],
-                                   env:[   [name: 'FOO', value: 'abc'],
-                                           [name:'VAR_X', valueFrom: [configMapKeyRef: [name:'data', key:'VAR_X']]],
-                                           [name:'VAR_Y', valueFrom: [configMapKeyRef: [name:'omega', key:'bar-2']]] ]
-                                  ]
-                          ]
-                  ]
-
+        pod.spec.containers[0].env == [
+                [name: 'FOO', value: 'abc'],
+                [name: 'VAR_X', valueFrom: [configMapKeyRef: [name:'data', key:'VAR_X']]],
+                [name: 'VAR_Y', valueFrom: [configMapKeyRef: [name:'omega', key:'bar-2']]]
         ]
     }
 
     def 'should consume file secrets' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo'])
@@ -566,67 +374,40 @@ class PodSpecBuilderTest extends Specification {
                 .build()
 
         then:
-        spec == [ apiVersion: 'v1',
-                  kind: 'Pod',
-                  metadata: [name:'foo', namespace:'default'],
-                  spec: [
-                          restartPolicy:'Never',
-                          containers:[
-                                  [name:'foo',
-                                   image:'busybox',
-                                   command: ['echo'],
-                                   volumeMounts:[
-                                           [name:'vol-1', mountPath:'/this/and/that'],
-                                           [name:'vol-2', mountPath:'/etc/mnt']
-                                   ]
-                                  ]
-                          ],
-                          volumes:[
-                                  [name:'vol-1', secret:[secretName: 'alpha']],
-                                  [name:'vol-2', secret:[
-                                          secretName: 'delta',
-                                          items: [
-                                                  [ key: 'foo', path:'bar.txt' ]
-                                          ]
-                                  ]]
-                          ]
-                  ]
-
+        pod.spec.containers[0].volumeMounts == [
+                [name:'vol-1', mountPath:'/this/and/that'],
+                [name:'vol-2', mountPath:'/etc/mnt']
+        ]
+        pod.spec.volumes == [
+                [name:'vol-1', secret:[secretName: 'alpha']],
+                [name:'vol-2', secret:[
+                        secretName: 'delta',
+                        items: [
+                                [ key: 'foo', path:'bar.txt' ]
+                        ]
+                ]]
         ]
     }
 
     def 'should get host path mounts' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def pod = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
-                .withWorkDir('/path')
                 .withCommand(['echo'])
                 .withHostMount('/tmp','/scratch')
                 .withHostMount('/host/data','/mnt/container')
                 .build()
 
         then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command: ['echo'],
-                                    workingDir:'/path',
-                                    volumeMounts:[
-                                            [name:'vol-1', mountPath:'/scratch'],
-                                            [name:'vol-2', mountPath:'/mnt/container']] ]
-                           ],
-                           volumes:[
-                                   [name:'vol-1', hostPath: [path:'/tmp']],
-                                   [name:'vol-2', hostPath: [path:'/host/data']] ]
-                   ]
-
+        pod.spec.containers[0].volumeMounts == [
+                [name:'vol-1', mountPath:'/scratch'],
+                [name:'vol-2', mountPath:'/mnt/container']
+        ]
+        pod.spec.volumes == [
+                [name:'vol-1', hostPath: [path:'/tmp']],
+                [name:'vol-2', hostPath: [path:'/host/data']]
         ]
 
     }
@@ -711,18 +492,9 @@ class PodSpecBuilderTest extends Specification {
     }
 
 
-    def 'should create pod spec given pod options' () {
+    def 'should create pod spec with pod options' () {
 
         given:
-        def opts = Mock(PodOptions)
-        def builder = new PodSpecBuilder([
-            podName: 'foo',
-            imageName: 'image',
-            command: ['echo'],
-            labels: [runName: 'crazy_john'],
-            annotations: [evict: 'false']
-        ])
-
         def affinity = [
             nodeAffinity: [
                 requiredDuringSchedulingIgnoredDuringExecution: [
@@ -732,15 +504,22 @@ class PodSpecBuilderTest extends Specification {
                 ]
             ]
         ]
-
         def tolerations = [[
             key: 'example-key',
             operator: 'Exists',
             effect: 'NoSchedule'
         ]]
+        def opts = Mock(PodOptions)
+        and:
+        def builder = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo'])
+                .withLabel('runName', 'crazy_john')
+                .withAnnotation('evict', 'false')
 
         when:
-        def spec = builder.withPodOptions(opts).build()
+        def pod = builder.withPodOptions(opts).build()
         then:
         _ * opts.getAffinity() >> affinity
         _ * opts.getAnnotations() >> [OMEGA:'zzz', SIGMA:'www']
@@ -756,48 +535,51 @@ class PodSpecBuilderTest extends Specification {
         _ * opts.getPriorityClassName() >> 'high-priority'
         _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
         _ * opts.getTolerations() >> tolerations
-
-        spec == [
-            apiVersion: 'v1',
-            kind: 'Pod',
-            metadata: [
+        and:
+        pod.metadata == [
                 name:'foo',
                 namespace:'default',
                 labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'],
                 annotations: [evict: 'false', OMEGA:'zzz', SIGMA:'www']
-            ],
-            spec: [
-                affinity: affinity,
-                automountServiceAccountToken: false,
-                imagePullSecrets: [[ name: 'myPullSecret' ]],
-                nodeSelector: [gpu: 'true', queue: 'fast'],
-                priorityClassName: 'high-priority',
-                restartPolicy:'Never',
-                securityContext: [ runAsUser: 1000 ],
-                tolerations: tolerations,
-
-                containers:[[
-                    name:'foo',
-                    image:'image',
-                    imagePullPolicy: 'always',
-                    command:['echo'],
-                    env:[[name:'HELLO', value:'WORLD']],
-                    volumeMounts:[
-                        [name:'vol-1', mountPath:'/work'],
-                        [name:'vol-2', mountPath:'/home/user'],
-                        [name:'vol-3', mountPath:'/etc/secret.txt']
-                    ],
-                ]],
-                volumes:[
-                    [name:'vol-1', persistentVolumeClaim:[claimName:'pvc1']],
-                    [name:'vol-2', configMap:[name:'data']],
-                    [name:'vol-3', secret:[secretName:'blah']]
-                ]
-            ]
+        ]
+        and:
+        pod.spec.affinity == affinity
+        pod.spec.automountServiceAccountToken == false
+        pod.spec.imagePullSecrets == [[ name: 'myPullSecret' ]]
+        pod.spec.nodeSelector == [gpu: 'true', queue: 'fast']
+        pod.spec.priorityClassName == 'high-priority'
+        pod.spec.securityContext == [ runAsUser: 1000 ]
+        pod.spec.tolerations == tolerations
+        pod.spec.containers[0].imagePullPolicy == 'always'
+        pod.spec.containers[0].env == [[name:'HELLO', value:'WORLD']]
+        pod.spec.containers[0].volumeMounts == [
+                [name:'vol-1', mountPath:'/work'],
+                [name:'vol-2', mountPath:'/home/user'],
+                [name:'vol-3', mountPath:'/etc/secret.txt']
+        ]
+        and:
+        pod.spec.volumes == [
+                [name:'vol-1', persistentVolumeClaim:[claimName:'pvc1']],
+                [name:'vol-2', configMap:[name:'data']],
+                [name:'vol-3', secret:[secretName:'blah']]
         ]
 
     }
 
+    def 'should create pod spec with activeDeadlineSeconds' () {
+
+        when:
+        def pod = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withActiveDeadline(100)
+                .build()
+
+        then:
+        pod.spec.activeDeadlineSeconds == 100
+
+    }
 
     def 'should create image pull request map' () {
         given:
@@ -856,6 +638,22 @@ class PodSpecBuilderTest extends Specification {
         then:
         res.requests == [cpu: 2, 'example.com/fpga': 5]
         res.limits == ['example.com/fpga': 10]
+    }
+
+    def 'should add resources limits' () {
+        given:
+        def builder = new PodSpecBuilder()
+        Map resources
+
+        when:
+        resources = builder.addResourcesLimits(['foo':1], null)
+        then:
+        resources == [limits:[foo:1]]
+
+        when:
+        resources = builder.addResourcesLimits(['foo':1], [requests: ['x':1], limits: ['y': 2]])
+        then:
+        resources == [requests:[x:1], limits:[y:2, foo:1]]
     }
 
 
@@ -1001,134 +799,59 @@ class PodSpecBuilderTest extends Specification {
                 .buildAsJob()
 
         then:
-        spec ==  [ apiVersion: 'batch/v1',
-                    kind: 'Job',
-                    metadata: [name:'foo', namespace:'default'],
+        spec == [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: [name: 'foo', namespace: 'default'],
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: [name: 'foo', namespace: 'default'],
                     spec: [
-                            backoffLimit: 0,
-                            template: [
-                                    spec: [
-                                            restartPolicy:'Never',
-                                            containers:[
-                                                    [name:'foo',
-                                                     image:'busybox',
-                                                     command:['echo', 'hello'],
-                                                    ]
-                                            ]
-                                    ]
-                            ]
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'foo',
+                            image: 'busybox',
+                            command: ['echo', 'hello'],
+                        ]]
                     ]
+                ]
+            ]
         ]
     }
 
-    def 'should set labels and annotations for job' () {
+    def 'should create job spec with labels and annotations' () {
 
         when:
-        def spec = new PodSpecBuilder()
+        def job = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo', 'hello'])
                 .withLabel('app','someApp')
                 .withLabel('runName','someName')
                 .withLabel('version','3.8.1')
-                .withAnnotation("anno1", "val1")
-                .withAnnotations([anno2: "val2", anno3: "val3"])
+                .withAnnotation('anno1', 'val1')
+                .withAnnotations([anno2: 'val2', anno3: 'val3'])
                 .buildAsJob()
 
-        then:
-        spec ==  [ apiVersion: 'batch/v1',
-                   kind: 'Job',
-                   metadata: [
-                           name:'foo',
-                           namespace:'default',
-                           labels: [
-                                   app: 'someApp',
-                                   runName: 'someName',
-                                   version: '3.8.1'
-                           ],
-                           annotations: [
-                                   anno1: "val1",
-                                   anno2: "val2",
-                                   anno3: "val3"
-                           ]
-                   ],
-                   spec: [
-                           backoffLimit: 0,
-                           template: [
-                                   spec: [
-                                           restartPolicy:'Never',
-                                           containers:[
-                                                   [name:'foo',
-                                                    image:'busybox',
-                                                    command:['echo', 'hello'],
-                                                   ]
-                                           ]
-                                   ]
-                           ]
-                   ]
-        ]
-    }
-
-    def 'should create pod spec with activeDeadlineSeconds' () {
-
-        when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withWorkDir('/some/work/dir')
-                .withCommand(['echo', 'hello'])
-                .withActiveDeadline(100)
-                .build()
-
-        then:
-        spec ==  [ apiVersion: 'v1',
-                   kind: 'Pod',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           restartPolicy:'Never',
-                           activeDeadlineSeconds: 100,
-                           containers:[
-                                   [name:'foo',
-                                    image:'busybox',
-                                    command:['echo', 'hello'],
-                                    workingDir:'/some/work/dir'
-                                   ]
-                           ]
-                   ]
+        def metadata = [
+            name: 'foo',
+            namespace: 'default',
+            labels: [
+                app: 'someApp',
+                runName: 'someName',
+                version: '3.8.1'
+            ],
+            annotations: [
+                anno1: 'val1',
+                anno2: 'val2',
+                anno3: 'val3'
+            ]
         ]
 
-    }
-
-    def 'should create job spec with activeDeadlineSeconds' () {
-
-        when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withCommand(['echo', 'hello'])
-                .withActiveDeadline(100)
-                .buildAsJob()
-
         then:
-        spec ==  [ apiVersion: 'batch/v1',
-                   kind: 'Job',
-                   metadata: [name:'foo', namespace:'default'],
-                   spec: [
-                           backoffLimit: 0,
-                           template: [
-                                   spec: [
-                                           restartPolicy:'Never',
-                                           activeDeadlineSeconds: 100,
-                                           containers:[
-                                                   [name:'foo',
-                                                    image:'busybox',
-                                                    command:['echo', 'hello'],
-                                                   ]
-                                           ]
-                                   ]
-                           ]
-                   ]
-        ]
+        job.metadata == metadata
+        job.spec.template.metadata == metadata
     }
 
 }

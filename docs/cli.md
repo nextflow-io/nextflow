@@ -31,6 +31,8 @@ Available options:
 : Add the specified file to configuration set.
 
 `-d, -dockerize`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Launch nextflow via Docker (experimental).
 
 `-h`
@@ -41,6 +43,9 @@ Available options:
 
 `-q, -quiet`
 : Do not print information messages.
+
+`-remote-debug`
+: Enable JVM interactive remote debugging (experimental).
 
 `-syslog`
 : Send logs to syslog server (e.g. localhost:514).
@@ -224,6 +229,8 @@ The `-v` option prints out information about Nextflow, such as the version and b
 (cli-commands)=
 
 ## Commands
+
+(cli-clean)=
 
 ### clean
 
@@ -411,6 +418,11 @@ The `config` command is used for printing the project's configuration i.e. the `
 `-sort`
 : Sort config attributes.
 
+`-value`
+: :::{versionadded} 23.08.0-edge
+  :::
+: Print the value of a config option, or fail if the option is not defined.
+
 **Examples**
 
 Print out the inferred config using a the default group key-value notation.
@@ -443,6 +455,13 @@ $ nextflow config -properties
 
 docker.enabled = true
 process.executor = local
+```
+
+Print out the value of a specific configuration property.
+
+```console
+$ nextflow config -value process.executor
+local
 ```
 
 Print out all profiles from the project's configuration.
@@ -531,6 +550,66 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 
 ```console
 $ nextflow drop nextflow-io/hello -f
+```
+
+### fs
+
+Perform basic filesystem operations.
+
+**Usage**
+
+```console
+$ nextflow fs [subcommands]
+```
+
+**Description**
+
+The `fs` command is used to perform filesystem operations like copy, move, delete, list directory, etc. Like the `file()` method, it can work with local files, remote URLs, and remote object storage. Storage credentials can be provided through the same manner as launching a pipeline (Nextflow config, environment vars, etc).
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Examples**
+
+List a directory.
+
+```console
+$ nextflow fs list <directory>
+```
+
+Print the contents of a file to standard output.
+
+```console
+$ nextflow fs cat <file>
+```
+
+Copy a file or directory.
+
+```console
+$ nextflow fs cp <source> <target>
+```
+
+Move a file or directory.
+
+```console
+$ nextflow fs mv <source> <target>
+```
+
+Delete a file or directory.
+
+```console
+$ nextflow fs rm <path>
+```
+
+:::{versionadded} 23.10.0
+:::
+
+Print file or directory attributes.
+
+```console
+$ nextflow fs stat <path>
 ```
 
 ### help
@@ -629,6 +708,57 @@ $ nextflow info nextflow-io/hello
     testing
     v1.1 [t]
     v1.2 [t]
+```
+
+### inspect
+
+:::{versionadded} 23.09.0-edge
+:::
+
+Inspect process settings in a pipeline project. Currently only supports the `container` directive.
+
+**Usage**
+
+```console
+$ nextflow inspect [options] [project]
+```
+
+**Description**
+
+The `inspect` command allows you to determine the container for each process in a pipeline without running the pipeline. It prints to stdout a listing of containers for each process, formatted either as JSON or Nextflow configuration.
+
+**Options**
+
+`-concretize`
+: Build the container images resolved by the inspect command.
+
+`-format` (`json`)
+: Inspect output format. Can be `json` or `config`.
+
+`-i, -ignore-errors`
+: Ignore errors while inspecting the pipeline.
+
+`-params-file`
+: Load script parameters from a JSON/YAML file.
+
+`-profile`
+: Use the given configuration profile(s).
+
+`-r, revision`
+: Revision of the project to inspect (either a git branch, tag or commit SHA number).
+
+**Examples**
+
+Get the list of containers used by a pipeline.
+
+```console
+$ nextflow inspect nextflow-io/hello
+```
+
+Specify parameters as with the `run` command:
+
+```console
+$ nextflow inspect main.nf --alpha 1 --beta foo
 ```
 
 ### kuberun
@@ -758,6 +888,8 @@ $ nextflow list
 nextflow-io/hello
 nextflow-hub/fastqc
 ```
+
+(cli-log)=
 
 ### log
 
@@ -1002,6 +1134,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-cache`
 : Enable/disable processes caching.
 
+`-cloudcache`
+: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
+
 `-d, -deep`
 : Create a shallow clone of the specified depth.
 
@@ -1009,9 +1144,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL2 syntax.
 
 `-dump-channels`
@@ -1058,7 +1197,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-preview`
 : :::{versionadded} 22.06.0-edge
   :::
-: Run the workflow script skipping the execution of all processes
+: Run the workflow script skipping the execution of all processes.
 
 `-process.<key>=<value>`
 : Set process config options.
@@ -1094,8 +1233,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
-`-with-dag` (`dag.dot`)
+`-with-dag` (`dag-<timestamp>.html`)
 : Create pipeline DAG file.
+: :::{versionchanged} 23.10.0
+  The default format was changed from `dot` to `html`.
+  :::
 
 `-with-docker`
 : Enable process execution in a Docker container.
@@ -1106,7 +1248,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-podman`
 : Enable process execution in a Podman container.
 
-`-with-report` (`report.html`)
+`-with-report` (`report-<timestamp>.html`)
 : Create workflow execution HTML report.
 
 `-with-singularity`
@@ -1115,19 +1257,19 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-spack`
 : Use the specified Spack environment package or file (must end with `.yaml`)
 
-`-with-timeline` (`timeline.html`)
+`-with-timeline` (`timeline-<timestamp>.html`)
 : Create workflow execution timeline.
 
-`-with-tower`
+`-with-tower` (`https://api.tower.nf`)
 : Monitor workflow execution with [Tower](https://cloud.tower.nf/).
 
-`-with-trace` (`trace.txt`)
+`-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
 
-`-with-wave`
+`-with-wave` (`https://wave.seqera.io`)
 : Enable the use of Wave containers.
 
-`-with-weblog`
+`-with-weblog` (`http://localhost`)
 : Send workflow status messages via HTTP to target URL.
 
 `-without-conda`

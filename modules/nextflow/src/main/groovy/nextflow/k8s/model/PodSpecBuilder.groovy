@@ -116,6 +116,8 @@ class PodSpecBuilder {
 
     List<String> devices
 
+    Map<String,?> resourcesLimits
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -306,13 +308,13 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withDevices(List<String> dev) {
-        this.devices = dev
+    PodSpecBuilder withActiveDeadline(int seconds) {
+        this.activeDeadlineSeconds = seconds
         return this
     }
 
-    PodSpecBuilder withActiveDeadline(int seconds) {
-        this.activeDeadlineSeconds = seconds
+    PodSpecBuilder withResourcesLimits(Map<String,?> limits) {
+        this.resourcesLimits = limits
         return this
     }
 
@@ -410,9 +412,6 @@ class PodSpecBuilder {
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
 
-        if( devices )
-            container.devices = devices
-
         final secContext = new LinkedHashMap(10)
         if( privileged ) {
             // note: privileged flag needs to be defined in the *container* securityContext
@@ -495,6 +494,10 @@ class PodSpecBuilder {
             container.resources = addDiskResources(this.disk, container.resources as Map)
         }
 
+        if( this.resourcesLimits ) {
+            container.resources = addResourcesLimits(this.resourcesLimits, container.resources as Map)
+        }
+
         // add storage definitions ie. volumes and mounts
         final List<Map> mounts = []
         final List<Map> volumes = []
@@ -564,30 +567,30 @@ class PodSpecBuilder {
     Map buildAsJob() {
         final pod = build()
 
-        // job metadata
-        final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
-        metadata.namespace = this.namespace ?: 'default'
+        return [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: pod.metadata,
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: pod.metadata,
+                    spec: pod.spec
+                ]
+            ]
+        ]
+    }
 
-        // job spec
-        final spec = new LinkedHashMap<String,Object>()
-        spec.backoffLimit = 0
-        spec.template = [spec: pod.spec]
+    @PackageScope
+    Map addResourcesLimits(Map limits, Map result) {
+        if( result == null )
+            result = new LinkedHashMap(10)
 
-        if( labels )
-            metadata.labels = sanitize(labels, MetaType.LABEL)
-
-        if( annotations )
-            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
-
-        final result = [
-                apiVersion: 'batch/v1',
-                kind: 'Job',
-                metadata: metadata,
-                spec: spec ]
+        final limits0 = result.limits as Map ?: new LinkedHashMap(10)
+        limits0.putAll( limits )
+        result.limits = limits0
 
         return result
-
     }
 
     @PackageScope

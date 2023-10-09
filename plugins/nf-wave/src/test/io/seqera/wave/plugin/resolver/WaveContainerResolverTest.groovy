@@ -18,6 +18,7 @@
 package io.seqera.wave.plugin.resolver
 
 import io.seqera.wave.plugin.WaveClient
+import io.seqera.wave.plugin.config.WaveConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.DefaultContainerResolver
@@ -35,6 +36,7 @@ class WaveContainerResolverTest extends Specification {
         given:
         def CONTAINER_NAME = "ubuntu:latest"
         def WAVE_CONTAINER = new ContainerInfo(CONTAINER_NAME, "wave.io/ubuntu:latest", "12345")
+        def ORAS_CONTAINER = new ContainerInfo(CONTAINER_NAME, "oras://wave.io/ubuntu:latest", "12345")
         def SINGULARITY_CONTAINER = new ContainerInfo('ubuntu:latest', '/some/singularity/ubuntu.img')
         and:
         def defaultResolver = Spy(DefaultContainerResolver)
@@ -46,48 +48,40 @@ class WaveContainerResolverTest extends Specification {
             }
         }
 
+        // docker images
         when:
         def result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true }
+        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) }
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
         and:
-        1 * resolver.waveContainer(task, CONTAINER_NAME) >> WAVE_CONTAINER
+        1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
         and:
         result == WAVE_CONTAINER
 
-
+        // singularity images
         when:
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true }
+        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) }
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
         and:
-        1 * resolver.waveContainer(task, CONTAINER_NAME) >> WAVE_CONTAINER
+        1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
         1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> SINGULARITY_CONTAINER
         and:
         result == SINGULARITY_CONTAINER
+
+        // singularity images + oras protocol
+        when:
+        result = resolver.resolveImage(task, CONTAINER_NAME)
+        then:
+        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) { freezeMode()>>true } }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
+        and:
+        1 * resolver.waveContainer(task, CONTAINER_NAME, true) >> ORAS_CONTAINER
+        0 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> null
+        and:
+        result == ORAS_CONTAINER
     }
 
-    def 'should validate container name' () {
-        when:
-        WaveContainerResolver.validateContainerRepo('ubuntu')
-        then:
-        noExceptionThrown()
-
-        when:
-        WaveContainerResolver.validateContainerRepo('ubuntu:latest')
-        then:
-        noExceptionThrown()
-
-        when:
-        WaveContainerResolver.validateContainerRepo('quay.io/wtsicgp/nanoseq:3.3.0')
-        then:
-        noExceptionThrown()
-
-        when:
-        WaveContainerResolver.validateContainerRepo('docker://quay.io/wtsicgp/nanoseq:3.3.0')
-        then:
-        thrown(IllegalArgumentException)
-    }
 }

@@ -23,7 +23,6 @@ import java.nio.file.Path
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
-import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
@@ -34,8 +33,6 @@ import nextflow.util.CacheHelper
  */
 @CompileStatic
 class CloudCacheStore implements CacheStore {
-
-    private final String LOCK_NAME = 'LOCK'
 
     private final int KEY_SIZE
 
@@ -51,9 +48,6 @@ class CloudCacheStore implements CacheStore {
     /** The base path for this cache instance */
     private Path dataPath
 
-    /** The lock file for this cache instance */
-    private Path lock
-
     /** The path to the index file */
     private Path indexPath
 
@@ -63,27 +57,20 @@ class CloudCacheStore implements CacheStore {
     /** Index file output stream */
     private OutputStream indexWriter
 
-    CloudCacheStore(UUID uniqueId, String runName, Path basePath=null) {
+    CloudCacheStore(UUID uniqueId, String runName, Path basePath) {
+        assert uniqueId, "Missing cloudcache 'uniqueId' argument"
+        assert runName, "Missing cloudcache 'runName' argument"
+        assert basePath, "Missing cloudcache 'basePath' argument"
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
-        this.basePath = basePath ?: defaultBasePath()
+        this.basePath = basePath
         this.dataPath = this.basePath.resolve("$uniqueId")
-        this.lock = dataPath.resolve(LOCK_NAME)
         this.indexPath = dataPath.resolve("index.$runName")
-    }
-
-    private Path defaultBasePath() {
-        final basePath = SysEnv.get('NXF_CLOUDCACHE_PATH')
-        if( !basePath )
-            throw new IllegalArgumentException("NXF_CLOUDCACHE_PATH must be defined when using the path-based cache store")
-
-        return basePath as Path
     }
 
     @Override
     CloudCacheStore open() {
-        acquireLock()
         indexWriter = new BufferedOutputStream(Files.newOutputStream(indexPath))
         return this
     }
@@ -92,26 +79,8 @@ class CloudCacheStore implements CacheStore {
     CloudCacheStore openForRead() {
         if( !dataPath.exists() )
             throw new AbortOperationException("Missing cache directory: $dataPath")
-        acquireLock()
         indexReader = Files.newInputStream(indexPath)
         return this
-    }
-
-    private void acquireLock() {
-        if( lock.exists() ) {
-            final msg = """
-                Unable to acquire lock for session with ID ${uniqueId}
-
-                Common reasons for this error are:
-                - You are trying to resume the execution of an already running pipeline
-                - A previous execution was abruptly interrupted, leaving the session open
-
-                You can see the name of the conflicting run by inspecting the contents of the following path: ${lock}
-                """
-            throw new IOException(msg)
-        }
-
-        lock.text = runName
     }
 
     @Override
@@ -122,7 +91,6 @@ class CloudCacheStore implements CacheStore {
     @Override
     void close() {
         FilesEx.closeQuietly(indexWriter)
-        lock.delete()
     }
 
     @Override

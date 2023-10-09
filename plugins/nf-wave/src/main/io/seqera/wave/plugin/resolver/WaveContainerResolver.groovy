@@ -30,8 +30,6 @@ import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
 import nextflow.processor.TaskRun
-import nextflow.util.StringUtils
-
 /**
  * Implement Wave container resolve logic
  *
@@ -54,22 +52,34 @@ class WaveContainerResolver implements ContainerResolver {
         return client0 = new WaveClient( Global.session as Session )
     }
 
+    private String getContainerEngine0(TaskRun task) {
+        final config = task.getContainerConfig()
+        final result = config.getEngine()
+        if( result )
+            return result
+        // fallback to docker by default
+        log.warn "Missing engine in container config - offending value: $config"
+        return 'docker'
+    }
+
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !client().enabled() )
             return defaultResolver.resolveImage(task, imageName)
 
+        final freeze = client().config().freezeMode()
+        final engine = getContainerEngine0(task)
+        final nativeSingularityBuild = freeze && engine in SINGULARITY_LIKE
         if( !imageName ) {
             // when no image name is provided the module bundle should include a
             // Dockerfile or a Conda recipe or a Spack recipe to build
             // an image on-fly with an automatically assigned name
-            return waveContainer(task, null)
+            return waveContainer(task, null, nativeSingularityBuild)
         }
 
-        final engine= task.getContainerConfig().getEngine()
         if( engine in DOCKER_LIKE ) {
             final image = defaultResolver.resolveImage(task, imageName)
-            return waveContainer(task, image.target)
+            return waveContainer(task, image.target, false)
         }
         else if( engine in SINGULARITY_LIKE ) {
             // remove any `docker://` prefix if any
@@ -80,8 +90,11 @@ class WaveContainerResolver implements ContainerResolver {
                 return defaultResolver.resolveImage(task, imageName)
             }
             // fetch the wave container name
-            final image = waveContainer(task, imageName)
-            // then adapt it to singularity format
+            final image = waveContainer(task, imageName, nativeSingularityBuild)
+            // oras prefixed container are served directly
+            if( image && image.target.startsWith("oras://") )
+                return image
+            // otherwise adapt it to singularity format
             return defaultResolver.resolveImage(task, image.target)
         }
         else
@@ -102,23 +115,14 @@ class WaveContainerResolver implements ContainerResolver {
      *      The container image name returned by the Wave backend or {@code null}
      *      when the task does not request any container or dockerfile to build
      */
-    protected ContainerInfo waveContainer(TaskRun task, String container) {
-        validateContainerRepo(container)
-        final assets = client().resolveAssets(task, container)
+    protected ContainerInfo waveContainer(TaskRun task, String container, boolean singularity) {
+        final assets = client().resolveAssets(task, container, singularity)
         if( assets ) {
             return client().fetchContainerImage(assets)
         }
         // no container and no dockerfile, wave cannot do anything
         log.trace "No container image or build recipe defined for task ${task.processor.name}"
         return null
-    }
-
-    static protected void validateContainerRepo(String name) {
-        if( !name )
-            return 
-        final scheme = StringUtils.getUrlProtocol(name)
-        if( scheme )
-            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
     }
 
 }

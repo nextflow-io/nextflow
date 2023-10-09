@@ -191,9 +191,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
         try {
             run0()
         }
-        catch(InvocationTargetException e) {
+        catch( InvocationTargetException e ) {
             // provide the exception cause which is more informative than InvocationTargetException
-            throw(e.cause ?: e)
+            Throwable target = e
+            do target = target.cause
+            while ( target instanceof InvocationTargetException )
+            throw target
         }
         finally {
             ExecutionStack.pop()
@@ -204,6 +207,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void print(Object object) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(object?.toString())
         else
@@ -212,6 +218,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println() {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info("")
         else
@@ -220,6 +229,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println(Object object) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(object?.toString())
         else
@@ -228,6 +240,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object arg) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(String.printf(msg, arg))
         else
@@ -236,6 +251,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object[] args) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(String.printf(msg, args))
         else
