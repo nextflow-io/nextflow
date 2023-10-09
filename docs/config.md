@@ -562,7 +562,7 @@ The following settings are available:
 `docker.fusionOptions`
 : :::{versionadded} 23.01.0-edge
   :::
-: :::{versionchanged} 23.08.0-edge
+: :::{versionchanged} 23.10.0
   The default options were changed from `'--rm --privileged'` to the current default.
   :::
 : The extra command line options to be used with Fusion (default: `'--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'`).
@@ -1137,10 +1137,10 @@ The following settings are available:
 `podman.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
-`docker.fusionOptions`
+`podman.fusionOptions`
 : :::{versionadded} 23.01.0-edge
   :::
-: :::{versionchanged} 23.08.0-edge
+: :::{versionchanged} 23.10.0
   The default options were changed from `'--rm --privileged'` to the current default.
   :::
 : The extra command line options to be used with Fusion (default: `'--rm --device /dev/fuse'`).
