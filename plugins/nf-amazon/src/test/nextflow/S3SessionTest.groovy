@@ -33,21 +33,15 @@ class S3SessionTest extends Specification {
     def 'should get cloud cache path' () {
         given:
         def session = Spy(Session)
-        SysEnv.push(ENV)
 
         expect:
-        session.initCloudCache(CONFIG, FileHelper.asPath(WORKDIR)) == EXPECTED
-
-        cleanup:
-        SysEnv.pop()
+        session.cloudCachePath(CONFIG, FileHelper.asPath(WORKDIR)) == EXPECTED
 
         where:
-        CONFIG                                  | WORKDIR           | ENV           | EXPECTED
-        null                                    | '/foo'            | [:]           | null
-        [enabled:true, path:'s3://this/that']   | '/foo'            | [:]           | FileHelper.asPath('s3://this/that')
-        [enabled:true, path:'s3://this/that']   | '/foo'            | [NXF_CLOUDCACHE_PATH:'s3://other/path']       | FileHelper.asPath('s3://this/that')
-        [enabled:true]                          | '/foo'            | [NXF_CLOUDCACHE_PATH:'s3://other/path']       | FileHelper.asPath('s3://other/path')
-        [enabled:true]                          | 's3://foo/work'   | [:]            | FileHelper.asPath('s3://foo/work')
+        CONFIG                                  | WORKDIR           | EXPECTED
+        null                                    | '/foo'            | null
+        [enabled:true]                          | 's3://foo/work'   | FileHelper.asPath('s3://foo/work')
+        [enabled:true, path:'s3://this/that']   | '/foo'            | FileHelper.asPath('s3://this/that')
 
     }
 
@@ -57,7 +51,7 @@ class S3SessionTest extends Specification {
         def session = Spy(Session)
 
         when:
-        session.initCloudCache([enabled:true], Path.of('/foo/dir'))
+        session.cloudCachePath([enabled:true], Path.of('/foo/dir'))
         then:
         def e = thrown(IllegalArgumentException)
         e.message == "Storage path not supported by Cloud-cache - offending value: '/foo/dir'"

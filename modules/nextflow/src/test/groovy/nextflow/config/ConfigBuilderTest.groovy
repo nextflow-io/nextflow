@@ -1212,6 +1212,41 @@ class ConfigBuilderTest extends Specification {
         config.cloudcache.enabled
         config.cloudcache.path == 's3://should/override/config'
 
+        when:
+        config = new ConfigObject()
+        config.cloudcache.enabled = false
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        !config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/env'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/env'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun())
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://config/path'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
     }
 
     def 'should enable conda env' () {

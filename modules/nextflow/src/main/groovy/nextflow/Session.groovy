@@ -367,17 +367,17 @@ class Session implements ISession {
         this.setLibDir( config.libDir as String )
 
         // -- init cloud cache path
-        this.cloudCachePath = initCloudCache(config.cloudcache as Map, workDir)
+        this.cloudCachePath = cloudCachePath(config.cloudcache as Map, workDir)
 
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
     }
 
-    protected Path initCloudCache(Map cloudcache, Path workDir) {
+    protected Path cloudCachePath(Map cloudcache, Path workDir) {
         if( !cloudcache?.enabled )
             return null
-        final String path = cloudcache.path ?: SysEnv.get('NXF_CLOUDCACHE_PATH')
+        final String path = cloudcache.path
         final result = path ? FileHelper.asPath(path) : workDir
         if( result.scheme !in ['s3','az','gs'] ) {
             throw new IllegalArgumentException("Storage path not supported by Cloud-cache - offending value: '${result}'")
