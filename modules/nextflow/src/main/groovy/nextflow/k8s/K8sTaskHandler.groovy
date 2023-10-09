@@ -252,8 +252,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             if( fusionConfig().privileged() )
                 builder.withPrivileged(true)
             else {
-                builder.withDevices(['/dev/fuse'])
-                        .withCapabilities(add:['SYS_ADMIN','MKNOD','SYS_CHROOT','SETFCAP'])
+                builder.withResourcesLimits(["nextflow.io/fuse": 1])
             }
 
             final env = fusionLauncher().fusionEnv()
