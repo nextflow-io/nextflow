@@ -129,8 +129,9 @@ class GridExecutorTest extends Specification {
         // now 'checkIfCompleted' returns true
         handler.checkIfCompleted()
         handler.status == TaskStatus.COMPLETED
-        // but the 'exitStatus' not ZERO
-        handler.task.exitStatus == Integer.MAX_VALUE
+        // but the 'exitStatus' is-1 to signal the '.exitcode' file was empty
+        // and allow the task to be retried
+        handler.task.exitStatus == -1
 
     }
 
