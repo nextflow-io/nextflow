@@ -709,6 +709,19 @@ class ConfigBuilder {
             config.fusion.enabled = cmdRun.withFusion == 'true'
         }
 
+        // -- set cloudcache options
+        final envCloudPath = env.get('NXF_CLOUDCACHE_PATH')
+        if( cmdRun.cloudCachePath || envCloudPath ) {
+            if( !(config.cloudcache instanceof Map) )
+                config.cloudcache = [:]
+            if( !config.cloudcache.isSet('enabled') )
+                config.cloudcache.enabled = true
+            if( cmdRun.cloudCachePath && cmdRun.cloudCachePath != '-' )
+                config.cloudcache.path = cmdRun.cloudCachePath
+            else if( !config.cloudcache.isSet('path') && envCloudPath )
+                config.cloudcache.path = envCloudPath
+        }
+
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.hasParams() )
             config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
