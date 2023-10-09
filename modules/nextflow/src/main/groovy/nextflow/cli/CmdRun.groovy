@@ -111,6 +111,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
     String bucketDir
 
+    @Parameter(names=['-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
+    String cloudCachePath
+
     /**
      * Defines the parameters to be passed to the pipeline script
      */

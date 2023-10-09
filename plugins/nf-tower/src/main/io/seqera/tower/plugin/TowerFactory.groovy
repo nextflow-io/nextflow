@@ -54,7 +54,7 @@ class TowerFactory implements TraceObserverFactory {
         final tower = createTowerClient(session, config)
         result.add(tower)
         // create the logs checkpoint
-        if( env.containsKey('NXF_CLOUDCACHE_PATH') )
+        if( session.cloudCachePath )
             result.add( new LogsCheckpoint() )
         return result
     }

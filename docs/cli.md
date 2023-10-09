@@ -1134,6 +1134,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-cache`
 : Enable/disable processes caching.
 
+`-cloudcache`
+: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
+
 `-d, -deep`
 : Create a shallow clone of the specified depth.
 
