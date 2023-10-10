@@ -308,11 +308,6 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withDevices(List<String> dev) {
-        this.devices = dev
-        return this
-    }
-
     PodSpecBuilder withActiveDeadline(int seconds) {
         this.activeDeadlineSeconds = seconds
         return this
@@ -416,9 +411,6 @@ class PodSpecBuilder {
 
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
-
-        if( devices )
-            container.devices = devices
 
         final secContext = new LinkedHashMap(10)
         if( privileged ) {
