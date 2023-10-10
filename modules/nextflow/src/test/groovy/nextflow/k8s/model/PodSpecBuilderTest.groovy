@@ -17,6 +17,7 @@
 package nextflow.k8s.model
 
 import nextflow.executor.res.AcceleratorResource
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -116,6 +117,35 @@ class PodSpecBuilderTest extends Specification {
         pod.spec.containers[0].devices == ['/dev/fuse']
         pod.spec.containers[0].securityContext == [capabilities: [add:['SYS_ADMIN']]]
 
+    }
+
+    def 'should create pod with resources limits' () {
+        when:
+        def pod1 = new PodSpecBuilder()
+            .withPodName('foo')
+            .withImageName('busybox')
+            .withCommand('echo foo')
+            .withResourcesLimits('nextflow.io/fuse': 1)
+            .build()
+
+        then:
+        pod1.spec.containers[0].resources == [limits:['nextflow.io/fuse':1]]
+
+
+        when:
+        def pod2 = new PodSpecBuilder()
+            .withPodName('foo')
+            .withImageName('busybox')
+            .withCommand('echo foo')
+            .withCpus(8)
+            .withMemory(MemoryUnit.of('10GB'))
+            .withResourcesLimits('nextflow.io/fuse': 1)
+            .build()
+
+        then:
+        pod2.spec.containers[0].resources == [
+                                                requests: ['cpu':8, 'memory':'10240Mi'],
+                                                limits: [memory:'10240Mi', 'nextflow.io/fuse':1] ]
     }
 
     def 'should set namespace, labels and annotations' () {
@@ -625,6 +655,22 @@ class PodSpecBuilderTest extends Specification {
         then:
         res.requests == [cpu: 2, 'example.com/fpga': 5]
         res.limits == ['example.com/fpga': 10]
+    }
+
+    def 'should add resources limits' () {
+        given:
+        def builder = new PodSpecBuilder()
+        Map resources
+
+        when:
+        resources = builder.addResourcesLimits(['foo':1], null)
+        then:
+        resources == [limits:[foo:1]]
+
+        when:
+        resources = builder.addResourcesLimits(['foo':1], [requests: ['x':1], limits: ['y': 2]])
+        then:
+        resources == [requests:[x:1], limits:[y:2, foo:1]]
     }
 
 
