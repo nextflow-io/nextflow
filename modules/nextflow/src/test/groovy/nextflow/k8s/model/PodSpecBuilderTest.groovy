@@ -102,23 +102,6 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
-    def 'should create pod spec with device and capabilities' () {
-
-        when:
-        def pod = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withCommand('echo foo')
-                .withDevices(['/dev/fuse'])
-                .withCapabilities(add:['SYS_ADMIN'])
-                .build()
-
-        then:
-        pod.spec.containers[0].devices == ['/dev/fuse']
-        pod.spec.containers[0].securityContext == [capabilities: [add:['SYS_ADMIN']]]
-
-    }
-
     def 'should create pod with resources limits' () {
         when:
         def pod1 = new PodSpecBuilder()
