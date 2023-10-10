@@ -199,6 +199,14 @@ The following configuration options are available:
 `fusion.logOutput`
 : Where the logging output is written. 
 
+`fusion.privileged`
+: :::{versionadded} 23.10.0
+  :::
+: This allows disabling the privileged container execution when using the Fusion file system.
+  The effective use of this setting depends on the target execution. Currently, it's only supported by the Kubernetes
+  executor which requires the use the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) to be installed
+  in the target cluster (default: `true`).
+
 `fusion.tagsEnabled`
 : Enable/disable the tagging of files created in the underlying object storage via the Fusion client (default: `true`).
 

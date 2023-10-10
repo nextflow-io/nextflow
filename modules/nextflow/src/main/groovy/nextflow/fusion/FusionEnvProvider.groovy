@@ -18,8 +18,6 @@
 package nextflow.fusion
 
 
-import nextflow.Global
-import nextflow.SysEnv
 import nextflow.plugin.Plugins
 /**
  * Provider strategy for {@link FusionEnv}
@@ -29,7 +27,7 @@ import nextflow.plugin.Plugins
 class FusionEnvProvider {
 
     Map<String,String> getEnvironment(String scheme) {
-        final config = new FusionConfig(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+        final config = FusionConfig.getConfig()
         final list = Plugins.getExtensions(FusionEnv)
         final result = new HashMap<String,String>()
         for( FusionEnv it : list ) {
