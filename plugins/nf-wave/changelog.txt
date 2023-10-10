@@ -1,5 +1,10 @@
 nf-wave changelog
 ==================
+0.14.0 - 10 Oct 2023
+- Add bioconda and seqera Conda default channels (#4359) [ff012dcd]
+- Improve Wave error handling [d47e8b07]
+- Improve Wave config validation [7d5a21b0]
+
 0.13.0 - 28 Sep 2023
 - Wave does not support 'null' container engine [f3eba3d7]
 - Default Conda basePackages to "conda-forge::procps-ng" [367af52f]
