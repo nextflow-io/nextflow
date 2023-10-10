@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.container.inspect.ContainersInspector
+import nextflow.exception.AbortOperationException
 import nextflow.util.LoggerHelper
 /**
  * Implement `inspect` command
@@ -88,6 +89,8 @@ class CmdInspect extends CmdBase {
     }
 
     protected void applyInspect(Session session) {
+        // disallow singularity w/o wave and freeze
+        checkSingularityConfig(session.config)
         // disable wave await mode when running
         if( session.config.wave instanceof Map )
             checkWaveConfig(session.config.wave as Map)
@@ -103,4 +106,11 @@ class CmdInspect extends CmdBase {
             wave.dryRun = !concretize
     }
 
+    protected void checkSingularityConfig(Map config) {
+        final sing = config.navigate('singularity.enabled',false)
+        final wave = config.navigate('wave.enabled',false)
+        final freeze = config.navigate('wave.freeze',false)
+        if( sing && (!wave || !freeze) )
+            throw new AbortOperationException("Inspect command with Singularity requires enabling 'wave' and 'freeze' settings")
+    }
 }

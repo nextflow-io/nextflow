@@ -17,7 +17,7 @@
 
 package nextflow.cli
 
-
+import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -48,6 +48,43 @@ class CmdInspectTest extends Specification {
         and:
         [enabled:true, freeze: true]    | false         | [enabled:true, freeze:true, dryRun: true]
         [enabled:true, freeze: true]    | true          | [enabled:true, freeze:true, dryRun: false]
+
+    }
+
+    def 'should allow singularity only with wave and freeze' () {
+        given:
+        def cmd = Spy(new CmdInspect())
+
+        when:
+        cmd.checkSingularityConfig([:])
+        then:
+        noExceptionThrown()
+
+        when:
+        cmd.checkSingularityConfig([singularity:[enabled:false]])
+        then:
+        noExceptionThrown()
+
+        when:
+        cmd.checkSingularityConfig([wave:[enabled:true, freeze:true]])
+        then:
+        noExceptionThrown()
+
+        when:
+        cmd.checkSingularityConfig([singularity:[enabled:true], wave:[enabled:true, freeze:true]])
+        then:
+        noExceptionThrown()
+
+        // singularity w/o wave and freeze is not allowed
+        when:
+        cmd.checkSingularityConfig([singularity:[enabled:true]])
+        then:
+        thrown(AbortOperationException)
+
+        when:
+        cmd.checkSingularityConfig([singularity:[enabled:true], wave:[enabled:true]])
+        then:
+        thrown(AbortOperationException)
 
     }
 
