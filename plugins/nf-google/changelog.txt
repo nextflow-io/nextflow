@@ -1,5 +1,9 @@
 nf-google changelog
 ===================
+1.8.3 - 10 Oct 2023
+- Add setting to enable the use of sync command [f0d5cc5c]
+- Fix Google Batch do not stop running jobs (#4381) [3d6b7358]
+
 1.8.2 - 28 Sep 2023
 - Fix allow_other vulnerability preventing google-batch submissions (#4332) [9b3741e3]
 
