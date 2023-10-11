@@ -420,12 +420,12 @@ class TaskProcessor {
         // -- check that input set defines at least two elements
         def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
-            checkWarn "Input `set` must define at least two component -- Check process `$name`"
+            checkWarn "Input `tuple` must define at least two component -- Check process `$name`"
 
         // -- check that output set defines at least two elements
         def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
         if( invalidOutputSet )
-            checkWarn "Output `set` must define at least two component -- Check process `$name`"
+            checkWarn "Output `tuple` must define at least two component -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
