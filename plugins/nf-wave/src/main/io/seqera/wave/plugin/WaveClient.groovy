@@ -79,7 +79,7 @@ class WaveClient {
                         'Accept','application/vnd.docker.distribution.manifest.v2+json',
                         'Accept','application/vnd.docker.distribution.manifest.list.v2+json' }
 
-    private static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','bioconda','conda-forge','defaults']
+    private static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
 
     private static final String DEFAULT_SPACK_ARCH = 'x86_64'
 
