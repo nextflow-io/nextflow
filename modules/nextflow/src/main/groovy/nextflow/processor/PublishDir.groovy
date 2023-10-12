@@ -405,8 +405,10 @@ class PublishDir {
      */
     @CompileStatic
     protected Path resolveFusionLink(Path file) {
-        while( file.name in getFusionLinks(file.parent) )
-            file = file.text.replace('/fusion/s3/', 's3://') as Path
+        while( file.name in getFusionLinks(file.parent) ) {
+            def pattern = ~/^\/fusion\/([^\/]+)\/(.*)/
+            file = file.text.replaceFirst(pattern) { _, scheme, path -> "${scheme}://${path}" } as Path
+        }
         return file
     }
 
