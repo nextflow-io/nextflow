@@ -1588,6 +1588,12 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
+`NXF_ENABLE_AWS_SES`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default: `false`)
+
+
 `NXF_ENABLE_FS_SYNC`
 : :::{versionadded} 23.10.0
   :::
