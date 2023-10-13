@@ -224,7 +224,7 @@ class Launcher {
                 normalized << '%all'
             }
 
-            else if( current == '-cloudcache' && (i==args.size() || args[i].startsWith('-'))) {
+            else if( current == '-with-cloudcache' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
 
