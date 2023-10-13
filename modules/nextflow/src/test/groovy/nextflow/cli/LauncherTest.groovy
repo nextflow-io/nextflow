@@ -187,9 +187,9 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run', '-', '-a', '-b') == ['run','-stdin', '-a', '-b']
         launcher.normalizeArgs('run') == ['run']
 
-        launcher.normalizeArgs('run','-cloudcache') == ['run', '-cloudcache', '-']
-        launcher.normalizeArgs('run','-cloudcache', '-x') == ['run', '-cloudcache', '-', '-x']
-        launcher.normalizeArgs('run','-cloudcache', 's3://foo/bar') == ['run', '-cloudcache','s3://foo/bar']
+        launcher.normalizeArgs('run','-with-cloudcache') == ['run', '-with-cloudcache', '-']
+        launcher.normalizeArgs('run','-with-cloudcache', '-x') == ['run', '-with-cloudcache', '-', '-x']
+        launcher.normalizeArgs('run','-with-cloudcache', 's3://foo/bar') == ['run', '-with-cloudcache','s3://foo/bar']
         
         launcher.normalizeArgs('run','-with-tower') == ['run', '-with-tower', '-']
         launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']

@@ -1134,9 +1134,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-cache`
 : Enable/disable processes caching.
 
-`-cloudcache`
-: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
-
 `-d, -deep`
 : Create a shallow clone of the specified depth.
 
@@ -1229,6 +1226,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-with-charliecloud`
 : Enable process execution in a Charliecloud container.
+
+`-with-cloudcache`
+: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
