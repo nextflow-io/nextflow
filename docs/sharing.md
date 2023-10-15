@@ -110,7 +110,7 @@ The `pull` command allows you to download a project from a GitHub repository or 
 nextflow pull nextflow-io/examples
 ```
 
-Altenatively, you can use the repository URL as the name of the project to pull:
+Alternatively, you can use the repository URL as the name of the project to pull:
 
 ```bash
 nextflow pull https://github.com/nextflow-io/examples
@@ -460,6 +460,8 @@ Read the {ref}`container-page` page to learn more on how to use containers with 
 This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
 
 [^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.
+
+(bundling-executables)=
 
 ### Bundling executables in the workflow
 

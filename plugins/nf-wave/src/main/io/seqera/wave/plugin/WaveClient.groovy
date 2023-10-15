@@ -79,7 +79,7 @@ class WaveClient {
                         'Accept','application/vnd.docker.distribution.manifest.v2+json',
                         'Accept','application/vnd.docker.distribution.manifest.list.v2+json' }
 
-    private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
+    private static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
 
     private static final String DEFAULT_SPACK_ARCH = 'x86_64'
 
@@ -118,7 +118,7 @@ class WaveClient {
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
-        log.debug "Wave endpoint: ${endpoint}; config: $config"
+        log.debug "Wave config: $config"
         this.packer = new Packer()
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
@@ -306,8 +306,9 @@ class WaveClient {
 
         final resp = httpSend(req)
         final code = resp.statusCode()
+        final body = resp.body()
         if( code>=200 && code<400 ) {
-            log.debug "Wave container config response: [$code] ${resp.body()}"
+            log.debug "Wave container config response: [$code] ${body}"
             return jsonToContainerConfig(resp.body())
         }
         throw new BadResponseException("Unexpected response for containerContainerConfigUrl \'$configUrl\': [${resp.statusCode()}] ${resp.body()}")
@@ -430,11 +431,11 @@ class WaveClient {
                 if( isCondaLocalFile(attrs.conda) ) {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
-                    condaFile = condaFileFromPath(attrs.conda, null, config.condaOpts())
+                    condaFile = condaFileFromPath(attrs.conda, null)
                 }
                 else {
                     // 'conda' attributes is resolved as the conda packages to be used
-                    condaFile = condaFileFromPackages(attrs.conda, condaChannels, config.condaOpts())
+                    condaFile = condaFileFromPackages(attrs.conda, condaChannels)
                 }
                 // create the container file to build the container
                 containerScript = singularity
@@ -487,6 +488,8 @@ class WaveClient {
          */
         final platform = dockerArch
 
+        // check is a valid container image
+        WaveAssets.validateContainerRepo(containerImage)
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig(platform)
         return new WaveAssets(
@@ -549,12 +552,13 @@ class WaveClient {
                 .build()
         final begin = System.currentTimeMillis()
         final resp = httpSend(req)
+        final body = resp.body()
         final code = resp.statusCode()
         if( code>=200 && code<400 ) {
-            log.debug "Wave container available in ${nextflow.util.Duration.of(System.currentTimeMillis()-begin)}: [$code] ${resp.body()}"
+            log.debug "Wave container available in ${nextflow.util.Duration.of(System.currentTimeMillis()-begin)}: [$code] ${body}"
         }
         else
-            throw new BadResponseException("Unexpected response for \'$manifest\': [${resp.statusCode()}] ${resp.body()}")
+            throw new BadResponseException("Unexpected response for \'$manifest\': [${code}] ${body}")
     }
 
     static protected boolean isCondaLocalFile(String value) {
@@ -585,7 +589,9 @@ class WaveClient {
                 .build()
 
         final resp = httpSend(req)
-        log.debug "Refresh cookie response: [${resp.statusCode()}] ${resp.body()}"
+        final code = resp.statusCode()
+        final body = resp.body()
+        log.debug "Refresh cookie response: [${code}] ${body}"
         if( resp.statusCode() != 200 )
             return false
 
@@ -621,16 +627,22 @@ class WaveClient {
         return null
     }
 
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond, Predicate<T> handle) {
         final cfg = config.retryOpts()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Wave connection failure - attempt: ${event.attemptCount}", event.lastFailure)
+                def msg = "Wave connection failure - attempt: ${event.attemptCount}"
+                if( event.lastResult!=null )
+                    msg += "; response: ${event.lastResult}"
+                if( event.lastFailure != null )
+                    msg += "; exception: [${event.lastFailure.class.name}] ${event.lastFailure.message}"
+                log.debug(msg)
             }
         }
         return RetryPolicy.<T>builder()
                 .handleIf(cond)
+                .handleResultIf(handle)
                 .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
                 .withMaxAttempts(cfg.maxAttempts)
                 .withJitter(cfg.jitter)
@@ -638,22 +650,16 @@ class WaveClient {
                 .build()
     }
 
-    protected <T> T safeApply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof IOException)  as Predicate<? extends Throwable>
-        final policy = retryPolicy(cond)
+    protected <T> HttpResponse<T> safeApply(CheckedSupplier action) {
+        final retryOnException = (e -> e instanceof IOException) as Predicate<? extends Throwable>
+        final retryOnStatusCode = ((HttpResponse<T> resp) -> resp.statusCode() in SERVER_ERRORS) as Predicate<HttpResponse<T>>
+        final policy = retryPolicy(retryOnException, retryOnStatusCode)
         return Failsafe.with(policy).get(action)
     }
 
-    static private final List<Integer> SERVER_ERRORS = [429,502,503,504]
+    static private final List<Integer> SERVER_ERRORS = [429,500,502,503,504]
 
     protected HttpResponse<String> httpSend(HttpRequest req)  {
-        return safeApply(() -> {
-            final resp=httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-            if( resp.statusCode() in SERVER_ERRORS) {
-                // throws an IOException so that the condition is handled by the retry policy
-                throw new IOException("Unexpected server response code ${resp.statusCode()} - message: ${resp.body()}")
-            }
-            return resp
-        })
+        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
     }
 }

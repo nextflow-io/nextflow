@@ -1218,7 +1218,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * @return A tuple in which:
          *      <li>1st item: {@code true} if successful or {@code false} otherwise
          *      <li>2nd item: on error condition the line containing the error in the source script, zero otherwise
-         *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
+         *      <li>3rd item: on error condition the column containing the error in the source script, zero otherwise
          *
          */
         protected boolean wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {

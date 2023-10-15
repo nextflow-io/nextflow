@@ -46,7 +46,7 @@ class MermaidRendererTest extends Specification {
         then:
         file.text ==
             '''
-            flowchart TD
+            flowchart TB
                 subgraph " "
                 v0[" "]
                 end

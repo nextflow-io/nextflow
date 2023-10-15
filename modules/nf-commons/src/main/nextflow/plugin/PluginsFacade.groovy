@@ -371,8 +371,8 @@ class PluginsFacade implements PluginStateListener {
             specs << defaultPlugins.getPlugin('nf-wave')
         }
 
-        // add cloudcache plugin when NXF_CLOUDCACHE_PATH is set
-        if( env.NXF_CLOUDCACHE_PATH ) {
+        // add cloudcache plugin when cloudcache is enabled in the config
+        if( Bolts.navigate(config, 'cloudcache.enabled')==true ) {
             specs << defaultPlugins.getPlugin('nf-cloudcache')
         }
 

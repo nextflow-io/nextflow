@@ -22,6 +22,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import io.seqera.wave.config.CondaOpts
 import io.seqera.wave.config.SpackOpts
+import nextflow.file.FileHelper
 import nextflow.util.Duration
 /**
  * Model Wave client configuration
@@ -29,7 +30,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includeNames = true, includePackage = false)
+@ToString(includeNames = true, includePackage = false, includeFields = true, excludes = 'reportOpts')
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
@@ -66,8 +67,8 @@ class WaveConfig {
         this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
         this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
-        if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
-            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
+        // some validation
+        validateConfig()
     }
 
     Boolean enabled() { this.enabled }
@@ -93,6 +94,16 @@ class WaveConfig {
     String buildRepository() { buildRepository }
 
     String cacheRepository() { cacheRepository }
+
+    private void validateConfig() {
+        def scheme= FileHelper.getUrlProtocol(endpoint)
+        if( scheme !in ['http','https'] )
+            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: '$endpoint'")
+        if( FileHelper.getUrlProtocol(buildRepository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$buildRepository'")
+        if( FileHelper.getUrlProtocol(cacheRepository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: '$cacheRepository'")
+    }
 
     private RetryOpts retryOpts0(Map opts) {
         if( opts.retryPolicy )
@@ -153,5 +164,6 @@ class WaveConfig {
         return tokensCacheMaxDuration 
     }
 
+    @Deprecated
     ReportOpts reportOpts() { reportOpts }
 }

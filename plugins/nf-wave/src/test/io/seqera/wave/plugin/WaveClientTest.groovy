@@ -19,6 +19,7 @@ package io.seqera.wave.plugin
 
 import static java.nio.file.StandardOpenOption.*
 
+import java.net.http.HttpRequest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -521,9 +522,10 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.4.9
+                FROM mambaorg/micromamba:1.5.1
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
                     '''.stripIndent()
@@ -536,7 +538,9 @@ class WaveClientTest extends Specification {
         and:
         assets.condaFile.text == '''\
                 channels:
+                - seqera
                 - conda-forge
+                - bioconda
                 - defaults
                 dependencies:
                 - bioconda::rseqc=3.0.1
@@ -556,10 +560,10 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.4.9
+                FROM mambaorg/micromamba:1.5.1
                 RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    -f https://host.com/conda-lock.yml \\
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/conda-lock.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
                     '''.stripIndent()
@@ -631,9 +635,10 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.4.9
+                FROM mambaorg/micromamba:1.5.1
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
                     '''.stripIndent()
@@ -710,12 +715,13 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.4.9
+                From: mambaorg/micromamba:1.5.1
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
-                    micromamba install -y -n base -f /scratch/conda.yml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
@@ -730,7 +736,9 @@ class WaveClientTest extends Specification {
         and:
         assets.condaFile.text == '''\
                 channels:
+                - seqera
                 - conda-forge
+                - bioconda
                 - defaults
                 dependencies:
                 - salmon=1.2.3
@@ -750,11 +758,11 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.4.9
+                From: mambaorg/micromamba:1.5.1
                 %post
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    -f https://host.com/lock-file.yaml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/lock-file.yaml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
@@ -784,12 +792,13 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.4.9
+                From: mambaorg/micromamba:1.5.1
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
-                    micromamba install -y -n base -f /scratch/conda.yml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
                 '''.stripIndent()
@@ -1214,5 +1223,46 @@ class WaveClientTest extends Specification {
         'http://foo.com'    | true
         'https://foo.com'   | true
     }
+
+    def 'should retry http request' () {
+
+        given:
+        int requestCount=0
+        HttpHandler handler = { HttpExchange exchange ->
+            if( ++requestCount<3 ) {
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(503, 0)
+                exchange.getResponseBody().close()
+            }
+            else {
+                def body = 'Hello world!'
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(200, body.size())
+                exchange.getResponseBody().write(body.bytes)
+                exchange.getResponseBody().close()
+            }
+        }
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(9901), 0);
+        server.createContext("/", handler);
+        server.start()
+
+        def session = Mock(Session) {getConfig() >> [:] }
+        def client = new WaveClient(session)
+
+        when:
+        def request = HttpRequest.newBuilder().uri(new URI('http://localhost:9901/foo.txt')).build()
+        def response = client.httpSend(request)
+        then:
+        response.statusCode() == 200
+        response.body() == 'Hello world!'
+        and:
+        requestCount == 3
+        
+        cleanup:
+        server?.stop(0)
+
+    }
+
 
 }
