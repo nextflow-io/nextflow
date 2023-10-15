@@ -330,7 +330,7 @@ The fully qualified process name can be used as a {ref}`process selector <config
 
 ## Special operators
 
-### Pipe (`|`)
+### Pipe `|`
 
 The `|` *pipe* operator can be used to compose Nextflow processes and operators. For example:
 
@@ -366,7 +366,7 @@ workflow {
 ```
 :::
 
-### And (`&`)
+### And `&`
 
 The `&` *and* operator can be used to feed multiple processes with the same channel(s). For example:
 
