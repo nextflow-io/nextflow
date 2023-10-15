@@ -116,6 +116,8 @@ class PodSpecBuilder {
 
     List<String> devices
 
+    Map<String,?> resourcesLimits
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -306,13 +308,13 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withDevices(List<String> dev) {
-        this.devices = dev
+    PodSpecBuilder withActiveDeadline(int seconds) {
+        this.activeDeadlineSeconds = seconds
         return this
     }
 
-    PodSpecBuilder withActiveDeadline(int seconds) {
-        this.activeDeadlineSeconds = seconds
+    PodSpecBuilder withResourcesLimits(Map<String,?> limits) {
+        this.resourcesLimits = limits
         return this
     }
 
@@ -334,6 +336,9 @@ class PodSpecBuilder {
         // -- emptyDirs
         if( opts.getMountEmptyDirs() )
             emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- host paths
+        if( opts.getMountHostPaths() )
+            hostMounts.addAll( opts.getMountHostPaths() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
@@ -409,9 +414,6 @@ class PodSpecBuilder {
 
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
-
-        if( devices )
-            container.devices = devices
 
         final secContext = new LinkedHashMap(10)
         if( privileged ) {
@@ -495,6 +497,10 @@ class PodSpecBuilder {
             container.resources = addDiskResources(this.disk, container.resources as Map)
         }
 
+        if( this.resourcesLimits ) {
+            container.resources = addResourcesLimits(this.resourcesLimits, container.resources as Map)
+        }
+
         // add storage definitions ie. volumes and mounts
         final List<Map> mounts = []
         final List<Map> volumes = []
@@ -576,6 +582,18 @@ class PodSpecBuilder {
                 ]
             ]
         ]
+    }
+
+    @PackageScope
+    Map addResourcesLimits(Map limits, Map result) {
+        if( result == null )
+            result = new LinkedHashMap(10)
+
+        final limits0 = result.limits as Map ?: new LinkedHashMap(10)
+        limits0.putAll( limits )
+        result.limits = limits0
+
+        return result
     }
 
     @PackageScope

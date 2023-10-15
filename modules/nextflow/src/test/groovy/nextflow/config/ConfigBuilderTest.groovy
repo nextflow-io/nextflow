@@ -1157,6 +1157,98 @@ class ConfigBuilderTest extends Specification {
         config.wave.endpoint == 'https://wave.seqera.io'
     }
 
+    def 'should set cloudcache options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.cloudcache
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://foo/bar'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.cloudcache instanceof Map
+        !config.cloudcache.enabled
+        config.cloudcache.path == 's3://foo/bar'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://this/that'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://this/that'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: '-'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        !config.cloudcache.path
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://alpha/delta'
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: '-'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://alpha/delta'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://alpha/delta'
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.enabled = false
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        !config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/env'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/env'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun())
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://config/path'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+    }
+
     def 'should enable conda env' () {
 
         given:

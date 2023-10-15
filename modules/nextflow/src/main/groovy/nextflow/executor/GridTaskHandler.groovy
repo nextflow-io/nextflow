@@ -375,6 +375,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             catch( Exception e ) {
                 log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
+                return Integer.MAX_VALUE
             }
         }
 
@@ -400,9 +401,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return null
             }
             log.warn "Unable to read command status from: ${exitFile.toUriString()} after $delta ms"
+            return -1
         }
-
-        return Integer.MAX_VALUE
     }
 
     @Override

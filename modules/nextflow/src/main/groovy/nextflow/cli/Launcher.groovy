@@ -228,6 +228,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-cloudcache' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
@@ -297,10 +301,6 @@ class Launcher {
             }
 
             else if( current == '-with-fusion' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << 'true'
-            }
-
-            else if( (current == '-dsl2') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
 

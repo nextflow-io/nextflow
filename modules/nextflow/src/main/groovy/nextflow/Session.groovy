@@ -189,6 +189,11 @@ class Session implements ISession {
     boolean debug
 
     /**
+     * Defines the cloud path where store cache meta-data
+     */
+    Path cloudCachePath
+
+    /**
      * Local path where script generated classes are saved
      */
     private Path classesDir
@@ -361,9 +366,23 @@ class Session implements ISession {
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
         this.setLibDir( config.libDir as String )
 
+        // -- init cloud cache path
+        this.cloudCachePath = cloudCachePath(config.cloudcache as Map, workDir)
+
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
+    }
+
+    protected Path cloudCachePath(Map cloudcache, Path workDir) {
+        if( !cloudcache?.enabled )
+            return null
+        final String path = cloudcache.path
+        final result = path ? FileHelper.asPath(path) : workDir
+        if( result.scheme !in ['s3','az','gs'] ) {
+            throw new IllegalArgumentException("Storage path not supported by Cloud-cache - offending value: '${result}'")
+        }
+        return result
     }
 
     /**
