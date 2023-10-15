@@ -6,4 +6,4 @@ nf-console@1.0.6
 nf-ga4gh@1.1.0
 nf-google@1.8.3
 nf-tower@1.6.3
-nf-wave@0.14.0
+nf-wave@1.0.0
