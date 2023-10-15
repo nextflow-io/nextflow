@@ -224,6 +224,10 @@ class Launcher {
                 normalized << '%all'
             }
 
+            else if( current == '-dump-hashes' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-cloudcache' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }

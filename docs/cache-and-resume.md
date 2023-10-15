@@ -186,6 +186,8 @@ nextflow run rnaseq-nf -resume 4dc656d2-c410-44c8-bc32-7dd0ea87bebf
 
 You can use the {ref}`cli-log` command to view all previous runs as well as the task executions for each run.
 
+(cache-compare-hashes)=
+
 ### Comparing the hashes of two runs
 
 One way to debug a resumed run is to compare the task hashes of each run using the `-dump-hashes` option.
@@ -196,3 +198,28 @@ One way to debug a resumed run is to compare the task hashes of each run using t
 4. Compare the runs with a diff viewer
 
 While some manual effort is required, the final diff can often reveal the exact change that caused a task to be re-executed.
+
+:::{versionadded} 23.10.0
+:::
+
+When using `-dump-hashes json`, the task hashes can be more easily extracted into a diff. Here is an example Bash script to perform two runs and produce a diff:
+
+```bash
+nextflow -log run_1.log run $pipeline -dump-hashes json
+nextflow -log run_2.log run $pipeline -dump-hashes json -resume
+
+get_hashes() {
+    cat $1 \
+    | grep 'cache hash:' \
+    | cut -d ' ' -f 10- \
+    | sort \
+    | awk '{ print; print ""; }'
+}
+
+get_hashes run_1.log > run_1.tasks.log
+get_hashes run_2.log > run_2.tasks.log
+
+diff run_1.tasks.log run_2.tasks.log
+```
+
+You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
