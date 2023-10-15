@@ -118,6 +118,8 @@ class PodSpecBuilder {
 
     Map<String,?> resourcesLimits
 
+    String schedulerName
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -374,6 +376,9 @@ class PodSpecBuilder {
             tolerations.addAll(opts.tolerations)
         // -- privileged
         privileged = opts.privileged
+        // -- schedulerName
+        if ( opts.schedulerName )
+            schedulerName = opts.schedulerName
 
         return this
     }
@@ -435,6 +440,9 @@ class PodSpecBuilder {
 
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
+
+        if( schedulerName )
+            spec.schedulerName = schedulerName
 
         if( affinity )
             spec.affinity = affinity

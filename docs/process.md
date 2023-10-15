@@ -2116,6 +2116,9 @@ The following options are available:
 : The `subPath` option can be used to mount a sub-directory of the volume instead of its root.
 : The `readOnly` option can be used to mount the volume as read-only (default: `false`)
 
+`schedulerName: '<name>'`
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
+
 (process-publishdir)=
 
 ### publishDir
