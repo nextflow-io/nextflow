@@ -35,7 +35,7 @@ If your Apptainer installation support the "user bind control" feature, enable t
 
 ### How it works
 
-The integration for Apptainer follows the same execution model implemented for Docker. You won't need to modify your Nextflow script in order to run it with Apptainer. Simply specify the Apptainer image file from where the containers are started by using the `-with-apptainer` command line option. For example::
+The integration for Apptainer follows the same execution model implemented for Docker. You won't need to modify your Nextflow script in order to run it with Apptainer. Simply specify the Apptainer image file from where the containers are started by using the `-with-apptainer` command line option. For example:
 
 ```bash
 nextflow run <your script> -with-apptainer [apptainer image file]
@@ -72,7 +72,7 @@ Nextflow no longer mounts the home directory when launching an Apptainer contain
 
 ### Multiple containers
 
-It is possible to specify a different Apptainer image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Apptainer images specifying them in the `nextflow.config` file as shown below::
+It is possible to specify a different Apptainer image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Apptainer images specifying them in the `nextflow.config` file as shown below:
 
 ```groovy
 process {

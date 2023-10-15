@@ -30,6 +30,7 @@ import datetime
 extensions = [
   'sphinx.ext.mathjax',
   'sphinxcontrib.mermaid',
+  'sphinxext.rediraffe',
   'sphinx_rtd_theme',
   'myst_parser'
 ]
@@ -37,6 +38,10 @@ extensions = [
 myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']
 
 myst_heading_anchors = 3
+
+rediraffe_redirects = {
+    'dsl2.md': 'dsl1.md'
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -75,7 +80,7 @@ release = '23.09.3-edge'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**README.md']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

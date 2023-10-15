@@ -338,6 +338,41 @@ Remove the first number with its trailing whitespace from a string:
 assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 ```
 
+### Functions
+
+Functions can be defined using the following syntax:
+
+```groovy
+def <function name> ( arg1, arg, .. ) {
+    <function body>
+}
+```
+
+For example:
+
+```groovy
+def foo() {
+    'Hello world'
+}
+
+def bar(alpha, omega) {
+    alpha + omega
+}
+```
+
+The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()`, which returns `'Hello world'`, and `bar(10, 20)`, which returns the sum of two parameters (`30` in this case).
+
+Functions implicitly return the result of the last statement. Additionally, the `return` keyword can be used to explicitly exit from a function and return the specified value. For example:
+
+```groovy
+def fib( x ) {
+    if( x <= 1 )
+        return x
+
+    fib(x-1) + fib(x-2)
+}
+```
+
 (script-closure)=
 
 ### Closures
