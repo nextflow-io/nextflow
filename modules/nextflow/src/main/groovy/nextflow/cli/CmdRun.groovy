@@ -223,7 +223,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String profile
 
     @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
-    boolean dumpHashes
+    String dumpHashes
 
     @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
     String dumpChannels

@@ -247,11 +247,11 @@ class Session implements ISession {
 
     boolean getStatsEnabled() { statsEnabled }
 
-    private boolean dumpHashes
+    private String dumpHashes
 
     private List<String> dumpChannels
 
-    boolean getDumpHashes() { dumpHashes }
+    String getDumpHashes() { dumpHashes }
 
     List<String> getDumpChannels() { dumpChannels }
 
