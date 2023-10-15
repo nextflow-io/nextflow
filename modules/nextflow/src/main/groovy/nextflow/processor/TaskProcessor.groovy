@@ -2160,7 +2160,6 @@ class TaskProcessor {
                 ? traceInputsHashesJson(task, keys, mode, hash)
                 : traceInputsHashes(task, keys, mode, hash)
         }
-
         return hash
     }
 
