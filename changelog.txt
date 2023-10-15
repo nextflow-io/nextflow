@@ -1,5 +1,20 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.10.0 - 15 Oct 2023
+- Add support for K8s hostPath [10c32325]
+- Add AWS SES docs [b83e7148]
+- Add -with-cloudcache instead of -cloudcache [ef530263]
+- Add inspect command validation tests [882f369e]
+- Improve warning complaining about tuple but mentioning set (#4400) [0ef48735]
+- Improve `-dump-hashes` output adding json format (#4369) [5bdaac94]
+- Improve error message on invalid file url prefix [82a3f405]
+- Fix conda channels order [6672c6d7]
+- Docs: Incorporate DSL2 features (#3793) [efd041cb]
+- Docs: aws.batch.retrymode = 'built-in' (#4229) [d5a8098f]
+- Docs: Update logos, fonts, and colors (#4407) [7814822c]
+- Changelog minor changes [dfb5bf09]
+- Bump nf-wave@1.0.0 [795849d7]
+
 23.09.3-edge - 10 Oct 2023
 - Add -cloudcache CLI option (#4385) [73fda582]
 - Add bioconda and seqera Conda default channels (#4359) [ff012dcd]
