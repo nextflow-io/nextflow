@@ -1,7 +1,7 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg-bright.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg.png">
-  <img alt="Nextflow Logo" src="https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/_static/nextflow-logo-bg-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/_static/nextflow-logo-bg-light.png">
+  <img alt="Nextflow Logo" src="docs/_static/nextflow-logo-bg-light.png">
 </picture>
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*

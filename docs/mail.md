@@ -183,7 +183,7 @@ nextflow run <pipeline name> -N <recipient address>
 
 It will send a notification mail when the execution completes similar to the one shown below:
 
-```{image} images/workflow-notification-min.png
+```{image} _static/workflow-notification-min.png
 ```
 
 :::{warning}
