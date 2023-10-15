@@ -32,6 +32,7 @@ import java.util.regex.Pattern
 
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -2155,7 +2156,9 @@ class TaskProcessor {
         final mode = config.getHashMode()
         final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
-            traceInputsHashes(task, keys, mode, hash)
+            session.dumpHashes=='json'
+                ? traceInputsHashesJson(task, keys, mode, hash)
+                : traceInputsHashes(task, keys, mode, hash)
         }
         return hash
     }
@@ -2189,6 +2192,16 @@ class TaskProcessor {
                 result.add(path)
         }
         return result
+    }
+
+    private void traceInputsHashesJson( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+        final collector = (item) -> [
+            hash: CacheHelper.hasher(item, mode).hash().toString(),
+            type: item?.getClass()?.getName(),
+            value: item?.toString()
+        ]
+        final json = JsonOutput.toJson(entries.collect(collector))
+        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${JsonOutput.prettyPrint(json)}"
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {

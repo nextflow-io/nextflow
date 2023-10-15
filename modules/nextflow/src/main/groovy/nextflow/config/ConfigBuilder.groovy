@@ -595,9 +595,10 @@ class ConfigBuilder {
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 
-        // -- sets `dumpKeys` option
-        if( cmdRun.dumpHashes )
-            config.dumpHashes = cmdRun.dumpHashes
+        // -- sets `dumpHashes` option
+        if( cmdRun.dumpHashes ) {
+            config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
+        }
 
         if( cmdRun.dumpChannels )
             config.dumpChannels = cmdRun.dumpChannels.tokenize(',')
