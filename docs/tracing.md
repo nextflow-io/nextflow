@@ -109,7 +109,7 @@ The report file name can be specified as an optional parameter following the rep
 
 The `Summary` section reports the execution status, the launch command, overall execution time and some other workflow metadata. You can see an example below:
 
-```{image} images/report-summary-min.png
+```{image} _static/report-summary-min.png
 ```
 
 ### Resource Usage
@@ -118,7 +118,7 @@ The `Resources` section plots the distribution of resource usage for each workfl
 
 Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are very helpful to check that task resources are used efficiently.
 
-```{image} images/report-resource-cpu.png
+```{image} _static/report-resource-cpu.png
 ```
 
 Learn more about how resource usage is computed in the {ref}`Metrics documentation <metrics-page>`.
@@ -129,7 +129,7 @@ Learn more about how resource usage is computed in the {ref}`Metrics documentati
 
 The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script, and many other metrics. You can see an example below:
 
-```{image} images/report-tasks-min.png
+```{image} _static/report-tasks-min.png
 ```
 
 :::{note}
@@ -326,7 +326,7 @@ Please read {ref}`Trace scope <config-trace>` section to learn more about it.
 
 Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline report is shown below:
 
-```{image} images/timeline-min.png
+```{image} _static/timeline-min.png
 ```
 
 Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
@@ -402,5 +402,5 @@ Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://git
 nextflow run rnaseq-nf -preview -with-dag
 ```
 
-```{mermaid} images/dag.mmd
+```{mermaid} _static/dag.mmd
 ```

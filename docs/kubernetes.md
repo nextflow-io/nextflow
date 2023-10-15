@@ -16,7 +16,7 @@ Kubernetes abstracts also the storage provisioning through the definition of one
 
 When using the `k8s` executor Nextflow deploys the workflow execution as a Kubernetes pod. This pod orchestrates the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow application.
 
-```{image} /images/nextflow-k8s-min.png
+```{image} _static/nextflow-k8s-min.png
 ```
 
 ## Requirements

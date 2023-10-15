@@ -206,7 +206,7 @@ class WorkflowNotifier {
      * @return A {@link Attachment} object representing the image logo to be included in the HTML email
      */
     protected Attachment loadDefaultLogo() {
-        Attachment.resource('/nextflow/mail/nextflow200x40.png', contentId: '<nxf-logo>', disposition: 'inline')
+        Attachment.resource('/nextflow/mail/nextflow-logo-v2-min.png', contentId: '<nxf-logo>', disposition: 'inline')
     }
 
     private String loadDefaultTemplate0(String classpathResource) {

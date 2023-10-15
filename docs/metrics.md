@@ -8,7 +8,7 @@ This section details how the resource usage metrics from the {ref}`Execution rep
 
 The plot reports how much CPU resources were used by each process.
 
-```{image} images/report-resource-cpu.png
+```{image} _static/report-resource-cpu.png
 ```
 
 Let's illustrate how this plot behaves with several examples.
@@ -248,17 +248,17 @@ process bar {
 
 The `Virtual (RAM + Disk swap)` tab shows that both `foo` and `bar` processes use the same amount of virtual memory (~1 GiB):
 
-```{image} images/report-resource-memory-vmem.png
+```{image} _static/report-resource-memory-vmem.png
 ```
 
 However, the `Physical (RAM)` tab shows that only the `bar` process uses ~1 GiB of RAM while `foo` process uses ~0 GiB:
 
-```{image} images/report-resource-memory-ram.png
+```{image} _static/report-resource-memory-ram.png
 ```
 
 As expected, the `% RAM Allocated` tab shows that 0% of the resource set in the `memory` directive was used for `foo` process while 67% (= 1 / 1.5) of the resource were used for `bar` process:
 
-```{image} images/report-resource-memory-pctram.png
+```{image} _static/report-resource-memory-pctram.png
 ```
 
 :::{warning}
@@ -269,7 +269,7 @@ Memory and storage metrics are reported in bytes. This means that 1KB = $1024$ b
 
 The plot has two tabs the job duration (a.k.a. elapsed real time, real time or wall time ) in the `Raw Usage` tag and the percentage of requested time used in the `% Allocated` tab with respect to the duration set in the `time` directive of the process.
 
-```{image} images/report-resource-job-duration.png
+```{image} _static/report-resource-job-duration.png
 ```
 
 ## I/O Usage
@@ -294,10 +294,10 @@ process io_read_write_256M {
 
 `Read` tab:
 
-```{image} images/report-resource-io-read.png
+```{image} _static/report-resource-io-read.png
 ```
 
 `Write` tab:
 
-```{image} images/report-resource-io-write.png
+```{image} _static/report-resource-io-write.png
 ```
