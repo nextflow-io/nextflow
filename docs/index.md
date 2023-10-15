@@ -38,8 +38,10 @@ script
 process
 channel
 operator
+workflow
+module
 config
-dsl2
+dsl1
 ```
 
 ```{toctree}

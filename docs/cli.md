@@ -1322,13 +1322,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run nextflow-io/hello -qs 4
   ```
 
-- Execute the pipeline with DSL-2 syntax.
-
-  ```console
-  $ nextflow run nextflow-io/hello -dsl2
-  ```
-
-- Execute a pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
+- Invoke the pipeline with a specific workflow as the entry-point.
 
   ```console
   $ nextflow run main.nf -entry workflow_A
