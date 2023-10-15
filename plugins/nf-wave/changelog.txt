@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.0.0 - 15 Oct 2023
+- Fix conda channels order [ci fast] [6672c6d7]
+
 0.14.0 - 10 Oct 2023
 - Add bioconda and seqera Conda default channels (#4359) [ff012dcd]
 - Improve Wave error handling [d47e8b07]
