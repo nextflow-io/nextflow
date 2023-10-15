@@ -336,6 +336,9 @@ class PodSpecBuilder {
         // -- emptyDirs
         if( opts.getMountEmptyDirs() )
             emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- host paths
+        if( opts.getMountHostPaths() )
+            hostMounts.addAll( opts.getMountHostPaths() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
