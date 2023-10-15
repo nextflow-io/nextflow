@@ -2155,10 +2155,12 @@ class TaskProcessor {
 
         final mode = config.getHashMode()
         final hash = computeHash(keys, mode)
-        if( session.dumpHashes == 'json' )
-            traceInputsHashesJson(task, keys, mode, hash)
-        else if( session.dumpHashes )
-            traceInputsHashes(task, keys, mode, hash)
+        if( session.dumpHashes ) {
+            session.dumpHashes=='json'
+                ? traceInputsHashesJson(task, keys, mode, hash)
+                : traceInputsHashes(task, keys, mode, hash)
+        }
+
         return hash
     }
 
@@ -2194,12 +2196,13 @@ class TaskProcessor {
     }
 
     private void traceInputsHashesJson( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
-        def collector = (item) -> [
+        final collector = (item) -> [
             hash: CacheHelper.hasher(item, mode).hash().toString(),
             type: item?.getClass()?.getName(),
             value: item?.toString()
         ]
-        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${JsonOutput.toJson(entries.collect(collector))}"
+        final json = JsonOutput.toJson(entries.collect(collector))
+        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${JsonOutput.prettyPrint(json)}"
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {

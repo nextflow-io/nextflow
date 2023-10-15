@@ -597,10 +597,7 @@ class ConfigBuilder {
 
         // -- sets `dumpHashes` option
         if( cmdRun.dumpHashes ) {
-            if( cmdRun.dumpHashes != '-' )
-                config.dumpHashes = cmdRun.dumpHashes
-            else
-                config.dumpHashes = 'default'
+            config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
         }
 
         if( cmdRun.dumpChannels )
