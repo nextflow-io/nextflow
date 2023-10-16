@@ -244,4 +244,94 @@ class XFileSystemProviderTest extends Specification {
         'this/that'             | 'http://foo.com:123/abc'  | 'http://foo.com:123/this/that'
 
     }
+
+    def "should validate input stream MD5 checksum"() {
+        given:
+        def fsp = Spy(new HttpFileSystemProvider())
+        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
+        def connection = Mock(URLConnection)
+        and:
+        fsp.setAttribute(path, 'checksum', '3e25960a79dbc69b674cd4ec67a72c62')
+
+        when:
+        def stream = fsp.newInputStream(path)
+        then:
+        fsp.toConnection(path) >> { Path it ->
+            assert it instanceof XPath
+            assert it.toUri() == new URI('http://host.com/index.html?query=123')
+            return connection
+        }
+        and:
+        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        and:
+        stream.text == 'Hello world'
+    }
+
+    def "should validate input stream SHA256 checksum"() {
+        given:
+        def fsp = Spy(new HttpFileSystemProvider())
+        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
+        def connection = Mock(URLConnection)
+        and:
+        fsp.setAttribute(path, 'checksum', 'sha256::64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c')
+
+        when:
+        def stream = fsp.newInputStream(path)
+        then:
+        fsp.toConnection(path) >> { Path it ->
+            assert it instanceof XPath
+            assert it.toUri() == new URI('http://host.com/index.html?query=123')
+            return connection
+        }
+        and:
+        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        and:
+        stream.text == 'Hello world'
+    }
+
+    def "should validate input stream SHA1 checksum"() {
+        given:
+        def fsp = Spy(new HttpFileSystemProvider())
+        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
+        def connection = Mock(URLConnection)
+        and:
+        fsp.setAttribute(path, 'checksum', 'sha1::7b502c3a1f48c8609ae212cdfb639dee39673f5e')
+
+        when:
+        def stream = fsp.newInputStream(path)
+        then:
+        fsp.toConnection(path) >> { Path it ->
+            assert it instanceof XPath
+            assert it.toUri() == new URI('http://host.com/index.html?query=123')
+            return connection
+        }
+        and:
+        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        and:
+        stream.text == 'Hello world'
+    }
+
+    def "should fail validating input stream checksum"() {
+        given:
+        def fsp = Spy(new HttpFileSystemProvider())
+        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
+        def connection = Mock(URLConnection)
+        and:
+        fsp.setAttribute(path, 'checksum', '1b6c18a922164a8ded8e7f3bad24882e3b5e212a')
+
+        when:
+        def stream = fsp.newInputStream(path)
+        stream.text == 'Hello world'
+
+        then:
+        fsp.toConnection(path) >> { Path it ->
+            assert it instanceof XPath
+            assert it.toUri() == new URI('http://host.com/index.html?query=123')
+            return connection
+        }
+        and:
+        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        and:
+        thrown(InputMismatchException)
+    }
 }

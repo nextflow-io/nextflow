@@ -123,6 +123,10 @@ class Nextflow {
             return checkIfExists(asPath(normalised), options)
         }
 
+        // Checksum is only allowed on non-glob paths
+        if(options?.checksum)
+            throw new IllegalArgumentException("Invalid checksum option at ${filePattern}")
+
         // revolve the glob pattern returning all matches
         return fileNamePattern(splitter, options)
     }

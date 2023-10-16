@@ -16,6 +16,11 @@
 
 package nextflow.file.http
 
+import nextflow.file.checksums.Md5Checksum
+
+import java.util.zip.CRC32
+import java.util.zip.CheckedInputStream
+
 import static nextflow.file.http.XFileSystemConfig.*
 
 import java.nio.ByteBuffer
@@ -334,9 +339,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     InputStream newInputStream(Path path, OpenOption... options)
             throws IOException
     {
-        if (path.class != XPath)
-            throw new ProviderMismatchException()
-
+        final xpath = checkPath(path)
         if (options.length > 0) {
             for (OpenOption opt: options) {
                 // All OpenOption values except for APPEND and WRITE are allowed
@@ -346,7 +349,21 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        return toConnection(path).getInputStream()
+        final inputStream = toConnection(path).getInputStream()
+
+        // Wrap checksum input stream
+        if ( xpath.checksum ) {
+            final checksum = FileHelper.buildChecksum(xpath.checksum)
+            return new CheckedInputStream(inputStream, checksum) {
+                @Override
+                void close() throws IOException {
+                    if( !FileHelper.validateChecksum(xpath.checksum, this.getChecksum()) )
+                        throw new InputMismatchException("Invalid checksum at $path")
+                }
+            }
+        }
+
+        return inputStream
     }
 
     /**
@@ -464,6 +481,14 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     @Override
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
+
+        // Support checksum verification
+        if ( attribute == "checksum" ) {
+            final XPath xpath = checkPath(path)
+            xpath.checksum = value
+            return
+        }
+
         throw new UnsupportedOperationException("Set file attributes not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
@@ -486,6 +511,14 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z', Locale.ENGLISH) // <-- make sure date parse is not language dependent (for the week day)
         def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).time, TimeUnit.MILLISECONDS) : (FileTime)null
         new XFileAttributes(modTime, contentLen)
+    }
+
+    private static XPath checkPath(Path path) {
+        if (path instanceof XPath) {
+            return (XPath) path;
+        }
+        throw new ProviderMismatchException(
+            "path " + path + " is not associated with a XPath file system");
     }
 
 }
