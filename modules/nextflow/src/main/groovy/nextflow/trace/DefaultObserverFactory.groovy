@@ -25,6 +25,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
+        createTraceMetadataObserver(result)
         return result
     }
 
@@ -99,6 +100,10 @@ class DefaultObserverFactory implements TraceObserverFactory {
         config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
         config.navigate('trace.overwrite') { observer.overwrite = it }
         result << observer
+    }
+
+    protected void createTraceMetadataObserver(Collection<TraceObserver> result) {
+        result << new TraceMetadataObserver(session)
     }
 
 }

@@ -91,7 +91,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'stdout',
             'stageInMode',
             'stageOutMode',
-            'resourceLabels'
+            'resourceLabels',
+            'customTraces'
     ]
 
     /**

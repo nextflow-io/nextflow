@@ -206,6 +206,19 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('stageOutMode')
     }
 
+    Map<String, String> getCustomTraces() {
+        def value = get('customTraces')
+        if( value == null )
+            return null
+
+        if( value instanceof Map ) {
+            //TODO validate key names
+            return (Map) value
+        }
+
+        throw new IllegalArgumentException("Not a valid `customTraces` value: ${value}")
+    }
+
     boolean getDebug() {
         // check both `debug` and `echo` for backward
         // compatibility until `echo` is not removed

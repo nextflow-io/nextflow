@@ -323,6 +323,9 @@ class BashWrapperBuilder {
         // patch root ownership problem on files created with docker
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
+        binding.custom_trace_collect = getCustomTraceCollect()
+        binding.custom_trace_write = getCustomTraceWrite()
+
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
         return binding
@@ -424,6 +427,26 @@ class BashWrapperBuilder {
         String result=''
         for( String it : moduleNames) {
             result += moduleLoad(it) + ENDL
+        }
+        return result
+    }
+
+    private String getCustomTraceCollect() {
+        if( !customTraces )
+            return null
+        String result=''
+        for( String key : customTraces.keySet() ) {
+            result += "local custom_${key}=\$(${customTraces.get(key)})"
+        }
+        return result
+    }
+
+    private String getCustomTraceWrite() {
+        if( !customTraces )
+            return null
+        String result=''
+        for( String key : customTraces.keySet() ) {
+            result += "echo \"custom_${key}=\$custom_${key}\" >> \$trace_file"
         }
         return result
     }

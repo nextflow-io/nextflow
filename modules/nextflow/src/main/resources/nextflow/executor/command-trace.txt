@@ -170,6 +170,10 @@ nxf_trace_linux() {
     local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
+
+    ## collect custom traces
+    {{custom_trace_collect}}
+
     ## capture error and kill mem watcher
     trap 'kill $mem_proc' ERR
     
@@ -209,6 +213,7 @@ nxf_trace_linux() {
     echo "syscw=${io_stat1[3]}"        >> $trace_file
     echo "read_bytes=${io_stat1[4]}"   >> $trace_file
     echo "write_bytes=${io_stat1[5]}"  >> $trace_file
+    {{custom_trace_write}}
 
     ## join nxf_mem_watch
     [ -e /proc/$mem_proc ] && eval "echo 'DONE' >&$mem_fd" || true

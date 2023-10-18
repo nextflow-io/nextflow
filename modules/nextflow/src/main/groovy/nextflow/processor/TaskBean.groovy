@@ -51,6 +51,8 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> moduleNames
 
+    Map<String,String> customTraces
+
     Path workDir
 
     Path targetDir
@@ -156,6 +158,7 @@ class TaskBean implements Serializable, Cloneable {
         this.stageOutMode = task.config.getStageOutMode()
 
         this.resourceLabels = task.config.getResourceLabels()
+        this.customTraces = task.config.getCustomTraces()
     }
 
     @Override

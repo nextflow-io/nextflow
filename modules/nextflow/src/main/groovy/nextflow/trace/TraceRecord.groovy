@@ -242,11 +242,6 @@ class TraceRecord implements Serializable {
 
     Map<String,Object> getStore() { store }
 
-    @Memoized
-    Set<String> keySet() {
-        FIELDS.keySet()
-    }
-
     def propertyMissing(String name, value) {
         put(name,value)
     }
@@ -261,7 +256,7 @@ class TraceRecord implements Serializable {
     }
 
     def get( String name ) {
-        assert keySet().contains(name), "Not a valid TraceRecord field: '$name'"
+        assert name.startsWith("custom_") || FIELDS.containsKey(name), "Not a valid TraceRecord field: '$name'"
         if( name == 'env' ) {
             final ret = store.get(name)
             return ret ? secureEnvString(ret.toString()) : ret
@@ -275,7 +270,7 @@ class TraceRecord implements Serializable {
 
 
     void put( String name, def value ) {
-        if( !keySet().contains(name) ) {
+        if( !name.startsWith('custom_') && !FIELDS.containsKey(name) ) {
             log.warn1 "Unknown trace record field: $name"
             return
         }
@@ -433,6 +428,12 @@ class TraceRecord implements Serializable {
             final value = pair[1]
             if( value == null )
                 continue
+
+            // Parse custom traces always as string
+            if( name.startsWith("custom_") ) {
+                this.put(name, value)
+                continue
+            }
 
             switch (name) {
                 case '%cpu':

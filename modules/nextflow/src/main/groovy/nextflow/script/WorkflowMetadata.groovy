@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import nextflow.trace.TraceRecord
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
@@ -206,6 +208,11 @@ class WorkflowMetadata {
      * The workflow manifest
      */
     Manifest manifest
+
+    /**
+     * The workflow completed traces
+     */
+    List<TraceRecord> traces = []
 
     private Session session
 
