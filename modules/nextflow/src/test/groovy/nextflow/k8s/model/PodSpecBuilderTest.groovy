@@ -854,4 +854,18 @@ class PodSpecBuilderTest extends Specification {
         job.spec.template.metadata == metadata
     }
 
+    def 'should create job spec with ttl seconds' () {
+        when:
+        def ttlSecondsAfterFinished = 3600
+        def job = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions( new PodOptions(ttlSecondsAfterFinished: ttlSecondsAfterFinished) )
+                .buildAsJob()
+
+        then:
+        job.spec.ttlSecondsAfterFinished == ttlSecondsAfterFinished
+    }
+
 }

@@ -67,6 +67,8 @@ class PodOptions {
     private List<Map> tolerations
 
     private Boolean privileged
+
+    private Integer ttlSecondsAfterFinished
     
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -156,6 +158,9 @@ class PodOptions {
         else if( entry.privileged instanceof Boolean ) {
             this.privileged = entry.privileged as Boolean
         }
+        else if( entry.ttlSecondsAfterFinished instanceof Integer ) {
+            this.ttlSecondsAfterFinished = entry.ttlSecondsAfterFinished as Integer
+        }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -221,7 +226,9 @@ class PodOptions {
     List<Map> getTolerations() { tolerations }
 
     Boolean getPrivileged() { privileged }
-    
+
+    Integer getTtlSecondsAfterFinished() { ttlSecondsAfterFinished }
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -296,6 +303,9 @@ class PodOptions {
 
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
+
+        // ttl seconds after finished (job)
+        result.ttlSecondsAfterFinished = other.ttlSecondsAfterFinished ?: this.ttlSecondsAfterFinished
 
         return result
     }
