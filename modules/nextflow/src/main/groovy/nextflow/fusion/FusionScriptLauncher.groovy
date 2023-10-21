@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 package nextflow.fusion
 
-
+import static nextflow.fusion.FusionConfig.FUSION_PATH
 import static nextflow.fusion.FusionHelper.*
 
 import java.nio.file.Path
@@ -39,27 +39,23 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
     private String scheme
     private Path remoteWorkDir
-    private Set<String> buckets = new HashSet<>()
     private Map<String,String> env
 
     /* ONLY FOR TESTING - DO NOT USE */
-    protected FusionScriptLauncher() {
-        this.buckets = new HashSet<>()
-    }
+    protected FusionScriptLauncher() { }
 
     static FusionScriptLauncher create(TaskBean bean, String scheme) {
 
-        final buckets = new HashSet(10)
         final remoteWorkDir = bean.workDir
 
         // map bean work and target dirs to container mount
         // this needed to create the command launcher using container local file paths
-        bean.workDir = toContainerMount(bean.workDir, scheme, buckets)
-        bean.targetDir = toContainerMount(bean.targetDir, scheme, buckets)
+        bean.workDir = toContainerMount(bean.workDir, scheme)
+        bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme, buckets) )
+            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
         }
 
         // make it change to the task work dir
@@ -68,15 +64,14 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         if( bean.scratch==null )
             bean.scratch = true
 
-        return new FusionScriptLauncher(bean, scheme, remoteWorkDir, buckets)
+        return new FusionScriptLauncher(bean, scheme, remoteWorkDir)
     }
 
-    FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir, Set<String> buckets) {
+    FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir) {
         super(bean)
         // keep track the google storage work dir
         this.scheme = scheme
         this.remoteWorkDir = remoteWorkDir
-        this.buckets = buckets
     }
 
     static protected String headerScript(TaskBean bean) {
@@ -84,20 +79,14 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     }
 
     Path toContainerMount(Path path) {
-        toContainerMount(path,scheme,buckets)
-    }
-
-    Set<String> fusionBuckets() {
-        return buckets
+        return toContainerMount(path, scheme)
     }
 
     Map<String,String> fusionEnv() {
         if( env==null ) {
-            final buckets = fusionBuckets().collect(it->"$scheme://$it").join(',')
             final work = toContainerMount(remoteWorkDir).toString()
             final result = new LinkedHashMap(10)
-            result.NXF_FUSION_WORK = work
-            result.NXF_FUSION_BUCKETS = buckets
+            result.FUSION_WORK = work
             // foreign env
             final provider = new FusionEnvProvider()
             result.putAll(provider.getEnvironment(scheme))
@@ -121,4 +110,13 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
+    @Override
+    protected Path targetStageFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_STAGE)
+    }
+
+    List<String> fusionSubmitCli(TaskRun task) {
+        final runFile = toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN), scheme)
+        return List.of(FUSION_PATH, 'bash', runFile.toString())
+    }
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2023, Seqera Labs.
  * Copyright 2022, Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +39,7 @@ import nextflow.util.PathTrie
  */
 @Slf4j
 @CompileStatic
-class GoogleBatchScriptLauncher extends BashWrapperBuilder {
+class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatchLauncherSpec {
 
     private static final String MOUNT_ROOT = '/mnt/disks'
 
@@ -108,6 +109,12 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
         throw new IllegalArgumentException("Unexpected path for Google Batch task handler: ${path.toUriString()}")
     }
 
+    @Override
+    String runCommand() {
+        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+    }
+
+    @Override
     List<String> getContainerMounts() {
         final result = new ArrayList(10)
         for( String it : pathTrie.longest() ) {
@@ -116,6 +123,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
         return result
     }
 
+    @Override
     List<Volume> getVolumes() {
         final result = new ArrayList(10)
         for( String it : buckets ) {
@@ -126,7 +134,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
                             .setRemotePath(it)
                     )
                     .setMountPath( "${MOUNT_ROOT}/${it}".toString() )
-                    .addAllMountOptions( ['-o rw,allow_other', '-implicit-dirs'] )
+                    .addAllMountOptions( ['-o rw', '-implicit-dirs'] )
                     .build()
             )
         }

@@ -1,0 +1,16 @@
+classDiagram
+    %%
+    %% nextflow.container
+    %%
+    direction LR
+
+    BashWrapperBuilder --> ContainerBuilder : build
+
+    ContainerBuilder <|-- CharliecloudBuilder
+    ContainerBuilder <|-- DockerBuilder
+    ContainerBuilder <|-- PodmanBuilder
+    ContainerBuilder <|-- ShifterBuilder
+    ContainerBuilder <|-- SingularityBuilder
+    ContainerBuilder <|-- UdockerBuilder
+
+    SingularityBuilder <|-- ApptainerBuilder

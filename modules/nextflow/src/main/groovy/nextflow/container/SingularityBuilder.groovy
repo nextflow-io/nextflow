@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,7 @@ package nextflow.container
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 
 /**
  * Implements a builder for Singularity containerisation
@@ -33,8 +33,37 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private boolean autoMounts
 
+    private boolean homeMount
+
+    private boolean newPidNamespace
+
+    private String runCmd0
+
     SingularityBuilder(String name) {
         this.image = name
+        this.homeMount = defaultHomeMount()
+        this.autoMounts = defaultAutoMounts()
+        this.newPidNamespace = defaultNewPidNamespace()
+        this.runCmd0 = defaultRunCommand()
+    }
+
+    private boolean defaultHomeMount() {
+        SysEnv.get("NXF_${getBinaryName().toUpperCase()}_HOME_MOUNT", 'false').toString() == 'true'
+    }
+
+    private boolean defaultNewPidNamespace() {
+        SysEnv.get("NXF_${getBinaryName().toUpperCase()}_NEW_PID_NAMESPACE", 'true').toString() == 'true'
+    }
+
+    private boolean defaultAutoMounts() {
+        SysEnv.get("NXF_${getBinaryName().toUpperCase()}_AUTO_MOUNTS", 'true').toString() == 'true'
+    }
+
+    private String defaultRunCommand() {
+        final result = SysEnv.get("NXF_${getBinaryName().toUpperCase()}_RUN_COMMAND", 'exec')
+        if( result !in ['run','exec'] )
+            throw new IllegalArgumentException("Invalid singularity launch command '$result' - it should be either 'run' or 'exec'")
+        return result
     }
 
     protected String getBinaryName() { 'singularity' }
@@ -54,8 +83,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
-        if( params.autoMounts )
+        if( params.autoMounts!=null )
             autoMounts = params.autoMounts.toString() == 'true'
+
+        if( params.newPidNamespace!=null )
+            newPidNamespace = params.newPidNamespace.toString() == 'true'
 
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
@@ -65,8 +97,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     @Override
     SingularityBuilder addRunOptions(String str) {
-        runOptions.add(str)
-        return this
+        super.addRunOptions(str)
     }
 
     @Override
@@ -81,7 +112,13 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( engineOptions )
             result << engineOptions.join(' ') << ' '
 
-        result << 'exec '
+        result << runCmd0 << ' '
+
+        if( !homeMount )
+            result << '--no-home '
+
+        if( newPidNamespace )
+            result << '--pid '
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
@@ -120,6 +157,23 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         return PREFIX+'ENV_'+key
     }
 
+    protected String quoteValue(String env) {
+        if( !env )
+            return env
+        final p=env.indexOf('=')
+        return p==-1 ? quoteValue0(env) : env.substring(0,p) + '=' + quoteValue0(env.substring(p+1))
+    }
+
+    private String quoteValue0(String value) {
+        if( !value )
+            return value
+        if( value.startsWith('"') && value.endsWith('"') )
+            return value
+        if( value.startsWith("'") && value.endsWith("'") )
+            return value
+        return '"'  + value + '"'
+    }
+
     @Override
     protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
@@ -131,7 +185,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << prefixEnv(env)
+            result << prefixEnv(quoteValue(env))
         }
         else if( env instanceof String ) {
             result << "\${$env:+${prefixEnv(env)}=\"\$$env\"}"

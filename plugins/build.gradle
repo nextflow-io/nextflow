@@ -84,6 +84,8 @@ subprojects {
                 "sha512sum": "${computeSha512(zip)}"
               }
             """.stripIndent()
+            // cleanup tmp dir
+            file("$buildDir/tmp/makeZip").deleteDir()
         }
         outputs.file("$buildDir/libs/${project.name}-${project.version}.zip")
     }
@@ -138,6 +140,9 @@ subprojects {
 
     jar {
         from sourceSets.main.allSource
+        doLast {
+            file("$buildDir/tmp/jar").deleteDir()
+        }
     }
 
     tasks.withType(GenerateModuleMetadata) {

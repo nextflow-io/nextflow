@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +60,7 @@ import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
+import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
 import nextflow.file.FileHelper
@@ -92,6 +92,8 @@ class LoggerHelper {
     static private String STARTUP_ERROR = 'startup failed:\n'
 
     static private String logFileName
+
+    static private LoggerHelper INSTANCE
 
     private CliOptions opts
 
@@ -157,7 +159,11 @@ class LoggerHelper {
         return false
     }
 
-    void setup() {
+    private void setQuiet0(boolean quiet) {
+        packages[MAIN_PACKAGE] = quiet ? Level.ERROR : Level.INFO
+    }
+
+    LoggerHelper setup() {
         logFileName = opts.logFile ?: System.getenv('NXF_LOG_FILE')
 
         final boolean quiet = opts.quiet
@@ -169,10 +175,10 @@ class LoggerHelper {
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
-        packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
+        setQuiet0(quiet)
 
         // -- add the S3 uploader by default
-        if( !containsClassName(debugConf,traceConf, 'com.upplication.s3fs') )
+        if( !containsClassName(debugConf,traceConf, 'nextflow.cloud.aws.nio') )
             debugConf << S3_UPLOADER_CLASS
         if( !containsClassName(debugConf,traceConf, 'io.seqera') )
             debugConf << 'io.seqera'
@@ -228,6 +234,8 @@ class LoggerHelper {
 
         if(!consoleAppender)
             logger.debug "Console appender: disabled"
+
+        return this
     }
 
     protected Logger createLogger(String clazz, Level level ) {
@@ -340,25 +348,23 @@ class LoggerHelper {
      *     instead in the file are saved the DEBUG level messages.
      *
      * @param logFileName The file where save the application log
-     * @param quiet When {@code true} only Warning and Error messages are visualized to teh console
+     * @param quiet When {@code true} only Warning and Error messages are visualized to the console
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
     static void configureLogger( Launcher launcher ) {
-        new LoggerHelper(launcher.options)
+        INSTANCE = new LoggerHelper(launcher.options)
                 .setDaemon(launcher.isDaemon())
                 .setRolling(true)
                 .setSyslog(launcher.options.syslog)
                 .setup()
     }
 
-    static void configureLogger( final CliOptions opts, boolean daemon = false ) {
-        new LoggerHelper(opts)
-                .setDaemon(daemon)
-                .setRolling(true)
-                .setSyslog(opts.syslog)
-                .setup()
+    static setQuiet(boolean quiet) {
+        if( INSTANCE==null )
+            throw new IllegalStateException("Method 'LoggerHelper.setQuiet' must be called after the invocation of 'LoggerHelper.configureLogger'")
+        INSTANCE.setQuiet0(quiet)
     }
 
     /*
@@ -446,7 +452,7 @@ class LoggerHelper {
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
         final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || fail instanceof ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
         List error = fail ? findErrorLine(fail) : null
 
@@ -467,10 +473,10 @@ class LoggerHelper {
             buffer.append("No such field: ${normalize(fail.message)}")
         }
         else if( fail instanceof NoSuchFileException ) {
-            buffer.append("No such file: ${normalize(fail.message)}")
+            buffer.append("No such file or directory: ${normalize(fail.message)}")
         }
         else if( fail instanceof FileAlreadyExistsException ) {
-            buffer.append("File already exist: $fail.message")
+            buffer.append("File or directory already exists: $fail.message")
         }
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
@@ -496,6 +502,9 @@ class LoggerHelper {
         else {
             buffer.append("Unexpected error")
         }
+        if( fail instanceof PlainExceptionMessage )
+            return
+
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
 
@@ -587,12 +596,12 @@ class LoggerHelper {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
         catch( Throwable t ) {
-            log.warn "Oops.. something went wrong while formatting the error stack trace | ${t.message ?: t}", e
+            log.warn "Something went wrong while formatting the error stack trace | ${t.message ?: t}", e
             return Collections.emptyList() as String[]
         }
     }
 
-    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{8}):(\d*)\)$/
+    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{16}):(\d*)\)$/
 
     @PackageScope
     static List<String> getErrorLine( String str, Map<String,Path> allNames ) {

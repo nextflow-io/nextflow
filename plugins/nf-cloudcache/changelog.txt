@@ -1,0 +1,11 @@
+nf-cloudcache changelog
+=======================
+0.3.0 - 10 Oct 2023
+- Add -cloudcache CLI option (#4385) [73fda582]
+
+0.2.0 - 17 Aug 2023
+- Remove lock file from cloudcache (#4167) [6e6ea579]
+- Enable cloud cache based on environment variable (#4160) [a66b0e63]
+
+0.1.0 - 22 Jul 2023
+- Initial version

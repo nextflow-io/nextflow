@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.scm
 
+import nextflow.SysEnv
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -84,6 +84,62 @@ class GithubRepositoryProviderTest extends Specification {
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=the-commit-id'
 
+    }
+
+    def 'should user github token as creds' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def provider = Spy(new GithubRepositoryProvider('foo/bar'))
+
+        expect:
+        provider.getUser() == '1234567890'
+        provider.getPassword() == 'x-oauth-basic'
+        
+        when:
+        SysEnv.get().remove('GITHUB_TOKEN')
+        then:
+        provider.getUser() >> null
+        provider.getPassword() >> null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should user from config' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def config = new ProviderConfig('github', [user: 'this', password: 'that'])
+        def provider = Spy(new GithubRepositoryProvider('foo/bar', config))
+
+        expect:
+        provider.getUser() == 'this'
+        provider.getPassword() == 'that'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should auth using github token' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def provider = Spy(new GithubRepositoryProvider('foo',Mock(ProviderConfig)))
+        and:
+        def conn = Mock(HttpURLConnection)
+
+        when:
+        provider.auth(conn)
+        then:
+        _ * provider.getUser() 
+        _ * provider.getPassword()
+        1 * provider.hasCredentials()
+        and:
+        1 * conn.setRequestProperty('Authorization', "Basic ${'1234567890:x-oauth-basic'.bytes.encodeBase64()}".toString())
+
+        cleanup:
+        SysEnv.pop()
     }
 }
 

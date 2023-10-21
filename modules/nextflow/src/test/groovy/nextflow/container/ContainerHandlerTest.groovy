@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -190,26 +189,16 @@ class ContainerHandlerTest extends Specification {
         given:
         def EXECUTOR  = Mock(Executor)
         def IMAGE = 'foo:latest'
-        def handler = Spy(new ContainerHandler([engine: 'shifter', enabled: true], EXECUTOR))
+        def handler = Spy(new ContainerHandler([engine: 'shifter', enabled: true]))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
         then:
-        1 * EXECUTOR.isContainerNative() >> false
         1 * handler.normalizeShifterImageName(IMAGE) >> 'shifter://image'
         0 * handler.normalizeDockerImageName(IMAGE) >> null
         and:
         result == 'shifter://image'
-
-        when:
-        result = handler.normalizeImageName(IMAGE)
-        then:
-        1 * EXECUTOR.isContainerNative() >> true
-        0 * handler.normalizeShifterImageName(IMAGE) >> null
-        1 * handler.normalizeDockerImageName(IMAGE) >> 'docker://image'
-        and:
-        result == 'docker://image'
-
+            
     }
     @Unroll
     def 'test normalize method for singularity' () {

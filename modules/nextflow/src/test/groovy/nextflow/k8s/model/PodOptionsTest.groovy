@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -207,6 +206,22 @@ class PodOptionsTest extends Specification {
 
     }
 
+    def 'should create host path' () {
+        given:
+        def options = [
+            [hostPath: '/host/one', mountPath: '/pod/1'],
+            [hostPath: '/host/two', mountPath: '/pod/2']
+        ]
+        when:
+        def mounts = new PodOptions(options).getMountHostPaths()
+
+        then:
+        mounts == [
+            new PodHostMount('/host/one', '/pod/1'),
+            new PodHostMount('/host/two', '/pod/2')
+        ] as Set
+
+    }
 
     def 'should not create env' () {
         when:
@@ -397,6 +412,31 @@ class PodOptionsTest extends Specification {
         opts = new PodOptions([[label:"FOO", value:'one']]) + new PodOptions([[label:"BAR", value:'two']])
         then:
         opts.labels == [FOO: 'one', BAR: 'two']
+    }
+
+    def 'should copy host paths' (){
+        given:
+        def data = [
+            [hostPath: "/foo", mountPath: '/one']
+        ]
+
+        when:
+        def opts = new PodOptions() + new PodOptions(data)
+        then:
+        opts.getMountHostPaths() == [new PodHostMount('/foo', '/one')] as Set
+
+        when:
+        opts = new PodOptions(data) + new PodOptions()
+        then:
+        opts.getMountHostPaths() == [new PodHostMount('/foo', '/one')] as Set
+
+        when:
+        opts = new PodOptions([[hostPath:"/foo", mountPath: '/one']]) + new PodOptions([[hostPath:"/bar", mountPath: '/two']])
+        then:
+        opts.getMountHostPaths() == [
+            new PodHostMount('/foo','/one'),
+            new PodHostMount('/bar','/two')
+        ] as Set
     }
 
     def 'should create pod labels' () {

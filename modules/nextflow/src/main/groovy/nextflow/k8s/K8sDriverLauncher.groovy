@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,6 +127,11 @@ class K8sDriverLauncher {
      * Workflow script positional parameters
      */
     private List<String> args
+
+    /**
+     * Plugins to run the workflow
+     */
+    private String plugins
 
     /**
      * Launcher entry point. Set-up the environment and create a pod that run the Nextflow
@@ -359,6 +363,12 @@ class K8sDriverLauncher {
         else if( !k8s.isSet('workDir') && config.workDir )
             k8s.workDir = config.workDir
 
+        if ( plugins ) {
+            LinkedList<String> plugins = config.plugins ?: []
+            plugins.addAll( this.plugins.tokenize(',') )
+            config.plugins = plugins
+        }
+
         // -- some cleanup
         if( !k8s.pod )
             k8s.remove('pod')
@@ -497,6 +507,7 @@ class K8sDriverLauncher {
                 cmd.&executorOptions,
                 cmd.&stdin,
                 cmd.&withSingularity,
+                cmd.&withApptainer,
                 cmd.&withDocker,
                 cmd.&withoutDocker,
                 cmd.&withMpi,

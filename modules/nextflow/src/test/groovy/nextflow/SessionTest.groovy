@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -355,15 +354,15 @@ class SessionTest extends Specification {
     @Unroll
     def 'should return engine type' () {
         given:
-        def session =  new Session([(engine): config])
+        def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == config as ContainerConfig
+        session.containerConfig == new ContainerConfig(CONFIG + [engine:ENGINE])
         session.containerConfig.enabled
-        session.containerConfig.engine == engine
+        session.containerConfig.engine == ENGINE
 
         where:
-        engine         | config
+        ENGINE         | CONFIG
         'docker'       | [enabled: true, x:'alpha', y: 'beta']
         'docker'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'podman'       | [enabled: true, x:'alpha', y: 'beta']
@@ -375,12 +374,42 @@ class SessionTest extends Specification {
         'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
     }
 
+    def 'should get config for specific engine' () {
+        given:
+        def config = [docker:[registry:'docker.io'], podman: [registry:'quay.io']]
+        def session = new Session(config)
+
+        expect:
+        session.getContainerConfig(null) == new ContainerConfig(engine:'docker', registry:'docker.io')
+        and:
+        session.getContainerConfig('docker') == new ContainerConfig(engine:'docker', registry:'docker.io')
+        and:
+        session.getContainerConfig('podman') == new ContainerConfig(engine:'podman', registry:'quay.io')
+        and:
+        session.getContainerConfig('sarus') == new ContainerConfig(engine:'sarus')
+    }
+
     @Unroll
-    def 'should get config config' () {
+    def 'should get config for conda environments' () {
         given:
         def session =  Spy(new Session([conda: CONFIG]))
         expect:
         session.condaConfig.isEnabled() == EXPECTED
+        
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
+    }
+
+    @Unroll
+    def 'should get config for spack environments' () {
+        given:
+        def session =  Spy(new Session([spack: CONFIG]))
+        expect:
+        session.spackConfig.isEnabled() == EXPECTED
         
         where:
         EXPECTED    | CONFIG            | ENV
@@ -496,25 +525,25 @@ class SessionTest extends Specification {
         when:
         text = '''
                 process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
+                    withName:'proc1' { container = 'alpha' }
+                    withName:'proc2' { container = 'beta' }
                 }
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta']
+        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta']
 
 
         when:
         text = '''
                 process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
+                    withName:'proc1' { container = 'alpha' }
+                    withName:'proc2' { container = 'beta' }
                 }
 
                 process.container = 'gamma'
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta', default: 'gamma']
+        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta', 'default': 'gamma']
 
 
         when:

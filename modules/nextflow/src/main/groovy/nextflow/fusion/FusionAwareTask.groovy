@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,10 @@ trait FusionAwareTask {
         return fusionEnabled
     }
 
+    FusionConfig fusionConfig() {
+        return FusionConfig.getConfig()
+    }
+
     FusionScriptLauncher fusionLauncher() {
         if( fusionLauncher==null ) {
             fusionLauncher = fusionEnabled()
@@ -57,10 +61,7 @@ trait FusionAwareTask {
     }
 
     List<String> fusionSubmitCli() {
-        final logFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_LOG))
-        final runFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
-        final cmd = "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${logFile}||true; exit \$ret; }\" EXIT; bash ${runFile} 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return ['bash','-o','pipefail','-c', cmd.toString() ]
+        return fusionLauncher().fusionSubmitCli(task)
     }
 
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,8 @@
 
 package nextflow.scm
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -29,6 +30,8 @@ import groovy.transform.Memoized
  */
 @CompileStatic
 final class AzureRepositoryProvider extends RepositoryProvider {
+
+    private static final Pattern COMMIT_REGEX = ~/[a-zA-Z0-9]{40}/
 
     private String user
     private String repo
@@ -74,8 +77,12 @@ final class AzureRepositoryProvider extends RepositoryProvider {
                 '$format':'json',
                 'path':path
         ] as Map<String,Object>
-        if( revision )
+        if( revision ) {
             queryParams['versionDescriptor.version']=revision
+
+            if( COMMIT_REGEX.matcher(revision).matches() )
+                queryParams['versionDescriptor.versionType'] = 'commit'
+        }
         def queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
         def result = "$endpointUrl/items?$queryString"
         result

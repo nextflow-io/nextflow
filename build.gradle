@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +24,7 @@ plugins {
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
 if (groovyVer) {
     def repo = groovyVer.startsWith('com.github.apache:') ? 'https://jitpack.io' : 'https://oss.jfrog.org/oss-snapshot-local/'
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer - repository: $repo"
+    logger.lifecycle "Overridden Groovy dependency to use $groovyVer - repository: $repo"
     allprojects {
         repositories {
             maven { url repo }
@@ -58,10 +57,11 @@ allprojects {
     apply plugin: 'idea'
     apply plugin: 'groovy'
     apply plugin: 'java-library'
+    apply plugin: 'jacoco'
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(19)
         }
     }
 
@@ -82,6 +82,8 @@ allprojects {
         mavenCentral()
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+        maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases" }
+        maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots" }
     }
 
     configurations {
@@ -139,6 +141,7 @@ allprojects {
     if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
         tasks.withType(Test) {
             jvmArgs ([
+                    '--enable-preview',
                     '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.io=ALL-UNNAMED',
                     '--add-opens=java.base/java.nio=ALL-UNNAMED',
@@ -154,7 +157,27 @@ allprojects {
                     '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
                     '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+                    '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
             ])
+        }
+    }
+
+    /**
+     * Code coverage with JaCoCo.
+     * See: https://www.jacoco.org/; https://docs.gradle.org/current/userguide/jacoco_plugin.html
+     */
+    // Code coverage report is always generated after tests run
+    test { finalizedBy jacocoTestReport }
+    jacocoTestReport {
+        // Tests are required to run before generating the code coverage report
+        dependsOn test
+
+        // Remove closure classes from the report, as they are already covered by the enclosing class coverage stats adding only noise.
+        // See: https://stackoverflow.com/questions/39453696
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect { dir ->
+                fileTree(dir: dir, excludes: ['**/*$*_closure*'])
+            }))
         }
     }
 }
@@ -207,7 +230,7 @@ task buildInfo { doLast {
             .eachDir { if(it.name.startsWith('nf-')) plugins << project(":plugins:${it.name}") }
 
     def meta = plugins .collect { "$it.name@$it.version" }
-    file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.join('\n')
+    file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.toSorted().join('\n')
 }}
 
 

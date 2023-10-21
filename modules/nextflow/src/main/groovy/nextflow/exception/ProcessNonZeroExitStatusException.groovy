@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
 package nextflow.exception
 
 import groovy.transform.CompileStatic
-
 /**
  * Thrown the submission to a grid scheduler returned an error condition
  *
@@ -29,13 +28,13 @@ class ProcessNonZeroExitStatusException extends RuntimeException {
 
     private String reason
     private int exitStatus
-    private List<String> command
+    private String command
 
     String getReason() { reason }
     int getExitStatus() { exitStatus }
-    List<String> getCommand() { command }
+    String getCommand() { command }
 
-    ProcessNonZeroExitStatusException(String message, String reason, int exitStatus, List<String> command) {
+    ProcessNonZeroExitStatusException(String message, String reason, int exitStatus, String command) {
         super(message)
         this.reason = reason
         this.exitStatus = exitStatus

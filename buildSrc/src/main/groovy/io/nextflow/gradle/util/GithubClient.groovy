@@ -73,7 +73,7 @@ class GithubClient {
     /**
      * 1. Get the last commit SHA of a specific branch
      *
-     * @return The SHA id of the last commit
+     * @return the SHA id of the last commit
      */
     String lastCommitId() {
         def resp = sendHttpMessage("https://api.github.com/repos/$owner/$repo/branches/$branch", null, 'GET')
@@ -84,7 +84,7 @@ class GithubClient {
      *  2. Create the blobs with the file content
      *
      * @param file content
-     * @return The SHA id of the uploaded content
+     * @return the SHA id of the uploaded content
      */
     String uploadBlob(String file) {
         def content = "{\"encoding\": \"base64\", \"content\": \"${file.bytes.encodeBase64().toString()}\"}"
@@ -95,10 +95,10 @@ class GithubClient {
     /**
      * 3. Create a tree that defines the file structure
      *
-     * @param fileName The name of the file changed
-     * @param blobId The id of the changed content
-     * @param lastCommitId The last commit id
-     * @return The SHA id of the tree structure
+     * @param fileName the name of the file changed
+     * @param blobId the id of the changed content
+     * @param lastCommitId the last commit id
+     * @return the SHA id of the tree structure
      */
     String createTree(String fileName, String blobId, String lastCommitId) {
         def content = "{ \"base_tree\": \"$lastCommitId\", \"tree\": [{\"path\": \"$fileName\",\"mode\": \"100644\",\"type\": \"blob\",\"sha\": \"$blobId\"}]}"
@@ -109,12 +109,12 @@ class GithubClient {
     /**
      * 4. Create the commit
      *
-     * @param treeId The change tree SHA id
-     * @param lastCommitId The last commit SHA id
-     * @param message The commit message
-     * @param author The commit author name
-     * @param email The commit author name
-     * @return The SHA id of the commit
+     * @param treeId the change tree SHA id
+     * @param lastCommitId the last commit SHA id
+     * @param message the commit message
+     * @param author the commit author name
+     * @param email the commit author email address
+     * @return the SHA id of the commit
      */
     String createCommit(String treeId, String lastCommitId, String message, String email) {
         def content = "{\"message\": \"$message\", \"author\": {\"name\": \"$userName\", \"email\": \"$email\"}, \"parents\": [\"$lastCommitId\"], \"tree\": \"$treeId\" }"
@@ -126,7 +126,7 @@ class GithubClient {
      * 5. Update the reference of your branch to point to the new commit SHA
      *
      * @param commitId
-     * @return The response message
+     * @return the response message
      */
     def updateRef(String commitId) {
         def content = "{\"ref\": \"refs/heads/$branch\", \"sha\": \"$commitId\"}"

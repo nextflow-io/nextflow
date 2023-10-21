@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1219,7 +1218,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * @return A tuple in which:
          *      <li>1st item: {@code true} if successful or {@code false} otherwise
          *      <li>2nd item: on error condition the line containing the error in the source script, zero otherwise
-         *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
+         *      <li>3rd item: on error condition the column containing the error in the source script, zero otherwise
          *
          */
         protected boolean wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {

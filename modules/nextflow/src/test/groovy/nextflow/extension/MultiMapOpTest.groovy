@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +104,7 @@ class MultiMapOpTest extends Dsl2Spec {
                 bar: it*it
             }
 
-            ch1 = Channel.from(1,2,3).multiMap(criteria)  
+            ch1 = Channel.of(1,2,3).multiMap(criteria)  
             
             ch1.foo.view { "foo:$it" }
             ch1.bar.view { "bar:$it" }

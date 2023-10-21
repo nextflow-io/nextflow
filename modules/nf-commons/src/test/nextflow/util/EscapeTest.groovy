@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +55,8 @@ class EscapeTest extends Specification {
         Escape.path("hello<3.txt") == "hello\\<3.txt"
         Escape.path("hello>3.txt") == "hello\\>3.txt"
         Escape.path("hello`3.txt") == "hello\\`3.txt"
+        Escape.path('hello:3.txt') == "hello\\:3.txt"
+        Escape.path('hello;3.txt') == "hello\\;3.txt"
         Escape.path("/some'5/data'3/with/quote's/file's.txt") == "/some\\'5/data\\'3/with/quote\\'s/file\\'s.txt"
         Escape.path("Hello '$world'") == "Hello\\ \\'world\\'"
 
@@ -94,5 +95,25 @@ class EscapeTest extends Specification {
         'foo\t'     | 'foo\\t'
         'foo\f'     | 'foo\\f'
         'foo\r'     | 'foo\\r'
+    }
+
+    def 'should escape special char' () {
+        expect:
+        Escape.variable(STR) == EXPECT
+        where:
+        STR         | EXPECT
+        'foo'       | 'foo'
+        'foo[x]bar' | 'foo[x]bar'
+        'foo '      | 'foo '
+        'foo:bar'   | 'foo:bar'
+        'foo!bar'   | 'foo!bar'
+        'foo[!x]bar'| 'foo[!x]bar'
+        and:
+        '$foo'      | '\\$foo'
+        'foo|bar'   | 'foo\\|bar'
+        'foo`bar'   | 'foo\\`bar'
+        'foo&bar'   | 'foo\\&bar'
+        'foo(x)bar' | 'foo\\(x\\)bar'
+        'foo<x>bar' | 'foo\\<x\\>bar'
     }
 }

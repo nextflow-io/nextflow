@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +19,22 @@ package nextflow.k8s
 import spock.lang.IgnoreIf
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.NodeTerminationException
-import nextflow.fusion.FusionScriptLauncher
 import nextflow.file.http.XPath
+import nextflow.fusion.FusionConfig
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
+import nextflow.k8s.client.PodUnschedulableException
 import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodHostMount
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodMountSecret
 import nextflow.k8s.model.PodOptions
@@ -56,7 +60,7 @@ class K8sTaskHandlerTest extends Specification {
         PodSpecBuilder.VOLUMES.set(0)
     }
 
-    def 'should return a new pod with args' () {
+    def 'should return a new pod request' () {
         given:
         def WORK_DIR = Paths.get('/some/work/dir')
         def config = Mock(TaskConfig)
@@ -83,20 +87,22 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [
-                            name:'nf-123',
-                            namespace:'default'
-                    ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-123',
-                                     image:'debian:latest',
-                                     args:['/bin/bash', '-ue','/some/work/dir/.command.run'] ]
-                            ]
-                    ]
+        and:
+        result == [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: [
+                name:'nf-123',
+                namespace:'default'
+            ],
+            spec: [
+                restartPolicy:'Never',
+                containers: [[
+                    name:'nf-123',
+                    image:'debian:latest',
+                    args:['/bin/bash', '-ue','/some/work/dir/.command.run']
+                ]]
+            ]
         ]
 
         when:
@@ -117,22 +123,12 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-foo', namespace:'default', labels: [sessionId: 'xxx'], annotations: [evict: 'false']],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-foo',
-                                     image:'debian:latest',
-                                     command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1] ],
-                                     env: [  [name:'NXF_OWNER', value:'501:502'] ]
-                                    ]
-                            ]
-                    ]
-        ]
-
+        and:
+        result.metadata.labels == [sessionId: 'xxx']
+        result.metadata.annotations == [evict: 'false']
+        result.spec.containers[0].command == ['/bin/bash', '-ue', '/some/work/dir/.command.run']
+        result.spec.containers[0].resources == [ requests: [cpu:1] ]
+        result.spec.containers[0].env == [ [name:'NXF_OWNER', value:'501:502'] ]
 
         when:
         result = handler.newSubmitRequest(task)
@@ -151,25 +147,18 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-abc', namespace:'namespace-x' ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-abc',
-                                     image:'user/alpine:1.0',
-                                     command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[memory:'16384Mi'] ]
-                                    ]
-                            ]
-                    ]
-        ]
+        and:
+        result.metadata.namespace == 'namespace-x'
+        result.spec.containers[0].image == 'user/alpine:1.0'
+        result.spec.containers[0].command == ['/bin/bash', '-ue', '/some/work/dir/.command.run']
+        result.spec.containers[0].resources == [ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
 
     }
 
-    def 'should return a new pod request with no storage' () {
+    def 'should create a pod with debug options' () {
         given:
+        SysEnv.push([NXF_DEBUG:'true'])
+        and:
         def WORK_DIR = Paths.get('/some/work/dir')
         def config = Mock(TaskConfig)
         def task = Mock(TaskRun)
@@ -183,11 +172,11 @@ class K8sTaskHandlerTest extends Specification {
         then:
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
-        1 * handler.entrypointOverride() >> true
+        1 * handler.entrypointOverride() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
-        1 * handler.getLabels(task) >> [foo: 'bar', hello: 'world']
-        1 * handler.getAnnotations() >> [fooz: 'barz', ciao: 'mondo']
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
@@ -195,90 +184,11 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [
-                            name:'nf-123',
-                            namespace:'default',
-                            labels:[ foo:'bar', hello: 'world'],
-                            annotations:[ fooz:'barz', ciao: 'mondo']
-                    ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-123',
-                                     image:'debian:latest',
-                                     command:['/bin/bash', '-ue','/some/work/dir/.command.run'] ]
-                            ]
-                    ]
-                ]
+        and:
+        result.spec.containers[0].env == [[name:'NXF_DEBUG', value:'true']]
 
-        when:
-        result = handler.newSubmitRequest(task)
-        then:
-        _ * handler.fusionEnabled() >> false
-        1 * handler.entrypointOverride() >> true
-        1 * handler.getSyntheticPodName(task) >> 'nf-foo'
-        1 * handler.getLabels(task) >> [sessionId:'xxx']
-        1 * handler.getAnnotations() >>  [evict: 'false']
-        1 * handler.getPodOptions() >> new PodOptions()
-        1 * handler.getContainerMounts() >> []
-        1 * handler.fixOwnership() >> true
-        1 * handler.getOwner() >> '501:502'
-        1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
-        1 * config.getCpus() >> 1
-        1 * config.getMemory() >> null
-        1 * client.getConfig() >> new ClientConfig()
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-foo', namespace:'default', labels: [sessionId: 'xxx'], annotations: [evict: 'false']],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-foo',
-                                     image:'debian:latest',
-                                     command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1] ],
-                                     env: [  [name:'NXF_OWNER', value:'501:502'] ]
-                                    ]
-                            ]
-                    ]
-        ]
-
-        when:
-        result = handler.newSubmitRequest(task)
-        then:
-        _ * handler.fusionEnabled() >> false
-        1 * handler.fixOwnership() >> false
-        1 * handler.entrypointOverride() >> true
-        1 * handler.getSyntheticPodName(task) >> 'nf-abc'
-        1 * handler.getLabels(task) >> [:]
-        1 * handler.getAnnotations() >> [:]
-        1 * handler.getPodOptions() >> new PodOptions()
-        1 * handler.getContainerMounts() >> []
-        1 * task.getContainer() >> 'user/alpine:1.0'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
-        1 * config.getCpus() >> 4
-        1 * config.getMemory() >> MemoryUnit.of('16GB')
-        1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-abc', namespace:'namespace-x' ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-abc',
-                                     image:'user/alpine:1.0',
-                                     command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
-                                    ]
-                            ]
-                    ]
-        ]
-
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should create a pod with specified client configs' () {
@@ -309,22 +219,9 @@ class K8sTaskHandlerTest extends Specification {
         1 * client.getConfig() >> config
         1 * config.getNamespace() >> 'just-a-namespace'
         1 * config.getServiceAccount() >> 'pedantic-kallisto'
-
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-123', namespace:'just-a-namespace' ],
-                    spec: [
-                            serviceAccountName: 'pedantic-kallisto',
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-123',
-                                     image:'debian:latest',
-                                     command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[requests:[cpu:1]]
-                                    ]
-                            ]
-                    ]
-        ]
+        and:
+        result.metadata.namespace == 'just-a-namespace'
+        result.spec.serviceAccountName == 'pedantic-kallisto'
 
     }
 
@@ -339,7 +236,6 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
         def podOptions = Mock(PodOptions)
         and:
-        podOptions.automountServiceAccountToken >> true
         Map result
 
         when:
@@ -360,30 +256,18 @@ class K8sTaskHandlerTest extends Specification {
         2 * podOptions.getEnvVars() >> [ PodEnv.value('FOO','bar') ]
         2 * podOptions.getMountSecrets() >> [ new PodMountSecret('my-secret/key-z', '/data/secret.txt') ]
         2 * podOptions.getMountConfigMaps() >> [ new PodMountConfig('my-data/key-x', '/etc/file.txt') ]
-
-        result == [
-            apiVersion: 'v1',
-            kind: 'Pod',
-            metadata: [name:'nf-123', namespace:'default' ],
-            spec: [
-                restartPolicy: 'Never',
-                containers: [
-                    [
-                        name: 'nf-123',
-                        image: 'debian:latest',
-                        command: ['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                        env: [[name:'FOO', value:'bar']],
-                        volumeMounts: [
-                            [name:'vol-1', mountPath:'/etc'],
-                            [name:'vol-2', mountPath:'/data']
-                        ]
-                    ]
-                ],
-                volumes:[
-                    [name:'vol-1', configMap:[name:'my-data', items:[[key:'key-x', path:'file.txt']]]],
-                    [name:'vol-2', secret:[secretName:'my-secret', items:[[key:'key-z', path:'secret.txt']]]]
-                ]
-            ]
+        2 * podOptions.getMountHostPaths() >> [ new PodHostMount('/host/x', '/mnt/x') ]
+        and:
+        result.spec.containers[0].env == [[name:'FOO', value:'bar']]
+        result.spec.containers[0].volumeMounts == [
+            [name:'vol-1', mountPath:'/etc'],
+            [name:'vol-2', mountPath:'/data'],
+            [name:'vol-3', mountPath:'/mnt/x']
+        ]
+        result.spec.volumes == [
+            [name:'vol-1', configMap:[name:'my-data', items:[[key:'key-x', path:'file.txt']]]],
+            [name:'vol-2', secret:[secretName:'my-secret', items:[[key:'key-z', path:'secret.txt']]]],
+            [name:'vol-3', 'hostPath':[path:'/host/x']]
         ]
 
     }
@@ -397,12 +281,9 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
+        def podOptions = Mock(PodOptions)
         and:
         Map result
-
-        def podOptions = Mock(PodOptions)
-        def CLAIMS = [ new PodVolumeClaim('first','/work'), new PodVolumeClaim('second','/data') ]
-        podOptions.automountServiceAccountToken >> true
 
         when:
         result = handler.newSubmitRequest(task)
@@ -421,32 +302,19 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        2 * podOptions.getVolumeClaims() >> CLAIMS
-
-        result == [
-            apiVersion: 'v1',
-            kind: 'Pod',
-            metadata: [name:'nf-123', namespace:'default'],
-            spec: [
-                restartPolicy: 'Never',
-                containers: [
-                    [
-                        name: 'nf-123',
-                        image: 'debian:latest',
-                        command: ['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                        volumeMounts: [
-                            [name:'vol-1', mountPath:'/work'],
-                            [name:'vol-2', mountPath:'/data']
-                        ]
-                    ]
-                ],
-                volumes: [
-                    [name:'vol-1', persistentVolumeClaim:[claimName: 'first']],
-                    [name:'vol-2', persistentVolumeClaim:[claimName: 'second']]
-                ]
-            ]
+        2 * podOptions.getVolumeClaims() >> [
+            new PodVolumeClaim('first','/work'),
+            new PodVolumeClaim('second','/data')
         ]
-
+        and:
+        result.spec.containers[0].volumeMounts == [
+            [name:'vol-1', mountPath:'/work'],
+            [name:'vol-2', mountPath:'/data']
+        ]
+        result.spec.volumes == [
+            [name:'vol-1', persistentVolumeClaim:[claimName: 'first']],
+            [name:'vol-2', persistentVolumeClaim:[claimName: 'second']]
+        ]
 
         when:
         result = handler.newSubmitRequest(task)
@@ -465,29 +333,14 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-
-        result == [
-            apiVersion: 'v1',
-            kind: 'Pod',
-            metadata: [name:'nf-123', namespace:'default'],
-            spec: [
-                restartPolicy: 'Never',
-                containers: [
-                    [
-                        name: 'nf-123',
-                        image: 'debian:latest',
-                        command: ['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                        volumeMounts: [
-                            [name:'vol-3', mountPath:'/tmp'],
-                            [name:'vol-4', mountPath: '/data']
-                        ]
-                    ]
-                ],
-                volumes: [
-                    [name:'vol-3', hostPath:[path:'/tmp']],
-                    [name:'vol-4', hostPath:[path:'/data']]
-                ]
-            ]
+        and:
+        result.spec.containers[0].volumeMounts == [
+            [name:'vol-3', mountPath:'/tmp'],
+            [name:'vol-4', mountPath: '/data']
+        ]
+        result.spec.volumes == [
+            [name:'vol-3', hostPath:[path:'/tmp']],
+            [name:'vol-4', hostPath:[path:'/data']]
         ]
 
     }
@@ -538,7 +391,6 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
         def podOptions = Mock(PodOptions)
         and:
-        podOptions.automountServiceAccountToken >> true
         Map result
 
         when:
@@ -559,23 +411,23 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getConfig() >> config
 
         result == [
-            apiVersion: 'batch/v1', 
-            kind: 'Job', 
-            metadata:[name: 'nf-123', namespace: 'default'], 
-            spec:[
-              backoffLimit: 0,
-              template: [
-                  spec: [
-                     restartPolicy: 'Never',
-                     containers: [
-                       [
-                           name: 'nf-123',
-                           image: 'debian:latest',
-                           command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
-                       ]
-                     ]
-                  ]
-              ]
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: [name: 'nf-123', namespace: 'default'],
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: [name: 'nf-123', namespace: 'default'],
+                    spec: [
+                        automountServiceAccountToken: false,
+                        restartPolicy: 'Never',
+                        containers: [[
+                            name: 'nf-123',
+                            image: 'debian:latest',
+                            command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
+                        ]]
+                    ]
+                ]
             ]
         ]
     }
@@ -759,6 +611,24 @@ class K8sTaskHandlerTest extends Specification {
         state.nodeTermination.message == "Node shutdown happened"
     }
 
+    def 'should return other nodeTermination state' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> { throw new PodUnschedulableException("Pod failed for unknown reason", new Exception("cause")) }
+        then:
+        state.terminated.startedAt
+        state.terminated.finishedAt
+        and:
+        state.nodeTermination instanceof PodUnschedulableException
+        state.nodeTermination.message == "Pod failed for unknown reason"
+    }
+
     def 'should return container mounts' () {
 
         given:
@@ -800,7 +670,9 @@ class K8sTaskHandlerTest extends Specification {
         handler.getRunName() >> 'pedantic-joe'
         task.getName() >> 'hello-world-1'
         task.getProcessor() >> proc
-        task.getConfig() >> Mock(TaskConfig)
+        task.getConfig() >> Mock(TaskConfig) {
+            getResourceLabels() >> [mylabel: 'myvalue']
+        }
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
@@ -809,7 +681,9 @@ class K8sTaskHandlerTest extends Specification {
                 [label: 'app', value: 'nextflow'],
                 [label: 'x', value: 'hello_world']
         ]]
-
+        and:
+        labels.mylabel == 'myvalue'
+        and:
         labels.app == 'nextflow'
         labels.foo == 'bar'
         labels.x == 'hello_world'
@@ -960,11 +834,11 @@ class K8sTaskHandlerTest extends Specification {
         when:
         opts = handler.getPodOptions()
         then:
-        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
         and:
         1 * taskConfig.getPodOptions() >> new PodOptions([:])
         and: 
-        opts == new PodOptions([[env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
     }
 
     def 'should update startTimeMillis and completeTimeMillis with terminated state' () {
@@ -1019,24 +893,27 @@ class K8sTaskHandlerTest extends Specification {
         handler.completeTimeMillis == 20
     }
 
-    def 'should create a fusion pod' () {
+    def 'should create a fusion privileged pod' () {
         given:
         def WORK_DIR = XPath.get('http://some/work/dir')
         def config = Mock(TaskConfig)
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
+        def launcher = Mock(FusionScriptLauncher)
         def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
         Map result
 
         when:
         result = handler.newSubmitRequest(task)
         then:
+        launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
+        launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        and:
         handler.getTask() >> task
         handler.fusionEnabled() >> true
-        handler.fusionLauncher() >> Mock(FusionScriptLauncher) {
-            fusionEnv() >> [NXF_FUSION_BUCKETS: 'this,that']
-        }
+        handler.fusionLauncher() >> launcher
         and:
         task.getContainer() >> 'debian:latest'
         task.getWorkDir() >> WORK_DIR
@@ -1053,24 +930,56 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [
-                            name:'nf-123',
-                            namespace:'default'
-                    ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-123',
-                                     image:'debian:latest',
-                                     args:['bash', '-o', 'pipefail', '-c', 'trap "{ ret=$?; cp .command.log null||true; exit $ret; }" EXIT; bash null 2>&1 | tee .command.log'],
-                                     securityContext:[privileged:true],
-                                     env:[[name:'NXF_FUSION_BUCKETS', value:'this,that']]]
-                            ]
-                    ]
-        ]
+        and:
+        result.spec.containers[0].args == ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        result.spec.containers[0].securityContext == [privileged:true]
+        result.spec.containers[0].env == [[name:'FUSION_BUCKETS', value:'this,that']]
      }
+
+    def 'should create a fusion unprivileged pod' () {
+        given:
+        def WORK_DIR = XPath.get('http://some/work/dir')
+        def config = Mock(TaskConfig)
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def launcher = Mock(FusionScriptLauncher)
+        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
+        launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        and:
+        handler.getTask() >> task
+        handler.fusionEnabled() >> true
+        handler.fusionLauncher() >> launcher
+        handler.fusionConfig() >> new FusionConfig(privileged: false)
+        and:
+        task.getContainer() >> 'debian:latest'
+        task.getWorkDir() >> WORK_DIR
+        task.getConfig() >> config
+        and:
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        and:
+        1 * config.getCpus() >> 0
+        1 * config.getMemory() >> null
+        1 * client.getConfig() >> new ClientConfig()
+        and:
+        result.spec.containers[0].args == ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        result.spec.containers[0].env == [[name:'FUSION_BUCKETS', value:'this,that']]
+        result.spec.containers[0].resources == [limits:['nextflow.io/fuse':1]]
+        !result.spec.containers[0].securityContext
+    }
 
     def 'get fusion submit command' () {
         given:
@@ -1085,6 +994,6 @@ class K8sTaskHandlerTest extends Specification {
         when:
         def result =  handler.getSubmitCommand(Mock(TaskRun))
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/http/foo/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/foo/work/dir/.command.run 2>&1 | tee .command.log'
+        result.join(' ') == '/usr/bin/fusion bash /fusion/http/foo/work/dir/.command.run'
     }
 }

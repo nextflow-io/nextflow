@@ -9,9 +9,10 @@ export NXF_IGNORE_WARN_DSL2=true
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 # disable ansi log to make log more readable
 export NXF_ANSI_LOG=false
+export NXF_DISABLE_CHECK_LATEST=true
 
 #
-# Integration test
+# Integration tests
 #
 if [[ $TEST_MODE == 'test_integration' ]]; then
 
@@ -48,12 +49,12 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     exit 0
 fi
 
-
-if [[ $GITHUB_EVENT_NAME == pull_request ]]; then
-  echo "Skipping cloud integration tests on PR event"
-  exit 0
+if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+  if [ "$(jq -r '.pull_request.head.repo.fork' $GITHUB_EVENT_PATH)" = "true" ]; then
+    echo "Skipping cloud integration tests on external PR event"
+    exit 0
+  fi
 fi
-
 
 #
 # AWS Batch tests
@@ -89,4 +90,9 @@ if [[ $TEST_MODE == 'test_google' ]]; then
     else
       echo "Missing GOOGLE_SECRET variable -- Skipping Google LS tests"
     fi
+fi
+
+if [[ $TEST_MODE == 'test_wave' ]]; then
+      echo "Wave tests"
+      bash wave.sh
 fi

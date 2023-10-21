@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +23,6 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.util.HistoryFile
-
-import static nextflow.util.HistoryFile.Record
 
 /**
  * Common cache operations shared by {@link CmdLog} and {@link CmdClean}
@@ -91,7 +88,7 @@ trait CacheBase {
         if( !args )
             return history.findByIdOrName('last')
 
-        List<Record> result = []
+        List<HistoryFile.Record> result = []
         for( String name : args ) {
             result.addAll(history.findByIdOrName(name))
         }

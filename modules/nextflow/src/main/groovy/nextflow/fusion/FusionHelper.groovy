@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerConfig
 import nextflow.extension.FilesEx
@@ -36,23 +37,23 @@ import nextflow.io.BucketParser
 class FusionHelper {
 
     @Memoized
-    static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=System.getenv()) {
+    static boolean isFusionEnabled(Session session) {
         def result = session.config.navigate('fusion.enabled')
         if( result == null )
-            result = sysEnv.get('NXF_FUSION_ENABLED')
+            result = SysEnv.get('FUSION_ENABLED')
         return result!=null ? result.toString()=='true' : false
     }
 
-
-    static List<String> runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
+    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, String containerOpts, List<String> runCmd) {
         if( !containerName )
             throw new IllegalArgumentException("Missing task container -- Fusion requires the task to be executed by a container process")
         final engine = containerConfig.getEngine()
         final containerBuilder = ContainerBuilder.create(engine, containerName)
                 .addMountWorkDir(false)
-                .addRunOptions('--rm')
+                .addRunOptions(containerConfig.runOptions as String)
+                .addRunOptions(containerOpts)
+                .addRunOptions(containerConfig.fusionOptions())
                 .params(containerConfig)
-                .params(privileged: true)
 
         // add fusion env vars
         for(Map.Entry<String,String> it : launcher.fusionEnv()) {
@@ -73,10 +74,10 @@ class FusionHelper {
                 .getRunCommand(patchCmd.join(' '))
                 .replaceAll('-w "\\$PWD" ','') // <-- hack to remove the PWD work dir
 
-        return ['sh', '-c', containerCmd]
+        return containerCmd
     }
 
-    static Path toContainerMount(Path path, String scheme, Set<String> buckets) {
+    static Path toContainerMount(Path path, String scheme) {
         if( path == null )
             return null
 
@@ -86,12 +87,7 @@ class FusionHelper {
             throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
 
         final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
-        buckets.add(p.bucket)
         return Path.of(result)
-    }
-
-    static Path toContainerMount(Path path, String scheme) {
-        return toContainerMount(path, scheme, new HashSet<String>(1))
     }
 
 }
