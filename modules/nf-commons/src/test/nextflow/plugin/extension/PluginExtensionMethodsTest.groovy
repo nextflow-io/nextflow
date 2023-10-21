@@ -26,7 +26,6 @@ import nextflow.plugin.TestPluginManager
 import spock.lang.Shared
 import spock.lang.TempDir
 import test.Dsl2Spec
-import test.MockScriptRunner 
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
@@ -199,7 +198,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        dsl_eval(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)
@@ -242,7 +241,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        dsl_eval(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)
@@ -335,7 +334,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         '''
 
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT)
 
         then:
         result.val == 'hi'
@@ -404,7 +403,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT)
 
         then:
         result.val == EXPECTED
@@ -442,7 +441,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         """.stripIndent()
 
         when:
-        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        dsl_eval(SCRIPT)
 
         then:
         thrown(DuplicateModuleFunctionException)
@@ -488,7 +487,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         """.stripIndent()
 
         when:
-        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        dsl_eval(SCRIPT)
 
         then:
         thrown(DuplicateModuleFunctionException)
