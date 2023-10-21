@@ -102,8 +102,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.7"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.7"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.15"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.15"
     }
 
     test {

@@ -17,19 +17,16 @@
 
 package nextflow.plugin.extension
 
-import nextflow.plugin.hello.HelloExtension
-
 import java.nio.file.Path
 
 import nextflow.Channel
 import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.plugin.Plugins
 import nextflow.plugin.TestPluginManager
-import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Shared
 import spock.lang.TempDir
 import test.Dsl2Spec
-import test.MockScriptRunner
+import test.MockScriptRunner 
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
