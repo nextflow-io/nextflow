@@ -1177,6 +1177,46 @@ output:
 
 In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is legitimately missing, the process does not fail. The output channel will only contain values for those processes that produce `output.txt`.
 
+### Multiple outputs and the `emit` option
+
+When you have multiple outputs in your process, you can access any of them individually in the output channel through their position in the process output block. The script below will print the location of the file of the second output. Remember indexes in Nextflow start with `0`.
+
+```
+process FOO {
+  output:
+    path 'bye_file.txt'
+    path 'hi_file.txt'
+  """
+  echo "bye" > bye_file.txt
+  echo "hi" > hi_file.txt
+  """
+}
+
+workflow {
+  ch = FOO()
+  ch[1].view()
+}
+```
+
+You can refer to these outputs through a mnemonic using the `emit` option, as in the following example:
+
+```
+process FOO {
+  output:
+    path 'bye_file.txt', emit: bye_file
+    path 'hi_file.txt',  emit: hi_file
+  """
+  echo "bye" > bye_file.txt
+  echo "hi" > hi_file.txt
+  """
+}
+
+workflow {
+  ch = FOO()
+  ch.hi_file.view()
+}
+```
+
 ## When
 
 The `when` block allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
