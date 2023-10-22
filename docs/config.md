@@ -1195,7 +1195,7 @@ process {
 ```
 
 :::{note}
-The `withName` selector applies to a process even when it is included from a module under an alias. For example, `withName: hello` will apply to any process originally defined as `hello`, regardless of whether it is included under an alias. However, a selector referring to the alias of a process will also be applied.
+The `withName` selector applies to a process even when it is included from a module under an alias. For example, `withName: hello` will apply to any process originally defined as `hello`. If there is also a `withName` selector for a given alias, it will also be applied to that alias with higher precedence.
 :::
 
 :::{tip}
