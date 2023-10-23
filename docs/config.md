@@ -87,7 +87,7 @@ The `apptainer` scope controls how [Apptainer](https://apptainer.org) containers
 The following settings are available:
 
 `apptainer.autoMounts`
-: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Apptainer installation (default: `false`).
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Apptainer installation (default: `true`).
 
 `apptainer.cacheDir`
 : The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
