@@ -1193,8 +1193,8 @@ process FOO {
 }
 
 workflow {
-  ch = FOO()
-  ch[1].view()
+  FOO()
+  FOO.out[1].view()
 }
 ```
 
