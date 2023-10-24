@@ -1212,8 +1212,8 @@ process FOO {
 }
 
 workflow {
-  ch = FOO()
-  ch.hi_file.view()
+  FOO()
+  FOO.out.hi_file.view()
 }
 ```
 
