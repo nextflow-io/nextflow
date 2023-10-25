@@ -66,8 +66,9 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.singularityOciMode() )
+                return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-
             final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
@@ -187,7 +188,7 @@ class ContainerHandler {
     }
 
 
-    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:\. ]+:\/\/(.*)/
+    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:. ]+:\/\/(.*)/
 
     /**
      * Normalize Singularity image name resolving the absolute path or
