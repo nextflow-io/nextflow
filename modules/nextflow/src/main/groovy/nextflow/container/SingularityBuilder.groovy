@@ -39,6 +39,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private String runCmd0
 
+    private boolean oci
+
     SingularityBuilder(String name) {
         this.image = name
         this.homeMount = defaultHomeMount()
@@ -92,6 +94,9 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
+        if( params.oci!=null )
+            oci = params.oci.toString() == 'true'
+
         return this
     }
 
@@ -119,6 +124,9 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( newPidNamespace )
             result << '--pid '
+
+        if( oci )
+            result << '--oci '
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
