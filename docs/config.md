@@ -1507,23 +1507,32 @@ nextflow run <your script> -profile standard,cloud
 :::
 
 :::{danger}
-When using the `profiles` feature in your config file, do NOT set attributes in the same scope both inside and outside a `profiles` context. For example:
+When using the `profiles` feature in your config file, avoid setting attributes in the same scope for a specific profile with different syntaxes (`{` and `.`). If you want to do so, start with `{`. For example:
 
 ```groovy
-process.cpus = 1
-
 profiles {
   foo {
     process.memory = '2 GB'
+    process {
+      cpus = 2
+    }
   }
-
-  bar {
-    process.memory = '4 GB'
-  }
-}
 ```
 
-In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also used in the `foo` and `bar` profiles.
+In the above example, the `process.memory` attribute is not correctly applied because the `process` scope is later used with curly braces. The example below works as expected, with both attributes being set, though:
+
+
+```groovy
+profiles {
+  foo {
+    process {
+      cpus = 2
+    }
+    process.memory = '2 GB'
+  }
+```
+
+In general, it's advised to pick one syntax and stick to it within specific profiles.
 :::
 
 (config-env-vars)=
