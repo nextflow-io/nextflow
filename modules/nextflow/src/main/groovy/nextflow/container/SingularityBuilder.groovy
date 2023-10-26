@@ -153,6 +153,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     protected CharSequence appendEnv(StringBuilder result) {
         makeEnv('TMP',result) .append(' ')
         makeEnv('TMPDIR',result) .append(' ')
+        // add magic variables required by singularity to run in OCI-mode
+        if( oci ) {
+            result .append('${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ')
+            result .append('${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ')
+        }
         super.appendEnv(result)
     }
 
