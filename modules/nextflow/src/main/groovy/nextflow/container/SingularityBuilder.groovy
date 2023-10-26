@@ -122,7 +122,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( !homeMount )
             result << '--no-home '
 
-        if( newPidNamespace )
+        if( newPidNamespace && !oci )
             result << '--pid '
 
         if( oci )
