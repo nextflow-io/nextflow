@@ -1177,45 +1177,51 @@ output:
 
 In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is legitimately missing, the process does not fail. The output channel will only contain values for those processes that produce `output.txt`.
 
-### Multiple outputs and the `emit` option
+(process-multiple-outputs)=
 
-When you have multiple outputs in your process, you can access any of them individually in the output channel through their position in the process output block. The script below will print the location of the file of the second output. Remember indexes in Nextflow start with `0`.
+### Multiple outputs
 
-```
+When a process declares multiple outputs, each output can be accessed by index. The following example prints the second process output (indexes start at zero):
+
+```groovy
 process FOO {
-  output:
+    output:
     path 'bye_file.txt'
     path 'hi_file.txt'
-  """
-  echo "bye" > bye_file.txt
-  echo "hi" > hi_file.txt
-  """
+
+    """
+    echo "bye" > bye_file.txt
+    echo "hi" > hi_file.txt
+    """
 }
 
 workflow {
-  FOO()
-  FOO.out[1].view()
+    FOO()
+    FOO.out[1].view()
 }
 ```
 
-You can refer to these outputs through a mnemonic using the `emit` option, as in the following example:
+You can also use the `emit` option to assign a name to each output and access them by name:
 
-```
+```groovy
 process FOO {
-  output:
+    output:
     path 'bye_file.txt', emit: bye_file
     path 'hi_file.txt',  emit: hi_file
-  """
-  echo "bye" > bye_file.txt
-  echo "hi" > hi_file.txt
-  """
+
+    """
+    echo "bye" > bye_file.txt
+    echo "hi" > hi_file.txt
+    """
 }
 
 workflow {
-  FOO()
-  FOO.out.hi_file.view()
+    FOO()
+    FOO.out.hi_file.view()
 }
 ```
+
+See {ref}`workflow-process-invocation` for more details.
 
 ## When
 
