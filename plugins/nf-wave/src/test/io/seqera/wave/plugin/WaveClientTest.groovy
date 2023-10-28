@@ -32,6 +32,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.container.inspect.ContainerInspectMode
+import nextflow.container.inspect.ContainersInspector
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -197,7 +199,8 @@ class WaveClientTest extends Specification {
 
     def 'should create request object with dry-run mode' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[dryRun:true]]}
+        ContainerInspectMode.activate(true)
+        def session = Mock(Session) { getConfig() >> [:]}
         def IMAGE =  'foo:latest'
         def wave = new WaveClient(session)
 
@@ -215,6 +218,9 @@ class WaveClientTest extends Specification {
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
+
+        cleanup:
+        ContainerInspectMode.activate(false)
     }
 
     def 'should create request object and platform' () {
