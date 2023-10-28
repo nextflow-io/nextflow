@@ -51,6 +51,7 @@ import io.seqera.wave.plugin.exception.UnauthorizedException
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
@@ -184,7 +185,7 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: config.dryRun()
+                dryRun: ContainerInspectMode.active()
         )
     }
 
@@ -208,7 +209,7 @@ class WaveClient {
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
-                dryRun: config.dryRun(),
+                dryRun: ContainerInspectMode.active(),
         )
         return sendRequest(request)
     }
@@ -489,7 +490,7 @@ class WaveClient {
         final platform = dockerArch
 
         // check is a valid container image
-        WaveAssets.validateContainerRepo(containerImage)
+        WaveAssets.validateContainerName(containerImage)
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig(platform)
         return new WaveAssets(
@@ -521,7 +522,7 @@ class WaveClient {
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             if( config.freezeMode() )  {
-                if( response.buildId && !config.dryRun() ) {
+                if( response.buildId && !ContainerInspectMode.active() ) {
                     // await the image to be available when a new image is being built
                     awaitImage(response.targetImage)
                 }

@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -67,7 +68,8 @@ class ContainerHandler {
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
@@ -76,7 +78,8 @@ class ContainerHandler {
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createApptainerCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
@@ -84,6 +87,8 @@ class ContainerHandler {
             // if the imagename starts with '/' it's an absolute path
             // otherwise we assume it's in a remote registry and pull it from there
             final requiresCaching = !imageName.startsWith('/')
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
             return Escape.path(result)
         }
