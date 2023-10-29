@@ -85,11 +85,11 @@ class WaveAssets {
     }
 
 
-    static void validateContainerRepo(String name) {
+    static void validateContainerName(String name) {
         if( !name )
             return
         final scheme = StringUtils.getUrlProtocol(name)
         if( scheme )
-            throw new IllegalArgumentException("Container repository should not start with URL like prefix - offending value: $name")
+            throw new IllegalArgumentException("Wave container request image cannot start with URL like prefix - offending value: $name")
     }
 }

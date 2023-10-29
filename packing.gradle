@@ -98,7 +98,7 @@ protected coordinates( it ) {
  */
 task packOne(type: Jar) {
     dependsOn configurations.capsule, configurations.defaultCfg
-    archiveName = "nextflow-${version}-one.jar"
+    archiveFileName = "nextflow-${version}-one.jar"
 
     from (configurations.capsule.collect { zipTree(it) })
 
@@ -133,7 +133,7 @@ task packOne(type: Jar) {
 
 task packAll(type: Jar) {
     dependsOn configurations.capsule, configurations.defaultCfg
-    archiveName = "nextflow-${version}-all.jar"
+    archiveFileName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
     from (configurations.amazon + configurations.google + configurations.tower + configurations.wave)
@@ -175,7 +175,7 @@ task packAll(type: Jar) {
 
 task packCore(type: Jar) {
     dependsOn configurations.capsule, configurations.defaultCfg
-    archiveName = "nextflow-${version}-core.jar"
+    archiveFileName = "nextflow-${version}-core.jar"
 
     from jar // embed our application jar
     from (configurations.defaultCfg)
