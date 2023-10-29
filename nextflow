@@ -404,7 +404,7 @@ else
     # we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
     cmd_pattern='"([^"]*)"(.*)'
     [[ "${cli[@]}" =~ $cmd_pattern ]]
-    cmd_base=(${BASH_REMATCH[1]})
+    declare -a cmd_base="(${BASH_REMATCH[1]})"
     declare -a cmd_tail="(${BASH_REMATCH[2]})"
 
     launcher="${cmd_base[@]}"
