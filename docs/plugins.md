@@ -350,7 +350,7 @@ nextflow run <pipeline> -plugins nf-hello
 
 To use Nextflow plugins in an offline environment:
 
-1. Download the {ref}`"all" release <getstarted-install>` of Nextflow, which comes with the following default plugins: `nf-amazon`, `nf-google`, `nf-tower`.
+1. {ref}`Download Nextflow <getstarted-install>` and install it on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
 
 2. Download any additional plugins by running `nextflow plugin install <pluginId,..>`. Alternatively, simply run your pipeline once and Nextflow will download all of the plugins that it needs.
 
