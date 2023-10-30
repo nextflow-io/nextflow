@@ -127,8 +127,6 @@ class CH {
     }
 
     static DataflowBroadcast topic(String name) {
-        if( !NF.isDsl2() )
-            throw new IllegalStateException("Channel 'topic' is only available with DSL2")
         synchronized (allTopics) {
             def topic = allTopics.find(it -> it.name == name)
             if( topic!=null )
@@ -141,8 +139,6 @@ class CH {
     }
 
     static DataflowWriteChannel topicWriter(String name) {
-        if( !NF.isDsl2() )
-            throw new IllegalStateException("Channel 'topic' is only available with DSL2")
         synchronized (allTopics) {
             def topic = allTopics.find(it -> it.name == name)
             if( topic==null ) {
