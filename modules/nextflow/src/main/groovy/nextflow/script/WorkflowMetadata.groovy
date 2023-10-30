@@ -394,6 +394,7 @@ class WorkflowMetadata {
                 action.call()
             }
             catch (WorkflowScriptErrorException e) {
+                // re-throw it to allow `error` function to be invoked by compleation handler
                 throw e
             }
             catch (Exception e) {
