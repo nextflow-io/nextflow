@@ -39,7 +39,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private String runCmd0
 
-    private boolean oci
+    private Boolean oci
 
     SingularityBuilder(String name) {
         this.image = name
@@ -125,8 +125,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( newPidNamespace && !oci )
             result << '--pid '
 
-        if( oci )
-            result << '--oci '
+        if( oci != null )
+            result << (oci ? '--oci ' : '--no-oci ')
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
