@@ -35,16 +35,16 @@ import nextflow.Channel
 class MixOp {
 
     private DataflowReadChannel source
-    private DataflowReadChannel[] others
+    private List<DataflowReadChannel> others
 
     MixOp(DataflowReadChannel source, DataflowReadChannel other) {
         this.source = source
-        this.others = [other]
+        this.others = List.of(other)
     }
 
     MixOp(DataflowReadChannel source, DataflowReadChannel[] others) {
         this.source = source
-        this.others = others
+        this.others = others.toList()
     }
 
     DataflowWriteChannel apply() {
@@ -60,7 +60,7 @@ class MixOp {
             subscribeImpl(it, handlers)
         }
 
-        def allSources = [source]
+        final allSources = [source]
         allSources.addAll(others)
         return target
     }
