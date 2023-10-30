@@ -441,7 +441,8 @@ class Launcher {
 
         }
         catch ( AbortOperationException e ) {
-            System.err.println (e.message ?: "Unknown abort reason")
+            final msg = e.message ?: "Unknown abort reason"
+            System.err.println(LoggerHelper.formatErrMessage(msg, e))
             System.exit(1)
         }
         catch( Throwable e ) {
@@ -509,7 +510,8 @@ class Launcher {
 
         catch ( AbortOperationException e ) {
             def message = e.getMessage()
-            if( message ) System.err.println(message)
+            if( message )
+                System.err.println(LoggerHelper.formatErrMessage(message,e))
             log.debug ("Operation aborted", e.cause ?: e)
             return(1)
         }
