@@ -87,7 +87,7 @@ The `apptainer` scope controls how [Apptainer](https://apptainer.org) containers
 The following settings are available:
 
 `apptainer.autoMounts`
-: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Apptainer installation (default: `false`).
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Apptainer installation (default: `true`).
 
 `apptainer.cacheDir`
 : The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
@@ -189,7 +189,7 @@ The following settings are available:
 : Max number of downloads attempts from S3 (default: `1`).
 
 `aws.batch.retryMode`
-: The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`)
+: The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`, other options: `legacy`, `adaptive`); this handling is delegated to AWS. To have Nextflow handle retries instead, use `built-in`.
 
 `aws.batch.schedulingPriority`
 : :::{versionadded} 23.01.0-edge
@@ -1588,6 +1588,17 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
+`NXF_ENABLE_AWS_SES`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default: `false`)
+
+
+`NXF_ENABLE_FS_SYNC`
+: :::{versionadded} 23.10.0
+  :::
+: When enabled the job script will execute Linux `sync` command on job completion. This may be useful to synchronize the job state over shared file systems (default: `false`)
+
 `NXF_ENABLE_SECRETS`
 : :::{versionadded} 21.09.0-edge
   :::
@@ -1637,6 +1648,12 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
+
+`NXF_PLUGINS_DEFAULT`
+: Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
+
+`NXF_PLUGINS_DIR`
+: The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
 `NXF_PLUGINS_TEST_REPOSITORY`
 : :::{versionadded} 23.04.0

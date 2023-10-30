@@ -82,7 +82,6 @@ on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf -- $exit_status > {{folder}}/.exitcode
     set +u
-    sync || true
     exit $exit_status
 }
 

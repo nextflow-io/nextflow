@@ -52,13 +52,23 @@ class WaveContainerResolver implements ContainerResolver {
         return client0 = new WaveClient( Global.session as Session )
     }
 
+    private String getContainerEngine0(TaskRun task) {
+        final config = task.getContainerConfig()
+        final result = config.getEngine()
+        if( result )
+            return result
+        // fallback to docker by default
+        log.warn "Missing engine in container config - offending value: $config"
+        return 'docker'
+    }
+
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !client().enabled() )
             return defaultResolver.resolveImage(task, imageName)
 
         final freeze = client().config().freezeMode()
-        final engine= task.getContainerConfig().getEngine()
+        final engine = getContainerEngine0(task)
         final nativeSingularityBuild = freeze && engine in SINGULARITY_LIKE
         if( !imageName ) {
             // when no image name is provided the module bundle should include a

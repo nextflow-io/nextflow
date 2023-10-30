@@ -32,6 +32,7 @@ import java.util.regex.Pattern
 
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -420,12 +421,12 @@ class TaskProcessor {
         // -- check that input set defines at least two elements
         def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
-            checkWarn "Input `set` must define at least two component -- Check process `$name`"
+            checkWarn "Input `tuple` must define at least two component -- Check process `$name`"
 
         // -- check that output set defines at least two elements
         def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
         if( invalidOutputSet )
-            checkWarn "Output `set` must define at least two component -- Check process `$name`"
+            checkWarn "Output `tuple` must define at least two component -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
@@ -662,7 +663,7 @@ class TaskProcessor {
 
     /**
      * @return A string 'she-bang' formatted to the added on top script to be executed.
-     * The interpreter to be used define bu the *taskConfig* property {@code shell}
+     * The interpreter to be used define by the *taskConfig* property {@code shell}
      */
     static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
@@ -2155,7 +2156,9 @@ class TaskProcessor {
         final mode = config.getHashMode()
         final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
-            traceInputsHashes(task, keys, mode, hash)
+            session.dumpHashes=='json'
+                ? traceInputsHashesJson(task, keys, mode, hash)
+                : traceInputsHashes(task, keys, mode, hash)
         }
         return hash
     }
@@ -2165,7 +2168,7 @@ class TaskProcessor {
             return CacheHelper.hasher(keys, mode).hash()
         }
         catch (Throwable e) {
-            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            final msg = "Something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
             throw new UnexpectedException(msg,e)
         }
     }
@@ -2189,6 +2192,16 @@ class TaskProcessor {
                 result.add(path)
         }
         return result
+    }
+
+    private void traceInputsHashesJson( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+        final collector = (item) -> [
+            hash: CacheHelper.hasher(item, mode).hash().toString(),
+            type: item?.getClass()?.getName(),
+            value: item?.toString()
+        ]
+        final json = JsonOutput.toJson(entries.collect(collector))
+        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${JsonOutput.prettyPrint(json)}"
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {

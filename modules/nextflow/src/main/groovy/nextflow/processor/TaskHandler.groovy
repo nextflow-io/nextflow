@@ -117,6 +117,8 @@ abstract class TaskHandler {
 
     boolean isCompleted()  { return status == COMPLETED  }
 
+    boolean isActive() { status == SUBMITTED || status == RUNNING }
+
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; error: ${task.error ?: '-'}; workDir: ${task.workDir?.toUriString()}"
     }

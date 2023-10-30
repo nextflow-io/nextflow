@@ -23,6 +23,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.inspect.ContainersInspector
 import nextflow.util.LoggerHelper
 /**
@@ -69,6 +70,7 @@ class CmdInspect extends CmdBase {
 
     @Override
     void run() {
+        ContainerInspectMode.activate(true)
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command
