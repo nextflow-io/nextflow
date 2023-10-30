@@ -138,7 +138,6 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
-    private TowerArchiver archiver
 
     /**
      * Constructor that consumes a URL and creates
@@ -151,7 +150,6 @@ class TowerClient implements TraceObserver {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
-        this.archiver = TowerArchiver.create(session, env)
     }
 
     TowerClient withEnvironment(Map env) {
@@ -401,8 +399,6 @@ class TowerClient implements TraceObserver {
         final req = makeCompleteReq(session)
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
-        // shutdown file archiver
-        archiver?.shutdown(session)
     }
 
     @Override
@@ -446,7 +442,6 @@ class TowerClient implements TraceObserver {
             aggregator.aggregate(trace)
         }
 
-        archiver?.archiveTaskLogs(trace.workDir)
     }
 
     @Override
@@ -482,9 +477,7 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFilePublish(Path destination) {
-        final result = reports.filePublish(destination)
-        if( result && archiver )
-            archiver.archiveFile(destination)
+        reports.filePublish(destination)
     }
 
     protected void refreshToken(String refresh) {
