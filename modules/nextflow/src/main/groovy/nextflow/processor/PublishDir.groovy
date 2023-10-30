@@ -418,8 +418,8 @@ class PublishDir {
             final file = workDir.resolve('.fusion.symlinks')
             return file.text.tokenize('\n')
         }
-        catch( NoSuchFileException ) {
-            return []
+        catch( NoSuchFileException e ) {
+            return List.of()
         }
     }
 
