@@ -22,6 +22,7 @@ import java.time.OffsetDateTime
 
 import nextflow.Const
 import nextflow.Session
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
@@ -169,6 +170,24 @@ class WorkflowMetadataTest extends Specification {
         result7 == 'Hello world'
 
 
+    }
+
+    def 'should be able to throw an error from onComplete handler' () {
+
+        given:
+        def session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        
+        def metadata = new WorkflowMetadata(session, null)
+
+        when:
+        metadata.onComplete {
+            throw new WorkflowScriptErrorException('You failed!')
+        }
+        metadata.invokeOnComplete()
+
+        then:
+        thrown(WorkflowScriptErrorException)
     }
 
     def 'should access workflow script variables onError' () {

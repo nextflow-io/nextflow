@@ -29,6 +29,7 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.config.Manifest
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.InvokerHelper
@@ -391,6 +392,10 @@ class WorkflowMetadata {
         onCompleteActions.each { Closure action ->
             try {
                 action.call()
+            }
+            catch (WorkflowScriptErrorException e) {
+                // re-throw it to allow `error` function to be invoked by completion handler
+                throw e
             }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onComplete` event handler", e)
