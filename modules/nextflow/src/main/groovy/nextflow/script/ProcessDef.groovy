@@ -196,7 +196,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
                 final param = (declaredOutputs[i] as BaseOutParam)
                 final topicName = param.channelTopicName
                 if( topicName && feedbackChannels )
-                    throw new IllegalArgumentException("Output topic conflict with recursion feature - check process '$name' should not declared any outout 'topic'" )
+                    throw new IllegalArgumentException("Output topic conflict with recursion feature - check process '$name' should not declared any output 'topic'" )
                 final ch = feedbackChannels
                         ? feedbackChannels[i]
                         : ( topicName ? CH.topicWriter(topicName) : CH.create(singleton) )
