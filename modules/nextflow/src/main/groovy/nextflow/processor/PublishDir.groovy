@@ -503,12 +503,12 @@ class PublishDir {
     }
 
     @CompileStatic
-    private void createPublishDir() {
+    protected void createPublishDir() {
         makeDirs(this.path)
     }
 
     @CompileStatic
-    private void makeDirs(Path dir) {
+    protected void makeDirs(Path dir) {
         if( !dir || makeCache.containsKey(dir) )
             return
 
