@@ -59,8 +59,8 @@ import nextflow.Session
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
-import nextflow.exception.ProcessException
 import nextflow.exception.PlainExceptionMessage
+import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
 import nextflow.file.FileHelper
@@ -510,12 +510,15 @@ class LoggerHelper {
 
         // extra formatting
         if( error ) {
-            buffer.append(" -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
+            buffer.append(errorDetailsMsg(error))
         }
         else if( logFileName && !quiet ) {
             buffer.append(" -- Check '${logFileName}' file for details")
         }
+    }
 
+    static private String errorDetailsMsg(List<String> error) {
+        return " -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details"
     }
 
     @PackageScope
@@ -574,6 +577,17 @@ class LoggerHelper {
         }
 
         return msg
+    }
+
+    static String formatErrMessage(String message, Throwable error) {
+        try {
+            final line = findErrorLine(error)
+            return line ? message + errorDetailsMsg(line) : message
+        }
+        catch (Throwable t) {
+            log.debug "Unable to determine script line for error: $error", t
+            return message
+        }
     }
 
     static List<String> findErrorLine( Throwable e ) {
