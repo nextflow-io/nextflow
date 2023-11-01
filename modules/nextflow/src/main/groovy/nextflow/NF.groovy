@@ -72,4 +72,8 @@ class NF {
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
     }
+
+    static boolean isTopicChannelEnabled() {
+        NextflowMeta.instance.preview.topic
+    }
 }

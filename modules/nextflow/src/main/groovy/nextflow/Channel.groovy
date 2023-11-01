@@ -122,6 +122,7 @@ class Channel  {
     }
 
     static DataflowWriteChannel topic(String name) {
+        if( !NF.topicChannelEnabled ) throw new MissingMethodException('topic', Channel.class, InvokerHelper.EMPTY_ARGS)
         return CH.topic(name)
     }
 

@@ -1,6 +1,6 @@
 package nextflow.extension
 
-import static nextflow.Channel.empty
+import static nextflow.Channel.*
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -17,8 +17,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
-import static nextflow.Channel.STOP
-
 /**
  * Helper class to handle channel internal api ops
  *
@@ -78,22 +76,37 @@ class CH {
     }
 
     static void broadcast() {
-        // connect all dataflow queue variables to associated broadcast channel 
+        // connect all broadcast topics, note this must be before the following
+        // "bridging" step because it can modify the final network topology
+        connectTopics()
+        // bridge together all broadcast channels
+        bridgeChannels()
+    }
+
+    static private void bridgeChannels() {
+        // connect all dataflow queue variables to associated broadcast channel
         for( DataflowQueue queue : bridges.keySet() ) {
             log.trace "Bridging dataflow queue=$queue"
             def broadcast = bridges.get(queue)
             queue.into(broadcast)
         }
+    }
 
-        // connect all topics
+    static private void connectTopics() {
         for( Topic topic : allTopics ) {
             if( topic.writers ) {
-                def ch = new ArrayList(topic.writers)
-                if( ch.size()==1 ) ch.add(empty())
-                new MixOp(ch.collect(it -> getReadChannel(it))).withTarget(topic.broadcaster).apply()
+                // the list of all writing dataflow queues for this topic
+                final ch = new ArrayList(topic.writers)
+                // the mix operator requires at least two sources, add an empty channel if needed
+                if( ch.size()==1 )
+                    ch.add(empty())
+                // get a list of sources for the mix operator
+                final sources = ch.collect(it -> getReadChannel(it))
+                // mix all of them 
+                new MixOp(sources).withTarget(topic.broadcaster).apply()
             }
             else {
-                topic.broadcaster.bind(Channel.STOP)
+                topic.broadcaster.bind(STOP)
             }
         }
     }
