@@ -20,12 +20,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
-import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
 import nextflow.util.ConfigHelper
-
 /**
  * Model a process generic output parameter
  *
@@ -62,10 +60,8 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     void lazyInit() {
 
-        if( intoObj instanceof TokenVar[] ) {
-            if( NF.dsl2 )
-                throw new IllegalArgumentException("Not a valid output channel argument: $intoObj")
-            for( def it : intoObj ) { lazyInitImpl(it) }
+        if( intoObj instanceof TokenVar || intoObj instanceof TokenVar[] ) {
+            throw new IllegalArgumentException("Not a valid output channel argument: $intoObj")
         }
         else if( intoObj != null ) {
             lazyInitImpl(intoObj)
@@ -83,14 +79,9 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     @PackageScope
     void lazyInitImpl( def target ) {
-        def channel = null
-        if( target instanceof TokenVar ) {
-            assert !NF.dsl2
-            channel = outputValToChannel(target.name)
-        }
-        else if( target != null ) {
-            channel = outputValToChannel(target)
-        }
+        final channel = (target != null)
+            ? outputValToChannel(target)
+            : null
 
         if( channel ) {
             outChannels.add(channel)
@@ -156,20 +147,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return this
     }
 
-    BaseOutParam into( def value ) {
-        if( NF.dsl2 )
-            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
-        this.intoObj = value
-        return this
-    }
-
-    BaseOutParam into( TokenVar... vars ) {
-        if( NF.dsl2 )
-            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
-        intoObj = vars
-        return this
-    }
-
     void setInto( Object obj ) {
         intoObj = obj
     }
@@ -177,12 +154,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     DataflowWriteChannel getOutChannel() {
         init()
         return outChannels ? outChannels.get(0) : null
-    }
-
-    @Deprecated
-    List<DataflowWriteChannel> getOutChannels() {
-        init()
-        return outChannels
     }
 
     String getName() {

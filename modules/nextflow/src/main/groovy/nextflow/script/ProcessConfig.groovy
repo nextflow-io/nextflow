@@ -82,7 +82,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'time',
             // input-output qualifiers
             'file',
-            'set',
             'val',
             'each',
             'env',
