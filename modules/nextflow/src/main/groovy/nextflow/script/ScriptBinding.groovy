@@ -186,9 +186,7 @@ class ScriptBinding extends WorkflowBinding {
     @Override
     void setVariable( String name, Object value ) {
         if( name == 'channel' ) {
-            final msg = 'The use of the identifier `channel` as variable name is discouraged and will be deprecated in a future version'
-            if( NF.isDsl2() ) throw new DeprecationException(msg)
-            log.warn(msg)
+            throw new IllegalAccessException("The use of the identifier `$name` as variable name is not allowed")
         }
         if( name != 'args' && name != 'params' )
             super.setVariable(name, value)

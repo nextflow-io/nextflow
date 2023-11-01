@@ -101,7 +101,6 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins(),
                 new CmdPlugin(),
                 new CmdInspect()
         ]

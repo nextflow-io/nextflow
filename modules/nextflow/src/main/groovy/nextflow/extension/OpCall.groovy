@@ -320,13 +320,6 @@ class OpCall implements Callable {
     protected void checkDeprecation(Method method) {
         if( method.getAnnotation(Deprecated) ) {
             def messg = "Operator `$methodName` is deprecated -- it will be removed in a future release"
-            if( NF.isDsl2() )
-                throw new DeprecationException(messg)
-            log.warn messg
-        }
-        else if( method.getAnnotation(DeprecatedDsl2) && NF.isDsl2() ) {
-            def annot = method.getAnnotation(DeprecatedDsl2)
-            def messg = annot.message() ?: "Operator `$methodName` has been deprecated -- it's not available in DSL2 syntax".toString()
             throw new DeprecationException(messg)
         }
     }
