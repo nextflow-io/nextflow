@@ -79,8 +79,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
-    @Deprecated final static private String WORKFLOW_GET = 'get'
-    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
@@ -508,12 +506,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 visited[context] = true
 
                 switch (context) {
-                    case WORKFLOW_GET:
-                        syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
-
-                    case WORKFLOW_PUBLISH:
-                        syntaxError(stm, "Workflow 'publish' is not supported anymore use process 'publishDir' instead")
-
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
