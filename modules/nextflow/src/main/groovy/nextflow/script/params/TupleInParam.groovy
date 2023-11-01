@@ -35,7 +35,7 @@ class TupleInParam extends BaseInParam {
 
     protected List<BaseInParam> inner = []
 
-    @Override String getTypeName() { 'set' }
+    @Override String getTypeName() { 'tuple' }
 
     List<BaseInParam> getInner() { inner }
 
