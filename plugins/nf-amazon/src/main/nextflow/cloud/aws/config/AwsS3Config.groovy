@@ -55,8 +55,8 @@ class AwsS3Config {
         if( endpoint && FileHelper.getUrlProtocol(endpoint) !in ['http','https'] )
             throw new IllegalArgumentException("S3 endpoint must begin with http:// or https:// prefix - offending value: '${endpoint}'")
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
-        this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
-        this.storageKmsKeyId = opts.storageKmsKeyId
+        this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String) ?: SysEnv.get('NXF_AWS_SSE_MODE')
+        this.storageKmsKeyId = opts.storageKmsKeyId ?: SysEnv.get('NXF_AWS_SSE_KMS_KEY_ID')
         this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
         this.anonymous = opts.anonymous as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
