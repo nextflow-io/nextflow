@@ -789,7 +789,13 @@ The following settings are available:
 : Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
 
 `google.batch.network`
-: Set network name to attach the VM's network interface to. The value will be prefixed with `global/networks/` unless it contains a `/`, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
+: The URL of an existing network resource to which the VM will be attached.
+
+  You can specify the network as a full or partial URL. For example, the following are all valid URLs:
+
+  - https://www.googleapis.com/compute/v1/projects/{project}/global/networks/{network}
+  - projects/{project}/global/networks/{network}
+  - global/networks/{network}
 
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
@@ -798,7 +804,13 @@ The following settings are available:
 : When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
 
 `google.batch.subnetwork`
-: Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
+: The URL of an existing subnetwork resource in the network to which the VM will be attached.
+
+  You can specify the subnetwork as a full or partial URL. For example, the following are all valid URLs:
+
+  - https://www.googleapis.com/compute/v1/projects/{project}/regions/{region}/subnetworks/{subnetwork}
+  - projects/{project}/regions/{region}/subnetworks/{subnetwork}
+  - regions/{region}/subnetworks/{subnetwork}
 
 `google.batch.usePrivateAddress`
 : When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
