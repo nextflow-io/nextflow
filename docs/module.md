@@ -271,8 +271,10 @@ Those scripts will be made accessible like any other command in the task environ
 This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
 
-## Managing shared modules
+## Sharing modules
 
-Sharing modules between workflows is useful for reducing duplicate coding efforts, harmonizing tools between workflows, and helping to distribute improvements, software upgrades, and bug fixes among your workflows.  
+Modules are designed to be easy to share and re-use across different pipelines, which helps eliminate duplicate work and spread improvements throughout the community. While Nextflow does not provide an explicit mechanism for sharing modules, there are several ways to do it:
 
-Managing shared modules across your workflows can be be done in many ways.  Several methods can been used, including as simple as manually copying files or more complex using [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules), and other ways.  [nf-core has a well-developed method](https://nf-co.re/tools#modules) using its tooling and specs, and which can be used for custom modules out of local git repositories.
+- Simply copy the module files into your pipeline repository
+- Use [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to fetch modules from other Git repositories without maintaining a separate copy
+- Use the [nf-core](https://nf-co.re/tools#modules) CLI to install and update modules with a standard approach used by the nf-core community
