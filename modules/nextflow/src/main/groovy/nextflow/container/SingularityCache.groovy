@@ -267,8 +267,9 @@ class SingularityCache {
         // Construct a temporary name for the image file
         final tmpFile = getTempImagePath(targetPath)
         final noHttpsOption = (config.noHttps)? '--nohttps' : ''
+        final oci = config.singularityOciMode()? '--oci' : ''
 
-        String cmd = "${binaryName} pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
+        String cmd = "${binaryName} pull ${noHttpsOption} ${oci} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
         try {
             runCommand( cmd, tmpFile.parent )
             Files.move( tmpFile, targetPath )

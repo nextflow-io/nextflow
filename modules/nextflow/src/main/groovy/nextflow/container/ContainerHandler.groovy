@@ -67,8 +67,8 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
-            if( normalizedImageName.startsWith('docker://') && config.singularityOciMode() )
-                return normalizedImageName
+            // if( normalizedImageName.startsWith('docker://') && config.singularityOciMode() )
+            //     return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
             if( ContainerInspectMode.active() && requiresCaching )
                 return imageName
