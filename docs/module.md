@@ -270,3 +270,9 @@ Those scripts will be made accessible like any other command in the task environ
 :::{note}
 This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
+
+## Managing shared modules
+
+Sharing modules between workflows is useful for reducing duplicate coding efforts, harmonizing tools between workflows, and helping to distribute improvements, software upgrades, and bug fixes among your workflows.  
+
+Managing shared modules across your workflows can be be done in many ways.  Several methods can been used, including as simple as manually copying files or more complex using [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules), and other ways.  [nf-core has a well-developed method](https://nf-co.re/tools#modules) using its tooling and specs, and which can be used for custom modules out of local git repositories."
