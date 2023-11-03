@@ -114,4 +114,8 @@ class AwsS3Config {
     Boolean getAnonymous() {
         return anonymous
     }
+
+    boolean isCustomEndpoint() {
+        endpoint && !endpoint.contains(".amazonaws.com")
+    }
 }
