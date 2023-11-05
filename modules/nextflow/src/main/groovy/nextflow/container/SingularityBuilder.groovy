@@ -133,7 +133,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( oci != null )
             result << (oci ? '--oci ' : '--no-oci ')
 
-        if( oci )
+        if( oci && compat != null )
             result << (compat ? '--compat ' : '--no-compat ')
         
         if( autoMounts ) {
