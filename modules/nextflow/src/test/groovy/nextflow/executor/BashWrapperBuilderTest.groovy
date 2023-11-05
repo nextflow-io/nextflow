@@ -1019,7 +1019,7 @@ class BashWrapperBuilderTest extends Specification {
             containerConfig: [enabled: true, engine: 'singularity', oci: true] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --oci --no-compact -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --oci --no-compat -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -1033,7 +1033,7 @@ class BashWrapperBuilderTest extends Specification {
             containerConfig: [enabled: true, engine: 'singularity', oci: true, compact: true] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --oci --compact -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --oci --compat -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
