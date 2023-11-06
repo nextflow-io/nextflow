@@ -57,6 +57,8 @@ class PublishDir {
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
 
+    private Session session = Global.session as Session
+
     /**
      * The target path where create the links or copy the output files
      */
@@ -119,12 +121,18 @@ class PublishDir {
 
     private boolean nullPathWarn
 
-    private String taskName
-
-    private Map<String,Path> taskInputs
+    private TaskRun task
 
     @Lazy
-    private ExecutorService threadPool = { def sess = Global.session as Session; sess.publishDirExecutorService() }()
+    private ExecutorService threadPool = { session.publishDirExecutorService() }()
+
+    protected String getTaskName() {
+        return task?.getName()
+    }
+
+    protected Map<String,Path> getTaskInputs() {
+        return task?.getInputFilesMap()
+    }
 
     void setPath( def value ) {
         final resolved = value instanceof Closure ? value.call() : value
@@ -285,8 +293,6 @@ class PublishDir {
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
-        this.taskName = task.name
-        this.taskInputs = task.getInputFilesMap()
 
         apply0(files)
     }
@@ -360,7 +366,6 @@ class PublishDir {
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
             if( NF.strictMode || failOnError){
-                final session = Global.session as Session
                 session?.abort(e)
             }
         }
@@ -370,9 +375,11 @@ class PublishDir {
     protected void processFile( Path source, Path destination ) {
 
         // resolve Fusion symlink if applicable
-        if( FusionHelper.isFusionEnabled(Global.session as Session) )
-            if( source.name in taskInputs )
-                source = resolveFusionLink(taskInputs[source.name])
+        if( FusionHelper.isFusionEnabled(session) ) {
+            final inputs = getTaskInputs()
+            if( source.name in inputs )
+                source = resolveFusionLink(inputs[source.name])
+        }
 
         // create target dirs if required
         makeDirs(destination.parent)
@@ -458,8 +465,9 @@ class PublishDir {
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
             def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
-            if( taskName )
-                msg += "\n- offending task  : $taskName"
+            def name0 = getTaskName()
+            if( name0 )
+                msg += "\n- offending task  : $name0"
             msg += "\n- offending file  : $target"
             if( t1 != target.toString() )
                 msg += "\n- real destination: $t1"
@@ -548,10 +556,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        final sess = Global.session
-        if (sess instanceof Session) {
-            sess.notifyFilePublish(destination, source)
-        }
+        session.notifyFilePublish(destination, source)
     }
 
 
