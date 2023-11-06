@@ -214,7 +214,6 @@ class PublishDir {
         return result
     }
 
-    @CompileStatic
     protected void apply0(Set<Path> files) {
         assert path
 
@@ -278,7 +277,6 @@ class PublishDir {
      * @param files Set of output files
      * @param task The task whose output need to be published
      */
-    @CompileStatic
     void apply( Set<Path> files, TaskRun task ) {
 
         if( !files || !enabled )
@@ -297,8 +295,6 @@ class PublishDir {
         apply0(files)
     }
 
-
-    @CompileStatic
     protected void apply1(Path source, boolean inProcess ) {
 
         def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
@@ -339,7 +335,6 @@ class PublishDir {
 
     }
 
-    @CompileStatic
     protected Path resolveDestination(target) {
 
         if( target instanceof Path ) {
@@ -358,7 +353,6 @@ class PublishDir {
         throw new IllegalArgumentException("Not a valid publish target path: `$target` [${target?.class?.name}]")
     }
 
-    @CompileStatic
     protected void safeProcessFile(Path source, Path target) {
         try {
             processFile(source, target)
@@ -371,7 +365,6 @@ class PublishDir {
         }
     }
 
-    @CompileStatic
     protected void processFile( Path source, Path destination ) {
 
         // resolve Fusion symlink if applicable
@@ -410,7 +403,6 @@ class PublishDir {
      *
      * @param file
      */
-    @CompileStatic
     protected Path resolveFusionLink(Path file) {
         final pattern = ~/^\/fusion\/([^\/]+)\/(.*)/
         while( file.name in getFusionLinks(file.parent) )
@@ -418,7 +410,6 @@ class PublishDir {
         return file
     }
 
-    @CompileStatic
     @Memoized
     protected List<String> getFusionLinks(Path workDir) {
         try {
@@ -482,7 +473,6 @@ class PublishDir {
         return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
     }
 
-    @CompileStatic
     protected void processFileImpl( Path source, Path destination ) {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
@@ -510,12 +500,10 @@ class PublishDir {
         }
     }
 
-    @CompileStatic
     protected void createPublishDir() {
         makeDirs(this.path)
     }
 
-    @CompileStatic
     protected void makeDirs(Path dir) {
         if( !dir || makeCache.containsKey(dir) )
             return
@@ -535,7 +523,6 @@ class PublishDir {
      * That valid publish mode has been selected
      * Note: link and symlinks are not allowed across different file system
      */
-    @CompileStatic
     @PackageScope
     void validatePublishMode() {
         if( log.isTraceEnabled() )
