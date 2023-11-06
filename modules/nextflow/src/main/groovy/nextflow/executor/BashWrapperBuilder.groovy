@@ -480,8 +480,12 @@ class BashWrapperBuilder {
          */
         if( containerBuilder ) {
             String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
-            if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder )
+            // wrap the command with an extra bash invocation either :
+            // - to propagate the container environment or
+            // - to change in the task work directory as required by singularity
+            final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
+            if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
+                if( needChangeTaskWorkDir )
                     cmd = 'cd $PWD; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
