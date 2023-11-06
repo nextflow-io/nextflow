@@ -534,6 +534,7 @@ class WaveClientTest extends Specification {
                     && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -572,6 +573,7 @@ class WaveClientTest extends Specification {
                     && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -647,6 +649,7 @@ class WaveClientTest extends Specification {
                     && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         assets.condaFile == condaFile
