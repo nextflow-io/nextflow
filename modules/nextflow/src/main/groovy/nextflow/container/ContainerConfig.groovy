@@ -55,6 +55,10 @@ class ContainerConfig extends LinkedHashMap {
         get('engine')
     }
 
+    boolean singularityOciMode() {
+        getEngine()=='singularity' && get('oci')?.toString() == 'true'
+    }
+
     List<String> getEnvWhitelist() {
         def result = get('envWhitelist')
         if( !result )

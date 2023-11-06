@@ -154,6 +154,11 @@ class SingularityBuilderTest extends Specification {
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home ubuntu'
 
+        new SingularityBuilder('ubuntu')
+            .params(oci: true)
+            .build()
+            .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} singularity exec --no-home --oci -B "$PWD" ubuntu'
+
     }
 
     def 'should mount home directory if specified' () {

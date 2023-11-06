@@ -1347,6 +1347,12 @@ The following settings are available:
 `singularity.noHttps`
 : Pull the Singularity image with http protocol (default: `false`).
 
+`singularity.oci`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Enable OCI-mode the allows the use of native OCI-compatible containers with Singularity. See [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
 

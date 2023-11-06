@@ -200,11 +200,12 @@ class ContainerHandlerTest extends Specification {
         result == 'shifter://image'
             
     }
+
     @Unroll
     def 'test normalize method for singularity' () {
         given:
         def BASE = Paths.get('/abs/path/')
-        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, baseDir: BASE))
+        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, oci:OCI, baseDir: BASE))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
@@ -215,17 +216,21 @@ class ContainerHandlerTest extends Specification {
         result == EXPECTED
 
         where:
-        IMAGE                                       | NORMALIZED                                        | X           | EXPECTED
-        null                                        | null                                              |           0 | null
-        ''                                          | null                                              |           0 | null
-        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
-        '/abs/path bar.img'                         | '/abs/path bar.img'                               |           0 | '/abs/path\\ bar.img'
-        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
-        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString() |       0 | Paths.get('foo.img').toAbsolutePath().toString()
-        'shub://busybox'                            | 'shub://busybox'                                  |           1 | '/path/to/busybox'
-        'docker://library/busybox'                  | 'docker://library/busybox'                        |           1 | '/path/to/busybox'
-        'foo'                                       | 'docker://foo'                                    |           1 | '/path/to/foo'
-        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         |           1 | '/path/to/foo-bar-latest.img'
+        IMAGE                                       | NORMALIZED                                        | OCI   | X           | EXPECTED
+        null                                        | null                                              | false |           0 | null
+        ''                                          | null                                              | false |           0 | null
+        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               | false |           0 | '/abs/path/bar.img'
+        '/abs/path bar.img'                         | '/abs/path bar.img'                               | false |           0 | '/abs/path\\ bar.img'
+        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               | false |           0 | '/abs/path/bar.img'
+        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString()  | false |           0 | Paths.get('foo.img').toAbsolutePath().toString()
+        'shub://busybox'                            | 'shub://busybox'                                  | false |           1 | '/path/to/busybox'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | false |           1 | '/path/to/busybox'
+        'foo'                                       | 'docker://foo'                                    | false |           1 | '/path/to/foo'
+        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         | false |           1 | '/path/to/foo-bar-latest.img'
+        and:
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | true  |           0 | 'docker://library/busybox'
+        'shub://busybox'                            | 'shub://busybox'                                  | true  |           1 | '/path/to/busybox'
+
     }
 
     def 'should not invoke caching when engine is disabled' () {
