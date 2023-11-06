@@ -131,7 +131,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             result << '--pid '
 
         if( oci != null )
-            result << (oci ? '--oci ' : '--no-oci ')
+            result << (oci ? '--oci --pwd $PWD ' : '--no-oci ')
 
         if( oci && compat != null )
             result << (compat ? '--compat ' : '--no-compat ')

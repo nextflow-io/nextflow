@@ -481,7 +481,7 @@ class BashWrapperBuilder {
         if( containerBuilder ) {
             String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
             if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder )
+                if( containerBuilder instanceof SingularityBuilder && !containerConfig.singularityOciMode() )
                     cmd = 'cd $PWD; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
