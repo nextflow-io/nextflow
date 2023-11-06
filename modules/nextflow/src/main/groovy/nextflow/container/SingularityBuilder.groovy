@@ -131,7 +131,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             result << '--pid '
 
         if( oci != null )
-            result << (oci ? '--oci --pwd $PWD ' : '--no-oci ')
+            result << (oci ? '--oci ' : '--no-oci ')
 
         if( oci && compat != null )
             result << (compat ? '--compat ' : '--no-compat ')
@@ -233,7 +233,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( launcher ) {
             def result = getRunCommand()
-            result += entryPoint ? " $entryPoint -c \"cd \$PWD; $launcher\"" : " $launcher"
+            result += entryPoint ? " $entryPoint -c \"cd \$NXF_TASK_WORKDIR; $launcher\"" : " $launcher"
             return result
         }
         return getRunCommand() + ' ' + launcher

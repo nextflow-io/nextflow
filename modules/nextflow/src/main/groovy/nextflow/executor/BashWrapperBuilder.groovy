@@ -480,9 +480,10 @@ class BashWrapperBuilder {
          */
         if( containerBuilder ) {
             String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
-            if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder && !containerConfig.singularityOciMode() )
-                    cmd = 'cd $PWD; ' + cmd
+            final isSingularity = containerBuilder instanceof SingularityBuilder
+            if( (env || isSingularity) && !containerConfig.entrypointOverride() ) {
+                if( isSingularity )
+                    cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
