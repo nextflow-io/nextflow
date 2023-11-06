@@ -39,6 +39,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private String runCmd0
 
+    private Boolean oci
+
     SingularityBuilder(String name) {
         this.image = name
         this.homeMount = defaultHomeMount()
@@ -92,6 +94,9 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
+        if( params.oci!=null )
+            oci = params.oci.toString() == 'true'
+
         return this
     }
 
@@ -117,8 +122,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( !homeMount )
             result << '--no-home '
 
-        if( newPidNamespace )
+        if( newPidNamespace && !oci )
             result << '--pid '
+
+        if( oci != null )
+            result << (oci ? '--oci ' : '--no-oci ')
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
@@ -145,6 +153,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     protected CharSequence appendEnv(StringBuilder result) {
         makeEnv('TMP',result) .append(' ')
         makeEnv('TMPDIR',result) .append(' ')
+        // add magic variables required by singularity to run in OCI-mode
+        if( oci ) {
+            result .append('${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ')
+            result .append('${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ')
+        }
         super.appendEnv(result)
     }
 

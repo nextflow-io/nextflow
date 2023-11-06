@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.WaveClient
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
@@ -52,8 +53,7 @@ class WaveContainerResolver implements ContainerResolver {
         return client0 = new WaveClient( Global.session as Session )
     }
 
-    private String getContainerEngine0(TaskRun task) {
-        final config = task.getContainerConfig()
+    private String getContainerEngine0(ContainerConfig config) {
         final result = config.getEngine()
         if( result )
             return result
@@ -68,13 +68,15 @@ class WaveContainerResolver implements ContainerResolver {
             return defaultResolver.resolveImage(task, imageName)
 
         final freeze = client().config().freezeMode()
-        final engine = getContainerEngine0(task)
-        final nativeSingularityBuild = freeze && engine in SINGULARITY_LIKE
+        final config = task.getContainerConfig()
+        final engine = getContainerEngine0(config)
+        final singularityOciMode = config.singularityOciMode()
+        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !singularityOciMode
         if( !imageName ) {
             // when no image name is provided the module bundle should include a
             // Dockerfile or a Conda recipe or a Spack recipe to build
             // an image on-fly with an automatically assigned name
-            return waveContainer(task, null, nativeSingularityBuild)
+            return waveContainer(task, null, singularitySpec)
         }
 
         if( engine in DOCKER_LIKE ) {
@@ -90,7 +92,7 @@ class WaveContainerResolver implements ContainerResolver {
                 return defaultResolver.resolveImage(task, imageName)
             }
             // fetch the wave container name
-            final image = waveContainer(task, imageName, nativeSingularityBuild)
+            final image = waveContainer(task, imageName, singularitySpec)
             // oras prefixed container are served directly
             if( image && image.target.startsWith("oras://") )
                 return image
