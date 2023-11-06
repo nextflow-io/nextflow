@@ -205,26 +205,23 @@ class PluginUpdater extends UpdateManager {
             return pluginPath
         }
 
-        // 1. determine the version
-        if( !version )
-            version = getLastPluginRelease(id)
         log.info "Downloading plugin ${id}@${version}"
 
-        // 2. Download to temporary location
-        Path downloaded = safeDownloadPlugin(id, version);
+        // 1. download to temporary location
+        Path downloaded = safeDownloadPlugin(id, version)
 
-        // 3. unzip the content and delete downloaded file
+        // 2. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
-        // 4. move the final destination the plugin directory
+        // 3. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
 
         try {
             safeMove(dir, pluginPath)
         }
         catch (IOException e) {
-            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder");
+            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder")
         }
 
         return pluginPath
@@ -316,10 +313,22 @@ class PluginUpdater extends UpdateManager {
     private boolean load0(String id, String version) {
         assert id, "Missing plugin Id"
 
-        if( version == null )
-            version = getLastPluginRelease(id)?.version
-        if( !version )
-            throw new IllegalStateException("Cannot find latest version of $id plugin")
+        final offline = SysEnv.get('NXF_OFFLINE')=='true'
+        if( !version ) {
+            version = offline
+                ? getLastPluginReleaseOffline(id)
+                : getLastPluginRelease(id)?.version
+        }
+
+        if( !version ) {
+            final msg = offline
+                ? "Cannot find local version of $id plugin (offline mode)"
+                : "Cannot find latest version of $id plugin"
+            throw new IllegalStateException(msg)
+        }
+
+        if( offline )
+            log.debug "Update disabled in offline mode -- using local version $version of $id plugin"
 
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
@@ -363,8 +372,19 @@ class PluginUpdater extends UpdateManager {
         // resolve the plugins
         pluginManager.resolvePlugins()
         // finally start it
-        PluginState state = pluginManager.startPlugin(id);
+        PluginState state = pluginManager.startPlugin(id)
         return PluginState.STARTED == state
+    }
+
+    private String getLastPluginReleaseOffline(String id) {
+        final specs = FilesEx.list(pluginsStore)
+            .collect( dir -> PluginSpec.parseDirName(dir) )
+            .findAll( spec -> spec.id == id )
+
+        if( !specs )
+            return null
+
+        specs.max( (a,b) -> Version.valueOf(b.version) <=> Version.valueOf(a.version) )?.version
     }
 
     /**
@@ -381,13 +401,13 @@ class PluginUpdater extends UpdateManager {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
 
-        PluginInfo pluginInfo = getPluginsMap().get(id);
+        PluginInfo pluginInfo = getPluginsMap().get(id)
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")
         }
 
         if (!pluginManager.deletePlugin(id)) {
-            return false;
+            return false
         }
 
         load0(id, version)
