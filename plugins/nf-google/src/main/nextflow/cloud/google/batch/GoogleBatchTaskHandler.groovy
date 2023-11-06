@@ -406,7 +406,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( lastEvent.getDescription().contains('due to Spot VM preemption with exit code 50001') )
             return 50001
 
-        return lastEvent?.getTaskExecution()?.getExitCode()
+        return null
     }
 
     @PackageScope Integer readExitFile() {
