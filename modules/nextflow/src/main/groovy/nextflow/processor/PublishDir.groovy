@@ -25,6 +25,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.util.concurrent.ExecutorService
+import java.util.regex.Pattern
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -52,6 +53,8 @@ import nextflow.util.PathTrie
 @EqualsAndHashCode
 @CompileStatic
 class PublishDir {
+
+    final static private Pattern FUSION_PATH_REGEX = ~/^\/fusion\/([^\/]+)\/(.*)/
 
     enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
@@ -404,9 +407,8 @@ class PublishDir {
      * @param file
      */
     protected Path resolveFusionLink(Path file) {
-        final pattern = ~/^\/fusion\/([^\/]+)\/(.*)/
         while( file.name in getFusionLinks(file.parent) )
-            file = file.text.replaceFirst(pattern) { _, scheme, path -> "${scheme}://${path}" } as Path
+            file = file.text.replaceFirst(FUSION_PATH_REGEX) { _, scheme, path -> "${scheme}://${path}" } as Path
         return file
     }
 
@@ -545,6 +547,5 @@ class PublishDir {
     protected void notifyFilePublish(Path destination, Path source=null) {
         session.notifyFilePublish(destination, source)
     }
-
 
 }
