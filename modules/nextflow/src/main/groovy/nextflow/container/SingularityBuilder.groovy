@@ -41,8 +41,6 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private Boolean oci
 
-    private Boolean compat
-
     SingularityBuilder(String name) {
         this.image = name
         this.homeMount = defaultHomeMount()
@@ -99,9 +97,6 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( params.oci!=null )
             oci = params.oci.toString() == 'true'
 
-        if( params.compat!=null )
-            compat = params.compat.toString() == 'true'
-        
         return this
     }
 
@@ -133,9 +128,6 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( oci != null )
             result << (oci ? '--oci ' : '--no-oci ')
 
-        if( oci && compat != null )
-            result << (compat ? '--compat ' : '--no-compat ')
-        
         if( autoMounts ) {
             makeVolumes(mounts, result)
         }
