@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#
+# normal run
+#
+echo initial run
+$NXF_RUN -with-fusion
+
+nextflow fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
+cmp data.txt .expected || false
+
+#
+# resume run
+#
+echo resumed run
+$NXF_RUN -with-fusion -resume
+
+nextflow fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
+cmp data.txt .expected || false
