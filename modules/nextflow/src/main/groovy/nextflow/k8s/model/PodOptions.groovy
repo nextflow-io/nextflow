@@ -68,6 +68,8 @@ class PodOptions {
 
     private Boolean privileged
 
+    private String schedulerName
+
     private Integer ttlSecondsAfterFinished
     
     PodOptions( List<Map> options=null ) {
@@ -158,6 +160,9 @@ class PodOptions {
         else if( entry.privileged instanceof Boolean ) {
             this.privileged = entry.privileged as Boolean
         }
+        else if( entry.schedulerName ) {
+            this.schedulerName = entry.schedulerName
+        }
         else if( entry.ttlSecondsAfterFinished instanceof Integer ) {
             this.ttlSecondsAfterFinished = entry.ttlSecondsAfterFinished as Integer
         }
@@ -222,6 +227,8 @@ class PodOptions {
     }
 
     String getPriorityClassName() { priorityClassName }
+
+    String getSchedulerName() { schedulerName }
 
     List<Map> getTolerations() { tolerations }
 
@@ -294,6 +301,9 @@ class PodOptions {
 
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
+
+        // scheduler name
+        result.schedulerName = other.schedulerName ?: this.schedulerName
 
         // ttl seconds after finished (job)
         result.ttlSecondsAfterFinished = other.ttlSecondsAfterFinished!=null ? other.ttlSecondsAfterFinished : this.ttlSecondsAfterFinished

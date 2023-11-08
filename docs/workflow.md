@@ -41,6 +41,8 @@ The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
 Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
+(workflow-process-invocation)=
+
 ## Process invocation
 
 A process can be invoked like a function in a workflow definition, passing the expected input channels like function arguments. For example:
@@ -141,6 +143,8 @@ workflow {
     ch_samples = foo().samples_bam
 }
 ```
+
+See {ref}`process-multiple-outputs` for more details.
 
 ### Process named stdout
 

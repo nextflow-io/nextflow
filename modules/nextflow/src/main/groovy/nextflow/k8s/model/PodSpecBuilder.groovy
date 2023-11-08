@@ -118,6 +118,8 @@ class PodSpecBuilder {
 
     Map<String,?> resourcesLimits
 
+    String schedulerName
+
     Integer ttlSecondsAfterFinished = 3600
 
     /**
@@ -376,6 +378,8 @@ class PodSpecBuilder {
             tolerations.addAll(opts.tolerations)
         // -- privileged
         privileged = opts.privileged
+        // -- scheduler name
+        schedulerName = opts.schedulerName
         // -- ttl seconds after finished (job)
         if( opts.ttlSecondsAfterFinished != null )
             ttlSecondsAfterFinished = opts.ttlSecondsAfterFinished
@@ -440,6 +444,9 @@ class PodSpecBuilder {
 
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
+
+        if( schedulerName )
+            spec.schedulerName = schedulerName
 
         if( affinity )
             spec.affinity = affinity

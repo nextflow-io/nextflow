@@ -553,4 +553,16 @@ class PodOptionsTest extends Specification {
         then:
         opts.getPrivileged()
     }
+
+    def 'should set pod schedulerName' () {
+        when:
+        def opts = new PodOptions()
+        then:
+        opts.getSchedulerName() == null
+
+        when:
+        opts = new PodOptions([ [schedulerName:'my-scheduler'] ])
+        then:
+        opts.getSchedulerName() == 'my-scheduler'
+    }
 }

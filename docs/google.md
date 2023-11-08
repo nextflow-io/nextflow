@@ -175,11 +175,14 @@ google {
 }
 ```
 
+:::{versionadded} 23.11.0-edge
+:::
+
 Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
 
 ```groovy
 process {
-    errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+    errorStrategy = { task.exitStatus==50001 ? 'retry' : 'terminate' }
     maxRetries = 5
 }
 ```
