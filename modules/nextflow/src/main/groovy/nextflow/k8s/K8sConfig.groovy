@@ -70,10 +70,6 @@ class K8sConfig implements Map<String,Object> {
             podOptions.securityContext = new PodSecurityContext(target.runAsUser)
         else if( target.securityContext instanceof Map )
             podOptions.securityContext = new PodSecurityContext(target.securityContext as Map)
-
-        // -- shortcut to pod image scheduler name
-        if ( target.schedulerName != null )
-            podOptions.schedulerName = target.schedulerName.toString()
     }
 
     private PodOptions createPodOptions( value ) {

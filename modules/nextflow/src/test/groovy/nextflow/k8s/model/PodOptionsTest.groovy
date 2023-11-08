@@ -561,13 +561,8 @@ class PodOptionsTest extends Specification {
         opts.getSchedulerName() == null
 
         when:
-        opts = new PodOptions([ [schedulerName:'foo-scheduler'] ])
+        opts = new PodOptions([ [schedulerName:'my-scheduler'] ])
         then:
-        opts.getSchedulerName() == 'foo-scheduler'
-
-        when:
-        opts = new PodOptions([ [schedulerName:'bar-scheduler'] ])
-        then:
-        opts.getSchedulerName() == 'bar-scheduler'
+        opts.getSchedulerName() == 'my-scheduler'
     }
 }

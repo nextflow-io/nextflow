@@ -376,9 +376,8 @@ class PodSpecBuilder {
             tolerations.addAll(opts.tolerations)
         // -- privileged
         privileged = opts.privileged
-        // -- schedulerName
-        if ( opts.schedulerName )
-            schedulerName = opts.schedulerName
+        // -- scheduler name
+        schedulerName = opts.schedulerName
 
         return this
     }

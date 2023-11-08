@@ -304,7 +304,7 @@ class PodOptions {
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
 
-        // schedulerName
+        // scheduler name
         result.schedulerName = other.schedulerName ?: this.schedulerName
 
         return result
