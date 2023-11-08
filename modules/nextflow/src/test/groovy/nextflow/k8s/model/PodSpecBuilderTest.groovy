@@ -805,6 +805,7 @@ class PodSpecBuilderTest extends Specification {
             metadata: [name: 'foo', namespace: 'default'],
             spec: [
                 backoffLimit: 0,
+                ttlSecondsAfterFinished: 3600,
                 template: [
                     metadata: [name: 'foo', namespace: 'default'],
                     spec: [
@@ -856,16 +857,23 @@ class PodSpecBuilderTest extends Specification {
 
     def 'should create job spec with ttl seconds' () {
         when:
-        def ttlSecondsAfterFinished = 3600
         def job = new PodSpecBuilder()
                 .withPodName('foo')
                 .withImageName('busybox')
                 .withCommand(['echo', 'hello'])
-                .withPodOptions( new PodOptions(ttlSecondsAfterFinished: ttlSecondsAfterFinished) )
                 .buildAsJob()
-
         then:
-        job.spec.ttlSecondsAfterFinished == ttlSecondsAfterFinished
+        job.spec.ttlSecondsAfterFinished == 3600
+
+        when:
+        job = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions( new PodOptions(ttlSecondsAfterFinished: 60) )
+                .buildAsJob()
+        then:
+        job.spec.ttlSecondsAfterFinished == 60
     }
 
 }

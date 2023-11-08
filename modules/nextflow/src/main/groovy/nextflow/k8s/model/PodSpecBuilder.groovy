@@ -118,7 +118,7 @@ class PodSpecBuilder {
 
     Map<String,?> resourcesLimits
 
-    Integer ttlSecondsAfterFinished
+    Integer ttlSecondsAfterFinished = 3600
 
     /**
      * @return A sequential volume unique identifier

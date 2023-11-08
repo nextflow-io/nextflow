@@ -261,10 +261,7 @@ class PodOptions {
         result.volumeClaims.addAll( other.volumeClaims )
 
         // sec context
-        if( other.securityContext )
-            result.securityContext = other.securityContext
-        else
-            result.securityContext = securityContext
+        result.securityContext = other.securityContext ?: this.securityContext
 
         // node selector
         result.nodeSelector = other.nodeSelector ?: this.nodeSelector
@@ -273,16 +270,10 @@ class PodOptions {
         result.affinity = other.affinity ?: this.affinity
 
         // pull policy
-        if (other.imagePullPolicy)
-            result.imagePullPolicy = other.imagePullPolicy
-        else
-            result.imagePullPolicy = imagePullPolicy
+        result.imagePullPolicy = other.imagePullPolicy ?: this.imagePullPolicy
 
         // image secret
-        if (other.imagePullSecret)
-            result.imagePullSecret = other.imagePullSecret
-        else
-            result.imagePullSecret = imagePullSecret
+        result.imagePullSecret = other.imagePullSecret ?: this.imagePullSecret
 
         // labels
         result.labels.putAll(labels)
@@ -305,7 +296,7 @@ class PodOptions {
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
 
         // ttl seconds after finished (job)
-        result.ttlSecondsAfterFinished = other.ttlSecondsAfterFinished ?: this.ttlSecondsAfterFinished
+        result.ttlSecondsAfterFinished = other.ttlSecondsAfterFinished!=null ? other.ttlSecondsAfterFinished : this.ttlSecondsAfterFinished
 
         return result
     }
