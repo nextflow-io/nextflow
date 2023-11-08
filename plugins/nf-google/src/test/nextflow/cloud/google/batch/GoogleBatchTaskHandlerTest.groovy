@@ -18,6 +18,9 @@
 package nextflow.cloud.google.batch
 
 import com.google.cloud.batch.v1.GCS
+import com.google.cloud.batch.v1.JobStatus
+import com.google.cloud.batch.v1.StatusEvent
+import com.google.cloud.batch.v1.TaskExecution
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchClient
@@ -329,5 +332,33 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         req.getAllocationPolicy().getInstances(0).policy.getMachineType() == ""
 
+    }
+
+    JobStatus makeJobStatus(String desc) {
+        JobStatus.newBuilder()
+            .addStatusEvents(
+                StatusEvent.newBuilder()
+                    .setDescription(desc)
+            )
+            .build()
+    }
+
+    def 'should detect spot failures from status event'() {
+        given:
+        def jobId = 'job-id'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, client: client, task: task))
+
+        when:
+        client.getJobStatus(jobId) >>> [
+            makeJobStatus('Task failed due to Spot VM preemption with exit code 50001.'),
+            makeJobStatus('Task succeeded')
+        ]
+        then:
+        handler.getJobExitCode() == 50001
+        handler.getJobExitCode() == null
     }
 }
