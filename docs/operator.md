@@ -1119,10 +1119,6 @@ The `header` option can also just be a list of columns:
 ```{literalinclude} snippets/splitcsv-with-columns.out
 :language: console
 ```
-:::{note}
-- By default, the `splitCsv` operator returns each row as a *list* object. Items are accessed by using the 0-based column index.
-- When the `header` is specified each row is returned as a *map* object (also known as dictionary). Items are accessed via the corresponding column name. 
-:::
 
 Available options:
 
