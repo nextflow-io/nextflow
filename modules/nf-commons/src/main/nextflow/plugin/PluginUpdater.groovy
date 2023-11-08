@@ -224,7 +224,7 @@ class PluginUpdater extends UpdateManager {
             safeMove(dir, pluginPath)
         }
         catch (IOException e) {
-            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder");
+            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder")
         }
 
         return pluginPath
@@ -318,8 +318,14 @@ class PluginUpdater extends UpdateManager {
 
         if( version == null )
             version = getLastPluginRelease(id)?.version
-        if( !version )
-            throw new IllegalStateException("Cannot find latest version of $id plugin")
+
+        final offline = SysEnv.get('NXF_OFFLINE')=='true'
+        if( !version ) {
+            final msg = offline
+                ? "Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode"
+                : "Cannot find latest version of $id plugin"
+            throw new IllegalStateException(msg)
+        }
 
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
@@ -363,7 +369,7 @@ class PluginUpdater extends UpdateManager {
         // resolve the plugins
         pluginManager.resolvePlugins()
         // finally start it
-        PluginState state = pluginManager.startPlugin(id);
+        PluginState state = pluginManager.startPlugin(id)
         return PluginState.STARTED == state
     }
 
@@ -381,13 +387,13 @@ class PluginUpdater extends UpdateManager {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
 
-        PluginInfo pluginInfo = getPluginsMap().get(id);
+        PluginInfo pluginInfo = getPluginsMap().get(id)
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")
         }
 
         if (!pluginManager.deletePlugin(id)) {
-            return false;
+            return false
         }
 
         load0(id, version)

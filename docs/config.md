@@ -1648,9 +1648,12 @@ The following environment variables control the configuration of the Nextflow ru
 : Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's only applied the JVM running Nextflow and not to any java pre-launching commands.
 
 `NXF_OFFLINE`
-: When `true` disables the project automatic download and update from remote repositories (default: `false`).
+: When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default: `false`).
 : :::{versionchanged} 23.09.0-edge
   This option also disables the automatic version check (see `NXF_DISABLE_CHECK_LATEST`).
+  :::
+: :::{versionchanged} 23.11.0-edge
+  This option also prevents plugins from being downloaded. Plugin versions must be specified in offline mode, or else Nextflow will fail.
   :::
 
 `NXF_OPTS`
