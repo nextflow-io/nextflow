@@ -249,6 +249,33 @@ channel
 The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory 
 is included under the alias `fromTable`.
 
+### Process directives
+
+Plugins that implement a [custom executor](#executors) will likely need to access {ref}`process directives <process-directives>` that affect the task execution. When an executor receives a task, the process directives can be accessed through that task's configuration. As a best practice, custom executors should try to support all process directives that have executor-specific behavior and are relevant to your executor.
+
+Nextflow does not provide the ability to define custom process directives in a plugin. Instead, you can use the {ref}`process-ext` directive to provide custom process settings to your executor. Try to use specific names that are not likely to conflict with other plugins or existing pipelines.
+
+Here is an example of a custom executor that uses existing process directives as well as a custom setting through the `ext` directive:
+
+```groovy
+class MyExecutor extends Executor {
+
+    @Override
+    TaskHandler createTaskHandler(TaskRun task) {
+        final cpus = task.config.cpus
+        final memory = task.config.memory
+        final myOption = task.config.ext.myOption
+
+        println "This task is configured with cpus=${cpus}, memory=${memory}, myOption=${myOption}"
+
+        // ...
+    }
+
+    // ...
+
+}
+```
+
 ### Trace observers
 
 A *trace observer* in Nextflow is an entity that can listen and react to workflow events, such as when a workflow starts, a task completes, a file is published, etc. Several components in Nextflow, such as the execution report and DAG visualization, are implemented as trace observers.

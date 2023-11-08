@@ -1653,15 +1653,26 @@ process mapping {
   tuple val(sampleId), path(reads)
 
   """
-  STAR --genomeDir $genome --readFilesIn $reads
+  STAR --genomeDir $genome --readFilesIn $reads ${task.ext.args ?: ''}
   """
 }
 ```
 
-In the above example, the process uses a container whose version is controlled by the `ext.version` property. This can be defined in the `nextflow.config` file as shown below:
+In the above example, the process container version is controlled by `ext.version`, and the script supports additional command line arguments through `ext.args`.
+
+The `ext` directive can be set in the process definition:
+
+```groovy
+process mapping {
+  ext version: '2.5.3', args: '--foo --bar'
+}
+```
+
+Or in the Nextflow configuration:
 
 ```groovy
 process.ext.version = '2.5.3'
+process.ext.args = '--foo --bar'
 ```
 
 (process-fair)=
