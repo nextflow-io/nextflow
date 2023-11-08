@@ -67,6 +67,8 @@ class PodOptions {
     private List<Map> tolerations
 
     private Boolean privileged
+
+    private String schedulerName
     
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -156,6 +158,9 @@ class PodOptions {
         else if( entry.privileged instanceof Boolean ) {
             this.privileged = entry.privileged as Boolean
         }
+        else if( entry.schedulerName ) {
+            this.schedulerName = entry.schedulerName
+        }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -217,6 +222,8 @@ class PodOptions {
     }
 
     String getPriorityClassName() { priorityClassName }
+
+    String getSchedulerName() { schedulerName }
 
     List<Map> getTolerations() { tolerations }
 
@@ -296,6 +303,9 @@ class PodOptions {
 
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
+
+        // scheduler name
+        result.schedulerName = other.schedulerName ?: this.schedulerName
 
         return result
     }

@@ -2075,6 +2075,9 @@ The following options are available:
 `runAsUser: '<uid>'`
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
+`schedulerName: '<name>'`
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
+
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
 : Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name and optional key to the given path. If the key is omitted, the path is interpreted as a directory and all entries in the `Secret` are exposed in that path.

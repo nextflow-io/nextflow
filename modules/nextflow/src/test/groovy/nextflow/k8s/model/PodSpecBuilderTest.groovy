@@ -581,6 +581,21 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should create pod spec with schedulerName' () {
+
+        when:
+        def pod = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions(new PodOptions(schedulerName: 'my-scheduler'))
+                .build()
+
+        then:
+        pod.spec.schedulerName == 'my-scheduler'
+
+    }
+
     def 'should create image pull request map' () {
         given:
         def builder = new PodSpecBuilder(imagePullSecret: 'MySecret')
