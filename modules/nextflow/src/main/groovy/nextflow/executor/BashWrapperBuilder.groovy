@@ -486,7 +486,7 @@ class BashWrapperBuilder {
             final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
             if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
                 if( needChangeTaskWorkDir )
-                    cmd = 'cd $PWD; ' + cmd
+                    cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)

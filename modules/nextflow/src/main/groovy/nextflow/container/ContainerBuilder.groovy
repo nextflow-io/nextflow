@@ -295,7 +295,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
         // -- append by default the current path -- this is needed when `scratch` is set to true
         if( mountWorkDir ) {
-            result << composeVolumePath('$PWD')
+            result << composeVolumePath('$NXF_TASK_WORKDIR')
             result << ' '
         }
 

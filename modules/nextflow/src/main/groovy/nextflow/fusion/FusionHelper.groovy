@@ -72,7 +72,7 @@ class FusionHelper {
         final containerCmd = containerBuilder
                 .build()
                 .getRunCommand(patchCmd.join(' '))
-                .replaceAll('-w "\\$PWD" ','') // <-- hack to remove the PWD work dir
+                .replaceAll('-w "\\$NXF_TASK_WORKDIR" ','') // <-- hack to remove the PWD work dir
 
         return containerCmd
     }
