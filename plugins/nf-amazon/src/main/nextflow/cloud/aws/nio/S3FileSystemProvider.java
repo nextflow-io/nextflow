@@ -836,7 +836,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		final String bucketName = S3Path.bucketName(uri);
 		final boolean global = bucketName!=null;
-		final AwsClientFactory factory = new AwsClientFactory(awsConfig, Regions.US_EAST_1.getName());
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, globalRegion(awsConfig));
 		client = new S3Client(factory.getS3Client(clientConfig, global));
 
 		// set the client acl
@@ -851,6 +851,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		return new S3FileSystem(this, client, uri, props);
 	}
+
+    protected String globalRegion(AwsConfig awsConfig) {
+        return awsConfig.getRegion() != null && awsConfig.getS3Config().isCustomEndpoint()
+                ? awsConfig.getRegion()
+                : Regions.US_EAST_1.getName();
+    }
 
 	protected String getProp(Properties props, String... keys) {
 		for( String k : keys ) {

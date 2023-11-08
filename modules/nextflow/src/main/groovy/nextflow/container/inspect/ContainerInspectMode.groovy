@@ -15,15 +15,21 @@
  *
  */
 
-package nextflow.extension
+package nextflow.container.inspect
 
-import nextflow.plugin.extension.PluginExtensionPoint
-
+import groovy.transform.CompileStatic
 /**
- * This class is deprecated, use {@link PluginExtensionPoint} instead
+ * Activate the container inspect mode
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Deprecated
-abstract class ChannelExtensionPoint extends PluginExtensionPoint {
+@CompileStatic
+class ContainerInspectMode {
+
+    private static boolean active
+
+    static boolean active() { return active }
+
+    static void activate(boolean value) { active=value }
+
 }
