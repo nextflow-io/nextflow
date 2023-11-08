@@ -398,15 +398,20 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected Integer getJobExitCode() {
-        final status = client.getJobStatus(jobId)
-        final eventsCount = status.getStatusEventsCount()
-        final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
-        log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}"
+        try {
+            final status = client.getJobStatus(jobId)
+            final eventsCount = status.getStatusEventsCount()
+            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}"
 
-        if( lastEvent?.getDescription()?.contains('due to Spot VM preemption with exit code 50001') ) {
-            return 50001
+            if( lastEvent?.getDescription()?.contains('due to Spot VM preemption with exit code 50001') ) {
+                return 50001
+            }
         }
-        
+        catch (Throwable t) {
+            log.debug "[GOOGLE BATCH] Unable to fetch task `${task.lazyName()}` exit code - cause: ${t.message}"
+        }
+
         return null
     }
 
