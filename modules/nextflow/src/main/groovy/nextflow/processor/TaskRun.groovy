@@ -38,6 +38,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.CmdOutParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -588,6 +589,15 @@ class TaskRun implements Cloneable {
     List<String> getOutputEnvNames() {
         final items = getOutputsByType(EnvOutParam)
         return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
+    }
+
+    List<String> getOutputCommands() {
+        final items = getOutputsByType(CmdOutParam)
+        final result = new ArrayList(items.size())
+        for( CmdOutParam param : items.keySet() ) {
+            result.add( "${param.name}=\$($param.target)" )
+        }
+        return result
     }
 
     Path getCondaEnv() {

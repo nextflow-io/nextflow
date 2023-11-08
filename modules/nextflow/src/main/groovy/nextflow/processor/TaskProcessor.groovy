@@ -84,6 +84,8 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.BaseOutParam
+import nextflow.script.params.CmdOutParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -1500,6 +1502,10 @@ class TaskProcessor {
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
                     break
 
+                case CmdOutParam:
+                    collectOutEnvParam(task, (CmdOutParam)param, workDir)
+                    break
+
                 case DefaultOutParam:
                     task.setOutput(param, DefaultOutParam.Completion.DONE)
                     break
@@ -1514,7 +1520,7 @@ class TaskProcessor {
         task.canBind = true
     }
 
-    protected void collectOutEnvParam(TaskRun task, EnvOutParam param, Path workDir) {
+    protected void collectOutEnvParam(TaskRun task, BaseOutParam param, Path workDir) {
 
         // fetch the output value
         final val = collectOutEnvMap(workDir).get(param.name)

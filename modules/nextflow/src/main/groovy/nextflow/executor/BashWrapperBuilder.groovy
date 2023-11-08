@@ -177,16 +177,24 @@ class BashWrapperBuilder {
         }
     }
 
-    protected String getOutputEnvCaptureSnippet(List<String> names) {
+    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, List<String> outCmds) {
         def result = new StringBuilder()
         result.append('\n')
         result.append('# capture process environment\n')
         result.append('set +u\n')
         result.append('cd "$NXF_TASK_WORKDIR"\n')
-        for( int i=0; i<names.size(); i++) {
-            final key = names[i]
+        int count=0
+        // out env
+        for( String key : (outEnvs ?: List.<String>of()) ) {
             result.append "echo $key=\${$key[@]} "
-            result.append( i==0 ? '> ' : '>> ' )
+            result.append( count++==0 ? '> ' : '>> ' )
+            result.append(TaskRun.CMD_ENV)
+            result.append('\n')
+        }
+        // out cmd
+        for( String cmd : (outCmds ?: List.<String>of()) ) {
+            result.append "echo $cmd "
+            result.append( count++==0 ? '> ' : '>> ' )
             result.append(TaskRun.CMD_ENV)
             result.append('\n')
         }
@@ -239,9 +247,12 @@ class BashWrapperBuilder {
          */
         final interpreter = TaskProcessor.fetchInterpreter(script)
 
-        if( outputEnvNames ) {
-            if( !isBash(interpreter) ) throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
-            script += getOutputEnvCaptureSnippet(outputEnvNames)
+        if( outputEnvNames || outputCommands ) {
+            if( !isBash(interpreter) && outputEnvNames )
+                throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
+            if( !isBash(interpreter) && outputCommands )
+                throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
+            script += getOutputEnvCaptureSnippet(outputEnvNames, outputCommands)
         }
 
         final binding = new HashMap<String,String>(20)
