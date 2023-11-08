@@ -39,4 +39,15 @@ class SubmitContainerTokenResponse {
      * The fully qualified wave container name to be used
      */
     String targetImage
+
+    /**
+     * The source container image that originated this request
+     */
+    String containerImage
+
+    /**
+     * The ID of the build associated with this request or null of the image already exists
+     */
+    String buildId
+
 }

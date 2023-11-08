@@ -28,7 +28,7 @@ import nextflow.script.TokenVar
  */
 @Slf4j
 @InheritConstructors
-class FileInParam extends BaseInParam implements PathQualifier {
+class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
 
     protected filePattern
 
@@ -51,13 +51,6 @@ class FileInParam extends BaseInParam implements PathQualifier {
         }
 
         if( obj instanceof GString ) {
-            filePattern = obj
-            return this
-        }
-
-        // the ability to pass a closure as file name has been replaced by
-        // lazy gstring -- this should be deprecated
-        if( obj instanceof Closure && !NF.dsl2 ) {
             filePattern = obj
             return this
         }

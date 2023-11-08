@@ -60,6 +60,8 @@ class FileHelper {
 
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
 
+    static final public Pattern INVALID_URL_PREFIX = ~/^(?!file)([a-zA-Z][a-zA-Z0-9]*):\\/[^\\/].+/
+
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
     static final private Path localTempBasePath
@@ -288,6 +290,10 @@ class FileHelper {
             return Paths.get(str)
         }
 
+        // check for valid the url scheme
+        if( INVALID_URL_PREFIX.matcher(str).matches() )
+            throw new IllegalArgumentException("File path is prefixed with an invalid URL scheme - Offending path: '${Escape.blanks(str)}'")
+
         return asPath0(str)
     }
 
@@ -365,7 +371,7 @@ class FileHelper {
                 throw new IllegalArgumentException("Malformed file URI: $uri -- It must start either with a `file:/` or `file:///` prefix")
 
             if( !uri.path )
-                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolue path prefix i.e. `file:/`")
+                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolute path prefix i.e. `file:/`")
         }
         else if( !uri.path ) {
             throw new IllegalArgumentException("URI path cannot be empty")
@@ -533,7 +539,7 @@ class FileHelper {
             return true
         }
         catch( IOException e ) {
-            log.trace "Cant read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
+            log.trace "Can't read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
             return false
         }
 

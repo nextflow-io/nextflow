@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
+import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.TaskProcessor
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -706,12 +707,12 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              path x
-              path f1
-              path '*.fa' 
+              path x, arity: '1'
+              path f1, arity: '1..2'
+              path '*.fa', arity: '1..*'
               path 'file.txt'
               path f2, name: '*.fa'
-              path f3, stageAs: '*.txt' 
+              path f3, stageAs: '*.txt'
 
               return ''
             }
@@ -737,18 +738,21 @@ class ParamsInTest extends Dsl2Spec {
         in0.inChannel.val == FILE
         in0.index == 0
         in0.isPathQualifier()
+        in0.arity == new ArityParam.Range(1, 1)
 
         in1.name == 'f1'
         in1.filePattern == '*'
         in1.inChannel.val == FILE
         in1.index == 1
         in1.isPathQualifier()
+        in1.arity == new ArityParam.Range(1, 2)
 
         in2.name == '*.fa'
         in2.filePattern == '*.fa'
         in2.inChannel.val == FILE
         in2.index == 2
         in2.isPathQualifier()
+        in2.arity == new ArityParam.Range(1, Integer.MAX_VALUE)
 
         in3.name == 'file.txt'
         in3.filePattern == 'file.txt'
@@ -983,6 +987,28 @@ class ParamsInTest extends Dsl2Spec {
         !in1.isNestedParam()
         (in1.inner[0] as ValueInParam).isNestedParam()
         (in1.inner[1] as FileInParam).isNestedParam()
+    }
+
+    def 'should throw error on missing comma' () {
+        setup:
+        def text = '''
+            process hola {
+              input:
+              tuple val(x) val(y)
+
+              /command/
+            }
+            
+            workflow {
+              hola(['x', 'y'])
+            }
+            '''
+        when:
+        parseAndReturnProcess(text)
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Invalid function call `val(y)` -- possible syntax error'
     }
 
 }

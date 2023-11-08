@@ -32,6 +32,7 @@ import groovyx.gpars.GParsConfig
 import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
+import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
@@ -109,6 +110,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
     String bucketDir
+
+    @Parameter(names=['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
+    String cloudCachePath
 
     /**
      * Defines the parameters to be passed to the pipeline script
@@ -219,7 +223,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String profile
 
     @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
-    boolean dumpHashes
+    String dumpHashes
 
     @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
     String dumpChannels
@@ -245,12 +249,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
 
-    @Parameter(names=['-dsl1'], description = 'Execute the workflow using DSL1 syntax')
-    boolean dsl1
-
-    @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
-    boolean dsl2
-
     @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
     String mainScript
 
@@ -271,6 +269,11 @@ class CmdRun extends CmdBase implements HubOptions {
                 ?  disableJobsCancellation
                 : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
+
+    /**
+     * Optional closure modelling an action to be invoked when the preview mode is enabled
+     */
+    Closure<Void> previewAction
 
     @Override
     String getName() { NAME }
@@ -304,9 +307,6 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
-
-        if( dsl1 && dsl2 )
-            throw new AbortOperationException("Command line options `-dsl1` and `-dsl2` cannot be specified at the same time")
 
         checkRunName()
 
@@ -342,10 +342,11 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
-        runner.setPreview(this.preview)
+        runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
@@ -619,16 +620,18 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
 
-    static protected parseParamValue(String str ) {
+    static protected parseParamValue(String str) {
+        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
+            return str
 
         if ( str == null ) return null
 
         if ( str.toLowerCase() == 'true') return Boolean.TRUE
         if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
 
-        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
-        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
     }

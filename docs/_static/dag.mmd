@@ -1,0 +1,25 @@
+flowchart TB
+    subgraph " "
+    v0["Channel.fromFilePairs"]
+    v1["transcriptome"]
+    v7["config"]
+    end
+    subgraph RNASEQ
+    v2([INDEX])
+    v3([FASTQC])
+    v4([QUANT])
+    end
+    v8([MULTIQC])
+    subgraph " "
+    v9[" "]
+    end
+    v5(( ))
+    v0 --> v3
+    v0 --> v4
+    v1 --> v2
+    v2 --> v4
+    v3 --> v5
+    v4 --> v5
+    v7 --> v8
+    v5 --> v8
+    v8 --> v9

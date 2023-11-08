@@ -27,7 +27,6 @@ import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.TraceHelper
-import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -678,14 +677,14 @@ class ConfigBuilderTest extends Specification {
         when:
         file.text =
                 '''
-                process.$test.container = 'busybox'
+                process.'withName:test'.container = 'busybox'
                 '''
         def opt = new CliOptions(config: [file.toFile().canonicalPath])
         def run = new CmdRun(withDocker: '-')
         def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
-        config.process.$test.container == 'busybox'
+        config.process.'withName:test'.container == 'busybox'
 
         when:
         file.text =
@@ -710,7 +709,7 @@ class ConfigBuilderTest extends Specification {
         when:
         file.text =
                 '''
-                process.$test.tag = 'tag'
+                process.'withName:test'.tag = 'tag'
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
@@ -778,6 +777,7 @@ class ConfigBuilderTest extends Specification {
         !config.hasContainerDirective([foo: 1, bar: 2])
         !config.hasContainerDirective([foo: 1, bar: 2, baz: [container: 'user/repo']])
         config.hasContainerDirective([foo: 1, bar: 2, $baz: [container: 'user/repo']])
+        config.hasContainerDirective([foo: 1, bar: 2, 'withName:baz': [container: 'user/repo']])
 
     }
 
@@ -941,7 +941,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag-20221001.dot'
+        config.dag.file == 'dag-20221001.html'
     }
 
     def 'should set session weblog options' () {
@@ -1000,7 +1000,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.weblog instanceof Map
         config.weblog.enabled
-        config.weblog.url == WebLogObserver.DEF_URL
+        config.weblog.url == 'http://localhost'
 
     }
 
@@ -1155,6 +1155,98 @@ class ConfigBuilderTest extends Specification {
         config.wave instanceof Map
         config.wave.enabled
         config.wave.endpoint == 'https://wave.seqera.io'
+    }
+
+    def 'should set cloudcache options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.cloudcache
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://foo/bar'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.cloudcache instanceof Map
+        !config.cloudcache.enabled
+        config.cloudcache.path == 's3://foo/bar'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://this/that'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://this/that'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: '-'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        !config.cloudcache.path
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://alpha/delta'
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: '-'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://alpha/delta'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://alpha/delta'
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.enabled = false
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        !config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/env'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/env'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun())
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://config/path'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
     }
 
     def 'should enable conda env' () {

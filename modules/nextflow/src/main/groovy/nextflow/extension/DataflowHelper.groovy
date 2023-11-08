@@ -16,6 +16,8 @@
 
 package nextflow.extension
 
+import java.lang.reflect.InvocationTargetException
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -91,7 +93,8 @@ class DataflowHelper {
     @PackageScope
     static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
-        boolean onException(final DataflowProcessor processor, final Throwable e) {
+        boolean onException(final DataflowProcessor processor, final Throwable t) {
+            final e = t instanceof InvocationTargetException ? t.cause : t
             OperatorImpl.log.error("@unknown", e)
             session?.abort(e)
             return true;

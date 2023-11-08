@@ -1,25 +1,26 @@
 params.str = 'Hello world!'
 
 process splitLetters {
-  output:
+    output:
     path 'chunk_*'
 
-  """
-  printf '${params.str}' | split -b 6 - chunk_
-  """
+    """
+    printf '${params.str}' | split -b 6 - chunk_
+    """
 }
 
 process convertToUpper {
-  input:
+    input:
     path x
-  output:
+
+    output:
     stdout
 
-  """
-  cat $x | tr '[a-z]' '[A-Z]'
-  """
+    """
+    cat $x | tr '[a-z]' '[A-Z]'
+    """
 }
 
 workflow {
-  splitLetters | flatten | convertToUpper | view { it.trim() }
+    splitLetters | flatten | convertToUpper | view { it.trim() }
 }

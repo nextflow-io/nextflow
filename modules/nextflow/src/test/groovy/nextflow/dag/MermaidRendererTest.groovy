@@ -15,22 +15,17 @@
  */
 
 package nextflow.dag
+
 import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowQueue
-import spock.lang.Specification
-
 import nextflow.Session
-
+import spock.lang.Specification
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class MermaidRendererTest extends Specification {
-
-    def setupSpec() {
-        new Session()
-    }
 
     def 'should render a graph using the `mmd` format' () {
         given:
@@ -39,6 +34,7 @@ class MermaidRendererTest extends Specification {
         def ch2 = new DataflowQueue()
         def ch3 = new DataflowQueue()
 
+        def session = new Session([dag: [verbose: true]])
         def dag = new DAG()
         dag.addOperatorNode('Op1', ch1, ch2)
         dag.addOperatorNode('Op2', ch2, ch3)
@@ -50,14 +46,18 @@ class MermaidRendererTest extends Specification {
         then:
         file.text ==
             '''
-            flowchart TD
-                p0(( ))
-                p1([Op1])
-                p2([Op2])
-                p3(( ))
-                p0 --> p1
-                p1 --> p2
-                p2 --> p3
+            flowchart TB
+                subgraph " "
+                v0[" "]
+                end
+                v1([Op1])
+                v2([Op2])
+                subgraph " "
+                v3[" "]
+                end
+                v0 --> v1
+                v1 --> v2
+                v2 --> v3
             '''
             .stripIndent().leftTrim()
 

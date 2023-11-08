@@ -39,7 +39,6 @@ import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
-import nextflow.trace.WebLogObserver
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -322,7 +321,7 @@ class ConfigBuilder {
     }
 
     protected Map configVars() {
-        // this is needed to make sure to re-use the same
+        // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
         return cacheableConfigVars(baseDir)
@@ -596,9 +595,10 @@ class ConfigBuilder {
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 
-        // -- sets `dumpKeys` option
-        if( cmdRun.dumpHashes )
-            config.dumpHashes = cmdRun.dumpHashes
+        // -- sets `dumpHashes` option
+        if( cmdRun.dumpHashes ) {
+            config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
+        }
 
         if( cmdRun.dumpChannels )
             config.dumpChannels = cmdRun.dumpChannels.tokenize(',')
@@ -678,7 +678,7 @@ class ConfigBuilder {
             if( cmdRun.withWebLog != '-' )
                 config.weblog.url = cmdRun.withWebLog
             else if( !config.weblog.url )
-                config.weblog.url = WebLogObserver.DEF_URL
+                config.weblog.url = 'http://localhost'
         }
 
         // -- sets tower options
@@ -710,14 +710,17 @@ class ConfigBuilder {
             config.fusion.enabled = cmdRun.withFusion == 'true'
         }
 
-        // -- nextflow setting
-        if( cmdRun.dsl1 || cmdRun.dsl2 ) {
-            if( config.nextflow !instanceof Map )
-                config.nextflow = [:]
-            if( cmdRun.dsl1 )
-                config.nextflow.enable.dsl = 1
-            if( cmdRun.dsl2 )
-                config.nextflow.enable.dsl = 2
+        // -- set cloudcache options
+        final envCloudPath = env.get('NXF_CLOUDCACHE_PATH')
+        if( cmdRun.cloudCachePath || envCloudPath ) {
+            if( !(config.cloudcache instanceof Map) )
+                config.cloudcache = [:]
+            if( !config.cloudcache.isSet('enabled') )
+                config.cloudcache.enabled = true
+            if( cmdRun.cloudCachePath && cmdRun.cloudCachePath != '-' )
+                config.cloudcache.path = cmdRun.cloudCachePath
+            else if( !config.cloudcache.isSet('path') && envCloudPath )
+                config.cloudcache.path = envCloudPath
         }
 
         // -- add the command line parameters to the 'taskConfig' object
@@ -788,8 +791,8 @@ class ConfigBuilder {
                 return true
 
             def result = process
-                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
-                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
+                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
 
             return result as boolean
         }

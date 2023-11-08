@@ -9,6 +9,7 @@ export NXF_IGNORE_WARN_DSL2=true
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 # disable ansi log to make log more readable
 export NXF_ANSI_LOG=false
+export NXF_DISABLE_CHECK_LATEST=true
 
 #
 # Integration tests
@@ -93,14 +94,14 @@ if [[ $TEST_MODE == 'test_azure' ]]; then
 fi
 
 #
-# Google Life Sciences
+# Google Batch
 #
 if [[ $TEST_MODE == 'test_google' ]]; then
     if [ "$GOOGLE_SECRET" ]; then
-      echo "Google LS tests"
+      echo "Google Batch tests"
       bash google.sh
     else
-      echo "Missing GOOGLE_SECRET variable -- Skipping Google LS tests"
+      echo "Missing GOOGLE_SECRET variable -- Skipping Google Batch tests"
     fi
 fi
 
