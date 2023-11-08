@@ -61,14 +61,14 @@ class SingularityBuilderTest extends Specification {
                 .addMount(path2)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /foo/data/file1 -B /bar/data/file2 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /foo/data/file1 -B /bar/data/file2 -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path1)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /foo/data/file1 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /foo/data/file1 -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
@@ -76,13 +76,13 @@ class SingularityBuilderTest extends Specification {
                 .params(autoMounts: true)
                 .params(readOnlyInputs: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /foo/data/file1:/foo/data/file1:ro -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path3)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /bar/data\\ file -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity run --no-home --pid -B /bar/data\\ file -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .params(newPidNamespace: false)
@@ -103,17 +103,17 @@ class SingularityBuilderTest extends Specification {
         expect:
         new SingularityBuilder('busybox')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$PWD" busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
 
         new SingularityBuilder('busybox')
                 .params(engineOptions: '-q -v')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity -q -v exec --no-home --pid -B "$PWD" busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity -q -v exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
 
         new SingularityBuilder('busybox')
                 .params(runOptions: '--contain --writable')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$PWD" --contain --writable busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" --contain --writable busybox'
 
         new SingularityBuilder('ubuntu')
                 .params(autoMounts: false)
@@ -125,14 +125,14 @@ class SingularityBuilderTest extends Specification {
                 .addMount(path2)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /foo/data/file1 -B /bar/data/file2 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /foo/data/file1 -B /bar/data/file2 -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path1)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /foo/data/file1 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /foo/data/file1 -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
@@ -140,13 +140,13 @@ class SingularityBuilderTest extends Specification {
                 .params(autoMounts: true)
                 .params(readOnlyInputs: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /foo/data/file1:/foo/data/file1:ro -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path3)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /bar/data\\ file -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B /bar/data\\ file -B "$NXF_TASK_WORKDIR" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .params(newPidNamespace: false)
@@ -157,7 +157,7 @@ class SingularityBuilderTest extends Specification {
         new SingularityBuilder('ubuntu')
             .params(oci: true)
             .build()
-            .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} singularity exec --no-home --oci -B "$PWD" ubuntu'
+            .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} singularity exec --no-home --oci -B "$NXF_TASK_WORKDIR" ubuntu'
 
     }
 
@@ -207,12 +207,12 @@ class SingularityBuilderTest extends Specification {
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} SINGULARITYENV_X="1" SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec --no-home --pid -B "$PWD" busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} SINGULARITYENV_X="1" SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
 
         new SingularityBuilder('busybox')
                 .addEnv('CUDA_VISIBLE_DEVICES')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${CUDA_VISIBLE_DEVICES:+SINGULARITYENV_CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES"} singularity exec --no-home --pid -B "$PWD" busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${CUDA_VISIBLE_DEVICES:+SINGULARITYENV_CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
 
     }
 
@@ -222,17 +222,17 @@ class SingularityBuilderTest extends Specification {
         when:
         def cmd = new SingularityBuilder('ubuntu.img').build().getRunCommand()
         then:
-        cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$PWD" ubuntu.img'
+        cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu.img'
 
         when:
         cmd = new SingularityBuilder('ubuntu.img').build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$PWD" ubuntu.img bwa --this --that file.fastq'
+        cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu.img bwa --this --that file.fastq'
 
         when:
         cmd = new SingularityBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$PWD" ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
+        cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu.img /bin/sh -c "cd $NXF_TASK_WORKDIR; bwa --this --that file.fastq"'
     }
 
     @Unroll
