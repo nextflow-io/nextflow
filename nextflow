@@ -320,7 +320,7 @@ else
   if [[ ! $JAVA_VER =~ ^(11|12|13|14|15|16|17|18|19|20|21) ]]; then
       echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 11 up to 21\n"
   fi
-  mkdir -p $(dirname "$JAVA_KEY")
+  mkdir -p "$(dirname "$JAVA_KEY")"
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
 fi
 
@@ -404,8 +404,8 @@ else
     # we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
     cmd_pattern='"([^"]*)"(.*)'
     [[ "${cli[@]}" =~ $cmd_pattern ]]
-    cmd_base=(${BASH_REMATCH[1]})
-    cmd_tail=(${BASH_REMATCH[2]})
+    declare -a cmd_base="(${BASH_REMATCH[1]})"
+    declare -a cmd_tail="(${BASH_REMATCH[2]})"
 
     launcher="${cmd_base[@]}"
     [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
@@ -443,7 +443,7 @@ else
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
         STR=''
         for x in "${launcher[@]}"; do
-        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && [[ ! "$x" == *"-agentlib:jdwp"* ]] && STR+="$x "
+        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && [[ ! "$x" == *"-agentlib:jdwp"* ]] && STR+=$(printf '%q ' "$x")
         done
         printf "$STR">"$LAUNCH_FILE"
     else

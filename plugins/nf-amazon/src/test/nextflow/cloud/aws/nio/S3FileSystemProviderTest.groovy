@@ -15,29 +15,33 @@
  *
  */
 
-package nextflow.cli
+package nextflow.cloud.aws.nio
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import nextflow.cloud.aws.config.AwsConfig
+import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
- * Deprecate - see {@link CmdPlugin} instead
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
-@CompileStatic
-class CmdPlugins extends CmdPlugin {
+class S3FileSystemProviderTest extends Specification {
 
-    @Override
-    String getName() {
-        return 'plugins'
+    @Unroll
+    def 'should get global region' () {
+        given:
+        def provider = Spy(S3FileSystemProvider)
+
+        expect:
+        provider.globalRegion(new AwsConfig(CONFIG)) == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG
+        'us-east-1' | [:]
+        'us-east-1' | [region:'foo']
+        'us-east-1' | [region:'foo', client:[endpoint: 'http://s3.us-east-2.amazonaws.com']]
+        'foo'       | [region:'foo', client:[endpoint: 'http://bar.com']]        
+
     }
 
-    @Override
-    void run() {
-        log.info "Command 'plugins' has been deprecated - Use 'plugin' instead"
-        super.run()
-    }
 }

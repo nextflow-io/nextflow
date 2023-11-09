@@ -112,11 +112,8 @@ class NextflowMeta {
         result.version = version.toString()
         result.build = build
         result.timestamp = parseDateStr(timestamp)
-        if( isDsl2Final() ) {
+        if( isDsl2() ) {
             result.enable = featuresMap()
-        }
-        else if( isDsl2() ) {
-            result.preview = featuresMap()
         }
         return result
     }
@@ -132,17 +129,6 @@ class NextflowMeta {
      * {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
      */
     boolean isDsl2() {
-        enable.dsl == 2f
-    }
-
-    /**
-     * As of the removal of DSL2 preview mode, the semantic of this method
-     * is identical to {@link #isDsl2()}.
-     * @return
-     *  {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
-     */
-    @Deprecated
-    boolean isDsl2Final() {
         enable.dsl == 2f
     }
 
