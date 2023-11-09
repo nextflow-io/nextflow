@@ -24,6 +24,7 @@ import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
 import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.LifecyclePolicy
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.ServiceAccount
@@ -206,6 +207,20 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .setEnvironment(env)
             )
             .addAllVolumes( launcher.getVolumes() )
+
+        // retry on spot reclaim
+        if( executor.config.maxSpotAttempts ) {
+            taskSpec
+                .setMaxRetryCount( executor.config.maxSpotAttempts )
+                .addLifecyclePolicies(
+                    LifecyclePolicy.newBuilder()
+                        .setActionCondition(
+                            LifecyclePolicy.ActionCondition.newBuilder()
+                                .addExitCodes(50001)
+                        )
+                        .setAction(LifecyclePolicy.Action.RETRY_TASK)
+                )
+        }
 
         // instance policy
         final allocationPolicy = AllocationPolicy.newBuilder()
