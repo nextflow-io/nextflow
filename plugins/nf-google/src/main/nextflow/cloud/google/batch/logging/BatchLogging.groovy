@@ -70,7 +70,7 @@ class BatchLogging implements Closeable {
         final stdout = new StringBuilder()
         final stderr = new StringBuilder()
         // use logging here
-        final filter = "resource.type=generic_task AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid"
+        final filter = "resource.type=generic_task OR resource.type=\"batch.googleapis.com/Job\" AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid"
         final entries = loggingService().listLogEntries(
                 Logging.EntryListOption.filter(filter),
                 Logging.EntryListOption.pageSize(1000) )
