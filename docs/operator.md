@@ -27,25 +27,12 @@ The `branch` operator allows you to forward the items emitted by a source channe
 
 The selection criteria is defined by specifying a {ref}`closure <script-closure>` that provides one or more boolean expression, each of which is identified by a unique label. On the first expression that evaluates to a *true* value, the current item is bound to a named channel as the label identifier. For example:
 
-```groovy
-Channel
-    .of(1, 2, 3, 40, 50)
-    .branch {
-        small: it < 10
-        large: it > 10
-    }
-    .set { result }
-
- result.small.view { "$it is small" }
- result.large.view { "$it is large" }
+```{literalinclude} snippets/branch.nf
+:language: groovy
 ```
 
-```
-1 is small
-2 is small
-3 is small
-40 is large
-50 is large
+```{literalinclude} snippets/branch.out
+:language: console
 ```
 
 :::{note}
@@ -54,31 +41,22 @@ The above *small* and *large* strings may be printed in any order due to the asy
 
 A default fallback condition can be specified using `true` as the last branch condition:
 
-```groovy
-Channel
-    .from(1, 2, 3, 40, 50)
-    .branch {
-        small: it < 10
-        large: it < 50
-        other: true
-    }
+```{literalinclude} snippets/branch-with-fallback.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/branch-with-fallback.out
+:language: console
 ```
 
 The value returned by each branch condition can be customised by specifying an optional expression statement(s) just after the condition expression. For example:
 
-```groovy
-Channel
-    .from(1, 2, 3, 40, 50)
-    .branch {
-        foo: it < 10
-            return it+2
+```{literalinclude} snippets/branch-with-mapper.nf
+:language: groovy
+```
 
-        bar: it < 50
-            return it-2
-
-        other: true
-            return 0
-    }
+```{literalinclude} snippets/branch-with-mapper.out
+:language: console
 ```
 
 :::{tip}
@@ -87,14 +65,12 @@ When the `return` keyword is omitted, the value of the last expression statement
 
 To create a branch criteria as variable that can be passed as an argument to more than one `branch` operator use the `branchCriteria` built-in method as shown below:
 
-```groovy
-def criteria = branchCriteria {
-    small: it < 10
-    large: it > 10
-}
+```{literalinclude} snippets/branch-criteria.nf
+:language: groovy
+```
 
-Channel.of(1, 2, 30).branch(criteria).set { ch1 }
-Channel.of(10, 20, 1).branch(criteria).set { ch2 }
+```{literalinclude} snippets/branch-criteria.out
+:language: console
 ```
 
 ## buffer
@@ -107,70 +83,52 @@ There are a number of ways you can regulate how `buffer` gathers the items from 
 
 - `buffer( closingCondition )`: starts to collect the items emitted by the channel into a subset until the `closingCondition` is verified. After that the subset is emitted to the resulting channel and new items are gathered into a new subset. The process is repeated until the last value in the source channel is sent. The `closingCondition` can be specified either as a {ref}`regular expression <script-regexp>`, a Java class, a literal value, or a boolean predicate that has to be satisfied. For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 1, 2, 3 )
-      .buffer { it == 2 }
-      .view()
+  ```{literalinclude} snippets/buffer-with-closing.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [1,2]
-  [3,1,2]
+  ```{literalinclude} snippets/buffer-with-closing.out
+  :language: console
   ```
 
 - `buffer( openingCondition, closingCondition )`: starts to gather the items emitted by the channel as soon as one of the them verify the `openingCondition` and it continues until there is one item which verify the `closingCondition`. After that the subset is emitted and it continues applying the described logic until the last channel item is emitted. Both conditions can be defined either as a {ref}`regular expression <script-regexp>`, a literal value, a Java class, or a boolean predicate that need to be satisfied. For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
-      .buffer( 2, 4 )
-      .view()
+  ```{literalinclude} snippets/buffer-with-opening-closing.nf
+  :language: groovy
+  ```
 
-  // emits bundles starting with '2' and ending with'4'
-  [2,3,4]
-  [2,3,4]
+  ```{literalinclude} snippets/buffer-with-opening-closing.out
+  :language: console
   ```
 
 - `buffer( size: n )`: transform the source channel in such a way that it emits tuples made up of `n` elements. An incomplete tuple is discarded. For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 1, 2, 3, 1 )
-      .buffer( size: 2 )
-      .view()
+  ```{literalinclude} snippets/buffer-with-size.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [1, 2]
-  [3, 1]
-  [2, 3]
+  ```{literalinclude} snippets/buffer-with-size.out
+  :language: console
   ```
 
   If you want to emit the last items in a tuple containing less than `n` elements, simply add the parameter `remainder` specifying `true`, for example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 1, 2, 3, 1 )
-      .buffer( size: 2, remainder: true )
-      .view()
+  ```{literalinclude} snippets/buffer-with-size-remainder.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [1, 2]
-  [3, 1]
-  [2, 3]
-  [1]
+  ```{literalinclude} snippets/buffer-with-size-remainder.out
+  :language: console
   ```
 
 - `buffer( size: n, skip: m )`: as in the previous example, it emits tuples containing `n` elements, but skips `m` values before starting to collect the values for the next tuple (including the first emission). For example:
 
-  ```groovy
-  Channel
-      .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
-      .buffer( size:3, skip:2 )
-      .view()
+  ```{literalinclude} snippets/buffer-with-size-skip.nf
+  :language: groovy
+  ```
 
-  // emitted values
-  [3, 4, 5]
-  [3, 4, 5]
+  ```{literalinclude} snippets/buffer-with-size-skip.out
+  :language: console
   ```
 
   If you want to emit the remaining items in a tuple containing less than `n` elements, simply add the parameter `remainder` specifying `true`, as shown in the previous example.
@@ -183,47 +141,32 @@ See also: [collate](#collate) operator.
 
 The `collate` operator transforms a channel in such a way that the emitted values are grouped in tuples containing `n` items. For example:
 
-```groovy
-Channel
-    .of(1,2,3,1,2,3,1)
-    .collate( 3 )
-    .view()
+```{literalinclude} snippets/collate.nf
+:language: groovy
 ```
 
-```
-[1, 2, 3]
-[1, 2, 3]
-[1]
+```{literalinclude} snippets/collate.out
+:language: console
 ```
 
 As shown in the above example the last tuple may be incomplete e.g. contain fewer elements than the specified size. If you want to avoid this, specify `false` as the second parameter. For example:
 
-```groovy
-Channel
-    .of(1,2,3,1,2,3,1)
-    .collate( 3, false )
-    .view()
+```{literalinclude} snippets/collate-with-no-remainder.nf
+:language: groovy
 ```
 
-```
-[1, 2, 3]
-[1, 2, 3]
+```{literalinclude} snippets/collate-with-no-remainder.out
+:language: console
 ```
 
 A second version of the `collate` operator allows you to specify, after the `size`, the `step` by which elements are collected in tuples. For example:
 
-```groovy
-Channel
-    .of(1,2,3,4)
-    .collate( 3, 1 )
-    .view()
+```{literalinclude} snippets/collate-with-step.nf
+:language: groovy
 ```
 
-```
-[1, 2, 3]
-[2, 3, 4]
-[3, 4]
-[4]
+```{literalinclude} snippets/collate-with-step.out
+:language: console
 ```
 
 As before, if you don't want to emit the last items which do not complete a tuple, specify `false` as the third parameter.
@@ -238,28 +181,22 @@ See also: [buffer](#buffer) operator.
 
 The `collect` operator collects all the items emitted by a channel to a `List` and return the resulting object as a sole emission. For example:
 
-```groovy
-Channel
-    .of( 1, 2, 3, 4 )
-    .collect()
-    .view()
+```{literalinclude} snippets/collect.nf
+:language: groovy
 ```
 
-```
-[1,2,3,4]
+```{literalinclude} snippets/collect.out
+:language: console
 ```
 
 An optional {ref}`closure <script-closure>` can be specified to transform each item before adding it to the resulting list. For example:
 
-```groovy
-Channel
-    .of( 'hello', 'ciao', 'bonjour' )
-    .collect { it.length() }
-    .view()
+```{literalinclude} snippets/collect-with-mapper.nf
+:language: groovy
 ```
 
-```
-[5,4,7]
+```{literalinclude} snippets/collect-with-mapper.out
+:language: console
 ```
 
 Available options:
@@ -280,42 +217,21 @@ The `collectFile` operator allows you to gather the items emitted by a channel a
 
 In the simplest case, just specify the name of a file where the entries have to be stored. For example:
 
-```groovy
-Channel
-    .of('alpha', 'beta', 'gamma')
-    .collectFile(name: 'sample.txt', newLine: true)
-    .subscribe {
-        println "Entries are saved to file: $it"
-        println "File content is: ${it.text}"
-    }
+```{literalinclude} snippets/collectfile.nf
+:language: groovy
 ```
+
 
 A second version of the `collectFile` operator allows you to gather the items emitted by a channel and group them together into files whose name can be defined by a dynamic criteria. The grouping criteria is specified by a {ref}`closure <script-closure>` that must return a pair in which the first element defines the file name for the group and the second element the actual value to be appended to that file. For example:
 
-```groovy
-Channel
-    .of('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
-    .collectFile() { item ->
-        [ "${item[0]}.txt", item + '\n' ]
-    }
-    .subscribe {
-        println "File ${it.name} contains:"
-        println it.text
-    }
+```{literalinclude} snippets/collectfile-closure.nf
+:language: groovy
 ```
 
+```{literalinclude} snippets/collectfile-closure.out
+:language: console
 ```
-File 'B.txt' contains:
-Bonjour
 
-File 'C.txt' contains:
-Ciao
-
-File 'H.txt' contains:
-Halo
-Hola
-Hello
-```
 
 :::{tip}
 When the items emitted by the source channel are files, the grouping criteria can be omitted. In this case the items content will be grouped into file(s) having the same name as the source items.
@@ -400,41 +316,22 @@ The `collectFile` operator needs to store files in a temporary folder that is au
 
 The `combine` operator combines (cartesian product) the items emitted by two channels or by a channel and a `Collection` object (as right operand). For example:
 
-```groovy
-numbers = Channel.of(1, 2, 3)
-words = Channel.of('hello', 'ciao')
-numbers
-    .combine(words)
-    .view()
+```{literalinclude} snippets/combine.nf
+:language: groovy
 ```
 
-```
-[1, hello]
-[2, hello]
-[3, hello]
-[1, ciao]
-[2, ciao]
-[3, ciao]
+```{literalinclude} snippets/combine.out
+:language: console
 ```
 
 A second version of the `combine` operator allows you to combine items that share a common matching key. The index of the key element is specified by using the `by` parameter (zero-based index, multiple indices can be specified as a list of integers). For example:
 
-```groovy
-left = Channel.of(['A', 1], ['B', 2], ['A', 3])
-right = Channel.of(['B', 'x'], ['B', 'y'], ['A', 'z'], ['A', 'w'])
-
-left
-    .combine(right, by: 0)
-    .view()
+```{literalinclude} snippets/combine-by.nf
+:language: groovy
 ```
 
-```
-[A, 1, z]
-[A, 3, z]
-[A, 1, w]
-[A, 3, w]
-[B, 2, x]
-[B, 2, y]
+```{literalinclude} snippets/combine-by.out
+:language: console
 ```
 
 See also [join](#join) and [cross](#cross).
@@ -451,23 +348,12 @@ In other words, given *N* channels, the items from the *i+1 th* channel are emit
 
 For example:
 
-```groovy
-a = Channel.of('a', 'b', 'c')
-b = Channel.of(1, 2, 3)
-c = Channel.of('p', 'q')
-
-c.concat( b, a ).view()
+```{literalinclude} snippets/concat.nf
+:language: groovy
 ```
 
-```
-p
-q
-1
-2
-3
-a
-b
-c
+```{literalinclude} snippets/concat.out
+:language: console
 ```
 
 (operator-count)=
@@ -478,34 +364,38 @@ c
 
 The `count` operator creates a channel that emits a single item: a number that represents the total number of items emitted by the source channel. For example:
 
-```groovy
-Channel
-    .of(9,1,7,5)
-    .count()
-    .view()
-// -> 4
+```{literalinclude} snippets/count.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/count.out
+:language: console
 ```
 
 An optional parameter can be provided to select which items are to be counted. The selection criteria can be specified either as a {ref}`regular expression <script-regexp>`, a literal value, a Java class, or a boolean predicate that needs to be satisfied. For example:
 
-```groovy
-Channel
-    .of(4,1,7,1,1)
-    .count(1)
-    .view()
-// -> 3
+```{literalinclude} snippets/count-with-filter-number.nf
+:language: groovy
+```
 
-Channel
-    .of('a','c','c','q','b')
-    .count ( ~/c/ )
-    .view()
-// -> 2
+```{literalinclude} snippets/count-with-filter-number.out
+:language: console
+```
 
-Channel
-    .of('a','c','c','q','b')
-    .count { it <= 'c' }
-    .view()
-// -> 4
+```{literalinclude} snippets/count-with-filter-regex.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/count-with-filter-regex.out
+:language: console
+```
+
+```{literalinclude} snippets/count-with-filter-closure.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/count-with-filter-closure.out
+:language: console
 ```
 
 (operator-countfasta)=
@@ -550,20 +440,12 @@ The `cross` operator allows you to combine the items of two channels in such a w
 
 The key is defined, by default, as the first entry in an array, a list or map object, or the value itself for any other data type. For example:
 
-```groovy
-source = Channel.of( [1, 'alpha'], [2, 'beta'] )
-target = Channel.of( [1, 'x'], [1, 'y'], [1, 'z'], [2, 'p'], [2, 'q'], [2, 't'] )
-
-source.cross(target).view()
+```{literalinclude} snippets/cross.nf
+:language: groovy
 ```
 
-```
-[ [1, alpha], [1, x] ]
-[ [1, alpha], [1, y] ]
-[ [1, alpha], [1, z] ]
-[ [2, beta],  [2, p] ]
-[ [2, beta],  [2, q] ]
-[ [2, beta],  [2, t] ]
+```{literalinclude} snippets/cross.out
+:language: console
 ```
 
 The above example shows how the items emitted by the source channels are associated to the ones emitted by the target channel (on the right) having the same key.
@@ -573,7 +455,15 @@ There are two important caveats when using the `cross` operator:
 1. The operator is not `commutative`, i.e. the result of `a.cross(b)` is different from `b.cross(a)`
 2. The source channel should emits items for which there's no key repetition i.e. the emitted items have an unique key identifier.
 
-Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key.
+An optional closure can be used to define the matching key for each item:
+
+```{literalinclude} snippets/cross-with-mapper.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/cross-with-mapper.out
+:language: console
+```
 
 ## distinct
 
@@ -581,38 +471,22 @@ Optionally, a mapping function can be specified in order to provide a custom rul
 
 The `distinct` operator allows you to remove *consecutive* duplicated items from a channel, so that each emitted item is different from the preceding one. For example:
 
-```groovy
-Channel
-    .of( 1,1,2,2,2,3,1,1,2,2,3 )
-    .distinct()
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/distinct.nf
+:language: groovy
 ```
 
-```
-1
-2
-3
-1
-2
-3
-Done
+```{literalinclude} snippets/distinct.out
+:language: console
 ```
 
 You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between distinct items. For example:
 
-```groovy
-Channel
-    .of( 1,1,2,2,2,3,1,1,2,4,6 )
-    .distinct { it % 2 }
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/distinct-with-mapper.nf
+:language: groovy
 ```
 
-```
-1
-2
-3
-2
-Done
+```{literalinclude} snippets/distinct-with-mapper.out
+:language: console
 ```
 
 (operator-dump)=
@@ -627,29 +501,21 @@ This is useful to enable the debugging of one or more channel content on-demand 
 
 An optional `tag` parameter allows you to select which channel to dump. For example:
 
-```groovy
-Channel
-    .of(1,2,3)
-    .map { it+1 }
-    .dump(tag: 'foo')
-
-Channel
-    .of(1,2,3)
-    .map { it^2 }
-    .dump(tag: 'bar')
+```{literalinclude} snippets/dump.nf
+:language: groovy
 ```
 
-Then you will be able to specify the tag `foo` or `bar` as an argument of the `-dump-channels` option to print either the content of the first or the second channel. Multiple tag names can be specified separating them with a `,` character.
+Then, you can run your pipeline with `-dump-channels foo` or `-dump-channels bar` to dump the content of either channel. Multiple tag names can be specified as a comma-separated list.
 
-:::{versionadded} 22.10.0
-The output can be formatted by enabling the `pretty` option:
+Available options:
 
-```groovy
-Channel
-    .fromSRA('SRP043510')
-    .dump(tag: 'foo', pretty: true)
-```
-:::
+`pretty`
+: :::{versionadded} 22.10.0
+  :::
+: When `true`, format the output as pretty-printed JSON (default: `false`).
+
+`tag`
+: Associate the channel with a tag that can be specified with the `-dump-channels` option to select which channels to dump.
 
 ## filter
 
@@ -659,45 +525,32 @@ The `filter` operator allows you to get only the items emitted by a channel that
 
 The following example shows how to filter a channel by using a regular expression that returns only strings that begin with `a`:
 
-```groovy
-Channel
-    .of( 'a', 'b', 'aa', 'bc', 3, 4.5 )
-    .filter( ~/^a.*/ )
-    .view()
+```{literalinclude} snippets/filter-regex.nf
+:language: groovy
 ```
 
-```
-a
-aa
+```{literalinclude} snippets/filter-regex.out
+:language: console
 ```
 
 The following example shows how to filter a channel by specifying the type qualifier `Number` so that only numbers are returned:
 
-```groovy
-Channel
-    .of( 'a', 'b', 'aa', 'bc', 3, 4.5 )
-    .filter( Number )
-    .view()
+```{literalinclude} snippets/filter-type.nf
+:language: groovy
 ```
 
-```
-3
-4.5
+```{literalinclude} snippets/filter-type.out
+:language: console
 ```
 
 Finally, a filtering condition can be defined by using any a boolean predicate. A predicate is expressed by a {ref}`closure <script-closure>` returning a boolean value. For example the following fragment shows how filter a channel emitting numbers so that the odd values are returned:
 
-```groovy
-Channel
-    .of( 1, 2, 3, 4, 5 )
-    .filter { it % 2 == 1 }
-    .view()
+```{literalinclude} snippets/filter-closure.nf
+:language: groovy
 ```
 
-```
-1
-3
-5
+```{literalinclude} snippets/filter-closure.out
+:language: console
 ```
 
 :::{tip}
@@ -712,30 +565,8 @@ In the above example the filter condition is wrapped in curly brackets, instead 
 
 The `first` operator creates a channel that returns the first item emitted by the source channel, or eventually the first item that matches an optional condition. The condition can be specified by using a {ref}`regular expression<script-regexp>`, a Java `class` type or any boolean predicate. For example:
 
-```groovy
-// no condition is specified, emits the very first item: 1
-Channel
-    .of( 1, 2, 3 )
-    .first()
-    .view()
-
-// emits the first String value: 'a'
-Channel
-    .of( 1, 2, 'a', 'b', 3 )
-    .first( String )
-    .view()
-
-// emits the first item matching the regular expression: 'aa'
-Channel
-    .of( 'a', 'aa', 'aaa' )
-    .first( ~/aa.*/ )
-    .view()
-
-// emits the first item for which the predicate evaluates to true: 4
-Channel
-    .of( 1,2,3,4,5 )
-    .first { it > 3 }
-    .view()
+```{literalinclude} snippets/first.nf
+:language: groovy
 ```
 
 (operator-flatmap)=
@@ -744,47 +575,26 @@ Channel
 
 *Returns: queue channel*
 
-The `flatMap` operator applies a function of your choosing to every item emitted by a channel, and returns the items so obtained as a new channel. Whereas the mapping function returns a list of items, this list is flattened so that each single item is emitted on its own.
+The `flatMap` operator applies a *mapping function* to each item from a source channel.
 
-For example:
+When the mapping function returns a list, each element in the list is emitted separately:
 
-```groovy
-// create a channel of numbers
-numbers = Channel.of( 1, 2, 3 )
-
-// map each number to a tuple (array), which items are emitted separately
-results = numbers.flatMap { n -> [ n*2, n*3 ] }
-
-// print the final results
-results.subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/flatmap-list.nf
+:language: groovy
 ```
 
-```
-2
-3
-4
-6
-6
-9
-Done
+```{literalinclude} snippets/flatmap-list.out
+:language: console
 ```
 
-Associative arrays are handled in the same way, so that each array entry is emitted as a single key-value pair. For example:
+When the mapping function returns a map, each key-value pair in the map is emitted separately:
 
-```groovy
-Channel
-    .of ( 1, 2, 3 )
-    .flatMap { it -> [ number: it, square: it*it ] }
-    .view { it.key + ': ' + it.value }
+```{literalinclude} snippets/flatmap-map.nf
+:language: groovy
 ```
 
-```
-number: 1
-square: 1
-number: 2
-square: 4
-number: 3
-square: 9
+```{literalinclude} snippets/flatmap-map.out
+:language: console
 ```
 
 (operator-flatten)=
@@ -795,20 +605,12 @@ square: 9
 
 The `flatten` operator transforms a channel in such a way that every item of type `Collection` or `Array` is flattened so that each single entry is emitted separately by the resulting channel. For example:
 
-```groovy
-Channel
-    .of( [1,[2,3]], 4, [5,[6]] )
-    .flatten()
-    .view()
+```{literalinclude} snippets/flatten.nf
+:language: groovy
 ```
 
-```
-1
-2
-3
-4
-5
-6
+```{literalinclude} snippets/flatten.out
+:language: console
 ```
 
 See also: [flatMap](#flatmap) operator.
@@ -825,55 +627,32 @@ In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)*
 
 For example:
 
-```groovy
-Channel
-    .of( [1, 'A'], [1, 'B'], [2, 'C'], [3, 'B'], [1, 'C'], [2, 'A'], [3, 'D'] )
-    .groupTuple()
-    .view()
+```{literalinclude} snippets/grouptuple.nf
+:language: groovy
 ```
 
-```
-[1, [A, B, C]]
-[2, [C, A]]
-[3, [B, D]]
+```{literalinclude} snippets/grouptuple.out
+:language: console
 ```
 
 By default the first entry in the tuple is used as grouping key. A different key can be chosen by using the `by` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example, grouping by the second value in each tuple:
 
-```groovy
-Channel
-    .of( [1, 'A'], [1, 'B'], [2, 'C'], [3, 'B'], [1, 'C'], [2, 'A'], [3, 'D'] )
-    .groupTuple(by: 1)
-    .view()
+```{literalinclude} snippets/grouptuple-by.nf
+:language: groovy
 ```
 
-```
-[[1, 2], A]
-[[1, 3], B]
-[[2, 1], C]
-[[3], D]
+```{literalinclude} snippets/grouptuple-by.out
+:language: console
 ```
 
 By default, if you don't specify a size, the `groupTuple` operator will not emit any groups until *all* inputs have been received. If possible, you should always try to specify the number of expected elements in each group using the `size` option, so that each group can be emitted as soon as it's ready. In cases where the size of each group varies based on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key with an associated size:
 
-```groovy
-chr_frequency = [ "chr1": 2, "chr2": 3 ]
-
-Channel.of(
-        [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
-        [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
-        [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
-        [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
-        [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ]
-    )
-    .map { region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf ) }
-    .groupTuple()
-    .view()
+```{literalinclude} snippets/grouptuple-groupkey.nf
+:language: groovy
 ```
 
-```
-[chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
-[chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
+```{literalinclude} snippets/grouptuple-groupkey.out
+:language: console
 ```
 
 Available options:
@@ -906,24 +685,22 @@ The `ifEmpty` operator creates a channel which emits a default value, specified 
 
 Thus, the following example prints:
 
-```groovy
-Channel .of(1,2,3) .ifEmpty('Hello') .view()
+```{literalinclude} snippets/ifempty-1.nf
+:language: groovy
 ```
 
-```
-1
-2
-3
+```{literalinclude} snippets/ifempty-1.out
+:language: console
 ```
 
 Instead, this one prints:
 
-```groovy
-Channel .empty() .ifEmpty('Hello') .view()
+```{literalinclude} snippets/ifempty-2.nf
+:language: groovy
 ```
 
-```
-Hello
+```{literalinclude} snippets/ifempty-2.out
+:language: console
 ```
 
 The `ifEmpty` value parameter can be defined with a {ref}`closure <script-closure>`. In this case the result value of the closure evaluation will be emitted when the empty condition is satisfied.
@@ -940,33 +717,24 @@ The `join` operator creates a channel that joins together the items emitted by t
 
 For example:
 
-```groovy
-left  = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
-right = Channel.of(['Z', 6], ['Y', 5], ['X', 4])
-left.join(right).view()
+```{literalinclude} snippets/join.nf
+:language: groovy
 ```
 
-```
-[Z, 3, 6]
-[Y, 2, 5]
-[X, 1, 4]
+```{literalinclude} snippets/join.out
+:language: console
 ```
 
 The `index` of a different matching element can be specified by using the `by` parameter.
 
 The `join` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element is missing, by specifying the optional parameter `remainder` as shown below:
 
-```groovy
-left  = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
-right = Channel.of(['Z', 6], ['Y', 5], ['X', 4])
-left.join(right, remainder: true).view()
+```{literalinclude} snippets/join-with-remainder.nf
+:language: groovy
 ```
 
-```
-[Y, 2, 5]
-[Z, 3, 6]
-[X, 1, 4]
-[P, 7, null]
+```{literalinclude} snippets/join-with-remainder.out
+:language: console
 ```
 
 Available options:
@@ -991,15 +759,12 @@ Available options:
 
 The `last` operator creates a channel that only returns the last item emitted by the source channel. For example:
 
-```groovy
-Channel
-    .of( 1,2,3,4,5,6 )
-    .last()
-    .view()
+```{literalinclude} snippets/last.nf
+:language: groovy
 ```
 
-```
-6
+```{literalinclude} snippets/last.out
+:language: console
 ```
 
 (operator-map)=
@@ -1010,20 +775,12 @@ Channel
 
 The `map` operator applies a function of your choosing to every item emitted by a channel, and returns the items so obtained as a new channel. The function applied is called the mapping function and is expressed with a {ref}`closure <script-closure>` as shown in the example below:
 
-```groovy
-Channel
-    .of( 1, 2, 3, 4, 5 )
-    .map { it * it }
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/map.nf
+:language: groovy
 ```
 
-```
-1
-4
-9
-16
-25
-Done
+```{literalinclude} snippets/map.out
+:language: console
 ```
 
 (operator-max)=
@@ -1034,37 +791,32 @@ Done
 
 The `max` operator waits until the source channel completes, and then emits the item that has the greatest value. For example:
 
-```groovy
-Channel
-    .of( 8, 6, 2, 5 )
-    .max()
-    .view { "Max value is $it" }
+```{literalinclude} snippets/max.nf
+:language: groovy
 ```
 
-```
-Max value is 8
+```{literalinclude} snippets/max.out
+:language: console
 ```
 
 An optional {ref}`closure <script-closure>` parameter can be specified in order to provide a function that returns the value to be compared. The example below shows how to find the string item that has the maximum length:
 
-```groovy
-Channel
-    .of("hello","hi","hey")
-    .max { it.size() }
-    .view()
+```{literalinclude} snippets/max-with-mapper.nf
+:language: groovy
 ```
 
-```
-"hello"
+```{literalinclude} snippets/max-with-mapper.out
+:language: console
 ```
 
 Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>` taking two parameters that represent two emitted items to be compared. For example:
 
-```groovy
-Channel
-    .of("hello","hi","hey")
-    .max { a,b -> a.size() <=> b.size() }
-    .view()
+```{literalinclude} snippets/max-with-comparator.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/max-with-comparator.out
+:language: console
 ```
 
 (operator-merge)=
@@ -1077,30 +829,22 @@ The `merge` operator lets you join items emitted by two (or more) channels into 
 
 For example, the following code merges two channels together: one which emits a series of odd integers and the other which emits a series of even integers:
 
-```groovy
-odds  = Channel.of(1, 3, 5, 7, 9)
-evens = Channel.of(2, 4, 6)
-
-odds
-    .merge( evens )
-    .view()
+```{literalinclude} snippets/merge.nf
+:language: groovy
 ```
 
-```
-[1, 2]
-[3, 4]
-[5, 6]
+```{literalinclude} snippets/merge.out
+:language: console
 ```
 
 An optional closure can be provided to customise the items emitted by the resulting merged channel. For example:
 
-```groovy
-odds  = Channel.of(1, 3, 5, 7, 9)
-evens = Channel.of(2, 4, 6)
+```{literalinclude} snippets/merge-with-mapper.nf
+:language: groovy
+```
 
-odds
-    .merge( evens ) { a, b -> tuple(b*b, a) }
-    .view()
+```{literalinclude} snippets/merge-with-mapper.out
+:language: console
 ```
 
 :::{danger}
@@ -1117,37 +861,32 @@ You should always use a matching key (e.g. sample ID) to merge multiple channels
 
 The `min` operator waits until the source channel completes, and then emits the item that has the lowest value. For example:
 
-```groovy
-Channel
-    .of( 8, 6, 2, 5 )
-    .min()
-    .view { "Min value is $it" }
+```{literalinclude} snippets/min.nf
+:language: groovy
 ```
 
-```
-Min value is 2
+```{literalinclude} snippets/min.out
+:language: console
 ```
 
 An optional {ref}`closure <script-closure>` parameter can be specified in order to provide a function that returns the value to be compared. The example below shows how to find the string item that has the minimum length:
 
-```groovy
-Channel
-    .of("hello","hi","hey")
-    .min { it.size() }
-    .view()
+```{literalinclude} snippets/min-with-mapper.nf
+:language: groovy
 ```
 
-```
-"hi"
+```{literalinclude} snippets/min-with-mapper.out
+:language: console
 ```
 
 Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>` taking two parameters that represent two emitted items to be compared. For example:
 
-```groovy
-Channel
-    .of("hello","hi","hey")
-    .min { a,b -> a.size() <=> b.size() }
-    .view()
+```{literalinclude} snippets/min-with-comparator.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/min-with-comparator.out
+:language: console
 ```
 
 (operator-mix)=
@@ -1160,22 +899,12 @@ The `mix` operator combines the items emitted by two (or more) channels into a s
 
 For example:
 
-```groovy
-c1 = Channel.of( 1, 2, 3 )
-c2 = Channel.of( 'a', 'b' )
-c3 = Channel.of( 'z' )
-
-c1.mix(c2,c3)
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/mix.nf
+:language: groovy
 ```
 
-```
-1
-2
-3
-'a'
-'b'
-'z'
+```{literalinclude} snippets/mix.out
+:language: console
 ```
 
 :::{note}
@@ -1206,50 +935,30 @@ The mapping criteria is defined with a {ref}`closure <script-closure>` that spec
 
 For example:
 
-```groovy
-Channel.of(1, 2, 3, 4)
-    .multiMap { it ->
-        foo: it + 1
-        bar: it * it
-    }
-    .set { result }
-
-result.foo.view { "foo $it" }
-result.bar.view { "bar $it" }
+```{literalinclude} snippets/multimap.nf
+:language: groovy
 ```
 
-```
-foo 2
-foo 3
-foo 4
-foo 5
-bar 1
-bar 4
-bar 9
-bar 16
+```{literalinclude} snippets/multimap.out
+:language: console
 ```
 
 The mapping expression can be omitted when the value to be emitted is the same as the following one. If you just need to forward the same value to multiple channels, you can use the following shorthand:
 
-```groovy
-Channel
-    .of(1,2,3)
-    .multiMap { it -> foo: bar: it }
-    .set { result }
+```{literalinclude} snippets/multimap-shared.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/multimap-shared.out
+:language: console
 ```
 
 As before, this creates two channels, but now both of them receive the same source items.
 
 You can use the `multiMapCriteria` method to create a multi-map criteria as a variable that can be passed as an argument to one or more `multiMap` operations, as shown below:
 
-```groovy
-def criteria = multiMapCriteria {
-    small: it < 10
-    large: it > 10
-}
-
-Channel.of(1, 2, 30).multiMap(criteria).set { ch1 }
-Channel.of(10, 20, 1).multiMap(criteria).set { ch2 }
+```{literalinclude} snippets/multimap-criteria.nf
+:language: groovy
 ```
 
 :::{note}
@@ -1264,22 +973,16 @@ If you use `multiMap` to split a tuple or map into multiple channels, it is reco
 
 The `randomSample` operator allows you to create a channel emitting the specified number of items randomly taken from the channel to which is applied. For example:
 
-```groovy
-Channel
-    .of( 1..100 )
-    .randomSample( 10 )
-    .view()
+```{literalinclude} snippets/random-sample.nf
+:language: groovy
 ```
 
 The above snippet will print 10 numbers in the range from 1 to 100.
 
 The operator supports a second parameter that allows you to set the initial `seed` for the random number generator. By setting it, the `randomSample` operator will always return the same pseudo-random sequence. For example:
 
-```groovy
-Channel
-    .of( 1..100 )
-    .randomSample( 10, 234 )
-    .view()
+```{literalinclude} snippets/random-sample-with-seed.nf
+:language: groovy
 ```
 
 The above example will print 10 random numbers in the range between 1 and 100. At each run of the script, the same sequence will be returned.
@@ -1296,19 +999,12 @@ Finally, the `reduce` operator emits the result of the last invocation of your f
 
 For example:
 
-```groovy
-Channel
-    .of( 1, 2, 3, 4, 5 )
-    .reduce { a, b -> println "a: $a b: $b"; return a+b }
-    .view { "result = $it" }
+```{literalinclude} snippets/reduce.nf
+:language: groovy
 ```
 
-```
-a: 1 b: 2
-a: 3 b: 3
-a: 6 b: 4
-a: 10 b: 5
-result = 15
+```{literalinclude} snippets/reduce.out
+:language: console
 ```
 
 :::{tip}
@@ -1317,8 +1013,12 @@ A common use case for this operator is to use the first parameter as an accumula
 
 Optionally you can specify an initial value for the accumulator as shown below:
 
-```groovy
-myChannel.reduce( initialValue ) { a, b -> ... }
+```{literalinclude} snippets/reduce-with-initial-value.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/reduce-with-initial-value.out
+:language: console
 ```
 
 (operator-set)=
@@ -1351,39 +1051,36 @@ The `splitCsv` operator allows you to parse text items emitted by a channel, tha
 
 In the simplest case just apply the `splitCsv` operator to a channel emitting a CSV formatted text files or text entries. For example:
 
-```groovy
-Channel
-    .of( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
-    .splitCsv()
-    .view { row -> "${row[0]} - ${row[1]} - ${row[2]}" }
+```{literalinclude} snippets/splitcsv.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/splitcsv.out
+:language: console
 ```
 
 The above example shows hows CSV text is parsed and is split into single rows. Values can be accessed by its column index in the row object.
 
 When the CSV begins with a header line defining the column names, you can specify the parameter `header: true` which allows you to reference each value by its name, as shown in the following example:
 
-```groovy
-Channel
-    .of( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
-    .splitCsv(header: true)
-    .view { row -> "${row.alpha} - ${row.beta} - ${row.gamma}" }
+```{literalinclude} snippets/splitcsv-with-header.nf
+:language: groovy
 ```
 
-It will print
-
-```
-10 - 20 - 30
-70 - 80 - 90
+```{literalinclude} snippets/splitcsv-with-header.out
+:language: console
 ```
 
 Alternatively you can provide custom header names by specifying a the list of strings in the `header` parameter as shown below:
 
-```groovy
-Channel
-    .of( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
-    .splitCsv(header: ['col1', 'col2', 'col3'], skip: 1 )
-    .view { row -> "${row.col1} - ${row.col2} - ${row.col3}" }
+```{literalinclude} snippets/splitcsv-with-columns.nf
+:language: groovy
 ```
+
+```{literalinclude} snippets/splitcsv-with-columns.out
+:language: console
+```
+
 :::{note}
 - By default, the `splitCsv` operator returns each row as a *list* object. Items are accessed by using the 0-based column index.
 - When the `header` is specified each row is returned as a *map* object (also known as dictionary). Items are accessed via the corresponding column name. 
@@ -1590,51 +1287,32 @@ The `splitJson` operator allows you to split a JSON document from a source chann
 
 An example with a JSON array:
 
-```groovy
-Channel.of('[1,null,["A",{}],true]')
-    .splitJson()
-    .view{"Item: ${it}"}
+```{literalinclude} snippets/splitjson-array.nf
+:language: groovy
 ```
 
-Produces the following output:
-
-```
-Item: 1
-Item: null
-Item: [A, [:]]
-Item: true
+```{literalinclude} snippets/splitjson-array.out
+:language: console
 ```
 
 An example with a JSON object:
 
-```groovy
-Channel.of('{"A":1,"B":[1,2,3],"C":{"D":null}}')
-    .splitJson()
-    .view{"Item: ${it}"}
+```{literalinclude} snippets/splitjson-object.nf
+:language: groovy
 ```
 
-Produces the following output:
-
-```
-Item: [value:1, key:A]
-Item: [value:[1, 2, 3], key:B]
-Item: [value:[D:null], key:C]
+```{literalinclude} snippets/splitjson-object.out
+:language: console
 ```
 
 You can optionally query a section of the JSON document to parse and split, using the `path` option:
 
-```groovy
-Channel.of('{"A":1,"B":[2,3,{"C":{"D":null,"E":4,"F":5}}]}')
-    .splitJson(path: "B[2].C")
-    .view{"Item: ${it}"}
+```{literalinclude} snippets/splitjson-with-path.nf
+:language: groovy
 ```
 
-Produces the following output:
-
-```
-Item: [value:null, key:D]
-Item: [value:4, key:E]
-Item: [value:5, key:F]
+```{literalinclude} snippets/splitjson-with-path.out
+:language: console
 ```
 
 Available options:
@@ -1729,18 +1407,12 @@ The `subscribe` operator allows you to execute a user defined function each time
 
 The emitted value is passed implicitly to the specified function. For example:
 
-```groovy
-// define a channel emitting three values
-source = Channel.of( 'alpha', 'beta', 'delta' )
-
-// subscribe a function to the channel printing the emitted values
-source.subscribe { println "Got: $it" }
+```{literalinclude} snippets/subscribe.nf
+:language: groovy
 ```
 
-```
-Got: alpha
-Got: beta
-Got: delta
+```{literalinclude} snippets/subscribe.out
+:language: console
 ```
 
 :::{note}
@@ -1749,18 +1421,15 @@ In Groovy, the language on which Nextflow is based, the user defined function is
 
 If needed the closure parameter can be defined explicitly, using a name other than `it` and, optionally, specifying the expected value type, as shown in the following example:
 
-```groovy
-Channel
-    .of( 'alpha', 'beta', 'lambda' )
-    .subscribe { String str ->
-        println "Got: ${str}; len: ${str.size()}"
-    }
+```{literalinclude} snippets/subscribe-with-param.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/subscribe-with-param.out
+:language: console
 ```
 
 ```
-Got: alpha; len: 5
-Got: beta; len: 4
-Got: lambda; len: 6
 ```
 
 The `subscribe` operator may accept one or more of the following event handlers:
@@ -1771,17 +1440,12 @@ The `subscribe` operator may accept one or more of the following event handlers:
 
 For example:
 
-```groovy
-Channel
-    .of( 1, 2, 3 )
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/subscribe-with-on-complete.nf
+:language: groovy
 ```
 
-```
-1
-2
-3
-Done
+```{literalinclude} snippets/subscribe-with-on-complete.out
+:language: console
 ```
 
 (operator-sum)=
@@ -1792,28 +1456,22 @@ Done
 
 The `sum` operator creates a channel that emits the sum of all the items emitted by the channel itself. For example:
 
-```groovy
-Channel
-    .of( 8, 6, 2, 5 )
-    .sum()
-    .view { "The sum is $it" }
+```{literalinclude} snippets/sum.nf
+:language: groovy
 ```
 
-```
-The sum is 21
+```{literalinclude} snippets/sum.out
+:language: console
 ```
 
 An optional {ref}`closure <script-closure>` parameter can be specified in order to provide a function that, given an item, returns the value to be summed. For example:
 
-```groovy
-Channel
-    .of( 4, 1, 7, 5 )
-    .sum { it * it }
-    .view { "Square: $it" }
+```{literalinclude} snippets/sum-with-mapper.nf
+:language: groovy
 ```
 
-```
-Square: 91
+```{literalinclude} snippets/sum-with-mapper.out
+:language: console
 ```
 
 ## take
@@ -1822,18 +1480,12 @@ Square: 91
 
 The `take` operator allows you to filter only the first `n` items emitted by a channel. For example:
 
-```groovy
-Channel
-    .of( 1, 2, 3, 4, 5, 6 )
-    .take( 3 )
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/take.nf
+:language: groovy
 ```
 
-```
-1
-2
-3
-Done
+```{literalinclude} snippets/take.out
+:language: console
 ```
 
 :::{tip}
@@ -1850,31 +1502,12 @@ The `tap` operator is like the [set](#set) operator in that it assigns a source 
 but it also emits the source channel for downstream use. This operator is a useful way to extract intermediate
 output channels from a chain of operators. For example:
 
-```groovy
-Channel
-    .of ( 'a', 'b', 'c' )
-    .tap { log1 }
-    .map { it * 2 }
-    .tap { log2 }
-    .map { it.toUpperCase() }
-    .view { "Result: $it" }
-
-log1.view { "Log 1: $it" }
-log2.view { "Log 2: $it" }
+```{literalinclude} snippets/tap.nf
+:language: groovy
 ```
 
-```
-Result: AA
-Result: BB
-Result: CC
-
-Log 1: a
-Log 1: b
-Log 1: c
-
-Log 2: aa
-Log 2: bb
-Log 2: cc
+```{literalinclude} snippets/tap.out
+:language: console
 ```
 
 ## toInteger
@@ -1883,12 +1516,12 @@ Log 2: cc
 
 The `toInteger` operator allows you to convert the string values emitted by a channel to `Integer` values. For example:
 
-```groovy
-Channel
-    .of( '1', '7', '12' )
-    .toInteger()
-    .sum()
-    .view()
+```{literalinclude} snippets/tointeger.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/tointeger.out
+:language: console
 ```
 
 :::{tip}
@@ -1901,16 +1534,12 @@ You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numeric
 
 The `toList` operator collects all the items emitted by a channel to a `List` object and emits the resulting collection as a single item. For example:
 
-```groovy
-Channel
-    .of( 1, 2, 3, 4 )
-    .toList()
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/tolist.nf
+:language: groovy
 ```
 
-```
-[1,2,3,4]
-Done
+```{literalinclude} snippets/tolist.out
+:language: console
 ```
 
 :::{note}
@@ -1934,29 +1563,23 @@ See also: [collect](#collect) operator.
 
 The `toSortedList` operator collects all the items emitted by a channel to a `List` object where they are sorted and emits the resulting collection as a single item. For example:
 
-```groovy
-Channel
-    .of( 3, 2, 1, 4 )
-    .toSortedList()
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
+```{literalinclude} snippets/tosortedlist.nf
+:language: groovy
 ```
 
-```
-[1,2,3,4]
-Done
+```{literalinclude} snippets/tosortedlist.out
+:language: console
 ```
 
 You may also pass a comparator closure as an argument to the `toSortedList` operator to customize the sorting criteria. For example, to sort by the second element of a tuple in descending order:
 
-```groovy
-Channel
-    .of( ["homer", 5], ["bart", 2], ["lisa", 10], ["marge", 3], ["maggie", 7] )
-    .toSortedList( { a, b -> b[1] <=> a[1] } )
-    .view()
+
+```{literalinclude} snippets/tosortedlist-with-comparator.nf
+:language: groovy
 ```
 
-```
-[[lisa, 10], [maggie, 7], [homer, 5], [marge, 3], [bart, 2]]
+```{literalinclude} snippets/tosortedlist-with-comparator.out
+:language: console
 ```
 
 See also: [collect](#collect) operator.
@@ -1967,26 +1590,12 @@ See also: [collect](#collect) operator.
 
 The `transpose` operator transforms a channel in such a way that the emitted items are the result of a transposition of all tuple elements in each item. For example:
 
-```groovy
-Channel.of(
-        [1, ['A', 'B', 'C']],
-        [2, ['C', 'A']],
-        [3, ['B', 'D']]
-    )
-    .transpose()
-    .view()
+```{literalinclude} snippets/transpose.nf
+:language: groovy
 ```
 
-The above snippet prints:
-
-```
-[1, A]
-[1, B]
-[1, C]
-[2, C]
-[2, A]
-[3, B]
-[3, D]
+```{literalinclude} snippets/transpose.out
+:language: console
 ```
 
 If each element of the channel has more than 2 items, these will be flattened by the first item in the element and only emit an element when the element is complete:
@@ -2046,32 +1655,22 @@ The `unique` operator allows you to remove duplicate items from a channel and on
 
 For example:
 
-```groovy
-Channel
-    .of( 1, 1, 1, 5, 7, 7, 7, 3, 3 )
-    .unique()
-    .view()
+```{literalinclude} snippets/unique.nf
+:language: groovy
 ```
 
-```
-1
-5
-7
-3
+```{literalinclude} snippets/unique.out
+:language: console
 ```
 
 You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between unique items. For example:
 
-```groovy
-Channel
-    .of(1, 3, 4, 5)
-    .unique { it % 2 }
-    .view()
+```{literalinclude} snippets/unique-with-mapper.nf
+:language: groovy
 ```
 
-```
-1
-4
+```{literalinclude} snippets/unique-with-mapper.out
+:language: console
 ```
 
 ## until
@@ -2080,17 +1679,12 @@ Channel
 
 The `until` operator creates a channel that returns the items emitted by the source channel and stop when the condition specified is verified. For example:
 
-```groovy
-Channel
-    .of( 3, 2, 1, 5, 1, 5 )
-    .until { it == 5 }
-    .view()
+```{literalinclude} snippets/until.nf
+:language: groovy
 ```
 
-```
-3
-2
-1
+```{literalinclude} snippets/until.out
+:language: console
 ```
 
 See also [take](#take).
@@ -2103,28 +1697,24 @@ See also [take](#take).
 
 The `view` operator prints the items emitted by a channel to the console standard output. For example:
 
-```groovy
-Channel.of(1, 2, 3).view()
+```{literalinclude} snippets/view.nf
+:language: groovy
+```
 
-1
-2
-3
+```{literalinclude} snippets/view.out
+:language: console
 ```
 
 Each item is printed on a separate line unless otherwise specified by using the `newLine: false` optional parameter.
 
 How the channel items are printed can be controlled by using an optional closure parameter. The closure must return the actual value of the item to be printed:
 
-```groovy
-Channel.of(1, 2, 3)
-    .map { it -> [it, it*it] }
-    .view { num, sqr -> "Square of: $num is $sqr" }
+```{literalinclude} snippets/view-with-mapper.nf
+:language: groovy
 ```
 
-```
-Square of: 1 is 1
-Square of: 2 is 4
-Square of: 3 is 9
+```{literalinclude} snippets/view-with-mapper.out
+:language: console
 ```
 
 The `view` operator also emits every item that it receives, allowing it to be chained with other operators.

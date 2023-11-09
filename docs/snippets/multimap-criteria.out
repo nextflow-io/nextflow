@@ -1,0 +1,12 @@
+ch1: 1 is large: false
+ch1: 1 is small: true
+ch1: 2 is large: false
+ch1: 2 is small: true
+ch1: 30 is large: true
+ch1: 30 is small: false
+ch2: 1 is large: false
+ch2: 1 is small: true
+ch2: 10 is large: false
+ch2: 10 is small: false
+ch2: 20 is large: true
+ch2: 20 is small: false
