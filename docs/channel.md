@@ -424,6 +424,47 @@ Y
 
 See also: [fromList](#fromlist) factory method.
 
+(channel-topic)=
+
+### topic
+
+:::{versionadded} 23.11.0-edge
+:::
+
+:::{note}
+This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+:::
+
+The `topic` method is used to create a "topic" channel, which is a queue channel that can receive items from multiple sources.
+
+Any process can send items to a topic by using the `topic` option on an output:
+
+```groovy
+process foo {
+  output:
+  val('foo'), topic: 'my-topic'
+}
+
+process bar {
+  output:
+  val('bar'), topic: 'my-topic'
+}
+```
+
+Then, the `topic` method can be used to consume all items in the topic:
+
+```groovy
+Channel.topic('my-topic').view()
+```
+
+This approach is a convenient way to collect outputs from many sources without having to write the necessary channel logic. You can name topics however you want, and you can use different names to collect items for different "topics", as long as your process outputs and channel logic are consistent with each other.
+
+:::{warning}
+Any process that consumes a topic channel should not send any outputs to that topic, or else the pipeline will hang forever.
+:::
+
+See also: {ref}`process-additional-options` for process outputs.
+
 (channel-value)=
 
 ### value
