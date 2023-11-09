@@ -62,6 +62,8 @@ class DurationTest extends Specification {
         Duration.of('1day').toHours() == 24
         Duration.of('1d').toHours() == 24
 
+        Duration.of('30d').toMillis() == 30 * DAY
+
     }
 
     def 'should not be parsed as a duration' () {
