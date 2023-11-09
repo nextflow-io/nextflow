@@ -219,7 +219,7 @@ class JsonSplitter extends AbstractTextSplitter {
                 break
             }
 
-            def map = new LinkedHashMap<>(1)
+            final map = new LinkedHashMap<>(1)
             map[OBJECT_KEY] = reader.nextName()
             map[OBJECT_VALUE] = fromJson(reader)
 
