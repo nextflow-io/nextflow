@@ -139,7 +139,7 @@ This operator has multiple variants:
   :language: console
   ```
 
-  Again, the `remainder` option can be used to emit any remaining items as a partial subset.
+  The `remainder` option can be used to emit any remaining items as a partial subset.
 
 See also: [collate](#collate)
 
@@ -174,7 +174,7 @@ This operator has multiple variants:
   ```
 
   :::{note}
-  This version of `collate` is equivalent to `buffer( size: n, remainder: true )`.
+  This version of `collate` is equivalent to `buffer( size: n, remainder: true | false )`.
   :::
 
 `collate( size, step, remainder = true )`
@@ -189,7 +189,7 @@ This operator has multiple variants:
   :language: console
   ```
 
-  Again, you can specify `false` as the third parameter to discard any remaining items.
+  You can specify `false` as the third parameter to discard any remaining items.
 
 See also: [buffer](#buffer)
 
@@ -319,7 +319,7 @@ Available options:
 
 *Returns: queue channel*
 
-The `combine` operator computes the outer product (a.k.a. cross product, "Cartesian" product) of two channels, or a channel and a list (as the right operand), emitting each item separately.
+The `combine` operator produces the combinations (i.e. cross product, "Cartesian" product) of two source channels, or a channel and a list (as the right operand), emitting each combination separately.
 
 For example:
 
@@ -359,7 +359,7 @@ See also: [cross](#cross), [join](#join)
 
 *Returns: queue channel*
 
-The `concat` operator emits the items from two or more source channels into a single output channel. Each input channel is emitted in the order in which it was specified.
+The `concat` operator emits the items from two or more source channels into a single output channel. Each source channel is emitted in the order in which it was specified.
 
 In other words, given *N* channels, the items from the *i+1*-th channel are emitted only after all of the items from the *i*-th channel have been emitted.
 
@@ -416,38 +416,6 @@ An optional filter can be provided to select which items to count. The selection
 ```{literalinclude} snippets/count-with-filter-closure.out
 :language: console
 ```
-
-(operator-countfasta)=
-
-## countFasta
-
-*Returns: value channel*
-
-Counts the total number of records in a channel of FASTA files, equivalent to `splitFasta | count`. See [splitFasta](#splitfasta) for the list of available options.
-
-(operator-countfastq)=
-
-## countFastq
-
-*Returns: value channel*
-
-Counts the total number of records in a channel of FASTQ files, equivalent to `splitFastq | count`. See [splitFastq](#splitfastq) for the list of available options.
-
-(operator-countjson)=
-
-## countJson
-
-*Returns: value channel*
-
-Counts the total number of records in a channel of JSON files, equivalent to `splitJson | count`. See [splitJson](#splitjson) for the list of available options.
-
-(operator-countlines)=
-
-## countLines
-
-*Returns: value channel*
-
-Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
 
 (operator-countfasta)=
 
@@ -748,7 +716,7 @@ The `ifEmpty` operator emits a source channel, or a default value if the source 
 :language: console
 ```
 
-The default value can also be a {ref}`closure <script-closure>`, in which case the closure is evaluated and its return value is emitted when the source channel is empty.
+The default value can also be a {ref}`closure <script-closure>`, in which case the closure is evaluated and the result is emitted when the source channel is empty.
 
 See also: {ref}`channel-empty` channel factory
 
@@ -758,7 +726,7 @@ See also: {ref}`channel-empty` channel factory
 
 *Returns: queue channel*
 
-The `join` operator emits the inner product of two channels using a matching key.
+The `join` operator emits the inner product of two source channels using a matching key.
 
 To be more precise, the operator transforms a sequence of tuples like *(K, V1, V2, ..)* and *(K, W1, W1, ..)* into a sequence of tuples like *(K, V1, V2, .., W1, W2, ..)*. It is equivalent to an *inner join* in SQL, or an *outer join* when `remainder` is `true`.
 
@@ -848,7 +816,7 @@ The `max` operator emits the item with the greatest value from a source channel:
 :language: console
 ```
 
-An optional closure can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
+An optional {ref}`closure <script-closure>` can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
 
 The following examples show how to find the longest string in a channel:
 
@@ -916,7 +884,7 @@ The `min` operator emits the item with the lowest value from a source channel:
 :language: console
 ```
 
-An optional closure can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
+An optional {ref}`closure <script-closure>` can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
 
 The following examples show how to find the shortest string in a channel:
 
@@ -1007,7 +975,7 @@ You can use the `multiMapCriteria()` method to create a multi-map criteria as a 
 ```
 
 :::{note}
-If you use `multiMap` to split a tuple or map into multiple channels, it is recommended that you retain a matching key (e.g. sample ID) with *each* new channel, so that you can re-combine these channels later on if needed. In general, you should not expect to be able to merge channels correctly without a matching key, due to the parallel and asynchronous nature of Nextflow pipelines.
+If you use `multiMap` to split a tuple or map into multiple channels, it is recommended that you retain a matching key (e.g. sample ID) with *each* new channel, so that you can re-combine these channels later on if needed. In general, you should not expect to be able to merge channels correctly without a matching key, due to the concurrent nature of Nextflow pipelines.
 :::
 
 (operator-randomsample)=
@@ -1126,31 +1094,31 @@ Available options:
 : When specified, group rows into *chunks* with the given size (default: none).
 
 `charset`
-: Parse the content with the specified charset, e.g. `UTF-8`.
+: Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
 
 `decompress`
-: When `true`, decompresses the content using the GZIP format before processing it (default: `false`). Files with a `.gz` extension are decompressed automatically.
+: When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
 
 `elem`
-: The index of the element to split when the operator is applied to a channel emitting lists or tuples (default: first file object or first element).
+: The index of the element to split when the source items are lists or tuples (default: first file object or first element).
 
 `header`
 : When `true`, the first line is used as the columns names (default: `false`). Can also be a list of columns names.
 
 `limit`
-: Limits the number of records to retrieve for each item from the input channel (default: no limit).
+: Limits the number of records to retrieve for each source item (default: no limit).
 
 `quote`
-: Use a custom character for quoting values (default: `''` or `""`).
+: The character used to quote values (default: `''` or `""`).
 
 `sep`
-: The character used to separate the values (default: `,`)
+: The character used to separate values (default: `,`)
 
 `skip`
-: Number of lines to ignore from the beginning when parsing the CSV content (default: `0`).
+: Number of lines to ignore from the beginning when parsing the CSV text (default: `0`).
 
 `strip`
-: Removes leading and trailing blanks from values (default: `false`).
+: When `true`, remove leading and trailing blanks from values (default: `false`).
 
 (operator-splitfasta)=
 
@@ -1183,7 +1151,7 @@ Channel
      .view { record -> record.seqString }
 ```
 
-The above example loads the `misc/sample.fa` file, splits it into records containing the `id` and the `seqString` fields (i.e. the sequence id and the sequence data), filters records by their ID, and finally prints the sequence string of each record.
+The above example loads the `misc/sample.fa` file, splits it into records containing the `id` and `seqString` fields (i.e. the sequence id and the sequence data), filters records by their ID, and finally prints the sequence string of each record.
 
 Available options:
 
@@ -1191,27 +1159,27 @@ Available options:
 : Defines the number of sequences in each chunk (default: `1`).
 
 `charset`
-: Parse the content with the specified charset, e.g. `UTF-8`.
+: Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
 
 `compress`
 : When `true`, resulting file chunks are GZIP compressed (default: `false`). The `.gz` suffix is automatically added to chunk file names.
 
 `decompress`
-: When `true`, decompresses the content using the GZIP format before processing it (default: `false`). Files with a `.gz` extension are decompressed automatically.
+: When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
 
 `elem`
-: The index of the element to split when the operator is applied to a channel emitting lists or tuples (default: first file object or first element).
+: The index of the element to split when the source items are lists or tuples (default: first file object or first element).
 
 `file`
 : When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified directory.
 
 `limit`
-: Limits the number of sequences to retrieve for each item from the input channel (default: no limit).
+: Limits the number of sequences to retrieve for each source item (default: no limit).
 
 `record`
 : Parse each entry in the FASTA file into a record. The following fields are available:
 
-  - `id`: The FASTA sequence identifier i.e. the word following the `>` symbol up to the first blank or newline character
+  - `id`: The FASTA sequence identifier, i.e. the word following the `>` symbol up to the first blank or newline character
   - `header`: The first line in a FASTA sequence without the `>` character
   - `desc`: The text in the FASTA header following the ID value
   - `text`: The complete FASTA sequence including the header
@@ -1254,7 +1222,7 @@ Channel
     .view { record -> record.readHeader }
 ```
 
-The `pe` option can be used to split paired-end FASTQ files. The input channel must emit tuples containing the file pairs. For example:
+The `pe` option can be used to split paired-end FASTQ files. The source channel must emit tuples containing the file pairs. For example:
 
 ```groovy
 Channel
@@ -1268,7 +1236,7 @@ Channel
 :::
 
 :::{note}
-This operator assumes that the order of the paired-end reads correspond with each other and both files contain the same number of reads.
+This operator assumes that the order of the paired-end reads correspond with each other and that both files contain the same number of reads.
 :::
 
 Available options:
@@ -1277,22 +1245,22 @@ Available options:
 : Defines the number of sequences in each chunk (default: `1`).
 
 `charset`
-: Parse the content with the specified charset e.g. `UTF-8`
+: Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
 
 `compress`
 : When `true`, resulting file chunks are GZIP compressed (default: `false`). The `.gz` suffix is automatically added to chunk file names.
 
 `decompress`
-: When `true`, decompresses the content using the GZIP format before processing it (default: `false`). Files with a `.gz` extension are decompressed automatically.
+: When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
 
 `elem`
-: The index of the element to split when the operator is applied to a channel emitting lists or tuples (default: first file object or first element)
+: The index of the element to split when the source items are lists or tuples (default: first file object or first element).
 
 `file`
 : When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified directory.
 
 `limit`
-: Limits the number of sequences to retrieve for each item from the input channel (default: no limit).
+: Limits the number of sequences to retrieve for each source item (default: no limit).
 
 `pe`
 : When `true`, splits paired-end read files. Items emitted by the source channel must be tuples with the file pairs.
@@ -1313,7 +1281,9 @@ See also: [countFastq](#countfastq)
 
 *Returns: queue channel*
 
-The `splitJson` operator splits a JSON document from a source channel into individual records. If the document is a JSON array, each element of the array will be emitted. If the document is a JSON object, each key-value pair will be emitted as a map with the properties `key`  and `value`.
+The `splitJson` operator splits [JSON formatted](https://en.wikipedia.org/wiki/JSON) text from a source channel into individual records.
+
+If the source item is a JSON array, each element of the array will be emitted:
 
 ```{literalinclude} snippets/splitjson-array.nf
 :language: groovy
@@ -1322,6 +1292,8 @@ The `splitJson` operator splits a JSON document from a source channel into indiv
 ```{literalinclude} snippets/splitjson-array.out
 :language: console
 ```
+
+If the source item is a JSON object, each key-value pair will be emitted as a map with the properties `key`  and `value`:
 
 ```{literalinclude} snippets/splitjson-object.nf
 :language: groovy
@@ -1344,10 +1316,10 @@ The `path` option can be used to query a section of the JSON document to parse a
 Available options:
 
 `limit`
-: Limits the number of records to retrieve for each item from the input channel (default: no limit).
+: Limits the number of records to retrieve for each source item (default: no limit).
 
 `path`
-: Defines a query for a section of the JSON document to parse and split. The expression should be a path similar to [JSONPath](https://goessner.net/articles/JsonPath/). The empty string is the document root (default). An integer in brackets is a zero-based index in a JSON array. A string preceded by a dot `.` is a key in a JSON object.
+: Defines a query for a section of each source item to parse and split. The expression should be a path similar to [JSONPath](https://goessner.net/articles/JsonPath/). The empty string is the document root (default). An integer in brackets is a zero-based index in a JSON array. A string preceded by a dot `.` is a key in a JSON object.
 
 See also: [countJson](#countjson)
 
@@ -1399,16 +1371,16 @@ Available options:
 : Defines the number of lines in each `chunk` (default: `1`).
 
 `charset`
-: Parse the content with the specified charset, e.g. `UTF-8`.
+: Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
 
 `compress`
 : When `true`, resulting file chunks are GZIP compressed (default: `false`). The `.gz` suffix is automatically added to chunk file names.
 
 `decompress`
-: When `true`, decompresses the content using the GZIP format before processing it (default: `false`). Files with a `.gz` extension are decompressed automatically.
+: When `true`, decompresses the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
 
 `elem`
-: The index of the element to split when the operator is applied to a channel emitting lists or tuples (default: first file object or first element).
+: The index of the element to split when the source items are lists or tuples (default: first file object or first element).
 
 `file`
 : When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified directory.
@@ -1417,7 +1389,7 @@ Available options:
 : Parses the first line as header and prepends it to each emitted chunk (default: `false`).
 
 `limit`
-: Limits the number of lines to retrieve for each item from the input channel (default: no limit).
+: Limits the number of lines to retrieve for each source item (default: no limit).
 
 See also: [countLines](#countlines)
 
@@ -1427,13 +1399,23 @@ See also: [countLines](#countlines)
 
 *Returns: nothing*
 
-The `subscribe` operator invokes a custom function for each item emitted by a source channel:
+The `subscribe` operator invokes a custom function for each item from a source channel:
 
 ```{literalinclude} snippets/subscribe.nf
 :language: groovy
 ```
 
 ```{literalinclude} snippets/subscribe.out
+:language: console
+```
+
+The closure parameter can be defined explicitly if needed, using a name other than `it` and, optionally, the expected type:
+
+```{literalinclude} snippets/subscribe-with-param.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/subscribe-with-param.out
 :language: console
 ```
 
@@ -1534,7 +1516,15 @@ The `toInteger` operator converts string values from a source channel to integer
 :language: console
 ```
 
-:::{tip}
+:::{note}
+`toInteger` is equivalent to:
+
+```groovy
+map { it -> it as Integer }
+```
+:::
+
+:::{note}
 You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numerical types.
 :::
 
@@ -1611,53 +1601,32 @@ To be more precise, the operator transforms a sequence of tuples like *(K, list(
 
 For example:
 
-```{literalinclude} snippets/transpose.nf
+```{literalinclude} snippets/transpose-1.nf
 :language: groovy
 ```
 
-```{literalinclude} snippets/transpose.out
+```{literalinclude} snippets/transpose-1.out
 :language: console
 ```
 
-If each element of the channel has more than 2 items, these will be flattened by the first item in the element and only emit an element when the element is complete:
+If each source item has more than two elements, these will be flattened by the first element in the item, and a new item will be emitted only when it is complete:
 
-```groovy
-Channel.of(
-        [1, [1], ['A']],
-        [2, [1, 2], ['B', 'C']],
-        [3, [1, 2, 3], ['D', 'E']]
-    )
-    .transpose()
-    .view()
+```{literalinclude} snippets/transpose-2.nf
+:language: groovy
 ```
 
-```
-[1, 1, A]
-[2, 1, B]
-[2, 2, C]
-[3, 1, D]
-[3, 2, E]
+```{literalinclude} snippets/transpose-2.out
+:language: console
 ```
 
-To emit all elements, use `remainder: true`:
+The `remainder` option can be used to emit any incomplete items:
 
-```groovy
-Channel.of(
-        [1, [1], ['A']],
-        [2, [1, 2], ['B', 'C']],
-        [3, [1, 2, 3], ['D', 'E']]
-    )
-    .transpose(remainder: true)
-    .view()
+```{literalinclude} snippets/transpose-2-with-remainder.nf
+:language: groovy
 ```
 
-```
-[1, 1, A]
-[2, 1, B]
-[2, 2, C]
-[3, 1, D]
-[3, 2, E]
-[3, 3, null]
+```{literalinclude} snippets/transpose-2-with-remainder.out
+:language: console
 ```
 
 Available options:
