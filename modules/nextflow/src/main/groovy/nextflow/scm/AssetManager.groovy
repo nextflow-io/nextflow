@@ -628,8 +628,11 @@ class AssetManager {
              * Try to checkout it from a remote branch and return
              */
             catch ( RefNotFoundException e ) {
-                def ref = checkoutRemoteBranch(revision)
-                return "checked out at ${ref?.getObjectId()?.name()}"
+                final ref = checkoutRemoteBranch(revision)
+                final commitId = ref?.getObjectId()
+                return commitId
+                    ? "checked out at ${commitId.name()}"
+                    : "checked out revision $revision}"
             }
         }
 
@@ -945,7 +948,7 @@ class AssetManager {
             fetch.call()
 
             try {
-                git.checkout()
+                return git.checkout()
                         .setCreateBranch(true)
                         .setName(revision)
                         .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
@@ -953,7 +956,7 @@ class AssetManager {
                         .call()
             }
             catch (RefNotFoundException e) {
-                git.checkout() .setName(revision) .call()
+                return git.checkout() .setName(revision) .call()
             }
         }
         catch (RefNotFoundException e) {
