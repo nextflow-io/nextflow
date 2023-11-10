@@ -1,5 +1,7 @@
 #!/bin/bash
 
+exit_status=0
+
 NXF_CMD=${NXF_CMD:-nextflow}
 NXF_FILES=${*:-'*.nf'}
 
@@ -17,6 +19,7 @@ for pipeline in $NXF_FILES ; do
         sort "$outfile" > a.out
         sort .out > b.out
         diff a.out b.out
+        status=$? ; [ $status -eq 0 ] || exit_status=$status
     else
         echo "> $outfile not found, skipping"
     fi
@@ -24,3 +27,5 @@ for pipeline in $NXF_FILES ; do
 done
 
 rm -rf .nextflow* work .out a.out b.out
+
+[ $exit_status -eq 0 ] || false
