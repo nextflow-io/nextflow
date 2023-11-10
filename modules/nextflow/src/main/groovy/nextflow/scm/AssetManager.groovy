@@ -632,7 +632,7 @@ class AssetManager {
                 final commitId = ref?.getObjectId()
                 return commitId
                     ? "checked out at ${commitId.name()}"
-                    : "checked out revision $revision}"
+                    : "checked out revision ${revision}"
             }
         }
 
