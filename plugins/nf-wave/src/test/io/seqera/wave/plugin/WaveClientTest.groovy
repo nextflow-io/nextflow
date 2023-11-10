@@ -19,6 +19,7 @@ package io.seqera.wave.plugin
 
 import static java.nio.file.StandardOpenOption.*
 
+import java.net.http.HttpRequest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -31,6 +32,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.container.inspect.ContainerInspectMode
+import nextflow.container.inspect.ContainersInspector
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -196,7 +199,8 @@ class WaveClientTest extends Specification {
 
     def 'should create request object with dry-run mode' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[dryRun:true]]}
+        ContainerInspectMode.activate(true)
+        def session = Mock(Session) { getConfig() >> [:]}
         def IMAGE =  'foo:latest'
         def wave = new WaveClient(session)
 
@@ -214,6 +218,9 @@ class WaveClientTest extends Specification {
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
+
+        cleanup:
+        ContainerInspectMode.activate(false)
     }
 
     def 'should create request object and platform' () {
@@ -513,7 +520,7 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3'] }
+        def task = Mock(TaskRun) {getConfig() >> [conda:"bioconda::rseqc=3.0.1 'conda-forge::r-base>=3.5'"] }
         and:
         def client = new WaveClient(session)
 
@@ -521,11 +528,13 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.4.9
+                FROM mambaorg/micromamba:1.5.1
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -536,10 +545,13 @@ class WaveClientTest extends Specification {
         and:
         assets.condaFile.text == '''\
                 channels:
+                - seqera
                 - conda-forge
+                - bioconda
                 - defaults
                 dependencies:
-                - salmon=1.2.3
+                - bioconda::rseqc=3.0.1
+                - conda-forge::r-base>=3.5
                 '''.stripIndent(true)
     }
 
@@ -555,12 +567,13 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.4.9
+                FROM mambaorg/micromamba:1.5.1
                 RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    -f https://host.com/conda-lock.yml \\
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/conda-lock.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -575,7 +588,7 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3', arch:'amd64'] }
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
         and:
         def client = new WaveClient(session)
 
@@ -607,8 +620,13 @@ class WaveClientTest extends Specification {
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
-        assets.spackFile
         !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
     }
 
     def 'should create asset with conda file' () {
@@ -625,11 +643,13 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.4.9
+                FROM mambaorg/micromamba:1.5.1
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         assets.condaFile == condaFile
@@ -704,12 +724,13 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.4.9
+                From: mambaorg/micromamba:1.5.1
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
-                    micromamba install -y -n base -f /scratch/conda.yml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
@@ -724,7 +745,9 @@ class WaveClientTest extends Specification {
         and:
         assets.condaFile.text == '''\
                 channels:
+                - seqera
                 - conda-forge
+                - bioconda
                 - defaults
                 dependencies:
                 - salmon=1.2.3
@@ -744,11 +767,11 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.4.9
+                From: mambaorg/micromamba:1.5.1
                 %post
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    -f https://host.com/lock-file.yaml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/lock-file.yaml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
@@ -778,12 +801,13 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.4.9
+                From: mambaorg/micromamba:1.5.1
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
-                    micromamba install -y -n base -f /scratch/conda.yml \\
-                    && micromamba clean -a -y
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
                 %environment
                     export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
                 '''.stripIndent()
@@ -796,6 +820,95 @@ class WaveClientTest extends Specification {
         !assets.containerConfig
         !assets.spackFile
         !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create assets with spack recipe for singularity' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[commands: ['cmd-foo','cmd-bar']]]]]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                Bootstrap: docker
+                From: {{spack_runner_image}}
+                stage: final
+                 
+                %files from build
+                    /opt/spack-env /opt/spack-env
+                    /opt/software /opt/software
+                    /opt/._view /opt/._view
+                    /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                 
+                %post
+                    cmd-foo
+                    cmd-bar
+                '''.stripIndent()
+
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with spack file for singularity' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def spackFile = folder.resolve('spack.yml');
+        spackFile.text = '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+        and:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[basePackages: 'nano@1.2.3']]]]}
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                    Bootstrap: docker
+                    From: {{spack_runner_image}}
+                    stage: final
+                     
+                    %files from build
+                        /opt/spack-env /opt/spack-env
+                        /opt/software /opt/software
+                        /opt/._view /opt/._view
+                        /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                     
+                    %post
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.projectResources
+        !assets.condaFile
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5, nano@1.2.3]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
 
         cleanup:
         folder?.deleteDir()
@@ -1119,5 +1232,46 @@ class WaveClientTest extends Specification {
         'http://foo.com'    | true
         'https://foo.com'   | true
     }
+
+    def 'should retry http request' () {
+
+        given:
+        int requestCount=0
+        HttpHandler handler = { HttpExchange exchange ->
+            if( ++requestCount<3 ) {
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(503, 0)
+                exchange.getResponseBody().close()
+            }
+            else {
+                def body = 'Hello world!'
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(200, body.size())
+                exchange.getResponseBody().write(body.bytes)
+                exchange.getResponseBody().close()
+            }
+        }
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(9901), 0);
+        server.createContext("/", handler);
+        server.start()
+
+        def session = Mock(Session) {getConfig() >> [:] }
+        def client = new WaveClient(session)
+
+        when:
+        def request = HttpRequest.newBuilder().uri(new URI('http://localhost:9901/foo.txt')).build()
+        def response = client.httpSend(request)
+        then:
+        response.statusCode() == 200
+        response.body() == 'Hello world!'
+        and:
+        requestCount == 3
+        
+        cleanup:
+        server?.stop(0)
+
+    }
+
 
 }

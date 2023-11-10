@@ -28,6 +28,7 @@ import java.nio.file.WatchService
 import java.nio.file.attribute.UserPrincipalLookupService
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.azure.core.util.polling.SyncPoller
@@ -552,7 +553,7 @@ class AzFileSystem extends FileSystem {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException)
+        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException || t instanceof TimeoutException || t.cause instanceof TimeoutException)
         return Failsafe.with(policy).get(action)
     }
 }

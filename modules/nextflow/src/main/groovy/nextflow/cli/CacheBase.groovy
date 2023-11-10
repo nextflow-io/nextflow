@@ -24,8 +24,6 @@ import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.util.HistoryFile
 
-import static nextflow.util.HistoryFile.Record
-
 /**
  * Common cache operations shared by {@link CmdLog} and {@link CmdClean}
  *
@@ -68,11 +66,11 @@ trait CacheBase {
 
     }
 
-    CacheDB cacheFor(Record entry) {
+    CacheDB cacheFor(HistoryFile.Record entry) {
         CacheFactory.create(entry.sessionId, entry.runName, basePath)
     }
 
-    List<Record> listIds() {
+    List<HistoryFile.Record> listIds() {
 
         if( but ) {
             return history.findBut(but)
@@ -90,7 +88,7 @@ trait CacheBase {
         if( !args )
             return history.findByIdOrName('last')
 
-        List<Record> result = []
+        List<HistoryFile.Record> result = []
         for( String name : args ) {
             result.addAll(history.findByIdOrName(name))
         }

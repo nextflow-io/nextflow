@@ -338,6 +338,41 @@ Remove the first number with its trailing whitespace from a string:
 assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 ```
 
+### Functions
+
+Functions can be defined using the following syntax:
+
+```groovy
+def <function name> ( arg1, arg, .. ) {
+    <function body>
+}
+```
+
+For example:
+
+```groovy
+def foo() {
+    'Hello world'
+}
+
+def bar(alpha, omega) {
+    alpha + omega
+}
+```
+
+The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()`, which returns `'Hello world'`, and `bar(10, 20)`, which returns the sum of two parameters (`30` in this case).
+
+Functions implicitly return the result of the last statement. Additionally, the `return` keyword can be used to explicitly exit from a function and return the specified value. For example:
+
+```groovy
+def fib( x ) {
+    if( x <= 1 )
+        return x
+
+    fib(x-1) + fib(x-2)
+}
+```
+
 (script-closure)=
 
 ### Closures
@@ -392,20 +427,30 @@ Mark = Williams
 Sudha = Kumari
 ```
 
-A closure has two other important features. First, it can access variables in the scope where it is defined, so that it can interact with them.
-
-Second, a closure can be defined in an anonymous manner, meaning that it is not given a name, and is defined in the place where it needs to be used.
-
-As an example showing both these features, see the following code fragment:
+Closures can also access variables outside of their scope, and they can be used anonymously, that is without assigning them to a variable. Here is an example that demonstrates both of these things:
 
 ```groovy
-myMap = ["China": 1 , "India" : 2, "USA" : 3]
+myMap = ["China": 1, "India": 2, "USA": 3]
 
 result = 0
-myMap.keySet().each( { result+= myMap[it] } )
+myMap.keySet().each { result += myMap[it] }
 
 println result
 ```
+
+A closure can also declare local variables that exist only for the lifetime of the closure:
+
+```groovy
+result = 0
+myMap.keySet().each {
+  def count = myMap[it]
+  result += count
+}
+```
+
+:::{warning}
+Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
+:::
 
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
 

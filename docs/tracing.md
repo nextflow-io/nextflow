@@ -100,7 +100,7 @@ Nextflow can create an HTML execution report: a single document which includes m
 To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-report [file name]
+nextflow run <pipeline> -with-report [file name]
 ```
 
 The report file name can be specified as an optional parameter following the report option.
@@ -109,7 +109,7 @@ The report file name can be specified as an optional parameter following the rep
 
 The `Summary` section reports the execution status, the launch command, overall execution time and some other workflow metadata. You can see an example below:
 
-```{image} images/report-summary-min.png
+```{image} _static/report-summary-min.png
 ```
 
 ### Resource Usage
@@ -118,7 +118,7 @@ The `Resources` section plots the distribution of resource usage for each workfl
 
 Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are very helpful to check that task resources are used efficiently.
 
-```{image} images/report-resource-cpu.png
+```{image} _static/report-resource-cpu.png
 ```
 
 Learn more about how resource usage is computed in the {ref}`Metrics documentation <metrics-page>`.
@@ -129,7 +129,7 @@ Learn more about how resource usage is computed in the {ref}`Metrics documentati
 
 The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script, and many other metrics. You can see an example below:
 
-```{image} images/report-tasks-min.png
+```{image} _static/report-tasks-min.png
 ```
 
 :::{note}
@@ -151,7 +151,7 @@ Nextflow creates an execution tracing file that contains some useful information
 In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-trace
+nextflow run <pipeline> -with-trace
 ```
 
 It will create a file named `trace.txt` in the current directory. The content looks like the above example:
@@ -282,10 +282,10 @@ The following table shows the fields that can be included in the execution repor
 : Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
 
 `vol_ctxt`
-: Number of voluntary context switches.
+: Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
 
 `inv_ctxt`
-: Number of involuntary context switches.
+: Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
 
 `env`
 : The variables defined in task execution environment.
@@ -326,7 +326,7 @@ Please read {ref}`Trace scope <config-trace>` section to learn more about it.
 
 Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline report is shown below:
 
-```{image} images/timeline-min.png
+```{image} _static/timeline-min.png
 ```
 
 Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
@@ -338,7 +338,7 @@ As each process can spawn many tasks, colors are used to identify those tasks be
 To enable the creation of the timeline report add the `-with-timeline` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-timeline [file name]
+nextflow run <pipeline> -with-timeline [file name]
 ```
 
 The report file name can be specified as an optional parameter following the timeline option.
@@ -347,82 +347,60 @@ The report file name can be specified as an optional parameter following the tim
 
 ## DAG visualisation
 
-A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data connections (i.e. channels) between them.
+A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e. channels) between them.
 
-The pipeline execution DAG can be outputted by adding the `-with-dag` option to the run command line. It creates a file named `dag.dot` containing a textual representation of the pipeline execution graph in the [DOT format](http://www.graphviz.org/content/dot-language).
+To render the workflow DAG, run your pipeline with the `-with-dag` option. By default, it creates a file named `dag-<timestamp>.html` with the workflow DAG rendered as a [Mermaid](https://mermaid.js.org/) diagram.
 
-The execution DAG can be rendered in a different format by specifying an output file name which has an extension corresponding to the required format. For example:
+The workflow DAG can be rendered in a different format by specifying an output file name with a different extension based on the desired format. For example:
 
 ```bash
-nextflow run <script-name> -with-dag flowchart.png
+nextflow run <pipeline> -with-dag flowchart.png
 ```
 
-List of supported file formats:
-
-| Extension | File format                     |
-| --------- | ------------------------------- |
-| dot       | Graphviz DOT file               |
-| html      | HTML file                       |
-| mmd       | Mermaid diagram                 |
-| pdf       | PDF file (\*)                   |
-| png       | PNG file (\*)                   |
-| svg       | SVG file (\*)                   |
-| gexf      | Graph Exchange XML file (Gephi) |
-
-:::{note}
-File formats marked with "\*" require the [Graphviz](http://www.graphviz.org) tool to be installed.
+:::{versionadded} 22.06.0-edge
+You can use the `-preview` option with `-with-dag` to render the workflow DAG without executing any tasks.
 :::
 
-The DAG produced by Nextflow for the [Unistrap](https://github.com/cbcrg/unistrap/) pipeline:
-
-```{image} images/dag.png
-```
-
-### Mermaid diagram
-
-:::{versionadded} 22.04.0
+:::{versionchanged} 23.10.0
+The default output format was changed from DOT to HTML.
 :::
 
-Nextflow can render the DAG as a [Mermaid](https://mermaid-js.github.io/) diagram. Mermaid diagrams are particularly useful because they can be embedded in [GitHub Flavored Markdown](https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/) without having to render them yourself. You can customize the diagram with CSS, and you can even add links! Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes) for details.
+The following file formats are supported:
 
-Here is the Mermaid diagram produced by Nextflow for the above example:
+`dot`
+: Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
 
-```mermaid
-flowchart TD
-    p0((Channel.fromPath))
-    p1([ifEmpty])
-    p2[get_shuffle_replicates]
-    p3[get_msa_replicates]
-    p4[get_msa_trees]
-    p5([collectFile])
-    p6([first])
-    p7[get_stable_msa_trees]
-    p8(( ))
-    p9[get_seqboot_replicates]
-    p10[get_replicate_trees]
-    p11([collectFile])
-    p12([max])
-    p13[get_shootstrap_tree]
-    p14(( ))
-    p0 --> p1
-    p1 -->|file_names| p2
-    p2 -->|shuffle_replicates| p3
-    p3 -->|msa_replicates| p4
-    p3 -->|msa_replicates2| p9
-    p4 -->|msa_trees| p7
-    p4 -->|msa_trees2| p5
-    p5 --> p6
-    p6 --> p7
-    p7 -->|stable_trees| p8
-    p7 -->|most_stable_tree| p12
-    p9 -->|replicates| p10
-    p10 -->|trees| p11
-    p11 --> p13
-    p12 --> p13
-    p13 -->|shootstrap_tree| p14
+`gexf`
+: Graph Exchange XML file (Gephi)
+
+`html`
+: HTML file with Mermaid diagram
+: :::{versionchanged} 23.10.0
+  The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
+  :::
+
+`mmd`
+: :::{versionadded} 22.04.0
+  :::
+: Mermaid diagram
+
+`pdf`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz PDF file
+
+`png`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz PNG file
+
+`svg`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz SVG file
+
+Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline (using the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) with the `default` theme):
+
+```bash
+nextflow run rnaseq-nf -preview -with-dag
 ```
 
-And the final image produced with the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) (using the `default` theme):
-
-```{image} images/dag-mermaid.png
+```{mermaid} _static/dag.mmd
 ```

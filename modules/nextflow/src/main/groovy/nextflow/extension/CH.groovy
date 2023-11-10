@@ -58,8 +58,6 @@ class CH {
     }
 
     static private DataflowReadChannel getRead2(DataflowBroadcast channel) {
-        if( !NF.isDsl2() )
-            throw new IllegalStateException("Broadcast channel are only allowed in a workflow definition scope")
         channel.createReadChannel()
     }
 

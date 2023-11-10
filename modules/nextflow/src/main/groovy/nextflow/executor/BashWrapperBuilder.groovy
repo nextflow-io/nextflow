@@ -75,9 +75,8 @@ class BashWrapperBuilder {
         /*
          * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
          * - 0: no debug
-         * - 1: dump current environment in the `.command.log` file
-         * - 2: trace the execution of user script adding the `set -x` flag
-         * - 3: trace the execution of wrapper scripts
+         * - 1: dump current environment in the `.command.log` file and trace the execution of user script
+         * - 2: trace the execution of wrapper scripts
          */
         def str = System.getenv('NXF_DEBUG')
         try {
@@ -199,7 +198,9 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
+        // see https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
@@ -249,7 +250,7 @@ class BashWrapperBuilder {
         binding.helpers_script = getHelpersScript()
 
         if( runWithContainer ) {
-            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"'
+            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A | tr -d \'\\r\\n\')"'
             binding.container_helpers = containerBuilder.getScriptHelpers()
             binding.kill_cmd = containerBuilder.getKillCommand()
         }
@@ -479,9 +480,13 @@ class BashWrapperBuilder {
          */
         if( containerBuilder ) {
             String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
-            if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder )
-                    cmd = 'cd $PWD; ' + cmd
+            // wrap the command with an extra bash invocation either :
+            // - to propagate the container environment or
+            // - to change in the task work directory as required by singularity
+            final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
+            if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
+                if( needChangeTaskWorkDir )
+                    cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
@@ -526,7 +531,7 @@ class BashWrapperBuilder {
     }
 
     String getSyncCmd() {
-        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+        if ( SysEnv.get( 'NXF_ENABLE_FS_SYNC' ) == "true" ) {
             return 'sync || true'
         }
         return null
@@ -592,10 +597,6 @@ class BashWrapperBuilder {
         // add the user owner variable in order to patch root owned files problem
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
-
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)

@@ -111,6 +111,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
     String bucketDir
 
+    @Parameter(names=['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
+    String cloudCachePath
+
     /**
      * Defines the parameters to be passed to the pipeline script
      */
@@ -220,7 +223,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String profile
 
     @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
-    boolean dumpHashes
+    String dumpHashes
 
     @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
     String dumpChannels
@@ -343,6 +346,7 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
@@ -625,9 +629,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if ( str.toLowerCase() == 'true') return Boolean.TRUE
         if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
 
-        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
-        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if ( str==~/-?\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
     }

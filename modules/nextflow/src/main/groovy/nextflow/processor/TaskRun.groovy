@@ -305,6 +305,11 @@ class TaskRun implements Cloneable {
     volatile int failCount
 
     /**
+     * The number of times the submit of the task has been retried
+     */
+    volatile int submitRetries
+
+    /**
      * Mark the task as failed
      */
     volatile boolean failed
@@ -461,7 +466,7 @@ class TaskRun implements Cloneable {
     /**
      * Get the map of *input* objects by the given {@code InParam} type
      *
-     * @param types One ore more subclass of {@code InParam}
+     * @param types One or more subclass of {@code InParam}
      * @return An associative array containing all the objects for the specified type
      */
     def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
@@ -477,7 +482,7 @@ class TaskRun implements Cloneable {
     /**
      * Get the map of *output* objects by the given {@code InParam} type
      *
-     * @param types One ore more subclass of {@code InParam}
+     * @param types One or more subclass of {@code InParam}
      * @return An associative array containing all the objects for the specified type
      */
     def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
