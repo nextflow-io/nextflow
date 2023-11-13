@@ -97,6 +97,9 @@ class ScriptMeta {
     /** The module components included in the script */
     private Map<String,ComponentDef> imports = new HashMap<>(10)
 
+    /** The module config associated with this script */
+    private Map config = new HashMap<>()
+
     private List<String> dsl1ProcessNames
 
     /** Whenever it's a module script or the main script */
@@ -111,6 +114,8 @@ class ScriptMeta {
     String getScriptName() { clazz.getName() }
 
     boolean isModule() { module }
+
+    Map getConfig() { config }
 
     ScriptMeta(BaseScript script) {
         this.clazz = script.class
@@ -130,6 +135,11 @@ class ScriptMeta {
     @PackageScope
     void setModule(boolean val) {
         this.module = val
+    }
+
+    @PackageScope
+    void setConfig(Map config) {
+        this.config = config
     }
 
     private void incFunctionCount(String name) {
@@ -323,11 +333,11 @@ class ScriptMeta {
     void addModule(ScriptMeta script, String name, String alias) {
         assert script
         assert name
-        // include a specific
-        def item = script.getComponent(name)
-        if( !item )
+        // include a specific component
+        def component = script.getComponent(name)
+        if( !component )
             throw new MissingModuleComponentException(script, name)
-        addModule0(item, alias)
+        addModule0(component, alias)
     }
 
     protected void addModule0(ComponentDef component, String alias=null) {

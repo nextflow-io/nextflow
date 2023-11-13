@@ -270,3 +270,49 @@ Those scripts will be made accessible like any other command in the task environ
 :::{note}
 This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
+
+### Module config
+
+:::{versionadded} 23.11.0-edge
+:::
+
+Modules can define a config file called `module.config` in the module directory. This config file can be used to apply process configuration to processes that are invoked in the module. Unlike a regular Nextflow configuration file, the module config assumes the {ref}`process config scope <config-process>` and only supports process config settings.
+
+Here is an example module with a module config:
+
+```
+<module-dir>
+|── main.nf
+└── module.config
+```
+
+```groovy
+// main.nf
+process BAR {
+}
+
+workflow FOO {
+    BAR()
+}
+```
+
+```groovy
+// module.config
+withName:'FOO:BAR' {
+    ext.args = '--n-iters 1000'
+    publishDir = "${params.outdir}/foo_bar"
+}
+```
+
+In the above example, the module config defines process config settings using the same syntax as a Nextflow config file (including {ref}`process selectors <config-process-selectors>`) but implicitly within the process config scope. The selector `FOO:BAR` matches the process `BAR` invoked by workflow `FOO`.
+
+Futhermore, the selector `BAR` would have also worked in this case, even if `BAR` is used elsewhere in the pipeline, because the module config is only applied to this module. This assurance is the advantage of defining process config in module config files instead of the global pipeline config.
+
+Process configuration is resolved as follows (from highest to lowest priority):
+
+1. Command line options (e.g. `-process.*`)
+2. Pipeline config files
+3. Module config files
+4. Process {ref}`directives <process-directives>`
+
+Similarly, if a "caller" module invokes a process in a "callee" module, the "caller" module config will take priority over the "callee" module config. In this way, a module can define a "default" configuration that can be overridden at higher and higher levels, where a process might be called in different contexts that require different config settings.

@@ -16,10 +16,6 @@
 
 package nextflow.script
 
-import nextflow.exception.ScriptCompilationException
-import nextflow.plugin.extension.PluginExtensionProvider
-import nextflow.plugin.Plugins
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -31,7 +27,11 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
+import nextflow.config.ConfigParser
 import nextflow.exception.IllegalModulePath
+import nextflow.exception.ScriptCompilationException
+import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.plugin.Plugins
 /**
  * Implements a script inclusion
  *
@@ -147,12 +147,25 @@ class IncludeDef {
     static BaseScript loadModule0(Path path, Map params, Session session) {
         final binding = new ScriptBinding() .setParams(params)
 
-        // the execution of a library file has as side effect the registration of declared processes
-        new ScriptParser(session)
+        // executing a module script also registers any component definitions
+        final script = new ScriptParser(session)
                 .setModule(true)
                 .setBinding(binding)
                 .runScript(path)
                 .getScript()
+
+        // load module config if it exists
+        final configPath = path.parent.resolve('module.config')
+        if( configPath.exists() ) {
+            final config = new ConfigParser()
+                    .setParams(params)
+                    .parse(configPath)
+                    .toMap()
+
+            ScriptMeta.get(script).setConfig(config)
+        }
+
+        return script
     }
 
     @PackageScope

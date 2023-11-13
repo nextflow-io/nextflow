@@ -70,6 +70,14 @@ class ExecutionStack {
         ctx instanceof WorkflowDef ? ctx : null
     }
 
+    static List<WorkflowDef> workflows() {
+        final result = [] as List<WorkflowDef>
+        for( def entry : stack )
+            if( entry instanceof WorkflowDef )
+                result << entry
+        return result
+    } 
+
     static void push(ExecutionContext script) {
         stack.push(script)
     }

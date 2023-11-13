@@ -4,20 +4,20 @@
 
 ## Configuration file
 
-When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file can contain conflicting settings, the sources are ranked to determine which settings are applied. Possible configuration sources, in order of priority:
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are resolved as follows (from highest to lowest priority):
 
 1. Parameters specified on the command line (`--something value`)
 2. Parameters provided using the `-params-file` option
-3. Config file specified using the `-c my_config` option
-4. The config file named `nextflow.config` in the current directory
-5. The config file named `nextflow.config` in the workflow project directory
+3. Config file specified using the `-c <config-file>` option
+4. The config file `nextflow.config` in the launch directory
+5. The config file `nextflow.config` in the project directory
 6. The config file `$HOME/.nextflow/config`
-7. Values defined within the pipeline script itself (e.g. `main.nf`)
+7. Values defined in the pipeline script (e.g. `main.nf`)
 
 When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
 
 :::{tip}
-If you want to ignore any default configuration files and use only a custom one, use `-C <config file>`.
+You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
 :::
 
 ### Config syntax
@@ -1235,12 +1235,12 @@ The above configuration snippet sets 2 cpus for the processes annotated with the
 
 #### Selector priority
 
-When mixing generic process configuration and selectors the following priority rules are applied (from lower to higher):
+Process configuration settings are resolved as follows (from lowest to highest priority):
 
-1. Process generic configuration.
-2. Process specific directive defined in the workflow script.
-3. `withLabel` selector definition.
-4. `withName` selector definition.
+1. Process configuration settings (without a selector)
+2. Process directives in the process definition
+3. Process `withLabel` selectors
+4. Process `withName` selectors
 
 For example:
 
@@ -1252,7 +1252,7 @@ process {
 }
 ```
 
-Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow script. Moreover processes annotated with the `foo` label use 8 cpus. Finally the process named `bar` uses 32 cpus.
+With the above configuration, all processes will use 4 cpus if not otherwise specified in their process definition. Processes annotated with the `foo` label will use 8 cpus. Any process named `bar` (or imported as `bar`) will use 32 cpus.
 
 (config-report)=
 
