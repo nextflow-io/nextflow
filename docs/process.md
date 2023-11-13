@@ -1177,6 +1177,52 @@ output:
 
 In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is legitimately missing, the process does not fail. The output channel will only contain values for those processes that produce `output.txt`.
 
+(process-multiple-outputs)=
+
+### Multiple outputs
+
+When a process declares multiple outputs, each output can be accessed by index. The following example prints the second process output (indexes start at zero):
+
+```groovy
+process FOO {
+    output:
+    path 'bye_file.txt'
+    path 'hi_file.txt'
+
+    """
+    echo "bye" > bye_file.txt
+    echo "hi" > hi_file.txt
+    """
+}
+
+workflow {
+    FOO()
+    FOO.out[1].view()
+}
+```
+
+You can also use the `emit` option to assign a name to each output and access them by name:
+
+```groovy
+process FOO {
+    output:
+    path 'bye_file.txt', emit: bye_file
+    path 'hi_file.txt',  emit: hi_file
+
+    """
+    echo "bye" > bye_file.txt
+    echo "hi" > hi_file.txt
+    """
+}
+
+workflow {
+    FOO()
+    FOO.out.hi_file.view()
+}
+```
+
+See {ref}`workflow-process-invocation` for more details.
+
 ## When
 
 The `when` block allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
@@ -1653,15 +1699,26 @@ process mapping {
   tuple val(sampleId), path(reads)
 
   """
-  STAR --genomeDir $genome --readFilesIn $reads
+  STAR --genomeDir $genome --readFilesIn $reads ${task.ext.args ?: ''}
   """
 }
 ```
 
-In the above example, the process uses a container whose version is controlled by the `ext.version` property. This can be defined in the `nextflow.config` file as shown below:
+In the above example, the process container version is controlled by `ext.version`, and the script supports additional command line arguments through `ext.args`.
+
+The `ext` directive can be set in the process definition:
+
+```groovy
+process mapping {
+  ext version: '2.5.3', args: '--foo --bar'
+}
+```
+
+Or in the Nextflow configuration:
 
 ```groovy
 process.ext.version = '2.5.3'
+process.ext.args = '--foo --bar'
 ```
 
 (process-fair)=
@@ -2074,6 +2131,9 @@ The following options are available:
 
 `runAsUser: '<uid>'`
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
+
+`schedulerName: '<name>'`
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
 
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*

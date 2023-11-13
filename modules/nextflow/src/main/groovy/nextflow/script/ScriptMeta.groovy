@@ -100,8 +100,6 @@ class ScriptMeta {
     /** The module config associated with this script */
     private Map config = new HashMap<>()
 
-    private List<String> dsl1ProcessNames
-
     /** Whenever it's a module script or the main script */
     private boolean module
 
@@ -170,25 +168,6 @@ class ScriptMeta {
         if( existing != null ) {
             throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined or included in script: $scriptPath")
         }
-    }
-
-    /*
-     * This method invocation is made by the NF AST transformer to pass
-     * the process names declared in the workflow script. This is only required
-     * for DSL1 script.
-     *
-     * When using DSL2 process names can be discovered during
-     * the script execution since, the process declaration is de-coupled by the
-     * process invocations.
-     */
-    @PackageScope
-    void setDsl1ProcessNames(List<String> names) {
-        this.dsl1ProcessNames = names
-    }
-
-    @PackageScope
-    List<String> getDsl1ProcessNames() {
-        dsl1ProcessNames ?: Collections.<String>emptyList()
     }
 
     @PackageScope
@@ -287,9 +266,6 @@ class ScriptMeta {
     }
 
     Set<String> getProcessNames() {
-        if( NF.dsl1 )
-            return new HashSet<String>(getDsl1ProcessNames())
-
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
@@ -305,9 +281,6 @@ class ScriptMeta {
     }
 
     Set<String> getLocalProcessNames() {
-        if( NF.dsl1 )
-            return new HashSet<String>(getDsl1ProcessNames())
-
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {

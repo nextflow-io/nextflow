@@ -271,7 +271,7 @@ Those scripts will be made accessible like any other command in the task environ
 This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
 
-### Module config
+## Module config
 
 :::{versionadded} 23.11.0-edge
 :::
@@ -316,3 +316,11 @@ Process configuration is resolved as follows (from highest to lowest priority):
 4. Process {ref}`directives <process-directives>`
 
 Similarly, if a "caller" module invokes a process in a "callee" module, the "caller" module config will take priority over the "callee" module config. In this way, a module can define a "default" configuration that can be overridden at higher and higher levels, where a process might be called in different contexts that require different config settings.
+
+## Sharing modules
+
+Modules are designed to be easy to share and re-use across different pipelines, which helps eliminate duplicate work and spread improvements throughout the community. While Nextflow does not provide an explicit mechanism for sharing modules, there are several ways to do it:
+
+- Simply copy the module files into your pipeline repository
+- Use [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to fetch modules from other Git repositories without maintaining a separate copy
+- Use the [nf-core](https://nf-co.re/tools#modules) CLI to install and update modules with a standard approach used by the nf-core community
