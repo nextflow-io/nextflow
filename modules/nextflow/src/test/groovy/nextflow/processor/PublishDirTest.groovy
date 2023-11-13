@@ -20,6 +20,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Global
 import nextflow.Session
 import spock.lang.Specification
 import test.TestHelper
@@ -114,8 +115,9 @@ class PublishDirTest extends Specification {
     }
 
     def 'should create symlinks for output files' () {
-
         given:
+        Global.session = Mock(Session) { getConfig()>>[:] }
+        and:
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()
         folder.resolve('work-dir/file1.txt').text = 'aaa'

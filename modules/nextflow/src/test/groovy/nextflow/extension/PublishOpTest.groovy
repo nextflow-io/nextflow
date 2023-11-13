@@ -42,6 +42,7 @@ class PublishOpTest extends BaseSpec {
         def BASE = folder
         def sess = Mock(Session) {
             getWorkDir() >> BASE
+            getConfig() >> [:]
         }
         Global.session = sess
 

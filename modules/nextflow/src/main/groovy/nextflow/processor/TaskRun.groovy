@@ -433,8 +433,8 @@ class TaskRun implements Cloneable {
      */
     Map<String,Path> getInputFilesMap() {
 
-        def result = [:]
-        def allFiles = getInputFiles().values()
+        final allFiles = getInputFiles().values()
+        final result = new HashMap<String,Path>(allFiles.size())
         for( List<FileHolder> entry : allFiles ) {
             if( entry ) for( FileHolder it : entry ) {
                 result[ it.stageName ] = it.storePath

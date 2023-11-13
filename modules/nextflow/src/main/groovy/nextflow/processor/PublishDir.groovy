@@ -25,10 +25,12 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.util.concurrent.ExecutorService
+import java.util.regex.Pattern
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -38,6 +40,7 @@ import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
+import nextflow.fusion.FusionHelper
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -51,9 +54,13 @@ import nextflow.util.PathTrie
 @CompileStatic
 class PublishDir {
 
+    final static private Pattern FUSION_PATH_REGEX = ~/^\/fusion\/([^\/]+)\/(.*)/
+
     enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
+
+    private Session session = Global.session as Session
 
     /**
      * The target path where create the links or copy the output files
@@ -117,10 +124,18 @@ class PublishDir {
 
     private boolean nullPathWarn
 
-    private String taskName
+    private TaskRun task
 
     @Lazy
-    private ExecutorService threadPool = { def sess = Global.session as Session; sess.publishDirExecutorService() }()
+    private ExecutorService threadPool = { session.publishDirExecutorService() }()
+
+    protected String getTaskName() {
+        return task?.getName()
+    }
+
+    protected Map<String,Path> getTaskInputs() {
+        return task?.getInputFilesMap()
+    }
 
     void setPath( def value ) {
         final resolved = value instanceof Closure ? value.call() : value
@@ -202,7 +217,6 @@ class PublishDir {
         return result
     }
 
-    @CompileStatic
     protected void apply0(Set<Path> files) {
         assert path
 
@@ -266,7 +280,6 @@ class PublishDir {
      * @param files Set of output files
      * @param task The task whose output need to be published
      */
-    @CompileStatic
     void apply( Set<Path> files, TaskRun task ) {
 
         if( !files || !enabled )
@@ -281,13 +294,10 @@ class PublishDir {
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
-        this.taskName = task.name
 
         apply0(files)
     }
 
-
-    @CompileStatic
     protected void apply1(Path source, boolean inProcess ) {
 
         def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
@@ -328,7 +338,6 @@ class PublishDir {
 
     }
 
-    @CompileStatic
     protected Path resolveDestination(target) {
 
         if( target instanceof Path ) {
@@ -347,7 +356,6 @@ class PublishDir {
         throw new IllegalArgumentException("Not a valid publish target path: `$target` [${target?.class?.name}]")
     }
 
-    @CompileStatic
     protected void safeProcessFile(Path source, Path target) {
         try {
             processFile(source, target)
@@ -355,14 +363,19 @@ class PublishDir {
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
             if( NF.strictMode || failOnError){
-                final session = Global.session as Session
                 session?.abort(e)
             }
         }
     }
 
-    @CompileStatic
     protected void processFile( Path source, Path destination ) {
+
+        // resolve Fusion symlink if applicable
+        if( FusionHelper.isFusionEnabled(session) ) {
+            final inputs = getTaskInputs()
+            if( source.name in inputs )
+                source = resolveFusionLink(inputs[source.name])
+        }
 
         // create target dirs if required
         makeDirs(destination.parent)
@@ -385,6 +398,29 @@ class PublishDir {
         }
 
         notifyFilePublish(destination, source)
+    }
+
+    /**
+     * Resolve a Fusion symlink by following the .fusion.symlinks
+     * file in the task directory until the original file is reached.
+     *
+     * @param file
+     */
+    protected Path resolveFusionLink(Path file) {
+        while( file.name in getFusionLinks(file.parent) )
+            file = file.text.replaceFirst(FUSION_PATH_REGEX) { _, scheme, path -> "${scheme}://${path}" } as Path
+        return file
+    }
+
+    @Memoized
+    protected List<String> getFusionLinks(Path workDir) {
+        try {
+            final file = workDir.resolve('.fusion.symlinks')
+            return file.text.tokenize('\n')
+        }
+        catch( NoSuchFileException e ) {
+            return List.of()
+        }
     }
 
     private String real0(Path p) {
@@ -422,8 +458,9 @@ class PublishDir {
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
             def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
-            if( taskName )
-                msg += "\n- offending task  : $taskName"
+            def name0 = getTaskName()
+            if( name0 )
+                msg += "\n- offending task  : $name0"
             msg += "\n- offending file  : $target"
             if( t1 != target.toString() )
                 msg += "\n- real destination: $t1"
@@ -438,7 +475,6 @@ class PublishDir {
         return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
     }
 
-    @CompileStatic
     protected void processFileImpl( Path source, Path destination ) {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
@@ -466,13 +502,11 @@ class PublishDir {
         }
     }
 
-    @CompileStatic
-    private void createPublishDir() {
+    protected void createPublishDir() {
         makeDirs(this.path)
     }
 
-    @CompileStatic
-    private void makeDirs(Path dir) {
+    protected void makeDirs(Path dir) {
         if( !dir || makeCache.containsKey(dir) )
             return
 
@@ -491,7 +525,6 @@ class PublishDir {
      * That valid publish mode has been selected
      * Note: link and symlinks are not allowed across different file system
      */
-    @CompileStatic
     @PackageScope
     void validatePublishMode() {
         if( log.isTraceEnabled() )
@@ -512,11 +545,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        final sess = Global.session
-        if (sess instanceof Session) {
-            sess.notifyFilePublish(destination, source)
-        }
+        session.notifyFilePublish(destination, source)
     }
-
 
 }
