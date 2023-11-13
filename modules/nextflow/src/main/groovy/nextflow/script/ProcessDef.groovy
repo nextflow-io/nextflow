@@ -125,8 +125,6 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // -- session config
         configs << (Map)session.config.process
 
-        log.info "${configs}"
-
         for( def config : configs )
             processConfig.applyConfig(config, baseName, simpleName, processName)
     }

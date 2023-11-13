@@ -1,5 +1,6 @@
 package nextflow.script
 
+import nextflow.NF
 import nextflow.Session
 import spock.lang.Specification
 /**
@@ -7,6 +8,10 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ProcessDefTest extends Specification {
+
+    def setupSpec() {
+        NF.init()
+    }
 
     def 'should clone a process with a new name '() {
 
@@ -39,6 +44,7 @@ class ProcessDefTest extends Specification {
     def 'should apply process config' () {
         given:
         def OWNER = Mock(BaseScript)
+        def META = ScriptMeta.register(OWNER)
         def CONFIG = [
                 process:[
                         cpus:2, memory: '1GB',
