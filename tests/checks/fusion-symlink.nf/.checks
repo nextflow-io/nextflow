@@ -6,7 +6,7 @@
 echo initial run
 $NXF_RUN
 
-nextflow fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
+$NXF_RUN fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
 cmp data.txt .expected || false
 
 #
@@ -15,5 +15,5 @@ cmp data.txt .expected || false
 echo resumed run
 $NXF_RUN -resume
 
-nextflow fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
+$NXF_RUN fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
 cmp data.txt .expected || false
