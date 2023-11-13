@@ -87,7 +87,7 @@ class WaveRunCmd {
         final containerCmd = containerBuilder
                 .build()
                 .getRunCommand(args.join(' '))
-                .replaceAll('-w "\\$PWD" ','') // <-- hack to remove the PWD work dir
+                .replaceAll('-w "\\$NXF_TASK_WORKDIR" ','') // <-- hack to remove the PWD work dir
 
         log.debug "Running: $containerCmd"
         final process = new ProcessBuilder()

@@ -146,7 +146,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
                 def digit = groups[1]
                 def unit = groups[2]
 
-                result += convert( digit.toFloat(), unit )
+                result += convert( digit.toDouble(), unit )
                 str = str.substring(all.length()).trim()
                 continue
             }
@@ -166,7 +166,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
      * @param unit A valid duration unit e.g. {@code d}, {@code d}, {@code h}, {@code hour}, etc
      * @return The duration in millisecond
      */
-    private long convert( float digit, String unit ) {
+    private long convert( double digit, String unit ) {
 
         if( unit in MILLIS ) {
             return Math.round(digit)
@@ -283,7 +283,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
 
         // when less than 60 seconds round up to 100th of millis
         if( durationInMillis < 60_000 ) {
-            return String.valueOf( Math.round(durationInMillis / 1_000 * 10 as float) / 10 ) + 's'
+            return String.valueOf( Math.round(durationInMillis / 1_000 * 10 as double) / 10 ) + 's'
         }
 
         def secs
