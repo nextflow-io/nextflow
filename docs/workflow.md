@@ -247,10 +247,6 @@ workflow {
 }
 ```
 
-:::{note}
-Workflow inputs are always channels by definition. If a basic data type, such as a number, string, list, etc, is provided, it is implicitly converted to a {ref}`value channel <channel-type-value>`.
-:::
-
 ### Workflow outputs
 
 A workflow can declare one or more output channels using the `emit` keyword. For example:
