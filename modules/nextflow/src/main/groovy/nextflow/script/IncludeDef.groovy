@@ -151,6 +151,11 @@ class IncludeDef {
                     .parse(configPath)
                     .toMap()
 
+            // remove any params inserted by the config parser
+            for( def value : config.values() )
+                if( value instanceof Map )
+                    value.remove('params')
+
             ScriptMeta.get(script).setConfig(config)
         }
 
