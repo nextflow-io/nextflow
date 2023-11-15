@@ -220,7 +220,10 @@ The following settings are available:
 : :::{versionadded} 22.12.0-edge
   :::
 : *Experimental: may change in a future release.*
-: Enable auto retrieval of S3 objects stored with Glacier class store (default: `false`).
+: Enable auto retrieval of S3 objects with a Glacier storage class (default: `false`).
+: :::{note}
+  This feature only works for S3 objects that are downloaded by Nextflow directly. It is not supported for tasks (e.g. when using the AWS Batch executor), since that would lead to many tasks sitting idle for several hours and wasting resources. If you need to restore many objects from Glacier, consider restoring them in a script prior to launching the pipeline.
+  :::
 
 `aws.client.glacierExpirationDays`
 : :::{versionadded} 22.12.0-edge
