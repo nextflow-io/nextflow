@@ -259,21 +259,43 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // use disk directive for an attached disk if type is specified
         if( disk?.type ) {
-            instancePolicy.addDisks(
-                AllocationPolicy.AttachedDisk.newBuilder()
-                    .setNewDisk(
-                        AllocationPolicy.Disk.newBuilder()
-                            .setType(disk.type)
-                            .setSizeGb(disk.request.toGiga())
-                    )
-                    .setDeviceName('scratch')
-            )
+            if ( disk?.image ) {
+                instancePolicy.addDisks(
+                    AllocationPolicy.AttachedDisk.newBuilder()
+                        .setNewDisk(
+                            AllocationPolicy.Disk.newBuilder()
+                                .setType(disk.type)
+                                .setImage(disk.image)
+                        )
+                        .setDeviceName('scratch')
+                )
 
-            taskSpec.addVolumes(
-                Volume.newBuilder()
-                    .setDeviceName('scratch')
-                    .setMountPath('/tmp')
-            )
+                taskSpec.addVolumes(
+                    Volume.newBuilder()
+                        .setDeviceName('scratch')
+                        .setMountPath('/tmp')
+                )
+            }
+
+            }
+            else {
+                
+                instancePolicy.addDisks(
+                    AllocationPolicy.AttachedDisk.newBuilder()
+                        .setNewDisk(
+                            AllocationPolicy.Disk.newBuilder()
+                                .setType(disk.type)
+                                .setSizeGb(disk.request.toGiga())
+                        )
+                        .setDeviceName('scratch')
+                )
+
+                taskSpec.addVolumes(
+                    Volume.newBuilder()
+                        .setDeviceName('scratch')
+                        .setMountPath('/tmp')
+                )
+            }
         }
 
         if( executor.config.serviceAccountEmail )

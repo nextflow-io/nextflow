@@ -132,7 +132,7 @@ process predefined_resources_task {
 :::{versionadded} 23.06.0-edge
 :::
 
-The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
+The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size or image and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
 
 Examples:
 
@@ -142,6 +142,9 @@ disk 100.GB
 
 // mount a persistent disk at '/tmp'
 disk 100.GB, type: 'pd-standard'
+
+// mount a balanced persistent disk at '/tmp' from the specified image
+disk 100.GB, type: 'pd-balanced', image: 'projects/project-id/global/images/ref-disk'
 
 // mount a local SSD disk at '/tmp' (should be a multiple of 375 GB)
 disk 375.GB, type: 'local-ssd'
