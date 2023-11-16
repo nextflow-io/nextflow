@@ -38,14 +38,9 @@ abstract class BindableDef extends ComponentDef {
 
     Object invoke_a(Object[] args) {
 
-        if (this instanceof ProcessDef && (this as ProcessDef).isPartial) {
-            return this.run(args)
-        }
-
         // use this instance an workflow template, therefore clone it
         final String prefix = ExecutionStack.workflow()?.name
         final fqName = prefix ? prefix+SCOPE_SEP+name : name
-
         if( this instanceof ProcessDef && !invocations.add(fqName) ) {
             log.debug "Bindable invocations=$invocations"
             final msg = "Process '$name' has been already used -- If you need to reuse the same component, include it with a different name or include it in a different workflow context"
@@ -54,7 +49,7 @@ abstract class BindableDef extends ComponentDef {
 
         final comp = (prefix ? this.cloneWithName(fqName) : this.clone()) as BindableDef
         // invoke the process execution
-        Object result = comp.run(args)
+        final result = comp.run(args)
 
         // register this component invocation in the current context
         // so that it can be accessed in the outer execution scope
@@ -66,4 +61,5 @@ abstract class BindableDef extends ComponentDef {
         }
         return result
     }
+
 }
