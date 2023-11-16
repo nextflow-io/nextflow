@@ -9,9 +9,10 @@ export NXF_IGNORE_WARN_DSL2=true
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 # disable ansi log to make log more readable
 export NXF_ANSI_LOG=false
+export NXF_DISABLE_CHECK_LATEST=true
 
 #
-# Integration test
+# Integration tests
 #
 if [[ $TEST_MODE == 'test_integration' ]]; then
 
@@ -32,20 +33,9 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     #
     git clone https://github.com/nextflow-io/hello
     (
-      cd hello;
+      cd hello
       $NXF_CMD run .
       $NXF_CMD run . -resume
-    )
-
-    #
-    # AMPA-NF
-    #
-    git clone https://github.com/cbcrg/ampa-nf
-    docker pull cbcrg/ampa-nf
-    (
-      cd ampa-nf;
-      $NXF_CMD run . -with-docker
-      $NXF_CMD run . -with-docker -resume
     )
 
     #
@@ -59,12 +49,25 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     exit 0
 fi
 
+#
+# Documentation tests
+#
+if [[ $TEST_MODE == 'test_docs' ]]; then
 
-if [[ $GITHUB_EVENT_NAME == pull_request ]]; then
-  echo "Skipping cloud integration tests on PR event"
-  exit 0
+    (
+      echo "Documentation tests"
+      cd ../docs/snippets/
+      bash test.sh
+    )
+
 fi
 
+if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+  if [ "$(jq -r '.pull_request.head.repo.fork' $GITHUB_EVENT_PATH)" = "true" ]; then
+    echo "Skipping cloud integration tests on external PR event"
+    exit 0
+  fi
+fi
 
 #
 # AWS Batch tests
@@ -91,13 +94,21 @@ if [[ $TEST_MODE == 'test_azure' ]]; then
 fi
 
 #
-# Google Life Sciences
+# Google Batch
 #
 if [[ $TEST_MODE == 'test_google' ]]; then
     if [ "$GOOGLE_SECRET" ]; then
-      echo "Google LS tests"
+      echo "Google Batch tests"
       bash google.sh
     else
-      echo "Missing GOOGLE_SECRET variable -- Skipping Google LS tests"
+      echo "Missing GOOGLE_SECRET variable -- Skipping Google Batch tests"
     fi
+fi
+
+#
+# Wave
+#
+if [[ $TEST_MODE == 'test_wave' ]]; then
+      echo "Wave tests"
+      bash wave.sh
 fi

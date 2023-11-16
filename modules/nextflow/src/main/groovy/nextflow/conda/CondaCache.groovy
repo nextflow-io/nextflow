@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +41,8 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 class CondaCache {
-
+    static final private Object condaLock = new Object()
+    
     /**
      * Cache the prefix path for each Conda environment
      */
@@ -66,6 +66,8 @@ class CondaCache {
 
     private Path configCacheDir0
 
+    private List<String> channels = Collections.emptyList()
+
     @PackageScope String getCreateOptions() { createOptions }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
@@ -73,6 +75,8 @@ class CondaCache {
     @PackageScope Map<String,String> getEnv() { System.getenv() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
+
+    @PackageScope List<String> getChannels() { channels }
 
     @PackageScope String getBinaryName() {
         if (useMamba)
@@ -111,7 +115,9 @@ class CondaCache {
 
         if( config.useMicromamba )
             useMicromamba = config.useMicromamba as boolean
-        
+
+        if( config.getChannels() )
+            channels = config.getChannels()
     }
 
     /**
@@ -172,8 +178,12 @@ class CondaCache {
 
         String content
         String name = 'env'
+        // check if it's a remote uri
+        if( isYamlUriPath(condaEnv) ) {
+            content = condaEnv
+        }
         // check if it's a YAML file
-        if( isYamlFilePath(condaEnv) ) {
+        else if( isYamlFilePath(condaEnv) ) {
             try {
                 final path = condaEnv as Path
                 content = path.text
@@ -258,9 +268,12 @@ class CondaCache {
         Paths.get(envFile).toAbsolutePath()
     }
 
+    @PackageScope boolean isYamlUriPath(String env) {
+        env.startsWith('http://') || env.startsWith('https://')
+    }
+
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
-
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
@@ -270,19 +283,26 @@ class CondaCache {
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {
-
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
         else {
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            final channelsOpt = channels.collect(it -> "-c $it ").join('')
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
         }
 
         try {
-            runCommand( cmd )
+            // Parallel execution of conda causes data and package corruption.
+            // https://github.com/nextflow-io/nextflow/issues/4233
+            // https://github.com/conda/conda/issues/13037
+            // Should be removed as soon as the upstream bug is fixed and released.
+            synchronized(condaLock) {
+                runCommand( cmd )
+            }
             log.debug "'${binaryName}' create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
@@ -297,13 +317,13 @@ class CondaCache {
     int runCommand( String cmd ) {
         log.trace """${binaryName} create
                      command: $cmd
-                     timeout: $createTimeout""".stripIndent()
+                     timeout: $createTimeout""".stripIndent(true)
 
         final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
-        final proc = builder.start()
+        final proc = builder.redirectErrorStream(true).start()
         final err = new StringBuilder()
-        final consumer = proc.consumeProcessErrorStream(err)
+        final consumer = proc.consumeProcessOutputStream(err)
         proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {

@@ -27,6 +27,9 @@ import java.nio.file.PathMatcher
 import java.nio.file.WatchService
 import java.nio.file.attribute.UserPrincipalLookupService
 import java.time.Duration
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
+import java.util.function.Predicate
 
 import com.azure.core.util.polling.SyncPoller
 import com.azure.storage.blob.BlobServiceClient
@@ -35,9 +38,16 @@ import com.azure.storage.blob.models.BlobCopyInfo
 import com.azure.storage.blob.models.BlobItem
 import com.azure.storage.blob.models.BlobStorageException
 import com.azure.storage.blob.models.ListBlobsOptions
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.cloud.azure.config.AzConfig
 /**
  * Implements a file system for Azure Blob Storage service
  *
@@ -69,7 +79,7 @@ class AzFileSystem extends FileSystem {
     @PackageScope AzFileSystem() {}
 
     @PackageScope
-    AzFileSystem(AzFileSystemProvider provider, BlobServiceClient storageClient, String bucket ) {
+    AzFileSystem(AzFileSystemProvider provider, BlobServiceClient storageClient, String bucket) {
         this.provider = provider
         this.containerName = bucket
         this.storageClient = storageClient
@@ -109,6 +119,10 @@ class AzFileSystem extends FileSystem {
     }
 
     private Iterable<? extends Path> listContainers() {
+        return apply(()-> listContainers0())
+    }
+
+    private Iterable<? extends Path> listContainers0() {
         final containers = new ArrayList()
         storageClient
                 .listBlobContainers()
@@ -243,7 +257,11 @@ class AzFileSystem extends FileSystem {
      * @param filter A {@link java.nio.file.DirectoryStream.Filter} object to select which files to include in the file traversal
      * @return A {@link DirectoryStream} object to traverse the associated objects
      */
-    private DirectoryStream<Path> listFiles(AzPath dir, DirectoryStream.Filter<? super Path> filter ) {
+    private DirectoryStream<Path> listFiles(AzPath dir, DirectoryStream.Filter<? super Path> filter) {
+        return apply(()-> listFiles0(dir,filter))
+    }
+
+    private DirectoryStream<Path> listFiles0(AzPath dir, DirectoryStream.Filter<? super Path> filter) {
 
         // -- create the list operation options
         def prefix = dir.blobName()
@@ -277,6 +295,10 @@ class AzFileSystem extends FileSystem {
      * @return A {@link DirectoryStream} object to traverse the associated objects
      */
     private DirectoryStream<Path> listContainers(AzPath path, DirectoryStream.Filter<? super Path> filter ) {
+        return apply(()-> listContainers0(path, filter))
+    }
+
+    private DirectoryStream<Path> listContainers0(AzPath path, DirectoryStream.Filter<? super Path> filter) {
 
         Iterator<BlobContainerItem> containers = storageClient.listBlobContainers().iterator()
 
@@ -332,8 +354,9 @@ class AzFileSystem extends FileSystem {
     private void checkContainerExistsOrEmpty(AzPath path) {
         try {
             final container = path.containerClient()
-            final blobs = container.listBlobs(new ListBlobsOptions().setMaxResultsPerPage(10), null)
-            if( blobs.iterator().hasNext() ) {
+            final opts = new ListBlobsOptions().setMaxResultsPerPage(10)
+            final blobs = apply(()-> container.listBlobs(opts, null))
+            if( apply(()-> blobs.iterator().hasNext()) ) {
                 throw new DirectoryNotEmptyException(path.toUriString())
             }
         }
@@ -359,18 +382,18 @@ class AzFileSystem extends FileSystem {
         boolean exists = false
         boolean isDirectory = false
 
-        def opts = new ListBlobsOptions()
+        final opts = new ListBlobsOptions()
                 .setPrefix(path.blobName())
                 .setMaxResultsPerPage(10)
         try {
-            def values = path.containerClient().listBlobs(opts,null).iterator()
+            final values = apply(()-> path.containerClient().listBlobs(opts,null).iterator())
 
             final char SLASH = '/'
             final String name = path.blobName()
 
             int count=0
-            while( values.hasNext() ) {
-                BlobItem blob = values.next()
+            while( apply(()-> values.hasNext()) ) {
+                BlobItem blob = apply(()-> values.next())
                 if( blob.name == name )
                     exists = true
                 else if( blob.name.startsWith(name) && blob.name.charAt(name.length())==SLASH ) {
@@ -398,12 +421,12 @@ class AzFileSystem extends FileSystem {
 
     private void deleteFile(AzPath path) {
         checkPathExistOrEmpty(path)
-        path.blobClient().delete()
+        apply(()-> path.blobClient().delete())
     }
 
     private void deleteBucket(AzPath path) {
         checkContainerExistsOrEmpty(path)
-        path.containerClient().delete()
+        apply(()-> path.containerClient().delete())
     }
 
     @PackageScope
@@ -425,7 +448,7 @@ class AzFileSystem extends FileSystem {
     }
 
     @PackageScope
-    AzFileAttributes readAttributes(AzPath path)  {
+    AzFileAttributes readAttributes(AzPath path) {
         final cache = path.attributesCache()
         if( cache )
             return cache
@@ -465,7 +488,7 @@ class AzFileSystem extends FileSystem {
 
     private AzFileAttributes readContainerAttrs0(AzPath path) {
         try {
-            new AzFileAttributes(path.containerClient())
+            return new AzFileAttributes(path.containerClient())
         }
         catch (BlobStorageException e) {
             if( e.statusCode==404 )
@@ -496,5 +519,41 @@ class AzFileSystem extends FileSystem {
             return false
         }
     }
-    
+
+
+    /**
+     * Creates a retry policy using the configuration specified by {@link nextflow.cloud.azure.config.AzRetryConfig}
+     *
+     * @param cond A predicate that determines when a retry should be triggered
+     * @return The {@link dev.failsafe.RetryPolicy} instance
+     */
+    @Memoized
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        final cfg = AzConfig.getConfig().retryConfig()
+        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                log.debug("Azure I/O exception - attempt: ${event.attemptCount}; cause: ${event.lastFailure?.message}")
+            }
+        }
+        return RetryPolicy.<T>builder()
+                .handleIf(cond)
+                .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(cfg.maxAttempts)
+                .withJitter(cfg.jitter)
+                .onRetry(listener)
+                .build()
+    }
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy
+     * when {@code TooManyRequests} Azure Batch error is returned
+     *
+     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> T apply(CheckedSupplier<T> action) {
+        final policy = retryPolicy((Throwable t) -> t instanceof IOException || t.cause instanceof IOException || t instanceof TimeoutException || t.cause instanceof TimeoutException)
+        return Failsafe.with(policy).get(action)
+    }
 }

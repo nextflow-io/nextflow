@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,16 +20,16 @@ import static test.TestParser.*
 
 import java.nio.file.Path
 
-import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.processor.TaskContext
 import nextflow.script.TokenVar
 import nextflow.util.BlankSeparatedList
-import spock.lang.Specification
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ParamsOutTest extends Specification {
+class ParamsOutTest extends Dsl2Spec {
 
     static private createTaskContext(Map binding, Map local=[:], String name='process_name') {
         def script = new Script() {
@@ -45,7 +44,6 @@ class ParamsOutTest extends Specification {
     }
 
 
-
     // ==============================================================
     //                  test *output* parameters
     // ==============================================================
@@ -57,14 +55,18 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               val x
-              val p into q
-              val 10 into t
-              val 'str' into y
-              val { x } into w
-              val "${y}" into z
-              val x.y into p
+              val p
+              val 10
+              val 'str' 
+              val { x }
+              val "${y}"
+              val x.y 
 
               return ''
+            }
+            
+            workflow {
+              hola()
             }
             '''
 
@@ -88,39 +90,31 @@ class ParamsOutTest extends Specification {
 
         out0.name == 'x'
         out0.resolve( [x: 100] ) == 100
-        out0.outChannel instanceof DataflowQueue
-        binding.containsKey('x')
+        out0.outChannel instanceof DataflowVariable
 
         out1.name == 'p'
         out1.resolve( [p: 200] ) == 200
-        out1.outChannel instanceof DataflowQueue
-        !binding.containsKey('p')
-        binding.containsKey('q')
+        out1.outChannel instanceof DataflowVariable
 
         out2.name == null
         out2.resolve( [:] ) == 10
-        out2.outChannel instanceof DataflowQueue
-        binding.containsKey('t')
+        out2.outChannel instanceof DataflowVariable
 
         out3.name == null
         out3.resolve( [:] ) == 'str'
-        out3.outChannel instanceof DataflowQueue
-        binding.containsKey('y')
+        out3.outChannel instanceof DataflowVariable
 
         out4.name == null
         out4.resolve( [x:'Hello', y:'world'] ) == 'Hello'
-        out4.outChannel instanceof DataflowQueue
-        binding.containsKey('w')
+        out4.outChannel instanceof DataflowVariable
 
         out5.name == null
         out5.resolve( [x:'Hello', y:'world'] ) == 'world'
-        out5.outChannel instanceof DataflowQueue
-        binding.containsKey('z')
+        out5.outChannel instanceof DataflowVariable
 
         out6.name == null
         out6.resolve( [x:[y:'Ciao']] ) == 'Ciao'
-        out6.outChannel instanceof DataflowQueue
-        binding.containsKey('p')
+        out6.outChannel instanceof DataflowVariable
     }
 
     def testIntoMultipleChannels() {
@@ -129,12 +123,12 @@ class ParamsOutTest extends Specification {
         def text = '''
             process foo {
               output:
-              val one into a
-              val two into p, q
-              file 'three' into b
-              file 'four'  into x,y,z
+              val one 
+              file 'two'
               return ''
             }
+            
+            workflow { foo() }
             '''
 
         def binding = [:]
@@ -142,31 +136,17 @@ class ParamsOutTest extends Specification {
         when:
         def process = parseAndReturnProcess(text, binding)
         def out0 = (ValueOutParam)process.config.getOutputs().get(0)
-        def out1 = (ValueOutParam)process.config.getOutputs().get(1)
-        def out2 = (FileOutParam)process.config.getOutputs().get(2)
-        def out3 = (FileOutParam)process.config.getOutputs().get(3)
+        def out1 = (FileOutParam)process.config.getOutputs().get(1)
 
         then:
-        process.config.getOutputs().size() == 4
+        process.config.getOutputs().size() == 2
 
         out0.name == 'one'
-        out0.getOutChannels().size()==1
-        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.getOutChannel() instanceof DataflowVariable
 
-        out1.name == 'two'
-        out1.getOutChannels().size()==2
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(1) instanceof DataflowQueue
+        out1.name == null
+        out1.getOutChannel() instanceof DataflowVariable
 
-        out2.name == null
-        out2.getOutChannels().size()==1
-        out2.getOutChannels().get(0) instanceof DataflowQueue
-
-        out3.name == null
-        out3.getOutChannels().size()==3
-        out3.getOutChannels().get(0) instanceof DataflowQueue
-        out3.getOutChannels().get(1) instanceof DataflowQueue
-        out3.getOutChannels().get(2) instanceof DataflowQueue
     }
 
     def testFileOutParams() {
@@ -176,11 +156,13 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               file x
-              file 'y' mode flatten
-              file p into q mode standard
+              file 'y'
+              file p
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -199,21 +181,15 @@ class ParamsOutTest extends Specification {
 
         out1.class == FileOutParam
         out1.name == 'x'
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.'x'
-        out1.mode == BasicMode.standard
+        out1.outChannel instanceof DataflowVariable
 
         out2.class == FileOutParam
         out2.name == null
-        out2.outChannel == null
-        out2.mode == BasicMode.flatten
+        out2.outChannel instanceof DataflowVariable
 
         out3.class == FileOutParam
         out3.name == 'p'
-        out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.q
-        out3.mode == BasicMode.standard
-        !binding.containsKey('p')
+        out3.outChannel instanceof DataflowVariable
     }
 
     def testFileOutParamsWithVariables() {
@@ -223,22 +199,24 @@ class ParamsOutTest extends Specification {
 
             process hola {
               output:
-              file "${x}_name" into channel1
-              file "${x}_${y}.fa" into channel2
-              file "simple.txt" into channel3
-              file "${z}.txt:sub/dir/${x}.fa" into channel4
-              tuple "${z}.txt:${x}.fa" into channel5
-              tuple file("${z}.txt:${x}.fa") into channel6
-              file meta.id into channel7 
-              file "$meta.id" into channel8
+              file "${x}_name" 
+              file "${x}_${y}.fa" 
+              file "simple.txt" 
+              file "${z}.txt:sub/dir/${x}.fa" 
+              tuple file("${z}.txt:${x}.fa") 
+              tuple path("${z}.txt:${x}.fa") 
+              file meta.id  
+              file "$meta.id" 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
-        def binding = [:]
+        def binding = [x: 'hola', y:99, z:'script_file', meta: [id:'hello.txt']]
         def process = parseAndReturnProcess(text, binding)
-        def ctx = [x: 'hola', y:99, z:'script_file', meta: [id:'hello.txt']]
-
+        def ctx = binding
+        
         when:
         FileOutParam out0 = process.config.getOutputs().get(0)
         FileOutParam out1 = process.config.getOutputs().get(1)
@@ -254,52 +232,44 @@ class ParamsOutTest extends Specification {
 
         out0.name == null
         out0.getFilePatterns(ctx,null) == ['hola_name']
-        out0.outChannel instanceof DataflowQueue
-        out0.outChannel == binding.channel1
+        out0.outChannel instanceof DataflowVariable
         out0.isDynamic()
 
         out1.name == null
         out1.getFilePatterns(ctx,null) == ['hola_99.fa']
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.channel2
+        out1.outChannel instanceof DataflowVariable
         out1.isDynamic()
 
         out2.name == null
         out2.getFilePatterns(ctx,null) == ['simple.txt']
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.channel3
+        out2.outChannel instanceof DataflowVariable
         !out2.isDynamic()
 
         out3.name == null
         out3.getFilePatterns(ctx,null) == ['script_file.txt','sub/dir/hola.fa']
-        out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.channel4
+        out3.outChannel instanceof DataflowVariable
         out3.isDynamic()
 
         out4.name == 'tupleoutparam<4>'
-        out4.outChannel instanceof DataflowQueue
-        out4.outChannel == binding.channel5
+        out4.outChannel instanceof DataflowVariable
         out4.inner[0] instanceof FileOutParam
         (out4.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt','hola.fa']
         (out4.inner[0] as FileOutParam) .isDynamic()
 
         out5.name == 'tupleoutparam<5>'
-        out5.outChannel instanceof DataflowQueue
-        out5.outChannel == binding.channel6
+        out5.outChannel instanceof DataflowVariable
         out5.inner[0] instanceof FileOutParam
-        (out5.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt','hola.fa']
+        (out5.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt:hola.fa']
         (out5.inner[0] as FileOutParam) .isDynamic()
 
         out6.name == null
         out6.getFilePatterns(ctx,null) == ['hello.txt']
-        out6.outChannel instanceof DataflowQueue
-        out6.outChannel == binding.channel7
+        out6.outChannel instanceof DataflowVariable
         out6.isDynamic()
 
         out7.name == null
         out7.getFilePatterns(ctx,null) == ['hello.txt']
-        out7.outChannel instanceof DataflowQueue
-        out7.outChannel == binding.channel8
+        out7.outChannel instanceof DataflowVariable
         out7.isDynamic()
     }
 
@@ -310,11 +280,13 @@ class ParamsOutTest extends Specification {
 
             process hola {
               output:
-              file(x) into channel1
-              tuple file(y) into channel2
+              file(x)
+              tuple file(y)
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -342,14 +314,16 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               file x
-              file "$y" into q
-              tuple file(z) into p
+              file "$y"
+              tuple file(z)
               file u
               file "$v"
               file 'w'
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [ x: 'hola', y:'hola_2', z: 'hola_z', v:'file_v' ]
@@ -366,13 +340,11 @@ class ParamsOutTest extends Specification {
         then:
         out0.name == 'x'
         out0.getFilePatterns(binding,null) == ['hola']
-        out0.getOutChannels().get(0) instanceof DataflowQueue
-        out0.getOutChannels().get(0) == binding.x
+        out0.getOutChannel() instanceof DataflowVariable
 
         out1.name == null
         out1.getFilePatterns(binding,null) == ['hola_2']
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(0) == binding.q
+        out1.getOutChannel() instanceof DataflowVariable
 
         out2.inner[0] instanceof FileOutParam
         (out2.inner[0] as FileOutParam).name == 'z'
@@ -380,16 +352,15 @@ class ParamsOutTest extends Specification {
 
         out3.name == 'u'
         out3.getFilePatterns(binding,null) == ['u']
-        out3.getOutChannels().get(0) instanceof DataflowQueue
-        out3.getOutChannels().get(0) == binding.u
+        out3.getOutChannel() instanceof DataflowVariable
 
         out4.name == null
         out4.getFilePatterns(binding,null) == ['file_v']
-        out4.getOutChannels().size()==0
+        out4.getOutChannel() instanceof DataflowVariable
 
         out5.name == null
         out5.getFilePatterns(binding,null) == ['w']
-        out4.getOutChannels().size()==0
+        out4.getOutChannel() instanceof DataflowVariable
     }
 
 
@@ -400,12 +371,14 @@ class ParamsOutTest extends Specification {
 
             process hola {
               output:
-              file { "${x}_name" } into channel1
-              file { "${params.fileName}_${y}.fa" } into channel2
-              tuple file({ "${z}.txt" }) into channel3
+              file { "${x}_name" } 
+              file { "${params.fileName}_${y}.fa" } 
+              tuple file({ "${z}.txt" }) 
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [x: 'hola', y:99, z:'script_file', params: [fileName: 'hello']]
@@ -419,18 +392,15 @@ class ParamsOutTest extends Specification {
         then:
         out1.name == null
         out1.getFilePatterns(binding,null) == ['hola_name']
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.channel1
+        out1.outChannel instanceof DataflowVariable
         out1.isDynamic()
 
         out2.name == null
         out2.getFilePatterns(binding,null) == ['hello_99.fa']
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.channel2
+        out2.outChannel instanceof DataflowVariable
         out2.isDynamic()
 
-        out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.channel3
+        out3.outChannel instanceof DataflowVariable
         out3.inner[0] instanceof FileOutParam
         (out3.inner[0] as FileOutParam) .getFilePatterns(binding,null) == ['script_file.txt']
         (out3.inner[0] as FileOutParam) .isDynamic()
@@ -444,22 +414,24 @@ class ParamsOutTest extends Specification {
 
             process hola {
               output:
-              file x into ch
+              file x 
 
-              file x maxDepth 5 into ch
-              file x hidden true into ch
-              file x followLinks false into ch
-              file x type 'file' into ch
-              file x separatorChar '#' into ch
+              path x, maxDepth: 5
+              path x, hidden: true 
+              path x, followLinks: false 
+              path x, type: 'file' 
+              path x, separatorChar: '#' 
 
-              file x hidden false into ch
-              file x followLinks true into ch
-              file x type 'dir' into ch
-              file x glob false into ch
-              file x optional true into ch
+              path x, hidden: false 
+              path x, followLinks: true 
+              path x, type: 'dir' 
+              path x, glob: false 
+              path x, optional: true 
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def process = parseAndReturnProcess(text, [:])
@@ -499,56 +471,20 @@ class ParamsOutTest extends Specification {
 
     }
 
-    def testFileWithoutInto() {
-        setup:
-        def text = '''
-            process hola {
-              output:
-                file 'x'
-                file y
-                file 'z' into channel_z
-
-              return ''
-            }
-            '''
-
-        def binding = [:]
-        def process = parseAndReturnProcess(text, binding)
-
-        when:
-        FileOutParam out0 = process.config.getOutputs().get(0)
-        FileOutParam out1 = process.config.getOutputs().get(1)
-        FileOutParam out2 = process.config.getOutputs().get(2)
-
-        then:
-        out0.name == null
-        out0.getFilePatterns(binding,null) == ['x']
-        out0.getOutChannels().size()==0
-
-        out1.name == 'y'
-        out1.getFilePatterns(binding,null) == ['y']
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(0) == binding.y
-
-        out2.name == null
-        out2.getFilePatterns(binding,null) == ['z']
-        out2.getOutChannels().get(0) instanceof DataflowQueue
-        out2.getOutChannels().get(0) == binding.channel_z
-    }
-
-
-    def testSetOutParams() {
+    def testTupleOutParams() {
 
         setup:
         def text = '''
             process hola {
               output:
-                set(x) into p
-                set(y, '-', '*.fa') into q mode flatten
-                set(stdout, z) into t mode combine
+                tuple val(x)
+                tuple val(y), stdout, file('*.fa') 
+                tuple stdout, val(z)
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -562,16 +498,13 @@ class ParamsOutTest extends Specification {
         then:
         process.config.getOutputs().size() == 3
 
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.p
+        out1.outChannel instanceof DataflowVariable
         out1.inner.size() == 1
         out1.inner[0] instanceof ValueOutParam
         out1.inner[0].name == 'x'
         out1.inner[0].index == 0
-        out1.mode == BasicMode.standard
 
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.q
+        out2.outChannel instanceof DataflowVariable
         out2.inner[0] instanceof ValueOutParam
         out2.inner[0].name == 'y'
         out2.inner[0].index == 1
@@ -583,10 +516,8 @@ class ParamsOutTest extends Specification {
         out2.inner[2].filePattern == '*.fa'
         out2.inner[2].index == 1
         out2.inner.size() ==3
-        out2.mode == BasicMode.flatten
 
-        out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.t
+        out3.outChannel instanceof DataflowVariable
         out3.inner.size() == 2
         out3.inner[0] instanceof StdOutParam
         out3.inner[0].name == '-'
@@ -594,22 +525,23 @@ class ParamsOutTest extends Specification {
         out3.inner[1] instanceof ValueOutParam
         out3.inner[1].name == 'z'
         out3.inner[1].index == 2
-        out3.mode == TupleOutParam.CombineMode.combine
 
     }
 
-    def testSetOutParams2() {
+    def testTupleOutValues() {
 
         setup:
         def text = '''
             process hola {
               output:
-                tuple val(x) into p
-                tuple val(y), stdout, file('*.fa') into q mode flatten
-                tuple stdout, val(z) into t mode combine
+                tuple val(x), val('x')
+                tuple val(1), val('2')
+                tuple val("$foo"), val { bar }
 
               return ''
             }
+            
+            workflow { hola() }  
             '''
 
         def binding = [:]
@@ -623,74 +555,11 @@ class ParamsOutTest extends Specification {
         then:
         process.config.getOutputs().size() == 3
 
-        out0.outChannel instanceof DataflowQueue
-        out0.outChannel == binding.p
-        out0.inner.size() == 1
-        out0.inner[0] instanceof ValueOutParam
-        out0.inner[0].name == 'x'
-        out0.inner[0].index == 0
-        out0.mode == BasicMode.standard
-
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.q
-        out1.inner[0] instanceof ValueOutParam
-        out1.inner[0].name == 'y'
-        out1.inner[0].index == 1
-        out1.inner[1] instanceof StdOutParam
-        out1.inner[1].name == '-'
-        out1.inner[1].index == 1
-        out1.inner[2] instanceof FileOutParam
-        out1.inner[2].name == null
-        out1.inner[2].filePattern == '*.fa'
-        out1.inner[2].index == 1
-        out1.inner.size() ==3
-        out1.mode == BasicMode.flatten
-
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.t
-        out2.inner.size() == 2
-        out2.inner[0] instanceof StdOutParam
-        out2.inner[0].name == '-'
-        out2.inner[0].index == 2
-        out2.inner[1] instanceof ValueOutParam
-        out2.inner[1].name == 'z'
-        out2.inner[1].index == 2
-        out2.mode == TupleOutParam.CombineMode.combine
-
-    }
-
-    def testSetOutValues() {
-
-        setup:
-        def text = '''
-            process hola {
-              output:
-                tuple val(x), val('x') into p
-                tuple val(1), val('2') into q
-                tuple val("$foo"), val { bar } into t
-
-              return ''
-            }
-            '''
-
-        def binding = [:]
-        def process = parseAndReturnProcess(text, binding)
-
-        when:
-        TupleOutParam out0 = process.config.getOutputs().get(0)
-        TupleOutParam out1 = process.config.getOutputs().get(1)
-        TupleOutParam out2 = process.config.getOutputs().get(2)
-
-        then:
-        process.config.getOutputs().size() == 3
-
-        // first set
-        out0.outChannel instanceof DataflowQueue
-        out0.outChannel == binding.p
+        // first tuple
+        out0.outChannel instanceof DataflowVariable
         out0.inner.size() == 2
         // val(x)
         out0.inner[0] instanceof ValueOutParam
-        out0.inner[0].name == 'x'
         out0.inner[0].index == 0
         out0.inner[0].resolve([x: 'hello']) == 'hello'
         // val('x')
@@ -699,9 +568,8 @@ class ParamsOutTest extends Specification {
         out0.inner[1].index == 0
         out0.inner[1].resolve([:]) == 'x'
 
-        // -- second set
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.q
+        // -- second tuple
+        out1.outChannel instanceof DataflowVariable
         out1.inner.size() == 2
         // val(1)
         out1.inner[0] instanceof ValueOutParam
@@ -714,9 +582,8 @@ class ParamsOutTest extends Specification {
         out1.inner[1].index == 1
         out1.inner[1].resolve([:]) == '2'
 
-        // -- third set
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.t
+        // -- third tuple
+        out2.outChannel instanceof DataflowVariable
         out2.inner.size() == 2
         // val("$foo")
         out2.inner[0] instanceof ValueOutParam
@@ -731,55 +598,18 @@ class ParamsOutTest extends Specification {
 
     }
 
-    def testSetOutWithoutInto() {
-
-        setup:
-        def text = '''
-            process hola {
-              output:
-              tuple val(X), file('Y')
-
-              return ''
-            }
-            '''
-
-        def binding = [:]
-        def process = parseAndReturnProcess(text, binding)
-
-        when:
-        TupleOutParam out0 = process.config.getOutputs().get(0)
-
-        then:
-        process.config.getOutputs().size() == 1
-
-        // first set
-        out0.getOutChannels().size()==0
-
-        out0.inner[0] instanceof ValueOutParam
-        out0.inner[0].name == 'X'
-        out0.inner[0].index == 0
-        out0.inner[0].mapIndex == 0
-
-        out0.inner[1] instanceof FileOutParam
-        out0.inner[1].name == null
-        out0.inner[1].filePattern == 'Y'
-        out0.inner[1].index == 0
-        out0.inner[1].mapIndex == 1
-
-    }
-
     def testStdOut() {
 
         setup:
         def text = '''
             process hola {
               output:
-              stdout into p
-              stdout into (q)
-              stdout into (x,y,z)
+              stdout
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -787,17 +617,11 @@ class ParamsOutTest extends Specification {
 
         when:
         def out0 = (StdOutParam)process.config.getOutputs().get(0)
-        def out1 = (StdOutParam)process.config.getOutputs().get(1)
-        def out2 = (StdOutParam)process.config.getOutputs().get(2)
 
         then:
-        process.config.getOutputs().size() == 3
+        process.config.getOutputs().size() == 1
 
-        out0.getOutChannels()[0].is binding.p
-        out1.getOutChannels()[0].is binding.q
-        out2.getOutChannels()[0].is binding.x
-        out2.getOutChannels()[1].is binding.y
-        out2.getOutChannels()[2].is binding.z
+        out0.getOutChannel() instanceof DataflowVariable
 
     }
 
@@ -823,48 +647,6 @@ class ParamsOutTest extends Specification {
 
     }
 
-
-    def testModeParam() {
-
-        setup:
-        def p = new TupleOutParam(new Binding(), [])
-        when:
-        p.mode(value)
-        then:
-        p.getMode() == expected
-
-        where:
-        value                   | expected
-        'combine'               | TupleOutParam.CombineMode.combine
-        new TokenVar('combine') | TupleOutParam.CombineMode.combine
-        'flatten'               | BasicMode.flatten
-        new TokenVar('flatten') | BasicMode.flatten
-
-    }
-
-    def testWrongMode() {
-
-        when:
-        def p = new TupleOutParam(new Binding(), [])
-        p.mode('unknown')
-        then:
-        thrown(IllegalArgumentException)
-
-    }
-
-    def testDefaultMode() {
-
-        setup:
-        def bind = new Binding()
-        def list = []
-
-        expect:
-        new StdOutParam(bind, list).mode == BasicMode.standard
-        new ValueOutParam(bind, list).mode == BasicMode.standard
-        new FileOutParam(bind, list).mode == BasicMode.standard
-        new TupleOutParam(bind, list).mode == BasicMode.standard
-
-    }
 
     def 'should fetch output value' () {
 
@@ -927,12 +709,14 @@ class ParamsOutTest extends Specification {
         def text = '''
             process foo {
               output:
-              path x into a
-              path 'hello.*' into b
-              path 'hello.txt' into c
+              path x 
+              path 'hello.*'
+              path 'hello.txt'
               
               return ''
             }
+            
+            workflow { foo() }
             '''
 
         def binding = [:]
@@ -948,20 +732,17 @@ class ParamsOutTest extends Specification {
 
         out0.getName() == 'x'
         out0.getFilePattern() == null
-        out0.getOutChannels().size()==1
-        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.getOutChannel() instanceof DataflowVariable
         out0.isPathQualifier()
 
         out1.getName() == null
         out1.getFilePattern() == 'hello.*'
-        out1.getOutChannels().size()==1
-        out1.getOutChannels().get(0) instanceof DataflowQueue
+        out1.getOutChannel() instanceof DataflowVariable
         out1.isPathQualifier()
 
         out2.getName() == null
         out2.getFilePattern() == 'hello.txt'
-        out2.getOutChannels().size()==1
-        out2.getOutChannels().get(0) instanceof DataflowQueue
+        out2.getOutChannel() instanceof DataflowVariable
         out2.isPathQualifier()
         
     }
@@ -974,13 +755,15 @@ class ParamsOutTest extends Specification {
 
             process hola {
               output:
-              path "${x}_name" into channel1
-              path "${x}_${y}.fa" into channel2
-              path "simple.txt" into channel3
-              path "data/sub/dir/file:${x}.fa" into channel4
+              path "${x}_name" 
+              path "${x}_${y}.fa" 
+              path "simple.txt" 
+              path "data/sub/dir/file:${x}.fa" 
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -998,29 +781,25 @@ class ParamsOutTest extends Specification {
 
         out0.name == null
         out0.getFilePatterns(ctx,null) == ['hola_name']
-        out0.outChannel instanceof DataflowQueue
-        out0.outChannel == binding.channel1
+        out0.outChannel instanceof DataflowVariable
         out0.isDynamic()
         out0.isPathQualifier()
 
         out1.name == null
         out1.getFilePatterns(ctx,null) == ['hola_99.fa']
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.channel2
+        out1.outChannel instanceof DataflowVariable
         out1.isDynamic()
         out1.isPathQualifier()
 
         out2.name == null
         out2.getFilePatterns(ctx,null) == ['simple.txt']
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.channel3
+        out2.outChannel instanceof DataflowVariable
         !out2.isDynamic()
         out2.isPathQualifier()
 
         out3.name == null
         out3.getFilePatterns(ctx,null) == ['data/sub/dir/file:hola.fa']
-        out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.channel4
+        out3.outChannel instanceof DataflowVariable
         out3.isDynamic()
         out3.isPathQualifier()
     }
@@ -1033,12 +812,14 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               path "${x}_name", emit: aaa
-              path "${x}_${y}.fa", emit: bbb into channel2
-              path "simple.txt", emit: ccc into channel3
-              path "data/sub/dir/file:${x}.fa", emit: ddd into channel4
+              path "${x}_${y}.fa", emit: bbb 
+              path "simple.txt", emit: ccc 
+              path "data/sub/dir/file:${x}.fa", emit: ddd 
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -1062,43 +843,42 @@ class ParamsOutTest extends Specification {
 
         out1.name == null
         out1.getFilePatterns(ctx,null) == ['hola_99.fa']
-        out1.outChannel instanceof DataflowQueue
-        out1.outChannel == binding.channel2
+        out1.outChannel instanceof DataflowVariable
         out1.isDynamic()
         out1.isPathQualifier()
         out1.channelEmitName == 'bbb'
 
         out2.name == null
         out2.getFilePatterns(ctx,null) == ['simple.txt']
-        out2.outChannel instanceof DataflowQueue
-        out2.outChannel == binding.channel3
+        out2.outChannel instanceof DataflowVariable
         !out2.isDynamic()
         out2.isPathQualifier()
         out2.channelEmitName == 'ccc'
 
         out3.name == null
         out3.getFilePatterns(ctx,null) == ['data/sub/dir/file:hola.fa']
-        out3.outChannel instanceof DataflowQueue
-        out3.outChannel == binding.channel4
+        out3.outChannel instanceof DataflowVariable
         out3.isDynamic()
         out3.isPathQualifier()
         out3.channelEmitName == 'ddd'
     }
 
-    def 'test output path with set' () {
+    def 'test output path with tuple' () {
 
         given:
         def text = '''
 
             process hola {
               output:
-              tuple path(x) into channel1
-              tuple path(y) into channel1
-              tuple path("sample.fa") into channel2
-              tuple path("data/file:${q}.fa") into channel3
+              tuple path(x) 
+              tuple path(y) 
+              tuple path("sample.fa") 
+              tuple path("data/file:${q}.fa") 
 
               return ''
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -1151,7 +931,8 @@ class ParamsOutTest extends Specification {
                 separatorChar: '#',
                 glob: false,
                 optional: false,
-                includeInputs: false
+                includeInputs: false,
+                arity: '1'
                 
               path y, 
                 maxDepth:5,
@@ -1161,10 +942,13 @@ class ParamsOutTest extends Specification {
                 separatorChar: ':',
                 glob: true,
                 optional: true,
-                includeInputs: true
+                includeInputs: true,
+                arity: '0..*'
 
               return ''
             }
+            
+            workflow { foo() }
             '''
 
         when:
@@ -1181,6 +965,7 @@ class ParamsOutTest extends Specification {
         !out0.getGlob()
         !out0.getOptional()
         !out0.getIncludeInputs()
+        out0.getArity() == new ArityParam.Range(1, 1)
 
         and:
         out1.getMaxDepth() == 5
@@ -1191,6 +976,7 @@ class ParamsOutTest extends Specification {
         out1.getGlob()
         out1.getOptional()
         out1.getIncludeInputs()
+        out1.getArity() == new ArityParam.Range(0, Integer.MAX_VALUE)
     }
 
     def 'should set file options' () {
@@ -1202,6 +988,8 @@ class ParamsOutTest extends Specification {
 
               return ''
             }
+            
+            workflow { foo() }
             '''
 
         when:
@@ -1227,11 +1015,13 @@ class ParamsOutTest extends Specification {
             
             process hola {
               output:
-              val x into ch
-              tuple x, path(x) into ch
+              val x 
+              tuple val(x), path(x) 
 
               /command/
             }
+            
+            workflow { hola() }
             '''
         when:
 
@@ -1266,6 +1056,8 @@ class ParamsOutTest extends Specification {
               val x.y,   emit: ch4
               /return/
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -1307,6 +1099,8 @@ class ParamsOutTest extends Specification {
               stdout emit: ch3    
               /return/
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]
@@ -1340,6 +1134,8 @@ class ParamsOutTest extends Specification {
               path "${y}",   emit: ch2
               /return/
             }
+            
+            workflow { hola() }
             '''
 
         when:
@@ -1370,6 +1166,8 @@ class ParamsOutTest extends Specification {
 
               /return/
             }
+            
+            workflow { hola() }
             '''
 
         def binding = [:]

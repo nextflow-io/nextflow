@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +24,13 @@ import java.time.format.DateTimeFormatter
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.container.DockerBuilder
 import nextflow.exception.NodeTerminationException
+import nextflow.k8s.client.PodUnschedulableException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
+import nextflow.fusion.FusionAwareTask
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
@@ -147,7 +148,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected List<String> classicSubmitCli(TaskRun task) {
         final result = new ArrayList(BashWrapperBuilder.BASH)
-        result.add("${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}")
+        result.add("${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}".toString())
         return result
     }
 
@@ -220,6 +221,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( fixOwnership() )
             builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
+        if( SysEnv.containsKey('NXF_DEBUG') )
+            builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
+        
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
@@ -245,7 +249,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         if ( fusionEnabled() ) {
-            builder.withPrivileged(true)
+            if( fusionConfig().privileged() )
+                builder.withPrivileged(true)
+            else {
+                builder.withResourcesLimits(["nextflow.io/fuse": 1])
+            }
 
             final env = fusionLauncher().fusionEnv()
             for( Map.Entry<String,String> it : env )
@@ -274,12 +282,14 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         final resLabels = task.config.getResourceLabels()
         if( resLabels )
-            resLabels.putAll(resLabels)
-        result.app = 'nextflow'
-        result.runName = getRunName()
-        result.taskName = task.getName()
-        result.processName = task.getProcessor().getName()
-        result.sessionId = "uuid-${executor.getSession().uniqueId}" as String
+            result.putAll(resLabels)
+        result.'nextflow.io/app' = 'nextflow'
+        result.'nextflow.io/runName' = getRunName()
+        result.'nextflow.io/taskName' = task.getName()
+        result.'nextflow.io/processName' = task.getProcessor().getName()
+        result.'nextflow.io/sessionId' = "uuid-${executor.getSession().uniqueId}" as String
+        if( task.config.queue )
+            result.'nextflow.io/queue' = task.config.queue
         return result
     }
 
@@ -332,9 +342,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             return state
         } 
-        catch (NodeTerminationException e) {
+        catch (NodeTerminationException | PodUnschedulableException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
-            // attribute to return the NodeTerminationException error to the caller method
+            // attribute to return the error to the caller method
             final instant = Instant.now()
             final result = new HashMap(10)
             result.terminated = [startedAt:instant.toString(), finishedAt:instant.toString()]
@@ -395,9 +405,10 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
-            if( state.nodeTermination instanceof NodeTerminationException ) {
-                // kee track of the node termination error
-                task.error = (NodeTerminationException) state.nodeTermination
+            if( state.nodeTermination instanceof NodeTerminationException ||
+                state.nodeTermination instanceof PodUnschedulableException ) {
+                // keep track of the node termination error
+                task.error = (Throwable) state.nodeTermination
                 // mark the task as ABORTED since thr failure is caused by a node failure
                 task.aborted = true
             }
@@ -466,7 +477,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 client.podDelete(podName)
         }
         else {
-            log.debug "[K8s] Oops.. invalid delete action"
+            log.debug "[K8s] Invalid delete action"
         }
     }
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +44,10 @@ class SplitterEx {
         new FastqSplitter().options(opts) .target(self) .count()
     }
 
+    static long countJson(Path self, Map opts=EMPTY) {
+        new JsonSplitter().options(opts) .target(self) .count()
+    }
+
     static List splitText(Path self, Map opts=EMPTY) {
         new TextSplitter().options(opts) .target(self) .list()
     }
@@ -61,4 +64,7 @@ class SplitterEx {
         new CsvSplitter().options(opts) .target(self) .list()
     }
 
+    static List splitJson(Path self, Map opts=EMPTY) {
+        new JsonSplitter().options(opts) .target(self) .list()
+    }
 }

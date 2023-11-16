@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 process recurseDir {
 
     output:
-    file 'folder/**.fa' into result1
-    file 'folder/**/*.txt' into result2
+    file 'folder/**.fa'
+    file 'folder/**/*.txt' 
 
     """
     mkdir -p folder/x
@@ -32,9 +30,10 @@ process recurseDir {
     touch folder/y/file4.fa
     touch folder/y/file5.txt
     """
-
 }
 
-
-result1.flatten().subscribe { println "result1: " + it.name }
-result2.flatten().subscribe { println "result2: " + it.name }
+workflow {
+  recurseDir()
+  recurseDir.out[0] | flatten | view { "result1: " + it.name }
+  recurseDir.out[1] | flatten | view { "result2: " + it.name }
+}

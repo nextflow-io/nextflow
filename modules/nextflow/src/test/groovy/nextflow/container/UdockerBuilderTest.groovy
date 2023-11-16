@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,10 +47,10 @@ class UdockerBuilderTest extends Specification {
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
-        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD" '
-        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD" '
-        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD" '
-        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD" '
+        builder.makeVolumes([]).toString() == '-v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
 
     }
 
@@ -64,38 +63,38 @@ class UdockerBuilderTest extends Specification {
         expect:
         new UdockerBuilder('fedora')
                 .build()
-                .runCommandRaw == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .addEnv(env)
                 .build()
-                .runCommandRaw == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .setCpuset('1,2')
                 .build()
-                .runCommandRaw == 'udocker.py run --rm --cpuset-cpus=1,2 -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm --cpuset-cpus=1,2 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .addMount(db_file)
                 .addEnv(env)
                 .build()
-                .runCommandRaw == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('busybox')
                 .params(remove: false)
                 .build()
-                .runCommandRaw == 'udocker.py run -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
+                .runCommandRaw == 'udocker.py run -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "busybox:latest")'
 
         new UdockerBuilder('busybox')
                 .params(runOptions: '-x --zeta')
                 .build()
-                .runCommandRaw == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome -x --zeta $(udocker.py create "busybox:latest")'
+                .runCommandRaw == 'udocker.py run --rm -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome -x --zeta $(udocker.py create "busybox:latest")'
 
         new UdockerBuilder('busybox')
                 .params(entry: '/bin/blah')
                 .build()
-                .runCommandRaw == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
+                .runCommandRaw == 'udocker.py run --rm -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "busybox:latest")'
 
     }
 
@@ -108,14 +107,14 @@ class UdockerBuilderTest extends Specification {
         def result = builder.build().getRunCommand()
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
-            udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest")
+            udocker.py run --rm -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "ubuntu:latest")
             '''
             .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should append the run command line with launcher' () {
@@ -125,14 +124,14 @@ class UdockerBuilderTest extends Specification {
         def result = builder.build().getRunCommand('bwa --this --that')
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
-            udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") bwa --this --that
+            udocker.py run --rm -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "ubuntu:latest") bwa --this --that
             '''
                 .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
 
 
         when:
@@ -140,14 +139,14 @@ class UdockerBuilderTest extends Specification {
         result = builder.build().getRunCommand('bwa --this --that')
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
-            udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") /bin/bash -c "bwa --this --that"
+            udocker.py run --rm -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --bindhome $(udocker.py create "ubuntu:latest") /bin/bash -c "bwa --this --that"
             '''
                 .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
 }

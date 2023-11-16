@@ -18,6 +18,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -30,6 +31,7 @@ import nextflow.processor.TaskRun
  * @author Vanessa Sochat <sochat1@llnl.gov>
  */
 @Slf4j
+@CompileStatic
 class FluxExecutor extends AbstractGridExecutor {
 
     static final private Pattern SUBMIT_REGEX = ~/(ƒ.+)/
@@ -61,14 +63,19 @@ class FluxExecutor extends AbstractGridExecutor {
         List<String> result = ['flux', 'mini', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
         result << '--job-name="' + getJobNameFor(task) + '"'
-        result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
 
-        if( task.config.cpus > 1 ) {
-            result << '--cores-per-task=' + task.config.cpus.toString()
+        // Only write output to file if user doesn't want written entirely to terminal
+        Boolean terminalOutput = session.config.navigate('flux.terminalOutput') as Boolean
+        if ( !terminalOutput ) {
+            result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
+        }
+
+        if( task.config.getCpus() > 1 ) {
+            result << '--cores-per-task=' + task.config.getCpus().toString()
         }
 
         // Time limit in minutes when no units provided
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             result << '--time-limit=' + task.config.getTime().format('mm')
         }
 
@@ -89,7 +96,7 @@ class FluxExecutor extends AbstractGridExecutor {
             // Split by space
             for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
                 if ( item ) {
-                    result << item.stripIndent().trim()
+                    result << item.stripIndent(true).trim()
                 }
             }
         }
@@ -129,17 +136,18 @@ class FluxExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand(Object queue) {
 
         // Look at jobs from last 15 minutes
-        final result = ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"']
+        String command = 'flux jobs --suppress-header --format="{id.f58} {status_abbrev}" --since="-15m"'
 
         if( queue )
-            result << '--queue' << queue.toString()
+            command += ' --queue=' + queue.toString()
 
         final user = System.getProperty('user.name')
         if( user )
-            result << '--user' << user
+            command += ' --user=' + user
         else
             log.debug "Cannot retrieve current user"
 
+        final result = ['sh', '-c', command]
         return result
     }
 
@@ -147,7 +155,7 @@ class FluxExecutor extends AbstractGridExecutor {
      *  Maps Flux job status to nextflow status
      *  see https://flux-framework.readthedocs.io/projects/flux-core/en/latest/man1/flux-jobs.html#job-status
      */
-    static private Map STATUS_MAP = [
+    static private Map<String,QueueStatus> STATUS_MAP = [
             'D': QueueStatus.HOLD,      // (depend)
             'R': QueueStatus.RUNNING,   // (running)
             'S': QueueStatus.PENDING,   // (scheduled)
@@ -158,7 +166,7 @@ class FluxExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         text.eachLine { String line ->
             def cols = line.split(/\s+/)

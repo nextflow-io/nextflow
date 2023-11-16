@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 package nextflow.executor.local
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -25,9 +26,11 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
-import nextflow.executor.fusion.FusionHelper
+import nextflow.extension.FilesEx
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -130,6 +133,9 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     protected ProcessBuilder localProcessBuilder() {
         final cmd = new ArrayList<String>(BashWrapperBuilder.BASH) << wrapperFile.getName()
         log.debug "Launch cmd line: ${cmd.join(' ')}"
+        // make sure it's a posix file system
+        if( task.workDir.fileSystem != FileSystems.default )
+            throw new ProcessUnrecoverableException("Local executor requires the use of POSIX compatible file system — offending path: ${FilesEx.toUriString(task.workDir)}")
 
         // NOTE: make sure to redirect process output to a file otherwise
         // execution can hang when stdout/stderr is bigger than 64k
@@ -144,18 +150,22 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder fusionProcessBuilder() {
+        if( task.workDir.fileSystem == FileSystems.default )
+            throw new ProcessUnrecoverableException("Fusion file system requires the use of an object storage as work directory — offending path: ${task.workDir}")
+
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
-        final config = session.containerConfig
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
-        log.debug "Launch cmd line: ${cmd.join(' ')}"
+        final config = task.getContainerConfig()
+        final containerOpts = task.config.getContainerOptions()
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+        log.debug "Launch cmd line: ${cmd}"
 
         final logPath = Files.createTempFile('nf-task','.log')
 
         return new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logPath.toFile())
-                .command(cmd)
+                .command(List.of('sh','-c', cmd))
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {

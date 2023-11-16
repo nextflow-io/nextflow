@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -317,7 +316,7 @@ class FilesExTest extends Specification {
 
     }
 
-    def 'test moveTo (directory) ' () {
+    def 'test moveTo directory' () {
 
         given:
         def sourceFolder =  Files.createTempDirectory('folderToCopy')
@@ -1273,7 +1272,7 @@ class FilesExTest extends Specification {
         FilesEx.toPosixFilePermission(0644) == [OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ] as Set
     }
 
-    def 'should convert permissions to actal' () {
+    def 'should convert permissions to octal' () {
         expect:
         FilesEx.toOctalFileMode([] as Set) == 0
         and:

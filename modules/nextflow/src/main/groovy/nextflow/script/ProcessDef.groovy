@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -176,7 +175,9 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
         // set input channels
         for( int i=0; i<params.size(); i++ ) {
-            (declaredInputs[i] as BaseInParam).setFrom(params[i])
+            final inParam = (declaredInputs[i] as BaseInParam)
+            inParam.setFrom(params[i])
+            inParam.init()
         }
 
         // set output channels

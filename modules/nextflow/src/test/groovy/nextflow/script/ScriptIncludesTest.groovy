@@ -16,11 +16,10 @@
 
 package nextflow.script
 
-import nextflow.exception.MissingProcessException
-
 import java.nio.file.Files
 
 import nextflow.NextflowMeta
+import nextflow.exception.MissingProcessException
 import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -60,7 +59,7 @@ class ScriptIncludesTest extends Dsl2Spec {
                 "echo 'hello'"
         }
         workflow {
-            foo(Channel.from(new Foo(id: "hello_world")))
+            foo(Channel.of(new Foo(id: "hello_world")))
         }
         """
 
@@ -149,7 +148,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         result.val == 'dlrow olleh'
     }
 
-    def 'should allows duplicate functions' () {
+    def 'should allow duplicate functions' () {
         given:
         NextflowMeta.instance.strictMode(true)
         and:
@@ -185,7 +184,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         NextflowMeta.instance.strictMode(false)
     }
 
-    def 'should allows multiple signatures of function' () {
+    def 'should allow multiple signatures of function' () {
         given:
         NextflowMeta.instance.strictMode(true)
         and:
@@ -206,7 +205,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE" 
         workflow {
            emit:
-           channel.from( foo() ).flatMap { foo(it, it*2) } 
+           channel.fromList( foo() ).flatMap { foo(it, it*2) } 
         }
         """
 
@@ -222,7 +221,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         NextflowMeta.instance.strictMode(false)
     }
 
-    def 'should fails if no signatures of function founded' () {
+    def 'should fail if no signatures of function founded' () {
         given:
         NextflowMeta.instance.strictMode(true)
         and:
@@ -243,7 +242,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE" 
         workflow {
            emit:
-           channel.from( foo(1, 2, 3) ) 
+           channel.of( foo(1, 2, 3) ) 
         }
         """
 
@@ -464,7 +463,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         SCRIPT.text = """
         include { foo } from "$MODULE" 
-        hello_ch = Channel.from('world')
+        hello_ch = Channel.of('world')
         
         workflow {
             main: foo(hello_ch)
@@ -505,7 +504,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from './module.nf'
 
         workflow {
-          main: ch1 = Channel.from('world')
+          main: ch1 = Channel.of('world')
                 ch2 = Channel.value(['x', '/some/file'])
                 foo(ch1, ch2)
           emit: foo.out  
@@ -678,8 +677,9 @@ class ScriptIncludesTest extends Dsl2Spec {
         """
 
         when:
-        def runner = new TestScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = new MockScriptRunner()
+                .setScript(SCRIPT)
+                .execute()
         then:
         noExceptionThrown()
         result == 'Hello world!'
@@ -764,32 +764,6 @@ class ScriptIncludesTest extends Dsl2Spec {
         workflow {
             foo()
         }
-        """
-
-        when:
-        def runner = new MockScriptRunner()
-        runner.setScript(SCRIPT).execute()
-        then:
-        noExceptionThrown()
-    }
-
-    def 'should allows duplicate import' () {
-        given:
-        def folder = TestHelper.createInMemTempDir();
-        def MOD1 = folder.resolve('mod1.nf')
-        def MOD2 = folder.resolve('mod2.nf')
-        def SCRIPT = folder.resolve('main.nf')
-
-        MOD1.text = MOD2.text = '''     
-        process foo {
-            /hello/ 
-        }      
-        '''
-
-        SCRIPT.text = """ 
-        include { foo } from './mod1' 
-        include { foo } from './mod2' 
-        println 'x'
         """
 
         when:

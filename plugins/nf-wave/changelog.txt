@@ -1,0 +1,106 @@
+nf-wave changelog
+==================
+1.0.0 - 15 Oct 2023
+- Fix conda channels order [ci fast] [6672c6d7]
+- Bump nf-wave@1.0.0 [795849d7]
+
+0.14.0 - 10 Oct 2023
+- Add bioconda and seqera Conda default channels (#4359) [ff012dcd]
+- Improve Wave error handling [d47e8b07]
+- Improve Wave config validation [7d5a21b0]
+
+0.13.0 - 28 Sep 2023
+- Wave does not support 'null' container engine [f3eba3d7]
+- Default Conda basePackages to "conda-forge::procps-ng" [367af52f]
+- Add procps by default to Conda-based Wave builds [66b2d2d2]
+- Improve wave container name validation [73eb5a02]
+- Bump wave-utils@0.7.8 [d0c47d49]
+
+0.12.0 - 10 Sep 2023
+- Add support for Spack to Singularity builds [23c4ec1d]
+- Add inspect command (#4069) [090c31ce]
+- Add support for Wave native build for singularity [8a434893]
+- Fix Wave build when Conda package name is quoted [d19cb0b7]
+- Fix Wave build for Singularity files [a60ef72b]
+- Improve Wave handing of Conda envs [736ab9bb]
+- Deprecated Wave report feature [80c5cb27]
+- Bump groovy 3.0.19 [cb411208]
+
+0.11.2 - 17 Aug 2023
+- Use root user in Wave container based on micromamba (#4038) [ci fast] [a3a75ea2]
+- Add 429 http status code to Wave retriable errors [8eb5f305]
+
+0.11.1 - 5 Aug 2023
+- Improve Wave config logging [547fad62]
+- Increase Wave client max attempts [fe5dd497]
+- Enable use virtual threads in Wave client [dd32f80a]
+- Fix Wave disable flag [8579e7a4]
+
+0.11.0 - 22 Jul 2023
+- Add support legacy wave retry [ci fast] [73a1e7d4]
+- Add support for Wave container freeze [9a5903e6]
+- Add retry logic to wave image await [ci fast] [9fc1d3bd]
+- Add missing header to wave container await [ci fast] [d39866e6]
+- Allow disabling the Wave requirement when Fusion is enabled [9180d633]
+- Improve handling Wave server errors [84f7a61a]
+- Bump micromamba 1.4.9 [6307f9b5]
+- Remove default arch from wave request [ci fast] [f0e5c0c1]
+- Bump Groovy 3.0.18 [207eb535]
+
+0.10.0 - 14 Jun 2023
+- Add retry policy to Wave http client [1daebeef]
+- Add support for arch auto-detection to Wave [7b5fdaf0]
+- Add Wave containers reports (preview) [9d9e2758]
+- Add wave.httpClient.connectTimeout config option [dd999a3c]
+- Consolidate Wave retryPolicy options [7d7464fe]
+- Enhanced support for Spack + Wave (#3998) [63ac03b3]
+- Refactor Conda and Spack support for Wave to Java [36b9e226]
+- Minor change in Wave config [4da0442a]
+- Fix log typo [ci fast] [f6e4b9ba]
+
+0.9.0 - 15 Apr 2023
+- Add support for the Spack recipes to Wave build (#3636) [b03cbe70]
+- Update logging libraries [d7eae86e]
+- Bump micromamba:1.4.2 [334df1e0]
+- Bump fusion 2.2 [f1ebe29a]
+- Bump groovy 3.0.17 [cfe4ba56]
+
+0.8.2 - 15 Apr 2023
+- Security fixes [83e8fd6a]
+
+0.8.1 - 1 Apr 2023
+- Bump micromamba 1.4.1 [ec1439e6]
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
+0.8.0 - 19 Mar 2023
+- Add workflowId to wave request [025ff9d0]
+- Add basePackages option to Wave config [7e827810]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
+0.7.0 - 14 Jan 2022
+- Improve container native executor configuration [03126371]
+- Prevent redirection on Wave client [124cfb3e]
+- Refactor Fusion package [52f4c5d5]
+- Update groovy deps [6f3ed6e8]
+
+0.6.3 - 13 Dic 2022
+- Fix Wave layer invalid checksum due to not closed stream [e188bbf9]
+- Fix Fusion test [2245a1c7]
+- Add support for Fusion ARM64 client [ci fast] [d073c538]
+- Improve Wave config error reporting [ci fast] [ae502668]
+- Bump fusion version URLs 0.6 [a160a8b1]
+- Bump nf-wave@0.6.3 [0cb6ca6a]
+
+0.6.2 - 8 Dec 2022
+- Add support for Fusion ARM64 client [d073c538]
+- Improve Wave config error reporting [ae502668]
+- Bump fusion version URLs 0.6 [b119a47e]
+
+0.6.1 - 29 Nov 2022
+- Add support for custom conda channels (#3435) [0884e80e]
+
+0.6.0 - 23 Nov 2022
+- Add support for Wave containerPlatform [10d56ca1]
+- Add tower endpoint to wave [b725ddc4]
+- Bump micromamba@1.0.0 [c7fd5d26]
+- Bump micromamba:0.27.0 [904c9409]

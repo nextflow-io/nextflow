@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package nextflow.executor.local
 
 import java.nio.file.Path
 
-import nextflow.Session
+import nextflow.Global
 import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
 import nextflow.processor.TaskBean
@@ -54,20 +54,19 @@ class LocalTaskHandlerTest extends Specification {
 
     def 'should create fusion process builder' () {
         given:
+        Global.config = [:]
         def WORK_DIR = XPath.get('http://some/work/dir')
         and:
-        def session = Mock(Session) {
-            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
-        }
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
         and:
         def task = Mock(TaskRun) {
             getContainer() >> 'ubuntu:latest'
             getWorkDir() >> WORK_DIR
             getConfig() >> Mock(TaskConfig)
+            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
             toTaskBean() >> bean
         }
-        def executor = Mock(LocalExecutor) { getSession() >> session }
+        def executor = Mock(LocalExecutor) 
         and:
         def handler = Spy(new LocalTaskHandler(task, executor))
 
@@ -76,7 +75,7 @@ class LocalTaskHandlerTest extends Specification {
         then:
         handler.fusionEnabled() >> true
         and:
-        builder.command() == ['sh','-c','docker run -i -e "NXF_FUSION_WORK=/fusion/http/some/work/dir" -e "NXF_FUSION_BUCKETS=http://some" --rm --privileged ubuntu:latest bash -o pipefail -c \'trap "{ ret=$?; cp .command.log /fusion/http/some/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/some/work/dir/.command.run 2>&1 | tee .command.log\'']
+        builder.command() == ['sh','-c','docker run -i -e "FUSION_WORK=/fusion/http/some/work/dir" -e "FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)" --rm --privileged ubuntu:latest /usr/bin/fusion bash \'/fusion/http/some/work/dir/.command.run\'']
         builder.directory() == null
         builder.redirectErrorStream()
         builder.redirectOutput().file()

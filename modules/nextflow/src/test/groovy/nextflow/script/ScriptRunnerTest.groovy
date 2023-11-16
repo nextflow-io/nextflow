@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,47 +16,57 @@
 
 package nextflow.script
 
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Session
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.config.ConfigParser
+import nextflow.exception.AbortRunException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import spock.lang.Ignore
-import spock.lang.Specification
 import spock.lang.Timeout
-import test.TestParser
+import test.Dsl2Spec
+import test.MockScriptRunner
+import test.MockSession
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(5)
-class ScriptRunnerTest extends Specification {
+@Timeout(10)
+class ScriptRunnerTest extends Dsl2Spec {
 
     def 'test process' () {
 
-        setup:
-        def runner = new TestScriptRunner([process:[executor:'nope']])
-
+        given:
+        def config = [process:[executor:'nope']]
         /*
          * Test a task with a very simple body.
          * For testing purposes the processor just return the script itself as result
          */
-        when:
+        and:
         def script =
             """
             process sayHello  {
+              output:
+                stdout
+              script:
                 "echo Hello world"
+            }
+            
+            workflow {
+              main: sayHello()
+              emit: sayHello.out
             }
             """
 
-        runner.setScript(script).execute()
+        when:
+        def result = new MockScriptRunner(config)
+                .setScript(script)
+                .execute()
 
         // when no outputs are specified, the 'stdout' is the default output
         then:
-        runner.result instanceof DataflowQueue
-        runner.result.val == "echo Hello world"
+        result instanceof DataflowVariable
+        result.val == "echo Hello world"
 
     }
 
@@ -67,201 +76,231 @@ class ScriptRunnerTest extends Specification {
         /*
          * test that the *machineType* attribute is visible in the taskConfig object
          */
-        when:
-        def runner = new TestScriptRunner( process: [executor:'nope', machineType:'alpha'] )
+        given:
+        def config = [process: [executor:'nope', machineType:'alpha']]
+        and:
         def script =
             '''
             process simpleTask  {
                 input:
-                val x from 1
+                val x 
                 output:
-                stdout into result
+                stdout 
 
                 """echo $x"""
             }
 
+            workflow {
+              main: simpleTask(1)
+              emit: simpleTask.out
+            }
             '''
-        runner.setScript(script).execute()
+        when:
+        new MockScriptRunner(config)
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
         then:
-        runner.getScriptObj().getTaskProcessor().name == 'simpleTask'
-        runner.getScriptObj().getTaskProcessor().config.machineType == 'alpha'
+        processor.name == 'simpleTask'
+        processor.config.machineType == 'alpha'
     }
 
 
     def 'test process with args' () {
-        setup:
-        def runner = new TestScriptRunner( executor: 'nope' )
-
-        when:
+        given:
         def script =
             '''
-            process task2  {
+            process simpleTask  {
                 input:
-                val x from 1
-                val y from ([3])
+                val x
+                val y
                 output:
-                stdout result
+                stdout
 
                 """echo $x - $y"""
             }
 
+            workflow {
+              main: simpleTask(1, channel.of(3))
+              emit: simpleTask.out
+            }
             '''
-        runner.setScript(script).execute()
+
+        when:
+        def result = new MockScriptRunner().setScript(script).execute()
 
         then:
-        runner.getResult().val == 'echo 1 - 3'
-        runner.getScriptObj().getTaskProcessor().getName() == 'task2'
-        runner.getScriptObj().getTaskProcessor().config.getInputs()[0].inChannel.getVal() == 1
-        runner.getScriptObj().getTaskProcessor().config.getInputs()[1].inChannel instanceof DataflowQueue
-        runner.getScriptObj().getTaskProcessor().config.getOutputs()[0].outChannel instanceof DataflowWriteChannel
+        result.val == 'echo 1 - 3'
+
     }
 
 
     def 'test process echo' () {
 
-        setup:
-        def runner = new TestScriptRunner( executor: 'nope' )
-
-        when:
+        given:
         def script =
             '''
-            process test  {
+            process simpleTask  {
                 input:
-                val x from 1
+                val x 
                 output:
-                stdout result
+                stdout
 
                 "echo $x"
             }
+            
+            workflow {
+              main: simpleTask(1)
+              emit: simpleTask.out
+            }
             '''
-        runner.setScript(script).execute()
+
+        when:
+        def runner = new MockScriptRunner().setScript(script)
+        runner.execute()
 
         then:
-        runner.getResult().val == 'echo 1'
-        runner.scriptObj.taskProcessor.name == 'test'
+        runner.result.val == 'echo 1'
+        TaskProcessor.currentProcessor().name == 'simpleTask'
 
     }
 
 
     def 'test process variables' () {
 
-        setup:
-        def runner = new TestScriptRunner( executor: 'nope' )
-
+        given:
         def script = '''
             X = 1
-            Y = 2
-            process test {
+            Y = 200
+            process simpleTask {
                 input:
                 val Y
+                output:
+                stdout
 
                 "$X-$Y-3"
             }
 
+            workflow {
+              main: simpleTask(2)
+              emit: simpleTask.out
+            }
             '''
 
-        expect:
-        runner.setScript(script).execute().val == '1-2-3'
+        when:
+        def runner = new MockScriptRunner().setScript(script)
+        def result = runner.execute()
+        then:
+        result.val == '1-2-3'
 
     }
 
     def 'test process variables 2' () {
 
-        setup:
-        def runner = new TestScriptRunner( executor: 'nope' )
-
+        given:
         def script = '''
             X = 1
-            Y = 2
-            process test {
+            Y = 200
+            process simpleTask {
                 input:
                 val Y
-
-                exec:
+                output:
+                stdout
+                script:
                 def Z = 3
                 "$X-$Y-$Z"
             }
 
+            workflow {
+              main: simpleTask(2)
+              emit: simpleTask.out
+            }
             '''
 
-        expect:
-        runner.setScript(script).execute().val == '1-2-3'
+        when:
+        def runner = new MockScriptRunner().setScript(script)
+        def result = runner.execute()
+        then:
+        result.val == '1-2-3'
 
     }
 
-    //Not understand why if we include new tests in FunctionalTests.groovy this test fails so I'll ignore it by the moment
-    @Ignore
     def 'test process missing variable' () {
 
-        setup:
-        def session = new Session( executor: 'nope' ) {
-            @Override
-            void abort(Throwable cause) {
-                forceTermination()
-            }
-        }
-
-        def runner = new TestScriptRunner(session)
-
+        given:
         def script = '''
-            process test {
+            process simpleTask {
                 script:
                 "echo $HELLO"
             }
 
+            workflow { simpleTask() }
             '''
 
         when:
-        runner.setScript(script).execute()
+        def config = [process:[executor: 'nope']]
+        def runner = new MockScriptRunner(config)
+        runner.setScript(script) .execute()
+
         then:
-        session.fault.error instanceof ProcessUnrecoverableException
-        session.fault.error.cause instanceof MissingPropertyException
-        session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
-        session.fault.report =~ /No such variable: HELLO -- .*/
+        thrown(AbortRunException)
+        and:
+        runner.session.fault.error instanceof ProcessUnrecoverableException
+        runner.session.fault.error.cause instanceof MissingPropertyException
+        runner.session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
+        // if this fails, likely there's something wrong in the LoggerHelper#getErrorLine method
+        runner.session.fault.report =~ /No such variable: HELLO -- .*/
 
     }
 
 
     def 'test process fallback variable' () {
-
-        setup:
-        def runner = new TestScriptRunner( executor: 'nope', env: [HELLO: 'Hello world!'] )
-
+        given:
         def script = '''
-            process test {
+            process simpleTask {
+                output: val(x)
                 exec:
-                "$HELLO"
+                x = "$HELLO"
             }
 
+            workflow { 
+              main: simpleTask()
+              emit: simpleTask.out
+            }
             '''
+        and:
+        def config = [executor: 'nope', env: [HELLO: 'Hello world!']]
 
         expect:
-        runner.setScript(script).execute().val == 'Hello world!'
+        new MockScriptRunner(config).setScript(script).execute().val == 'Hello world!'
 
     }
 
 
-
     def 'test process output file' () {
-
-
-        setup:
-        def runner = new TestScriptRunner( executor: 'nope' )
-
+        given:
         def script = '''
             X = file('filename')
 
-            process test {
+            process simpleTask {
                 input:
                 file X
+                output:
+                stdout
 
                 "cat $X"
             }
 
+            workflow { 
+                main: simpleTask(X)
+                emit: simpleTask.out 
+            }
             '''
+        and:
+        def config = [executor: 'nope']
 
         expect:
-        runner.setScript(script).execute().val == 'cat filename'
+        new MockScriptRunner(config).setScript(script).execute().val == 'cat filename'
 
     }
 
@@ -284,17 +323,21 @@ class ScriptRunnerTest extends Specification {
               penv 1
               cpus 2
 
-              return ''
+              'echo hola'
             }
+            
+            workflow { hola() }
             '''
 
-        def session = new Session( new ConfigParser().parse(config))
+        and:
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        def process = new TestParser(session).parseAndGetProcess(script)
+        new MockScriptRunner(session).setScript(script).execute()
+        def process = TaskProcessor.currentProcessor()
 
         then:
-        process.config instanceof ProcessConfig
+        TaskProcessor.currentProcessor().config instanceof ProcessConfig
         process.config.penv == 1
         process.config.cpus == '222'  // !! this value is overridden by the one in the config file
         process.config.memory == '333'
@@ -328,14 +371,18 @@ class ScriptRunnerTest extends Specification {
               penv 1
               cpus 2
 
-              return ''
+              'echo hola'
             }
+            
+            workflow { hola() }
             '''
 
-        def session = new Session( new ConfigParser().parse(config))
+        and:
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        def process = new TestParser(session).parseAndGetProcess(script)
+        new MockScriptRunner(session).setScript(script).execute()
+        def process = TaskProcessor.currentProcessor()
 
         then:
         process.config instanceof ProcessConfig
@@ -348,7 +395,7 @@ class ScriptRunnerTest extends Specification {
 
     def 'test module config'() {
 
-        setup:
+        given:
         // -- this represent the configuration file
         def config = '''
             executor = 'nope'
@@ -361,13 +408,16 @@ class ScriptRunnerTest extends Specification {
               module 'c/3'
 
               'echo 1'
-            }               
+            }
+            
+            workflow { hola() }               
             '''
-
-        def session = new Session(new ConfigParser().parse(config))
+        and:
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        def process = new TestParser(session).parseAndGetProcess(script)
+        new MockScriptRunner(session).setScript(script).execute()
+        def process = TaskProcessor.currentProcessor()
 
         then:
         process.config instanceof ProcessConfig
@@ -377,8 +427,7 @@ class ScriptRunnerTest extends Specification {
     }
 
     def 'test module config 2'() {
-
-        setup:
+        given:
         /*
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
@@ -397,12 +446,16 @@ class ScriptRunnerTest extends Specification {
 
               'echo 1'
             }
+            
+            workflow { hola() }
             '''
 
-        def session = new Session(new ConfigParser().parse(config))
+        and:
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        def process = new TestParser(session).parseAndGetProcess(script)
+        new MockScriptRunner(session).setScript(script).execute()
+        def process = TaskProcessor.currentProcessor()
 
         then:
         process.config instanceof ProcessConfig
@@ -412,8 +465,7 @@ class ScriptRunnerTest extends Specification {
     }
 
     def 'test module config 3'() {
-
-        setup:
+        given:
         /*
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
@@ -426,12 +478,15 @@ class ScriptRunnerTest extends Specification {
             process hola {
               'echo 1'
             }
+            
+            workflow { hola() }
             '''
-
-        def session = new Session(new ConfigParser().parse(config))
+        and:
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        def process = new TestParser(session).parseAndGetProcess(script)
+        new MockScriptRunner(session).setScript(script).execute()
+        def process = TaskProcessor.currentProcessor()
 
         then:
         process.config instanceof ProcessConfig
@@ -443,10 +498,9 @@ class ScriptRunnerTest extends Specification {
 
 
     def 'test resource'() {
-
-        setup:
+        given:
         // -- this represent the configuration file
-        def configText = '''
+        def config = '''
             executor = 'nope'
             process {
               queue = 'short'
@@ -459,6 +513,7 @@ class ScriptRunnerTest extends Specification {
 
         def script = '''
             process hola {
+              output: stdout
               """
               queue: ${task.queue}
               cpus: ${task.cpus}
@@ -468,14 +523,27 @@ class ScriptRunnerTest extends Specification {
               memory: ${task.memory}
               """
             }
+            
+            workflow { 
+              main: hola() 
+              emit: hola.out
+            }
             '''
-
-        def config = new ConfigParser().parse(configText)
-
+        and:
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        def session = new Session(config)
-        def process = new TestParser(session).parseAndGetProcess(script)
+        def result = new MockScriptRunner(session)
+                .setScript(script)
+                .execute()
+                .getVal()
+                .toString()
+                .stripIndent()
+                .trim()
+                .readLines()
+        and:
+        def process = TaskProcessor.currentProcessor()
+
         then:
         process.config instanceof ProcessConfig
         process.config.queue == 'short'
@@ -484,17 +552,7 @@ class ScriptRunnerTest extends Specification {
         process.config.memory == '10G'
         process.config.time == '6 hour'
 
-        when:
-        def result = new TestScriptRunner(config)
-                    .setScript(script)
-                    .execute()
-                    .getVal()
-                    .toString()
-                    .stripIndent()
-                    .trim()
-                    .readLines()
-
-        then:
+        and:
         result[0] == 'queue: short'
         result[1] == 'cpus: 2'
         result[2] == 'time: 6h'
@@ -509,21 +567,23 @@ class ScriptRunnerTest extends Specification {
         setup:
         def script = '''
             process hola {
+              output: stdout
               """
               cpus: ${task.cpus}
               """
             }
+            
+            workflow { 
+              main: hola()
+              emit: hola.out 
+            }
             '''
 
-        when:
-        def session = new Session()
-        def process = new TestParser(session).parseAndGetProcess(script)
-        then:
-        process.config instanceof ProcessConfig
-        process.config.cpus == null
+        and:
+        def config = [process: [executor:'nope']]
 
         when:
-        def result = new TestScriptRunner(process: [executor:'nope'])
+        def result = new MockScriptRunner(config)
                 .setScript(script)
                 .execute()
                 .getVal()
@@ -531,8 +591,14 @@ class ScriptRunnerTest extends Specification {
                 .stripIndent()
                 .trim()
                 .readLines()
+        and:
+        def process = TaskProcessor.currentProcessor()
 
         then:
+        process.config instanceof ProcessConfig
+        process.config.cpus == null
+
+        and:
         result[0] == 'cpus: 1'
 
     }
@@ -552,8 +618,7 @@ class ScriptRunnerTest extends Specification {
            '''
 
         when:
-        def runner = new TestScriptRunner([executor:'nope'])
-        def result = (Map)runner.setScript(script).execute()
+        def result = new MockScriptRunner().setScript(script).execute()
         then:
         result.mem1 instanceof MemoryUnit
         result.mem1 == MemoryUnit.of('1 GB')
@@ -568,7 +633,7 @@ class ScriptRunnerTest extends Specification {
 
     def 'should define directive with a negative value' () {
 
-        when:
+        given:
         def script = '''
             X = 10
             process taskHello {
@@ -576,38 +641,17 @@ class ScriptRunnerTest extends Specification {
                 maxErrors -X
                 'echo hello'
             }
+            
+            workflow { taskHello() }
             '''
-        def runner = new TestScriptRunner([executor:'nope'])
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
+
+        when:
+        def result = new MockScriptRunner().setScript(script).execute()
+        def processor = TaskProcessor.currentProcessor()
 
         then:
         processor.config.maxRetries == -1
         processor.config.maxErrors == -10
-
-    }
-
-
-    def 'should not thrown duplicate channel exception' () {
-
-        when:
-        def script = '''
-
-            process foo {
-              output: file '*.pdf'
-              'touch x.pdf'
-            }
-
-            process bar {
-              output: file '*.pdf'
-              'touch x.pdf'
-            }
-                        '''
-        def runner = new TestScriptRunner([executor:'nope'])
-        runner.setScript(script).execute()
-
-        then:
-        noExceptionThrown()
 
     }
 
@@ -625,27 +669,30 @@ class ScriptRunnerTest extends Specification {
 
         def script = '''
             process hola {
-
+                output:
+                  stdout
                 stub:
                  /echo foo/
-                 
                 script:
                   /echo bar/
+            }
+            
+            workflow { 
+              main: hola() 
+              emit: hola.out 
             }
             '''
 
         and:
-        def session = new Session(new ConfigParser().parse(config))
-        and:
-        def runner = new TestScriptRunner(session).setScript(script)
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        runner.execute()
+        def result = new MockScriptRunner(session).setScript(script).execute()
 
         // when no outputs are specified, the 'stdout' is the default output
         then:
-        runner.result instanceof DataflowQueue
-        runner.result.val == "echo foo"
+        result instanceof DataflowVariable
+        result.val == "echo foo"
 
     }
 
@@ -662,28 +709,27 @@ class ScriptRunnerTest extends Specification {
 
         def script = '''
             process hola {
-                 
+                output:
+                  stdout
                 script:
                   /echo bar/
- 
                 stub:
                  /echo foo/
- 
             }
+            
+            workflow { main: hola(); emit: hola.out }
             '''
 
         and:
-        def session = new Session(new ConfigParser().parse(config))
-        and:
-        def runner = new TestScriptRunner(session).setScript(script)
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        runner.execute()
+        def result = new MockScriptRunner(session).setScript(script).execute()
 
         // when no outputs are specified, the 'stdout' is the default output
         then:
-        runner.result instanceof DataflowQueue
-        runner.result.val == "echo foo"
+        result instanceof DataflowVariable
+        result.val == "echo foo"
 
     }
 
@@ -700,25 +746,28 @@ class ScriptRunnerTest extends Specification {
 
         def script = '''
             process hola {
-                 
+                output:
+                 stdout
                 stub:
                  /echo foo/
- 
+            }
+            
+            workflow { 
+              main: hola() 
+              emit: hola.out 
             }
             '''
 
         and:
-        def session = new Session(new ConfigParser().parse(config))
-        and:
-        def runner = new TestScriptRunner(session).setScript(script)
+        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        runner.execute()
+        def result = new MockScriptRunner(session).setScript(script).execute()
 
         // when no outputs are specified, the 'stdout' is the default output
         then:
-        runner.result instanceof DataflowQueue
-        runner.result.val == "echo foo"
+        result instanceof DataflowVariable
+        result.val == "echo foo"
 
     }
 }

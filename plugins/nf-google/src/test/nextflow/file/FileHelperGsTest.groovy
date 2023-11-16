@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +22,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.SysEnv
 import spock.lang.Ignore
 import spock.lang.Specification
 
 import nextflow.Global
 import nextflow.Session
+import spock.lang.Unroll
 
 /**
  *
@@ -97,5 +98,34 @@ class FileHelperGsTest extends Specification {
         Files.copy(foo, bar)
         then:
         thrown(FileAlreadyExistsException)
+    }
+
+    @Unroll
+    def 'should convert to canonical path with base' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
+        and:
+        SysEnv.push(NXF_FILE_ROOT: 'gs://host.com/work')
+
+        expect:
+        FileHelper.toCanonicalPath(VALUE) == (EXPECTED ? FileHelper.asPath(EXPECTED) : null)
+
+        cleanup:
+        SysEnv.pop()
+        Global.session = null
+
+        where:
+        VALUE                       | EXPECTED
+        null                        | null
+        'file.txt'                  | 'gs://host.com/work/file.txt'
+        Path.of('file.txt')         | 'gs://host.com/work/file.txt'
+        and:
+        './file.txt'                | 'gs://host.com/work/file.txt'
+        '.'                         | 'gs://host.com/work'
+        './'                        | 'gs://host.com/work'
+        '../file.txt'               | 'gs://host.com/file.txt'
+        and:
+        '/file.txt'                 | '/file.txt'
+        Path.of('/file.txt')        | '/file.txt'
     }
 }

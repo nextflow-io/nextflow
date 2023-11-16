@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,7 @@ package nextflow.container
 
 import java.nio.file.Path
 
+import nextflow.executor.BashWrapperBuilder
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.PathTrie
@@ -43,6 +43,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new ApptainerBuilder(containerImage)
         if( engine == 'udocker' )
             return new UdockerBuilder(containerImage)
+        if( engine == 'sarus' )
+            return new SarusBuilder(containerImage)
         if( engine == 'shifter' )
             return new ShifterBuilder(containerImage)
         if( engine == 'charliecloud' )
@@ -85,12 +87,14 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     String getImage() { image }
 
     V addRunOptions(String str) {
-        runOptions.add(str)
+        if( str )
+            runOptions.add(str)
         return (V)this
     }
 
     V addEngineOptions(String str) {
-        engineOptions.add(str)
+        if( str )
+            engineOptions.add(str)
         return (V)this
     }
 
@@ -156,7 +160,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return run + ' ' + launcher
     }
 
-    String getKillCommand() { return '[[ "$pid" ]] && kill $pid 2>/dev/null' }
+    String getKillCommand() { BashWrapperBuilder.KILL_CMD }
 
     String getRemoveCommand() { return null }
 
@@ -242,7 +246,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             result << '-e "' << env << '"'
         }
         else if( env instanceof String ) {
-            result << "\${$env:+-e \"$env=\$$env\"}"
+            result << "-e \"$env\""
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
@@ -291,7 +295,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
         // -- append by default the current path -- this is needed when `scratch` is set to true
         if( mountWorkDir ) {
-            result << composeVolumePath('$PWD')
+            result << composeVolumePath('$NXF_TASK_WORKDIR')
             result << ' '
         }
 

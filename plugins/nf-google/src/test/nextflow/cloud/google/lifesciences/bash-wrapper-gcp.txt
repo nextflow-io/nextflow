@@ -41,7 +41,9 @@ nxf_parallel() {
     while ((i<${#cmd[@]})); do
         local copy=()
         for x in "${pid[@]}"; do
-          [[ -e /proc/$x ]] && copy+=($x)
+          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+          # see https://github.com/nextflow-io/nextflow/pull/4050
+          [[ -e /proc/$x ]] && copy+=($x) || wait $x
         done
         pid=("${copy[@]}")
 
@@ -155,13 +157,18 @@ nxf_fs_rsync() {
   rsync -rRl $1 $2
 }
 
+nxf_fs_rclone() {
+  rclone copyto $1 $2/$1
+}
+
+nxf_fs_fcp() {
+  fcp $1 $2/$1
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
-    printf $exit_status > {{folder}}/.exitcode
+    printf -- $exit_status > {{folder}}/.exitcode
     set +u
-    [[ "$tee1" ]] && kill $tee1 2>/dev/null
-    [[ "$tee2" ]] && kill $tee2 2>/dev/null
-    [[ "$ctmp" ]] && rm -rf $ctmp || true
     exit $exit_status
 }
 
@@ -202,19 +209,12 @@ nxf_main() {
     set +u
     set -u
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
 
     set +e
-    ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
-    local cout=$ctmp/.command.out; mkfifo $cout
-    local cerr=$ctmp/.command.err; mkfifo $cerr
-    tee .command.out < $cout &
-    tee1=$!
-    tee .command.err < $cerr >&2 &
-    tee2=$!
-    ( nxf_launch ) >$cout 2>$cerr &
+    (set -o pipefail; (nxf_launch | tee .command.out) 3>&1 1>&2 2>&3 | tee .command.err) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    wait $tee1 $tee2
 }
 
 $NXF_ENTRY

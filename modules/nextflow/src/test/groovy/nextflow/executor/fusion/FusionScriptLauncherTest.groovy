@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,9 @@ package nextflow.executor.fusion
 import java.nio.file.Path
 
 import nextflow.Global
-import nextflow.SysEnv
+import nextflow.Session
 import nextflow.file.http.XPath
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
@@ -32,6 +33,8 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get container mount' () {
         given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        and:
         def fusion = new FusionScriptLauncher(scheme: 'http')
 
         when:
@@ -49,84 +52,52 @@ class FusionScriptLauncherTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
-        expect:
-        fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
-
     }
 
     def 'should get fusion env' () {
         given:
+        Global.config = [:]
+        and:
         def fusion = new FusionScriptLauncher(
                 scheme: 'http',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
-        fusion.fusionEnv() == [NXF_FUSION_BUCKETS: 'http://foo',
-                               NXF_FUSION_WORK: '/fusion/http/foo/work']
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+        ]
     }
 
-    def 'should get fusion env with s3 endpoint' () {
+    def 'should get fusion logs env' () {
         given:
-        SysEnv.push([AWS_S3_ENDPOINT: 'http://foo.com'])
+        Global.config = [fusion: [logLevel:'debug', logOutput:'stdout', tags: false]]
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 'http',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
-        fusion.fusionEnv() == [AWS_S3_ENDPOINT: 'http://foo.com',
-                               NXF_FUSION_BUCKETS: 'http://foo',
-                               NXF_FUSION_WORK: '/fusion/http/foo/work']
-
-        cleanup:
-        SysEnv.pop()
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_LOG_LEVEL: 'debug',
+                FUSION_LOG_OUTPUT: 'stdout'
+        ]
     }
 
-    def 'should get fusion env with aws credentials' () {
+    def 'should get fusion with custom tags' () {
         given:
-        SysEnv.push([AWS_ACCESS_KEY_ID: 'xxx', AWS_SECRET_ACCESS_KEY: 'zzz'])
-        Global.config = [fusion: [exportAwsAccessKeys: true]]
+        Global.config = [fusion: [tags: 'custom-tags-pattern-here']]
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 'http',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
-        fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'xxx',
-                               AWS_SECRET_ACCESS_KEY: 'zzz',
-                               NXF_FUSION_BUCKETS: 'http://foo',
-                               NXF_FUSION_WORK: '/fusion/http/foo/work']
-
-        cleanup:
-        Global.config = null
-        SysEnv.pop()
-    }
-
-    def 'should get fusion env with aws credentials in nextflow config' () {
-        given:
-        SysEnv.push([:])
-        and:
-        def CONFIG = [fusion: [exportAwsAccessKeys: true], aws: [accessKey: 'k1', secretKey: 's1', client: [endpoint: 'http://minio.com']]]
-        Global.config = CONFIG
-        and:
-        def fusion = new FusionScriptLauncher(
-                scheme: 'http',
-                buckets: ['foo'] as Set,
-                remoteWorkDir: XPath.get('http://foo/work'))
-
-        expect:
-        fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'k1',
-                               AWS_SECRET_ACCESS_KEY: 's1',
-                               AWS_S3_ENDPOINT: 'http://minio.com',
-                               NXF_FUSION_BUCKETS: 'http://foo',
-                               NXF_FUSION_WORK: '/fusion/http/foo/work']
-
-        cleanup:
-        Global.config = null
-        SysEnv.pop()
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_TAGS: 'custom-tags-pattern-here'
+        ]
     }
 
     def 'should get header script' () {

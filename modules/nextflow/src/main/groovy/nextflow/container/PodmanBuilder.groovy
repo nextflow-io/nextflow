@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +39,10 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
     private String mountFlags0
 
+    private String device
+
+    private String capAdd
+    
     PodmanBuilder( String name ) {
         this.image = name
     }
@@ -75,6 +78,12 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( params.containsKey('privileged') )
             this.privileged = params.privileged?.toString() == 'true'
 
+        if( params.containsKey('device') )
+            this.device = params.device
+
+        if( params.containsKey('capAdd') )
+            this.capAdd = params.capAdd
+
         return this
     }
 
@@ -103,7 +112,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << '-w "$PWD" '
+        result << '-w "$NXF_TASK_WORKDIR" '
 
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '
@@ -113,6 +122,12 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( privileged )
             result << '--privileged '
+
+        if( device )
+            result << '--device ' << device << ' '
+
+        if( capAdd )
+            result << '--cap-add ' << capAdd << ' '
 
         if( cpus ) {
             result << "--cpu-shares ${cpus * 1024} "
@@ -141,9 +156,9 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         }
 
         if( kill )  {
-            killCommand = 'podman kill '
+            killCommand = 'podman stop '
             // if `kill` is a string it is interpreted as a the kill signal
-            if( kill instanceof String ) killCommand += "-s $kill "
+            if( kill instanceof String ) killCommand = "podman kill -s $kill "
             killCommand += name
         }
 

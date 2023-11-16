@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.Priority
 
 /**
  * Implements the default cache factory
@@ -30,6 +31,7 @@ import nextflow.exception.AbortOperationException
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Priority(0)
 class DefaultCacheFactory extends CacheFactory {
 
     @Override

@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 /*
- * Defines pipeline parameters in order to specify the refence genomes
+ * Defines pipeline parameters in order to specify the reference genomes
  * and read pairs by using the command line options
  */
 params.reads = "$baseDir/data/ggal/*_{1,2}.fq"

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +18,9 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
 
+import com.amazonaws.services.s3.model.CannedAccessControlList
 import nextflow.Session
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.ProcessUnrecoverableException
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -36,17 +37,17 @@ class AwsOptionsTest extends Specification {
         AwsOptions opts
 
         when:
-        opts = new AwsOptions()
+        opts = new AwsOptions(awsConfig: new AwsConfig([:]))
         then:
         opts.awsCli == 'aws'
 
         when:
-        opts = new AwsOptions(cliPath: '/foo/bin/aws')
+        opts = new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/bin/aws']))
         then:
         opts.awsCli == '/foo/bin/aws'
 
         when:
-        opts = new AwsOptions(cliPath: '/foo/bin/aws', region: 'eu-west-1')
+        opts = new AwsOptions(awsConfig: new AwsConfig(region: 'eu-west-1', batch: [cliPath: '/foo/bin/aws']))
         then:
         opts.awsCli == '/foo/bin/aws --region eu-west-1'
     }
@@ -59,7 +60,7 @@ class AwsOptionsTest extends Specification {
         AwsOptions opts
 
         when:
-        opts = new AwsOptions()
+        opts = new AwsOptions(awsConfig: new AwsConfig([:]))
         then:
         opts.maxParallelTransfers == AwsOptions.MAX_TRANSFER
 
@@ -76,15 +77,15 @@ class AwsOptionsTest extends Specification {
             getConfig() >> [aws:
                                 [
                                     batch:[
-                                        cliPath: '/foo/bar/aws',
+                                        cliPath: '/foo/bin/aws',
                                         maxParallelTransfers: 5,
                                         maxTransferAttempts: 3,
                                         delayBetweenAttempts: '9 sec',
                                         jobRole: 'aws::foo::bar',
                                         volumes: '/foo,/this:/that'],
                                     client: [
-                                        uploadStorageClass: 'my-store-class',
-                                        storageEncryption: 'my-ecrypt-class'],
+                                        uploadStorageClass: 'STANDARD',
+                                        storageEncryption: 'AES256'],
                                     region: 'aws-west-2'
                                 ]
             ]
@@ -100,8 +101,8 @@ class AwsOptionsTest extends Specification {
         opts.maxParallelTransfers == 5
         opts.maxTransferAttempts == 3 
         opts.delayBetweenAttempts.seconds == 9
-        opts.storageClass == 'my-store-class'
-        opts.storageEncryption == 'my-ecrypt-class'
+        opts.storageClass == 'STANDARD'
+        opts.storageEncryption == 'AES256'
         opts.region == 'aws-west-2'
         opts.jobRole == 'aws::foo::bar'
         opts.volumes == ['/foo','/this:/that']
@@ -126,34 +127,16 @@ class AwsOptionsTest extends Specification {
 
         when:
         def sess2 = Mock(Session)  {
-            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key', storageEncryption: 'foo']]]
+            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key', storageEncryption: 'aws:kms']]]
         }
         and:
         def opts2 = new AwsOptions(sess2)
         then:
         opts2.storageKmsKeyId == 'my-kms-key'
-        opts2.storageEncryption == 'foo'    // <-- allow explicit `storageEncryption`
+        opts2.storageEncryption == 'aws:kms'    // <-- allow explicit `storageEncryption`
 
     }
 
-    def 'should parse volumes list' () {
-
-        given:
-        def executor = Spy(AwsOptions)
-
-        expect:
-        executor.makeVols(OBJ) == EXPECTED
-
-        where:
-        OBJ             | EXPECTED
-        null            | []
-        'foo'           | ['foo']
-        'foo, bar'      | ['foo','bar']
-        '/foo/,/bar///' | ['/foo','/bar']
-        ['/this','/that'] | ['/this','/that']
-        ['/foo/bar/']   | ['/foo/bar']
-
-    }
 
 
     @Unroll
@@ -162,10 +145,8 @@ class AwsOptionsTest extends Specification {
         def cfg = [
                 aws: [client: [
                         uploadStorageClass: awsStorClass,
-                        storageEncryption  : awsStorEncrypt]],
-                executor: [
-                        awscli: awscliPath
-                ]
+                        storageEncryption  : awsStorEncrypt],
+                      batch: [ cliPath: awscliPath ]]
         ]
         def session = new Session(cfg)
 
@@ -186,48 +167,48 @@ class AwsOptionsTest extends Specification {
     def 'should validate aws options' () {
 
         when:
-        def opts = new AwsOptions()
+        def opts = new AwsOptions(awsConfig: new AwsConfig([:]))
         then:
         opts.getCliPath() == null
         opts.getStorageClass() == null
         opts.getStorageEncryption() == null
 
         when:
-        opts = new AwsOptions(cliPath: '/foo/bin/aws', storageClass: 'STANDARD', storageEncryption: 'AES256')
+        opts = new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/bin/aws'], client: [storageClass: 'STANDARD', storageEncryption: 'AES256']))
         then:
         opts.getCliPath() == '/foo/bin/aws'
         opts.getStorageClass() == 'STANDARD'
         opts.getStorageEncryption() == 'AES256'
 
         when:
-        opts = new AwsOptions(storageClass: 'foo')
+        opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageClass: 'foo']))
         then:
         opts.getStorageClass() == null
 
         when:
-        opts = new AwsOptions(storageEncryption: 'abr')
+        opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageEncryption: 'abr']))
         then:
         opts.getStorageEncryption() == null
 
         when:
-        opts = new AwsOptions(storageKmsKeyId: 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f')
+        opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageKmsKeyId: 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f']))
         then:
         opts.getStorageKmsKeyId() == 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
 
         when:
-        new AwsOptions(cliPath: 'bin/aws')
+        new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: 'bin/aws']))
         then:
         thrown(ProcessUnrecoverableException)
 
         when:
-        new AwsOptions(cliPath: '/foo/aws')
+        new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/aws']))
         then:
         thrown(ProcessUnrecoverableException)
     }
 
     def 'should add a volume' () {
         given:
-        def opts = new AwsOptions()
+        def opts = new AwsOptions(awsConfig: new AwsConfig([:]))
 
         when:
         opts.addVolume(Paths.get('/some/dir'))
@@ -239,6 +220,25 @@ class AwsOptionsTest extends Specification {
         opts.addVolume(Paths.get('/other/dir'))
         then:
         opts.volumes == ['/some/dir', '/other/dir']
+    }
+
+    def 'should parse s3 acl' ( ) {
+        when:
+        def opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'PublicRead']]))
+        then:
+        opts.getS3Acl() == CannedAccessControlList.PublicRead
+
+
+        when:
+        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'public-read']]))
+        then:
+        opts.getS3Acl() == CannedAccessControlList.PublicRead
+
+
+        when:
+        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'unknown']]))
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }

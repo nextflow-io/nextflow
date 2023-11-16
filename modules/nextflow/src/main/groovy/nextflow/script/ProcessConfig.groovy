@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +46,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     static final public List<String> DIRECTIVES = [
             'accelerator',
             'afterScript',
+            'arch',
             'beforeScript',
             'cache',
             'conda',
@@ -61,9 +61,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'errorStrategy',
             'executor',
             'ext',
+            'fair',
             'machineType',
             'queue',
             'label',
+            'maxSubmitAwait',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -74,12 +76,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'publishDir',
             'scratch',
             'shell',
+            'spack',
             'storeDir',
             'tag',
             'time',
             // input-output qualifiers
             'file',
-            'set',
             'val',
             'each',
             'env',
@@ -533,12 +535,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new EachInParam(this).bind(obj)
     }
 
-    InParam _in_set( Object... obj ) {
-        final msg = "Input of type `set` is deprecated -- Use `tuple` instead"
-        if( NF.isDsl2() ) throw new DeprecationException(msg)
-        new TupleInParam(this).bind(obj)
-    }
-
     InParam _in_tuple( Object... obj ) {
         new TupleInParam(this).bind(obj)
     }
@@ -601,12 +597,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                     .setOptions(opts)
                     .bind(obj)
         }
-    }
-
-    OutParam _out_set( Object... obj ) {
-        final msg = "Output of type `set` is deprecated -- Use `tuple` instead"
-        if( NF.isDsl2() ) throw new DeprecationException(msg)
-        new TupleOutParam(this) .bind(obj)
     }
 
     OutParam _out_tuple( Object... obj ) {
@@ -738,6 +728,19 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
     }
 
+    boolean getFair() {
+        final value = configProperties.get('fair')
+        if( value == null )
+            return false
+        if( value instanceof Boolean )
+            return value
+
+        if( value instanceof Closure )
+            throw new IllegalArgumentException("Process directive `fair` cannot be declared in a dynamic manner with a closure")
+        else
+            throw new IllegalArgumentException("Unexpected value for directive `fair` -- offending value: $value")
+    }
+
     ProcessConfig secret(String name) {
         if( !name )
             return this
@@ -798,6 +801,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself.
      */
     ProcessConfig errorStrategy( strategy ) {
+        if( strategy instanceof CharSequence && !ErrorStrategy.isValid(strategy) ) {
+            throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${ErrorStrategy.values().join(',').toLowerCase()}")
+        }
+
         configProperties.put('errorStrategy', strategy)
         return this
     }
@@ -910,6 +917,63 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    /**
+     * Allow user to specify `disk` directive as a value with a list of options, eg:
+     *
+     *     disk 375.GB, type: 'local-ssd'
+     *
+     * @param opts
+     *      A map representing the disk options
+     * @param value
+     *      The default disk value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( Map opts, value )  {
+        opts.request = value
+        return disk(opts)
+    }
+
+    /**
+     * Allow user to specify `disk` directive as a value or a list of options, eg:
+     *
+     *     disk 100.GB
+     *     disk request: 375.GB, type: 'local-ssd'
+     *
+     * @param value
+     *      The default disk value or map of options
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( value ) {
+        if( value instanceof Map || value instanceof Closure )
+            configProperties.put('disk', value)
+        else
+            configProperties.put('disk', [request: value])
+        return this
+    }
+
+    ProcessConfig arch( Map params, value )  {
+        if( value instanceof String ) {
+            if( params.name==null )
+                params.name=value
+        }
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
+        arch(params)
+        return this
+    }
+
+    ProcessConfig arch( value ) {
+        if( value instanceof String )
+            configProperties.put('arch', [name: value])
+        else if( value instanceof Map )
+            configProperties.put('arch', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
         return this
     }
 

@@ -74,7 +74,7 @@ public class Base62 {
             int digit = DIGITS.indexOf(string.charAt(digits - index - 1));
             result = result.add(BigInteger.valueOf(digit).multiply(BASE.pow(index)));
             if (bitLimit > 0 && result.bitLength() > bitLimit) {
-                throwIllegalArgumentException("String contains '%s' more than 128bit information (%sbit)", string, result.bitLength());
+                throwIllegalArgumentException("String contains '%s' more than 128-bit information (%sbit)", string, result.bitLength());
             }
         }
         return result;

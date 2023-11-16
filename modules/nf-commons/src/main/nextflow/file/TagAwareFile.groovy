@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 package nextflow.file
 
 /**
- * Defines the interface for annotate a file with one ore more tags
+ * Defines the interface for annotate a file with one or more tags
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -28,4 +28,5 @@ interface TagAwareFile {
 
     void setContentType(String type)
 
+    void setStorageClass(String storageClass)
 }

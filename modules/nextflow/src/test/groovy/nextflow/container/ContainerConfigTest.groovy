@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +59,46 @@ class ContainerConfigTest extends Specification {
         [:]                             | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | true
         [entrypointOverride: false]     | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | false
 
+    }
+
+
+    def 'should validate oci mode' () {
+
+        when:
+        def cfg = new ContainerConfig(OPTS)
+        then:
+        cfg.singularityOciMode() == EXPECTED
+
+        where:
+        OPTS                                | EXPECTED
+        [:]                                 | false
+        [oci:false]                         | false
+        [oci:true]                          | false
+        [engine:'apptainer', oci:true]      | false
+        [engine:'docker', oci:true]         | false
+        [engine:'singularity']              | false
+        [engine:'singularity', oci:false]   | false
+        [engine:'singularity', oci:true]    | true
+
+    }
+
+    def 'should get fusion options' () {
+        when:
+        def cfg = new ContainerConfig(OPTS)
+
+        then:
+        cfg.fusionOptions() == EXPECTED
+        
+        where:
+        OPTS                                            | EXPECTED
+        [:]                                             | null
+        [engine:'docker']                               | '--rm --privileged'
+        [engine:'podman']                               | '--rm --privileged'
+        and:
+        [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
+        [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'
+        and:
+        [engine:'sarus', fusionOptions:'--other']       | '--other'
     }
 
 }
