@@ -47,6 +47,10 @@ trait FusionAwareTask {
         return fusionEnabled
     }
 
+    FusionConfig fusionConfig() {
+        return FusionConfig.getConfig()
+    }
+
     FusionScriptLauncher fusionLauncher() {
         if( fusionLauncher==null ) {
             fusionLauncher = fusionEnabled()

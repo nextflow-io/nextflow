@@ -38,7 +38,6 @@ import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -79,8 +78,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
-    @Deprecated final static private String WORKFLOW_GET = 'get'
-    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
@@ -429,12 +426,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 visited[context] = true
 
                 switch (context) {
-                    case WORKFLOW_GET:
-                        syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
-
-                    case WORKFLOW_PUBLISH:
-                        syntaxError(stm, "Workflow 'publish' is not supported anymore use process 'publishDir' instead")
-
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
@@ -1095,7 +1086,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * @return A tuple in which:
          *      <li>1st item: {@code true} if successful or {@code false} otherwise
          *      <li>2nd item: on error condition the line containing the error in the source script, zero otherwise
-         *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
+         *      <li>3rd item: on error condition the column containing the error in the source script, zero otherwise
          *
          */
         protected boolean wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {

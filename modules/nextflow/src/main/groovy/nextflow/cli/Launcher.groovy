@@ -101,7 +101,6 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins(),
                 new CmdPlugin(),
                 new CmdInspect()
         ]
@@ -180,7 +179,7 @@ class Launcher {
             colsString.toShort()
         }
         catch( Exception e ) {
-            log.debug "Oops.. not a valid \$COLUMNS value: $colsString"
+            log.debug "Unexpected terminal \$COLUMNS value: $colsString"
             return 0
         }
     }
@@ -222,6 +221,14 @@ class Launcher {
             }
             else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '%all'
+            }
+
+            else if( current == '-dump-hashes' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
+            else if( current == '-with-cloudcache' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
             }
 
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
@@ -293,10 +300,6 @@ class Launcher {
             }
 
             else if( current == '-with-fusion' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << 'true'
-            }
-
-            else if( (current == '-dsl2') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
 
@@ -437,7 +440,8 @@ class Launcher {
 
         }
         catch ( AbortOperationException e ) {
-            System.err.println (e.message ?: "Unknown abort reason")
+            final msg = e.message ?: "Unknown abort reason"
+            System.err.println(LoggerHelper.formatErrMessage(msg, e))
             System.exit(1)
         }
         catch( Throwable e ) {
@@ -505,7 +509,8 @@ class Launcher {
 
         catch ( AbortOperationException e ) {
             def message = e.getMessage()
-            if( message ) System.err.println(message)
+            if( message )
+                System.err.println(LoggerHelper.formatErrMessage(message,e))
             log.debug ("Operation aborted", e.cause ?: e)
             return(1)
         }

@@ -155,10 +155,6 @@ abstract class BaseInParam extends BaseParam implements InParam {
         throw new IllegalArgumentException(message)
     }
 
-    BaseInParam from( def obj ) {
-        throw new ScriptRuntimeException("Process clause `from` is no longer supported in DSL2")
-    }
-
     void setFrom( obj ) {
         checkFromNotNull(obj)
         fromObject = obj
@@ -170,10 +166,6 @@ abstract class BaseInParam extends BaseParam implements InParam {
         if( CH.isChannel(inChannel) )
             return inChannel
         throw new IllegalStateException("Missing input channel")
-    }
-
-    BaseInParam from( Object... obj ) {
-        throw new ScriptRuntimeException("Process clause `from` is no longer supported in DSL2")
     }
 
     def decodeInputs( List inputs ) {

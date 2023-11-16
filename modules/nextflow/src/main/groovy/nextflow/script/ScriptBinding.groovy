@@ -185,7 +185,10 @@ class ScriptBinding extends WorkflowBinding {
 
     @Override
     void setVariable( String name, Object value ) {
-        if( name !in ['args', 'channel', 'params'] )
+        if( name == 'channel' ) {
+            throw new IllegalAccessException("The use of the identifier `$name` as variable name is not allowed")
+        }
+        if( name != 'args' && name != 'params' )
             super.setVariable(name, value)
     }
 

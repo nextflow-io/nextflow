@@ -8,6 +8,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import test.Dsl2Spec
+import test.MockExecutorFactory
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -125,7 +126,10 @@ class NextflowDSLImplTest extends Dsl2Spec {
 
     def 'should set process name in the script meta' () {
         given:
-        def parser = new ScriptParser(new Session())
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        and:
+        def parser = new ScriptParser(session)
 
         def SCRIPT = '''
             process alpha {
@@ -134,6 +138,10 @@ class NextflowDSLImplTest extends Dsl2Spec {
         
             process beta {
               /world/
+            }
+            
+            workflow {
+              alpha(); beta()
             }
         '''
 

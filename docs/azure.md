@@ -221,7 +221,7 @@ The pool name can only contain alphanumeric, hyphen and underscore characters.
 :::
 
 :::{warning}
-If the pool name includes a hyphen, make sure to wrap it with single quotes. For example::
+If the pool name includes a hyphen, make sure to wrap it with single quotes. For example:
 
 ```groovy
 azure {
@@ -374,7 +374,7 @@ The value of the setting must be the identifier of a subnet available in the vir
 Batch Authentication with Shared Keys does not allow to link external resources (like Virtual Networks) to the pool. Therefore, Active Directory Authentication must be used in conjunction with the `virtualNetwork` setting.
 :::
 
-## Active Directory Authentication
+## Microsoft Entra (formerly Active Directory Authentication)
 
 :::{versionadded} 22.11.0-edge
 :::

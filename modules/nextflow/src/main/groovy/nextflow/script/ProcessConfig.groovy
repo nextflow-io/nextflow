@@ -82,7 +82,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'time',
             // input-output qualifiers
             'file',
-            'set',
             'val',
             'each',
             'env',
@@ -536,10 +535,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new EachInParam(this).bind(obj)
     }
 
-    InParam _in_set( Object... obj ) {
-        throw new DeprecationException("Input of type `set` is deprecated -- Use `tuple` instead")
-    }
-
     InParam _in_tuple( Object... obj ) {
         new TupleInParam(this).bind(obj)
     }
@@ -602,10 +597,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                     .setOptions(opts)
                     .bind(obj)
         }
-    }
-
-    OutParam _out_set( Object... obj ) {
-        throw new DeprecationException("Output of type `set` is deprecated -- Use `tuple` instead")
     }
 
     OutParam _out_tuple( Object... obj ) {

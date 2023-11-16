@@ -62,7 +62,7 @@ tower {
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <dsl2-module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
+To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
 
 :::{tip}
 Make sure the process does not declare a `container` directive, otherwise it will take precedence over the Dockerfile definition.
@@ -204,7 +204,7 @@ container freeze mode, the container repository authentication needs to be manag
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
 `wave.build.conda.basePackages`
-: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
+: One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
 `wave.build.conda.commands`
 : One or more commands to be added to the Dockerfile used to build a Conda based image.

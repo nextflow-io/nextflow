@@ -20,12 +20,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
-import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
 import nextflow.util.ConfigHelper
-
 /**
  * Model a process generic output parameter
  *
@@ -81,7 +79,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     @PackageScope
     void lazyInitImpl( def target ) {
-        def channel = (target != null)
+        final channel = (target != null)
             ? outputValToChannel(target)
             : null
 
@@ -149,14 +147,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return this
     }
 
-    BaseOutParam into( def value ) {
-        throw new ScriptRuntimeException("Process clause `into` is no longer supported in DSL2")
-    }
-
-    BaseOutParam into( TokenVar... vars ) {
-        throw new ScriptRuntimeException("Process clause `into` is no longer supported in DSL2")
-    }
-
     void setInto( Object obj ) {
         intoObj = obj
     }
@@ -164,12 +154,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     DataflowWriteChannel getOutChannel() {
         init()
         return outChannels ? outChannels.get(0) : null
-    }
-
-    @Deprecated
-    List<DataflowWriteChannel> getOutChannels() {
-        init()
-        return outChannels
     }
 
     String getName() {

@@ -4,7 +4,7 @@
 
 In Nextflow, a **process** is the basic processing primitive to execute a user script.
 
-The process definition starts with the keyword `process`, followed by process name and finally the process body delimited by curly brackets. The process body must contain a string which represents the command or, more generally, a script that is executed by it. A basic process looks like the following example:
+The process definition starts with the keyword `process`, followed by process name and finally the process body delimited by curly braces. The process body must contain a string which represents the command or, more generally, a script that is executed by it. A basic process looks like the following example:
 
 ```groovy
 process sayHello {
@@ -824,7 +824,7 @@ The above example executes the `bar` process three times because `x` is a value 
 ```
 
 :::{note}
-In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the `merge` operator, which is not recommended as it may lead to inputs being combined in a non-deterministic way.
+In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the {ref}`operator-merge` operator, which is not recommended as it may lead to {ref}`non-deterministic process inputs <cache-nondeterministic-inputs>`.
 :::
 
 See also: {ref}`channel-types`.
@@ -1177,6 +1177,52 @@ output:
 
 In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is legitimately missing, the process does not fail. The output channel will only contain values for those processes that produce `output.txt`.
 
+(process-multiple-outputs)=
+
+### Multiple outputs
+
+When a process declares multiple outputs, each output can be accessed by index. The following example prints the second process output (indexes start at zero):
+
+```groovy
+process FOO {
+    output:
+    path 'bye_file.txt'
+    path 'hi_file.txt'
+
+    """
+    echo "bye" > bye_file.txt
+    echo "hi" > hi_file.txt
+    """
+}
+
+workflow {
+    FOO()
+    FOO.out[1].view()
+}
+```
+
+You can also use the `emit` option to assign a name to each output and access them by name:
+
+```groovy
+process FOO {
+    output:
+    path 'bye_file.txt', emit: bye_file
+    path 'hi_file.txt',  emit: hi_file
+
+    """
+    echo "bye" > bye_file.txt
+    echo "hi" > hi_file.txt
+    """
+}
+
+workflow {
+    FOO()
+    FOO.out.hi_file.view()
+}
+```
+
+See {ref}`workflow-process-invocation` for more details.
+
 ## When
 
 The `when` block allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
@@ -1211,9 +1257,21 @@ Directives are optional settings that affect the execution of the current proces
 
 They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
 
+```groovy
+// directive with simple value
+name value
+
+// directive with list value
+name arg1, arg2, arg3
+
+// directive with map value
+name key1: val1, key2: val2
+
+// directive with value and options
+name arg, opt1: val1, opt2: val2
 ```
-name value [, value2 [,..]]
-```
+
+By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 
 Some directives are generally available to all processes, while others depend on the `executor` currently defined.
 
@@ -1320,11 +1378,9 @@ When combined with the {ref}`container directive <process-container>`, the `befo
 
 ### cache
 
-The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any following attempt to execute the process, along with the same inputs, will cause the process execution to be skipped, producing the stored data as the actual results.
+The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any task executions that are already cached will be re-used. See the {ref}`cache-resume-page` page for more information about how the cache works.
 
-The caching feature generates a unique key by indexing the process script and inputs. This key is used to identify univocally the outputs produced by the process execution.
-
-The cache is enabled by default, you can disable it for a specific process by setting the `cache` directive to `false`. For example:
+The cache is enabled by default, but you can disable it for a specific process by setting the `cache` directive to `false`. For example:
 
 ```groovy
 process noCacheThis {
@@ -1335,19 +1391,20 @@ process noCacheThis {
 }
 ```
 
-The following values are available:
+The following options are available:
 
 `false`
 : Disable caching.
 
 `true` (default)
-: Enable caching. Cache keys are created indexing input files meta-data information (name, size and last update timestamp attributes).
+: Enable caching. Input file metadata (name, size, last updated timestamp) are included in the cache keys.
 
 `'deep'`
-: Enable caching. Cache keys are created indexing input files content.
+: Enable caching. Input file content is included in the cache keys.
 
 `'lenient'`
-: Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps).
+: Enable caching. Minimal input file metadata (name and size only) are included in the cache keys.
+: This strategy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent file timestamps.
 
 (process-clusteroptions)=
 
@@ -1642,15 +1699,26 @@ process mapping {
   tuple val(sampleId), path(reads)
 
   """
-  STAR --genomeDir $genome --readFilesIn $reads
+  STAR --genomeDir $genome --readFilesIn $reads ${task.ext.args ?: ''}
   """
 }
 ```
 
-In the above example, the process uses a container whose version is controlled by the `ext.version` property. This can be defined in the `nextflow.config` file as shown below:
+In the above example, the process container version is controlled by `ext.version`, and the script supports additional command line arguments through `ext.args`.
+
+The `ext` directive can be set in the process definition:
+
+```groovy
+process mapping {
+  ext version: '2.5.3', args: '--foo --bar'
+}
+```
+
+Or in the Nextflow configuration:
 
 ```groovy
 process.ext.version = '2.5.3'
+process.ext.args = '--foo --bar'
 ```
 
 (process-fair)=
@@ -2022,6 +2090,12 @@ The following options are available:
 : *Can be specified multiple times*
 : Defines an environment variable with the given name and value.
 
+`hostPath: '/host/absolute/path', mountPath: '</pod/absolute/path>'`
+: :::{versionadded} 23.10.0
+  :::
+: *Can be specified multiple times*
+: Allows creating [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath) volume and access it with the specified `mountPath` in the pod.
+
 `imagePullPolicy: 'IfNotPresent' | 'Always' | 'Never'`
 : Specifies the [image pull policy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) used by the pod to pull the container image.
 
@@ -2057,6 +2131,9 @@ The following options are available:
 
 `runAsUser: '<uid>'`
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
+
+`schedulerName: '<name>'`
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
 
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
