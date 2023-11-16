@@ -150,25 +150,8 @@ See {ref}`process-multiple-outputs` for more details.
 
 The `emit` option can also be used to name a `stdout` output:
 
-```groovy
-process sayHello {
-    input:
-    val cheers
-
-    output:
-    stdout emit: verbiage
-
-    script:
-    """
-    echo -n $cheers
-    """
-}
-
-workflow {
-    things = channel.of('Hello world!', 'Yo, dude!', 'Duck!')
-    sayHello(things)
-    sayHello.out.verbiage.view()
-}
+```{literalinclude} snippets/process-named-stdout.nf
+:language: groovy
 ```
 
 :::{note}
@@ -334,26 +317,12 @@ The fully qualified process name can be used as a {ref}`process selector <config
 
 The `|` *pipe* operator can be used to compose Nextflow processes and operators. For example:
 
-```groovy
-process foo {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = "$data world"
-}
-
-workflow {
-   channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
-}
+```{literalinclude} snippets/pipe.nf
+:language: groovy
 ```
 
 The above snippet defines a process named `foo` and invokes it with the `data` channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
 
-:::{tip}
 Statements can also be split across multiple lines for better readability:
 
 ```groovy
@@ -364,7 +333,17 @@ workflow {
       | view
 }
 ```
+
+:::{versionadded} 23.12.0-edge
 :::
+
+When using the pipe operator, the right operand can also be a closure that receives the output of the left operand and returns the result of a process, workflow, or operator invocation. This form is a useful way to define a custom mapping between the left-hand outputs and right-hand inputs, including the use of additional input channels aside from the left-hand outputs. For example:
+
+```{literalinclude} snippets/pipe-with-closure.nf
+:language: groovy
+```
+
+When the left operand is a process, the closure argument is equivalent to the `.out` of that process, and the output channels can be accessed by index or by name as described in [Process invocation](#process-invocation). For example, the `view` operation in the above example can be rewritten as `{ _ -> _.suffixed.view() }` to access the `suffixed` output of process `foo`.
 
 ### And `&`
 
