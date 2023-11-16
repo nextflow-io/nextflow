@@ -31,12 +31,11 @@ class CH {
     }
 
     static class Topic {
-        String name
-        DataflowBroadcast broadcaster = new DataflowBroadcast()
-        List<DataflowWriteChannel> writers = new ArrayList<>(10)
+        List<DataflowWriteChannel> sources = new ArrayList<>(10)
+        DataflowBroadcast target = new DataflowBroadcast()
     }
 
-    static final private List<Topic> allTopics = new ArrayList<>(10)
+    static final private Map<String, Topic> allTopics = new HashMap<>(10)
 
     static final private Map<DataflowQueue, DataflowBroadcast> bridges = new HashMap<>(10)
 
@@ -91,20 +90,20 @@ class CH {
     }
 
     static private void connectTopics() {
-        for( Topic topic : allTopics ) {
-            if( topic.writers ) {
-                // the list of all writing dataflow queues for this topic
-                final ch = new ArrayList(topic.writers)
+        for( Topic topic : allTopics.values() ) {
+            if( topic.sources ) {
+                // get the list of source channels for this topic
+                final ch = new ArrayList(topic.sources)
                 // the mix operator requires at least two sources, add an empty channel if needed
                 if( ch.size()==1 )
                     ch.add(empty())
-                // get a list of sources for the mix operator
+                // map write channels to read channels
                 final sources = ch.collect(it -> getReadChannel(it))
                 // mix all of them 
-                new MixOp(sources).withTarget(topic.broadcaster).apply()
+                new MixOp(sources).withTarget(topic.target).apply()
             }
             else {
-                topic.broadcaster.bind(STOP)
+                topic.target.bind(STOP)
             }
         }
     }
@@ -139,25 +138,23 @@ class CH {
 
     static DataflowBroadcast topic(String name) {
         synchronized (allTopics) {
-            def topic = allTopics.find(it -> it.name == name)
+            def topic = allTopics[name]
             if( topic!=null )
-                return topic.broadcaster
+                return topic.target
             // create a new topic
-            topic = new Topic(name:name)
-            allTopics.add(topic)
-            return topic.broadcaster
+            topic = new Topic()
+            allTopics[name] = topic
+            return topic.target
         }
     }
 
     static DataflowWriteChannel topicWriter(String name) {
         synchronized (allTopics) {
-            def topic = allTopics.find(it -> it.name == name)
-            if( topic==null ) {
-                topic = new Topic(name:name)
-                allTopics.add(topic)
-            }
+            if( name !in allTopics )
+                allTopics[name] = new Topic()
+            def topic = allTopics[name]
             def result = CH.create()
-            topic.writers.add(result)
+            topic.sources.add(result)
             return result
         }
     }
