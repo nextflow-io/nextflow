@@ -91,8 +91,10 @@ class ContainerConfig extends LinkedHashMap {
         final eng = getEngine()
         if( !eng )
             return null
-        if( eng=='docker' || eng=='podman' )
-            return '--rm --privileged'
+        if( eng=='docker' )
+            return '--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'
+        if( eng=='podman' )
+            return '--rm --device /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
             return null
         log.warn "Fusion file system is not supported by '$eng' container engine"
