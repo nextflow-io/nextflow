@@ -237,6 +237,38 @@ class ChannelEx {
         throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }
 
+    /**
+     * Compose a channel with another channel into a multi-channel.
+     *
+     * @param left
+     * @param right
+     */
+    static ChannelOut and(DataflowWriteChannel left, DataflowWriteChannel right) {
+        new ChannelOut(List.of(left, right))
+    }
+
+    static ChannelOut and(ChannelOut left, DataflowWriteChannel right) {
+        def elements = ChannelOut.spread(left)
+        elements << right
+
+        new ChannelOut(elements)
+    }
+
+    static ChannelOut and(ChannelOut left, ChannelOut right) {
+        def elements = ChannelOut.spread(left)
+        elements.addAll(ChannelOut.spread(right))
+
+        new ChannelOut(elements)
+    }
+
+    /**
+     * Compose a process or workflow with another process or workflow
+     * such that they receive the same input channels and their outputs
+     * are concatenated.
+     *
+     * @param left
+     * @param right
+     */
     static CompositeDef and(ChainableDef left, ChainableDef right) {
         checkContext('and', left)
         checkContext('and', right)

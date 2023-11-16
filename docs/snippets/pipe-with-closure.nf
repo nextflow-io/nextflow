@@ -12,7 +12,7 @@ process foo {
 
 workflow {
     suffix = ' world!'
-    channel.from('Hello','Hola','Ciao')
+    channel.of('Hello','Hola','Ciao')
       | map { it.toUpperCase() }
       | { _ -> foo(_, suffix) }
       | view

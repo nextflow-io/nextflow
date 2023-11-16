@@ -10,5 +10,5 @@ process foo {
 }
 
 workflow {
-    channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
+    channel.of('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
 }

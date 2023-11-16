@@ -226,7 +226,7 @@ Inputs can be specified like arguments when invoking the workflow:
 
 ```groovy
 workflow {
-    my_pipeline( channel.from('/some/data') )
+    my_pipeline( channel.of('/some/data') )
 }
 ```
 
@@ -327,7 +327,7 @@ Statements can also be split across multiple lines for better readability:
 
 ```groovy
 workflow {
-    channel.from('Hello','Hola','Ciao')
+    channel.of('Hello','Hola','Ciao')
       | foo
       | map { it.toUpperCase() }
       | view
@@ -337,7 +337,7 @@ workflow {
 :::{versionadded} 23.12.0-edge
 :::
 
-When using the pipe operator, the right operand can also be a closure that receives the output of the left operand and returns the result of a process, workflow, or operator invocation. This form is a useful way to define a custom mapping between the left-hand outputs and right-hand inputs, including the use of additional input channels aside from the left-hand outputs. For example:
+When using the pipe operator, the right operand can also be a closure that receives the output of the left operand and returns the result of a process, workflow, or operator invocation, or any expression that produces a channel or multi-channel. This form is a useful way to define a custom mapping between the left-hand outputs and right-hand inputs, including the use of additional input channels aside from the left-hand outputs. For example:
 
 ```{literalinclude} snippets/pipe-with-closure.nf
 :language: groovy
@@ -349,36 +349,19 @@ When the left operand is a process, the closure argument is equivalent to the `.
 
 The `&` *and* operator can be used to feed multiple processes with the same channel(s). For example:
 
-```groovy
-process foo {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = "$data world"
-}
-
-process bar {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = data.toUpperCase()
-}
-
-workflow {
-    channel.from('Hello')
-      | map { it.reverse() }
-      | (foo & bar)
-      | mix
-      | view
-}
+```{literalinclude} snippets/and-process.nf
+:language: groovy
 ```
 
 In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+
+:::{versionadded} 23.12.0-edge
+:::
+
+The and operator can also be used to compose channels into multi-channels. For example:
+
+```{literalinclude} snippets/and-channel.nf
+:language: groovy
+```
+
+Note that when a multi-channel is applied to an operator, the first channel is provided as the source and the other channels are applied as the arguments.
