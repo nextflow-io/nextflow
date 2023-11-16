@@ -345,6 +345,15 @@ When using the pipe operator, the right operand can also be a closure that recei
 
 When the left operand is a process, the closure argument is equivalent to the `.out` of that process, and the output channels can be accessed by index or by name as described in [Process invocation](#process-invocation). For example, the `view` operation in the above example can be rewritten as `{ _ -> _.suffixed.view() }` to access the `suffixed` output of process `foo`.
 
+You can also achieve the same behavior with the `then` operator:
+
+```groovy
+    channel.of('Hello','Hola','Ciao')
+      .map { it.toUpperCase() }
+      .then { _ -> foo(_, suffix) }
+      .view()
+```
+
 ### And `&`
 
 The `&` *and* operator can be used to feed multiple processes with the same channel(s). For example:

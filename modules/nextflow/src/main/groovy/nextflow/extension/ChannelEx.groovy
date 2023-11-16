@@ -72,6 +72,26 @@ class ChannelEx {
     }
 
     /**
+     * Apply a channel as the first argument to a closure and return the result.
+     *
+     * @param source
+     * @param closure
+     */
+    static Object then(final DataflowWriteChannel source, Closure closure) {
+        def out = closure.call(source)
+        if( out instanceof DataflowWriteChannel || out instanceof ChannelOut )
+            return out
+        throw new ScriptRuntimeException("Pipeline closure did not return a channel or multi-channel")
+    }
+
+    static Object then(final ChannelOut source, Closure closure) {
+        def out = closure.call(source)
+        if( out instanceof DataflowWriteChannel || out instanceof ChannelOut )
+            return out
+        throw new ScriptRuntimeException("Pipeline closure did not return a channel or multi-channel")
+    }
+
+    /**
      * Creates a channel emitting the entries in the collection to which is applied
      *
      * @param values A list of values to be emitted by the resulting channel
@@ -135,10 +155,7 @@ class ChannelEx {
      * @param right
      */
     static Object or(DataflowWriteChannel left, Closure right) {
-        def out = right.call(left)
-        if( out instanceof DataflowWriteChannel || out instanceof ChannelOut )
-            return out
-        throw new ScriptRuntimeException("Closure component did not return a channel")
+        then(left, right)
     }
 
     /**
@@ -171,10 +188,7 @@ class ChannelEx {
      * @param right
      */
     static Object or(ChannelOut left, Closure right) {
-        def out = right.call(left)
-        if( out instanceof DataflowWriteChannel || out instanceof ChannelOut )
-            return out
-        throw new ScriptRuntimeException("Closure component did not return a channel")
+        then(left, right)
     }
 
     /**
@@ -229,12 +243,12 @@ class ChannelEx {
         def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
 
         if( out instanceof DataflowWriteChannel )
-            return or((DataflowWriteChannel)out, right)
+            return then((DataflowWriteChannel)out, right)
 
         if( out instanceof ChannelOut )
-            return or((ChannelOut)out, right)
+            return then((ChannelOut)out, right)
 
-        throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
+        throw new ScriptRuntimeException("Pipeline closure did not return a channel or multi-channel")
     }
 
     /**
