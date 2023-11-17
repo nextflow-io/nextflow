@@ -435,9 +435,9 @@ See also: [fromList](#fromlist) factory method.
 This feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-The `topic` method is used to create a "topic" channel, which is a queue channel that can receive items from many sources implicitly based on a "topic" identifier.
+The `topic` method is used to create a queue channel that receives the items from all process outputs in a particular "topic".
 
-Any process can send items to a topic by using the `topic` option on an output:
+A process output can be assigned to a topic using the `topic` option on an output:
 
 ```groovy
 process foo {
