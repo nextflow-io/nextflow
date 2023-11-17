@@ -496,7 +496,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Path s3Path = (S3Path) path;
 
         if (Files.notExists(path)){
-            throw new NoSuchFileException("the path: " + path + " not exists");
+            throw new NoSuchFileException("the path: " + path + " does not exist");
         }
 
         if (Files.isDirectory(path)){
@@ -711,11 +711,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		boolean directory = false;
 		boolean regularFile = false;
 		String key = objectSummary.getKey();
-		// check if is a directory and exists the key of this directory at amazon s3
+		// check if is a directory and the key of this directory exists in amazon s3
 		if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
 			directory = true;
 		}
-		// is a directory but not exists at amazon s3
+		// is a directory but does not exist in amazon s3
 		else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
 			directory = true;
 			// no metadata, we fake one
@@ -910,7 +910,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	/**
-	 * Get the Control List, if the path not exists
+	 * Get the Control List, if the path does not exist
      * (because the path is a directory and this key isn't created at amazon s3)
      * then return the ACL of the first child.
      *
