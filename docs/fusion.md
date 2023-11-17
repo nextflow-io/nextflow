@@ -214,4 +214,6 @@ The following configuration options are available:
 : The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
 
 `fusion.cacheSize`
+: :::{versionadded} 23.11.0-edge
+  :::
 : The maximum size of the local cache used by the Fusion client.
