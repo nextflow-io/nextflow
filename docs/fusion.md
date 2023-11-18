@@ -184,14 +184,19 @@ The following configuration options are available:
 `fusion.enabled`
 : Enable/disable the use of Fusion file system.
 
+`fusion.cacheSize`
+: :::{versionadded} 23.11.0-edge
+:::
+: The maximum size of the local cache used by the Fusion client.
+
+`fusion.containerConfigUrl`
+: The URL from where the container layer provisioning the Fusion client is downloaded.
+
 `fusion.exportStorageCredentials`
 : :::{versionadded} 23.05.0-edge
   This option was previously named `fusion.exportAwsAccessKeys`.
   :::
 : When `true` the access credentials required by the underlying object storage are exported the pipeline jobs execution environment.
-
-`fusion.containerConfigUrl`
-: The URL from where the container layer provisioning the Fusion client is downloaded. 
 
 `fusion.logLevel`
 : The level of logging emitted by the Fusion client.

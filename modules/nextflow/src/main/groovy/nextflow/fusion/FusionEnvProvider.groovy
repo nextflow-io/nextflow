@@ -42,6 +42,8 @@ class FusionEnvProvider {
             result.FUSION_LOG_OUTPUT = config.logOutput()
         if( config.logLevel() )
             result.FUSION_LOG_LEVEL = config.logLevel()
+        if( config.cacheSize() )
+            result.FUSION_CACHE_SIZE = "${config.cacheSize().toMega()}M"
         return result
     }
 }

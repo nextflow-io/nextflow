@@ -17,7 +17,7 @@
 
 package nextflow.fusion
 
-
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -84,6 +84,21 @@ class FusionConfigTest extends Specification {
         [logLevel: 'trace']             | 'trace'   | null
         [logOutput: 'stdout']           | null      | 'stdout'
     }
+
+    def 'should configure cache size' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.cacheSize() == SIZE
+
+        where:
+        OPTS                            | SIZE
+        [:]                             | null
+        [cacheSize: 100]                | MemoryUnit.of(100)
+        [cacheSize: '100']              | MemoryUnit.of(100)
+        [cacheSize: '100.MB']           | MemoryUnit.of('100.MB')
+    }
+
 
     @Unroll
     def 'should configure tags' () {
