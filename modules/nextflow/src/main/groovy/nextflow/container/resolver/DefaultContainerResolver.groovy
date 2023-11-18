@@ -39,10 +39,20 @@ class DefaultContainerResolver implements ContainerResolver {
             return ContainerInfo.EMPTY
         }
 
+        final ret = resolveImage0(task, imageName)
+        return new ContainerInfo(imageName, ret, ret)
+    }
+
+    private String resolveImage0(TaskRun task, String imageName) {
         final cfg = task.getContainerConfig()
         final handler = new ContainerHandler(cfg)
-        final ret = handler.normalizeImageName(imageName)
-        return new ContainerInfo(imageName, ret, ret)
+        return handler.normalizeImageName(imageName)
+    }
+
+    ContainerInfo resolveImage(TaskRun task, String imageName, String hashKey) {
+        assert imageName
+        final ret = resolveImage0(task, imageName)
+        return new ContainerInfo(imageName, ret, hashKey)
     }
 
 }

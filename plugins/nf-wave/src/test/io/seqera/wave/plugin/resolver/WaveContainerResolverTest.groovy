@@ -67,7 +67,7 @@ class WaveContainerResolverTest extends Specification {
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
-        1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> SINGULARITY_CONTAINER
+        1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target, WAVE_CONTAINER.hashKey) >> SINGULARITY_CONTAINER
         and:
         result == SINGULARITY_CONTAINER
 
