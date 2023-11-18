@@ -41,7 +41,7 @@ import nextflow.processor.TaskRun
 @Priority(-10)  // <-- lower is higher, this is needed to override default provider behavior
 class WaveContainerResolver implements ContainerResolver {
 
-    private ContainerResolver defaultResolver = new DefaultContainerResolver()
+    private DefaultContainerResolver defaultResolver = new DefaultContainerResolver()
     static final private List<String> DOCKER_LIKE = ['docker','podman','sarus']
     static final private List<String> SINGULARITY_LIKE = ['singularity','apptainer']
     static final private String DOCKER_PREFIX = 'docker://'
@@ -93,11 +93,15 @@ class WaveContainerResolver implements ContainerResolver {
             }
             // fetch the wave container name
             final image = waveContainer(task, imageName, singularitySpec)
+            // when wave returns no info, just default to standard behaviour
+            if( !image ) {
+                return defaultResolver.resolveImage(task, imageName)
+            }
             // oras prefixed container are served directly
-            if( image && image.target.startsWith("oras://") )
+            if( image.target.startsWith("oras://") )
                 return image
-            // otherwise adapt it to singularity format
-            return defaultResolver.resolveImage(task, image.target)
+            // otherwise adapt it to singularity format using the target containerInfo to avoid the cache invalidation
+            return defaultResolver.resolveImage(task, image.target, image.hashKey)
         }
         else
             throw new IllegalArgumentException("Wave does not support '$engine' container engine")
