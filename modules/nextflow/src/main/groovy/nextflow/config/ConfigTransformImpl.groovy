@@ -18,6 +18,7 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.ast.BinaryExpressionXform
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
@@ -55,6 +56,7 @@ class ConfigTransformImpl implements ASTTransformation {
         // the following line is mostly an hack to pass a parameter to this xform instance
         this.renderClosureAsString = annot.getMember('renderClosureAsString') != null
         createVisitor(unit).visitClass(clazz)
+        new BinaryExpressionXform(unit).visitClass(clazz)
     }
 
     protected ClassCodeVisitorSupport createVisitor(SourceUnit unit) {

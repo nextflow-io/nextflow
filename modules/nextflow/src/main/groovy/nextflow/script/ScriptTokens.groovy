@@ -78,7 +78,7 @@ class TokenPathCall {
  *   map( stdin, .. ) from x
  * </pre>
  *
- * @see nextflow.ast.NextflowDSLImpl
+ * @see nextflow.ast.DslCodeVisitor
  * @see nextflow.script.params.TupleInParam#bind(java.lang.Object[])
  */
 class TokenStdinCall { }
@@ -90,7 +90,7 @@ class TokenStdinCall { }
  *   map( stdout, .. ) into x
  * </pre>
  *
- * @see nextflow.ast.NextflowDSLImpl
+ * @see nextflow.ast.DslCodeVisitor
  * @see nextflow.script.params.TupleOutParam#bind(java.lang.Object[])
  */
 class TokenStdoutCall { }

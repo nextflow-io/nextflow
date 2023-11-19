@@ -19,10 +19,10 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.ast.DslCodeVisitor
 import nextflow.exception.DuplicateChannelNameException
 import nextflow.script.params.OutParam
 import nextflow.script.params.OutputsList
-import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 /**
  * Models the output of a process or a workflow component returning
  * more than one output channels
@@ -67,7 +67,9 @@ class ChannelOut implements List<DataflowWriteChannel> {
         target = Collections.unmodifiableList(onlyWithName)
     }
 
-    Set<String> getNames() { channels.keySet().findAll { !it.startsWith(OUT_PREFIX) }  }
+    Set<String> getNames() {
+        channels.keySet().findAll { !it.startsWith(DslCodeVisitor.OUT_PREFIX) }
+    }
 
     @Override
     def getProperty(String name) {

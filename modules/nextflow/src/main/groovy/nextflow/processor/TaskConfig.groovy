@@ -24,7 +24,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.Const
-import nextflow.ast.NextflowDSLImpl
+import nextflow.ast.DslCodeVisitor
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
@@ -509,7 +509,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
 
     protected TaskClosure getStubBlock() {
-        final code = target.get(NextflowDSLImpl.PROCESS_STUB)
+        final code = target.get(DslCodeVisitor.PROCESS_STUB)
         if( !code )
             return null
         if( code instanceof TaskClosure )

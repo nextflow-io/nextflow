@@ -21,7 +21,6 @@ import java.nio.file.Path
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
-import nextflow.ast.NextflowXform
 import nextflow.exception.ConfigParseException
 import nextflow.extension.Bolts
 import nextflow.file.FileHelper
@@ -172,7 +171,6 @@ class ConfigParser {
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
-        config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         //  add implicit types
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( Duration.name )

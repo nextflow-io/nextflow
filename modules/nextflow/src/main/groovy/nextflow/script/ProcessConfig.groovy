@@ -22,9 +22,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
-import nextflow.ast.NextflowDSLImpl
+import nextflow.ast.DslCodeVisitor
 import nextflow.exception.ConfigParseException
-import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ConfigList
@@ -204,9 +203,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     private void checkName(String name) {
         if( DIRECTIVES.contains(name) )
             return
-        if( name == NextflowDSLImpl.PROCESS_WHEN )
+        if( name == DslCodeVisitor.PROCESS_WHEN )
             return
-        if( name == NextflowDSLImpl.PROCESS_STUB )
+        if( name == DslCodeVisitor.PROCESS_STUB )
             return
 
         String message = "Unknown process directive: `$name`"
