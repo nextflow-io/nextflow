@@ -73,7 +73,8 @@ class GsPathFactory extends FileSystemPathFactory {
                 .setTotalTimeout(org.threeten.bp.Duration.ofSeconds(opts.storageOpts.retryPolicy.maxDelaySecs()))
                 .build()
 
-        return StorageOptions.getDefaultInstance().toBuilder()
+        return StorageOptions.getDefaultInstance()
+            .toBuilder()
             .setTransportOptions(transportOptions.build())
             .setRetrySettings(retrySettings)
             .build()
