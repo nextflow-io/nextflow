@@ -1817,4 +1817,4 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
 : *Experimental: may change in a future release.*
 
-: When `true`, enables {ref}`topic channels <channel-topic>`.
+: When `true`, enables {ref}`channel topics <channel-topic>`.
