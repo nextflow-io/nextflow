@@ -225,7 +225,7 @@ task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
         checkVersionExits(version)
         
         def path = new File(releaseDir)
-        if( !path.exists() ) error("Releases path does not exists: $path")
+        if( !path.exists() ) error("Releases path does not exist: $path")
         path.eachFile {
             if( it.name.startsWith("nextflow-$version"))
                 files << it

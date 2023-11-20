@@ -172,7 +172,7 @@ class CmdRunTest extends Specification {
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Specified params file does not exists: /missing/path.yml'
+        e.message == 'Specified params file does not exist: /missing/path.yml'
 
         cleanup:
         folder?.delete()

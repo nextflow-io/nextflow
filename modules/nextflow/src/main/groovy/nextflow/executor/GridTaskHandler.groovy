@@ -478,7 +478,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return true
             }
             // if the task is not complete (ie submitted or running)
-            // AND the work-dir does not exists ==> something is wrong
+            // AND the work-dir does not exist ==> something is wrong
             task.error = new ProcessException("Task work directory is missing (!)")
             // sanity check does not pass
             return false

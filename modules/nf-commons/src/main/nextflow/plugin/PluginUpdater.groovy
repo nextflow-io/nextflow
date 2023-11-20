@@ -121,7 +121,7 @@ class PluginUpdater extends UpdateManager {
                 uri = 'file://' + temp.absolutePath
             }
             catch (FileNotFoundException e) {
-                throw new IllegalArgumentException("Provided repository URL does not exists or cannot be accessed: $uri")
+                throw new IllegalArgumentException("Provided repository URL does not exist or cannot be accessed: $uri")
             }
         }
         // create the update repository instance
