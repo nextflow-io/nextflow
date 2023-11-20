@@ -366,6 +366,10 @@ The following settings are available:
 : *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
 
+`azure.batch.pools.<name>.lowPriority`
+: *New in `nf-azure` version `1.4.0`*
+: Enable the use of low-priority VMs (default: `false`).
+
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
 

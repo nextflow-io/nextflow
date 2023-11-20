@@ -749,7 +749,12 @@ class AzBatchService implements Closeable {
                     .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) )
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
-        else {
+        else if( spec.opts.lowPriority ) {
+            log.debug "Creating low-priority pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
+            poolParams
+                .withTargetLowPriorityNodes(spec.opts.vmCount)
+        }
+        else  {
             log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
             poolParams
                     .withTargetDedicatedNodes(spec.opts.vmCount)
