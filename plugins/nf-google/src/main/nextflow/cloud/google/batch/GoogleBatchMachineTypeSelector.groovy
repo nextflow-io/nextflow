@@ -90,7 +90,6 @@ class GoogleBatchMachineTypeSelector {
     }
 
     MachineType bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean fusionEnabled, List<String> families) {
-        final machineTypes = getAvailableMachineTypes(region, spot)
         if (families == null)
             families = Collections.<String>emptyList()
 
@@ -100,7 +99,7 @@ class GoogleBatchMachineTypeSelector {
             if (familyOrType.contains("custom-"))
                 return new MachineType(type: familyOrType, family: 'custom', cpusPerVm: cpus, memPerVm: memoryMB, location: region, priceModel: spot ? PriceModel.spot : PriceModel.standard)
 
-            final machineType = machineTypes.find { it.type == familyOrType }
+            final machineType = getAvailableMachineTypes(region, spot).find { it.type == familyOrType }
             if( machineType )
                 return machineType
         }
@@ -117,7 +116,7 @@ class GoogleBatchMachineTypeSelector {
         final matchMachineType = {String type -> !families || families.find { matchType(it, type) }}
 
         // find machines with enough resources and SSD local disk
-        final validMachineTypes = machineTypes.findAll {
+        final validMachineTypes = getAvailableMachineTypes(region, spot).findAll {
                     it.cpusPerVm >= cpus &&
                     it.memPerVm >= memoryGB &&
                     matchMachineType(it.type)
