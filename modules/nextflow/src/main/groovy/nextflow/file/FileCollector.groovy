@@ -217,7 +217,7 @@ abstract class FileCollector implements Closeable {
      * Save the entries collected grouping them into files whose name is given by the
      * correspondent group key
      *
-     * @param target A {@link Path} to the folder where files will be saved. If the folder does not exists, is created
+     * @param target A {@link Path} to the folder where files will be saved. If the folder does not exist, is created
      *              automatically
      * @return The list of files where entries have been saved.
      */
