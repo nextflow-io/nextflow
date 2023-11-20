@@ -31,8 +31,8 @@ class CH {
     }
 
     static class Topic {
+        DataflowBroadcast broadcaster = new DataflowBroadcast()
         List<DataflowWriteChannel> sources = new ArrayList<>(10)
-        DataflowBroadcast target = new DataflowBroadcast()
     }
 
     static final private Map<String, Topic> allTopics = new HashMap<>(10)
@@ -100,10 +100,10 @@ class CH {
                 // map write channels to read channels
                 final sources = ch.collect(it -> getReadChannel(it))
                 // mix all of them 
-                new MixOp(sources).withTarget(topic.target).apply()
+                new MixOp(sources).withTarget(topic.broadcaster).apply()
             }
             else {
-                topic.target.bind(STOP)
+                topic.broadcaster.bind(STOP)
             }
         }
     }
@@ -140,20 +140,22 @@ class CH {
         synchronized (allTopics) {
             def topic = allTopics[name]
             if( topic!=null )
-                return topic.target
+                return topic.broadcaster
             // create a new topic
             topic = new Topic()
             allTopics[name] = topic
-            return topic.target
+            return topic.broadcaster
         }
     }
 
     static DataflowWriteChannel topicWriter(String name) {
         synchronized (allTopics) {
-            if( name !in allTopics )
-                allTopics[name] = new Topic()
-            def topic = allTopics[name]
-            def result = CH.create()
+            def topic = allTopics.get(name)
+            if( topic==null ) {
+                topic = new Topic()
+                allTopics.put(name, topic)
+            }
+            final result = CH.create()
             topic.sources.add(result)
             return result
         }
