@@ -99,7 +99,7 @@ class SingularityCache {
     }
 
     /**
-     * Create the specified directory if not exists
+     * Create the specified directory if it does not exist
      *
      * @param
      *      str A path string representing a folder where store the singularity images once downloaded
