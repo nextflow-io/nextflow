@@ -277,43 +277,28 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // use disk directive for an attached disk if type is specified
         if( disk?.type ) {
-            if ( disk?.image ) {
-                instancePolicy.addDisks(
-                    AllocationPolicy.AttachedDisk.newBuilder()
-                        .setNewDisk(
-                            AllocationPolicy.Disk.newBuilder()
-                                .setType(disk.type)
-                                .setImage(disk.image)
-                        )
-                        .setDeviceName('scratch')
-                )
+            final diskSpec = AllocationPolicy.Disk.newBuilder()
+                .setType(disk.type)
 
-                taskSpec.addVolumes(
-                    Volume.newBuilder()
-                        .setDeviceName('scratch')
-                        .setMountPath('/tmp')
-                )
-            }
+            // use disk image if specified
+            if ( disk?.image )
+                diskSpec.setImage(disk.image)
 
-            
-            else {
-                
-                instancePolicy.addDisks(
-                    AllocationPolicy.AttachedDisk.newBuilder()
-                        .setNewDisk(
-                            AllocationPolicy.Disk.newBuilder()
-                                .setType(disk.type)
-                                .setSizeGb(disk.request.toGiga())
-                        )
-                        .setDeviceName('scratch')
-                )
+            // otherwise use empty disk of specified size
+            else
+                diskSpec.setSizeGb(disk.request.toGiga())
 
-                taskSpec.addVolumes(
-                    Volume.newBuilder()
-                        .setDeviceName('scratch')
-                        .setMountPath('/tmp')
-                )
-            }
+            instancePolicy.addDisks(
+                AllocationPolicy.AttachedDisk.newBuilder()
+                    .setNewDisk(diskSpec)
+                    .setDeviceName('scratch')
+            )
+
+            taskSpec.addVolumes(
+                Volume.newBuilder()
+                    .setDeviceName('scratch')
+                    .setMountPath('/tmp')
+            )
         }
 
         if( executor.config.serviceAccountEmail )
