@@ -6,7 +6,7 @@ process foo {
   val(index)
 
   output:
-  stdout topic: versions
+  stdout emit: versions, topic: versions
 
   script:
   """
@@ -19,7 +19,7 @@ process bar {
   val(index)
 
   output:
-  stdout topic: versions
+  stdout emit: versions, topic: versions
 
   script:
   """

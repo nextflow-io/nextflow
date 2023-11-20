@@ -1218,7 +1218,7 @@ The following options are available for all process outputs:
 
 : *Experimental: may change in a future release.*
 
-: Defines the {ref}`topic channel <channel-topic>` to which the output will be sent. Cannot be used with the `emit` option on the same output.
+: Defines the {ref}`topic channel <channel-topic>` to which the output will be sent.
 
 ## When
 
