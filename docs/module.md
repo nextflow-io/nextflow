@@ -306,7 +306,7 @@ withName:'FOO:BAR' {
 
 In the above example, the module config defines process config settings using the same syntax as a Nextflow config file (including {ref}`process selectors <config-process-selectors>`) but implicitly within the process config scope. The selector `FOO:BAR` matches the process `BAR` invoked by workflow `FOO`.
 
-Futhermore, the selector `BAR` would have also worked in this case, even if `BAR` is used elsewhere in the pipeline, because the module config is only applied to this module. This assurance is the advantage of defining process config in module config files instead of the global pipeline config.
+Furthermore, the selector `BAR` would have also worked in this case, even if `BAR` is used elsewhere in the pipeline, because the module config is only applied to this module. This assurance is the advantage of defining process config in module config files instead of the global pipeline config.
 
 Process configuration is resolved as follows (from highest to lowest priority):
 
