@@ -109,7 +109,7 @@ class TaskProcessorTest extends Specification {
         when:
         def session = new Session([env: [X:"1", Y:"2"]])
         session.setBaseDir(home)
-        def processor = new DummyProcessor('task1', session, Mock(BaseScript), Mock(ProcessConfig))
+        def processor = new DummyProcessor('task1', session, Mock(BaseScript), new ProcessConfig([:]))
         def builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
         then:
@@ -121,7 +121,7 @@ class TaskProcessorTest extends Specification {
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
         session.setBaseDir(home)
-        processor = new DummyProcessor('task1', session,  Mock(BaseScript), Mock(ProcessConfig))
+        processor = new DummyProcessor('task1', session,  Mock(BaseScript), new ProcessConfig([:]))
         builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
         then:

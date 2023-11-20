@@ -23,6 +23,7 @@ import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.executor.ExecutorFactory
 import nextflow.processor.TaskProcessor
+import nextflow.script.dsl.ProcessDsl
 /**
  *  Factory class for {@TaskProcessor} instances
  *
@@ -79,25 +80,26 @@ class ProcessFactory {
      * @return
      *      The {@code Processor} instance
      */
+    @Deprecated
     TaskProcessor createProcessor( String name, Closure<BodyDef> body ) {
         assert body
         assert config.process instanceof Map
 
-        // -- the config object
-        final processConfig = new ProcessConfig(owner, name)
+        final builder = new ProcessDsl(owner, name)
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
-        processConfig.throwExceptionOnMissingProperty(true)
         final copy = (Closure<BodyDef>)body.clone()
-        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
-        copy.setDelegate(processConfig)
+        copy.delegate = builder
+        copy.resolveStrategy = Closure.DELEGATE_FIRST
         final script = copy.call()
-        processConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // -- apply settings from config file to process config
-        processConfig.applyConfigLegacy((Map)config.process, name)
+        builder.applyConfig((Map)config.process, name, null, null)
+
+        // -- the config object
+        final processConfig = builder.getConfig()
 
         // -- get the executor for the given process config
         final execObj = executorFactory.getExecutor(name, processConfig, script, session)

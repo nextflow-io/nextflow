@@ -29,12 +29,12 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class OpXformTest extends Specification {
+class OperatorXformTest extends Specification {
 
     private TokenBranchDef eval_branch(String stmt) {
 
         def config = new CompilerConfiguration()
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
 
         def shell = new GroovyShell(config)
         def result = shell.evaluate("""
@@ -52,7 +52,7 @@ class OpXformTest extends Specification {
     private TokenMultiMapDef eval_multiMap(String stmt) {
 
         def config = new CompilerConfiguration()
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
 
         def shell = new GroovyShell(config)
         def result = shell.evaluate("""

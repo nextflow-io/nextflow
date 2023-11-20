@@ -12,8 +12,8 @@ class ProcessDefTest extends Specification {
 
         given:
         def OWNER = Mock(BaseScript)
-        def BODY = { -> null }
-        def proc = new ProcessDef(OWNER, BODY, 'foo')
+        def BODY = new BodyDef({->}, 'echo hello')
+        def proc = new ProcessDef(OWNER, 'foo', BODY, new ProcessConfig([:]))
 
         when:
         def copy = proc.cloneWithName('foo_alias')
@@ -22,8 +22,8 @@ class ProcessDefTest extends Specification {
         copy.getSimpleName() == 'foo_alias'
         copy.getBaseName() == 'foo'
         copy.getOwner() == OWNER
-        copy.rawBody.class == BODY.class
-        !copy.rawBody.is(BODY)
+        copy.taskBody.class == BODY.class
+        !copy.taskBody.is(BODY)
 
         when:
         copy = proc.cloneWithName('flow1:flow2:foo')
@@ -32,8 +32,8 @@ class ProcessDefTest extends Specification {
         copy.getSimpleName() == 'foo'
         copy.getBaseName() == 'foo'
         copy.getOwner() == OWNER
-        copy.rawBody.class == BODY.class
-        !copy.rawBody.is(BODY)
+        copy.taskBody.class == BODY.class
+        !copy.taskBody.is(BODY)
     }
 
     def 'should apply process config' () {
@@ -47,11 +47,11 @@ class ProcessDefTest extends Specification {
                         'withName:flow1:flow2:flow3:bar': [memory: '8GB']
                 ]
         ]
-        def BODY = {->
-            return new BodyDef({->}, 'echo hello')
+        def BODY = new BodyDef({->}, 'echo hello')
+        def proc = new ProcessDef(OWNER, 'foo', BODY, new ProcessConfig([:]))
+        proc.session = Mock(Session) {
+            getConfig() >> CONFIG
         }
-        def proc = new ProcessDef(OWNER, BODY, 'foo')
-        proc.session = Mock(Session) { getConfig() >> CONFIG }
 
         when:
         def copy = proc.clone()

@@ -13,12 +13,12 @@ import test.MockExecutorFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowDSLImplTest extends Dsl2Spec {
+class DslCodeVisitorTest extends Dsl2Spec {
 
     def createCompilerConfig() {
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
 
         return config
     }

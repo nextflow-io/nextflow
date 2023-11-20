@@ -16,6 +16,8 @@
 
 package nextflow.scm
 
+import java.nio.file.Files
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -240,6 +242,32 @@ class ProviderConfigTest extends Specification {
         and:
         'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
         'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+    }
+
+    def 'should get default config path' () {
+        given:
+        ProviderConfig.env.remove('NXF_SCM_FILE')
+
+        when:
+        def path = ProviderConfig.getScmConfigPath()
+        then:
+        path.toString() == "${System.getProperty('user.home')}/.nextflow/scm"
+
+    }
+
+    def 'should get custom config path' () {
+        given:
+        def cfg = Files.createTempFile('test','config')
+        ProviderConfig.env.NXF_SCM_FILE = cfg.toString()
+
+        when:
+        def path = ProviderConfig.getScmConfigPath()
+        then:
+        path.toString() == cfg.toString()
+
+        cleanup:
+        ProviderConfig.env.remove('NXF_SCM_FILE')
+        cfg.delete()
     }
 
 }

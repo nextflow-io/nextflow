@@ -102,45 +102,36 @@ class TaskConfigTest extends Specification {
 
         given:
         def config
-        def local
 
         when:
-        config = new ProcessConfig([:])
-        config.module 't_coffee/10'
-        config.module( [ 'blast/2.2.1', 'clustalw/2'] )
-        local = config.createTaskConfig()
+        config = new TaskConfig()
+        config.module = ['t_coffee/10', 'blast/2.2.1', 'clustalw/2']
         then:
-        local.module == ['t_coffee/10', 'blast/2.2.1', 'clustalw/2']
-        local.getModule() == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
+        config.module == ['t_coffee/10', 'blast/2.2.1', 'clustalw/2']
+        config.getModule() == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
 
 
         when:
-        config = new ProcessConfig([:])
-        config.module 'a/1'
-        config.module 'b/2:c/3'
-        local = config.createTaskConfig()
+        config = new TaskConfig()
+        config.module = ['a/1', 'b/2:c/3']
         then:
-        local.module == ['a/1','b/2','c/3']
+        config.module == ['a/1','b/2','c/3']
 
 
         when:
-        config = new ProcessConfig([:])
-        config.module { 'a/1' }
-        config.module { 'b/2:c/3' }
-        config.module 'd/4'
-        local = config.createTaskConfig()
-        local.setContext([:])
+        config = new TaskConfig()
+        config.module = ['a/1', 'b/2:c/3', 'd/4']
+        config.setContext([:])
         then:
-        local.module == ['a/1','b/2','c/3', 'd/4']
+        config.module == ['a/1','b/2','c/3', 'd/4']
 
 
         when:
-        config = new ProcessConfig([:])
-        config.module = 'b/2:c/3'
-        local = config.createTaskConfig()
+        config = new TaskConfig()
+        config.module = ['b/2:c/3']
         then:
-        local.module == ['b/2','c/3']
-        local.getModule() == ['b/2','c/3']
+        config.module == ['b/2','c/3']
+        config.getModule() == ['b/2','c/3']
 
 
     }
@@ -462,14 +453,13 @@ class TaskConfigTest extends Specification {
     def 'should create publishDir object' () {
 
         setup:
-        def script = Mock(BaseScript)
-        ProcessConfig process
-        PublishDir publish
+        def config
+        def publish
 
         when:
-        process = new ProcessConfig(script)
-        process.publishDir '/data'
-        publish = process.createTaskConfig().getPublishDir()[0]
+        config = new TaskConfig()
+        config.publishDir = [[path: '/data']]
+        publish = config.getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
         publish.pattern == null
@@ -477,9 +467,9 @@ class TaskConfigTest extends Specification {
         publish.mode == null
 
         when:
-        process = new ProcessConfig(script)
-        process.publishDir '/data', overwrite: false, mode: 'copy', pattern: '*.txt'
-        publish = process.createTaskConfig().getPublishDir()[0]
+        config = new TaskConfig()
+        config.publishDir = [[path: '/data', overwrite: false, mode: 'copy', pattern: '*.txt']]
+        publish = config.getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
         publish.pattern == '*.txt'
@@ -487,18 +477,17 @@ class TaskConfigTest extends Specification {
         publish.mode == PublishDir.Mode.COPY
 
         when:
-        process = new ProcessConfig(script)
-        process.publishDir '/my/data', mode: 'copyNoFollow'
-        publish = process.createTaskConfig().getPublishDir()[0]
+        config = new TaskConfig()
+        config.publishDir = [[path: '/my/data', mode: 'copyNoFollow']]
+        publish = config.getPublishDir()[0]
         then:
         publish.path == Paths.get('//my/data').complete()
         publish.mode == PublishDir.Mode.COPY_NO_FOLLOW
 
         when:
-        process = new ProcessConfig(script)
-        process.publishDir '/here'
-        process.publishDir '/there', pattern: '*.fq'
-        def dirs = process.createTaskConfig().getPublishDir()
+        config = new TaskConfig()
+        config.publishDir = [[path: '/here'], [path: '/there', pattern: '*.fq']]
+        def dirs = config.getPublishDir()
         then:
         dirs.size() == 2 
         dirs[0].path == Paths.get('/here')
@@ -549,20 +538,18 @@ class TaskConfigTest extends Specification {
 
     def 'should configure pod options'()  {
 
-        given:
-        def script = Mock(BaseScript)
-
         when:
-        def process = new ProcessConfig(script)
-        process.pod secret: 'foo', mountPath: '/this'
-        process.pod secret: 'bar', env: 'BAR_XXX'
+        def config = new TaskConfig()
+        config.pod = [
+                    [secret: 'foo', mountPath: '/this'],
+                    [secret: 'bar', env: 'BAR_XXX'] ]
         
         then:
-        process.get('pod') == [
+        config.get('pod') == [
                     [secret: 'foo', mountPath: '/this'],
                     [secret: 'bar', env: 'BAR_XXX'] ]
 
-        process.createTaskConfig().getPodOptions() == new PodOptions([
+        config.getPodOptions() == new PodOptions([
                     [secret: 'foo', mountPath: '/this'],
                     [secret: 'bar', env: 'BAR_XXX'] ])
 
@@ -571,20 +558,19 @@ class TaskConfigTest extends Specification {
     def 'should get gpu resources' () {
 
         given:
-        def script = Mock(BaseScript)
+        def config = new TaskConfig()
+        def res
 
         when:
-        def process = new ProcessConfig(script)
-        process.accelerator 5
-        def res = process.createTaskConfig().getAccelerator()
+        config.accelerator = [request: 5, limit: 5]
+        res = config.getAccelerator()
         then:
         res.limit == 5 
         res.request == 5
 
         when:
-        process = new ProcessConfig(script)
-        process.accelerator 5, limit: 10, type: 'nvidia'
-        res = process.createTaskConfig().getAccelerator()
+        config.accelerator = [request: 5, limit: 10, type: 'nvidia']
+        res = config.getAccelerator()
         then:
         res.request == 5
         res.limit == 10
@@ -593,36 +579,23 @@ class TaskConfigTest extends Specification {
 
     def 'should configure secrets'()  {
 
-        given:
-        def script = Mock(BaseScript)
-
         when:
-        def process = new ProcessConfig(script)
-        process.secret 'alpha'
-        process.secret 'omega'
+        def config = new TaskConfig()
+        config.secret = ['alpha', 'omega']
 
         then:
-        process.getSecret() == ['alpha', 'omega']
+        config.getSecret() == ['alpha', 'omega']
         and:
-        process.createTaskConfig().secret == ['alpha', 'omega']
-        process.createTaskConfig().getSecret() == ['alpha', 'omega']
+        config.secret == ['alpha', 'omega']
+        config.getSecret() == ['alpha', 'omega']
 
     }
 
     def 'should configure resourceLabels options'()  {
 
-        given:
-        def script = Mock(BaseScript)
-
         when:
-        def process = new ProcessConfig(script)
-        process.resourceLabels( region: 'eu-west-1', organization: 'A', user: 'this', team: 'that' )
-
-        then:
-        process.get('resourceLabels') == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
-
-        when:
-        def config = process.createTaskConfig()
+        def config = new TaskConfig()
+        config.resourceLabels = [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
         then:
         config.getResourceLabels() == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
         config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'

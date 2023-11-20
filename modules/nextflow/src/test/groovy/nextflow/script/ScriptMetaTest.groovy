@@ -45,8 +45,8 @@ class ScriptMetaTest extends Dsl2Spec {
         given:
         def script = new FooScript(new ScriptBinding())
 
-        def proc1 = new ProcessDef(script, Mock(Closure), 'proc1')
-        def proc2 = new ProcessDef(script, Mock(Closure), 'proc2')
+        def proc1 = new ProcessDef(script, 'proc1', Mock(BodyDef), new ProcessConfig([:]))
+        def proc2 = new ProcessDef(script, 'proc2', Mock(BodyDef), new ProcessConfig([:]))
         def func1 = new FunctionDef(name: 'func1', alias: 'func1')
         def work1 = new WorkflowDef(name:'work1')
 
@@ -83,19 +83,19 @@ class ScriptMetaTest extends Dsl2Spec {
 
         // defs in the root script
         def func1 = new FunctionDef(name: 'func1', alias: 'func1')
-        def proc1 = new ProcessDef(script1, Mock(Closure), 'proc1')
+        def proc1 = new ProcessDef(script1, 'proc1', Mock(BodyDef), new ProcessConfig([:]))
         def work1 = new WorkflowDef(name:'work1')
         meta1.addDefinition(proc1, func1, work1)
 
         // defs in the second script imported in the root namespace
         def func2 = new FunctionDef(name: 'func2', alias: 'func2')
-        def proc2 = new ProcessDef(script2, Mock(Closure), 'proc2')
+        def proc2 = new ProcessDef(script2, 'proc2', Mock(BodyDef), new ProcessConfig([:]))
         def work2 = new WorkflowDef(name:'work2')
         meta2.addDefinition(proc2, func2, work2)
 
         // defs in the third script imported in a separate namespace
         def func3 = new FunctionDef(name: 'func3', alias: 'func3')
-        def proc3 = new ProcessDef(script2, Mock(Closure), 'proc3')
+        def proc3 = new ProcessDef(script2, 'proc3', Mock(BodyDef), new ProcessConfig([:]))
         def work3 = new WorkflowDef(name:'work3')
         meta3.addDefinition(proc3, func3, work3)
 
@@ -205,7 +205,7 @@ class ScriptMetaTest extends Dsl2Spec {
 
         // import module into main script
         def func2 = new FunctionDef(name: 'func1', alias: 'func1')
-        def proc2 = new ProcessDef(script2, Mock(Closure), 'proc1')
+        def proc2 = new ProcessDef(script2, 'proc1', Mock(BodyDef), new ProcessConfig([:]))
         def work2 = new WorkflowDef(name: 'work1')
         meta2.addDefinition(proc2, func2, work2)
 
@@ -215,7 +215,7 @@ class ScriptMetaTest extends Dsl2Spec {
 
         // attempt to define duplicate components in main script
         def func1 = new FunctionDef(name: 'func1', alias: 'func1')
-        def proc1 = new ProcessDef(script1, Mock(Closure), 'proc1')
+        def proc1 = new ProcessDef(script1, 'proc1', Mock(BodyDef), new ProcessConfig([:]))
         def work1 = new WorkflowDef(name: 'work1')
 
         when:

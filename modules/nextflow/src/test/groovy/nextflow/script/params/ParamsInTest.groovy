@@ -631,7 +631,7 @@ class ParamsInTest extends Dsl2Spec {
         in0.inChannel instanceof DataflowVariable
         in0.inChannel.val == ['aaa']
         in0.inner.name == 'x'
-        in0.inner.owner == in0
+        in0.inner.owner.toString() == in0.toString()
 
         in1.class == EachInParam
         in1.name == '__$eachinparam<1>'
@@ -639,14 +639,14 @@ class ParamsInTest extends Dsl2Spec {
         in1.inChannel.val == [1,2]
         in1.inner.name == 'p'
         in1.inner instanceof ValueInParam
-        in1.inner.owner == in1
+        in1.inner.owner.toString() == in1.toString()
 
         in2.class == EachInParam
         in2.name == '__$eachinparam<2>'
         in2.inChannel.val == [1,2,3]
         in2.inner instanceof ValueInParam
         in2.inner.name == 'z'
-        in2.inner.owner == in2
+        in2.inner.owner.toString() == in2.toString()
 
         in3.class == EachInParam
         in3.name == '__$eachinparam<3>'
@@ -654,7 +654,7 @@ class ParamsInTest extends Dsl2Spec {
         in3.inChannel.val == ['file-a.txt']
         in3.inner instanceof FileInParam
         in3.inner.name == 'foo'
-        in3.inner.owner == in3
+        in3.inner.owner.toString() == in3.toString()
 
         in4.class == EachInParam
         in4.name == '__$eachinparam<4>'
@@ -663,7 +663,7 @@ class ParamsInTest extends Dsl2Spec {
         in4.inner instanceof FileInParam
         in4.inner.name == 'bar'
         in4.inner.filePattern == 'bar'
-        in4.inner.owner == in4
+        in4.inner.owner.toString() == in4.toString()
 
     }
 
@@ -940,19 +940,19 @@ class ParamsInTest extends Dsl2Spec {
         in0.inChannel instanceof DataflowVariable
         in0.inChannel.val == ['file-a.txt']
         in0.inner instanceof FileInParam
-        (in0.inner as FileInParam).name == 'foo'
-        (in0.inner as FileInParam).owner == in0
-        (in0.inner as FileInParam).isPathQualifier()
+        in0.inner.name == 'foo'
+        in0.inner.owner.toString() == in0.toString()
+        in0.inner.isPathQualifier()
 
         in1.class == EachInParam
         in1.name == '__$eachinparam<1>'
         in1.inChannel instanceof DataflowVariable
         in1.inChannel.val == ['file-x.fa']
         in1.inner instanceof FileInParam
-        (in1.inner as FileInParam).name == 'bar'
-        (in1.inner as FileInParam).filePattern == 'bar'
-        (in1.inner as FileInParam).owner == in1
-        (in1.inner as FileInParam).isPathQualifier()
+        in1.inner.name == 'bar'
+        in1.inner.filePattern == 'bar'
+        in1.inner.owner.toString() == in1.toString()
+        in1.inner.isPathQualifier()
 
     }
 

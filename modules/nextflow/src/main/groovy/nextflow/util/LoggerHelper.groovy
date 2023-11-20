@@ -65,6 +65,7 @@ import nextflow.script.ChainableDef
 import nextflow.script.ComponentDef
 import nextflow.script.CompositeDef
 import nextflow.script.FunctionDef
+import nextflow.script.ProcessDef
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowBinding
 import nextflow.script.WorkflowDef
@@ -754,7 +755,7 @@ class LoggerHelper {
         if( type instanceof Class ) {
             if( DataflowWriteChannel.isAssignableFrom(type) || DataflowReadChannel .isAssignableFrom(type) )
                 return 'channel type'
-            if( ComponentDef.isAssignableFrom(type) )
+            if( ProcessDef.isAssignableFrom(type) )
                 return 'process type'
             if( FunctionDef.isAssignableFrom(type) )
                 return 'function type'
