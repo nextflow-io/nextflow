@@ -277,7 +277,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 )
             }
 
-            }
+            
             else {
                 
                 instancePolicy.addDisks(
