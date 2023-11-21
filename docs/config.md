@@ -279,7 +279,7 @@ The following settings are available:
 `aws.client.storageKmsKeyId`
 : :::{versionadded} 22.05.0-edge
   :::
-: The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket ().
+: The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
 `aws.client.userAgent`
 : The HTTP user agent header passed with all HTTP requests.
@@ -1097,7 +1097,7 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
 `notification.binding`
-: An associative array modelling the variables in the template file.
+: A map modelling the variables in the template file.
 
 `notification.enabled`
 : Enables the sending of a notification message when the workflow execution completes.
