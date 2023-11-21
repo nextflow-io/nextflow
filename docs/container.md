@@ -4,11 +4,9 @@
 
 Nextflow supports a variety of container runtimes. Containerization allows you to write self-contained and truly reproducible computational pipelines, by packaging the binary dependencies of a script into a standard and portable format that can be executed on any platform that supports a container runtime. Furthermore, the same pipeline can be transparently executed with any of the supported container runtimes, depending on which runtimes are available in the target compute environment.
 
-## Requirements
-
+:::{note}
 When creating a container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in the image, along with other tools required for collecting metrics (See {ref}`this section <execution-report-tasks>`). Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
-
-Consider using {ref}`Wave containers <wave-page>` to streamline the provisioning of containers on-demand for your data pipeline.
+:::
 
 (container-apptainer)=
 
