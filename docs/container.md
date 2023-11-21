@@ -8,7 +8,7 @@ Nextflow supports a variety of container runtimes. Containerization allows you t
 
 When creating a container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in the image, along with other tools required for collecting metrics (See {ref}`this section <execution-report-tasks>`). Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
 
-When using AWS Batch, containers must be able to use the {ref}`AWS CLI <aws-batch-cli>` (unless you are using {ref}`wave-page` and {ref}`fusion-page`).
+Consider using {ref}`Wave containers <wave-page>` to streamline the provisioning of containers on-demand for your data pipeline.
 
 (container-apptainer)=
 

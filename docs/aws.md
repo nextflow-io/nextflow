@@ -142,18 +142,13 @@ Read the {ref}`AWS Batch executor <awsbatch-executor>` section to learn more abo
 
 ### AWS CLI
 
-Nextflow needs the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to be available in the container in which tasks are executed, in order to stage input files and output files to and from S3 storage.
-
-The `aws` command can be made available in any of the following ways:
-
-1. Installed in the Docker image(s),
-2. Installed in a custom [Amazon Machine Image (AMI)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) to use in place of the default AMI when configuring AWS Batch.
-
-The [custom AMI](#custom-ami) approach is preferred because it allows the use of existing Docker images without having to add the AWS CLI to each one.
-
 :::{tip}
-When using {ref}`wave-page` and {ref}`fusion-page`, the AWS CLI is not needed for task containers or the underlying EC2 instances when running Nextflow on AWS Batch. See the {ref}`fusion-page` documentation for more details.
+Installing the AWS CLI in task containers is a legacy approach. Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
 :::
+
+Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.
+
+The `aws` command can be made available by either (1) installing it in the container image(s) or (2) installing it in a {ref}`custom AMI <aws-custom-ami>` to be used instead of the default AMI when configuring AWS Batch.
 
 ### Get started
 
@@ -247,6 +242,8 @@ containerOptions '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
 
 Check the [AWS documentation](https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html) for further details.
 
+(aws-custom-ami)=
+
 ## Custom AMI
 
 There are several reasons why you might need to create your own [AMI (Amazon Machine Image)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) to use in your Compute Environments:
@@ -280,7 +277,7 @@ Any additional software must be installed on the EC2 instance *before* creating 
 ### AWS CLI installation
 
 :::{tip}
-When using {ref}`wave-page` and {ref}`fusion-page`, the AWS command line tool is not needed for task containers or the underlying EC2 instances when running Nextflow on AWS Batch. See the {ref}`fusion-page` documentation for more details.
+Installing the AWS CLI in task containers is a legacy approach. Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
 :::
 
 The [AWS CLI](https://aws.amazon.com/cli) should be installed in your custom AMI using a self-contained package manager such as [Conda](https://conda.io). That way, you can control which version of Python is used by the AWS CLI (which is written in Python).
