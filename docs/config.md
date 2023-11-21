@@ -220,7 +220,10 @@ The following settings are available:
 : :::{versionadded} 22.12.0-edge
   :::
 : *Experimental: may change in a future release.*
-: Enable auto retrieval of S3 objects stored with Glacier class store (default: `false`).
+: Enable auto retrieval of S3 objects with a Glacier storage class (default: `false`).
+: :::{note}
+  This feature only works for S3 objects that are downloaded by Nextflow directly. It is not supported for tasks (e.g. when using the AWS Batch executor), since that would lead to many tasks sitting idle for several hours and wasting resources. If you need to restore many objects from Glacier, consider restoring them in a script prior to launching the pipeline.
+  :::
 
 `aws.client.glacierExpirationDays`
 : :::{versionadded} 22.12.0-edge
@@ -362,6 +365,10 @@ The following settings are available:
 `azure.batch.pools.<name>.fileShareRootPath`
 : *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
+
+`azure.batch.pools.<name>.lowPriority`
+: *New in `nf-azure` version `1.4.0`*
+: Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
