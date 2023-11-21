@@ -775,6 +775,11 @@ The following settings are available for Google Cloud Batch:
 `google.location`
 : The Google Cloud location where jobs are executed (default: `us-central1`).
 
+`google.batch.maxSpotAttempts`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
+
 `google.project`
 : The Google Cloud project ID to use for pipeline execution
 

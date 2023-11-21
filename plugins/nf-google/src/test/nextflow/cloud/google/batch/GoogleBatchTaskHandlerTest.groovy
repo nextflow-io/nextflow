@@ -130,6 +130,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
                 getCpuPlatform() >> CPU_PLATFORM
+                getMaxSpotAttempts() >> 5
                 getSpot() >> true
                 getNetwork() >> 'net-1'
                 getServiceAccountEmail() >> 'foo@bar.baz'
@@ -170,16 +171,20 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         and:
         def taskGroup = req.getTaskGroups(0)
-        def runnable = taskGroup.getTaskSpec().getRunnables(0)
+        def taskSpec = taskGroup.getTaskSpec()
+        def runnable = taskSpec.getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         def networkInterface = allocationPolicy.getNetwork().getNetworkInterfaces(0)
         and:
-        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
-        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
-        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
-        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
-        taskGroup.getTaskSpec().getVolumes(0).getMountPath() == '/tmp'
+        taskSpec.getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
+        taskSpec.getComputeResource().getCpuMilli() == CPUS * 1_000
+        taskSpec.getComputeResource().getMemoryMib() == MEM.toMega()
+        taskSpec.getMaxRunDuration().getSeconds() == TIMEOUT.seconds
+        taskSpec.getVolumes(0).getMountPath() == '/tmp'
+        taskSpec.getMaxRetryCount() == 5
+        taskSpec.getLifecyclePolicies(0).getActionCondition().getExitCodes(0) == 50001
+        taskSpec.getLifecyclePolicies(0).getAction().toString() == 'RETRY_TASK'
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
