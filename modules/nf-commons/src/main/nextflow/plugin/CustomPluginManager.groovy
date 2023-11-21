@@ -64,6 +64,6 @@ class CustomPluginManager extends DefaultPluginManager {
 
     @Override
     protected ExtensionFactory createExtensionFactory() {
-        return new SingletonExtensionFactory()
+        return new SingletonExtensionFactory(this)
     }
 }
