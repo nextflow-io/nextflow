@@ -86,7 +86,7 @@ Learn more about lists:
 Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
 ```groovy
-scores = [ "Brett":100, "Pete":"Did not finish", "Andrew":86.87934 ]
+scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
 ```
 
 Note that each of the values stored in the map can be of a different type. `Brett` is an integer, `Pete` is a string, and `Andrew` is a floating-point number.
@@ -453,6 +453,50 @@ Local variables should be declared using a qualifier such as `def` or a type nam
 :::
 
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
+
+### Syntax sugar
+
+Groovy provides several forms of "syntax sugar", or shorthands that can make your code easier to read.
+
+Some programming languages require every statement to be terminated by a semi-colon. In Groovy, semi-colons are optional, but they can still be used to write multiple statements on the same line:
+
+```groovy
+println 'Hello!' ; println 'Hello again!'
+```
+
+When calling a function, the parentheses around the function arguments are optional:
+
+```groovy
+// full syntax
+printf('Hello %s!\n', 'World')
+
+// shorthand
+printf 'Hello %s!\n', 'World'
+```
+
+It is especially useful when calling a function with a closure parameter:
+
+```groovy
+// full syntax
+[1, 2, 3].each({ println it })
+
+// shorthand
+[1, 2, 3].each { println it }
+```
+
+If the last argument is a closure, the closure can be written outside of the parentheses:
+
+```groovy
+// full syntax
+[1, 2, 3].inject('result:', { accum, v -> accum + ' ' + v })
+
+// shorthand
+[1, 2, 3].inject('result:') { accum, v -> accum + ' ' + v }
+```
+
+:::{note}
+In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
+:::
 
 (implicit-variables)=
 

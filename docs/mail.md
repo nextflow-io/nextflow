@@ -10,7 +10,7 @@ The built-in function `sendMail` allows you to send a mail message from a workfl
 
 ### Basic mail
 
-The mail attributes are specified as named parameters or providing an equivalent associative array as argument. For example:
+The mail attributes are specified as named parameters or an equivalent map. For example:
 
 ```groovy
 sendMail(
