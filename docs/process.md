@@ -2005,7 +2005,7 @@ process your_task {
 
 The above snippet defines an environment variable named `FOO` whose value is `bar`.
 
-When defined in the Nextflow configuration file, pod settings should be defined as maps. For example:
+When defined in the Nextflow configuration file, a pod setting can be defined as a map:
 
 ```groovy
 process {
@@ -2013,13 +2013,13 @@ process {
 }
 ```
 
-Multiple pod settings can be provided as a list of maps:
+Or as a list of maps:
 
 ```groovy
 process {
   pod = [
-      [env: 'FOO', value: 'bar'],
-      [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
+    [env: 'FOO', value: 'bar'],
+    [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
   ]
 }
 ```
