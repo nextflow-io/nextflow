@@ -210,6 +210,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // retry on spot reclaim
         if( executor.config.maxSpotAttempts ) {
+            // Note: Google Batch uses the special exit status 50001 to signal
+            // the execution was terminated due a spot reclaim. When this happens
+            // The policy re-execute the jobs automatically up to `maxSpotAttempts` times
             taskSpec
                 .setMaxRetryCount( executor.config.maxSpotAttempts )
                 .addLifecyclePolicies(
