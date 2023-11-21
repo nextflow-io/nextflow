@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+2.1.4-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 2.1.4 - 10 Oct 2023
 - Improve S3 endpoint validation [2b9ae6aa]
 - Add -cloudcache CLI option (#4385) [73fda582]
