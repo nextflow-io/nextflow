@@ -237,6 +237,18 @@ class AzBatchServiceTest extends Specification {
         formula.contains '$TargetDedicatedNodes = lifespan < interval ? 3 : targetPoolSize;'
     }
 
+    def 'should check scaling formula for low-priority' () {
+        given:
+        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def formula = svc.scaleFormula( new AzPoolOpts(lowPriority: true, vmCount: 3, maxVmCount: 10, scaleInterval: Duration.of('5 min')) )
+        then:
+        formula.contains 'interval = TimeInterval_Minute * 5;'
+        formula.contains '$TargetLowPriorityNodes = lifespan < interval ? 3 : targetPoolSize;'
+    }
+
     def 'should  check formula vars' () {
         given:
         def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
@@ -347,7 +359,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-9022a3fbfb5f93028d78fefaea5e21ab-Standard_X1'
+        spec.poolId == 'nf-pool-6e9cf97d3d846621464131d3842265ce-Standard_X1'
         spec.metadata == [foo: 'bar']
 
     }
