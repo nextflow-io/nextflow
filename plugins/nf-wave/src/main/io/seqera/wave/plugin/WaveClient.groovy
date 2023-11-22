@@ -567,7 +567,7 @@ class WaveClient {
             return false
         if( value.startsWith('http://') || value.startsWith('https://') )
             return false
-        if( value.startsWith('/') && !value.contains('/n') )
+        if( value.startsWith('/') && !value.contains('\n') )
             return true
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
     }
