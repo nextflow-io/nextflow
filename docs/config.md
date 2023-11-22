@@ -279,7 +279,7 @@ The following settings are available:
 `aws.client.storageKmsKeyId`
 : :::{versionadded} 22.05.0-edge
   :::
-: The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket ().
+: The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
 `aws.client.userAgent`
 : The HTTP user agent header passed with all HTTP requests.
@@ -365,6 +365,10 @@ The following settings are available:
 `azure.batch.pools.<name>.fileShareRootPath`
 : *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
+
+`azure.batch.pools.<name>.lowPriority`
+: *New in `nf-azure` version `1.4.0`*
+: Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
@@ -751,7 +755,9 @@ The `google` scope allows you to configure the interactions with Google Cloud, i
 
 Read the {ref}`google-page` page for more information.
 
-The following settings are available:
+#### Cloud Batch
+
+The following settings are available for Google Cloud Batch:
 
 `google.enableRequesterPaysBuckets`
 : When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
@@ -769,16 +775,13 @@ The following settings are available:
 `google.location`
 : The Google Cloud location where jobs are executed (default: `us-central1`).
 
+`google.batch.maxSpotAttempts`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
+
 `google.project`
 : The Google Cloud project ID to use for pipeline execution
-
-`google.region`
-: *Available only for Google Life Sciences*
-: The Google Cloud region where jobs are executed. Multiple regions can be provided as a comma-separated list. Cannot be used with the `google.zone` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
-
-`google.zone`
-: *Available only for Google Life Sciences*
-: The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
 
 `google.batch.allowedLocations`
 : :::{versionadded} 22.12.0-edge
@@ -817,6 +820,50 @@ The following settings are available:
 
 `google.batch.usePrivateAddress`
 : When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
+
+`google.storage.maxAttempts`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
+
+`google.storage.maxDelay`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
+
+`google.storage.multiplier`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
+
+#### Cloud Life Sciences
+
+The following settings are available for Cloud Life Sciences:
+
+`google.enableRequesterPaysBuckets`
+: When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
+
+`google.httpConnectTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+
+`google.httpReadTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
+
+`google.location`
+: The Google Cloud location where jobs are executed (default: `us-central1`).
+
+`google.project`
+: The Google Cloud project ID to use for pipeline execution
+
+`google.region`
+: The Google Cloud region where jobs are executed. Multiple regions can be provided as a comma-separated list. Cannot be used with the `google.zone` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
+
+`google.zone`
+: The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
 
 `google.lifeSciences.bootDiskSize`
 : Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
@@ -1093,7 +1140,7 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
 `notification.binding`
-: An associative array modelling the variables in the template file.
+: A map modelling the variables in the template file.
 
 `notification.enabled`
 : Enables the sending of a notification message when the workflow execution completes.
