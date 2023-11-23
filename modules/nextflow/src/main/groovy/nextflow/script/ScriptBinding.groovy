@@ -240,7 +240,7 @@ class ScriptBinding extends WorkflowBinding {
 
         private ParamsMap allowNames(Set names) {
             for( String name : names ) {
-                def name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
+                final name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
                 readOnlyNames.remove(name)
                 readOnlyNames.remove(name2)
             }
