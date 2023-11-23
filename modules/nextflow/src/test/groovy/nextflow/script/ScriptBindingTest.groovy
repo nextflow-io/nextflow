@@ -144,23 +144,31 @@ class ScriptBindingTest extends Specification {
         def map = new ScriptBinding.ParamsMap()
         map['alpha'] = 0
         map['alpha'] = 1
+        map['alphaBeta'] = 0
+        map['alphaBeta'] = 1
         map['delta'] = 2
         map['gamma'] = 3
         then:
         map.alpha == 0
+        map.alphaBeta == 0
+        map.'alpha-beta' == 0
         map.delta == 2
         map.gamma == 3
 
         when:
-        def copy = map.copyWith(foo:1, omega: 9)
+        def copy = map.copyWith(foo:1, alphaBeta: 4, omega: 9)
         then:
         copy.foo == 1
+        copy.alphaBeta == 4
+        copy.'alpha-beta' == 4
         copy.delta == 2
         copy.gamma == 3
         copy.omega == 9
         and:
         // source does not change
         map.alpha == 0
+        map.alphaBeta == 0
+        map.'alpha-beta' == 0
         map.delta == 2
         map.gamma == 3
         !map.containsKey('omega')
