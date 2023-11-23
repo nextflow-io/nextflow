@@ -37,10 +37,16 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private boolean newPidNamespace
 
+    private String runCmd0
+
+    private Boolean oci
+
     SingularityBuilder(String name) {
         this.image = name
         this.homeMount = defaultHomeMount()
+        this.autoMounts = defaultAutoMounts()
         this.newPidNamespace = defaultNewPidNamespace()
+        this.runCmd0 = defaultRunCommand()
     }
 
     private boolean defaultHomeMount() {
@@ -49,6 +55,17 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private boolean defaultNewPidNamespace() {
         SysEnv.get("NXF_${getBinaryName().toUpperCase()}_NEW_PID_NAMESPACE", 'true').toString() == 'true'
+    }
+
+    private boolean defaultAutoMounts() {
+        SysEnv.get("NXF_${getBinaryName().toUpperCase()}_AUTO_MOUNTS", 'true').toString() == 'true'
+    }
+
+    private String defaultRunCommand() {
+        final result = SysEnv.get("NXF_${getBinaryName().toUpperCase()}_RUN_COMMAND", 'exec')
+        if( result !in ['run','exec'] )
+            throw new IllegalArgumentException("Invalid singularity launch command '$result' - it should be either 'run' or 'exec'")
+        return result
     }
 
     protected String getBinaryName() { 'singularity' }
@@ -68,7 +85,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
-        if( params.autoMounts )
+        if( params.autoMounts!=null )
             autoMounts = params.autoMounts.toString() == 'true'
 
         if( params.newPidNamespace!=null )
@@ -76,6 +93,9 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
+
+        if( params.oci!=null )
+            oci = params.oci.toString() == 'true'
 
         return this
     }
@@ -97,13 +117,16 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( engineOptions )
             result << engineOptions.join(' ') << ' '
 
-        result << 'exec '
+        result << runCmd0 << ' '
 
         if( !homeMount )
             result << '--no-home '
 
-        if( newPidNamespace )
+        if( newPidNamespace && !oci )
             result << '--pid '
+
+        if( oci != null )
+            result << (oci ? '--oci ' : '--no-oci ')
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
@@ -130,6 +153,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     protected CharSequence appendEnv(StringBuilder result) {
         makeEnv('TMP',result) .append(' ')
         makeEnv('TMPDIR',result) .append(' ')
+        // add magic variables required by singularity to run in OCI-mode
+        if( oci ) {
+            result .append('${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ')
+            result .append('${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ')
+        }
         super.appendEnv(result)
     }
 
@@ -197,7 +225,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( launcher ) {
             def result = getRunCommand()
-            result += entryPoint ? " $entryPoint -c \"cd \$PWD; $launcher\"" : " $launcher"
+            result += entryPoint ? " $entryPoint -c \"cd \$NXF_TASK_WORKDIR; $launcher\"" : " $launcher"
             return result
         }
         return getRunCommand() + ' ' + launcher

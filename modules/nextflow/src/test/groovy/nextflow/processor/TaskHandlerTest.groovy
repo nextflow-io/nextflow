@@ -207,4 +207,46 @@ class TaskHandlerTest extends Specification {
         handler.task.processor.getForksCount().intValue() == COUNTER -1
     }
 
+    def 'should validate is submit timeout' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = TaskStatus.SUBMITTED
+        handler.task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) { getMaxSubmitAwait() >> Duration.of('500ms') }
+        }
+
+        when:
+        def timeout = handler.isSubmitTimeout()
+        then:
+        !timeout
+
+        when:
+        sleep 1_000
+        and:
+        timeout = handler.isSubmitTimeout()
+        then:
+        timeout
+
+    }
+
+    @Unroll
+    def 'should validate status' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = STATUS
+
+        expect:
+        handler.isNew() == EXPECT_NEW
+        handler.isRunning() == EXPECT_RUNNING
+        handler.isSubmitted() == EXPECT_SUBMITTED
+        handler.isActive() == EXPECTED_ACTIVE
+        handler.isCompleted() == EXPECT_COMPLETE
+        
+        where:
+        STATUS              | EXPECT_NEW  | EXPECT_SUBMITTED | EXPECT_RUNNING | EXPECTED_ACTIVE | EXPECT_COMPLETE
+        TaskStatus.NEW      | true        | false            | false          | false           | false
+        TaskStatus.SUBMITTED| false       | true             | false          | true            | false
+        TaskStatus.RUNNING  | false       | false            | true           | true            | false
+        TaskStatus.COMPLETED| false       | false            | false          | false           | true
+    }
 }

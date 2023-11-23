@@ -179,6 +179,21 @@ class Session implements ISession {
     boolean disableRemoteBinDir
 
     /**
+     * Suppress all output from pipeline script
+     */
+    boolean quiet
+
+    /**
+     * Enable debugging mode
+     */
+    boolean debug
+
+    /**
+     * Defines the cloud path where store cache meta-data
+     */
+    Path cloudCachePath
+
+    /**
      * Local path where script generated classes are saved
      */
     private Path classesDir
@@ -232,11 +247,11 @@ class Session implements ISession {
 
     boolean getStatsEnabled() { statsEnabled }
 
-    private boolean dumpHashes
+    private String dumpHashes
 
     private List<String> dumpChannels
 
-    boolean getDumpHashes() { dumpHashes }
+    String getDumpHashes() { dumpHashes }
 
     List<String> getDumpChannels() { dumpChannels }
 
@@ -351,9 +366,23 @@ class Session implements ISession {
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
         this.setLibDir( config.libDir as String )
 
+        // -- init cloud cache path
+        this.cloudCachePath = cloudCachePath(config.cloudcache as Map, workDir)
+
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
+    }
+
+    protected Path cloudCachePath(Map cloudcache, Path workDir) {
+        if( !cloudcache?.enabled )
+            return null
+        final String path = cloudcache.path
+        final result = path ? FileHelper.asPath(path) : workDir
+        if( result.scheme !in ['s3','az','gs'] ) {
+            throw new IllegalArgumentException("Storage path not supported by Cloud-cache - offending value: '${result}'")
+        }
+        return result
     }
 
     /**
@@ -879,11 +908,12 @@ class Session implements ISession {
         def keys = (config.process as Map).keySet()
         for(String key : keys) {
             String name = null
-            if( key.startsWith('$') ) {
-                name = key.substring(1)
-            }
-            else if( key.startsWith('withName:') ) {
+            if( key.startsWith('withName:') ) {
                 name = key.substring('withName:'.length())
+            }
+            else if( key.startsWith('$') ) {
+                name = key.substring(1)
+                log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
             }
             if( name )
                 checkValidProcessName(processNames, name, result)
@@ -1190,13 +1220,18 @@ class Session implements ISession {
             return new ContainerConfig(result)
         }
 
-        final enabled = allEngines.findAll { it.enabled?.toString() == 'true' }
+        final enabled = allEngines.findAll(it -> it.enabled?.toString() == 'true')
         if( enabled.size() > 1 ) {
-            def names = enabled.collect { it.engine }
+            final names = enabled.collect(it -> it.engine)
             throw new IllegalConfigException("Cannot enable more than one container engine -- Choose either one of: ${names.join(', ')}")
         }
-
-        (enabled ? enabled.get(0) : ( allEngines ? allEngines.get(0) : [engine:'docker'] )) as ContainerConfig
+        if( enabled ) {
+            return new ContainerConfig(enabled.get(0))
+        }
+        if( allEngines ) {
+            return new ContainerConfig(allEngines.get(0))
+        }
+        return new ContainerConfig(engine:'docker')
     }
 
     ContainerConfig getContainerConfig() {
@@ -1204,9 +1239,11 @@ class Session implements ISession {
     }
 
     private void getContainerConfig0(String engine, List<Map> drivers) {
+        assert engine
         final entry = this.config?.get(engine)
         if( entry instanceof Map ) {
-            final config0 = new LinkedHashMap((Map)entry)
+            final config0 = new LinkedHashMap()
+            config0.putAll((Map)entry)
             config0.put('engine', engine)
             drivers.add(config0)
         }
@@ -1268,7 +1305,15 @@ class Session implements ISession {
              * look for `container` definition at process level
              */
             config.process.each { String name, value ->
-                if( name.startsWith('$') && value instanceof Map && value.container ) {
+                if( name.startsWith('withName:') ) {
+                    name = name.substring('withName:'.length())
+                }
+                else if( name.startsWith('$') ) {
+                    name = name.substring(1)
+                    log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
+                }
+
+                if( value instanceof Map && value.container ) {
                     result[name] = resolveClosure(value.container)
                 }
             }

@@ -20,7 +20,6 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
-import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
@@ -90,13 +89,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected process( String name, Closure<BodyDef> body ) {
-        if( NF.isDsl2() ) {
-            def process = new ProcessDef(this,body,name)
-            meta.addDefinition(process)
-        }
-        else {
-            throw new UnsupportedOperationException("DSL1 is not supported anymore")
-        }
+        final process = new ProcessDef(this,body,name)
+        meta.addDefinition(process)
     }
 
     /**
@@ -191,9 +185,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
         try {
             run0()
         }
-        catch(InvocationTargetException e) {
+        catch( InvocationTargetException e ) {
             // provide the exception cause which is more informative than InvocationTargetException
-            throw(e.cause ?: e)
+            Throwable target = e
+            do target = target.cause
+            while ( target instanceof InvocationTargetException )
+            throw target
         }
         finally {
             ExecutionStack.pop()
@@ -204,6 +201,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void print(Object object) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(object?.toString())
         else
@@ -212,6 +212,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println() {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info("")
         else
@@ -220,6 +223,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println(Object object) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(object?.toString())
         else
@@ -228,6 +234,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object arg) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(String.printf(msg, arg))
         else
@@ -236,6 +245,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object[] args) {
+        if( session?.quiet )
+            return
+
         if( session?.ansiLog )
             log.info(String.printf(msg, args))
         else

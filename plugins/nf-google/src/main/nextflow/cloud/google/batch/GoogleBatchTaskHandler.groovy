@@ -24,6 +24,7 @@ import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
 import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.LifecyclePolicy
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.ServiceAccount
@@ -207,6 +208,23 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             )
             .addAllVolumes( launcher.getVolumes() )
 
+        // retry on spot reclaim
+        if( executor.config.maxSpotAttempts ) {
+            // Note: Google Batch uses the special exit status 50001 to signal
+            // the execution was terminated due a spot reclaim. When this happens
+            // The policy re-execute the jobs automatically up to `maxSpotAttempts` times
+            taskSpec
+                .setMaxRetryCount( executor.config.maxSpotAttempts )
+                .addLifecyclePolicies(
+                    LifecyclePolicy.newBuilder()
+                        .setActionCondition(
+                            LifecyclePolicy.ActionCondition.newBuilder()
+                                .addExitCodes(50001)
+                        )
+                        .setAction(LifecyclePolicy.Action.RETRY_TASK)
+                )
+        }
+
         // instance policy
         final allocationPolicy = AllocationPolicy.newBuilder()
         final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
@@ -356,10 +374,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return jobState
     }
 
-    private List<String> RUNNING_AND_TERMINATED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
+    static private List<String> RUNNING_AND_TERMINATED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
-    private List<String> TERMINATED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
-
+    static private List<String> TERMINATED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
     @Override
     boolean checkIfRunning() {
@@ -379,7 +396,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( state in TERMINATED ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; state=$state"
             // finalize the task
-            task.exitStatus = readExitFile()
+            task.exitStatus = getJobExitCode()
+            if( task.exitStatus == null )
+                task.exitStatus = readExitFile()
             if( state == 'FAILED' ) {
                 task.stdout = executor.logging.stdout(uid) ?: outputFile
                 task.stderr = executor.logging.stderr(uid) ?: errorFile
@@ -395,6 +414,24 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return false
     }
 
+    protected Integer getJobExitCode() {
+        try {
+            final status = client.getJobStatus(jobId)
+            final eventsCount = status.getStatusEventsCount()
+            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}"
+
+            if( lastEvent?.getDescription()?.contains('due to Spot VM preemption with exit code 50001') ) {
+                return 50001
+            }
+        }
+        catch (Throwable t) {
+            log.debug "[GOOGLE BATCH] Unable to fetch task `${task.lazyName()}` exit code - cause: ${t.message}"
+        }
+
+        return null
+    }
+
     @PackageScope Integer readExitFile() {
         try {
             exitFile.text as Integer
@@ -408,7 +445,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     void kill() {
-        if( isSubmitted() ) {
+        if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
             client.deleteJob(jobId)
         }

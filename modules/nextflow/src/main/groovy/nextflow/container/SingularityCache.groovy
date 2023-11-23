@@ -99,7 +99,7 @@ class SingularityCache {
     }
 
     /**
-     * Create the specified directory if not exists
+     * Create the specified directory if it does not exist
      *
      * @param
      *      str A path string representing a folder where store the singularity images once downloaded
@@ -224,7 +224,7 @@ class SingularityCache {
             return libraryPath
         }
 
-        // check for the image in teh cache dir
+        // check for the image in the cache dir
         // if the image does not exist in the cache dir, download it
         final localPath = localCachePath(imageUrl)
         if( localPath.exists() ) {

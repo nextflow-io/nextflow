@@ -55,6 +55,10 @@ class ContainerConfig extends LinkedHashMap {
         get('engine')
     }
 
+    boolean singularityOciMode() {
+        getEngine()=='singularity' && get('oci')?.toString() == 'true'
+    }
+
     List<String> getEnvWhitelist() {
         def result = get('envWhitelist')
         if( !result )
@@ -89,6 +93,8 @@ class ContainerConfig extends LinkedHashMap {
             return null
         if( eng=='docker' || eng=='podman' )
             return '--rm --privileged'
+        if( singularityOciMode() )
+            return '-B /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
             return null
         log.warn "Fusion file system is not supported by '$eng' container engine"

@@ -138,24 +138,18 @@ Nextflow provides built-in support for AWS Batch, allowing the seamless deployme
 
 Read the {ref}`AWS Batch executor <awsbatch-executor>` section to learn more about the `awsbatch` executor in Nextflow.
 
-(aws-batch-config)=
+(aws-batch-cli)=
 
 ### AWS CLI
 
-Nextflow needs the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to be available in the container in which tasks are executed, in order to stage input files and output files to and from S3 storage.
-
 :::{tip}
-When using {ref}`wave-page` and {ref}`fusion-page`, the AWS command line tool is not needed for task containers or the underlying EC2 instances when running Nextflow on AWS Batch. See the {ref}`fusion-page` documentation for more details.
+The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
+Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
 :::
 
-The `aws` command can be made available in the container in two ways:
+Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.
 
-1. Installed in the Docker image(s) used during the pipeline execution,
-2. Installed in a custom [AMI (Amazon Machine Image)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) to use in place of the default AMI when configuring AWS Batch (see next section).
-
-The latter approach is preferred because it allows the use of existing Docker images without having to add the AWS CLI to each one.
-
-See the sections below to learn how to create a custom AMI and install the AWS CLI tool in it.
+The `aws` command can be made available by either (1) installing it in the container image(s) or (2) installing it in a {ref}`custom AMI <aws-custom-ami>` to be used instead of the default AMI when configuring AWS Batch.
 
 ### Get started
 
@@ -194,7 +188,7 @@ process {
 
 aws {
     batch {
-        // NOTE: this setting is only required if the AWS CLI tool is installed in a custom AMI
+        // NOTE: this setting is only required if the AWS CLI is installed in a custom AMI
         cliPath = '/home/ec2-user/miniconda/bin/aws'
     }
     region = 'us-east-1'
@@ -249,6 +243,8 @@ containerOptions '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
 
 Check the [AWS documentation](https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html) for further details.
 
+(aws-custom-ami)=
+
 ## Custom AMI
 
 There are several reasons why you might need to create your own [AMI (Amazon Machine Image)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) to use in your Compute Environments:
@@ -260,10 +256,11 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 
 ### Create your custom AMI
 
-From the EC2 Dashboard, select **Launch Instance**, then select **AWS Marketplace** in the left-hand pane and search for "ECS". In the result list, select **Amazon ECS-Optimized Amazon Linux 2 AMI**, then continue as usual to configure and launch the instance.
+From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select 
+**AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}
-The selected instance has a bootstrap volume of 8GB and a second EBS volume of 30GB for scratch storage, which is not enough for real genomic workloads. Make sure to specify an additional volume with enough storage for your pipeline execution.
+The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
 :::
 
 When the instance is running, SSH into it (or connect with the Session Manager service), install the AWS CLI, and install any other tool that may be required (see following sections).
@@ -281,10 +278,11 @@ Any additional software must be installed on the EC2 instance *before* creating 
 ### AWS CLI installation
 
 :::{tip}
-When using {ref}`wave-page` and {ref}`fusion-page`, the AWS command line tool is not needed for task containers or the underlying EC2 instances when running Nextflow on AWS Batch. See the {ref}`fusion-page` documentation for more details.
+The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
+Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
 :::
 
-The [AWS CLI tool](https://aws.amazon.com/cli) should be installed in your custom AMI using a self-contained package manager such as [Conda](https://conda.io). That way, you can control which version of Python is used by the AWS CLI (which is written in Python).
+The [AWS CLI](https://aws.amazon.com/cli) should be installed in your custom AMI using a self-contained package manager such as [Conda](https://conda.io). That way, you can control which version of Python is used by the AWS CLI (which is written in Python).
 
 If you don't use Conda, the `aws` command will attempt to use the version of Python that is installed in the container, and it won't be able to find the necessary dependencies.
 
@@ -303,7 +301,7 @@ Afterwards, verify that the AWS CLI package works correctly:
 
 ```console
 $ ./miniconda/bin/aws --version
-aws-cli/1.19.79 Python/3.8.5 Linux/4.14.231-173.361.amzn2.x86_64 botocore/1.20.79
+aws-cli/1.29.20 Python/3.11.4 Linux/4.14.318-241.531.amzn2.x86_64 botocore/1.31.20
 ```
 
 :::{note}
@@ -328,7 +326,7 @@ The grandparent directory of the `aws` tool will be mounted into the container a
 
 ### Docker installation
 
-Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-Optimized Amazon Linux 2** AMI has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
+Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
 
 The following snippet shows how to install Docker on an Amazon EC2 instance:
 
@@ -353,7 +351,7 @@ These steps must be done *before* creating the AMI from the current EC2 instance
 
 The [ECS container agent](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html) is a component of Amazon Elastic Container Service (Amazon ECS) and is responsible for managing containers on behalf of ECS. AWS Batch uses ECS to execute containerized jobs, therefore it requires the agent to be installed on EC2 instances within your Compute Environments.
 
-The ECS agent is included in the **Amazon ECS-Optimized Amazon Linux 2** AMI. If you use a different AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
+The ECS agent is included in the **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** . If you use a different base AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
 
 To install the agent, follow these steps:
 
@@ -371,6 +369,10 @@ curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
 
 :::{note}
 The `AmazonEC2ContainerServiceforEC2Role` policy must be attached to the instance role in order to be able to connect the EC2 instance created by the Compute Environment to the ECS container.
+:::
+
+:::{note}
+The `AmazonEC2ContainerRegistryReadOnly` policy should be attached to the instance role in order to get read-only access to Amazon EC2 Container Registry repositories.
 :::
 
 ## Jobs & Execution
@@ -405,7 +407,7 @@ The bucket path should include at least a top level directory name, e.g. `s3://m
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to AWS Batch.
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the AWS Batch {ref}`configuration <aws-batch-config>` to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the AWS Batch configuration to the subset of processes that you want to offload. For example:
 
 ```groovy
 aws {

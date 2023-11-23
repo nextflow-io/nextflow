@@ -10,7 +10,7 @@ The built-in function `sendMail` allows you to send a mail message from a workfl
 
 ### Basic mail
 
-The mail attributes are specified as named parameters or providing an equivalent associative array as argument. For example:
+The mail attributes are specified as named parameters or an equivalent map. For example:
 
 ```groovy
 sendMail(
@@ -130,6 +130,23 @@ mail {
 
 See the {ref}`mail scope <config-mail>` section to learn more the mail server configuration options.
 
+### AWS SES configuration
+
+As of version `23.06.0-edge` Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative
+provider to send emails in place of SMTP server.
+
+To enable this feature add the following environment variable in the launching environment:
+
+```
+export NXF_ENABLE_AWS_SES=true
+```
+
+Make also sure to add the following AWS IAM permission to the AWS user (or role) used to launch the pipeline execution:
+
+```
+ses:SendRawEmail
+```
+
 ## Mail notification
 
 You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify the completion of a workflow completion. For example:
@@ -166,7 +183,7 @@ nextflow run <pipeline name> -N <recipient address>
 
 It will send a notification mail when the execution completes similar to the one shown below:
 
-```{image} images/workflow-notification-min.png
+```{image} _static/workflow-notification-min.png
 ```
 
 :::{warning}
