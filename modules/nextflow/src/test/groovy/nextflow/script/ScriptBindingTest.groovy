@@ -142,19 +142,23 @@ class ScriptBindingTest extends Specification {
     def 'should copy with overriding values' () {
         when:
         def map = new ScriptBinding.ParamsMap()
+        map['alpha'] = 0
+        map['alpha'] = 1
         map['alphaBeta'] = 0
         map['alphaBeta'] = 1
         map['delta'] = 2
         map['gamma'] = 3
         then:
+        map.alpha == 0
         map.alphaBeta == 0
         map.'alpha-beta' == 0
         map.delta == 2
         map.gamma == 3
 
         when:
-        def copy = map.copyWith(alphaBeta: 4, omega: 9)
+        def copy = map.copyWith(foo:1, alphaBeta: 4, omega: 9)
         then:
+        copy.foo == 1
         copy.alphaBeta == 4
         copy.'alpha-beta' == 4
         copy.delta == 2
@@ -162,6 +166,7 @@ class ScriptBindingTest extends Specification {
         copy.omega == 9
         and:
         // source does not change
+        map.alpha == 0
         map.alphaBeta == 0
         map.'alpha-beta' == 0
         map.delta == 2
