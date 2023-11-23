@@ -13,23 +13,34 @@ A channel has two major properties:
 
 ## Channel types
 
-In Nextflow there are two kinds of channels: *queue channels* and *value channels*.
-
-(channel-type-queue)=
-
-### Queue channel
-
-A *queue channel* is a non-blocking unidirectional FIFO queue which connects two processes, channel factories, or operators.
-
-A queue channel can be created by factory methods ([of](#of), [fromPath](#frompath), etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
+In Nextflow there are three kinds of channels: *value channels*, *queue channels* and *topic channels*.
 
 (channel-type-value)=
 
 ### Value channel
 
-A *value channel* contains a single value and can be consumed any number of times by a process or operator.
+A *value channel* contains a single value and can be consumed any number of times by a process or an operator.
 
-A value channel can be created with the [value](#value) factory method or by any operator that produces a single value ({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
+A value channel can be created with the [value](#value) factory method or by any operator that produces a single value
+({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value
+channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
+
+(channel-type-queue)=
+
+### Queue channel
+
+A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
+to a consumer , channel factories, or operators.
+
+A queue channel can be created by factory methods ([of](#of), [fromPath](#frompath), etc), operators ({ref}`operator-map`,
+{ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
+
+(channel-type-topic)=
+
+### Topic channel
+
+A *topic channel*, similarly to a *queue channel* is non-blocking unidirectional FIFO queue, however it connects multiple
+
 
 For example:
 

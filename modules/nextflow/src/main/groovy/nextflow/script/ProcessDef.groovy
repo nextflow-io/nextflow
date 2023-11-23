@@ -28,6 +28,7 @@ import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
+
 /**
  * Models a nextflow process definition
  *

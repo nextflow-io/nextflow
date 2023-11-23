@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
+
 /**
  * Implements Nextflow Mix operator
  *
