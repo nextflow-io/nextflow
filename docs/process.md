@@ -1166,62 +1166,59 @@ process foo {
 ```
 :::
 
-### Optional outputs
+(process-additional-options)=
 
-In most cases, a process is expected to produce an output for each output definition. However, there are situations where it is valid for a process to not generate output. In these cases, `optional: true` may be added to the output definition, which tells Nextflow not to fail the process if the declared output is not produced:
+### Additional options
 
-```groovy
-output:
-    path("output.txt"), optional: true
-```
+The following options are available for all process outputs:
 
-In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is legitimately missing, the process does not fail. The output channel will only contain values for those processes that produce `output.txt`.
+`emit: <name>`
 
-(process-multiple-outputs)=
+: Defines the name of the output channel, which can be used to access the channel by name from the process output:
 
-### Multiple outputs
+  ```groovy
+  process FOO {
+      output:
+      path 'hello.txt', emit: hello
+      path 'bye.txt', emit: bye
 
-When a process declares multiple outputs, each output can be accessed by index. The following example prints the second process output (indexes start at zero):
+      """
+      echo "hello" > hello.txt
+      echo "bye" > bye.txt
+      """
+  }
 
-```groovy
-process FOO {
-    output:
-    path 'bye_file.txt'
-    path 'hi_file.txt'
+  workflow {
+      FOO()
+      FOO.out.hello.view()
+  }
+  ```
 
-    """
-    echo "bye" > bye_file.txt
-    echo "hi" > hi_file.txt
-    """
-}
+  See {ref}`workflow-process-invocation` for more details.
 
-workflow {
-    FOO()
-    FOO.out[1].view()
-}
-```
+`optional: true | false`
 
-You can also use the `emit` option to assign a name to each output and access them by name:
+: Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the given output channel.
 
-```groovy
-process FOO {
-    output:
-    path 'bye_file.txt', emit: bye_file
-    path 'hi_file.txt',  emit: hi_file
+  ```groovy
+  output:
+  path("output.txt"), optional: true
+  ```
 
-    """
-    echo "bye" > bye_file.txt
-    echo "hi" > hi_file.txt
-    """
-}
+  In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is missing, the task will not fail. The output channel will only contain values for those tasks that produced `output.txt`.
 
-workflow {
-    FOO()
-    FOO.out.hi_file.view()
-}
-```
+: :::{note}
+  While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-type-tuple) output. The entire tuple must be optional or not optional.
+  :::
 
-See {ref}`workflow-process-invocation` for more details.
+`topic: <name>`
+
+: :::{versionadded} 23.11.0-edge
+  :::
+
+: *Experimental: may change in a future release.*
+
+: Defines the {ref}`channel topic <channel-topic>` to which the output will be sent.
 
 ## When
 
