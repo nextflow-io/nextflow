@@ -63,7 +63,7 @@ class NextflowMeta {
 
         void setTopic(Boolean value) {
             if( topic )
-                log.warn "TOPIC CHANNELS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.topic = value
         }
     }
