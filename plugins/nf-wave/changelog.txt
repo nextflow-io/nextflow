@@ -1,5 +1,14 @@
 nf-wave changelog
 ==================
+1.1.0 - 24 Nov 2023
+- Add Retry policy to Google Storage (#4524) [c271bb18]
+- Add support for Singularity OCI mode (#4440) [f5362a7b]
+- Fix detection of Conda local path made by Wave client (#4532) [4d5bc216]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix container hashing for Singularity + Wave containers [4c6f2e85]
+- Use consistently NXF_TASK_WORKDIR (#4484) [48ee3c64]
+- Fix Inspect command fails with Singularity [f5bb829f]
+
 1.0.0 - 15 Oct 2023
 - Fix conda channels order [ci fast] [6672c6d7]
 - Bump nf-wave@1.0.0 [795849d7]
