@@ -148,7 +148,7 @@ class CH {
         }
     }
 
-    static DataflowWriteChannel topicWriter(String name) {
+    static DataflowWriteChannel createTopicSource(String name) {
         synchronized (allTopics) {
             def topic = allTopics.get(name)
             if( topic==null ) {

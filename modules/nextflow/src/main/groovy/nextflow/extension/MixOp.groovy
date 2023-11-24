@@ -62,7 +62,7 @@ class MixOp {
 
     DataflowWriteChannel apply() {
         if( target == null )
-            target =  CH.create()
+            target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
         def handlers = [
                 onNext: { target << it },

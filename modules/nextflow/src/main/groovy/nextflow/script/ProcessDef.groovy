@@ -200,7 +200,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
                     throw new IllegalArgumentException("Output topic conflicts with recursion feature - process `$processName` should not declare any output topic" )
                 final ch = feedbackChannels
                         ? feedbackChannels[i]
-                        : ( topicName ? CH.topicWriter(topicName) : CH.create(singleton) )
+                        : ( topicName ? CH.createTopicSource(topicName) : CH.create(singleton) )
                 param.setInto(ch)
             }
         }

@@ -13,34 +13,27 @@ A channel has two major properties:
 
 ## Channel types
 
-In Nextflow there are three kinds of channels: *value channels*, *queue channels* and *topic channels*.
-
-(channel-type-value)=
-
-### Value channel
-
-A *value channel* contains a single value and can be consumed any number of times by a process or an operator.
-
-A value channel can be created with the [value](#value) factory method or by any operator that produces a single value
-({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value
-channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
+In Nextflow there are two kinds of channels: *queue channels* and *value channels*.
 
 (channel-type-queue)=
 
 ### Queue channel
 
 A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
-to a consumer , channel factories, or operators.
+to a consumer process, or an operators.
 
-A queue channel can be created by factory methods ([of](#of), [fromPath](#frompath), etc), operators ({ref}`operator-map`,
-{ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
+A queue channel can be created by factory methods ([of](#of), [fromPath](#frompath), etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
 
-(channel-type-topic)=
+(channel-type-value)=
 
-### Topic channel
+### Value channel
 
-A *topic channel*, similarly to a *queue channel* is non-blocking unidirectional FIFO queue, however it connects multiple
+A *value channel* can be bound (i.e. assigned) with one and only one value, and can be consumed any number of times by
+a process or an operator.
 
+A value channel can be created with the [value](#value) factory method or by any operator that produces a single value
+({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value
+channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
 
 For example:
 
@@ -63,7 +56,8 @@ workflow {
 }
 ```
 
-In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly wrapped in a value channel, and the output is also emitted as a value channel.
+In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly
+wrapped in a value channel, and the output is also emitted as a value channel.
 
 See also: {ref}`process-multiple-input-channels`.
 
@@ -74,7 +68,8 @@ See also: {ref}`process-multiple-input-channels`.
 Channels may be created explicitly using the following channel factory methods.
 
 :::{versionadded} 20.07.0
-`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or `Channel.of()`, and so on.
+`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or
+`Channel.of()`, and so on.
 :::
 
 (channel-empty)=
@@ -446,29 +441,39 @@ See also: [fromList](#fromlist) factory method.
 This feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-The `topic` method is used to create a queue channel that receives the items from all process outputs in a particular "topic".
+A *topic* is a channel type introduced as of Nextflow 23.11.0-edge along with {ref}`channel-type-value` and
+{ref}`channel-type-queue`.
 
-A process output can be assigned to a topic using the `topic` option on an output:
+A *topic channel*, similarly to a *queue channel*, is non-blocking unidirectional FIFO queue, however it connects
+multiple *producer* processes with multiple *consumer* processes or operators.
+
+:::{tip}
+You can think about it as a channel that is shared across many different process using the same *topic name*.
+:::
+
+A process output can be assigned to a topic using the `topic` option on an output, for example:
 
 ```groovy
 process foo {
   output:
-  val('foo'), topic: 'my-topic'
+  val('foo'), topic: my_topic
 }
 
 process bar {
   output:
-  val('bar'), topic: 'my-topic'
+  val('bar'), topic: my_topic
 }
 ```
 
-Then, the `topic` method can be used to consume all items in the topic:
+The `channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
+input or operator composition as any other Nextflow channel:
 
 ```groovy
 Channel.topic('my-topic').view()
 ```
 
-This approach is a convenient way to collect related items from many different sources without explicitly defining the channel logic (the `topic` method is essentially an implicit {ref}`operator-mix` operation). You can name topics however you want, and you can use different names to collect items for different "topics", as long as your process outputs and channel logic are consistent with each other.
+This approach is a convenient way to collect related items from many different sources without explicitly defining
+the logic connecting many different queue channels altogether, commonly using the `mix` operator.
 
 :::{warning}
 Any process that consumes a channel topic should not send any outputs to that topic, or else the pipeline will hang forever.
