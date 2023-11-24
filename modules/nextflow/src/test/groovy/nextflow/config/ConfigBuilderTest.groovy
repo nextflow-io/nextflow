@@ -1169,14 +1169,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new CmdRun( Mock(CmdRun.Options) ))
         then:
         !config.cloudcache
 
         when:
         config = new ConfigObject()
         config.cloudcache.path = 's3://foo/bar'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new CmdRun( Mock(CmdRun.Options) ))
         then:
         config.cloudcache instanceof Map
         !config.cloudcache.enabled
@@ -1184,7 +1184,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withCloudCache: 's3://this/that'))
+        builder.configRunOptions(config, env, new CmdRun( Mock(CmdRun.Options) { withCloudCache >> 's3://this/that' }))
         then:
         config.cloudcache instanceof Map
         config.cloudcache.enabled
@@ -1192,7 +1192,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withCloudCache: '-'))
+        builder.configRunOptions(config, env, new CmdRun( Mock(CmdRun.Options) { withCloudCache >> '-' }))
         then:
         config.cloudcache instanceof Map
         config.cloudcache.enabled
@@ -1201,7 +1201,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.cloudcache.path = 's3://alpha/delta'
-        builder.configRunOptions(config, env, new CmdRun(withCloudCache: '-'))
+        builder.configRunOptions(config, env, new CmdRun( Mock(CmdRun.Options) { withCloudCache >> '-' }))
         then:
         config.cloudcache instanceof Map
         config.cloudcache.enabled
@@ -1210,7 +1210,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.cloudcache.path = 's3://alpha/delta'
-        builder.configRunOptions(config, env, new CmdRun(withCloudCache: 's3://should/override/config'))
+        builder.configRunOptions(config, env, new CmdRun( Mock(CmdRun.Options) { withCloudCache >> 's3://should/override/config' }))
         then:
         config.cloudcache instanceof Map
         config.cloudcache.enabled
@@ -1219,7 +1219,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.cloudcache.enabled = false
-        builder.configRunOptions(config, env, new CmdRun(withCloudCache: 's3://should/override/config'))
+        builder.configRunOptions(config, env, new CmdRun( Mock(CmdRun.Options) { withCloudCache >> 's3://should/override/config' }))
         then:
         config.cloudcache instanceof Map
         !config.cloudcache.enabled
@@ -1227,7 +1227,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(withCloudCache: 's3://should/override/env'))
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun( Mock(CmdRun.Options) { withCloudCache >> 's3://should/override/env' }))
         then:
         config.cloudcache instanceof Map
         config.cloudcache.enabled
@@ -1236,7 +1236,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.cloudcache.path = 's3://config/path'
-        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun())
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun( Mock(CmdRun.Options) ))
         then:
         config.cloudcache instanceof Map
         config.cloudcache.enabled
@@ -1245,7 +1245,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.cloudcache.path = 's3://config/path'
-        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(withCloudCache: 's3://should/override/config'))
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun( Mock(CmdRun.Options) { withCloudCache >> 's3://should/override/config' }))
         then:
         config.cloudcache instanceof Map
         config.cloudcache.enabled

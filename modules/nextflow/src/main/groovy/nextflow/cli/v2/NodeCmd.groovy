@@ -32,7 +32,7 @@ import picocli.CommandLine.ParentCommand
 @CompileStatic
 @Command(
     name = 'node',
-    description = 'Launch Nextflow in deamon mode'
+    description = 'Launch Nextflow in daemon mode'
 )
 class NodeCmd extends AbstractCmd implements CmdNode.Options {
 
