@@ -18,7 +18,7 @@ NEXTFLOW CHANGE-LOG
 - Add support for Fusion when using Singularity OCI mode (#4508) [4f3aa631]
 - Add support for K8s schedulerName pod spec (#4485) [ci fast] [dfc7b7c8]
 - Add support for Singularity OCI mode (#4440) [f5362a7b]
-- Allow the use of error build-in function in onComplete handler (#4458) [ci fast] [35a4424b]
+- Allow the use of error built-in function in onComplete handler (#4458) [ci fast] [35a4424b]
 - Fix Bug in JsonSplitter ordering [ci fast] [8ec14dd2]
 - Fix Bypass Google Batch Price query if task cpus and memory are defined (#4521) [7f8f20d3]
 - Fix Checkout remote tag if checkout remote branch fails (#4247) [b8907ccb]
