@@ -93,7 +93,6 @@ class Launcher {
                 new CmdLog.V1(),
                 new CmdNode.V1(),
                 new CmdPlugin.V1(),
-                new CmdPlugins(),
                 new CmdPull.V1(),
                 new CmdRun.V1(),
                 new CmdSelfUpdate(),

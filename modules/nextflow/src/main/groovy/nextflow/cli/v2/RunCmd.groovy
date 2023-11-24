@@ -90,7 +90,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     String dumpChannels
 
     @Option(names = ['--dump-hashes'], description = 'Dump task hash keys for debugging purposes')
-    boolean dumpHashes
+    String dumpHashes
 
     @Option(names = ['--entry'], arity = '1', paramLabel = '<workflow>', description = 'Entry workflow name to be executed')
     String entryName
@@ -163,6 +163,9 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
 
     @Option(names = ['--with-charliecloud'], arity = '0..1', fallbackValue = '-', paramLabel = '<container>', description = 'Enable process execution in a Charliecloud container runtime')
     String withCharliecloud
+
+    @Option(names = ['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
+    String withCloudCache
 
     @Option(names = ['--with-conda'], arity = '0..1', fallbackValue = '-', paramLabel = '<name>|<file>', description = 'Use the specified Conda environment, package, or file (must end with .yml|.yaml suffix)')
     String withConda

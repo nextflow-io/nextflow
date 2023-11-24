@@ -68,7 +68,7 @@ class CmdRun {
         Integer getDepth()
         Boolean getDisableJobsCancellation()
         String getDumpChannels()
-        boolean getDumpHashes()
+        String getDumpHashes()
         String getEntryName()
         Map<String,String> getEnv()
         Map<String,String> getExecutorOptions()
@@ -92,9 +92,10 @@ class CmdRun {
         boolean getStubRun()
         String getTest()
         String getWithApptainer()
+        String getWithCharliecloud()
+        String getWithCloudCache()
         String getWithConda()
         Boolean getWithoutConda()
-        String getWithCharliecloud()
         String getWithDag()
         String getWithDocker()
         boolean getWithoutDocker()
@@ -173,9 +174,6 @@ class CmdRun {
 
         @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
         String bucketDir
-
-        @Parameter(names=['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
-        String cloudCachePath
 
         /**
         * Defines the parameters to be passed to the pipeline script
@@ -270,6 +268,9 @@ class CmdRun {
 
         @Parameter(names = '-with-dag', description = 'Create pipeline DAG file')
         String withDag
+
+        @Parameter(names=['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
+        String withCloudCache
 
         @Parameter(names = ['-bg'], arity = 0, hidden = true)
         void setBackground(boolean value) {
