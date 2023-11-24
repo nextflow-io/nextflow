@@ -217,6 +217,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNoExternalIpAddress() == true
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        and:
+        req.getLabelsMap() == [foo: 'bar']
+
 
         when:
         req = handler.newSubmitRequest(task, launcher)
