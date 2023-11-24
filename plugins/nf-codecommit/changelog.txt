@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+0.1.6 - 24 Nov 2023
+- Fix security vulnerabilities (#4513) [a310c777]
+
 0.1.5 - 15 May 2023
 - Update logging libraries [d7eae86e]
 
