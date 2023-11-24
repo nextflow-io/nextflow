@@ -347,6 +347,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 LogsPolicy.newBuilder()
                     .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
             )
+            .putAllLabels(task.config.getResourceLabels())
             .build()
     }
 
