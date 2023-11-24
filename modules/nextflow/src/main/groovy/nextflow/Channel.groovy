@@ -121,6 +121,11 @@ class Channel  {
         return CH.queue()
     }
 
+    static DataflowWriteChannel topic(String name) {
+        if( !NF.topicChannelEnabled ) throw new MissingMethodException('topic', Channel.class, InvokerHelper.EMPTY_ARGS)
+        return CH.topic(name)
+    }
+
     /**
      * Create a empty channel i.e. only emits a STOP signal
      *

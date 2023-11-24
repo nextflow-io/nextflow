@@ -1856,3 +1856,12 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 : *Experimental: may change in a future release.*
 
 : When `true`, enables process and workflow recursion. See [this GitHub discussion](https://github.com/nextflow-io/nextflow/discussions/2521) for more information.
+
+`nextflow.preview.topic`
+
+: :::{versionadded} 23.11.0-edge
+  :::
+
+: *Experimental: may change in a future release.*
+
+: When `true`, enables {ref}`topic channels <channel-topic>` feature.
