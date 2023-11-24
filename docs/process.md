@@ -2595,7 +2595,7 @@ process foo {
   queue { entries > 100 ? 'long' : 'short' }
 
   input:
-  tuple val(entries), path('data.txt')
+  tuple val(entries), path(data, name: 'data.txt')
 
   script:
   """
@@ -2605,6 +2605,12 @@ process foo {
 ```
 
 In the above example, the [queue](#queue) directive is evaluated dynamically, depending on the input value `entries`. When it is larger than 100, jobs will be submitted to the `long` queue, otherwise the `short` queue will be used.
+
+You can also set dynamic directives based on input files, for example:
+```groovy
+  // set the task memory equal to the input file size
+  memory { data.size() }
+```
 
 All directives can be assigned a dynamic value except the following:
 
