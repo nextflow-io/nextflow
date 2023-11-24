@@ -140,8 +140,8 @@ class PluginsFacadeTest extends Specification {
         result == [ new PluginSpec('nf-google','2.0.0') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_CLOUDCACHE_PATH:'xyz'])
-        result = handler.pluginsRequirement([:])
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([cloudcache:[enabled:true]])
         then:
         result == [ new PluginSpec('nf-cloudcache', '0.1.0') ]
 

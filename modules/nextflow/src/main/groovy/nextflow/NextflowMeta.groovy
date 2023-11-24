@@ -43,6 +43,7 @@ class NextflowMeta {
         volatile float dsl
         boolean strict
         boolean recursion
+        boolean topic
 
         void setDsl( float num ) {
             if( num == 1 )
@@ -58,6 +59,12 @@ class NextflowMeta {
             if( recurse )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recurse
+        }
+
+        void setTopic(Boolean value) {
+            if( topic )
+                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.topic = value
         }
     }
 
@@ -105,11 +112,8 @@ class NextflowMeta {
         result.version = version.toString()
         result.build = build
         result.timestamp = parseDateStr(timestamp)
-        if( isDsl2Final() ) {
+        if( isDsl2() ) {
             result.enable = featuresMap()
-        }
-        else if( isDsl2() ) {
-            result.preview = featuresMap()
         }
         return result
     }
@@ -125,17 +129,6 @@ class NextflowMeta {
      * {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
      */
     boolean isDsl2() {
-        enable.dsl == 2f
-    }
-
-    /**
-     * As of the removal of DSL2 preview mode, the semantic of this method
-     * is identical to {@link #isDsl2()}.
-     * @return
-     *  {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
-     */
-    @Deprecated
-    boolean isDsl2Final() {
         enable.dsl == 2f
     }
 

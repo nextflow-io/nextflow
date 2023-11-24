@@ -174,6 +174,9 @@ class CmdRun {
         @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
         String bucketDir
 
+        @Parameter(names=['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
+        String cloudCachePath
+
         /**
         * Defines the parameters to be passed to the pipeline script
         */
@@ -283,7 +286,7 @@ class CmdRun {
         String profile
 
         @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
-        boolean dumpHashes
+        String dumpHashes
 
         @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
         String dumpChannels
@@ -777,7 +780,7 @@ class CmdRun {
             result.putAll(json)
         }
         catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
+            throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
         }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: ${file.toUriString()} - Cause: ${e.message}", e)
@@ -791,7 +794,7 @@ class CmdRun {
             result.putAll(yaml)
         }
         catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
+            throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
         }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)

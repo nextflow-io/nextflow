@@ -1154,7 +1154,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Dump channels for debugging purpose.
 
 `-dump-hashes`
-: Dump task hash keys for debugging purpose.
+: Dump task hash keys for debugging purposes.
+: :::{versionadded} 23.10.0
+  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`caching and resuming tips <cache-compare-hashes>` for more details.
+  :::
 
 `-e.<key>=<value>`
 : Add the specified variable to execution environment.
@@ -1226,6 +1229,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-with-charliecloud`
 : Enable process execution in a Charliecloud container.
+
+`-with-cloudcache`
+: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
 
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
@@ -1313,13 +1319,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run nextflow-io/hello -qs 4
   ```
 
-- Execute the pipeline with DSL-2 syntax.
-
-  ```console
-  $ nextflow run nextflow-io/hello -dsl2
-  ```
-
-- Execute a pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
+- Invoke the pipeline with a specific workflow as the entry-point.
 
   ```console
   $ nextflow run main.nf -entry workflow_A

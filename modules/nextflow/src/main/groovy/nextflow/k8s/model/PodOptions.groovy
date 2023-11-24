@@ -48,6 +48,8 @@ class PodOptions {
 
     private Collection<PodVolumeClaim> mountClaims
 
+    private Collection<PodHostMount> mountHostPaths
+
     private Map<String,String> labels = [:]
 
     private Map<String,String> annotations = [:]
@@ -65,6 +67,8 @@ class PodOptions {
     private List<Map> tolerations
 
     private Boolean privileged
+
+    private String schedulerName
     
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -74,6 +78,7 @@ class PodOptions {
         mountEmptyDirs = new HashSet<>(size)
         mountSecrets = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
+        mountHostPaths = new HashSet<>(10)
         automountServiceAccountToken = true
         tolerations = new ArrayList<Map>(size)
         init(options)
@@ -114,6 +119,9 @@ class PodOptions {
         else if( entry.mountPath && entry.volumeClaim ) {
             mountClaims << new PodVolumeClaim(entry)
         }
+        else if( entry.mountPath && entry.hostPath instanceof CharSequence ) {
+            mountHostPaths << new PodHostMount(entry.hostPath, entry.mountPath)
+        }
         else if( entry.pullPolicy || entry.imagePullPolicy ) {
             this.imagePullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
         }
@@ -150,6 +158,9 @@ class PodOptions {
         else if( entry.privileged instanceof Boolean ) {
             this.privileged = entry.privileged as Boolean
         }
+        else if( entry.schedulerName ) {
+            this.schedulerName = entry.schedulerName
+        }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -164,6 +175,8 @@ class PodOptions {
     Collection<PodMountEmptyDir> getMountEmptyDirs() { mountEmptyDirs }
 
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
+
+    Collection<PodHostMount> getMountHostPaths() { mountHostPaths }
 
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
 
@@ -210,6 +223,8 @@ class PodOptions {
 
     String getPriorityClassName() { priorityClassName }
 
+    String getSchedulerName() { schedulerName }
+
     List<Map> getTolerations() { tolerations }
 
     Boolean getPrivileged() { privileged }
@@ -232,6 +247,10 @@ class PodOptions {
         // empty dirs
         result.mountEmptyDirs.addAll( mountEmptyDirs )
         result.mountEmptyDirs.addAll( other.mountEmptyDirs )
+
+        // host paths
+        result.mountHostPaths.addAll( mountHostPaths )
+        result.mountHostPaths.addAll( other.mountHostPaths )
 
         // secrets
         result.mountSecrets.addAll( mountSecrets )
@@ -284,6 +303,9 @@ class PodOptions {
 
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
+
+        // scheduler name
+        result.schedulerName = other.schedulerName ?: this.schedulerName
 
         return result
     }

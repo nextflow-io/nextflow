@@ -55,7 +55,7 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
-        if( mode=='dev' && root.toString()=='plugins' && !isRunningFromDistArchive() )
+        if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
@@ -371,8 +371,8 @@ class PluginsFacade implements PluginStateListener {
             specs << defaultPlugins.getPlugin('nf-wave')
         }
 
-        // add cloudcache plugin when NXF_CLOUDCACHE_PATH is set
-        if( env.NXF_CLOUDCACHE_PATH ) {
+        // add cloudcache plugin when cloudcache is enabled in the config
+        if( Bolts.navigate(config, 'cloudcache.enabled')==true ) {
             specs << defaultPlugins.getPlugin('nf-cloudcache')
         }
 

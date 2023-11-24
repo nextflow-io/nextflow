@@ -186,6 +186,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run', '-', '-a', '-b') == ['run','-stdin', '-a', '-b']
         launcher.normalizeArgs('run') == ['run']
 
+        launcher.normalizeArgs('run','-with-cloudcache') == ['run', '-with-cloudcache', '-']
+        launcher.normalizeArgs('run','-with-cloudcache', '-x') == ['run', '-with-cloudcache', '-', '-x']
+        launcher.normalizeArgs('run','-with-cloudcache', 's3://foo/bar') == ['run', '-with-cloudcache','s3://foo/bar']
+        
         launcher.normalizeArgs('run','-with-tower') == ['run', '-with-tower', '-']
         launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']
         launcher.normalizeArgs('run','-with-tower', 'foo.com') == ['run', '-with-tower','foo.com']
@@ -257,8 +261,6 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-ansi-log', '-x') == ['run', '-ansi-log','true', '-x']
         launcher.normalizeArgs('run','-ansi-log', 'true', '-x') == ['run', '-ansi-log','true', '-x']
         launcher.normalizeArgs('run','-ansi-log', 'false', '-x') == ['run', '-ansi-log','false', '-x']
-
-        launcher.normalizeArgs('run','-dsl2', '-x') == ['run', '-dsl2','true', '-x']
 
         launcher.normalizeArgs('run','-stub', '-x') == ['run', '-stub','true', '-x']
         launcher.normalizeArgs('run','-stub-run', '-x') == ['run', '-stub-run','true', '-x']
