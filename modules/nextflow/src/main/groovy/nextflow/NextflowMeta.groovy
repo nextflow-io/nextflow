@@ -43,6 +43,7 @@ class NextflowMeta {
         volatile float dsl
         boolean strict
         boolean recursion
+        boolean topic
 
         void setDsl( float num ) {
             if( num == 1 )
@@ -58,6 +59,12 @@ class NextflowMeta {
             if( recurse )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recurse
+        }
+
+        void setTopic(Boolean value) {
+            if( topic )
+                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.topic = value
         }
     }
 
