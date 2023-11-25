@@ -230,7 +230,7 @@ class PodSpecBuilderTest extends Specification {
         pod.spec.volumes == [
                 [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
                 [name:'vol-2', persistentVolumeClaim:[claimName:'second']],
-                [name:'vol-3', persistentVolumeClaim:[claimName:'third']]
+                [name:'vol-3', persistentVolumeClaim:[claimName:'third', readOnly:true]]
         ]
 
     }
