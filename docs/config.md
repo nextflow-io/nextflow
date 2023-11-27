@@ -1400,7 +1400,7 @@ The following settings are available:
 `singularity.oci`
 : :::{versionadded} 23.11.0-edge
   :::
-: Enable OCI-mode the allows the use of native OCI-compatible containers with Singularity. See [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+: Enable OCI-mode, that allows running native OCI-compatible containers with Singularity using `crun` or `runc` as low-level runtime. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
 
 `singularity.pullTimeout`
@@ -1856,3 +1856,12 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 : *Experimental: may change in a future release.*
 
 : When `true`, enables process and workflow recursion. See [this GitHub discussion](https://github.com/nextflow-io/nextflow/discussions/2521) for more information.
+
+`nextflow.preview.topic`
+
+: :::{versionadded} 23.11.0-edge
+  :::
+
+: *Experimental: may change in a future release.*
+
+: When `true`, enables {ref}`topic channels <channel-topic>` feature.
