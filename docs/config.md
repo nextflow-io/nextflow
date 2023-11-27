@@ -1400,7 +1400,7 @@ The following settings are available:
 `singularity.oci`
 : :::{versionadded} 23.11.0-edge
   :::
-: Enable OCI-mode the allows the use of native OCI-compatible containers with Singularity. See [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+: Enable OCI-mode, that allows running native OCI-compatible containers with Singularity using `crun` or `runc` as low-level runtime. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
 
 `singularity.pullTimeout`
