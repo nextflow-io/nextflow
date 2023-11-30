@@ -47,6 +47,7 @@ class NextflowXformImpl implements ASTTransformation {
         new BinaryExpressionXform(unit).visitClass(classNode)
         new DslCodeVisitor(unit).visitClass(classNode)
         new OperatorXform(unit).visitClass(classNode)
+        new ProcessFnXform(unit).visitClass(classNode)
     }
 
 }

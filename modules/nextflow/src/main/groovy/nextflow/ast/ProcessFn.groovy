@@ -14,29 +14,29 @@
  * limitations under the License.
  */
 
-package nextflow.io
+package nextflow.ast
 
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
-import groovy.transform.AnnotationCollector
-import groovy.transform.AnnotationCollectorMode
-import groovy.transform.AutoClone
-import groovy.transform.Immutable
 /**
- * Declares an AST xform to automatically add the {@link SerializableMarker} interface
- * for a class marked as @SerializableObject
+ * Annotation for process functions.
  *
- *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-@AutoClone
-@Immutable(copyWith=true, knownImmutableClasses=[java.nio.file.Path])
-@SerializableObject
-@AnnotationCollector(mode = AnnotationCollectorMode.PREFER_EXPLICIT_MERGED)
 @Retention(RetentionPolicy.RUNTIME)
-@Target([ElementType.TYPE])
-@interface ValueObject {
+@Target(ElementType.METHOD)
+@interface ProcessFn {
+    Class directives()
+    Class inputs()
+    Class outputs()
 
+    boolean script() default false
+    boolean shell() default false
+
+    // injected via AST transform
+    Class params()
+    String source()
 }

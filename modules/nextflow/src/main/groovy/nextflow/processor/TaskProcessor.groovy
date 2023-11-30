@@ -66,6 +66,7 @@ import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.exception.ScriptRuntimeException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
@@ -396,23 +397,7 @@ class TaskProcessor {
             log.warn(msg)
     }
 
-    /**
-     * Launch the 'script' define by the code closure as a local bash script
-     *
-     * @param code A {@code Closure} returning a bash script e.g.
-     *          <pre>
-     *              {
-     *                 """
-     *                 #!/bin/bash
-     *                 do this ${x}
-     *                 do that ${y}
-     *                 :
-     *                 """
-     *              }
-     *
-     * @return {@code this} instance
-     */
-    def run() {
+    def run(DataflowReadChannel source) {
 
         // -- check that the task has a body
         if ( !taskBody )
@@ -468,7 +453,7 @@ class TaskProcessor {
         session.processRegister(this)
 
         // create the underlying dataflow operator
-        createOperator()
+        createOperator(source)
 
         session.notifyProcessCreate(this)
 
@@ -480,15 +465,11 @@ class TaskProcessor {
         return result.size() == 1 ? result[0] : result
     }
 
-    /**
-     * Template method which extending classes have to override in order to
-     * create the underlying *dataflow* operator associated with this processor
-     *
-     * See {@code DataflowProcessor}
-     */
-
-    protected void createOperator() {
-        def opInputs = new ArrayList(config.getInputs().getChannels())
+    protected void createOperator(DataflowReadChannel source) {
+        def control = config.getInputs().last().getInChannel()
+        def opInputs = source != null
+            ? [source, control]
+            : [control]
 
         /*
          * check if there are some iterators declaration
@@ -599,7 +580,7 @@ class TaskProcessor {
     final protected void invokeTask( Object[] args ) {
         assert args.size()==2
         final params = (TaskStartParams) args[0]
-        final values = (List) args[1]
+        final values = ((List) args[1]).first()
 
         // create and initialize the task instance to be executed
         log.trace "Invoking task > $name with params=$params; values=$values"
@@ -608,6 +589,24 @@ class TaskProcessor {
         final task = createTaskRun(params)
         // -- set the task instance as the current in this thread
         currentTask.set(task)
+
+        // -- add task config to arguments
+        values.push(task.config)
+
+        // -- validate task arguments
+        if( config.params.size() != values.size() )
+            throw new ScriptRuntimeException("Process $name expected ${config.params.size()} arguments but received ${values.size()}: ${values}")
+
+        for( int i = 0; i < config.params.size(); i++ ) {
+            final param = config.params[i]
+            final value = values[i]
+            if( !param.type.isAssignableFrom(value.class) )
+                log.warn1 "Process $name > expected type ${param.type.name} for param ${param.name} but got a ${value.class.name}"
+        }
+
+        // -- add arguments to task context
+        for( int i = 1; i < config.params.size(); i++ )
+            task.context.put(config.params[i].name, values[i])
 
         // -- validate input lengths
         validateInputTuples(values)
@@ -627,7 +626,7 @@ class TaskProcessor {
         }
         else {
             // -- resolve the task command script
-            task.resolve(taskBody)
+            task.resolve(taskBody, config.params*.name)
         }
 
         // -- verify if exists a stored result for this case,
@@ -2018,7 +2017,19 @@ class TaskProcessor {
         task.inputs.keySet().each { InParam param ->
 
             // add the value to the task instance
-            def val = param.decodeInputs(values)
+            def bindObject = param.getBindObject()
+
+            def val
+            if( bindObject instanceof Closure ) {
+                final cl = (Closure)bindObject.clone()
+                cl.delegate = task.context
+                cl.resolveStrategy = Closure.DELEGATE_FIRST
+                val = cl.call()
+            }
+            else
+                val = bindObject
+
+            log.trace "Process $name > binding param ${param.class.name} to ${val}"
 
             switch(param) {
                 case ValueInParam:

@@ -18,11 +18,14 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.MergeOp
 import nextflow.script.dsl.ProcessDsl
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
@@ -148,16 +151,17 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // initialise process config
         initialize()
 
-        // get params 
-        final params = ChannelOut.spread(args)
-        // sanity check
-        if( params.size() != declaredInputs.size() )
-            throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
+        // create merged input channel
+        final inputs = ChannelOut.spread(args).collect(ch -> getInChannel(ch))
+        if( inputs.findAll(ch -> CH.isChannelQueue(ch)).size() > 1 )
+            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which is not allowed")
+
+        final input = CH.getReadChannel(new MergeOp(inputs.first(), inputs[1..<inputs.size()], [flat: false]).apply())
 
         // set input channels
-        for( int i=0; i<params.size(); i++ ) {
+        for( int i=0; i<declaredInputs.size(); i++ ) {
             final inParam = (declaredInputs[i] as BaseInParam)
-            inParam.setFrom(params[i])
+            inParam.setFrom("in${i}")
             inParam.init()
         }
 
@@ -192,11 +196,33 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         session
                 .newProcessFactory(owner)
                 .newTaskProcessor(processName, executor, processConfig, taskBody)
-                .run()
+                .run(input)
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
         return output = new ChannelOut(copyOuts)
+    }
+
+    private DataflowReadChannel getInChannel(Object obj) {
+        if( obj == null )
+            throw new IllegalArgumentException('A process input channel evaluates to null')
+
+        final result = obj instanceof Closure
+            ? obj.call()
+            : obj
+
+        if( result == null )
+            throw new IllegalArgumentException('A process input channel evaluates to null')
+
+        def inChannel
+        if ( result instanceof DataflowReadChannel || result instanceof DataflowBroadcast )
+            inChannel = CH.getReadChannel(result)
+        else {
+            inChannel = CH.value()
+            inChannel.bind(result)
+        }
+
+        return inChannel
     }
 
 }

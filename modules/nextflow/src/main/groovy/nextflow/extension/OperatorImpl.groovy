@@ -1077,24 +1077,18 @@ class OperatorImpl {
     }
 
     // NO DAG
-    DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
-        final result = CH.createBy(source)
-        final inputs = [source, other]
-        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
-        final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, action)
-        return result;
+    DataflowWriteChannel merge(DataflowReadChannel source, Map opts=null, DataflowReadChannel other, Closure closure=null) {
+        new MergeOp(source, other, opts, closure).apply()
     }
 
     // NO DAG
-    DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
-        new MergeOp(source,others as List).apply()
+    DataflowWriteChannel merge(DataflowReadChannel source, Map opts=null, DataflowReadChannel... others) {
+        new MergeOp(source, others as List, opts).apply()
     }
 
     // NO DAG
-    DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
-        new MergeOp(source,others,closure).apply()
+    DataflowWriteChannel merge(DataflowReadChannel source, Map opts=null, List<DataflowReadChannel> others, Closure closure=null) {
+        new MergeOp(source, others, opts, closure).apply()
     }
 
     DataflowWriteChannel randomSample(DataflowReadChannel source, int n, Long seed = null) {

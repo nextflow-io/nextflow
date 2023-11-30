@@ -710,9 +710,10 @@ class TaskRun implements Cloneable {
      * 2) extract the process code `source`
      * 3) assign the `script` code to execute
      *
-     * @param body A {@code BodyDef} object instance
+     * @param body
+     * @param params
      */
-    @PackageScope void resolve(BodyDef body) {
+    @PackageScope void resolve(BodyDef body, List<String> params=[]) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure
@@ -727,11 +728,14 @@ class TaskRun implements Cloneable {
         if( body.type != ScriptType.SCRIPTLET )
             return
 
+        // collect method args from task context
+        final args = params.collect(param -> context[param])
+
         // Important!
         // when the task is implemented by a script string
         // Invoke the closure which returns the script with all the variables replaced with the actual values
         try {
-            final result = code.call()
+            final result = code.call(*args)
             if ( result instanceof Path ) {
                 script = renderTemplate(result, body.isShell)
             }

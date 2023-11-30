@@ -19,9 +19,11 @@ package nextflow.script
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
+import nextflow.ast.ProcessFn
 import nextflow.exception.AbortOperationException
 import nextflow.script.dsl.ProcessDsl
 import nextflow.script.dsl.WorkflowDsl
@@ -144,22 +146,63 @@ abstract class BaseScript extends Script implements ExecutionContext {
         include .setSession(session)
     }
 
-    /**
-     * Invokes custom methods in the task execution context
-     *
-     * @see nextflow.processor.TaskContext#invokeMethod(java.lang.String, java.lang.Object)
-     * @see WorkflowBinding#invokeMethod(java.lang.String, java.lang.Object)
-     *
-     * @param name the name of the method to call
-     * @param args the arguments to use for the method call
-     * @return The result of the custom method execution
-     */
-    @Override
-    Object invokeMethod(String name, Object args) {
-        binding.invokeMethod(name, args)
+    @CompileStatic
+    private void registerProcessFunctions() {
+        final dslEval = { Object delegate, Class<Closure> clazz ->
+            final cl = clazz.newInstance(this, this)
+            cl.delegate = delegate
+            cl.resolveStrategy = Closure.DELEGATE_FIRST
+            cl.call()
+        }
+
+        final clazz = this.getClass()
+        for( final method : clazz.getDeclaredMethods() ) {
+            // check for ProcessFn annotation
+            final name = method.getName()
+            final processFn = method.getAnnotation(ProcessFn)
+            if( !processFn )
+                continue
+
+            // validate annotation
+            if( processFn.script() && processFn.shell() )
+                throw new IllegalArgumentException("Process function `${name}` cannot have script and shell enabled simultaneously")
+
+            // build process from annotation
+            final builder = new ProcessDsl(this, name)
+            dslEval(builder, processFn.directives())
+            dslEval(builder, processFn.inputs())
+            dslEval(builder, processFn.outputs())
+
+            // get method parameters
+            final paramNames = (List<String>)((Closure)processFn.params().newInstance(this, this)).call()
+            final params = (0 ..< paramNames.size()).collect( i ->
+                new Parameter( paramNames[i], method.getParameters()[i].getType() )
+            )
+
+            builder.config.params = params
+
+            // determine process type
+            def type
+            if( processFn.script() )
+                type = 'script'
+            else if( processFn.shell() )
+                type = 'shell'
+            else
+                type = 'exec'
+
+            // create task body
+            final taskBody = new BodyDef( this.&"${name}", processFn.source(), type, [] )
+
+            final process = builder.withBody(taskBody).build()
+            meta.addDefinition(process)
+        }
     }
 
     private run0() {
+        // register any process functions
+        registerProcessFunctions()
+
+        // execute script
         final result = runScript()
         if( meta.isModule() ) {
             return result

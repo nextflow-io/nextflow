@@ -54,6 +54,10 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return inChannel
     }
 
+    def getBindObject() {
+        bindObject
+    }
+
     BaseInParam( ProcessConfig config ) {
         this(config.getOwnerScript().getBinding(), config.getInputs())
     }

@@ -35,24 +35,24 @@ import groovyx.gpars.dataflow.operator.ChainWithClosure
 class MergeOp {
     private DataflowReadChannel source
     private List<DataflowReadChannel> others
+    private boolean flat
     private Closure closure
 
-    MergeOp(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
+    MergeOp(DataflowReadChannel source, List<DataflowReadChannel> others, Map opts=null, Closure closure=null) {
         this.source = source
         this.others = others
+        this.flat = opts?.flat!=null ? opts?.flat : true
         this.closure = closure
     }
 
-    MergeOp(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null ) {
-        this.source = source
-        this.others = Collections.singletonList(other)
-        this.closure = closure
+    MergeOp(DataflowReadChannel source, DataflowReadChannel other, Map opts=null, Closure closure=null) {
+        this(source, Collections.singletonList(other), opts, closure)
     }
 
     DataflowWriteChannel apply() {
         final result = CH.createBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
-        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(1 + others.size())
+        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(1 + others.size(), flat)
         inputs.add(source)
         inputs.addAll(others)
         final listener = stopErrorListener(source,result)
