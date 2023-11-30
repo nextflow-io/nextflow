@@ -17,6 +17,7 @@
 package nextflow.script
 
 import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
@@ -24,16 +25,18 @@ import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.ast.ProcessFn
+import nextflow.ast.WorkflowFn
 import nextflow.exception.AbortOperationException
 import nextflow.script.dsl.ProcessBuilder
 import nextflow.script.dsl.ProcessInputsBuilder
-import nextflow.script.dsl.WorkflowDsl
+import nextflow.script.dsl.WorkflowBuilder
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 abstract class BaseScript extends Script implements ExecutionContext {
 
     private Session session
@@ -115,12 +118,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param rawBody
      */
     protected void workflow(Closure<BodyDef> rawBody) {
-        final builder = new WorkflowDsl(this)
-        final copy = (Closure<BodyDef>)rawBody.clone()
-        copy.delegate = builder
-        copy.resolveStrategy = Closure.DELEGATE_FIRST
-        final body = copy.call()
-        final workflow = builder.withBody(body).build()
+        final workflow = workflow0(null, rawBody)
         this.entryFlow = workflow
         meta.addDefinition(workflow)
     }
@@ -132,13 +130,17 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param rawBody
      */
     protected void workflow(String name, Closure<BodyDef> rawBody) {
-        final builder = new WorkflowDsl(this, name)
+        final workflow = workflow0(name, rawBody)
+        meta.addDefinition(workflow)
+    }
+
+    protected WorkflowDef workflow0(String name, Closure<BodyDef> rawBody) {
+        final builder = new WorkflowBuilder(this, name)
         final copy = (Closure<BodyDef>)rawBody.clone()
         copy.delegate = builder
         copy.resolveStrategy = Closure.DELEGATE_FIRST
         final body = copy.call()
-        final workflow = builder.withBody(body).build()
-        meta.addDefinition(workflow)
+        return builder.withBody(body).build()
     }
 
     protected IncludeDef include( IncludeDef include ) {
@@ -147,63 +149,113 @@ abstract class BaseScript extends Script implements ExecutionContext {
         include .setSession(session)
     }
 
-    @CompileStatic
-    private void registerProcessFunctions() {
-        final dslEval = { Object delegate, Class<Closure> clazz ->
-            final cl = clazz.newInstance(this, this)
-            cl.delegate = delegate
-            cl.resolveStrategy = Closure.DELEGATE_FIRST
-            cl.call()
+    @Override
+    Object getProperty(String name) {
+        try {
+            ExecutionStack.binding().getProperty(name)
         }
-
-        final clazz = this.getClass()
-        for( final method : clazz.getDeclaredMethods() ) {
-            // check for ProcessFn annotation
-            final name = method.getName()
-            final processFn = method.getAnnotation(ProcessFn)
-            if( !processFn )
-                continue
-
-            // validate annotation
-            if( processFn.script() && processFn.shell() )
-                throw new IllegalArgumentException("Process function `${name}` cannot have script and shell enabled simultaneously")
-
-            // build process from annotation
-            final builder = new ProcessBuilder(this, name)
-            final inputsBuilder = new ProcessInputsBuilder(builder.getConfig())
-
-            dslEval(inputsBuilder, processFn.inputs())
-            dslEval(builder, processFn.directives())
-            dslEval(builder, processFn.outputs())
-
-            // get method parameters
-            final paramNames = (List<String>)((Closure)processFn.params().newInstance(this, this)).call()
-            final params = (0 ..< paramNames.size()).collect( i ->
-                new Parameter( paramNames[i], method.getParameters()[i].getType() )
-            )
-
-            builder.config.params = params
-
-            // determine process type
-            def type
-            if( processFn.script() )
-                type = 'script'
-            else if( processFn.shell() )
-                type = 'shell'
-            else
-                type = 'exec'
-
-            // create task body
-            final taskBody = new BodyDef( this.&"${name}", processFn.source(), type, [] )
-
-            final process = builder.withBody(taskBody).build()
-            meta.addDefinition(process)
+        catch( MissingPropertyException e ) {
+            if( !ExecutionStack.withinWorkflow() )
+                throw e
+            binding.getProperty(name)
         }
     }
 
+    /**
+     * Invokes custom methods in the task execution context
+     *
+     * @see nextflow.processor.TaskContext#invokeMethod(java.lang.String, java.lang.Object)
+     * @see WorkflowBinding#invokeMethod(java.lang.String, java.lang.Object)
+     *
+     * @param name the name of the method to call
+     * @param args the arguments to use for the method call
+     * @return The result of the custom method execution
+     */
+    @Override
+    Object invokeMethod(String name, Object args) {
+        ExecutionStack.binding().invokeMethod(name, args)
+    }
+
+    private void applyDsl(Object delegate, Class<Closure> clazz) {
+        final cl = clazz.newInstance(this, this)
+        cl.delegate = delegate
+        cl.resolveStrategy = Closure.DELEGATE_FIRST
+        cl.call()
+    }
+
+    private void registerProcessFn(Method method) {
+        final name = method.getName()
+        final processFn = method.getAnnotation(ProcessFn)
+
+        // validate annotation
+        if( processFn.script() && processFn.shell() )
+            throw new IllegalArgumentException("Process function `${name}` cannot have script and shell enabled simultaneously")
+
+        // build process from annotation
+        final builder = new ProcessBuilder(this, name)
+        final inputsBuilder = new ProcessInputsBuilder(builder.getConfig())
+
+        applyDsl(inputsBuilder, processFn.inputs())
+        applyDsl(builder, processFn.directives())
+        applyDsl(builder, processFn.outputs())
+
+        // get method parameters
+        final paramNames = (List<String>)((Closure)processFn.params().newInstance(this, this)).call()
+        final params = (0 ..< paramNames.size()).collect( i ->
+            new Parameter( paramNames[i], method.getParameters()[i].getType() )
+        )
+        builder.config.params = params
+
+        // determine process type
+        def type
+        if( processFn.script() )
+            type = 'script'
+        else if( processFn.shell() )
+            type = 'shell'
+        else
+            type = 'exec'
+
+        // create task body
+        final taskBody = new BodyDef( this.&"${name}", processFn.source(), type, [] )
+        builder.withBody(taskBody)
+
+        // register process
+        meta.addDefinition(builder.build())
+    }
+
+    private void registerWorkflowFn(Method method) {
+        final name = method.getName()
+        final workflowFn = method.getAnnotation(WorkflowFn)
+
+        // build workflow from annotation
+        final builder = workflowFn.main()
+            ? new WorkflowBuilder(this)
+            : new WorkflowBuilder(this, name)
+
+        // get method parameters
+        final params = (List<String>)((Closure)workflowFn.params().newInstance(this, this)).call()
+        builder.withParams(params)
+
+        // create body
+        final body = new BodyDef( this.&"${name}", workflowFn.source(), 'workflow', [] )
+        builder.withBody(body)
+
+        // register workflow
+        final workflow = builder.build()
+        if( workflowFn.main() )
+            this.entryFlow = workflow
+        meta.addDefinition(workflow)
+    }
+
     private run0() {
-        // register any process functions
-        registerProcessFunctions()
+        // register any process and workflow functions
+        final clazz = this.getClass()
+        for( final method : clazz.getDeclaredMethods() ) {
+            if( method.isAnnotationPresent(ProcessFn) )
+                registerProcessFn(method)
+            if( method.isAnnotationPresent(WorkflowFn) )
+                registerWorkflowFn(method)
+        }
 
         // execute script
         final result = runScript()
@@ -309,7 +361,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
 
         if( session?.ansiLog )
-            log.info(String.printf(msg, arg))
+            log.info(String.format(msg, arg))
         else
             super.printf(msg, arg)
     }
@@ -320,7 +372,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
 
         if( session?.ansiLog )
-            log.info(String.printf(msg, args))
+            log.info(String.format(msg, args))
         else
             super.printf(msg, args)
     }

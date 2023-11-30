@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -189,16 +190,40 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         }
     }
 
+    @CompileDynamic
     private Object run0(Object[] args) {
         collectInputs(binding, args)
         // invoke the workflow execution
         final closure = body.closure
         closure.delegate = binding
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-        closure.call()
+        def result = closure.call(*args)
+
+        // apply return value to declared outputs, binding
+        normalizeOutput(result)
+
         // collect the workflow outputs
         output = collectOutputs(declaredOutputs)
         return output
+    }
+
+    private void normalizeOutput(Object result) {
+        if( CH.isChannel(result) )
+            result = ['$out0': result]
+
+        if( result instanceof List )
+            result = result.inject([:], (acc, value) -> { acc.put("\$out${acc.size()}".toString(), value); acc })
+
+        if( result instanceof Map<String,?> ) {
+            for( def entry : result ) {
+                declaredOutputs.add(entry.key)
+                binding.setVariable(entry.key, entry.value)
+            }
+        }
+        else if( result instanceof ChannelOut )
+            log.debug "Workflow `$name` > ignoring multi-channel return value"
+        else if( result != null )
+            throw new ScriptRuntimeException("Workflow `$name` emitted unexpected value of type ${result.class.name} -- ${result}")
     }
 
 }

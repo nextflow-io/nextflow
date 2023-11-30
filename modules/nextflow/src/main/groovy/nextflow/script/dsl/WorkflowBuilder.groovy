@@ -22,13 +22,13 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.WorkflowDef
 /**
- * Implements the workflow DSL.
+ * Implements the workflow builder DSL.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class WorkflowDsl {
+class WorkflowBuilder {
 
     static final private String TAKE_PREFIX = '_take_'
     static final private String EMIT_PREFIX = '_emit_'
@@ -39,7 +39,7 @@ class WorkflowDsl {
     private Map<String,Object> takes = new LinkedHashMap<>(10)
     private Map<String,Object> emits = new LinkedHashMap<>(10)
 
-    WorkflowDsl(BaseScript owner, String name=null) {
+    WorkflowBuilder(BaseScript owner, String name=null) {
         this.owner = owner
         this.name = name
     }
@@ -56,7 +56,12 @@ class WorkflowDsl {
             throw new MissingMethodException(name, WorkflowDef, args)
     }
 
-    WorkflowDsl withBody(BodyDef body) {
+    WorkflowBuilder withParams(List<String> params) {
+        for( String param : params )
+            takes.put(param, true)
+    }
+
+    WorkflowBuilder withBody(BodyDef body) {
         this.body = body
         return this
     }

@@ -2227,7 +2227,7 @@ class TaskProcessor {
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        final result = task.getGlobalVars(ownerScript.binding)
+        final result = task.getGlobalVars(ownerScript.getBinding())
         final directives = getTaskExtensionDirectiveVars(task)
         result.putAll(directives)
         return result

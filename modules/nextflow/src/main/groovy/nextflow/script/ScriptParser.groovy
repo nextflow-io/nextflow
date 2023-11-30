@@ -25,6 +25,7 @@ import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowXform
 import nextflow.ast.ProcessFn
+import nextflow.ast.WorkflowFn
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -115,6 +116,7 @@ class ScriptParser {
         importCustomizer.addImports( MemoryUnit.name )
         importCustomizer.addImports( ProcessFn.name )
         importCustomizer.addImports( ValueObject.name )
+        importCustomizer.addImports( WorkflowFn.name )
         importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
 

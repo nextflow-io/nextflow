@@ -26,6 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.ast.ProcessFn
+import nextflow.ast.WorkflowFn
 import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.MissingModuleComponentException
 import nextflow.script.bundle.ResourcesBundle
@@ -177,6 +178,7 @@ class ScriptMeta {
             if( method.name.startsWith('super$')) continue
             if( method.name in INVALID_FUNCTION_NAMES ) continue
             if( method.isAnnotationPresent(ProcessFn) ) continue
+            if( method.isAnnotationPresent(WorkflowFn) ) continue
 
             // If method is already into the list, maybe with other signature, it's not necessary to include it again
             if( result.find{it.name == method.name}) continue

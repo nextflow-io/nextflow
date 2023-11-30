@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskConfig
 import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
@@ -64,18 +65,18 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
                 .find(a -> a.getClassNode().getName() == 'ProcessFn')
 
         if( annotation )
-            transform(method, annotation.getMembers())
+            transform(method, annotation)
     }
 
     /**
      * Transform a ProcessFn annotation to be semantically valid.
      *
      * @param method
-     * @param opts
+     * @param annotation
      */
-    protected void transform(MethodNode method, Map<String,Expression> opts) {
+    protected void transform(MethodNode method, AnnotationNode annotation) {
         // fix directives
-        final directives = opts['directives']
+        final directives = annotation.getMember('directives')
         if( directives != null && directives instanceof ClosureExpression ) {
             final block = (BlockStatement)directives.getCode()
             for( Statement stmt : block.getStatements() )
@@ -83,7 +84,7 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
         }
 
         // fix outputs
-        final outputs = opts['outputs']
+        final outputs = annotation.getMember('outputs')
         if( outputs != null && outputs instanceof ClosureExpression ) {
             final block = (BlockStatement)outputs.getCode()
             for( Statement stmt : block.getStatements() )
@@ -98,14 +99,14 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
         // TODO: append stub source
 
         // append method params
-        opts.put( 'params', closureX( block( new ExpressionStatement(
+        annotation.addMember( 'params', closureX( block( new ExpressionStatement(
             new ListExpression(
                 params.collect(p -> (Expression)constX(p.getName()))
             )
         ) ) ) )
 
         // append script source
-        opts.put( 'source', constX( getSource(method.getCode()) ) )
+        annotation.addMember( 'source', constX( getSource(method.getCode()) ) )
     }
 
     /**
