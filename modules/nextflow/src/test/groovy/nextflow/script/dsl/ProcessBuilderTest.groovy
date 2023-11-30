@@ -33,12 +33,12 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ProcessDslTest extends Specification {
+class ProcessBuilderTest extends Specification {
 
     def 'should set directives' () {
 
         setup:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
 
         // setting list values
@@ -80,7 +80,7 @@ class ProcessDslTest extends Specification {
     def 'should create input directives' () {
 
         setup:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
 
         when:
@@ -109,7 +109,7 @@ class ProcessDslTest extends Specification {
     def 'should create output directives' () {
 
         setup:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
 
         when:
@@ -133,7 +133,7 @@ class ProcessDslTest extends Specification {
     def 'should create PublishDir object' () {
 
         setup:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
 
         when:
@@ -155,7 +155,7 @@ class ProcessDslTest extends Specification {
     def 'should throw IllegalDirectiveException'() {
 
         given:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
 
         when:
         builder.hello 'world'
@@ -174,7 +174,7 @@ class ProcessDslTest extends Specification {
 
     def 'should set process secret'() {
         when:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
         then:
         config.getSecret() == []
@@ -193,7 +193,7 @@ class ProcessDslTest extends Specification {
 
     def 'should set process labels'() {
         when:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
         then:
         config.getLabels() == []
@@ -211,7 +211,7 @@ class ProcessDslTest extends Specification {
 
     def 'should apply resource labels config' () {
         given:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
         expect:
         config.getResourceLabels() == [:]
@@ -231,7 +231,7 @@ class ProcessDslTest extends Specification {
     def 'should check a valid label' () {
 
         expect:
-        ProcessDsl.isValidLabel(lbl) == result
+        ProcessBuilder.isValidLabel(lbl) == result
 
         where:
         lbl         | result
@@ -261,7 +261,7 @@ class ProcessDslTest extends Specification {
     @Unroll
     def 'should match selector: #SELECTOR with #TARGET' () {
         expect:
-        ProcessDsl.matchesSelector(TARGET, SELECTOR) == EXPECTED
+        ProcessBuilder.matchesSelector(TARGET, SELECTOR) == EXPECTED
 
         where:
         SELECTOR        | TARGET    | EXPECTED
@@ -288,7 +288,7 @@ class ProcessDslTest extends Specification {
 
         when:
         def config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithLabels(settings, ['short'])
+        new ProcessBuilder(config).applyConfigSelectorWithLabels(settings, ['short'])
         then:
         config.cpus == 1
         config.time == '1h'
@@ -296,7 +296,7 @@ class ProcessDslTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithLabels(settings, ['long'])
+        new ProcessBuilder(config).applyConfigSelectorWithLabels(settings, ['long'])
         then:
         config.cpus == 32
         config.queue == 'cn-long'
@@ -304,7 +304,7 @@ class ProcessDslTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithLabels(settings, ['foo'])
+        new ProcessBuilder(config).applyConfigSelectorWithLabels(settings, ['foo'])
         then:
         config.cpus == 2
         config.disk == '100GB'
@@ -313,7 +313,7 @@ class ProcessDslTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithLabels(settings, ['bar'])
+        new ProcessBuilder(config).applyConfigSelectorWithLabels(settings, ['bar'])
         then:
         config.cpus == 32
         config.disk == '100GB'
@@ -322,7 +322,7 @@ class ProcessDslTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithLabels(settings, ['gpu-1'])
+        new ProcessBuilder(config).applyConfigSelectorWithLabels(settings, ['gpu-1'])
         then:
         config.cpus == 4
         config.queue == 'cn-long'
@@ -342,13 +342,13 @@ class ProcessDslTest extends Specification {
 
         when:
         def config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithName(settings, 'xx')
+        new ProcessBuilder(config).applyConfigSelectorWithName(settings, 'xx')
         then:
         config.size() == 0
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithName(settings, 'alpha')
+        new ProcessBuilder(config).applyConfigSelectorWithName(settings, 'alpha')
         then:
         config.cpus == 1
         config.time == '1h'
@@ -356,7 +356,7 @@ class ProcessDslTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithName(settings, 'delta')
+        new ProcessBuilder(config).applyConfigSelectorWithName(settings, 'delta')
         then:
         config.cpus == 2
         config.disk == '100GB'
@@ -364,14 +364,14 @@ class ProcessDslTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithName(settings, 'gamma')
+        new ProcessBuilder(config).applyConfigSelectorWithName(settings, 'gamma')
         then:
         config.disk == '100GB'
         config.size() == 1
 
         when:
         config = new ProcessConfig([:])
-        new ProcessDsl(config).applyConfigSelectorWithName(settings, 'omega_x')
+        new ProcessBuilder(config).applyConfigSelectorWithName(settings, 'omega_x')
         then:
         config.cpus == 4
         config.size() == 1
@@ -381,7 +381,7 @@ class ProcessDslTest extends Specification {
     def 'should apply config process defaults' () {
 
         when:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.queue 'cn-el6'
         builder.memory '10 GB'
         builder.applyConfigDefaults(
@@ -399,7 +399,7 @@ class ProcessDslTest extends Specification {
 
 
         when:
-        builder = new ProcessDsl(Mock(BaseScript), null)
+        builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.container null
         builder.applyConfigDefaults(
                 queue: 'def-queue',
@@ -415,7 +415,7 @@ class ProcessDslTest extends Specification {
 
 
         when:
-        builder = new ProcessDsl(Mock(BaseScript), null)
+        builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.maxRetries 10
         builder.applyConfigDefaults(
                 queue: 'def-queue',
@@ -433,7 +433,7 @@ class ProcessDslTest extends Specification {
     def 'should apply pod configs' () {
 
         when:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.applyConfigDefaults( pod: [secret: 'foo', mountPath: '/there'] )
         then:
         builder.getConfig().pod == [
@@ -441,7 +441,7 @@ class ProcessDslTest extends Specification {
         ]
 
         when:
-        builder = new ProcessDsl(Mock(BaseScript), null)
+        builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.applyConfigDefaults( pod: [
                 [secret: 'foo', mountPath: '/here'],
                 [secret: 'bar', mountPath: '/there']
@@ -457,7 +457,7 @@ class ProcessDslTest extends Specification {
     def 'should clone config object' () {
 
         when:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
         builder.queue 'cn-el6'
         builder.container 'ubuntu:latest'
@@ -475,7 +475,7 @@ class ProcessDslTest extends Specification {
 
         when:
         def copy = config.clone()
-        builder = new ProcessDsl(copy)
+        builder = new ProcessBuilder(copy)
         builder.queue 'long'
         builder.container 'debian:wheezy'
         builder.memory '5 GB'
@@ -500,7 +500,7 @@ class ProcessDslTest extends Specification {
     def 'should apply accelerator config' () {
 
         given:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
 
         when:
@@ -532,7 +532,7 @@ class ProcessDslTest extends Specification {
     def 'should apply disk config' () {
 
         given:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
 
         when:
@@ -554,7 +554,7 @@ class ProcessDslTest extends Specification {
     def 'should apply architecture config' () {
 
         given:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         def config = builder.getConfig()
 
         when:
@@ -583,21 +583,21 @@ class ProcessDslTest extends Specification {
 
         when:
         def config = new ProcessConfig(label: ['foo', 'other'])
-        new ProcessDsl(config).applyConfig(settings, "processName", null, null)
+        new ProcessBuilder(config).applyConfig(settings, "processName", null, null)
         then:
         config.cpus == 2
         config.disk == '100.GB'
 
         when:
         config = new ProcessConfig(label: ['foo', 'other', 'nodisk_label'])
-        new ProcessDsl(config).applyConfig(settings, "processName", null, null)
+        new ProcessBuilder(config).applyConfig(settings, "processName", null, null)
         then:
         config.cpus == 2
         !config.disk
 
         when:
         config = new ProcessConfig(label: ['other', 'nodisk_label'])
-        new ProcessDsl(config).applyConfig(settings, "processName", null, null)
+        new ProcessBuilder(config).applyConfig(settings, "processName", null, null)
         then:
         config.cpus == 4
         !config.disk
@@ -606,7 +606,7 @@ class ProcessDslTest extends Specification {
 
     def 'should throw exception for invalid error strategy' () {
         when:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.errorStrategy 'abort'
 
         then:
@@ -617,21 +617,21 @@ class ProcessDslTest extends Specification {
 
     def 'should not throw exception for valid error strategy or closure' () {
         when:
-        def builder = new ProcessDsl(Mock(BaseScript), null)
+        def builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.errorStrategy 'retry'
 
         then:
         noExceptionThrown()
 
         when:
-        builder = new ProcessDsl(Mock(BaseScript), null)
+        builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.errorStrategy 'terminate'
 
         then:
         noExceptionThrown()
 
         when:
-        builder = new ProcessDsl(Mock(BaseScript), null)
+        builder = new ProcessBuilder(Mock(BaseScript), null)
         builder.errorStrategy { task.exitStatus==14 ? 'retry' : 'terminate' }
 
         then:

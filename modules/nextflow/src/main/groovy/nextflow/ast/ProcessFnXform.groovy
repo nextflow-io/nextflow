@@ -82,14 +82,6 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
                 fixDirectiveWithNegativeValue(stmt)
         }
 
-        // fix inputs
-        final inputs = opts['inputs']
-        if( inputs != null && inputs instanceof ClosureExpression ) {
-            final block = (BlockStatement)inputs.getCode()
-            for( Statement stmt : block.getStatements() )
-                fixInputMethod((ExpressionStatement)stmt)
-        }
-
         // fix outputs
         final outputs = opts['outputs']
         if( outputs != null && outputs instanceof ClosureExpression ) {
@@ -145,24 +137,6 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
             name,
             new ArgumentListExpression(arg)
         ) )
-    }
-
-    private static final VALID_INPUT_METHODS = ['env','file','path','stdin']
-
-    /**
-     * Fix input method calls.
-     *
-     * @param stmt
-     */
-    protected void fixInputMethod(ExpressionStatement stmt) {
-        final methodCall = (MethodCallExpression)stmt.getExpression()
-        final name = methodCall.getMethodAsString()
-        final args = (ArgumentListExpression)methodCall.getArguments()
-
-        if( name !in VALID_INPUT_METHODS )
-            syntaxError(stmt, "Invalid input method '${name}'")
-
-        methodCall.setMethod( constX('_in_' + name) )
     }
 
     private static final VALID_OUTPUT_METHODS = ['val','env','file','path','stdout','tuple']

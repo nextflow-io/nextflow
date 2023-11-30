@@ -55,7 +55,7 @@ import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-import nextflow.script.dsl.ProcessDsl
+import nextflow.script.dsl.ProcessBuilder
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
@@ -932,7 +932,7 @@ class Session implements ISession {
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
     protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
-        final matches = processNames.any { name -> ProcessDsl.matchesSelector(name, selector) }
+        final matches = processNames.any { name -> ProcessBuilder.matchesSelector(name, selector) }
         if( matches )
             return true
 

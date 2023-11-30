@@ -23,7 +23,7 @@ import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.executor.ExecutorFactory
 import nextflow.processor.TaskProcessor
-import nextflow.script.dsl.ProcessDsl
+import nextflow.script.dsl.ProcessBuilder
 /**
  *  Factory class for {@TaskProcessor} instances
  *
@@ -85,7 +85,7 @@ class ProcessFactory {
         assert body
         assert config.process instanceof Map
 
-        final builder = new ProcessDsl(owner, name)
+        final builder = new ProcessBuilder(owner, name)
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
         final copy = (Closure<BodyDef>)body.clone()

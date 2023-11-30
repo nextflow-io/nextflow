@@ -33,12 +33,12 @@ import nextflow.script.ProcessConfig
 import nextflow.script.ProcessDef
 
 /**
- * Implements the process DSL.
+ * Implements the process builder DSL.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
-class ProcessDsl {
+class ProcessBuilder {
 
     static final List<String> DIRECTIVES = [
             'accelerator',
@@ -88,13 +88,13 @@ class ProcessDsl {
     private BodyDef body
     private ProcessConfig config
 
-    ProcessDsl(BaseScript ownerScript, String processName) {
+    ProcessBuilder(BaseScript ownerScript, String processName) {
         this.ownerScript = ownerScript
         this.processName = processName
         this.config = new ProcessConfig(ownerScript, processName)
     }
 
-    ProcessDsl(ProcessConfig config) {
+    ProcessBuilder(ProcessConfig config) {
         this.ownerScript = config.getOwnerScript()
         this.processName = config.getProcessName()
         this.config = config
@@ -524,7 +524,7 @@ class ProcessDsl {
 
     /// SCRIPT
 
-    ProcessDsl withBody(BodyDef body) {
+    ProcessBuilder withBody(BodyDef body) {
         this.body = body
         return this
     }

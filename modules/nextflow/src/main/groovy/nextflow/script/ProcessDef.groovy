@@ -26,7 +26,7 @@ import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.MergeOp
-import nextflow.script.dsl.ProcessDsl
+import nextflow.script.dsl.ProcessBuilder
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
@@ -96,7 +96,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     protected void initialize() {
         // apply config settings to the process
-        new ProcessDsl(processConfig).applyConfig((Map)session.config.process, baseName, simpleName, processName)
+        new ProcessBuilder(processConfig).applyConfig((Map)session.config.process, baseName, simpleName, processName)
     }
 
     @Override

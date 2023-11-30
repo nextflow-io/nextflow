@@ -25,7 +25,8 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.ast.ProcessFn
 import nextflow.exception.AbortOperationException
-import nextflow.script.dsl.ProcessDsl
+import nextflow.script.dsl.ProcessBuilder
+import nextflow.script.dsl.ProcessInputsBuilder
 import nextflow.script.dsl.WorkflowDsl
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -99,7 +100,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param rawBody
      */
     protected void process(String name, Closure<BodyDef> rawBody) {
-        final builder = new ProcessDsl(this, name)
+        final builder = new ProcessBuilder(this, name)
         final copy = (Closure<BodyDef>)rawBody.clone()
         copy.delegate = builder
         copy.resolveStrategy = Closure.DELEGATE_FIRST
@@ -168,9 +169,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
                 throw new IllegalArgumentException("Process function `${name}` cannot have script and shell enabled simultaneously")
 
             // build process from annotation
-            final builder = new ProcessDsl(this, name)
+            final builder = new ProcessBuilder(this, name)
+            final inputsBuilder = new ProcessInputsBuilder(builder.getConfig())
+
+            dslEval(inputsBuilder, processFn.inputs())
             dslEval(builder, processFn.directives())
-            dslEval(builder, processFn.inputs())
             dslEval(builder, processFn.outputs())
 
             // get method parameters
