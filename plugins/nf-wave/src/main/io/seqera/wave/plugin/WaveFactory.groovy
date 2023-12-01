@@ -56,10 +56,7 @@ class WaveFactory implements TraceObserverFactory {
             }
         }
 
-        final observer = new WaveObserver(session)
-        return wave.enabled && observer.reportOpts().enabled()
-                ? List.<TraceObserver>of(observer)
-                : List.<TraceObserver>of()
+        return List.<TraceObserver>of()
     }
 
     protected boolean isAwsBatchFargateMode(Map config) {
