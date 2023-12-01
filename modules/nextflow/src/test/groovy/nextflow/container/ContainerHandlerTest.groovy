@@ -224,8 +224,8 @@ class ContainerHandlerTest extends Specification {
         'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               | false |           0 | '/abs/path/bar.img'
         'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString()  | false |           0 | Paths.get('foo.img').toAbsolutePath().toString()
         'shub://busybox'                            | 'shub://busybox'                                  | false |           1 | '/path/to/busybox'
-        'docker://library/busybox'                  | 'docker://library/busybox'                        | false |           1 | '/path/to/busybox'
-        'foo'                                       | 'docker://foo'                                    | false |           1 | '/path/to/foo'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | false |           1 | 'docker://library/busybox'
+        'foo'                                       | 'docker://foo'                                    | false |           1 | 'docker://foo'
         'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         | false |           1 | '/path/to/foo-bar-latest.img'
         and:
         'docker://library/busybox'                  | 'docker://library/busybox'                        | true  |           0 | 'docker://library/busybox'
