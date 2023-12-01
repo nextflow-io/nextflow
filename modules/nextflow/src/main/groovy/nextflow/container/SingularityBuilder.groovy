@@ -94,7 +94,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
-        if( params.oci!=null )
+        // note: 'oci' flag should be ignored by Apptainer sub-class
+        if( params.oci!=null && this.class==SingularityBuilder )
             oci = params.oci.toString() == 'true'
 
         return this

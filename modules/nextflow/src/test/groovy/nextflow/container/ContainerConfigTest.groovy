@@ -61,24 +61,24 @@ class ContainerConfigTest extends Specification {
 
     }
 
-
+    @Unroll
     def 'should validate oci mode' () {
 
         when:
         def cfg = new ContainerConfig(OPTS)
         then:
-        cfg.singularityOciMode() == EXPECTED
+        cfg.isOciMode() == EXPECTED
 
         where:
         OPTS                                | EXPECTED
         [:]                                 | false
         [oci:false]                         | false
         [oci:true]                          | false
-        [engine:'apptainer', oci:true]      | false
         [engine:'docker', oci:true]         | false
         [engine:'singularity']              | false
         [engine:'singularity', oci:false]   | false
         [engine:'singularity', oci:true]    | true
+        [engine:'apptainer', oci:true]      | true
 
     }
 

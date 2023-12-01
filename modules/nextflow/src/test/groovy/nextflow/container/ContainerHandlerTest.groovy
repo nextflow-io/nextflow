@@ -233,6 +233,38 @@ class ContainerHandlerTest extends Specification {
 
     }
 
+    @Unroll
+    def 'test normalize method for apptainer' () {
+        given:
+        def BASE = Paths.get('/abs/path/')
+        def handler = Spy(new ContainerHandler(engine: 'apptainer', enabled: true, oci:OCI, baseDir: BASE))
+
+        when:
+        def result = handler.normalizeImageName(IMAGE)
+
+        then:
+        1 * handler.normalizeApptainerImageName(IMAGE) >> NORMALIZED
+        X * handler.createApptainerCache(handler.config, NORMALIZED) >> EXPECTED
+        result == EXPECTED
+
+        where:
+        IMAGE                                       | NORMALIZED                                        | OCI   | X           | EXPECTED
+        null                                        | null                                              | false |           0 | null
+        ''                                          | null                                              | false |           0 | null
+        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               | false |           0 | '/abs/path/bar.img'
+        '/abs/path bar.img'                         | '/abs/path bar.img'                               | false |           0 | '/abs/path\\ bar.img'
+        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               | false |           0 | '/abs/path/bar.img'
+        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString()  | false |           0 | Paths.get('foo.img').toAbsolutePath().toString()
+        'shub://busybox'                            | 'shub://busybox'                                  | false |           1 | '/path/to/busybox'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | false |           1 | '/path/to/busybox'
+        'foo'                                       | 'docker://foo'                                    | false |           1 | '/path/to/foo'
+        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         | false |           1 | '/path/to/foo-bar-latest.img'
+        and:
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | true  |           0 | 'docker://library/busybox'
+        'shub://busybox'                            | 'shub://busybox'                                  | true  |           1 | '/path/to/busybox'
+
+    }
+
     def 'should not invoke caching when engine is disabled' () {
         given:
         final handler = Spy(new ContainerHandler([engine: 'singularity']))

@@ -55,8 +55,8 @@ class ContainerConfig extends LinkedHashMap {
         get('engine')
     }
 
-    boolean singularityOciMode() {
-        getEngine()=='singularity' && get('oci')?.toString() == 'true'
+    boolean isOciMode() {
+        get('oci')?.toString() == 'true' && (getEngine()=='singularity' || getEngine()=='apptainer')
     }
 
     List<String> getEnvWhitelist() {
@@ -93,7 +93,7 @@ class ContainerConfig extends LinkedHashMap {
             return null
         if( eng=='docker' || eng=='podman' )
             return '--rm --privileged'
-        if( singularityOciMode() )
+        if( eng=='singularity' && isOciMode() )
             return '-B /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
             return null
