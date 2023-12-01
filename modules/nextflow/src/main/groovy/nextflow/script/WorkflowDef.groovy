@@ -16,7 +16,6 @@
 
 package nextflow.script
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -25,6 +24,7 @@ import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import org.codehaus.groovy.runtime.MethodClosure
 /**
  * Models a script workflow component
  *
@@ -190,14 +190,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         }
     }
 
-    @CompileDynamic
     private Object run0(Object[] args) {
         collectInputs(binding, args)
         // invoke the workflow execution
-        final closure = body.closure
-        closure.delegate = binding
-        closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-        def result = closure.call(*args)
+        final result = run1(body.closure, args)
 
         // apply return value to declared outputs, binding
         normalizeOutput(result)
@@ -205,6 +201,25 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         // collect the workflow outputs
         output = collectOutputs(declaredOutputs)
         return output
+    }
+
+    private Object run1(Closure closure, Object[] args) {
+        if( closure instanceof MethodClosure ) {
+            final target = closure.owner
+            final name = closure.method
+            final meta = target.metaClass.getMetaMethod(name, args)
+            if( meta == null )
+                throw new MissingMethodException(name, target.getClass(), args)
+            final method = target.getClass().getMethod(name, meta.getNativeParameterTypes())
+            if( method == null )
+                throw new MissingMethodException(name, target.getClass(), args)
+            return method.invoke(target, args)
+        }
+        else {
+            closure.setDelegate(binding)
+            closure.setResolveStrategy(Closure.DELEGATE_FIRST)
+            return closure.call()
+        }
     }
 
     private void normalizeOutput(Object result) {

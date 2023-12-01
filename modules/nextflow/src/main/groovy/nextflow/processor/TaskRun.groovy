@@ -725,17 +725,19 @@ class TaskRun implements Cloneable {
         // note: this may be overwritten when a template file is used
         this.source = body.source
 
-        if( body.type != ScriptType.SCRIPTLET )
-            return
+        // -- collect method args from task context
+        final args = params.collect(param -> context[param]).toArray()
 
-        // collect method args from task context
-        final args = params.collect(param -> context[param])
+        if( body.type != ScriptType.SCRIPTLET ) {
+            code = code.curry(args)
+            return
+        }
 
         // Important!
         // when the task is implemented by a script string
         // Invoke the closure which returns the script with all the variables replaced with the actual values
         try {
-            final result = code.call(*args)
+            final result = code.call(args)
             if ( result instanceof Path ) {
                 script = renderTemplate(result, body.isShell)
             }

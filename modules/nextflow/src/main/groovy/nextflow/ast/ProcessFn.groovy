@@ -29,9 +29,9 @@ import java.lang.annotation.Target
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @interface ProcessFn {
-    Class directives()
-    Class inputs()
-    Class outputs()
+    Class directives() default {->}
+    Class inputs() default {->}
+    Class outputs() default {->}
 
     boolean script() default false
     boolean shell() default false

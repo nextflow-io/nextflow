@@ -173,7 +173,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     @Override
     Object invokeMethod(String name, Object args) {
-        ExecutionStack.binding().invokeMethod(name, args)
+        try {
+            ExecutionStack.binding().invokeMethod(name, args)
+        }
+        catch( MissingMethodException e ) {
+            if( !ExecutionStack.withinWorkflow() )
+                throw e
+            binding.invokeMethod(name, args)
+        }
     }
 
     private void applyDsl(Object delegate, Class<Closure> clazz) {
