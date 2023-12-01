@@ -412,7 +412,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- script can still override the DSL version
         final scriptDsl = NextflowMeta.checkDslMode(scriptText)
         if( scriptDsl ) {
-            log.debug("Applied DSL=$scriptDsl from script declararion")
+            log.debug("Applied DSL=$scriptDsl from script declaration")
             return scriptDsl
         }
         else if( dsl ) {
