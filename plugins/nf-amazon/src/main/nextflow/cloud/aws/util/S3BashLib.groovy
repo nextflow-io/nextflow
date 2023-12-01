@@ -22,6 +22,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.executor.BashFunLib
+
 /**
  * AWS S3 helper class
  */

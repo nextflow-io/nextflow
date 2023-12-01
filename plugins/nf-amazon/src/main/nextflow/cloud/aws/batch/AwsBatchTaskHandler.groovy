@@ -211,6 +211,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         else {
             log.trace "[AWS BATCH] Job id=$jobId details=$result"
         }
+
         return result
     }
 

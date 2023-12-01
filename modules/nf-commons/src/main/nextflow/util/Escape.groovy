@@ -76,10 +76,6 @@ class Escape {
         args.collect { cli(it) }.join(' ')
     }
 
-    static String cli(List<String> args) {
-        args.collect { cli(it) }.join(' ')
-    }
-
     static String cli(String arg) {
         if( arg.contains("'") )
             return wildcards(arg)
