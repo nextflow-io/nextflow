@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,7 +179,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         config._in_file([infile:'filename.fa'])
-        config._in_val('x') .from(1)
+        config._in_val('x').setFrom(1)
         config._in_stdin()
 
         then:
@@ -209,9 +208,9 @@ class ProcessConfigTest extends Specification {
 
         when:
         config._out_stdout()
-        config._out_file(new TokenVar('file1')).into('ch1')
-        config._out_file(new TokenVar('file2')).into('ch2')
-        config._out_file(new TokenVar('file3')).into('ch3')
+        config._out_file(new TokenVar('file1')).setInto('ch1')
+        config._out_file(new TokenVar('file2')).setInto('ch2')
+        config._out_file(new TokenVar('file3')).setInto('ch3')
 
         then:
         config.outputs.size() == 4
@@ -677,6 +676,48 @@ class ProcessConfigTest extends Specification {
         process.accelerator 5, request: 1
         then:
         process.accelerator == [request: 1, limit:5]
+    }
+
+    def 'should apply disk config' () {
+
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.disk '100 GB'
+        then:
+        process.disk == [request: '100 GB']
+
+        when:
+        process.disk '375 GB', type: 'local-ssd'
+        then:
+        process.disk == [request: '375 GB', type: 'local-ssd']
+
+        when:
+        process.disk request: '375 GB', type: 'local-ssd'
+        then:
+        process.disk == [request: '375 GB', type: 'local-ssd']
+    }
+
+    def 'should apply architecture config' () {
+
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.arch 'linux/x86_64'
+        then:
+        process.arch == [name: 'linux/x86_64']
+
+        when:
+        process.arch 'linux/x86_64', target: 'zen3'
+        then:
+        process.arch == [name: 'linux/x86_64', target: 'zen3']
+
+        when:
+        process.arch name: 'linux/x86_64', target: 'zen3'
+        then:
+        process.arch == [name: 'linux/x86_64', target: 'zen3']
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,6 @@ class CmdSecret extends CmdBase implements UsageAware {
 
     CmdSecret() {
         commands.add( new GetCmd() )
-        commands.add( new PutCmd() )
         commands.add( new SetCmd() )
         commands.add( new ListCmd() )
         commands.add( new DeleteCmd() )
@@ -143,19 +142,6 @@ class CmdSecret extends CmdBase implements UsageAware {
         }
         else {
             log.debug "Unknown help field: $fieldName"
-        }
-    }
-
-    /**
-     * Implements the secret `put` sub-command
-     */
-    @Deprecated
-    class PutCmd extends SetCmd {
-        String getName() { 'put' }
-
-        void apply(List<String> result) {
-            log.warn "Put command is deprecated - use 'set' instead'"
-            super.apply(result)
         }
     }
 

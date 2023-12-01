@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +16,12 @@
 
 package nextflow.cloud.aws.util
 
-
-import groovy.transform.CompileStatic
 import com.amazonaws.services.s3.model.CannedAccessControlList
+import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.executor.BashFunLib
-import nextflow.util.Escape
 /**
  * AWS S3 helper class
  */
@@ -37,7 +34,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
     private String debug = ''
     private String cli = 'aws'
     private String retryMode
-    private List<String> s5cmdPath
+    private String s5cmdPath
     private String acl = ''
 
     S3BashLib withCliPath(String cliPath) {
@@ -75,7 +72,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
-    S3BashLib withS5cmdPath(List<String> value) {
+    S3BashLib withS5cmdPath(String value) {
         this.s5cmdPath = value
         return this
     }
@@ -127,7 +124,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 $cli s3 cp --only-show-errors "\$source" "\$target"
             fi
         }
-        """.stripIndent()
+        """.stripIndent(true)
     }
 
     /**
@@ -137,7 +134,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
      * @return The Bash script implementing the S3 helper functions
      */
     protected String s5cmdLib() {
-        final cli = Escape.cli(s5cmdPath)
+        final cli = s5cmdPath
         """
         # aws helper for s5cmd
         nxf_s3_upload() {

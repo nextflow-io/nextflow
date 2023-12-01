@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
-        if( mode=='dev' && root.toString()=='plugins' && !isRunningFromDistArchive() )
+        if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
@@ -252,7 +252,7 @@ class PluginsFacade implements PluginStateListener {
             return manager.getExtensions(type)
         }
         else {
-            // this should oly be used to load system extensions
+            // this should only be used to load system extensions
             // i.e. included in the app class path not provided by
             // a plugin extension
             log.debug "Using Default plugin manager"
@@ -371,6 +371,11 @@ class PluginsFacade implements PluginStateListener {
             specs << defaultPlugins.getPlugin('nf-wave')
         }
 
+        // add cloudcache plugin when cloudcache is enabled in the config
+        if( Bolts.navigate(config, 'cloudcache.enabled')==true ) {
+            specs << defaultPlugins.getPlugin('nf-cloudcache')
+        }
+
         log.debug "Plugins resolved requirement=$specs"
         return specs
     }
@@ -401,6 +406,9 @@ class PluginsFacade implements PluginStateListener {
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
 
+        if( Bolts.navigate(config, 'weblog.enabled'))
+            plugins << new PluginSpec('nf-weblog')
+            
         return plugins
     }
 

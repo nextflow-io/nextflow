@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 package nextflow.executor
 
+import groovy.transform.CompileStatic
 import nextflow.cloud.CloudTransferOptions
 import nextflow.util.Duration
 
@@ -25,6 +26,7 @@ import nextflow.util.Duration
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class BashFunLib<V extends BashFunLib> {
 
     protected int maxParallelTransfers = CloudTransferOptions.MAX_TRANSFER
@@ -93,7 +95,9 @@ class BashFunLib<V extends BashFunLib> {
             while ((i<\${#cmd[@]})); do
                 local copy=()
                 for x in "\${pid[@]}"; do
-                  [[ -e /proc/\$x ]] && copy+=(\$x)
+                  # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                  # see https://github.com/nextflow-io/nextflow/pull/4050
+                  [[ -e /proc/\$x ]] && copy+=(\$x) || wait \$x
                 done
                 pid=("\${copy[@]}")
                 
@@ -111,7 +115,7 @@ class BashFunLib<V extends BashFunLib> {
             )
             unset IFS
         }
-        """.stripIndent()
+        """.stripIndent(true)
     }
 
     String render() {

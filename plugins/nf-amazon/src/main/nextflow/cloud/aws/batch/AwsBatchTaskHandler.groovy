@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +62,6 @@ import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.res.AcceleratorResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
@@ -72,7 +70,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
-import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 /**
  * Implements a task handler for AWS Batch jobs
@@ -659,7 +656,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected String s5Cmd(AwsOptions opts) {
-        final cli = Escape.cli(opts.getS5cmdPath())
+        final cli = opts.getS5cmdPath()
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final cmd = "trap \"{ ret=\$?; $cli cp${sse}${kms} ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $cli cat s3:/${getWrapperFile()} | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
@@ -673,7 +670,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 : classicSubmitCli()
     }
 
-    protected maxSpotAttempts() {
+    protected int maxSpotAttempts() {
         return executor.awsOptions.maxSpotAttempts
     }
 
@@ -749,8 +746,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( cpus > 1 )
             resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
-        if( task.config.getAccelerator() )
-            resources << createGpuResource(task.config.getAccelerator())
+        final accelerator = task.config.getAccelerator()
+        if( accelerator ) {
+            if( accelerator.type )
+                log.warn1 "Ignoring task ${task.lazyName()} accelerator type: ${accelerator.type} -- AWS Batch doesn't support accelerator type in job definition"
+            resources << new ResourceRequirement().withType(ResourceType.GPU).withValue(accelerator.request.toString())
+        }
 
         if( resources )
             container.withResourceRequirements(resources)
@@ -765,20 +766,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    protected ResourceRequirement createGpuResource(AcceleratorResource acc) {
-        final res = new ResourceRequirement()
-        final type = acc.type ?: 'GPU'
-        final count = acc.request?.toString() ?: '1'
-        res.setType(type.toUpperCase())
-        res.setValue(count)
-        return res
-    }
-
     /**
      * @return The list of environment variables to be defined in the Batch job execution context
      */
     protected List<KeyValuePair> getEnvironmentVars() {
-        def vars = []
+        List<KeyValuePair> vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
         if( this.getAwsOptions().retryMode && this.getAwsOptions().retryMode in AwsOptions.VALID_RETRY_MODES)

@@ -23,6 +23,8 @@ class CustomVersionManagerTest extends Specification {
         '1.1.0'     | '1.0.0'       | 1
         '1.0.0'     | '1.0.1'       | -1
         and:
+        '1.0.0'     | '1.0.0-patch0'| 1
+        and:
         '20.01.1'   | '20.01.1'     | 0
         '20.02.1'   | '20.01.1'     | 1
         '20.02.1'   | '20.02.2'     | -1

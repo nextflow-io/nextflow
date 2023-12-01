@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,6 @@ package nextflow.fusion
 import groovy.transform.CompileStatic
 import nextflow.executor.Executor
 import nextflow.processor.TaskRun
-
-import static nextflow.fusion.FusionConfig.FUSION_PATH
-
 /**
  * Implements commons logic to handle fusion based tasks.
  * This trait is expected to be used by a sub-class of {@link nextflow.processor.TaskHandler}
@@ -50,6 +47,10 @@ trait FusionAwareTask {
         return fusionEnabled
     }
 
+    FusionConfig fusionConfig() {
+        return FusionConfig.getConfig()
+    }
+
     FusionScriptLauncher fusionLauncher() {
         if( fusionLauncher==null ) {
             fusionLauncher = fusionEnabled()
@@ -60,9 +61,7 @@ trait FusionAwareTask {
     }
 
     List<String> fusionSubmitCli() {
-        final fusion = fusionLauncher()
-        final runFile = fusion.toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
-        return [FUSION_PATH, 'bash', runFile.toString() ]
+        return fusionLauncher().fusionSubmitCli(task)
     }
 
 }

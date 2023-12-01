@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package nextflow.util
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import nextflow.file.FileHelper
 
 /**
  * Split a path into two paths, the first component which may include the host name if it's a remote
@@ -35,7 +36,7 @@ class PathSplitter {
     List<String> tail
 
     static PathSplitter parse(String path) {
-        final baseUrl = StringUtils.baseUrl(path)
+        final baseUrl = FileHelper.baseUrl(path)
         if( !baseUrl )
             return split0(path, 0)
 

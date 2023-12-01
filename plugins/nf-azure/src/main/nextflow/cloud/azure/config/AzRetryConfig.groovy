@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,9 +31,9 @@ import nextflow.util.Duration
 @EqualsAndHashCode
 @CompileStatic
 class AzRetryConfig {
-    Duration delay = Duration.of('50ms')
-    Duration maxDelay = Duration.of('30s')
-    int maxAttempts = 5
+    Duration delay = Duration.of('250ms')
+    Duration maxDelay = Duration.of('90s')
+    int maxAttempts = 10
     double jitter = 0.25
 
     AzRetryConfig() {

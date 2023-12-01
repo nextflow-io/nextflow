@@ -36,12 +36,27 @@ $NXF_CMD run test-complexpaths.nf -resume -c awsbatch.config
 
 $NXF_CMD run test-subdirs.nf -c awsbatch.config
 
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
 $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
     -with-report \
-    -with-trace
+    -with-trace \
+    -plugins nf-cloudcache
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 
-## run with fargate + wave
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
 $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
+    -with-report \
+    -with-trace \
+    -plugins nf-cloudcache \
+    -resume
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
+[[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
+
+## run with fargate + wave
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
+$NXF_CMD run nextflow-io/rnaseq-nf \
+    -profile batch \
+    -plugins nf-cloudcache \
     -c awsfargate.config

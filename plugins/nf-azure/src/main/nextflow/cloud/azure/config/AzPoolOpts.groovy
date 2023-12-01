@@ -65,6 +65,9 @@ class AzPoolOpts implements CacheFunnel {
     String userName
     String password
 
+    String virtualNetwork
+    boolean lowPriority
+
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
@@ -86,6 +89,8 @@ class AzPoolOpts implements CacheFunnel {
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
+        this.virtualNetwork = opts.virtualNetwork
+        this.lowPriority = opts.lowPriority as boolean
     }
 
     @Override
@@ -104,6 +109,8 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putBoolean(autoScale)
         hasher.putUnencodedChars(scaleFormula ?: '')
         hasher.putUnencodedChars(schedulePolicy ?: '')
+        hasher.putUnencodedChars(virtualNetwork ?: '')
+        hasher.putBoolean(lowPriority)
         return hasher
     }
 

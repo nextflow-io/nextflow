@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +38,8 @@ import nextflow.util.Escape
 
 import static java.nio.file.StandardOpenOption.*
 
+import nextflow.util.MemoryUnit
+
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -49,10 +50,12 @@ import static java.nio.file.StandardOpenOption.*
 @CompileStatic
 class BashWrapperBuilder {
 
+    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
     private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
     private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
     private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
+    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
     private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
     private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
     private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
@@ -72,9 +75,8 @@ class BashWrapperBuilder {
         /*
          * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
          * - 0: no debug
-         * - 1: dump current environment in the `.command.log` file
-         * - 2: trace the execution of user script adding the `set -x` flag
-         * - 3: trace the execution of wrapper scripts
+         * - 1: dump current environment in the `.command.log` file and trace the execution of user script
+         * - 2: trace the execution of wrapper scripts
          */
         def str = System.getenv('NXF_DEBUG')
         try {
@@ -107,6 +109,10 @@ class BashWrapperBuilder {
     private Path exitedFile
 
     private Path wrapperFile
+
+    private Path stageFile
+
+    private String stageScript
 
     private BashTemplateEngine engine = new BashTemplateEngine()
 
@@ -176,6 +182,7 @@ class BashWrapperBuilder {
         result.append('\n')
         result.append('# capture process environment\n')
         result.append('set +u\n')
+        result.append('cd "$NXF_TASK_WORKDIR"\n')
         for( int i=0; i<names.size(); i++) {
             final key = names[i]
             result.append "echo $key=\${$key[@]} "
@@ -185,7 +192,22 @@ class BashWrapperBuilder {
         }
         result.toString()
     }
-    
+
+    protected String stageCommand(String stagingScript) {
+        if( !stagingScript )
+            return null
+
+        final header = "# stage input files\n"
+        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
+        // see https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
+            stageScript = stagingScript
+            return header + "bash ${stageFile}"
+        }
+        else
+            return header + stagingScript
+    }
+
     protected Map<String,String> makeBinding() {
         /*
          * initialise command files
@@ -195,6 +217,7 @@ class BashWrapperBuilder {
         startedFile = workDir.resolve(TaskRun.CMD_START)
         exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
+        stageFile = workDir.resolve(TaskRun.CMD_STAGE)
 
         // set true when running with through a container engine
         runWithContainer = containerEnabled && !containerNative
@@ -227,7 +250,7 @@ class BashWrapperBuilder {
         binding.helpers_script = getHelpersScript()
 
         if( runWithContainer ) {
-            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"'
+            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A | tr -d \'\\r\\n\')"'
             binding.container_helpers = containerBuilder.getScriptHelpers()
             binding.kill_cmd = containerBuilder.getKillCommand()
         }
@@ -276,7 +299,7 @@ class BashWrapperBuilder {
          * staging input files when required
          */
         final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
-        binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
+        binding.stage_inputs = stageCommand(stagingScript)
 
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
@@ -298,7 +321,7 @@ class BashWrapperBuilder {
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
 
         // patch root ownership problem on files created with docker
-        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true" : null
+        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
@@ -341,6 +364,8 @@ class BashWrapperBuilder {
         write0(targetScriptFile(), script)
         if( input != null )
             write0(targetInputFile(), input.toString())
+        if( stageScript != null )
+            write0(targetStageFile(), stageScript)
         return result
     }
 
@@ -350,11 +375,16 @@ class BashWrapperBuilder {
 
     protected Path targetInputFile() { return inputFile }
 
+    protected Path targetStageFile() { return stageFile }
+
     private Path write0(Path path, String data) {
         int attempt=0
         while( true ) {
             try {
-                return Files.write(path, data.getBytes(), CREATE,WRITE,TRUNCATE_EXISTING)
+                try (BufferedWriter writer=Files.newBufferedWriter(path, CREATE,WRITE,TRUNCATE_EXISTING)) {
+                    writer.write(data)
+                }
+                return path
             }
             catch (FileSystemException | SocketException | RuntimeException e) {
                 final isLocalFS = path.getFileSystem()==FileSystems.default
@@ -450,9 +480,13 @@ class BashWrapperBuilder {
          */
         if( containerBuilder ) {
             String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
-            if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder )
-                    cmd = 'cd $PWD; ' + cmd
+            // wrap the command with an extra bash invocation either :
+            // - to propagate the container environment or
+            // - to change in the task work directory as required by singularity
+            final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
+            if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
+                if( needChangeTaskWorkDir )
+                    cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
@@ -497,7 +531,7 @@ class BashWrapperBuilder {
     }
 
     String getSyncCmd() {
-        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+        if ( SysEnv.get( 'NXF_ENABLE_FS_SYNC' ) == "true" ) {
             return 'sync || true'
         }
         return null
@@ -554,6 +588,8 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        // export task work directory
+        builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
         if( isTraceRequired() )
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
@@ -561,10 +597,6 @@ class BashWrapperBuilder {
         // add the user owner variable in order to patch root owned files problem
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
-
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)

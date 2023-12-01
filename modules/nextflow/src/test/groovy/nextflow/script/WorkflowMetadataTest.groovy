@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +22,7 @@ import java.time.OffsetDateTime
 
 import nextflow.Const
 import nextflow.Session
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
@@ -170,6 +170,24 @@ class WorkflowMetadataTest extends Specification {
         result7 == 'Hello world'
 
 
+    }
+
+    def 'should be able to throw an error from onComplete handler' () {
+
+        given:
+        def session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        
+        def metadata = new WorkflowMetadata(session, null)
+
+        when:
+        metadata.onComplete {
+            throw new WorkflowScriptErrorException('You failed!')
+        }
+        metadata.invokeOnComplete()
+
+        then:
+        thrown(WorkflowScriptErrorException)
     }
 
     def 'should access workflow script variables onError' () {

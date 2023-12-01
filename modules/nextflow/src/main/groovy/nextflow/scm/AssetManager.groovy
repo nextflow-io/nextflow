@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -573,7 +572,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    String download(String revision=null) {
+    String download(String revision=null, Integer deep=null) {
         assert project
 
         /*
@@ -596,7 +595,9 @@ class AssetManager {
                 .setURI(cloneURL)
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
-                .call()
+            if( deep )
+                clone.setDepth(deep)
+            clone.call()
 
             if( revision ) {
                 // use an explicit checkout command *after* the clone instead of cloning a specific branch
@@ -627,8 +628,11 @@ class AssetManager {
              * Try to checkout it from a remote branch and return
              */
             catch ( RefNotFoundException e ) {
-                def ref = checkoutRemoteBranch(revision)
-                return "checkout-out at ${ref.getObjectId().name()}"
+                final ref = checkoutRemoteBranch(revision)
+                final commitId = ref?.getObjectId()
+                return commitId
+                    ? "checked out at ${commitId.name()}"
+                    : "checked out revision ${revision}"
             }
         }
 
@@ -664,7 +668,7 @@ class AssetManager {
      * @param directory The folder when the pipeline will be cloned
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null) {
+    void clone(File directory, String revision = null, Integer deep=null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
@@ -675,13 +679,15 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        clone.setDepth(1)
         clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider( provider.getGitCredentials() )
 
         if( revision )
             clone.setBranch(revision)
-
+        if( deep )
+            clone.setDepth(deep)
         clone.call()
     }
 
@@ -940,12 +946,18 @@ class AssetManager {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
             }
             fetch.call()
-            git.checkout()
-                    .setCreateBranch(true)
-                    .setName(revision)
-                    .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
-                    .setStartPoint("origin/" + revision)
-                    .call()
+
+            try {
+                return git.checkout()
+                        .setCreateBranch(true)
+                        .setName(revision)
+                        .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
+                        .setStartPoint("origin/" + revision)
+                        .call()
+            }
+            catch (RefNotFoundException e) {
+                return git.checkout() .setName(revision) .call()
+            }
         }
         catch (RefNotFoundException e) {
             throw new AbortOperationException("Cannot find revision `$revision` -- Make sure that it exists in the remote repository `$repositoryUrl`", e)

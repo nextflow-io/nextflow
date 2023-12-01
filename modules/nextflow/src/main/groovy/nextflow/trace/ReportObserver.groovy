@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +24,7 @@ import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -128,6 +128,9 @@ class ReportObserver implements TraceObserver {
     void onFlowCreate(Session session) {
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
+        // check if the process exists
+        if( Files.exists(reportFile) && !overwrite )
+            throw new AbortOperationException("Report file already exists: ${reportFile.toUriString()} -- enable the 'report.overwrite' option in your config file to overwrite existing files")
     }
 
     /**
@@ -238,9 +241,7 @@ class ReportObserver implements TraceObserver {
     }
 
     protected String renderSummaryJson() {
-        final result = aggregator.renderSummaryJson()
-        log.debug "Execution report summary data:\n  ${result}"
-        return result
+        aggregator.renderSummaryJson()
     }
 
     protected String renderPayloadJson() {

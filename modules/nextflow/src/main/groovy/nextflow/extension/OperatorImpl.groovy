@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +41,7 @@ import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
+import nextflow.splitter.JsonSplitter
 import nextflow.splitter.TextSplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
@@ -726,23 +726,26 @@ class OperatorImpl {
 
         final listeners = []
         final target = CH.create()
+        final stopOnFirst = source instanceof DataflowExpression
 
-        if( source instanceof DataflowExpression ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                    processor.bindOutput( Channel.STOP )
+        listeners << new DataflowEventAdapter() {
+            @Override
+            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                if( stopOnFirst )
                     processor.terminate()
-                }
+            }
 
-                boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    OperatorImpl.log.error("@unknown", e)
-                    session.abort(e)
-                    return true;
-                }
+            @Override
+            void afterStop(final DataflowProcessor processor) {
+                processor.bindOutput(Channel.STOP)
+            }
+
+            boolean onException(final DataflowProcessor processor, final Throwable e) {
+                OperatorImpl.log.error("@unknown", e)
+                session.abort(e)
+                return true;
             }
         }
-
 
         newOperator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
 
@@ -998,7 +1001,7 @@ class OperatorImpl {
      * For example:
      *
      * <pre>
-     *     Channel.from(...)
+     *     Channel.of(...)
      *            .tap { newChannelName }
      *            .map { ... }
      *  </pre>
@@ -1010,11 +1013,6 @@ class OperatorImpl {
     DataflowWriteChannel tap( final DataflowReadChannel source, final Closure holder ) {
         def tap = new TapOp(source, holder).apply()
         OpCall.current.get().outputs.addAll( tap.outputs )
-        return tap.result
-    }
-
-    DataflowWriteChannel tap( final DataflowReadChannel source, final DataflowWriteChannel target ) {
-        def tap = new TapOp(source, target).apply()
         return tap.result
     }
 
@@ -1048,7 +1046,7 @@ class OperatorImpl {
     static private final Map PARAMS_VIEW = [newLine: Boolean]
 
     /**
-     * Print out the channel content retuning a new channel emitting the identical content as the original one
+     * Print out the channel content returning a new channel emitting the identical content as the original one
      *
      * @param source
      * @param closure
@@ -1157,6 +1155,11 @@ class OperatorImpl {
         return result
     }
 
+    DataflowWriteChannel splitJson(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitJson', opts ).apply()
+        return result
+    }
+    
     DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {
         final splitter = new TextSplitter()
         final result = countOverChannel( source, splitter, opts )
@@ -1171,6 +1174,12 @@ class OperatorImpl {
 
     DataflowWriteChannel countFastq(DataflowReadChannel source, Map opts=null) {
         final splitter = new FastqSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        return result
+    }
+
+    DataflowWriteChannel countJson(DataflowReadChannel source, Map opts=null) {
+        final splitter = new JsonSplitter()
         final result = countOverChannel( source, splitter, opts )
         return result
     }

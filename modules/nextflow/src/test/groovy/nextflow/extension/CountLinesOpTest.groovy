@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +52,7 @@ class CountLinesOpTest extends Specification {
             '''
                 .stripIndent().strip()
 
-        def result = Channel.from(str, str2, str3).countLines()
+        def result = Channel.of(str, str2, str3).countLines()
         then:
         result.val == 11
 
