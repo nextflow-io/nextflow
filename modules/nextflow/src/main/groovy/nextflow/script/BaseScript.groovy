@@ -239,10 +239,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
             ? new WorkflowBuilder(this)
             : new WorkflowBuilder(this, name)
 
-        // get method parameters
-        final params = (List<String>)((Closure)workflowFn.params().newInstance(this, this)).call()
-        builder.withParams(params)
-
         // create body
         final body = new BodyDef( this.&"${name}", workflowFn.source(), 'workflow', [] )
         builder.withBody(body)

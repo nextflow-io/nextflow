@@ -24,10 +24,6 @@ import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.MethodNode
-import org.codehaus.groovy.ast.Parameter
-import org.codehaus.groovy.ast.expr.Expression
-import org.codehaus.groovy.ast.expr.ListExpression
-import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.SourceUnit
 /**
  * Implements syntax transformations for workflow functions.
@@ -57,14 +53,6 @@ class WorkflowFnXform extends ClassCodeVisitorSupport {
     }
 
     protected void transform(MethodNode method, AnnotationNode annotation) {
-        // append method params
-        final params = method.getParameters() as List<Parameter>
-        annotation.addMember( 'params', closureX( block( new ExpressionStatement(
-            new ListExpression(
-                params.collect(p -> (Expression)constX(p.getName()))
-            )
-        ) ) ) )
-
         // append workflow source
         annotation.addMember( 'source', constX( getSource(method.getCode()) ) )
     }

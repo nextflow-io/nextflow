@@ -56,11 +56,6 @@ class WorkflowBuilder {
             throw new MissingMethodException(name, WorkflowDef, args)
     }
 
-    WorkflowBuilder withParams(List<String> params) {
-        for( String param : params )
-            takes.put(param, true)
-    }
-
     WorkflowBuilder withBody(BodyDef body) {
         this.body = body
         return this

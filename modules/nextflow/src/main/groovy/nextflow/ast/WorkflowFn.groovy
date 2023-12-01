@@ -32,6 +32,5 @@ import java.lang.annotation.Target
     boolean main() default false
 
     // injected via AST transform
-    Class params()
     String source()
 }

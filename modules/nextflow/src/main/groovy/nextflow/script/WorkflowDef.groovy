@@ -191,20 +191,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     }
 
     private Object run0(Object[] args) {
-        collectInputs(binding, args)
-        // invoke the workflow execution
-        final result = run1(body.closure, args)
-
-        // apply return value to declared outputs, binding
-        normalizeOutput(result)
-
-        // collect the workflow outputs
-        output = collectOutputs(declaredOutputs)
-        return output
-    }
-
-    private Object run1(Closure closure, Object[] args) {
+        final closure = body.closure
         if( closure instanceof MethodClosure ) {
+            // invoke the workflow function with args
             final target = closure.owner
             final name = closure.method
             final meta = target.metaClass.getMetaMethod(name, args)
@@ -213,13 +202,22 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
             final method = target.getClass().getMethod(name, meta.getNativeParameterTypes())
             if( method == null )
                 throw new MissingMethodException(name, target.getClass(), args)
-            return method.invoke(target, args)
+            final result = method.invoke(target, args)
+
+            // apply return value to declared outputs, binding
+            normalizeOutput(result)
         }
         else {
+            // invoke the workflow closure with delegate
+            collectInputs(binding, args)
             closure.setDelegate(binding)
             closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-            return closure.call()
+            closure.call()
         }
+
+        // collect the workflow outputs
+        output = collectOutputs(declaredOutputs)
+        return output
     }
 
     private void normalizeOutput(Object result) {
