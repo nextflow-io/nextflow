@@ -118,8 +118,6 @@ class NextflowDSLImpl implements ASTTransformation {
 
         final private SourceUnit unit
 
-        private String currentTaskName
-
         private String currentLabel
 
         private String bodyLabel
@@ -162,14 +160,8 @@ class NextflowDSLImpl implements ASTTransformation {
                 // clear block label
                 bodyLabel = null
                 currentLabel = null
-                currentTaskName = methodName
-                try {
-                    convertProcessDef(methodCall,sourceUnit)
-                    super.visitMethodCallExpression(methodCall)
-                }
-                finally {
-                    currentTaskName = null
-                }
+                convertProcessDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
             }
             else if( methodName == 'workflow' && preCondition ) {
                 convertWorkflowDef(methodCall,sourceUnit)
@@ -474,11 +466,11 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
             log.trace "Apply task closure transformation to method call: $methodCall"
 
-            final args = (ArgumentListExpression)methodCall.arguments
+            final args = methodCall.arguments as ArgumentListExpression
             final lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null
 
             // the block holding all the statements defined in the process (closure) definition
-            final block = (BlockStatement)((ClosureExpression)lastArg).code
+            final block = (lastArg as ClosureExpression).code as BlockStatement
 
             /*
              * iterate over the list of statements to:
@@ -785,66 +777,37 @@ class NextflowDSLImpl implements ASTTransformation {
             //      `stdout` --> `stdout()`
             VariableExpression varX
             if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') ) {
-                final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
-                final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
+                final call = new MethodCallExpression( new VariableExpression('this'), varX.name, new ArgumentListExpression() )
                 // remove replace the old one with the new one
                 stm.setExpression(call)
             }
         }
 
-        /*
-         * handle *input* parameters
-         */
+        private static final VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
+
         protected void convertInputMethod( Expression expression ) {
-            log.trace "convert > input expression: $expression"
+            // don't throw error if not method because it could be an implicit script statement
+            if( expression !instanceof MethodCallExpression )
+                return
 
-            if( expression instanceof MethodCallExpression ) {
+            def methodCall = expression as MethodCallExpression
+            def methodName = methodCall.getMethodAsString()
+            log.trace "convert > input method: $methodName"
 
-                def methodCall = expression as MethodCallExpression
-                def methodName = methodCall.getMethodAsString()
-                def nested = methodCall.objectExpression instanceof MethodCallExpression
-                log.trace "convert > input method: $methodName"
-
-                if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
-                    //this methods require a special prefix
-                    if( !nested )
-                        methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
-
-                    fixMethodCall(methodCall)
-                }
-
-                /*
-                 * Handles a GString a file name, like this:
-                 *
-                 *      input:
-                 *        file x name "$var_name" from q
-                 *
-                 */
-                else if( methodName == 'name' && isWithinMethod(expression, 'file') ) {
-                    varToConstX(methodCall.getArguments())
-                }
-
-                // invoke on the next method call
-                if( expression.objectExpression instanceof MethodCallExpression ) {
-                    convertInputMethod(methodCall.objectExpression)
-                }
+            def caller = methodCall.objectExpression
+            if( caller !instanceof VariableExpression || caller.getText() != 'this' ) {
+                syntaxError(expression, "Invalid process input statement, possible syntax error")
+                return
             }
 
-            else if( expression instanceof PropertyExpression ) {
-                // invoke on the next method call
-                if( expression.objectExpression instanceof MethodCallExpression ) {
-                    convertInputMethod(expression.objectExpression)
-                }
+            if( methodName !in VALID_INPUT_METHODS ) {
+                syntaxError(expression, "Invalid process input method '${methodName}'")
+                return
             }
 
-        }
+            methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
+            fixMethodCall(methodCall)
 
-        protected boolean isWithinMethod(MethodCallExpression method, String name) {
-            if( method.objectExpression instanceof MethodCallExpression ) {
-                return isWithinMethod(method.objectExpression as MethodCallExpression, name)
-            }
-
-            return method.getMethodAsString() == name
         }
 
         /**
@@ -873,33 +836,31 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        protected void convertOutputMethod( Expression expression ) {
-            log.trace "convert > output expression: $expression"
+        private static final VALID_OUTPUT_METHODS = ['val','env','file','path','stdout','tuple']
 
-            if( !(expression instanceof MethodCallExpression) ) {
+        protected void convertOutputMethod( Expression expression ) {
+            // don't throw error if not method because it could be an implicit script statement
+            if( expression !instanceof MethodCallExpression )
                 return
-            }
 
             def methodCall = expression as MethodCallExpression
             def methodName = methodCall.getMethodAsString()
-            def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
-                // prefix the method name with the string '_out_'
-                methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
-                fixMethodCall(methodCall)
-                fixOutEmitOption(methodCall)
+            def caller = methodCall.objectExpression
+            if( caller !instanceof VariableExpression || caller.getText() != 'this' ) {
+                syntaxError(expression, "Invalid process output statement, possible syntax error")
+                return
             }
 
-            else if( methodName in ['into','mode'] ) {
-                fixMethodCall(methodCall)
+            if( methodName !in VALID_OUTPUT_METHODS ) {
+                syntaxError(expression, "Invalid process output method '${methodName}'")
+                return
             }
 
-            // continue to traverse
-            if( methodCall.objectExpression instanceof MethodCallExpression ) {
-                convertOutputMethod(methodCall.objectExpression)
-            }
+            methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
+            fixMethodCall(methodCall)
+            fixOutEmitOption(methodCall)
 
         }
 
@@ -919,7 +880,7 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixMethodCall( MethodCallExpression methodCall ) {
             final name = methodCall.methodAsString
 
-            withinTupleMethod = name == '_in_set' || name == '_out_set' || name == '_in_tuple' || name == '_out_tuple'
+            withinTupleMethod = name == '_in_tuple' || name == '_out_tuple'
             withinEachMethod = name == '_in_each'
 
             try {
@@ -1009,15 +970,13 @@ class NextflowDSLImpl implements ASTTransformation {
                 /*
                  * the 'stdin' is used as placeholder for the standard input in the tuple definition. For example:
                  *
-                 * input:
-                 *    tuple( stdin, .. ) from q
+                 * tuple( stdin, .. )
                  */
                 if( name == 'stdin' && withinTupleMethod )
                     return createX( TokenStdinCall )
 
                 /*
-                 * input:
-                 *    tuple( stdout, .. )
+                 * tuple( stdout, .. )
                  */
                 else if ( name == 'stdout' && withinTupleMethod )
                     return createX( TokenStdoutCall )
@@ -1032,8 +991,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 /*
                  * replace 'file' method call in the tuple definition, for example:
                  *
-                 * input:
-                 *   tuple( file(fasta:'*.fa'), .. ) from q
+                 * tuple( file(fasta:'*.fa'), .. )
                  */
                 if( methodCall.methodAsString == 'file' && (withinTupleMethod || withinEachMethod) ) {
                     def args = (TupleExpression) varToConstX(methodCall.arguments)
@@ -1045,8 +1003,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
 
                 /*
-                 * input:
-                 *  tuple( env(VAR_NAME) ) from q
+                 * tuple( env(VAR_NAME) )
                  */
                 if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
@@ -1054,8 +1011,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
 
                 /*
-                 * input:
-                 *   tuple val(x), .. from q
+                 * tuple( val(x), .. )
                  */
                 if( methodCall.methodAsString == 'val' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
@@ -1166,7 +1122,7 @@ class NextflowDSLImpl implements ASTTransformation {
             processNames.add(name)
 
             // make sure there is a single nested argument, which is a closure
-            def args = (ArgumentListExpression)nested.getArguments()
+            def args = nested.getArguments() as ArgumentListExpression
             log.trace "Process name: $name with args: $args"
 
             if( args.size() != 1 || args[0] !instanceof ClosureExpression ) {

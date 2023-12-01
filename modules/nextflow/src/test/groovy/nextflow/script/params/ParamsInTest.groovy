@@ -23,7 +23,6 @@ import java.nio.file.Paths
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
-import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.TaskProcessor
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -147,73 +146,13 @@ class ParamsInTest extends Dsl2Spec {
               input:
               file x
               file f1
-              file f2 name 'abc'
-              file f3:'*.fa'
               file 'file.txt'
 
               return ''
             }
             
             workflow {
-              hola(x, x, x, x, x)
-            }
-            '''
-
-        when:
-        def process = parseAndReturnProcess(text)
-        FileInParam in1 = process.config.getInputs().get(0)
-        FileInParam in2 = process.config.getInputs().get(1)
-        FileInParam in3 = process.config.getInputs().get(2)
-        FileInParam in4 = process.config.getInputs().get(3)
-        FileInParam in5 = process.config.getInputs().get(4)
-
-        then:
-        process.config.getInputs().size() == 5
-
-        in1.name == 'x'
-        in1.filePattern == '*'
-        in1.inChannel.val == Paths.get('file.x')
-        in1.index == 0
-
-        in2.name == 'f1'
-        in2.filePattern == '*'
-        in2.inChannel.val == Paths.get('file.x')
-        in2.index == 1
-
-        in3.name == 'f2'
-        in3.filePattern == 'abc'
-        in3.inChannel.val == Paths.get('file.x')
-        in3.index == 2
-
-        in4.name == 'f3'
-        in4.filePattern == '*.fa'
-        in4.inChannel.val == Paths.get('file.x')
-        in4.index == 3
-
-        in5.name == 'file.txt'
-        in5.filePattern == 'file.txt'
-        in5.inChannel.val == Paths.get('file.x')
-        in5.index == 4
-
-    }
-
-    def testInputFilesWithGString() {
-        setup:
-        def ctx = [x: 'main.txt', y: 'hello', z:'the_file_name']
-        def text = '''
-            q = java.nio.file.Paths.get('file.txt')
-
-            process hola {
-              input:
-              file "$x" 
-              file "${y}.txt"
-              file f2 name "${z}.fa"
-
-              return ''
-            }
-            
-            workflow {
-              hola(q, "str", q)
+              hola(x, x, x)
             }
             '''
 
@@ -226,38 +165,39 @@ class ParamsInTest extends Dsl2Spec {
         then:
         process.config.getInputs().size() == 3
 
-        in1.name == '__$fileinparam<0>'
-        in1.getFilePattern(ctx) == 'main.txt'
-        in1.inChannel.val == Paths.get('file.txt')
+        in1.name == 'x'
+        in1.filePattern == '*'
+        in1.inChannel.val == Paths.get('file.x')
+        in1.index == 0
 
-        in2.name == '__$fileinparam<1>'
-        in2.getFilePattern(ctx) == 'hello.txt'
-        in2.inChannel.val == "str"
+        in2.name == 'f1'
+        in2.filePattern == '*'
+        in2.inChannel.val == Paths.get('file.x')
+        in2.index == 1
 
-        in3.name == 'f2'
-        in3.getFilePattern(ctx) == 'the_file_name.fa'
-        in3.inChannel.val == Paths.get('file.txt')
+        in3.name == 'file.txt'
+        in3.filePattern == 'file.txt'
+        in3.inChannel.val == Paths.get('file.x')
+        in3.index == 2
 
     }
 
-    def testInputFilesWithClosure() {
+    def testInputFilesWithGString() {
         setup:
-        def ctx = [x: 'main.txt', y: 'hello', z:'the_file_name']
+        def ctx = [x: 'main.txt', y: 'hello']
         def text = '''
             q = java.nio.file.Paths.get('file.txt')
 
             process hola {
               input:
               file "$x" 
-              file "${y}.txt" 
-              file f2 name "${z}.fa" 
-              file f3:"${z}.txt" 
+              file "${y}.txt"
 
               return ''
             }
             
             workflow {
-              hola(q, "str", q, q)
+              hola(q, "str")
             }
             '''
 
@@ -265,11 +205,9 @@ class ParamsInTest extends Dsl2Spec {
         def process = parseAndReturnProcess(text)
         FileInParam in1 = process.config.getInputs().get(0)
         FileInParam in2 = process.config.getInputs().get(1)
-        FileInParam in3 = process.config.getInputs().get(2)
-        FileInParam in4 = process.config.getInputs().get(3)
 
         then:
-        process.config.getInputs().size() == 4
+        process.config.getInputs().size() == 2
 
         in1.name == '__$fileinparam<0>'
         in1.getFilePattern(ctx) == 'main.txt'
@@ -279,13 +217,42 @@ class ParamsInTest extends Dsl2Spec {
         in2.getFilePattern(ctx) == 'hello.txt'
         in2.inChannel.val == "str"
 
-        in3.name == 'f2'
-        in3.getFilePattern(ctx) == 'the_file_name.fa'
-        in3.inChannel.val == Paths.get('file.txt')
+    }
 
-        in4.name == 'f3'
-        in4.getFilePattern(ctx) == 'the_file_name.txt'
-        in4.inChannel.val == Paths.get('file.txt')
+    def testInputFilesWithClosure() {
+        setup:
+        def ctx = [x: 'main.txt', y: 'hello']
+        def text = '''
+            q = java.nio.file.Paths.get('file.txt')
+
+            process hola {
+              input:
+              file "$x" 
+              file "${y}.txt" 
+
+              return ''
+            }
+            
+            workflow {
+              hola(q, "str")
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text)
+        FileInParam in1 = process.config.getInputs().get(0)
+        FileInParam in2 = process.config.getInputs().get(1)
+
+        then:
+        process.config.getInputs().size() == 2
+
+        in1.name == '__$fileinparam<0>'
+        in1.getFilePattern(ctx) == 'main.txt'
+        in1.inChannel.val == Paths.get('file.txt')
+
+        in2.name == '__$fileinparam<1>'
+        in2.getFilePattern(ctx) == 'hello.txt'
+        in2.inChannel.val == "str"
 
     }
 
@@ -987,28 +954,6 @@ class ParamsInTest extends Dsl2Spec {
         !in1.isNestedParam()
         (in1.inner[0] as ValueInParam).isNestedParam()
         (in1.inner[1] as FileInParam).isNestedParam()
-    }
-
-    def 'should throw error on missing comma' () {
-        setup:
-        def text = '''
-            process hola {
-              input:
-              tuple val(x) val(y)
-
-              /command/
-            }
-            
-            workflow {
-              hola(['x', 'y'])
-            }
-            '''
-        when:
-        parseAndReturnProcess(text)
-
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Invalid function call `val(y)` -- possible syntax error'
     }
 
 }
