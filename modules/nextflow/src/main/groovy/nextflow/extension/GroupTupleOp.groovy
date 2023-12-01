@@ -96,7 +96,7 @@ class GroupTupleOp {
         final len = tuple.size()
 
         final List items = groups.getOrCreate(key) {    // get the group for the specified key
-            def result = new ArrayList(len)             // create if does not exists
+            def result = new ArrayList(len)             // create if does not exist
             for( int i=0; i<len; i++ )
                 result[i] = (i in indices ? tuple[i] : new ArrayBag())
             return result

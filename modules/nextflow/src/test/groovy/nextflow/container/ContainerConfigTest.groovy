@@ -95,6 +95,9 @@ class ContainerConfigTest extends Specification {
         [engine:'docker']                               | '--rm --privileged'
         [engine:'podman']                               | '--rm --privileged'
         and:
+        [engine: 'singularity']                         | null
+        [engine: 'singularity', oci:true]               | '-B /dev/fuse'
+        and:
         [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
         [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'
         and:
