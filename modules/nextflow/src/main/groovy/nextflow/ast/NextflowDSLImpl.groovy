@@ -197,7 +197,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                 // extract module arguments from closure
                 final arg = (ClosureExpression)allArgs[0]
-                final block = (BlockStatement)arg.code
+                final block = (BlockStatement)arg.getCode()
                 final modulesList = new ListExpression()
                 for( Statement stm : block.statements ) {
                     if( stm instanceof ExpressionStatement ) {
@@ -468,6 +468,11 @@ class NextflowDSLImpl implements ASTTransformation {
 
             final args = methodCall.arguments as ArgumentListExpression
             final lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null
+
+            if( lastArg !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid process definition")
+                return
+            }
 
             // the block holding all the statements defined in the process (closure) definition
             final block = (lastArg as ClosureExpression).code as BlockStatement
