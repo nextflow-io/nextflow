@@ -24,7 +24,6 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
 import static nextflow.util.CacheHelper.HashMode
-import nextflow.script.params.DefaultInParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
@@ -171,14 +170,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     OutputsList getOutputs() {
         outputs
-    }
-
-    /**
-     * Defines a special *dummy* input parameter, when no inputs are
-     * provided by the user for the current task
-     */
-    void fakeInput() {
-        new DefaultInParam(this)
     }
 
     void fakeOutput() {

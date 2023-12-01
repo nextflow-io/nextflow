@@ -75,11 +75,6 @@ abstract class BaseInParam extends BaseParam implements InParam {
     protected DataflowReadChannel inputValToChannel( value ) {
         checkFromNotNull(value)
 
-        if( this instanceof DefaultInParam ) {
-            assert value instanceof DataflowQueue
-            return value
-        }
-
         if ( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )  {
             return CH.getReadChannel(value)
         }

@@ -25,6 +25,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.CombineOp
 import nextflow.extension.MergeOp
 import nextflow.script.dsl.ProcessBuilder
 import nextflow.script.params.BaseInParam
@@ -69,7 +70,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     /**
      * The resolved process configuration
      */
-    private ProcessConfig processConfig
+    private ProcessConfig config
 
     /**
      * The actual process implementation
@@ -87,7 +88,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         this.processName = name
         this.baseName = name
         this.taskBody = body
-        this.processConfig = config
+        this.config = config
     }
 
     static String stripScope(String str) {
@@ -96,14 +97,14 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     protected void initialize() {
         // apply config settings to the process
-        new ProcessBuilder(processConfig).applyConfig((Map)session.config.process, baseName, simpleName, processName)
+        new ProcessBuilder(config).applyConfig((Map)session.config.process, baseName, simpleName, processName)
     }
 
     @Override
     ProcessDef clone() {
         def result = (ProcessDef)super.clone()
         result.@taskBody = taskBody.clone()
-        result.@processConfig = processConfig.clone()
+        result.@config = config.clone()
         return result
     }
 
@@ -113,13 +114,13 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)
-        result.@processConfig.processName = name
+        result.@config.processName = name
         return result
     }
 
-    private InputsList getDeclaredInputs() { processConfig.getInputs() }
+    private InputsList getDeclaredInputs() { config.getInputs() }
 
-    private OutputsList getDeclaredOutputs() { processConfig.getOutputs() }
+    private OutputsList getDeclaredOutputs() { config.getOutputs() }
 
     BaseScript getOwner() { owner }
 
@@ -129,7 +130,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     String getBaseName() { baseName }
 
-    ProcessConfig getProcessConfig() { processConfig }
+    ProcessConfig getProcessConfig() { config }
 
     ChannelOut getOut() {
         if( output==null )
@@ -152,11 +153,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         initialize()
 
         // create merged input channel
-        final inputs = ChannelOut.spread(args).collect(ch -> getInChannel(ch))
-        if( inputs.findAll(ch -> CH.isChannelQueue(ch)).size() > 1 )
-            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which is not allowed")
-
-        final input = CH.getReadChannel(new MergeOp(inputs.first(), inputs[1..<inputs.size()], [flat: false]).apply())
+        final source = getSourceChannel(args)
 
         // set input channels
         for( int i=0; i<declaredInputs.size(); i++ ) {
@@ -190,17 +187,42 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // create the executor
         final executor = session
                 .executorFactory
-                .getExecutor(processName, processConfig, taskBody, session)
+                .getExecutor(processName, config, taskBody, session)
 
         // create processor class
         session
                 .newProcessFactory(owner)
-                .newTaskProcessor(processName, executor, processConfig, taskBody)
-                .run(input)
+                .newTaskProcessor(processName, executor, config, taskBody)
+                .run(source)
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
         return output = new ChannelOut(copyOuts)
+    }
+
+    private DataflowReadChannel getSourceChannel(Object[] args) {
+        if( args.length == 0 )
+            return null
+
+        // normalize and validate input channels
+        final inputs = ChannelOut.spread(args).collect(ch -> getInChannel(ch))
+        if( inputs.findAll(ch -> CH.isChannelQueue(ch)).size() > 1 )
+            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which is not allowed")
+
+        // merge input channels
+        // TODO: skip `each` inputs
+        def source = CH.getReadChannel(new MergeOp(inputs.first(), inputs[1..<inputs.size()], [flat: false]).apply())
+
+        // combine source channel with `each` params
+        for( int i = 0; i < config.getInputs().size(); i++ ) {
+            final param = config.getInputs()[i]
+            if( param !instanceof EachInParam )
+                continue
+            log.trace "Process ${name} > each param '${param.name}' at index ${i} -- ${param.dump()}"
+            source = CH.getReadChannel(new CombineOp(source, param.getInChannel()))
+        }
+
+        return source
     }
 
     private DataflowReadChannel getInChannel(Object obj) {

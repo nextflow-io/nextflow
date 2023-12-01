@@ -443,6 +443,8 @@ class ProcessBuilder {
     }
 
     InParam _in_tuple( Object... obj ) {
+        if( obj.length < 2 )
+            throw new IllegalArgumentException("Input `tuple` must define at least two elements -- Check process `$processName`")
         new TupleInParam(config).bind(obj)
     }
 
@@ -501,11 +503,15 @@ class ProcessBuilder {
     }
 
     OutParam _out_tuple( Object... obj ) {
+        if( obj.length < 2 )
+            throw new IllegalArgumentException("Output `tuple` must define at least two elements -- Check process `$processName`")
         new TupleOutParam(config)
                 .bind(obj)
     }
 
     OutParam _out_tuple( Map opts, Object... obj ) {
+        if( obj.length < 2 )
+            throw new IllegalArgumentException("Output `tuple` must define at least two elements -- Check process `$processName`")
         new TupleOutParam(config)
                 .setOptions(opts)
                 .bind(obj)

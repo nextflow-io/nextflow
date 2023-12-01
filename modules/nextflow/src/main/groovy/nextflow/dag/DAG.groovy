@@ -30,7 +30,6 @@ import nextflow.NF
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
-import nextflow.script.params.DefaultInParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.InParam
@@ -237,9 +236,7 @@ class DAG {
 
     private List<ChannelHandler> normalizeInputs( InputsList inputs ) {
 
-        inputs
-                .findAll { !( it instanceof DefaultInParam)  }
-                .collect { InParam p -> new ChannelHandler(channel: p.rawChannel, label: inputName0(p)) }
+        inputs.collect { InParam p -> new ChannelHandler(channel: p.rawChannel, label: inputName0(p)) }
 
     }
 

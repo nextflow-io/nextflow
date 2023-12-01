@@ -207,10 +207,6 @@ class TaskProcessor {
      */
     protected volatile boolean completed
 
-    protected boolean allScalarValues
-
-    protected boolean hasEachParams
-
     /**
      * The state is maintained by using an agent
      */
@@ -227,10 +223,9 @@ class TaskProcessor {
     protected boolean singleton
 
     /**
-     * Track the status of input ports. When 1 the port is open (waiting for data),
-     * when 0 the port is closed (ie. received the STOP signal)
+     * Whenever the process is closed (ie. received the STOP signal)
      */
-    protected AtomicIntegerArray openPorts
+    protected AtomicBoolean closed = new AtomicBoolean(false)
 
     /**
      * Process ID number. The first is 1, the second 2 and so on ..
@@ -403,27 +398,6 @@ class TaskProcessor {
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
 
-        // -- check that input tuple defines at least two elements
-        def invalidInputTuple = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
-        if( invalidInputTuple )
-            checkWarn "Input `tuple` must define at least two elements -- Check process `$name`"
-
-        // -- check that output tuple defines at least two elements
-        def invalidOutputTuple = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
-        if( invalidOutputTuple )
-            checkWarn "Output `tuple` must define at least two elements -- Check process `$name`"
-
-        /**
-         * Verify if this process run only one time
-         */
-        allScalarValues = config.getInputs().allScalarInputs()
-        hasEachParams = config.getInputs().any { it instanceof EachInParam }
-
-        /*
-         * Normalize input channels
-         */
-        config.fakeInput()
-
         /*
          * Normalize the output
          * - even though the output may be empty, let return the stdout as output by default
@@ -466,107 +440,35 @@ class TaskProcessor {
     }
 
     protected void createOperator(DataflowReadChannel source) {
-        def control = config.getInputs().last().getInChannel()
-        def opInputs = source != null
-            ? [source, control]
-            : [control]
+        // determine whether the process is executed only once
+        this.singleton = source == null || !CH.isChannelQueue(source)
+        config.getOutputs().setSingleton(singleton)
 
-        /*
-         * check if there are some iterators declaration
-         * the list holds the index in the list of all *inputs* for the {@code each} declaration
-         */
-        List<Integer> iteratorIndexes = []
-        config.getInputs().eachWithIndex { param, index ->
-            if( param instanceof EachInParam ) {
-                log.trace "Process ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
-                iteratorIndexes << index
-            }
-        }
+        // create inputs with control channel
+        final control = CH.queue()
+        control.bind(Boolean.TRUE)
 
-        /**
-         * The thread pool used by GPars. The thread pool to be used is set in the static
-         * initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
-         */
-        final PGroup group = Dataflow.retrieveCurrentDFPGroup()
+        final opInputs = source != null ? [source, control] : [control]
 
-        /*
-         * When one (or more) {@code each} are declared as input, it is created an extra
-         * operator which will receive the inputs from the channel (excepts the values over iterate)
-         *
-         * The operator will *expand* the received inputs, iterating over the user provided value and
-         * forwarding the final values the the second *parallel* processor executing the user specified task
-         */
-        if( iteratorIndexes ) {
-            log.debug "Creating *combiner* operator for each param(s) at index(es): ${iteratorIndexes}"
-
-            // don't care about the last channel, being the control channel it doesn't bring real values
-            final size = opInputs.size()-1
-
-            // the iterator operator needs to executed just one time
-            // thus add a dataflow queue binding a single value and then a stop signal
-            def termination = new DataflowQueue<>()
-            termination << Boolean.TRUE
-            opInputs[size] = termination
-
-            // the channel forwarding the data from the *iterator* process to the target task
-            final linkingChannels = new ArrayList(size)
-            size.times { linkingChannels[it] = new DataflowQueue() }
-
-            // the script implementing the iterating process
-            final forwarder = new ForwardClosure(size, iteratorIndexes)
-
-            // instantiate the iteration process
-            def DataflowOperator op1
-            def stopAfterFirstRun = allScalarValues
-            def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
-            def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
-            session.allOperators << (op1 = new DataflowOperator(group, params, forwarder))
-            // fix issue #41
-            start(op1)
-
-            // set as next inputs the result channels of the iteration process
-            // adding the 'control' channel removed previously
-            opInputs = new ArrayList(size+1)
-            opInputs.addAll( linkingChannels )
-            opInputs.add( config.getInputs().getChannels().last() )
-        }
-
-        /*
-         * finally create the operator
-         */
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
-        this.singleton = allScalarValues && !hasEachParams
-        this.openPorts = createPortsArray(opInputs.size())
-        config.getOutputs().setSingleton(singleton)
-        def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
+        def interceptor = new TaskProcessorInterceptor(source, control, singleton)
         def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
-        session.allOperators << (operator = new DataflowOperator(group, params, invoke))
+
+        // note: the GPars thread pool is set in the static initializer of {@link nextflow.cli.CmdRun}
+        // see also {@link nextflow.util.CustomPoolFactory}
+        this.operator = new DataflowOperator( Dataflow.retrieveCurrentDFPGroup(), params, invoke )
 
         // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
 
-        // fix issue #41
-        start(operator)
-    }
-
-    private start(DataflowProcessor op) {
-        if( !NF.dsl2 ) {
-            op.start()
-            return
-        }
+        // start the operator
+        session.allOperators << operator
         session.addIgniter {
             log.debug "Starting process > $name"
-            op.start()
+            operator.start()
         }
-    }
-
-    private AtomicIntegerArray createPortsArray(int size) {
-        def result = new AtomicIntegerArray(size)
-        for( int i=0; i<size; i++ )
-            result.set(i, 1)
-        return result
     }
 
     /**
@@ -580,7 +482,7 @@ class TaskProcessor {
     final protected void invokeTask( Object[] args ) {
         assert args.size()==2
         final params = (TaskStartParams) args[0]
-        final values = ((List) args[1]).first()
+        final values = (List) args[1]
 
         // create and initialize the task instance to be executed
         log.trace "Invoking task > $name with params=$params; values=$values"
@@ -2375,69 +2277,23 @@ class TaskProcessor {
 
         def statusStr = !completed && !terminated ? 'status=ACTIVE' : ( completed && terminated ? 'status=TERMINATED' : "completed=$completed; terminated=$terminated" )
         result << "  $statusStr\n"
-        // add extra info about port statuses
-        for( int i=0; i<openPorts.length(); i++ ) {
-            def last = i == openPorts.length()-1
-            def param = config.getInputs()[i]
-            def chnnl = param?.inChannel
-            def isValue = chnnl instanceof DataflowExpression
-            def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
-            def channel = param && !(param instanceof TupleInParam) ? param.getName() : '-'
-            def status; if( isValue ) { status = !chnnl.isBound() ? 'OPEN  ' : 'bound ' }
-            else status = type == '(queue)' ? (openPorts.get(i) ? 'OPEN  ' : 'closed') : '-     '
-            result << "  port $i: $type ${status}; channel: $channel\n"
-        }
+        result << "  closed: $closed\n"
 
         return result.toString()
     }
 
-    /*
-     * logger class for the *iterator* processor
-     */
-    class BaseProcessInterceptor extends DataflowEventAdapter {
+    class TaskProcessorInterceptor extends DataflowEventAdapter {
 
-        final List<DataflowReadChannel> inputs
-
-        final boolean stopAfterFirstRun
-
-        final int len
+        final DataflowReadChannel source
 
         final DataflowQueue control
 
-        final int first
+        final boolean singleton
 
-        BaseProcessInterceptor( List<DataflowReadChannel> inputs, boolean stop ) {
-            this.inputs = new ArrayList<>(inputs)
-            this.stopAfterFirstRun = stop
-            this.len = inputs.size()
-            this.control = (DataflowQueue)inputs.get(len-1)
-            this.first = inputs.findIndexOf { CH.isChannelQueue(it) }
-        }
-
-        @Override
-        Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            if( len == 1 || stopAfterFirstRun ) {
-                // -- kill itself
-                control.bind(PoisonPill.instance)
-            }
-            else if( index == first ) {
-                // the `if` condition guarantees only and only one signal message (the true value)
-                // is bound to the control message for a complete set of input values delivered
-                // to the process -- the control message is need to keep the process running
-                control.bind(Boolean.TRUE)
-            }
-
-            return message
-        }
-    }
-
-    /**
-     *  Intercept dataflow process events
-     */
-    class TaskProcessorInterceptor extends BaseProcessInterceptor {
-
-        TaskProcessorInterceptor(List<DataflowReadChannel> inputs, boolean stop) {
-            super(inputs, stop)
+        TaskProcessorInterceptor(DataflowReadChannel source, DataflowQueue control, boolean singleton) {
+            this.source = source
+            this.control = control
+            this.singleton = singleton
         }
 
         @Override
@@ -2450,12 +2306,12 @@ class TaskProcessor {
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
             final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
+            final args = source != null ? messages.first() : []
             final result = new ArrayList(2)
             result[0] = params
-            result[1] = messages
+            result[1] = args
             return result
         }
-
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
@@ -2467,23 +2323,24 @@ class TaskProcessor {
 
         @Override
         Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
-            if( log.isTraceEnabled() ) {
-                def channelName = config.getInputs()?.names?.get(index)
-                def taskName = currentTask.get()?.name ?: name
-                log.trace "<${taskName}> Message arrived -- ${channelName} => ${message}"
+            if( singleton ) {
+                // -- kill the process
+                control.bind(PoisonPill.instance)
+            }
+            else {
+                // -- send a control message for each new source item to keep the process running
+                control.bind(Boolean.TRUE)
             }
 
-            super.messageArrived(processor, channel, index, message)
+            return message
         }
 
         @Override
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
-                def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
-                log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
+                log.trace "<${taskName}> Control message arrived => ${message}"
             }
 
             super.controlMessageArrived(processor, channel, index, message)
@@ -2492,7 +2349,7 @@ class TaskProcessor {
                 // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
                 if( log.isTraceEnabled() )
                     log.trace "<${name}> Poison pill arrived; port: $index"
-                openPorts.set(index, 0) // mark the port as closed
+                closed.set(true)
                 state.update { StateObj it -> it.poison() }
             }
 
