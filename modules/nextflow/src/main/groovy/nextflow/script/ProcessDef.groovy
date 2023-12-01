@@ -107,10 +107,14 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         final copy = (Closure)rawBody.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(processConfig)
+
+
         taskBody = copy.call() as BodyDef
+
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !taskBody )
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
+
 
         // apply config settings to the process
         processConfig.applyConfig((Map)session.config.process, baseName, simpleName, processName)
@@ -167,8 +171,25 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // initialise process config
         initialize()
 
-        // get params 
-        final params = ChannelOut.spread(args)
+        def params = []
+        def serializedValsJson = System.getenv("LATCH_PARAM_VALS")
+        if (serializedValsJson == null) {
+            println("Environment variable 'LATCH_PARAM_VALS' is not set.")
+            params = ChannelOut.spread(args)
+        } else {
+            def slurper = new groovy.json.JsonSlurper()
+            def serializedVals = slurper.parseText(serializedValsJson)
+
+            def decoder = java.util.Base64.getDecoder()
+            for (String val: serializedVals) {
+                def byteData = decoder.decode( val );
+                def ois = new ObjectInputStream( new ByteArrayInputStream(  byteData ) );
+                def deserializedVal = ois.readObject();
+                ois.close();
+                params << deserializedVal
+            }
+        }
+
         // sanity check
         if( params.size() != declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
@@ -194,14 +215,8 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
                 throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
             for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final param = (declaredOutputs[i] as BaseOutParam)
-                final topicName = param.channelTopicName
-                if( topicName && feedbackChannels )
-                    throw new IllegalArgumentException("Output topic conflicts with recursion feature - process `$processName` should not declare any output topic" )
-                final ch = feedbackChannels
-                        ? feedbackChannels[i]
-                        : ( topicName ? CH.createTopicSource(topicName) : CH.create(singleton) )
-                param.setInto(ch)
+                final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
+                (declaredOutputs[i] as BaseOutParam).setInto(ch)
             }
         }
 

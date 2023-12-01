@@ -50,7 +50,6 @@ import java.util.concurrent.atomic.AtomicLong
 @Slf4j
 class DAG {
 
-    @PackageScope
     static enum Type {
         PROCESS,
         OPERATOR,
@@ -113,6 +112,7 @@ class DAG {
     void addOperatorNode( String label, inputs, outputs, List<DataflowProcessor> operators=null )  {
         assert label
         assert inputs
+
         addVertex(Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
     }
 
@@ -141,8 +141,10 @@ class DAG {
 
         final vertex = createVertex( type, label, extra )
 
+        def idx = 0
         for( ChannelHandler channel : inbounds ) {
-            inbound( vertex, channel )
+            inbound( vertex, channel, idx )
+            idx += 1
         }
 
         for( ChannelHandler channel : outbounds ) {
@@ -174,18 +176,20 @@ class DAG {
         return result
     }
 
-    private void inbound( Vertex vertex, ChannelHandler entering )  {
+    private void inbound( Vertex vertex, ChannelHandler entering, Integer idx)  {
 
         // look for an existing edge for the given dataflow channel
         def edge = findEdge(entering.channel)
 
         // if does not exist just create it
         if( !edge ) {
-            edges << new Edge(channel: entering.channel, to: vertex, label: entering.label)
+            edges << new Edge(channel: entering.channel, to: vertex, label: entering.label, idx: idx)
         }
         // link the edge to given `edge`
         else if( edge.to == null ) {
+            println "linking ${edge} to ${vertex} with idx ${idx}"
             edge.to = vertex
+            edge.idx = idx
         }
         // handle the special case for dataflow variable
         // this kind of channel can be used more than one time as an input
@@ -464,6 +468,11 @@ class DAG {
          * A descriptive label
          */
         String label
+
+        /**
+         * Index of receiving parameter (if receiving node is a process)
+         */
+        Integer idx
 
         /**
          * unique Id

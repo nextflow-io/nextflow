@@ -63,6 +63,11 @@ class ScriptRunner {
     private boolean preview
 
     /**
+     * Generate workflow metadata for an execution on Latch
+     */
+    private boolean latchJIT
+
+    /**
      * Optional callback to perform a custom action on a preview event
      */
     private Closure previewAction
@@ -95,6 +100,10 @@ class ScriptRunner {
         this.preview = value
         this.previewAction = action
         return this
+    }
+
+    void setLatchJIT(boolean value) {
+        this.latchJIT = value
     }
 
     Session getSession() { session }
@@ -243,11 +252,11 @@ class ScriptRunner {
         // -- normalise output
         result = normalizeOutput(scriptParser.getResult())
         // -- ignite dataflow network
-        session.fireDataflowNetwork(preview)
+        session.fireDataflowNetwork(preview, latchJIT)
     }
 
     protected await() {
-        if( preview ) {
+        if( preview || latchJIT ) {
             previewAction?.call(session)
             return
         }

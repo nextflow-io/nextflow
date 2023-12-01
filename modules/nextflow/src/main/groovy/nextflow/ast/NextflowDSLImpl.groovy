@@ -38,6 +38,7 @@ import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -52,6 +53,8 @@ import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.UnaryMinusExpression
@@ -78,6 +81,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
+    @Deprecated final static private String WORKFLOW_GET = 'get'
+    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
@@ -134,9 +139,17 @@ class NextflowDSLImpl implements ASTTransformation {
 
         protected SourceUnit getSourceUnit() { unit }
 
+        private ExpressionStatement currentParentExpression
+
+        private String targetProcessName
+
 
         DslCodeVisitor(SourceUnit unit) {
             this.unit = unit
+            this.targetProcessName = System.getenv("LATCH_TARGET_PROCESS_NAME")
+            if (this.targetProcessName == null) {
+                println("Environment variable 'LATCH_TARGET_PROCESS_NAME' is not set.")
+            }
         }
 
         @Override
@@ -147,6 +160,64 @@ class NextflowDSLImpl implements ASTTransformation {
             }
             super.visitMethod(node)
         }
+
+        protected Statement makeSetProcessNamesStm() {
+            final names = new ListExpression()
+            for( String it: processNames ) {
+                names.addExpression(new ConstantExpression(it.toString()))
+            }
+
+            // the method list argument
+            final args = new ArgumentListExpression()
+            args.addExpression(names)
+
+            // some magic code
+            // this generates the invocation of the method:
+            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
+            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
+            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
+            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
+            final call = new MethodCallExpression( meta, 'setDsl1ProcessNames', args)
+            final stm = new ExpressionStatement(call)
+            return stm
+        }
+
+        /**
+         * Add to constructor a method call to inject parsed metadata.
+         * Only needed by DSL1.
+         *
+         * @param node The node representing the class to be invoked
+         */
+        protected void injectMetadata(ClassNode node) {
+            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
+                def code = constructor.getCode()
+                if( code instanceof BlockStatement ) {
+                    code.addStatement(makeSetProcessNamesStm())
+                }
+                else if( code instanceof ExpressionStatement ) {
+                    def expr = code
+                    def block = new BlockStatement()
+                    block.addStatement(expr)
+                    block.addStatement(makeSetProcessNamesStm())
+                    constructor.setCode(block)
+                }
+                else
+                    throw new IllegalStateException("Invalid constructor expression: $code")
+            }
+        }
+
+        /**
+         * Only needed by DSL1 to inject process names declared in the script
+         *
+         * @param node The node representing the class to be invoked
+         */
+        @Override
+        protected void visitObjectInitializerStatements(ClassNode node) {
+            if( node.getSuperClass().getName() == BaseScript.getName() )
+                injectMetadata(node)
+            super.visitObjectInitializerStatements(node)
+        }
+
 
         @Override
         void visitMethodCallExpression(MethodCallExpression methodCall) {
@@ -164,7 +235,19 @@ class NextflowDSLImpl implements ASTTransformation {
                 currentLabel = null
                 currentTaskName = methodName
                 try {
-                    convertProcessDef(methodCall,sourceUnit)
+                    def list = (methodCall.arguments as ArgumentListExpression).getExpressions()
+                    def name = (list[0] as MethodCallExpression).getMethodAsString()
+
+                    if (targetProcessName != null && name != targetProcessName) {
+                      MethodCallExpression printlnCall = new MethodCallExpression(
+                        new VariableExpression("this"),
+                        new ConstantExpression("println"),
+                        new ArgumentListExpression(new ConstantExpression(name))
+                      )
+                      currentParentExpression.setExpression(printlnCall)
+                    } else
+                      convertProcessDef(methodCall,sourceUnit)
+
                     super.visitMethodCallExpression(methodCall)
                 }
                 finally {
@@ -185,6 +268,11 @@ class NextflowDSLImpl implements ASTTransformation {
 
         @Override
         void visitExpressionStatement(ExpressionStatement stm) {
+
+            if (stm.text.startsWith('this.process(')) {
+              currentParentExpression = stm 
+            }
+
             if( stm.text.startsWith('this.include(') && stm.getExpression() instanceof MethodCallExpression )  {
                 final methodCall = (MethodCallExpression)stm.getExpression()
                 convertIncludeDef(methodCall)
@@ -431,7 +519,7 @@ class NextflowDSLImpl implements ASTTransformation {
             final visited = new HashMap<String,Boolean>(5);
             final emitNames = new LinkedHashSet<String>(codeStms.size())
             final wrap = new ArrayList<Statement>(codeStms.size())
-            final body = new ArrayList<Statement>(codeStms.size())
+            def body = new ArrayList<Statement>(codeStms.size())
             final source = new StringBuilder()
             String context = null
             String previous = null
@@ -448,6 +536,12 @@ class NextflowDSLImpl implements ASTTransformation {
                 visited[context] = true
 
                 switch (context) {
+                    case WORKFLOW_GET:
+                        syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
+
+                    case WORKFLOW_PUBLISH:
+                        syntaxError(stm, "Workflow 'publish' is not supported anymore use process 'publishDir' instead")
+
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
@@ -474,12 +568,30 @@ class NextflowDSLImpl implements ASTTransformation {
             // read the closure source
             readSource(closure, source, unit, true)
 
+            if (targetProcessName != null) {
+                // Strip all process calls in the workflow body save one empty call
+                // to our target process. Values are deserialized as objects so AST
+                // manipulation is pointless here and we inject them into the scope
+                // of the target process body directly. ( script/ProcessDef.groovy
+                // )
+                body = (ArrayList<Statement>)[
+                    new ExpressionStatement(
+                            new MethodCallExpression(
+                                new VariableExpression('this'),
+                                new ConstantExpression(targetProcessName),
+                                new ArgumentListExpression([])
+                            )
+                        )
+                ]
+            }
+
             final bodyClosure = closureX(null, block(scope, body))
             final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
             wrap.add( stmt(invokeBody) )
 
             closureX(null, block(scope, wrap))
         }
+
 
         protected void syntaxError(ASTNode node, String message) {
             int line = node.lineNumber
@@ -878,7 +990,6 @@ class NextflowDSLImpl implements ASTTransformation {
 
                     fixMethodCall(methodCall)
                 }
-
                 /*
                  * Handles a GString a file name, like this:
                  *
@@ -915,16 +1026,15 @@ class NextflowDSLImpl implements ASTTransformation {
 
         /**
          * Transform a map entry `emit: something` into `emit: 'something'
-         * and `topic: something` into `topic: 'something'
          * (ie. as a constant) in a map expression passed as argument to
          * a method call. This allow the syntax
          *
          *   output:
-         *   path 'foo', emit: bar, topic: baz
+         *   path 'foo', emit: bar
          *
          * @param call
          */
-        protected void fixOutEmitAndTopicOptions(MethodCallExpression call) {
+        protected void fixOutEmitOption(MethodCallExpression call) {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
             if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
@@ -935,9 +1045,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 final key = isConstX(entry.keyExpression)
                 final val = isVariableX(entry.valueExpression)
                 if( key?.text == 'emit' && val ) {
-                    map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
-                }
-                else if( key?.text == 'topic' && val ) {
                     map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
                 }
             }
@@ -959,7 +1066,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
-                fixOutEmitAndTopicOptions(methodCall)
+                fixOutEmitOption(methodCall)
             }
 
             else if( methodName in ['into','mode'] ) {

@@ -55,6 +55,8 @@ import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.script.params.InParam
+import nextflow.script.params.BaseInParam
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
@@ -84,7 +86,6 @@ import sun.misc.SignalHandler
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@CompileStatic
 class Session implements ISession {
 
     /**
@@ -485,7 +486,7 @@ class Session implements ISession {
         igniters.add(action)
     }
 
-    void fireDataflowNetwork(boolean preview=false) {
+    void fireDataflowNetwork(boolean preview=false, boolean latchJIT=false) {
         checkConfig()
         notifyFlowBegin()
 
@@ -496,12 +497,92 @@ class Session implements ISession {
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
-        if( preview ) {
+        if (latchJIT) {
+            def edgeBuilders = []
+            for( def e : getDag().edges ) {
+
+               def connectionValue = [e.from ? e.from.id : null, e.to ?  e.to.id : null]
+               def idxVal = e.idx
+               def labelVal = e.label
+               edgeBuilders.add(
+                   new groovy.json.JsonBuilder(
+                       { 
+                         id e.id 
+                         label labelVal
+                         idx idxVal
+                         connection connectionValue
+                       }
+                   )
+               )
+
+            }
+
+            def vertexBuilders = []
+            for( def v : getDag().vertices ) {
+
+                def vertexBuilder = new groovy.json.JsonBuilder()
+                def inputParamsBuilder = new groovy.json.JsonBuilder()
+                def outputParamsBuilder = new groovy.json.JsonBuilder()
+
+                if (v.type == DAG.Type.PROCESS) {
+
+                  ProcessConfig processConfig = v.process.config
+
+                  vertexBuilder{ 
+                    id v.id
+                    label v.label
+                    type v.type
+                    source v.process.taskBody.source
+                    inputParams (inputParamsBuilder processConfig.getInputs(), { param ->
+                        name param.getName()
+                        type param.getTypeName()
+                    })
+                    outputParams (outputParamsBuilder processConfig.getOutputs(), { param ->
+                        name (param.getName() ?: param.filePattern)
+                        type param.typeSimpleName
+                    })
+                  }
+
+                } else if (v.type == DAG.Type.OPERATOR){
+
+                  vertexBuilder { 
+                    id v.id
+                    label v.label
+                    type v.type
+                    inputParams null
+                    outputParams null
+                  }
+
+                } else {
+
+                  vertexBuilder { 
+                    id v.id
+                    label v.label
+                    type v.type
+                    inputParams null
+                    outputParams null
+                  }
+
+                }
+
+                vertexBuilders.add(vertexBuilder)
+            }
+
+            def dagBuilder = new groovy.json.JsonBuilder()
+            dagBuilder {
+              vertices vertexBuilders
+              edges edgeBuilders
+            }
+
+            def latchInterface = new File('.latch/nextflowDAG.json')
+            latchInterface.write(dagBuilder.toString())
+
             terminated = true
-        }
-        else {
+        } else if( preview ) {
+            terminated = true
+        } 
+        else 
             callIgniters()
-        }
     }
 
     private void callIgniters() {
