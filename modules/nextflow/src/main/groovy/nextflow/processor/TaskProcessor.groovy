@@ -440,24 +440,28 @@ class TaskProcessor {
 
     protected void createOperator(DataflowReadChannel source) {
         // determine whether the process is executed only once
-        this.singleton = source == null || !CH.isChannelQueue(source)
+        this.singleton = !CH.isChannelQueue(source)
         config.getOutputs().setSingleton(singleton)
 
         // create inputs with control channel
         final control = CH.queue()
         control.bind(Boolean.TRUE)
 
-        final opInputs = source != null ? [source, control] : [control]
+        final opInputs = [source, control]
+
+        /**
+         * The thread pool used by GPars. The thread pool to be used is set in the static
+         * initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
+         */
+        final PGroup group = Dataflow.retrieveCurrentDFPGroup()
 
         // note: do not specify the output channels in the operator declaration
         // this allows us to manage them independently from the operator life-cycle
         def interceptor = new TaskProcessorInterceptor(source, control, singleton)
         def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
-        def invoke = new InvokeTaskAdapter(this, opInputs.size())
+        def invoke = this.&invokeTask
 
-        // note: the GPars thread pool is set in the static initializer of {@link nextflow.cli.CmdRun}
-        // see also {@link nextflow.util.CustomPoolFactory}
-        this.operator = new DataflowOperator(Dataflow.retrieveCurrentDFPGroup(), params, invoke)
+        this.operator = new DataflowOperator(group, params, invoke)
 
         // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
@@ -470,19 +474,7 @@ class TaskProcessor {
         }
     }
 
-    /**
-     * The processor execution body
-     *
-     * @param args
-     *      The args array is expected to be composed by two elements:
-     *      the first must be an object object of type {@link TaskStartParams},
-     *      the second is the list of task input messages as received by the process
-     */
-    final protected void invokeTask( Object[] args ) {
-        assert args.size()==2
-        final params = (TaskStartParams) args[0]
-        final values = (List) args[1]
-
+    final protected void invokeTask( TaskStartParams params, List values ) {
         // create and initialize the task instance to be executed
         log.trace "Invoking task > $name with params=$params; values=$values"
 
@@ -490,10 +482,6 @@ class TaskProcessor {
         final task = createTaskRun(params)
         // -- set the task instance as the current in this thread
         currentTask.set(task)
-
-        // -- add arguments to task context (for process function)
-        for( int i = 1; i < config.params.length; i++ )
-            task.context.put(config.params[i], values[i-1])
 
         // -- validate input lengths
         validateInputTuples(values)
@@ -1891,6 +1879,12 @@ class TaskProcessor {
 
     final protected void makeTaskContextStage1( TaskRun task, List values ) {
 
+        final allValues = [:]
+
+        // add arguments to task config (for process function)
+        for( int i = 1; config.params!=null && i < config.params.length; i++ )
+            allValues.put(config.params[i], values[i-1])
+
         // collect params from process inputs
         final params = []
         for( InParam param : config.getInputs() ) {
@@ -1902,14 +1896,14 @@ class TaskProcessor {
                 params.add(param)
         }
 
-        // apply params to task config and context
+        // add param values to task config and context
         for ( InParam param : params ) {
 
             def val = param.decodeInputs(values)
 
             switch(param) {
                 case ValueInParam:
-                    task.context.put( param.name, val )
+                    allValues.put( param.name, val )
                     break
 
                 case FileInParam:
@@ -1930,6 +1924,9 @@ class TaskProcessor {
                     throw new IllegalStateException("Unsupported input param type: ${param?.class?.simpleName}")
             }
         }
+
+        task.config.put('vals', allValues)
+        task.context.putAll(allValues)
     }
 
     final protected void makeTaskContextStage2( TaskRun task ) {
@@ -1993,9 +1990,11 @@ class TaskProcessor {
         if( task.isContainerEnabled() )
             keys << task.getContainerFingerprint()
 
-        // add all the input name-value pairs to the key generator
-        for( FileHolder it : task.inputFiles )
-            keys.add( it )
+        // add task inputs
+        keys.add( task.config.get('vals') )
+        keys.add( task.inputFiles )
+        keys.add( task.getInputEnvironment() )
+        keys.add( task.stdin )
 
         // add all variable references in the task script but not declared as input/output
         def vars = getTaskGlobalVars(task)
@@ -2275,10 +2274,9 @@ class TaskProcessor {
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
             final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
-            final args = source != null ? messages.first() : []
             final result = new ArrayList(2)
             result[0] = params
-            result[1] = args
+            result[1] = messages.first()
             return result
         }
 

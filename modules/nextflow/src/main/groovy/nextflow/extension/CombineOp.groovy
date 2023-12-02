@@ -54,7 +54,9 @@ class CombineOp {
 
     private List<Integer> pivot = NONE
 
-    CombineOp(DataflowReadChannel left, Object right) {
+    private boolean flat = true
+
+    CombineOp(DataflowReadChannel left, Object right, Map opts) {
 
         leftChannel = left
 
@@ -72,6 +74,11 @@ class CombineOp {
                 throw new IllegalArgumentException("Not a valid argument for 'combine' operator [${right?.class?.simpleName}]: ${right} -- Use a List or a channel instead. ")
         }
 
+        if( opts?.by != null )
+            pivot = opts.by as List<Integer>
+
+        if( opts?.flat != null )
+            flat = opts.flat
     }
 
     CombineOp setPivot( pivot ) {
@@ -103,7 +110,8 @@ class CombineOp {
         opts.onComplete = {
             if( stopCount.decrementAndGet()==0) {
                 target << Channel.STOP
-            }}
+            }
+        }
 
         return opts
     }
@@ -113,8 +121,8 @@ class CombineOp {
     def tuple( List p, a, b ) {
         List result = new LinkedList()
         result.addAll(p)
-        addToList(result, a)
-        addToList(result, b)
+        addToList(result, a, flat)
+        addToList(result, b, flat)
 
         result.size()==1 ? result[0] : result
     }
@@ -143,7 +151,7 @@ class CombineOp {
             return
         }
 
-        throw new IllegalArgumentException("Not a valid spread operator index: $index")
+        throw new IllegalArgumentException("Not a valid combine operator index: $index")
     }
 
     DataflowWriteChannel apply() {
@@ -162,7 +170,7 @@ class CombineOp {
         }
 
         else
-            throw new IllegalArgumentException("Not a valid spread operator state -- Missing right operand")
+            throw new IllegalArgumentException("Not a valid combine operator state -- Missing right operand")
 
         return target
     }

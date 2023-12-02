@@ -153,14 +153,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         initialize()
 
         // create merged input channel
-        final source = getSourceChannel(args)
-
-        // set input channels
-        for( int i=0; i<declaredInputs.size(); i++ ) {
-            final inParam = (declaredInputs[i] as BaseInParam)
-            inParam.setFrom("in${i}")
-            inParam.init()
-        }
+        final source = collectInputs(args)
 
         // set output channels
         // note: the result object must be an array instead of a List to allow process
@@ -200,29 +193,50 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         return output = new ChannelOut(copyOuts)
     }
 
-    private DataflowReadChannel getSourceChannel(Object[] args) {
-        if( args.length == 0 )
-            return null
+    private DataflowReadChannel collectInputs(Object[] args0) {
+        final args = ChannelOut.spread(args0)
+        final hasDeclaredInputs = config.params==null
+        if( hasDeclaredInputs && args.size() != declaredInputs.size() )
+            throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
 
-        // normalize and validate input channels
-        final inputs = ChannelOut.spread(args).collect(ch -> getInChannel(ch))
-        if( inputs.findAll(ch -> CH.isChannelQueue(ch)).size() > 1 )
-            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which is not allowed")
-
-        // merge input channels
-        // TODO: skip `each` inputs
-        def source = CH.getReadChannel(new MergeOp(inputs.first(), inputs[1..<inputs.size()], [flat: false]).apply())
-
-        // combine source channel with `each` params
-        for( int i = 0; i < config.getInputs().size(); i++ ) {
-            final param = config.getInputs()[i]
-            if( param !instanceof EachInParam )
-                continue
-            log.trace "Process ${name} > each param '${param.name}' at index ${i} -- ${param.dump()}"
-            source = CH.getReadChannel(new CombineOp(source, param.getInChannel()))
+        // emit value channel if process has no inputs
+        if( args.size() == 0 ) {
+            final source = CH.value()
+            source.bind([])
+            return source
         }
 
-        return source
+        // set input channels
+        for( int i = 0; i < declaredInputs.size(); i++ ) {
+            final param = (declaredInputs[i] as BaseInParam)
+            param.setFrom(args[i])
+            param.init()
+        }
+
+        // normalize args into channels
+        final inputs = hasDeclaredInputs
+            ? declaredInputs.getChannels()
+            : args.collect(ch -> getInChannel(ch))
+
+        // make sure no more than one queue channel is provided
+        int count = 0
+        for( int i = 0; i < inputs.size(); i++ )
+            if( CH.isChannelQueue(inputs[i]) && (!hasDeclaredInputs || declaredInputs[i] !instanceof EachInParam) )
+                count += 1
+
+        if( count > 1 )
+            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which is not allowed -- consider combining these channels explicitly using the `combine` or `join` operator")
+
+        // combine input channels
+        def result = inputs.first()
+
+        if( inputs.size() == 1 )
+            return result.chainWith { it instanceof Collection ? it : [it] }
+
+        for( int i = 1; i < inputs.size(); i++ )
+            result = CH.getReadChannel(new CombineOp(result, inputs[i], [flat: false]).apply())
+
+        return result
     }
 
     private DataflowReadChannel getInChannel(Object obj) {

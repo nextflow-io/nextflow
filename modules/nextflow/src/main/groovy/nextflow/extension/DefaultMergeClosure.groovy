@@ -25,12 +25,9 @@ class DefaultMergeClosure extends Closure {
 
     private int numOfParams
 
-    private boolean flat
-
-    DefaultMergeClosure(int n, boolean flat) {
-        super(null, null)
-        this.numOfParams = n
-        this.flat = flat
+    DefaultMergeClosure(int n) {
+        super(null, null);
+        numOfParams = n
     }
 
     @Override
@@ -45,12 +42,12 @@ class DefaultMergeClosure extends Closure {
 
     @Override
     public void setDelegate(final Object delegate) {
-        super.setDelegate(delegate)
+        super.setDelegate(delegate);
     }
 
     @Override
     public void setResolveStrategy(final int resolveStrategy) {
-        super.setResolveStrategy(resolveStrategy)
+        super.setResolveStrategy(resolveStrategy);
     }
 
     @Override
@@ -61,15 +58,10 @@ class DefaultMergeClosure extends Closure {
     @Override
     public Object call(final Object... args) {
         final result = []
-        for( int i=0; i<args.size(); i++ ) {
-            if( flat && args[i] instanceof List )
-                result.addAll(args[i])
-            else
-                result.add(args[i])
-        }
-
-        ((DataflowProcessor) getDelegate()).bindAllOutputsAtomically(result)
-        return result
+        for( int i=0; i<args.size(); i++ )
+            DataflowHelper.addToList(result, args[i])
+        ((DataflowProcessor) getDelegate()).bindAllOutputsAtomically(result);
+        return result;
     }
 
     @Override

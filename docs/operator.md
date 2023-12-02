@@ -334,6 +334,11 @@ A second version of the `combine` operator allows you to combine items that shar
 :language: console
 ```
 
+:::{versionadded} 24.10.0
+:::
+
+By default, the `combine` operator flattens list items into the resulting tuple. You can set `flat: false` to preserve nested list items.
+
 See also [join](#join) and [cross](#cross).
 
 (operator-concat)=
@@ -846,13 +851,6 @@ An optional closure can be provided to customise the items emitted by the result
 ```{literalinclude} snippets/merge-with-mapper.out
 :language: console
 ```
-
-Available options:
-
-`flat`
-: :::{versionadded} 24.10.0
-  :::
-: When `true`, automatically flattens merged items by one level (default: `true`). This option is ignored when a mapping closure is specified.
 
 :::{danger}
 In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to {ref}`not work properly <cache-nondeterministic-inputs>`.
