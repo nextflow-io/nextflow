@@ -61,6 +61,27 @@ class ContainerConfigTest extends Specification {
 
     }
 
+
+    def 'should validate oci mode' () {
+
+        when:
+        def cfg = new ContainerConfig(OPTS)
+        then:
+        cfg.singularityOciMode() == EXPECTED
+
+        where:
+        OPTS                                | EXPECTED
+        [:]                                 | false
+        [oci:false]                         | false
+        [oci:true]                          | false
+        [engine:'apptainer', oci:true]      | false
+        [engine:'docker', oci:true]         | false
+        [engine:'singularity']              | false
+        [engine:'singularity', oci:false]   | false
+        [engine:'singularity', oci:true]    | true
+
+    }
+
     def 'should get fusion options' () {
         when:
         def cfg = new ContainerConfig(OPTS)
@@ -73,6 +94,9 @@ class ContainerConfigTest extends Specification {
         [:]                                             | null
         [engine:'docker']                               | '--rm --privileged'
         [engine:'podman']                               | '--rm --privileged'
+        and:
+        [engine: 'singularity']                         | null
+        [engine: 'singularity', oci:true]               | '-B /dev/fuse'
         and:
         [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
         [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'

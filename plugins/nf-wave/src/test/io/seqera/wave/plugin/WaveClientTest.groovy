@@ -33,7 +33,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
-import nextflow.container.inspect.ContainersInspector
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -534,6 +533,7 @@ class WaveClientTest extends Specification {
                     && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -572,6 +572,7 @@ class WaveClientTest extends Specification {
                     && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -647,6 +648,7 @@ class WaveClientTest extends Specification {
                     && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
                 USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         assets.condaFile == condaFile
@@ -1203,6 +1205,25 @@ class WaveClientTest extends Specification {
         'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
     }
 
+    @Unroll
+    def 'should get s5cmd default url' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultS5cmdUrl(ARCH).toURI().toString() == EXPECTED
+
+        where:
+        ARCH                | EXPECTED
+        'linux/amd64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'linux/x86_64'      | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'arm64'             | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+    }
+
     def 'should check is local conda file' () {
         expect:
         WaveClient.isCondaLocalFile(CONTENT) == EXPECTED
@@ -1212,6 +1233,7 @@ class WaveClientTest extends Specification {
         'foo'               | false
         'foo.yml'           | true
         'foo.txt'           | true
+        '/foo/bar'          | true
         'foo\nbar.yml'      | false
         'http://foo.com'    | false
     }

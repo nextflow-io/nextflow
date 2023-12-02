@@ -144,4 +144,17 @@ class AwsOptions implements CloudTransferOptions {
         awsConfig.batchConfig.addVolume(path)
         return this
     }
+
+    boolean isFargateMode() {
+        return awsConfig.batchConfig.fargateMode
+    }
+
+    String getS5cmdPath() {
+        return awsConfig.batchConfig.s5cmdPath
+    }
+
+    String getExecutionRole() {
+        return awsConfig.batchConfig.getExecutionRole()
+    }
+
 }

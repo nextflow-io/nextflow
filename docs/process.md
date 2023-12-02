@@ -1166,16 +1166,59 @@ process foo {
 ```
 :::
 
-### Optional outputs
+(process-additional-options)=
 
-In most cases, a process is expected to produce an output for each output definition. However, there are situations where it is valid for a process to not generate output. In these cases, `optional: true` may be added to the output definition, which tells Nextflow not to fail the process if the declared output is not produced:
+### Additional options
 
-```groovy
-output:
-    path("output.txt"), optional: true
-```
+The following options are available for all process outputs:
 
-In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is legitimately missing, the process does not fail. The output channel will only contain values for those processes that produce `output.txt`.
+`emit: <name>`
+
+: Defines the name of the output channel, which can be used to access the channel by name from the process output:
+
+  ```groovy
+  process FOO {
+      output:
+      path 'hello.txt', emit: hello
+      path 'bye.txt', emit: bye
+
+      """
+      echo "hello" > hello.txt
+      echo "bye" > bye.txt
+      """
+  }
+
+  workflow {
+      FOO()
+      FOO.out.hello.view()
+  }
+  ```
+
+  See {ref}`workflow-process-invocation` for more details.
+
+`optional: true | false`
+
+: Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the given output channel.
+
+  ```groovy
+  output:
+  path("output.txt"), optional: true
+  ```
+
+  In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is missing, the task will not fail. The output channel will only contain values for those tasks that produced `output.txt`.
+
+: :::{note}
+  While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-type-tuple) output. The entire tuple must be optional or not optional.
+  :::
+
+`topic: <name>`
+
+: :::{versionadded} 23.11.0-edge
+  :::
+
+: *Experimental: may change in a future release.*
+
+: Defines the {ref}`channel topic <channel-topic>` to which the output will be sent.
 
 ## When
 
@@ -1653,15 +1696,26 @@ process mapping {
   tuple val(sampleId), path(reads)
 
   """
-  STAR --genomeDir $genome --readFilesIn $reads
+  STAR --genomeDir $genome --readFilesIn $reads ${task.ext.args ?: ''}
   """
 }
 ```
 
-In the above example, the process uses a container whose version is controlled by the `ext.version` property. This can be defined in the `nextflow.config` file as shown below:
+In the above example, the process container version is controlled by `ext.version`, and the script supports additional command line arguments through `ext.args`.
+
+The `ext` directive can be set in the process definition:
+
+```groovy
+process mapping {
+  ext version: '2.5.3', args: '--foo --bar'
+}
+```
+
+Or in the Nextflow configuration:
 
 ```groovy
 process.ext.version = '2.5.3'
+process.ext.args = '--foo --bar'
 ```
 
 (process-fair)=
@@ -1948,7 +2002,7 @@ process your_task {
 
 The above snippet defines an environment variable named `FOO` whose value is `bar`.
 
-When defined in the Nextflow configuration file, pod settings should be defined as maps. For example:
+When defined in the Nextflow configuration file, a pod setting can be defined as a map:
 
 ```groovy
 process {
@@ -1956,13 +2010,13 @@ process {
 }
 ```
 
-Multiple pod settings can be provided as a list of maps:
+Or as a list of maps:
 
 ```groovy
 process {
   pod = [
-      [env: 'FOO', value: 'bar'],
-      [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
+    [env: 'FOO', value: 'bar'],
+    [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
   ]
 }
 ```
@@ -2074,6 +2128,9 @@ The following options are available:
 
 `runAsUser: '<uid>'`
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
+
+`schedulerName: '<name>'`
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
 
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*

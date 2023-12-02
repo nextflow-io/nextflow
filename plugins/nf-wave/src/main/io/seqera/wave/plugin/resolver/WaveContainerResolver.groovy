@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.WaveClient
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
@@ -40,7 +41,7 @@ import nextflow.processor.TaskRun
 @Priority(-10)  // <-- lower is higher, this is needed to override default provider behavior
 class WaveContainerResolver implements ContainerResolver {
 
-    private ContainerResolver defaultResolver = new DefaultContainerResolver()
+    private DefaultContainerResolver defaultResolver = new DefaultContainerResolver()
     static final private List<String> DOCKER_LIKE = ['docker','podman','sarus']
     static final private List<String> SINGULARITY_LIKE = ['singularity','apptainer']
     static final private String DOCKER_PREFIX = 'docker://'
@@ -52,8 +53,7 @@ class WaveContainerResolver implements ContainerResolver {
         return client0 = new WaveClient( Global.session as Session )
     }
 
-    private String getContainerEngine0(TaskRun task) {
-        final config = task.getContainerConfig()
+    private String getContainerEngine0(ContainerConfig config) {
         final result = config.getEngine()
         if( result )
             return result
@@ -68,13 +68,15 @@ class WaveContainerResolver implements ContainerResolver {
             return defaultResolver.resolveImage(task, imageName)
 
         final freeze = client().config().freezeMode()
-        final engine = getContainerEngine0(task)
-        final nativeSingularityBuild = freeze && engine in SINGULARITY_LIKE
+        final config = task.getContainerConfig()
+        final engine = getContainerEngine0(config)
+        final singularityOciMode = config.singularityOciMode()
+        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !singularityOciMode
         if( !imageName ) {
             // when no image name is provided the module bundle should include a
             // Dockerfile or a Conda recipe or a Spack recipe to build
             // an image on-fly with an automatically assigned name
-            return waveContainer(task, null, nativeSingularityBuild)
+            return waveContainer(task, null, singularitySpec)
         }
 
         if( engine in DOCKER_LIKE ) {
@@ -90,12 +92,16 @@ class WaveContainerResolver implements ContainerResolver {
                 return defaultResolver.resolveImage(task, imageName)
             }
             // fetch the wave container name
-            final image = waveContainer(task, imageName, nativeSingularityBuild)
+            final image = waveContainer(task, imageName, singularitySpec)
+            // when wave returns no info, just default to standard behaviour
+            if( !image ) {
+                return defaultResolver.resolveImage(task, imageName)
+            }
             // oras prefixed container are served directly
-            if( image && image.target.startsWith("oras://") )
+            if( image.target.startsWith("oras://") )
                 return image
-            // otherwise adapt it to singularity format
-            return defaultResolver.resolveImage(task, image.target)
+            // otherwise adapt it to singularity format using the target containerInfo to avoid the cache invalidation
+            return defaultResolver.resolveImage(task, image.target, image.hashKey)
         }
         else
             throw new IllegalArgumentException("Wave does not support '$engine' container engine")

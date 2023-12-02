@@ -1,5 +1,8 @@
 nf-cloudcache changelog
 =======================
+0.3.1 - 24 Nov 2023
+- Fix security vulnerabilities (#4513) [a310c777]
+
 0.3.0 - 10 Oct 2023
 - Add -cloudcache CLI option (#4385) [73fda582]
 
