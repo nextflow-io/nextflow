@@ -508,7 +508,7 @@ With AWS Fargate, you no longer have to provision, configure, or scale clusters 
 
 To enable the use of AWS Fargate in your pipeline use the following settings in your `nextflow.config` file:
 
-```
+```groovy
 process.executor = 'awsbatch'
 process.queue = '<AWS BATCH QUEUE>'
 aws.region = '<AWS REGION>'
