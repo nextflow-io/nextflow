@@ -23,9 +23,11 @@ The pipeline can be launched either in a local computer, or an EC2 instance. EC2
 Resource requests and other job characteristics can be controlled via the following process directives:
 
 - {ref}`process-accelerator`
+- {ref}`process-arch` (only when using Fargate platform type for AWS Batch)
 - {ref}`process-container`
 - {ref}`process-containerOptions`
 - {ref}`process-cpus`
+- {ref}`process-disk` (only when using Fargate platform type for AWS Batch)
 - {ref}`process-memory`
 - {ref}`process-queue`
 - {ref}`process-resourcelabels`
