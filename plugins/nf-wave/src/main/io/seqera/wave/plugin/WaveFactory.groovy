@@ -46,16 +46,27 @@ class WaveFactory implements TraceObserverFactory {
         }
         
         if( fusion.enabled ) {
-            if( !wave.enabled ) {
-                throw new AbortOperationException("Fusion feature requires enabling Wave service")
-            }
-            else {
-                log.debug "Detected Fusion enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
-                wave.bundleProjectResources = true
-                session.disableRemoteBinDir = true
-            }
+            checkWaveRequirement(session, wave, 'Fusion')
+        }
+        if( isAwsBatchFargateMode(config) ) {
+            checkWaveRequirement(session, wave, 'Fargate')
         }
 
         return List.<TraceObserver>of()
+    }
+
+    protected void checkWaveRequirement(Session session, Map wave, String feature) {
+        if( !wave.enabled ) {
+            throw new AbortOperationException("$feature feature requires enabling Wave service")
+        }
+        else {
+            log.debug "Detected $feature enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
+            wave.bundleProjectResources = true
+            session.disableRemoteBinDir = true
+        }
+    }
+
+    static boolean isAwsBatchFargateMode(Map config) {
+        return 'fargate'.equalsIgnoreCase(config.navigate('aws.batch.platformType') as String)
     }
 }
