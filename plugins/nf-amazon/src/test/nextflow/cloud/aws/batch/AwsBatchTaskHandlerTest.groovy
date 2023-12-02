@@ -619,6 +619,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
         result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
         result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        result.containerProperties.getEphemeralStorage().sizeInGiB == 50
     }
 
     def 'should create a job definition request object for fusion' () {

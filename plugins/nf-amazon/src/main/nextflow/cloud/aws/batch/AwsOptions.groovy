@@ -27,6 +27,7 @@ import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
 /**
  * Helper class wrapping AWS config options required for Batch job executions
@@ -155,5 +156,9 @@ class AwsOptions implements CloudTransferOptions {
 
     String getExecutionRole() {
         return awsConfig.batchConfig.getExecutionRole()
+    }
+
+    MemoryUnit getEphemeralStorage() {
+        return awsConfig.batchConfig.ephemeralStorage
     }
 }

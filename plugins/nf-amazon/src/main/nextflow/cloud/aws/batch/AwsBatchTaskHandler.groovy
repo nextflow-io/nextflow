@@ -526,7 +526,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( opts.isFargateMode() ) {
             result.setPlatformCapabilities(List.of('FARGATE'))
             container.withNetworkConfiguration( new NetworkConfiguration().withAssignPublicIp(AssignPublicIp.ENABLED) )
-            container.setEphemeralStorage(new EphemeralStorage().withSizeInGiB(100))
+            container.withEphemeralStorage( new EphemeralStorage().withSizeInGiB(opts.ephemeralStorage.toGiga() as int) )
         }
 
         // finally set the container options
