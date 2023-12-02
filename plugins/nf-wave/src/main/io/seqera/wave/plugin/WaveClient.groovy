@@ -69,6 +69,9 @@ import org.slf4j.LoggerFactory
 @CompileStatic
 class WaveClient {
 
+    final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+    final static public String DEFAULT_S5CMD_ARM64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
     final static private String[] REQUEST_HEADERS =  new String[]{
@@ -112,11 +115,17 @@ class WaveClient {
 
     final private String waveRegistry
 
+    final private boolean awsFargate
+
+    final private URL s5cmdConfigUrl
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
+        this.awsFargate = WaveFactory.isAwsBatchFargateMode(session.config)
+        this.s5cmdConfigUrl = session.config.navigate('wave.s5cmdConfigUrl') as URL
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave config: $config"
@@ -280,11 +289,22 @@ class WaveClient {
                 : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
     }
 
+    protected URL defaultS5cmdUrl(String platform) {
+        final isArm = platform.tokenize('/')?.contains('arm64')
+        return isArm
+            ? new URL(DEFAULT_S5CMD_ARM64_URL)
+            : new URL(DEFAULT_S5CMD_AMD64_URL)
+    }
+
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
         if( fusion.enabled() ) {
             final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl(platform)
             urls.add(fusionUrl)
+        }
+        if( awsFargate ) {
+            final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
+            urls.add(s5cmdUrl)
         }
         if( !urls )
             return null

@@ -151,7 +151,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         helper = new AwsBatchHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
-        log.debug "[AWS BATCH] Executor options=$awsOptions"
+        log.debug "[AWS BATCH] Executor ${awsOptions.fargateMode ? '(FARGATE mode) ' : ''}options=$awsOptions"
     }
 
     /**
