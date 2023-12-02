@@ -49,6 +49,22 @@ class WaveFactoryTest extends Specification {
         [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]] | 1
     }
 
+    @Unroll
+    def 'should check s5cmd is enabled' () {
+        given:
+        def factory = new WaveFactory()
+
+        expect:
+        factory.isAwsBatchFargateMode(CONFIG) == EXPECTED
+        
+        where:
+        CONFIG                                  | EXPECTED
+        [:]                                     | false
+        [aws:[batch:[platformType:'foo']]]       | false
+        [aws:[batch:[platformType:'fargate']]]   | true
+        [aws:[batch:[platformType:'Fargate']]]   | true
+
+    }
     def 'should fail when wave is disabled' () {
         given:
         def CONFIG = [wave:[:], fusion:[enabled:true]]

@@ -1,6 +1,6 @@
 (aws-page)=
 
-# Amazon Web Services
+# AWS Cloud
 
 ## AWS security credentials
 
@@ -132,7 +132,7 @@ See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/
 
 ## AWS Batch
 
-[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that allows the execution of containerised workloads in the Amazon cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the jobs submitted.
+[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that allows the execution of containerised workloads in the AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the jobs submitted.
 
 Nextflow provides built-in support for AWS Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
@@ -495,6 +495,35 @@ It may happen that the pipeline execution hangs indefinitely because one of the 
 There are multiple reasons why this can happen. They are mainly related to the Compute Environment workload/configuration, the docker service or container configuration, network status, etc.
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
+
+## AWS Fargate
+
+:::{versionadded} 23.12.0-edge
+:::
+
+Nextflow provides experimental support for the execution of [AWS Batch jobs with Fargate resources](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html).
+
+AWS Fargate is a technology that you can use with AWS Batch to run containers without having to manage servers or  EC2 instances.
+With AWS Fargate, you no longer have to provision, configure, or scale clusters of virtual machines to run containers.
+
+To enable the use of AWS Fargate in your pipeline use the following settings in your `nextflow.config` file:
+
+```groovy
+process.executor = 'awsbatch'
+process.queue = '<AWS BATCH QUEUE>'
+aws.region = '<AWS REGION>'
+aws.batch.platformType = 'fargate'
+aws.batch.jobRole = 'JOB ROLE ARN'
+aws.batch.executionRole = 'EXECUTION ROLE ARN'
+wave.enabled = true
+```
+
+See the AWS documentation for details how to create the required AWS Batch queue for Fargate, the Batch Job Role
+and the Batch Execution Role.
+
+:::{note}
+This feature requires the use {ref}`Wave <wave-page>` container provisioning service.
+:::
 
 ## Advanced configuration
 
