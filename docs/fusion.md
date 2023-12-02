@@ -212,8 +212,6 @@ The following configuration options are available:
   executor which requires the use the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) to be installed
   in the target cluster (default: `true`).
 
-`fusion.tagsEnabled`
-: Enable/disable the tagging of files created in the underlying object storage via the Fusion client (default: `true`).
-
-`fusion.tagsPattern`
-: The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
+`fusion.tags`
+: The pattern that determines how tags are applied to files created via the Fusion client. To disable tags
+  set it to `false`. (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
