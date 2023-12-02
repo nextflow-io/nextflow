@@ -33,6 +33,7 @@ import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
+import com.amazonaws.services.batch.model.EphemeralStorage
 import com.amazonaws.services.batch.model.EvaluateOnExit
 import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
@@ -525,6 +526,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( opts.isFargateMode() ) {
             result.setPlatformCapabilities(List.of('FARGATE'))
             container.withNetworkConfiguration( new NetworkConfiguration().withAssignPublicIp(AssignPublicIp.ENABLED) )
+            container.setEphemeralStorage(new EphemeralStorage().withSizeInGiB(100))
         }
 
         // finally set the container options
@@ -731,7 +733,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
-        def container = new ContainerOverrides()
+        final container = new ContainerOverrides()
         container.command = getSubmitCommand()
         // set the task memory
         final cpus = task.config.getCpus()
