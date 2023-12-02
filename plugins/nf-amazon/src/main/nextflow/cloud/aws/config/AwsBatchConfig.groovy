@@ -102,6 +102,7 @@ class AwsBatchConfig implements CloudTransferOptions {
     AwsBatchConfig(Map opts) {
         fargateMode = opts.platformType == 'fargate'
         cliPath = !fargateMode ? parseCliPath(opts.cliPath as String) : null
+        s5cmdPath = fargateMode ? parses5cmdPath(opts.cliPath as String) : null
         maxParallelTransfers = opts.maxParallelTransfers as Integer ?: MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts as Integer ?: defaultMaxTransferAttempts()
         delayBetweenAttempts = opts.delayBetweenAttempts as Duration ?: DEFAULT_DELAY_BETWEEN_ATTEMPTS
@@ -113,7 +114,6 @@ class AwsBatchConfig implements CloudTransferOptions {
         shareIdentifier = opts.shareIdentifier
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
         executionRole = opts.executionRole
-        s5cmdPath = fargateMode ? parses5cmdPath(opts.cliPath as String) : null
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )
