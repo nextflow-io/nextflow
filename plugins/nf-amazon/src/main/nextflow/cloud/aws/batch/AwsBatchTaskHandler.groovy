@@ -481,6 +481,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final result = new RegisterJobDefinitionRequest()
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
+
         // create the container opts based on task config
         final containerOpts = task.getConfig().getContainerOptionsMap()
         final container = createContainerProperties(containerOpts)

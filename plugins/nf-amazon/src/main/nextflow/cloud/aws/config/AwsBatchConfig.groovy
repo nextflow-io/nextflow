@@ -26,6 +26,7 @@ import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
+
 /**
  * Model AWS Batch config settings
  * 
@@ -178,7 +179,7 @@ class AwsBatchConfig implements CloudTransferOptions {
     private String parseCliPath(String value) {
         if( !value )
             return null
-        if( value.tokenize('/')[-1] == 's5cmd' )
+        if( value.tokenize('/' )[-1] == 's5cmd' )
             return null
         if( !value.startsWith('/') )
             throw new ProcessUnrecoverableException("Not a valid aws-cli tools path: $value -- it must be an absolute path")
