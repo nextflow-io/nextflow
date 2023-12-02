@@ -55,8 +55,14 @@ class ContainerConfig extends LinkedHashMap {
         get('engine')
     }
 
-    boolean isOciMode() {
-        get('oci')?.toString() == 'true' && (getEngine()=='singularity' || getEngine()=='apptainer')
+    boolean canRunOciImage() {
+        if( isSingularityOciMode() )
+            return true
+        return get('direct')?.toString()=='true' && (getEngine()=='singularity' || getEngine()=='apptainer')
+    }
+
+    boolean isSingularityOciMode() {
+        return getEngine()=='singularity' && get('oci')?.toString()=='true'
     }
 
     List<String> getEnvWhitelist() {
@@ -93,7 +99,7 @@ class ContainerConfig extends LinkedHashMap {
             return null
         if( eng=='docker' || eng=='podman' )
             return '--rm --privileged'
-        if( eng=='singularity' && isOciMode() )
+        if( isSingularityOciMode() )
             return '-B /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
             return null

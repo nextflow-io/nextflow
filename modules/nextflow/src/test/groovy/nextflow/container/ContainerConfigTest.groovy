@@ -62,23 +62,29 @@ class ContainerConfigTest extends Specification {
     }
 
     @Unroll
-    def 'should validate oci mode' () {
+    def 'should validate oci mode and direct mode' () {
 
         when:
         def cfg = new ContainerConfig(OPTS)
         then:
-        cfg.isOciMode() == EXPECTED
+        cfg.isSingularityOciMode() == OCI_MODE
+        cfg.canRunOciImage() == DIRECT_MODE
 
         where:
-        OPTS                                | EXPECTED
-        [:]                                 | false
-        [oci:false]                         | false
-        [oci:true]                          | false
-        [engine:'docker', oci:true]         | false
-        [engine:'singularity']              | false
-        [engine:'singularity', oci:false]   | false
-        [engine:'singularity', oci:true]    | true
-        [engine:'apptainer', oci:true]      | true
+        OPTS                                | OCI_MODE  | DIRECT_MODE
+        [:]                                 | false     | false
+        [oci:false]                         | false     | false
+        [oci:true]                          | false     | false
+        [engine:'docker', oci:true]         | false     | false
+        [engine:'singularity']              | false     | false
+        [engine:'singularity', oci:false]   | false     | false
+        [engine:'singularity', direct:false]| false     | false
+        and:
+        [engine:'singularity', oci:true]    | true      | true
+        [engine:'apptainer', oci:true]      | false     | false
+        and:
+        [engine:'singularity', direct:true] | false     | true
+        [engine:'apptainer', direct:true]   | false     | true
 
     }
 
@@ -97,6 +103,8 @@ class ContainerConfigTest extends Specification {
         and:
         [engine: 'singularity']                         | null
         [engine: 'singularity', oci:true]               | '-B /dev/fuse'
+        [engine: 'singularity', direct:true]            | null
+        [engine: 'apptainer', oci:true]                 | null
         and:
         [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
         [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'
