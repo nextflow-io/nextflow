@@ -67,6 +67,6 @@ class WaveFactory implements TraceObserverFactory {
     }
 
     protected boolean isAwsBatchFargateMode(Map config) {
-        'fargate'.equalsIgnoreCase(config.navigate('aws.batch.platformType') as String)
+        return 'fargate'.equalsIgnoreCase(config.navigate('aws.batch.platformType') as String)
     }
 }
