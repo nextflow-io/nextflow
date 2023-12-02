@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script.params
+package nextflow.processor
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -26,7 +26,7 @@ import nextflow.exception.IllegalArityException
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-trait ArityParam {
+trait PathArityAware {
 
     Range arity
 

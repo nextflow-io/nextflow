@@ -491,20 +491,16 @@ class TaskProcessor {
         // -- set the task instance as the current in this thread
         currentTask.set(task)
 
-        // -- prepend task config to arguments (for process function)
-        values.push(task.config)
-
         // -- add arguments to task context (for process function)
         for( int i = 1; i < config.params.length; i++ )
-            task.context.put(config.params[i], values[i])
+            task.context.put(config.params[i], values[i-1])
 
         // -- validate input lengths
         validateInputTuples(values)
 
         // -- map the inputs to a map and use to delegate closure values interpolation
-        final secondPass = [:]
-        int count = makeTaskContextStage1(task, secondPass, values)
-        makeTaskContextStage2(task, secondPass, count)
+        makeTaskContextStage1(task, values)
+        makeTaskContextStage2(task)
 
         // verify that `when` guard, when specified, is satisfied
         if( !checkWhenGuard(task) )
@@ -515,6 +511,9 @@ class TaskProcessor {
             task.resolve(block)
         }
         else {
+            // -- prepend task config to arguments (for process function)
+            values.push(task.config)
+
             // -- resolve the task command script
             task.resolve(taskBody, values.toArray())
         }
@@ -630,17 +629,8 @@ class TaskProcessor {
         task.config.executor = task.processor.executor.name
 
         /*
-         * initialize the inputs/outputs for this task instance
+         * initialize the outputs for this task instance
          */
-        config.getInputs().each { InParam param ->
-            if( param instanceof TupleInParam )
-                param.inner.each { task.setInput(it)  }
-            else if( param instanceof EachInParam )
-                task.setInput(param.inner)
-            else
-                task.setInput(param)
-        }
-
         config.getOutputs().each { OutParam param ->
             if( param instanceof TupleOutParam ) {
                 param.inner.each { task.setOutput(it) }
@@ -1899,88 +1889,81 @@ class TaskProcessor {
         return script.join('\n')
     }
 
-    final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
+    final protected void makeTaskContextStage1( TaskRun task, List values ) {
 
-        final contextMap = task.context
-        int count = 0
-
-        task.inputs.keySet().each { InParam param ->
-
-            // add the value to the task instance
-            def bindObject = param.getBindObject()
-
-            def val
-            if( bindObject instanceof Closure ) {
-                final cl = (Closure)bindObject.clone()
-                cl.delegate = task.context
-                cl.resolveStrategy = Closure.DELEGATE_FIRST
-                val = cl.call()
-            }
+        // collect params from process inputs
+        final params = []
+        for( InParam param : config.getInputs() ) {
+            if( param instanceof TupleInParam )
+                param.inner.each { params.add(it) }
+            else if( param instanceof EachInParam )
+                params.add(param.inner)
             else
-                val = bindObject
+                params.add(param)
+        }
 
-            log.trace "Process $name > binding param ${param.class.name} to ${val}"
+        // apply params to task config and context
+        for ( InParam param : params ) {
+
+            def val = param.decodeInputs(values)
 
             switch(param) {
                 case ValueInParam:
-                    contextMap.put( param.name, val )
+                    task.context.put( param.name, val )
                     break
 
                 case FileInParam:
-                    secondPass[param] = val
-                    return // <-- leave it, because we do not want to add this 'val' at this stage
+                    final allFiles = (List)task.config.get('files')
+                    allFiles.add( new TaskFileInput(val, param.isPathQualifier(), param.getName(), param.getOptions()) )
+                    break
 
                 case StdInParam:
+                    task.config.put('stdin', val)
+                    break
+
                 case EnvInParam:
-                    // nothing to do
+                    final allEnvs = task.config.get('env')
+                    allEnvs.put( param.name, val )
                     break
 
                 default:
                     throw new IllegalStateException("Unsupported input param type: ${param?.class?.simpleName}")
             }
-
-            // add the value to the task instance context
-            task.setInput(param, val)
         }
-
-        return count
     }
 
-    final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
+    final protected void makeTaskContextStage2( TaskRun task ) {
 
         final ctx = task.context
+        final allFileInputs = (List)task.config.get('files')
         final allNames = new HashMap<String,Integer>()
+        int count = 0
 
         final FilePorter.Batch batch = session.filePorter.newBatch(executor.getStageDir())
 
-        // -- all file parameters are processed in a second pass
-        //    so that we can use resolve the variables that eventually are in the file name
-        for( Map.Entry<FileInParam,?> entry : secondPass.entrySet() ) {
-            final param = entry.getKey()
-            final val = entry.getValue()
-            final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
-            final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
+        // -- resolve input files against the task context
+        for( def fileInput : allFileInputs ) {
+            final normalized = normalizeInputToFiles(fileInput.getValue(ctx), count, fileInput.isPathQualifier(), batch)
+            final resolved = expandWildcards( fileInput.getFilePattern(ctx), normalized )
 
-            if( !param.isValidArity(resolved.size()) )
+            if( !fileInput.isValidArity(resolved.size()) )
                 throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
 
-            ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
+            ctx.put( fileInput.name, singleItemOrList(resolved, fileInput.isSingle(), task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1
                 allNames.put(item.stageName,num)
             }
 
-            // add the value to the task instance context
-            task.setInput(param, resolved)
+            task.inputFiles.addAll(resolved)
         }
 
         // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 
-        // check conflicting file names
+        // -- check conflicting file names
         def conflicts = allNames.findAll { name, num -> num>1 }
         if( conflicts ) {
             log.debug("Process $name > collision check staging file names: $allNames")
@@ -2011,10 +1994,8 @@ class TaskProcessor {
             keys << task.getContainerFingerprint()
 
         // add all the input name-value pairs to the key generator
-        for( Map.Entry<InParam,Object> it : task.inputs ) {
-            keys.add( it.key.name )
-            keys.add( it.value )
-        }
+        for( FileHolder it : task.inputFiles )
+            keys.add( it )
 
         // add all variable references in the task script but not declared as input/output
         def vars = getTaskGlobalVars(task)

@@ -38,13 +38,9 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
-import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
-import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
-import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
 import org.codehaus.groovy.runtime.MethodClosure
@@ -85,27 +81,15 @@ class TaskRun implements Cloneable {
     TaskProcessor processor
 
     /**
-     * Holds the input value(s) for each task input parameter
+     * The list of resolved input files
      */
-    Map<InParam,Object> inputs = [:]
+    List<FileHolder> inputFiles = []
 
     /**
      * Holds the output value(s) for each task output parameter
      */
     Map<OutParam,Object> outputs = [:]
 
-
-    void setInput( InParam param, Object value = null ) {
-        assert param
-
-        inputs[param] = value
-
-        // copy the value to the task 'input' attribute
-        // it will be used to pipe it to the process stdin
-        if( param instanceof StdInParam) {
-            stdin = value
-        }
-    }
 
     void setOutput( OutParam param, Object value = null ) {
         assert param
@@ -114,9 +98,11 @@ class TaskRun implements Cloneable {
 
 
     /**
-     * The value to be piped to the process stdin
+     * @return The value to be piped to the process stdin
      */
-    def stdin
+    def getStdin() {
+        config.get('stdin')
+    }
 
     /**
      * The exit code returned by executing the task script
@@ -415,33 +401,20 @@ class TaskRun implements Cloneable {
         return false
     }
 
-    Map<InParam,List<FileHolder>> getInputFiles() {
-        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
-    }
-
     /**
      * Return the list of all input files staged as inputs by this task execution
      */
     List<String> getStagedInputs()  {
-        getInputFiles()
-                .values()
-                .flatten()
-                .collect { it.stageName }
+        inputFiles.collect { it.stageName }
     }
 
     /**
      * @return A map object containing all the task input files as <stage name, store path> pairs
      */
     Map<String,Path> getInputFilesMap() {
-
         def result = [:]
-        def allFiles = getInputFiles().values()
-        for( List<FileHolder> entry : allFiles ) {
-            if( entry ) for( FileHolder it : entry ) {
-                result[ it.stageName ] = it.storePath
-            }
-        }
-
+        for( FileHolder it : inputFiles )
+            result[ it.stageName ] = it.storePath
         return result
     }
 
@@ -465,25 +438,9 @@ class TaskRun implements Cloneable {
     }
 
     /**
-     * Get the map of *input* objects by the given {@code InParam} type
+     * Get the map of *output* objects by the given {@code OutParam} type
      *
-     * @param types One or more subclass of {@code InParam}
-     * @return An associative array containing all the objects for the specified type
-     */
-    def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
-
-        def result = [:]
-        for( def it : inputs ) {
-            if( types.contains(it.key.class) )
-                result << it
-        }
-        return result
-    }
-
-    /**
-     * Get the map of *output* objects by the given {@code InParam} type
-     *
-     * @param types One or more subclass of {@code InParam}
+     * @param types One or more subclass of {@code OutParam}
      * @return An associative array containing all the objects for the specified type
      */
     def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
@@ -500,9 +457,9 @@ class TaskRun implements Cloneable {
      */
     protected Map<String,String> getInputEnvironment() {
         final Map<String,String> environment = [:]
-        getInputsByType( EnvInParam ).each { param, value ->
-            environment.put( param.name, value?.toString() )
-        }
+        final allEnvs = config.get('env')
+        for( def key : allEnvs.keySet() )
+            environment.put(key, allEnvs.get(key))
         return environment
     }
 

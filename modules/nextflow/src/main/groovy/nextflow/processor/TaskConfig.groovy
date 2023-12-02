@@ -16,13 +16,12 @@
 
 package nextflow.processor
 
-import nextflow.util.CmdLineOptionMap
-
 import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import nextflow.Const
 import nextflow.ast.DslCodeVisitor
 import nextflow.exception.AbortOperationException
@@ -33,6 +32,7 @@ import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
+import nextflow.util.CmdLineOptionMap
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -44,6 +44,9 @@ import nextflow.util.MemoryUnit
 class TaskConfig extends LazyMap implements Cloneable {
 
     static public final int EXIT_ZERO = 0
+
+    @PackageScope
+    static final List<String> LAZY_MAP_PROPERTIES = ['env', 'ext']
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -78,9 +81,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         // clear cache to force re-compute dynamic entries
         this.cache.clear()
 
-        // set the binding context for 'ext' map
-        if( target.ext instanceof LazyMap )
-            (target.ext as LazyMap).binding = context
+        // set the binding context for lazy map properties
+        for( def key in LAZY_MAP_PROPERTIES )
+            if( target.get(key) instanceof LazyMap )
+                (target.get(key) as LazyMap).binding = context
 
         // set the this object in the task context in order to allow task properties to be resolved in process script
         context.put(TASK_CONTEXT_PROPERTY_NAME, this)
@@ -140,7 +144,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             return cache.get(key)
 
         def result
-        if( key == 'ext' ) {
+        if( key in LAZY_MAP_PROPERTIES ) {
             if( target.containsKey(key) )
                 result = target.get(key)
             else {
@@ -168,7 +172,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             }
             target.put(key, value)
         }
-        else if( key == 'ext' && value instanceof Map ) {
+        else if( key in LAZY_MAP_PROPERTIES && value instanceof Map ) {
             super.put( key, new LazyMap(value) )
         }
         else {
@@ -586,7 +590,7 @@ class LazyMap implements Map<String,Object> {
          * note: 'ext' property is meant for extension attributes
          * as it should be preserved as LazyMap
          */
-        else if( value instanceof Map && name!='ext' ) {
+        else if( value instanceof Map && name !in TaskConfig.LAZY_MAP_PROPERTIES ) {
             return resolveParams(name, value)
         }
 

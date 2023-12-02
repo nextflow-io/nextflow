@@ -18,8 +18,6 @@ package nextflow.script.params
 
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-import nextflow.NF
-import nextflow.script.TokenVar
 
 /**
  * Represents a process *file* input parameter
@@ -28,35 +26,15 @@ import nextflow.script.TokenVar
  */
 @Slf4j
 @InheritConstructors
-class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
-
-    protected filePattern
+class FileInParam extends BaseInParam implements PathQualifier {
 
     private boolean pathQualifier
+
+    private Map<String,?> options
 
     @Override String getTypeName() { pathQualifier ? 'path' : 'file' }
 
     @Override String getTypeSimpleName() { getTypeName() + "inparam" }
-
-    /**
-     * Define the file name
-     */
-    FileInParam name( obj ) {
-        if( pathQualifier )
-            throw new MissingMethodException("name", this.class, [String] as Object[])
-
-        if( obj instanceof String ) {
-            filePattern = obj
-            return this
-        }
-
-        if( obj instanceof GString ) {
-            filePattern = obj
-            return this
-        }
-
-        throw new IllegalArgumentException()
-    }
 
     String getName() {
         if( bindObject instanceof Map ) {
@@ -80,39 +58,6 @@ class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
         return this
     }
 
-    String getFilePattern(Map ctx = null) {
-
-        if( filePattern != null  )
-            return resolve(ctx,filePattern)
-
-        if( bindObject instanceof Map ) {
-            assert !pathQualifier
-            def entry = bindObject.entrySet().first()
-            return resolve(ctx, entry?.value)
-        }
-
-        if( bindObject instanceof TokenVar )
-            return filePattern = '*'
-
-        if( bindObject != null )
-            return resolve(ctx, bindObject)
-
-        return filePattern = '*'
-    }
-
-    private resolve( Map ctx, value ) {
-        if( value instanceof GString ) {
-            value.cloneAsLazy(ctx)
-        }
-
-        else if( value instanceof Closure ) {
-            return ctx.with(value)
-        }
-
-        else
-            return value
-    }
-
     @Override
     FileInParam setPathQualifier(boolean flag) {
         pathQualifier = flag
@@ -124,26 +69,10 @@ class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
 
     @Override
     FileInParam setOptions(Map<String,?> opts) {
-        (FileInParam)super.setOptions(opts)
-    }
-
-    /**
-     * Defines the `stageAs:` option to define the input file stage name pattern
-     *
-     * @param value
-     *      A string representing the target file name or a file name pattern
-     *      ie. containing the star `*` or question mark wildcards
-     * @return
-     *      The param instance itself
-     */
-    FileInParam setStageAs(String value) {
-        this.filePattern = value
+        this.options = opts
         return this
     }
 
-    FileInParam setName(String value) {
-        this.filePattern = value
-        return this
-    }
+    Map<String,?> getOptions() { options }
 
 }

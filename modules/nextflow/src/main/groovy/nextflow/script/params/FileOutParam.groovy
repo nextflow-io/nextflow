@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
+import nextflow.processor.PathArityAware
 import nextflow.script.TokenVar
 import nextflow.util.BlankSeparatedList
 /**
@@ -33,7 +34,7 @@ import nextflow.util.BlankSeparatedList
  */
 @Slf4j
 @InheritConstructors
-class FileOutParam extends BaseOutParam implements OutParam, ArityParam, OptionalParam, PathQualifier {
+class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, PathArityAware, PathQualifier {
 
     /**
      * ONLY FOR TESTING DO NOT USE
