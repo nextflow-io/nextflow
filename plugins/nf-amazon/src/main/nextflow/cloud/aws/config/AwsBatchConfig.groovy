@@ -26,8 +26,6 @@ import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
-import nextflow.util.MemoryUnit
-
 /**
  * Model AWS Batch config settings
  * 
@@ -95,11 +93,6 @@ class AwsBatchConfig implements CloudTransferOptions {
      */
     boolean fargateMode
 
-    /**
-     * Container ephemeral storage for Fargate jobs
-     */
-    MemoryUnit ephemeralStorage
-
     /*
      * only for testing
      */
@@ -120,7 +113,6 @@ class AwsBatchConfig implements CloudTransferOptions {
         shareIdentifier = opts.shareIdentifier
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
         executionRole = opts.executionRole
-        ephemeralStorage = opts.ephemeralStorage as MemoryUnit ?: MemoryUnit.of('50GB')
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )

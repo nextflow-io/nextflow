@@ -158,7 +158,4 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.batchConfig.getExecutionRole()
     }
 
-    MemoryUnit getEphemeralStorage() {
-        return awsConfig.batchConfig.ephemeralStorage
-    }
 }

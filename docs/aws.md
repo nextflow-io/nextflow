@@ -515,7 +515,6 @@ aws.region = '<AWS REGION>'
 aws.batch.platformType = 'fargate'
 aws.batch.jobRole = 'JOB ROLE ARN'
 aws.batch.executionRole = 'EXECUTION ROLE ARN'
-aws.batch.ephemeralStorage = '50 GB'
 wave.enabled = true
 ```
 

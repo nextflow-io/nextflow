@@ -49,6 +49,7 @@ import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.ResourceRequirement
 import com.amazonaws.services.batch.model.ResourceType
 import com.amazonaws.services.batch.model.RetryStrategy
+import com.amazonaws.services.batch.model.RuntimePlatform
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
@@ -377,7 +378,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             return container.substring(17)
         }
 
-        return resolveJobDefinition(container)
+        return resolveJobDefinition(task)
     }
 
     /**
@@ -387,14 +388,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The Batch Job Definition name associated with the specified container
      */
     @CompileStatic
-    protected String resolveJobDefinition(String container) {
+    protected String resolveJobDefinition(TaskRun task) {
         final int DEFAULT_BACK_OFF_BASE = 3
         final int DEFAULT_BACK_OFF_DELAY = 250
         final int MAX_ATTEMPTS = 5
         int attempt=0
         while( true ) {
             try {
-                return resolveJobDefinition0(container)
+                return resolveJobDefinition0(task)
             }
             catch (ClientException e) {
                 if( e.statusCode != 404 || attempt++ > MAX_ATTEMPTS)
@@ -407,8 +408,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
-    protected String resolveJobDefinition0(String container) {
-        final req = makeJobDefRequest(container)
+    @CompileStatic
+    protected String resolveJobDefinition0(TaskRun task) {
+        final req = makeJobDefRequest(task)
+        final container = task.getContainer()
         final token = req.getParameters().get('nf-token')
         final jobKey = "$container:$token".toString()
         if( jobDefinitions.containsKey(jobKey) )
@@ -444,9 +447,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param image The Docker container image for which is required to create a Batch job definition
      * @return An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
+    protected RegisterJobDefinitionRequest makeJobDefRequest(TaskRun task) {
         final uniq = new ArrayList()
-        final result = configJobDefRequest(image, uniq)
+        final result = configJobDefRequest(task, uniq)
 
         // create a job marker uuid
         def hash = computeUniqueToken(uniq)
@@ -470,15 +473,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return
      *      An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest configJobDefRequest(String image, List hashingTokens) {
+    protected RegisterJobDefinitionRequest configJobDefRequest(TaskRun task, List hashingTokens) {
+        final image = task.getContainer()
         final name = normalizeJobDefinitionName(image)
         final opts = getAwsOptions()
 
         final result = new RegisterJobDefinitionRequest()
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
-
-        // create the container opts based on task config 
+        // create the container opts based on task config
         final containerOpts = task.getConfig().getContainerOptionsMap()
         final container = createContainerProperties(containerOpts)
 
@@ -526,7 +529,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( opts.isFargateMode() ) {
             result.setPlatformCapabilities(List.of('FARGATE'))
             container.withNetworkConfiguration( new NetworkConfiguration().withAssignPublicIp(AssignPublicIp.ENABLED) )
-            container.withEphemeralStorage( new EphemeralStorage().withSizeInGiB(opts.ephemeralStorage.toGiga() as int) )
+            // use at least 50 GB as disk local storage
+            final diskGb = task.config.getDisk()?.toGiga()?.toInteger() ?: 50
+            container.withEphemeralStorage( new EphemeralStorage().withSizeInGiB(diskGb) )
+            // check for arm64 cpu architecture
+            if( task.config.getArchitecture()?.arch == 'arm64' )
+                container.withRuntimePlatform(new RuntimePlatform().withCpuArchitecture('ARM64'))
         }
 
         // finally set the container options

@@ -35,15 +35,16 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
+import nextflow.Const
 import nextflow.Session
 import nextflow.cloud.aws.config.AwsConfig
-import nextflow.Const
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -54,7 +55,6 @@ import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -337,7 +337,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result = handler.getJobDefinition(task)
         then:
         1 * task.getContainer() >> IMAGE
-        1 * handler.resolveJobDefinition(IMAGE) >> JOB_NAME
+        1 * handler.resolveJobDefinition(task) >> JOB_NAME
         result == JOB_NAME
 
     }
@@ -409,6 +409,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def JOB_ID= '123'
         def handler = Spy(AwsBatchTaskHandler)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE }
 
         def req = Mock(RegisterJobDefinitionRequest) {
             getJobDefinitionName() >> JOB_NAME
@@ -416,17 +417,17 @@ class AwsBatchTaskHandlerTest extends Specification {
         }
 
         when:
-        handler.resolveJobDefinition(IMAGE)
+        handler.resolveJobDefinition(task)
         then:
-        1 * handler.makeJobDefRequest(IMAGE) >> req
+        1 * handler.makeJobDefRequest(task) >> req
         1 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         1 * handler.createJobDef(req) >> null
 
         when:
-        handler.resolveJobDefinition(IMAGE)
+        handler.resolveJobDefinition(task)
         then:
         // second time are not invoked for the same image
-        1 * handler.makeJobDefRequest(IMAGE) >> req
+        1 * handler.makeJobDefRequest(task) >> req
         0 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         0 * handler.createJobDef(req) >> null
 
@@ -554,14 +555,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig() >> Mock(TaskConfig) }
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = Mock(AwsBatchExecutor)
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
@@ -573,7 +575,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         !result.containerProperties.privileged
         
         when:
-        result = handler.makeJobDefRequest(IMAGE)
+        result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch'], region: 'us-east-1'))
@@ -593,10 +595,13 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should create a fargate job definition' () {
         given:
+        def ARM64 = new Architecture('linux/arm64')
+        def _100GB = MemoryUnit.of('100GB')
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) { getContainer()>>IMAGE }
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = Mock(AwsBatchExecutor)
@@ -607,8 +612,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         def opts = new AwsOptions(session)
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
+        task.getConfig() >> Mock(TaskConfig)
+        and:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
         and:
@@ -619,21 +626,44 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
         result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
         result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        and:
         result.containerProperties.getEphemeralStorage().sizeInGiB == 50
+        result.containerProperties.getRuntimePlatform() == null
+
+        when:
+        result = handler.makeJobDefRequest(task)
+        then:
+        task.getConfig() >> Mock(TaskConfig) { getDisk()>>_100GB ; getArchitecture()>>ARM64 }
+        and:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> opts
+        and:
+        result.jobDefinitionName == JOB_NAME
+        result.type == 'container'
+        result.getPlatformCapabilities() == ['FARGATE']
+        result.containerProperties.getJobRoleArn() == 'the-job-role'
+        result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
+        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        and:
+        result.containerProperties.getEphemeralStorage().sizeInGiB == 100
+        result.containerProperties.getRuntimePlatform().getCpuArchitecture() == 'ARM64'
     }
 
     def 'should create a job definition request object for fusion' () {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>Mock(TaskConfig)  }
+        and:
         AwsBatchTaskHandler handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> task
             fusionEnabled() >> true
         }
         handler.@executor = Mock(AwsBatchExecutor) {}
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
@@ -650,14 +680,16 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def executor = Mock(AwsBatchExecutor)
         def opts = Mock(AwsOptions)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>Mock(TaskConfig)  }
+        and:
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = executor
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
@@ -682,14 +714,16 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def opts = Mock(AwsOptions)
         def executor = Mock(AwsBatchExecutor)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>Mock(TaskConfig) }
+        and:
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig) }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = executor
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
@@ -707,14 +741,16 @@ class AwsBatchTaskHandlerTest extends Specification {
         def opts = Mock(AwsOptions)
         def taskConfig = new TaskConfig(containerOptions: '--privileged --user foo')
         def executor = Mock(AwsBatchExecutor)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>taskConfig }
+        and:
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> taskConfig }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = executor
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
