@@ -66,7 +66,6 @@ import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.exception.ScriptRuntimeException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
@@ -458,7 +457,7 @@ class TaskProcessor {
 
         // note: the GPars thread pool is set in the static initializer of {@link nextflow.cli.CmdRun}
         // see also {@link nextflow.util.CustomPoolFactory}
-        this.operator = new DataflowOperator( Dataflow.retrieveCurrentDFPGroup(), params, invoke )
+        this.operator = new DataflowOperator(Dataflow.retrieveCurrentDFPGroup(), params, invoke)
 
         // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
@@ -492,23 +491,12 @@ class TaskProcessor {
         // -- set the task instance as the current in this thread
         currentTask.set(task)
 
-        // -- add task config to arguments
+        // -- prepend task config to arguments (for process function)
         values.push(task.config)
 
-        // -- validate task arguments
-        if( config.params.size() != values.size() )
-            throw new ScriptRuntimeException("Process $name expected ${config.params.size()} arguments but received ${values.size()}: ${values}")
-
-        for( int i = 0; i < config.params.size(); i++ ) {
-            final param = config.params[i]
-            final value = values[i]
-            if( !param.type.isAssignableFrom(value.class) )
-                log.warn1 "Process $name > expected type ${param.type.name} for param ${param.name} but got a ${value.class.name}"
-        }
-
-        // -- add arguments to task context
-        for( int i = 1; i < config.params.size(); i++ )
-            task.context.put(config.params[i].name, values[i])
+        // -- add arguments to task context (for process function)
+        for( int i = 1; i < config.params.length; i++ )
+            task.context.put(config.params[i], values[i])
 
         // -- validate input lengths
         validateInputTuples(values)
@@ -528,7 +516,7 @@ class TaskProcessor {
         }
         else {
             // -- resolve the task command script
-            task.resolve(taskBody, config.params*.name)
+            task.resolve(taskBody, values.toArray())
         }
 
         // -- verify if exists a stored result for this case,

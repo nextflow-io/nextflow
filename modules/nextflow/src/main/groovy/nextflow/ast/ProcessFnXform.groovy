@@ -99,11 +99,9 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
         // TODO: append stub source
 
         // append method params
-        annotation.addMember( 'params', closureX( block( new ExpressionStatement(
-            new ListExpression(
-                params.collect(p -> (Expression)constX(p.getName()))
-            )
-        ) ) ) )
+        annotation.addMember( 'params', new ListExpression(
+            params.collect(p -> (Expression)constX(p.getName()))
+        ) )
 
         // append script source
         annotation.addMember( 'source', constX( getSource(method.getCode()) ) )

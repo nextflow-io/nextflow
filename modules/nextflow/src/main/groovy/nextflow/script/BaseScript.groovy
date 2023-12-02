@@ -207,11 +207,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         applyDsl(builder, processFn.outputs())
 
         // get method parameters
-        final paramNames = (List<String>)((Closure)processFn.params().newInstance(this, this)).call()
-        final params = (0 ..< paramNames.size()).collect( i ->
-            new Parameter( paramNames[i], method.getParameters()[i].getType() )
-        )
-        builder.config.params = params
+        builder.withParams(processFn.params())
 
         // determine process type
         def type

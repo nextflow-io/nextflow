@@ -530,6 +530,11 @@ class ProcessBuilder {
 
     /// SCRIPT
 
+    ProcessBuilder withParams(String[] params) {
+        config.params = params
+        return this
+    }
+
     ProcessBuilder withBody(BodyDef body) {
         this.body = body
         return this

@@ -37,6 +37,6 @@ import java.lang.annotation.Target
     boolean shell() default false
 
     // injected via AST transform
-    Class params()
+    String[] params()
     String source()
 }

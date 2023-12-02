@@ -47,6 +47,7 @@ import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import org.codehaus.groovy.runtime.MethodClosure
 /**
  * Models a task instance
  *
@@ -711,33 +712,36 @@ class TaskRun implements Cloneable {
      * 3) assign the `script` code to execute
      *
      * @param body
-     * @param params
+     * @param args
      */
-    @PackageScope void resolve(BodyDef body, List<String> params=[]) {
+    @PackageScope void resolve(BodyDef body, Object[] args) {
 
         // -- initialize the task code to be executed
-        this.code = body.closure.clone() as Closure
-        this.code.delegate = this.context
-        this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
+        this.code = body.closure
+
+        // -- provide arguments directly or via delegate
+        if( code instanceof MethodClosure ) {
+            code = code.curry(args)
+        }
+        else {
+            code = code.clone() as Closure
+            code.setDelegate(this.context)
+            code.setResolveStrategy(Closure.DELEGATE_ONLY)
+        }
 
         // -- set the task source
         this.body = body
         // note: this may be overwritten when a template file is used
         this.source = body.source
 
-        // -- collect method args from task context
-        final args = params.collect(param -> context[param]).toArray()
-
-        if( body.type != ScriptType.SCRIPTLET ) {
-            code = code.curry(args)
+        if( body.type != ScriptType.SCRIPTLET )
             return
-        }
 
         // Important!
         // when the task is implemented by a script string
         // Invoke the closure which returns the script with all the variables replaced with the actual values
         try {
-            final result = code.call(args)
+            final result = code.call()
             if ( result instanceof Path ) {
                 script = renderTemplate(result, body.isShell)
             }

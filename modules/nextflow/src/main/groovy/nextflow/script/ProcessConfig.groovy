@@ -16,7 +16,6 @@
 
 package nextflow.script
 
-import groovy.transform.Immutable
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -67,9 +66,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     private String processName
 
     /**
-     * List of parameters defined by a process function.
+     * List of parameter names defined by a process function.
      */
-    List<Parameter> params
+    String[] params
 
     /**
      * List of process input definitions
@@ -160,7 +159,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return new TaskConfig(configProperties)
     }
 
-    List<Parameter> getParams() {
+    String[] getParams() {
         params
     }
 
@@ -219,10 +218,4 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         (List<String>) configProperties.get('secret') ?: Collections.<String>emptyList()
     }
 
-}
-
-@Immutable
-class Parameter {
-    String name
-    Class type
 }
