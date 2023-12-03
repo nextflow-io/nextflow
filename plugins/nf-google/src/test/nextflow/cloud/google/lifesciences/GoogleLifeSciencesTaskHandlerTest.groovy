@@ -198,19 +198,19 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         given:
         def workDir = mockGsPath('gs://my-bucket/work/dir')
         and:
+        def config = new GoogleLifeSciencesConfig(
+            project: 'my-project',
+            zones: ['my-zone'],
+            regions: ['my-region'],
+            preemptible: true,
+            bootDiskSize: MemoryUnit.of('20 GB'),
+            usePrivateAddress: true,
+            cpuPlatform: 'Intel Skylake'
+        )
+        and:
         def executor = Mock(GoogleLifeSciencesExecutor) {
             getHelper() >> Mock(GoogleLifeSciencesHelper)
-            getConfig() >> {
-                Mock(GoogleLifeSciencesConfig) {
-                    getProject() >> 'my-project'
-                    getZones() >> ['my-zone']
-                    getRegions() >> ['my-region']
-                    getPreemptible() >> true
-                    getBootDiskSize() >> MemoryUnit.of('20 GB')
-                    getUsePrivateAddress() >> true
-                    getCpuPlatform() >> 'Intel Skylake'
-                }
-            }
+            getConfig() >> config
         }
         and:
         def task = Mock(TaskRun)
