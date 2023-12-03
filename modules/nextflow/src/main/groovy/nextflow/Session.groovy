@@ -489,10 +489,6 @@ class Session implements ISession {
         checkConfig()
         notifyFlowBegin()
 
-        if( !NextflowMeta.instance.isDsl2() ) {
-            return
-        }
-
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
