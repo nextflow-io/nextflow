@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
@@ -424,7 +425,7 @@ class WorkflowMetadata {
         final allProperties = this.metaClass.getProperties()
         final result = new LinkedHashMap(allProperties.size())
         for( MetaProperty property : allProperties ) {
-            if( property.name == 'class' )
+            if( property.name == 'class' || !Modifier.isPublic(property.modifiers) )
                 continue
             try {
                 result[property.name] = property.getProperty(this)
