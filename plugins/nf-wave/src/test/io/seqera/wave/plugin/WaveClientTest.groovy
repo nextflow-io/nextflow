@@ -32,11 +32,13 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.conda.CondaConfig
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.spack.SpackConfig
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -338,11 +340,15 @@ class WaveClientTest extends Specification {
         def wave = new WaveClient(session)
 
         when:
-        def req = wave.makeRequest(new WaveAssets(null, null, null, null, DOCKERFILE, null, SPACKFILE))
+        def assets = new WaveAssets(null, null, null, null, DOCKERFILE, null, SPACKFILE, null, false, 'Skylake', '0.21.0')
+        def req = wave.makeRequest(assets)
         then:
-        !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         new String(req.spackFile.decodeBase64()) == SPACKFILE.text
+        req.spackVersion == '0.21.0'
+        req.spackTarget == 'Skylake'
+        and:
+        !req.containerImage
         !req.containerConfig.layers
 
         cleanup:
@@ -580,6 +586,8 @@ class WaveClientTest extends Specification {
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
+        !assets.spackTarget
+        !assets.spackVersion
         !assets.projectResources
     }
 
@@ -621,6 +629,8 @@ class WaveClientTest extends Specification {
         !assets.condaFile
         !assets.projectResources
         and:
+        assets.spackVersion == '0.20.0'
+        assets.spackTarget == 'x86_64'
         assets.spackFile.text == '''\
                 spack:
                   specs: [rseqc@3.0.1, rbase@3.5]
@@ -1289,8 +1299,33 @@ class WaveClientTest extends Specification {
         
         cleanup:
         server?.stop(0)
-
     }
 
+    def 'should create wave client' () {
+        given:
+        def sess = Mock(Session)
+
+        when:
+        def client = new WaveClient(sess)
+        then:
+        sess.getConfig() >> [:]
+        and:
+        client.@endpoint == 'https://wave.seqera.io'
+        client.@s5cmdConfigUrl == null
+        client.@condaChannels == ['seqera', 'conda-forge', 'bioconda', 'defaults']
+        client.@spackVersion == '0.20.0'
+
+        when:
+        client = new WaveClient(sess)
+        then:
+        sess.getConfig() >> [ wave:[endpoint:'https://foo.com', s5cmdConfigUrl: 'http://s5cmd.com'] ]
+        sess.getCondaConfig() >> Mock(CondaConfig) { getChannels()>>['foo','bar'] }
+        sess.getSpackConfig() >> Mock(SpackConfig) { getVersion()>>'0.30.0' }
+        and:
+        client.@endpoint == 'https://foo.com'
+        client.@s5cmdConfigUrl == new URL('http://s5cmd.com')
+        client.@condaChannels == ['foo','bar']
+        client.@spackVersion == '0.30.0'
+    }
 
 }

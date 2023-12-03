@@ -57,4 +57,8 @@ class SpackConfig extends LinkedHashMap {
 
         throw new IllegalArgumentException("Unexpected spack.channels value: $value")
     }
+
+    String getVersion() {
+        return get('version')
+    }
 }

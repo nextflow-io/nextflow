@@ -43,6 +43,8 @@ class WaveAssets {
     final Path spackFile
     final ResourcesBundle projectResources
     final boolean singularity
+    final String spackTarget
+    final String spackVersion
 
     static fromImage(String containerImage,String containerPlatform=null) {
         new WaveAssets(containerImage, containerPlatform)
@@ -81,6 +83,8 @@ class WaveAssets {
         allMeta.add( this.spackFile?.text )
         allMeta.add( this.projectResources?.fingerprint() )
         allMeta.add( this.containerPlatform )
+        allMeta.add( this.spackFile ? this.spackTarget : null )
+        allMeta.add( this.spackFile ? this.spackVersion : null )
         return CacheHelper.hasher(allMeta).hash().toString()
     }
 

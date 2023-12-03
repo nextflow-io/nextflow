@@ -87,6 +87,8 @@ class WaveClient {
 
     private static final String DEFAULT_SPACK_ARCH = 'x86_64'
 
+    private static final String DEFAULT_SPACK_VERSION = '0.20.0'
+
     private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
     final private HttpClient httpClient
@@ -113,6 +115,8 @@ class WaveClient {
 
     private List<String> condaChannels
 
+    private String spackVersion
+
     final private String waveRegistry
 
     final private boolean awsFargate
@@ -125,9 +129,10 @@ class WaveClient {
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.awsFargate = WaveFactory.isAwsBatchFargateMode(session.config)
-        this.s5cmdConfigUrl = session.config.navigate('wave.s5cmdConfigUrl') as URL
+        this.s5cmdConfigUrl = parseUrl(session.config.navigate('wave.s5cmdConfigUrl') as String)
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
+        this.spackVersion = session.getSpackConfig()?.getVersion() ?: DEFAULT_SPACK_VERSION
         log.debug "Wave config: $config"
         this.packer = new Packer()
         this.waveRegistry = new URI(endpoint).getAuthority()
@@ -140,6 +145,10 @@ class WaveClient {
         cookieManager = new CookieManager()
         // create http client
         this.httpClient = newHttpClient()
+    }
+
+    private URL parseUrl(String value) {
+        return value ? new URL(value) : null
     }
 
     protected HttpClient newHttpClient() {
@@ -188,6 +197,8 @@ class WaveClient {
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
                 spackFile: assets.spackFileEncoded(),
+                spackTarget: assets.spackTarget,
+                spackVersion: assets.spackVersion,
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
@@ -427,7 +438,7 @@ class WaveClient {
         return resolveAssets0(attrs, bundle, singularity, dockerArch, spackArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackTarget) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -522,7 +533,9 @@ class WaveClient {
                     condaFile,
                     spackFile,
                     projectRes,
-                    singularity)
+                    singularity,
+                    spackFile ? spackTarget : null,
+                    spackFile ? spackVersion : null)
     }
 
     @Memoized

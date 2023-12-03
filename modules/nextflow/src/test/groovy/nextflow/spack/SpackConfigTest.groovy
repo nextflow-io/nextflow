@@ -44,4 +44,17 @@ class SpackConfigTest extends Specification {
         false       | [enabled: false]  | [NXF_SPACK_ENABLED: true]  // <-- config has priority
         true        | [enabled: true]   | [NXF_SPACK_ENABLED: true]
     }
+
+    def 'should check version' () {
+        given:
+        def spack = new SpackConfig(CONFIG, [:])
+
+        expect:
+        spack.version == EXPECTED
+
+        where:
+        CONFIG              | EXPECTED
+        [:]                 | null
+        [version: '0.20.0'] | '0.20.0'
+    }
 }
