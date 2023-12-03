@@ -1080,11 +1080,15 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        observers.each { trace -> trace.onFlowBegin() }
+        for( TraceObserver trace : observers ) {
+            trace.onFlowBegin()
+        }
     }
 
     void notifyFlowCreate() {
-        observers.each { trace -> trace.onFlowCreate(this) }
+        for( TraceObserver trace : observers ) {
+            trace.onFlowCreate(this)
+        }
     }
 
     void notifyFilePublish(Path destination, Path source=null) {
