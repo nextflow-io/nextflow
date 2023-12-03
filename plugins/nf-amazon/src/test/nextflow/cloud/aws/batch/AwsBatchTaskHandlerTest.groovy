@@ -55,7 +55,6 @@ import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
