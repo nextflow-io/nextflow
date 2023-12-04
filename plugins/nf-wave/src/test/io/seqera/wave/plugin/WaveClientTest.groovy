@@ -1205,6 +1205,25 @@ class WaveClientTest extends Specification {
         'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
     }
 
+    @Unroll
+    def 'should get s5cmd default url' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultS5cmdUrl(ARCH).toURI().toString() == EXPECTED
+
+        where:
+        ARCH                | EXPECTED
+        'linux/amd64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'linux/x86_64'      | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'arm64'             | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+    }
+
     def 'should check is local conda file' () {
         expect:
         WaveClient.isCondaLocalFile(CONTENT) == EXPECTED
