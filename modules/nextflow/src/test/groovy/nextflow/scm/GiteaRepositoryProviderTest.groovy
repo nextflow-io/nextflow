@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 
@@ -76,6 +77,7 @@ class GiteaRepositoryProviderTest extends Specification {
 
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
     def 'should read file content'() {
 
