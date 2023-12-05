@@ -591,11 +591,16 @@ class TaskRun implements Cloneable {
         return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
     }
 
-    List<String> getOutputCommands() {
+    /**
+     * @return A {@link Map} instance holding a collection of key-pairs
+     * where the key represents a environment variable name holding the command
+     * output and the value the command the executed.
+     */
+    Map<String,String> getOutputCommands() {
         final items = getOutputsByType(CmdOutParam)
-        final result = new ArrayList(items.size())
+        final result = new LinkedHashMap(items.size())
         for( CmdOutParam param : items.keySet() ) {
-            result.add( "${param.name}=\$($param.target)" )
+            result.put(param.name, param.target)
         }
         return result
     }

@@ -944,8 +944,15 @@ class TaskProcessorTest extends Specification {
         def envFile = workDir.resolve(TaskRun.CMD_ENV)
         envFile.text =  '''
                         ALPHA=one
+                        END_ALPHA
                         DELTA=x=y
+                        END_DELTA
                         OMEGA=
+                        END_OMEGA
+                        LONG=one
+                        two
+                        three
+                        END_LONG
                         '''.stripIndent()
         and:
         def processor = Spy(TaskProcessor)
@@ -953,7 +960,7 @@ class TaskProcessorTest extends Specification {
         when:
         def result = processor.collectOutEnvMap(workDir)
         then:
-        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
+        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '', LONG: 'one\ntwo\nthree']
     }
 
     def 'should create a task preview' () {

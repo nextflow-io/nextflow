@@ -1129,11 +1129,33 @@ class BashWrapperBuilderTest extends Specification {
             # capture process environment
             set +u
             cd "$NXF_TASK_WORKDIR"
-            echo FOO=${FOO[@]} > .command.env
-            echo BAR=${BAR[@]} >> .command.env
+            echo FOO="${FOO[@]}" > .command.env
+            echo END_FOO >> .command.env
+            echo BAR="${BAR[@]}" >> .command.env
+            echo END_BAR >> .command.env
             '''
             .stripIndent()
+    }
 
+    def 'should return env & cmd capture snippet' () {
+        given:
+        def builder = new BashWrapperBuilder()
+
+        when:
+        def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other --cmd'])
+        then:
+        str == '''
+            # capture process environment
+            set +u
+            cd "$NXF_TASK_WORKDIR"
+            echo FOO="${FOO[@]}" > .command.env
+            echo END_FOO >> .command.env
+            echo THIS="$(this --cmd)" >> .command.env
+            echo END_THIS >> .command.env
+            echo THAT="$(other --cmd)" >> .command.env
+            echo END_THAT >> .command.env
+            '''
+            .stripIndent()
     }
 
     def 'should validate bash interpreter' () {

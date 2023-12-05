@@ -1537,10 +1537,21 @@ class TaskProcessor {
     protected Map collectOutEnvMap(Path workDir) {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
         final result = new HashMap(50)
+        String current=null
         for(String line : env.readLines() ) {
-            def (k,v) = tokenize0(line)
-            if (!k) continue
-            result.put(k,v)
+            if( !current ) {
+                def (k,v) = tokenize0(line)
+                if (!k) continue
+                result.put(k,v)
+                current = k
+            }
+            else if( line=="END_$current" ) {
+                current = null
+            }
+            else {
+                result[current] += '\n' + line
+            }
+
         }
         return result
     }

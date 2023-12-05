@@ -177,7 +177,7 @@ class BashWrapperBuilder {
         }
     }
 
-    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, List<String> outCmds) {
+    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, Map<String,String> outCmds=Map.<String,String>of()) {
         def result = new StringBuilder()
         result.append('\n')
         result.append('# capture process environment\n')
@@ -186,17 +186,15 @@ class BashWrapperBuilder {
         int count=0
         // out env
         for( String key : (outEnvs ?: List.<String>of()) ) {
-            result.append "echo $key=\${$key[@]} "
-            result.append( count++==0 ? '> ' : '>> ' )
-            result.append(TaskRun.CMD_ENV)
-            result.append('\n')
+            result.append "echo $key=\"\${$key[@]}\" "
+            result.append( count++==0 ? '> ' : '>> ' ) .append(TaskRun.CMD_ENV) .append('\n')
+            result.append("echo END_$key >> ") .append(TaskRun.CMD_ENV) .append('\n')
         }
         // out cmd
-        for( String cmd : (outCmds ?: List.<String>of()) ) {
-            result.append "echo $cmd "
-            result.append( count++==0 ? '> ' : '>> ' )
-            result.append(TaskRun.CMD_ENV)
-            result.append('\n')
+        for( Map.Entry<String,String> cmd : outCmds ) {
+            result.append "echo $cmd.key=\"\$($cmd.value)\" "
+            result.append( count++==0 ? '> ' : '>> ' ) .append(TaskRun.CMD_ENV) .append('\n')
+            result.append("echo END_$cmd.key >> ") .append(TaskRun.CMD_ENV) .append('\n')
         }
         result.toString()
     }

@@ -73,7 +73,7 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> outputEnvNames
 
-    List<String> outputCommands
+    Map<String,String> outputCommands
 
     String beforeScript
 
