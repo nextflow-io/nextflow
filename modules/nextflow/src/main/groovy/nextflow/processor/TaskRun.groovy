@@ -588,7 +588,14 @@ class TaskRun implements Cloneable {
 
     List<String> getOutputEnvNames() {
         final items = getOutputsByType(EnvOutParam)
-        return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
+        if( !items )
+            return List.<String>of()
+        final result = new ArrayList<String>(items.size())
+        for( EnvOutParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output environment name - offending parameter: $it")
+            result.add(it.name)
+        }
+        return result
     }
 
     /**
@@ -599,8 +606,9 @@ class TaskRun implements Cloneable {
     Map<String,String> getOutputCommands() {
         final items = getOutputsByType(CmdOutParam)
         final result = new LinkedHashMap(items.size())
-        for( CmdOutParam param : items.keySet() ) {
-            result.put(param.name, param.target)
+        for( CmdOutParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output command name - offending parameter: $it")
+            result.put(it.name, it.target)
         }
         return result
     }
