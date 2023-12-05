@@ -40,4 +40,6 @@ interface OutParam extends Cloneable {
 
     String getChannelEmitName()
 
+    String getChannelTopicName()
+
 }

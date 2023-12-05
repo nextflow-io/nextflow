@@ -18,6 +18,9 @@
 package nextflow.cloud.google.batch
 
 import com.google.cloud.batch.v1.GCS
+import com.google.cloud.batch.v1.JobStatus
+import com.google.cloud.batch.v1.StatusEvent
+import com.google.cloud.batch.v1.TaskExecution
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchClient
@@ -127,6 +130,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
                 getCpuPlatform() >> CPU_PLATFORM
+                getMaxSpotAttempts() >> 5
                 getSpot() >> true
                 getNetwork() >> 'net-1'
                 getServiceAccountEmail() >> 'foo@bar.baz'
@@ -167,16 +171,20 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         and:
         def taskGroup = req.getTaskGroups(0)
-        def runnable = taskGroup.getTaskSpec().getRunnables(0)
+        def taskSpec = taskGroup.getTaskSpec()
+        def runnable = taskSpec.getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         def networkInterface = allocationPolicy.getNetwork().getNetworkInterfaces(0)
         and:
-        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
-        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
-        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
-        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
-        taskGroup.getTaskSpec().getVolumes(0).getMountPath() == '/tmp'
+        taskSpec.getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
+        taskSpec.getComputeResource().getCpuMilli() == CPUS * 1_000
+        taskSpec.getComputeResource().getMemoryMib() == MEM.toMega()
+        taskSpec.getMaxRunDuration().getSeconds() == TIMEOUT.seconds
+        taskSpec.getVolumes(0).getMountPath() == '/tmp'
+        taskSpec.getMaxRetryCount() == 5
+        taskSpec.getLifecyclePolicies(0).getActionCondition().getExitCodes(0) == 50001
+        taskSpec.getLifecyclePolicies(0).getAction().toString() == 'RETRY_TASK'
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
@@ -209,6 +217,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNoExternalIpAddress() == true
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        and:
+        req.getLabelsMap() == [foo: 'bar']
+
 
         when:
         req = handler.newSubmitRequest(task, launcher)
@@ -329,5 +340,33 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         req.getAllocationPolicy().getInstances(0).policy.getMachineType() == ""
 
+    }
+
+    JobStatus makeJobStatus(String desc) {
+        JobStatus.newBuilder()
+            .addStatusEvents(
+                StatusEvent.newBuilder()
+                    .setDescription(desc)
+            )
+            .build()
+    }
+
+    def 'should detect spot failures from status event'() {
+        given:
+        def jobId = 'job-id'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, client: client, task: task))
+
+        when:
+        client.getJobStatus(jobId) >>> [
+            makeJobStatus('Task failed due to Spot VM preemption with exit code 50001.'),
+            makeJobStatus('Task succeeded')
+        ]
+        then:
+        handler.getJobExitCode() == 50001
+        handler.getJobExitCode() == null
     }
 }

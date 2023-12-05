@@ -79,7 +79,7 @@ class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << '-w "$PWD" --bindhome '
+        result << '-w "$NXF_TASK_WORKDIR" --bindhome '
 
 
         if( runOptions )
