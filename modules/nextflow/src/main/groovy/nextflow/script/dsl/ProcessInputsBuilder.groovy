@@ -16,6 +16,7 @@
 
 package nextflow.script.dsl
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskFileInput
 import nextflow.script.ProcessConfig
@@ -26,6 +27,7 @@ import nextflow.script.ProcessConfig
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ProcessInputsBuilder {
 
     private ProcessConfig config
@@ -35,18 +37,18 @@ class ProcessInputsBuilder {
     }
 
     void env( String name, Object obj ) {
-        final allEnvs = (Map)config.env
+        final allEnvs = (Map)config.get('env', [:])
         allEnvs.put(name, obj)
     }
 
     void file( Object obj ) {
-        final allFiles = (List)config.files
-        allFiles.add(new TaskFileInput(obj, false, [:]))
+        final allFiles = (List)config.get('files', [])
+        allFiles.add(new TaskFileInput(obj, false, null, [:]))
     }
 
     void path( Map opts=[:], Object obj ) {
-        final allFiles = (List)config.files
-        allFiles.add(new TaskFileInput(obj, true, opts))
+        final allFiles = (List)config.get('files', [])
+        allFiles.add(new TaskFileInput(obj, true, null, opts))
     }
 
     void stdin( Object obj ) {

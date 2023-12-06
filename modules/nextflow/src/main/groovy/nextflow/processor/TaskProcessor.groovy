@@ -522,9 +522,9 @@ class TaskProcessor {
 
     protected void validateInputTuples( List values ) {
 
-        def declaredSets = getDeclaredInputTuple()
-        for( int i=0; i<declaredSets.size(); i++ ) {
-            final param = declaredSets[i]
+        def declaredTuples = getDeclaredInputTuple()
+        for( int i=0; i<declaredTuples.size(); i++ ) {
+            final param = declaredTuples[i]
             final entry = values[param.index]
             final expected = param.inner.size()
             final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
@@ -1907,7 +1907,7 @@ class TaskProcessor {
                     break
 
                 case FileInParam:
-                    final allFiles = (List)task.config.get('files')
+                    final allFiles = (List)task.config.get('files', [])
                     allFiles.add( new TaskFileInput(val, param.isPathQualifier(), param.getName(), param.getOptions()) )
                     break
 
@@ -1916,7 +1916,7 @@ class TaskProcessor {
                     break
 
                 case EnvInParam:
-                    final allEnvs = task.config.get('env')
+                    final allEnvs = (Map)task.config.get('env', new LazyMap())
                     allEnvs.put( param.name, val )
                     break
 
@@ -1946,7 +1946,7 @@ class TaskProcessor {
             if( !fileInput.isValidArity(resolved.size()) )
                 throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
 
-            ctx.put( fileInput.name, singleItemOrList(resolved, fileInput.isSingle(), task.type) )
+            ctx.put( fileInput.getName(ctx), singleItemOrList(resolved, fileInput.isSingle(), task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1

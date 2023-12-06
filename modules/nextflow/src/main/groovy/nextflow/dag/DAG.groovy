@@ -97,7 +97,7 @@ class DAG {
      */
     void addProcessNode( String label, InputsList inputs, OutputsList outputs, TaskProcessor process=null ) {
         assert label
-        assert inputs
+        assert inputs!=null
         assert outputs
         addVertex( Type.PROCESS, label, normalizeInputs(inputs), normalizeOutputs(outputs), process )
     }
@@ -111,7 +111,7 @@ class DAG {
      */
     void addOperatorNode( String label, inputs, outputs, List<DataflowProcessor> operators=null )  {
         assert label
-        assert inputs
+        assert inputs!=null
         addVertex(Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
     }
 

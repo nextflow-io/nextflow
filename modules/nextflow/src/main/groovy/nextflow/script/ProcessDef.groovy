@@ -195,7 +195,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     private DataflowReadChannel collectInputs(Object[] args0) {
         final args = ChannelOut.spread(args0)
-        final hasDeclaredInputs = config.params==null
+        final hasDeclaredInputs = config.getParams()==null
         if( hasDeclaredInputs && args.size() != declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
 
@@ -231,7 +231,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         def result = inputs.first()
 
         if( inputs.size() == 1 )
-            return result.chainWith { it instanceof Collection ? it : [it] }
+            return result.chainWith( it -> [it] )
 
         for( int i = 1; i < inputs.size(); i++ )
             result = CH.getReadChannel(new CombineOp(result, inputs[i], [flat: false]).apply())

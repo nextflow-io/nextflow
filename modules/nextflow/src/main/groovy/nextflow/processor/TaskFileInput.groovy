@@ -49,16 +49,19 @@ class TaskFileInput implements PathArityAware {
         return coerceToPath
     }
 
-    String getName() {
-        return name
+    String getName(Map ctx) {
+        if( name != null )
+            return name
+
+        if( value != null )
+            return resolve(ctx, value)
+
+        return null
     }
 
     String getFilePattern(Map ctx) {
         if( filePattern != null )
             return resolve(ctx, filePattern)
-
-        if( value != null )
-            return resolve(ctx, value)
 
         return filePattern = '*'
     }

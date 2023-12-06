@@ -428,7 +428,7 @@ class ProcessBuilder {
         new FileInParam(config).bind(obj)
     }
 
-    InParam _in_path( Map opts=null, Object obj ) {
+    InParam _in_path( Map opts=[:], Object obj ) {
         new FileInParam(config)
                 .setPathQualifier(true)
                 .setOptions(opts)
@@ -531,7 +531,7 @@ class ProcessBuilder {
     /// SCRIPT
 
     ProcessBuilder withParams(String[] params) {
-        config.params = params
+        config.setParams(params)
         return this
     }
 

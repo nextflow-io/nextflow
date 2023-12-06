@@ -68,7 +68,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     /**
      * List of parameter names defined by a process function.
      */
-    String[] params
+    private String[] params
 
     /**
      * List of process input definitions
@@ -118,6 +118,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    @PackageScope
+    ProcessConfig setParams(String[] params) {
+        this.params = params
+        return this
+    }
+
     @Override
     Object getProperty( String name ) {
 
@@ -134,16 +140,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             case 'cacheable':
                 return isCacheable()
 
-            case 'env':
             case 'ext':
                 if( !configProperties.containsKey(name) ) {
                     configProperties.put(name, new HashMap())
-                }
-                return configProperties.get(name)
-
-            case 'files':
-                if( !configProperties.containsKey(name) ) {
-                    configProperties.put(name, new ArrayList())
                 }
                 return configProperties.get(name)
 
