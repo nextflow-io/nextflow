@@ -56,7 +56,7 @@ class StringUtils {
         return m.matches() ? m.group(1).toLowerCase() : null
     }
 
-    static private Pattern multilinePattern = ~/"?(password|token|secret|license)"?\s?[:=]\s?"?(\w+)"?/
+    static private Pattern multilinePattern = ~/["']?(password|token|secret|license)["']?\s?[:=]\s?["']?(\w+)["']?/
 
     static String stripSecrets(String message) {
         if (message == null) {
