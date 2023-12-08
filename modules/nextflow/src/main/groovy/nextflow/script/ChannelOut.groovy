@@ -21,8 +21,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.ast.DslCodeVisitor
 import nextflow.exception.DuplicateChannelNameException
-import nextflow.script.params.OutParam
-import nextflow.script.params.OutputsList
 /**
  * Models the output of a process or a workflow component returning
  * more than one output channels
@@ -52,12 +50,12 @@ class ChannelOut implements List<DataflowWriteChannel> {
         this.channels = Collections.unmodifiableMap(new LinkedHashMap<String,DataflowWriteChannel>(channels))
     }
 
-    ChannelOut(OutputsList outs) {
+    ChannelOut(ProcessOutputs outs) {
         channels = new HashMap<>(outs.size())
         final onlyWithName = new ArrayList<DataflowWriteChannel>(outs.size())
-        for( OutParam param : outs ) {
-            final ch = param.getOutChannel()
-            final name = param.channelEmitName
+        for( ProcessOutput param : outs ) {
+            final ch = param.getChannel()
+            final name = param.getName()
             onlyWithName.add(ch)
             if(name) {
                 if(channels.containsKey(name)) throw new DuplicateChannelNameException("Output channel name `$name` is used more than one time")

@@ -83,28 +83,20 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
                 fixDirectiveWithNegativeValue(stmt)
         }
 
-        // fix outputs
-        final outputs = annotation.getMember('outputs')
-        if( outputs != null && outputs instanceof ClosureExpression ) {
-            final block = (BlockStatement)outputs.getCode()
-            for( Statement stmt : block.getStatements() )
-                fixOutputMethod((ExpressionStatement)stmt)
-        }
-
-        // insert `task` method parameter
-        final params = method.getParameters() as List<Parameter>
-        params.push(new Parameter(new ClassNode(TaskConfig), 'task'))
-        method.setParameters(params as Parameter[])
-
         // TODO: append stub source
 
         // append method params
+        final params = method.getParameters() as List<Parameter>
         annotation.addMember( 'params', new ListExpression(
             params.collect(p -> (Expression)constX(p.getName()))
         ) )
 
         // append script source
         annotation.addMember( 'source', constX( getSource(method.getCode()) ) )
+
+        // prepend `task` method parameter
+        params.push(new Parameter(new ClassNode(TaskConfig), 'task'))
+        method.setParameters(params as Parameter[])
     }
 
     /**
@@ -136,24 +128,6 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
             name,
             new ArgumentListExpression(arg)
         ) )
-    }
-
-    private static final VALID_OUTPUT_METHODS = ['val','env','file','path','stdout','tuple']
-
-    /**
-     * Fix output method calls.
-     *
-     * @param stmt
-     */
-    protected void fixOutputMethod(ExpressionStatement stmt) {
-        final methodCall = (MethodCallExpression)stmt.getExpression()
-        final name = methodCall.getMethodAsString()
-        final args = (ArgumentListExpression)methodCall.getArguments()
-
-        if( name !in VALID_OUTPUT_METHODS )
-            syntaxError(stmt, "Invalid output method '${name}'")
-
-        methodCall.setMethod( constX('_out_' + name) )
     }
 
     private String getSource(ASTNode node) {

@@ -28,7 +28,9 @@ import nextflow.ast.ProcessFn
 import nextflow.ast.WorkflowFn
 import nextflow.exception.AbortOperationException
 import nextflow.script.dsl.ProcessBuilder
+import nextflow.script.dsl.ProcessDsl
 import nextflow.script.dsl.ProcessInputsBuilder
+import nextflow.script.dsl.ProcessOutputsBuilder
 import nextflow.script.dsl.WorkflowBuilder
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -103,7 +105,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param rawBody
      */
     protected void process(String name, Closure<BodyDef> rawBody) {
-        final builder = new ProcessBuilder(this, name)
+        final builder = new ProcessDsl(this, name)
         final copy = (Closure<BodyDef>)rawBody.clone()
         copy.delegate = builder
         copy.resolveStrategy = Closure.DELEGATE_FIRST
@@ -200,30 +202,35 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // build process from annotation
         final builder = new ProcessBuilder(this, name)
-        final inputsBuilder = new ProcessInputsBuilder(builder.getConfig())
 
-        applyDsl(inputsBuilder, processFn.inputs())
+        // -- directives
         applyDsl(builder, processFn.directives())
-        applyDsl(builder, processFn.outputs())
 
-        // get method parameters
-        builder.withParams(processFn.params())
+        // -- inputs
+        final inputs = new ProcessInputsBuilder()
+        applyDsl(inputs, processFn.inputs())
 
-        // determine process type
-        def type
-        if( processFn.script() )
-            type = 'script'
-        else if( processFn.shell() )
-            type = 'shell'
-        else
-            type = 'exec'
+        for( String param : processFn.params() )
+            inputs.take(param)
 
-        // create task body
-        final taskBody = new BodyDef( this.&"${name}", processFn.source(), type, [] )
-        builder.withBody(taskBody)
+        // -- outputs
+        final outputs = new ProcessOutputsBuilder()
+        applyDsl(outputs, processFn.outputs())
+
+        // -- process type
+        final type =
+            processFn.script() ? 'script'
+            : processFn.shell() ? 'shell'
+            : 'exec'
+
+        final process = builder
+            .withInputs(inputs.build())
+            .withOutputs(outputs.build())
+            .withBody(this.&"${name}", type, processFn.source())
+            .build()
 
         // register process
-        meta.addDefinition(builder.build())
+        meta.addDefinition(process)
     }
 
     private void registerWorkflowFn(Method method) {

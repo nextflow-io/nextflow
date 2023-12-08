@@ -19,13 +19,11 @@ import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.FileSystems
-import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -75,7 +73,6 @@ import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
@@ -84,21 +81,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.DefaultOutParam
-import nextflow.script.params.EachInParam
-import nextflow.script.params.EnvInParam
-import nextflow.script.params.EnvOutParam
-import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
-import nextflow.script.params.InParam
-import nextflow.script.params.MissingParam
-import nextflow.script.params.OptionalParam
-import nextflow.script.params.OutParam
-import nextflow.script.params.StdInParam
-import nextflow.script.params.StdOutParam
-import nextflow.script.params.TupleInParam
-import nextflow.script.params.TupleOutParam
-import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
@@ -397,14 +380,6 @@ class TaskProcessor {
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
 
-        /*
-         * Normalize the output
-         * - even though the output may be empty, let return the stdout as output by default
-         */
-        if ( config.getOutputs().size() == 0 ) {
-            config.fakeOutput()
-        }
-
         // the state agent
         state = new Agent<>(new StateObj(name))
         state.addListener { StateObj old, StateObj obj ->
@@ -434,14 +409,13 @@ class TaskProcessor {
          * When there is a single output channel, return let returns that item
          * otherwise return the list
          */
-        def result = config.getOutputs().channels
+        final result = config.getOutputs().getChannels()
         return result.size() == 1 ? result[0] : result
     }
 
     protected void createOperator(DataflowReadChannel source) {
         // determine whether the process is executed only once
         this.singleton = !CH.isChannelQueue(source)
-        config.getOutputs().setSingleton(singleton)
 
         // create inputs with control channel
         final control = CH.queue()
@@ -483,9 +457,6 @@ class TaskProcessor {
         // -- set the task instance as the current in this thread
         currentTask.set(task)
 
-        // -- validate input lengths
-        validateInputTuples(values)
-
         // -- map the inputs to a map and use to delegate closure values interpolation
         makeTaskContextStage1(task, values)
         makeTaskContextStage2(task)
@@ -514,28 +485,6 @@ class TaskProcessor {
         def hash = createTaskHashKey(task)
         checkCachedOrLaunchTask(task, hash, resumable)
     }
-
-    @Memoized
-    private List<TupleInParam> getDeclaredInputTuple() {
-        getConfig().getInputs().ofType(TupleInParam)
-    }
-
-    protected void validateInputTuples( List values ) {
-
-        def declaredTuples = getDeclaredInputTuple()
-        for( int i=0; i<declaredTuples.size(); i++ ) {
-            final param = declaredTuples[i]
-            final entry = values[param.index]
-            final expected = param.inner.size()
-            final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
-
-            if( actual != expected ) {
-                final msg = "Input tuple does not match tuple declaration in process `$name` -- offending value: $entry"
-                checkWarn(msg, [firstOnly: true, cacheKey: this])
-            }
-        }
-    }
-
 
     /**
      * @return A string 'she-bang' formatted to the added on top script to be executed.
@@ -615,17 +564,6 @@ class TaskProcessor {
         task.config.index = task.index
         task.config.process = task.processor.name
         task.config.executor = task.processor.executor.name
-
-        /*
-         * initialize the outputs for this task instance
-         */
-        config.getOutputs().each { OutParam param ->
-            if( param instanceof TupleOutParam ) {
-                param.inner.each { task.setOutput(it) }
-            }
-            else
-                task.setOutput(param)
-        }
 
         return task
     }
@@ -807,16 +745,16 @@ class TaskProcessor {
         }
 
         try {
-            // -- expose task exit status to make accessible as output value
+            // -- set task properties in order to resolve outputs
+            task.workDir = folder
+            task.stdout = stdoutFile
             task.config.exitStatus = exitCode
             // -- check if all output resources are available
-            collectOutputs(task, folder, stdoutFile, task.context)
+            collectOutputs(task)
 
             // set the exit code in to the task object
             task.cached = true
             task.hash = hash
-            task.workDir = folder
-            task.stdout = stdoutFile
             if( exitCode != null ) {
                 task.exitStatus = exitCode
             }
@@ -834,6 +772,7 @@ class TaskProcessor {
             log.trace "[${safeTaskName(task)}] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
+            task.stdout = null
             return false
         }
     }
@@ -1195,38 +1134,14 @@ class TaskProcessor {
      */
     @CompileStatic
     protected void publishOutputs( TaskRun task ) {
-        final publishList = task.config.getPublishDir()
-        if( !publishList ) {
-            return
+        final publishers = task.config.getPublishDir()
+
+        for( PublishDir publisher : publishers ) {
+            if( publisher.overwrite == null )
+                publisher.overwrite = !task.cached
+
+            publisher.apply(task)
         }
-
-        for( PublishDir pub : publishList ) {
-            publishOutputs0(task, pub)
-        }
-    }
-
-    private void publishOutputs0( TaskRun task, PublishDir publish ) {
-
-        if( publish.overwrite == null ) {
-            publish.overwrite = !task.cached
-        }
-
-        HashSet<Path> files = []
-        def outputs = task.getOutputsByType(FileOutParam)
-        for( Map.Entry entry : outputs ) {
-            final value = entry.value
-            if( value instanceof Path ) {
-                files.add((Path)value)
-            }
-            else if( value instanceof Collection<Path> ) {
-                files.addAll(value)
-            }
-            else if( value != null ) {
-                throw new IllegalArgumentException("Unknown output file object [${value.class.name}]: ${value}")
-            }
-        }
-
-        publish.apply(files, task)
     }
 
     /**
@@ -1235,46 +1150,12 @@ class TaskProcessor {
      */
     synchronized protected void bindOutputs( TaskRun task ) {
 
-        // -- creates the map of all tuple values to bind
-        Map<Short,List> tuples = [:]
-        for( OutParam param : config.getOutputs() ) {
-            tuples.put(param.index, [])
-        }
-
-        // -- collects the values to bind
-        for( OutParam param: task.outputs.keySet() ){
-            def value = task.outputs.get(param)
-
-            switch( param ) {
-            case StdOutParam:
-                log.trace "Process $name > normalize stdout param: $param"
-                value = value instanceof Path ? value.text : value?.toString()
-
-            case OptionalParam:
-                if( !value && param instanceof OptionalParam && param.optional ) {
-                    final holder = [] as MissingParam; holder.missing = param
-                    tuples[param.index] = holder
-                    break
-                }
-
-            case EnvOutParam:
-            case ValueOutParam:
-            case DefaultOutParam:
-                log.trace "Process $name > collecting out param: ${param} = $value"
-                tuples[param.index].add(value)
-                break
-
-            default:
-                throw new IllegalArgumentException("Illegal output parameter type: $param")
-            }
-        }
-
         // bind the output
         if( isFair0 ) {
-            fairBindOutputs0(tuples, task)
+            fairBindOutputs0(task.outputs, task)
         }
         else {
-            bindOutputs0(tuples)
+            bindOutputs0(task.outputs)
         }
 
         // -- finally prints out the task output when 'debug' is true
@@ -1283,7 +1164,7 @@ class TaskProcessor {
         }
     }
 
-    protected void fairBindOutputs0(Map<Short,List> emissions, TaskRun task) {
+    protected void fairBindOutputs0(List emissions, TaskRun task) {
         synchronized (isFair0) {
             // decrement -1 because tasks are 1-based
             final index = task.index-1
@@ -1305,39 +1186,24 @@ class TaskProcessor {
         }
     }
 
-    protected void bindOutputs0(Map<Short,List> tuples) {
+    protected void bindOutputs0(List outputs) {
         // -- bind out the collected values
-        for( OutParam param : config.getOutputs() ) {
-            final outValue = tuples[param.index]
-            if( outValue == null )
-                throw new IllegalStateException()
+        for( int i = 0; i < config.getOutputs().size(); i++ ) {
+            final param = config.getOutputs()[i]
+            final value = outputs[i]
 
-            if( outValue instanceof MissingParam ) {
-                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
+            if( value == null ) {
+                log.debug "Process $name > Skipping output binding because one or more optional files are missing: ${param.name}"
                 continue
             }
 
-            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
-            bindOutParam(param, outValue)
+            // clone collection values before emitting them so that the task processor
+            // can iterate over them without causing a race condition
+            // see https://github.com/nextflow-io/nextflow/issues/3768
+            log.trace "Process $name > Emitting output: ${param.name} = ${value}"
+            final copy = value instanceof Collection && value instanceof Cloneable ? value.clone() : value
+            param.getChannel().bind(copy)
         }
-    }
-
-    protected void bindOutParam( OutParam param, List values ) {
-        log.trace "<$name> Binding param $param with $values"
-        final x = values.size() == 1 ? values[0] : values
-        final ch = param.getOutChannel()
-        if( ch != null ) {
-            // create a copy of the output list of operation made by a downstream task
-            // can modify the list which is used internally by the task processor
-            // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
-            final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
-            // emit the final value
-            ch.bind(copy)
-        }
-    }
-
-    protected void collectOutputs( TaskRun task ) {
-        collectOutputs( task, task.getTargetDir(), task.@stdout, task.context )
     }
 
     /**
@@ -1345,245 +1211,9 @@ class TaskProcessor {
      *
      * @param task
      */
-    final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
-        log.trace "<$name> collecting output: ${task.outputs}"
-
-        for( OutParam param : task.outputs.keySet() ) {
-
-            switch( param ) {
-                case StdOutParam:
-                    collectStdOut(task, (StdOutParam)param, stdout)
-                    break
-
-                case FileOutParam:
-                    collectOutFiles(task, (FileOutParam)param, workDir, context)
-                    break
-
-                case ValueOutParam:
-                    collectOutValues(task, (ValueOutParam)param, context)
-                    break
-
-                case EnvOutParam:
-                    collectOutEnvParam(task, (EnvOutParam)param, workDir)
-                    break
-
-                case DefaultOutParam:
-                    task.setOutput(param, DefaultOutParam.Completion.DONE)
-                    break
-
-                default:
-                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-
-            }
-        }
-
-        // mark ready for output binding
+    protected void collectOutputs( TaskRun task ) {
+        task.outputs = config.getOutputs().collect( param -> param.resolve(task) )
         task.canBind = true
-    }
-
-    protected void collectOutEnvParam(TaskRun task, EnvOutParam param, Path workDir) {
-
-        // fetch the output value
-        final val = collectOutEnvMap(workDir).get(param.name)
-        if( val == null && !param.optional )
-            throw new MissingValueException("Missing environment variable: $param.name")
-        // set into the output set
-        task.setOutput(param,val)
-        // trace the result
-        log.trace "Collecting param: ${param.name}; value: ${val}"
-
-    }
-
-    @Memoized(maxCacheSize = 10_000)
-    protected Map collectOutEnvMap(Path workDir) {
-        final env = workDir.resolve(TaskRun.CMD_ENV).text
-        final result = new HashMap(50)
-        for(String line : env.readLines() ) {
-            def (k,v) = tokenize0(line)
-            if (!k) continue
-            result.put(k,v)
-        }
-        return result
-    }
-
-    private List<String> tokenize0(String line) {
-        int p=line.indexOf('=')
-        return p==-1
-                ? List.of(line,'')
-                : List.of(line.substring(0,p), line.substring(p+1))
-    }
-    
-    /**
-     * Collects the process 'std output'
-     *
-     * @param task The executed process instance
-     * @param param The declared {@link StdOutParam} object
-     * @param stdout The object holding the task produced std out object
-     */
-    protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
-
-        if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
-        }
-
-        if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
-        }
-
-        task.setOutput(param, stdout)
-    }
-
-    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir, Map context ) {
-
-        final List<Path> allFiles = []
-        // type file parameter can contain a multiple files pattern separating them with a special character
-        def entries = param.getFilePatterns(context, task.workDir)
-        boolean inputsRemovedFlag = false
-        // for each of them collect the produced files
-        for( String filePattern : entries ) {
-            List<Path> result = null
-
-            def splitter = param.glob ? FilePatternSplitter.glob().parse(filePattern) : null
-            if( splitter?.isPattern() ) {
-                result = fetchResultFiles(param, filePattern, workDir)
-                // filter the inputs
-                if( result && !param.includeInputs ) {
-                    result = filterByRemovingStagedInputs(task, result, workDir)
-                    log.trace "Process ${safeTaskName(task)} > after removing staged inputs: ${result}"
-                    inputsRemovedFlag |= (result.size()==0)
-                }
-            }
-            else {
-                def path = param.glob ? splitter.strip(filePattern) : filePattern
-                def file = workDir.resolve(path)
-                def exists = checkFileExists(file, param.followLinks)
-                if( exists )
-                    result = List.of(file)
-                else
-                    log.debug "Process `${safeTaskName(task)}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
-            }
-
-            if( result )
-                allFiles.addAll(result)
-
-            else if( !param.optional && (!param.arity || param.arity.min > 0) ) {
-                def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
-                if( inputsRemovedFlag )
-                    msg += " (note: input files are not included in the default matching set)"
-                throw new MissingFileException(msg)
-            }
-        }
-
-        if( !param.isValidArity(allFiles.size()) )
-            throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
-
-        task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
-
-    }
-
-    protected boolean checkFileExists(Path file, boolean followLinks) {
-        followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
-    }
-
-    protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
-
-        try {
-            // fetch the output value
-            final val = param.resolve(ctx)
-            // set into the output set
-            task.setOutput(param,val)
-            // trace the result
-            log.trace "Collecting param: ${param.name}; value: ${val}"
-        }
-        catch( MissingPropertyException e ) {
-            throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
-        }
-
-    }
-
-    /**
-     * Collect the file(s) with the name specified, produced by the execution
-     *
-     * @param workDir The job working path
-     * @param namePattern The file name, it may include file name wildcards
-     * @return The list of files matching the specified name in lexicographical order
-     * @throws MissingFileException when no matching file is found
-     */
-    @PackageScope
-    List<Path> fetchResultFiles( FileOutParam param, String namePattern, Path workDir ) {
-        assert namePattern
-        assert workDir
-
-        List<Path> files = []
-        def opts = visitOptions(param, namePattern)
-        // scan to find the file with that name
-        try {
-            FileHelper.visitFiles(opts, workDir, namePattern) { Path it -> files.add(it) }
-        }
-        catch( NoSuchFileException e ) {
-            throw new MissingFileException("Cannot access directory: '$workDir'", e)
-        }
-
-        return files.sort()
-    }
-
-    /**
-     * Given a {@link FileOutParam} object create the option map for the
-     * {@link FileHelper#visitFiles(java.util.Map, java.nio.file.Path, java.lang.String, groovy.lang.Closure)} method
-     *
-     * @param param A task {@link FileOutParam}
-     * @param namePattern A file glob pattern
-     * @return A {@link Map} object holding the traverse options for the {@link FileHelper#visitFiles(java.util.Map, java.nio.file.Path, java.lang.String, groovy.lang.Closure)} method
-     */
-    @PackageScope
-    Map visitOptions( FileOutParam param, String namePattern ) {
-        final opts = [:]
-        opts.relative = false
-        opts.hidden = param.hidden ?: namePattern.startsWith('.')
-        opts.followLinks = param.followLinks
-        opts.maxDepth = param.maxDepth
-        opts.type = param.type ? param.type : ( namePattern.contains('**') ? 'file' : 'any' )
-        return opts
-    }
-
-    /**
-     * Given a list of {@code Path} removes all the hidden file i.e. the ones which names starts with a dot char
-     * @param files A list of {@code Path}
-     * @return The result list not containing hidden file entries
-     */
-    @PackageScope
-    List<Path> filterByRemovingHiddenFiles( List<Path> files ) {
-        files.findAll { !it.getName().startsWith('.') }
-    }
-
-    /**
-     * Given a list of {@code Path} removes all the entries which name match the name of
-     * file used as input for the specified {@code TaskRun}
-     *
-     * See TaskRun#getStagedInputs
-     *
-     * @param task
-     *      A {@link TaskRun} object representing the task executed
-     * @param collectedFiles
-     *      Collection of candidate output files
-     * @return
-     *      List of the actual output files (not including any input matching an output file name pattern)
-     */
-    @PackageScope
-    List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> collectedFiles, Path workDir ) {
-
-        // get the list of input files
-        final List<String> allStaged = task.getStagedInputs()
-        final List<Path> result = new ArrayList<>(collectedFiles.size())
-
-        for( int i=0; i<collectedFiles.size(); i++ ) {
-            final it = collectedFiles.get(i)
-            final relName = workDir.relativize(it).toString()
-            if( !allStaged.contains(relName) )
-                result.add(it)
-        }
-
-        return result
     }
 
     @Memoized
@@ -1879,75 +1509,44 @@ class TaskProcessor {
 
     final protected void makeTaskContextStage1( TaskRun task, List values ) {
 
-        final allValues = [:]
+        final inputs = config.getInputs()
 
-        // add arguments to task config (for process function)
-        for( int i = 1; config.params!=null && i < config.params.length; i++ )
-            allValues.put(config.params[i], values[i-1])
+        // -- add variables
+        final vars = [:]
+        for( int i = 0; i < inputs.size(); i++ )
+            vars.put(inputs[i].getName(), values[i])
 
-        // collect params from process inputs
-        final params = []
-        for( InParam param : config.getInputs() ) {
-            if( param instanceof TupleInParam )
-                param.inner.each { params.add(it) }
-            else if( param instanceof EachInParam )
-                params.add(param.inner)
-            else
-                params.add(param)
-        }
+        task.config.put('vars', vars)
+        task.context.putAll(vars)
 
-        // add param values to task config and context
-        for ( InParam param : params ) {
-
-            def val = param.decodeInputs(values)
-
-            switch(param) {
-                case ValueInParam:
-                    allValues.put( param.name, val )
-                    break
-
-                case FileInParam:
-                    final allFiles = (List)task.config.get('files', [])
-                    allFiles.add( new TaskFileInput(val, param.isPathQualifier(), param.getName(), param.getOptions()) )
-                    break
-
-                case StdInParam:
-                    task.config.put('stdin', val)
-                    break
-
-                case EnvInParam:
-                    final allEnvs = (Map)task.config.get('env', new LazyMap())
-                    allEnvs.put( param.name, val )
-                    break
-
-                default:
-                    throw new IllegalStateException("Unsupported input param type: ${param?.class?.simpleName}")
-            }
-        }
-
-        task.config.put('vals', allValues)
-        task.context.putAll(allValues)
+        // -- add environment vars, stdin
+        task.config.put('env', new LazyMap(inputs.env))
+        task.config.put('stdin', inputs.stdin)
     }
 
     final protected void makeTaskContextStage2( TaskRun task ) {
 
         final ctx = task.context
-        final allFileInputs = (List)task.config.get('files')
         final allNames = new HashMap<String,Integer>()
         int count = 0
 
         final FilePorter.Batch batch = session.filePorter.newBatch(executor.getStageDir())
 
         // -- resolve input files against the task context
-        for( def fileInput : allFileInputs ) {
-            final normalized = normalizeInputToFiles(fileInput.getValue(ctx), count, fileInput.isPathQualifier(), batch)
-            final resolved = expandWildcards( fileInput.getFilePattern(ctx), normalized )
+        for( def param : config.getInputs().files ) {
+            final val = param.getValue(ctx)
+            final normalized = normalizeInputToFiles(val, count, param.isPathQualifier(), batch)
+            final resolved = expandWildcards( param.getFilePattern(ctx), normalized )
 
-            if( !fileInput.isValidArity(resolved.size()) )
+            if( !param.isValidArity(resolved.size()) )
                 throw new IllegalArityException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${resolved.size()}")
 
-            ctx.put( fileInput.getName(ctx), singleItemOrList(resolved, fileInput.isSingle(), task.type) )
+            // add to context if the path was declared with a variable name
+            if( param.name )
+                ctx.put( param.name, singleItemOrList(resolved, param.isSingle(), task.type) )
+
             count += resolved.size()
+
             for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1
                 allNames.put(item.stageName,num)
@@ -1991,7 +1590,7 @@ class TaskProcessor {
             keys << task.getContainerFingerprint()
 
         // add task inputs
-        keys.add( task.config.get('vals') )
+        keys.add( task.config.get('vars') )
         keys.add( task.inputFiles )
         keys.add( task.getInputEnvironment() )
         keys.add( task.stdin )

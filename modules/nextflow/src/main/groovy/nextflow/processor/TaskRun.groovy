@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 import com.google.common.hash.HashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -38,7 +39,6 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.ValueOutParam
@@ -86,15 +86,18 @@ class TaskRun implements Cloneable {
     List<FileHolder> inputFiles = []
 
     /**
-     * Holds the output value(s) for each task output parameter
+     * The list of resolved output files
+     *
+     * @see ProcessOutput#path(String)
      */
-    Map<OutParam,Object> outputs = [:]
+    Set<Path> outputFiles = []
 
-
-    void setOutput( OutParam param, Object value = null ) {
-        assert param
-        outputs[param] = value
-    }
+    /**
+     * The list of resolved task outputs
+     *
+     * @see TaskProcessor#collectOutputs(TaskRun)
+     */
+    List<Object> outputs = []
 
 
     /**
@@ -414,42 +417,20 @@ class TaskRun implements Cloneable {
     Map<String,Path> getInputFilesMap() {
         def result = [:]
         for( FileHolder it : inputFiles )
-            result[ it.stageName ] = it.storePath
+            result.put(it.stageName, it.storePath)
         return result
     }
 
     /**
-     * Look at the {@code nextflow.script.FileOutParam} which name is the expected
-     *  output name
-     *
+     * Get the list of expected output file patterns.
      */
+    @Memoized
     List<String> getOutputFilesNames() {
-        cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
-    }
-
-    private List<String> getOutputFilesNames0() {
-        def result = []
-
-        for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
+        final declaredOutputs = processor.config.getOutputs()
+        final result = []
+        for( def param : declaredOutputs.files.values() )
             result.addAll( param.getFilePatterns(context, workDir) )
-        }
-
         return result.unique()
-    }
-
-    /**
-     * Get the map of *output* objects by the given {@code OutParam} type
-     *
-     * @param types One or more subclass of {@code OutParam}
-     * @return An associative array containing all the objects for the specified type
-     */
-    def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
-        def result = [:]
-        for( def it : outputs ) {
-            if( types.contains(it.key.class) )
-                result << it
-        }
-        return result
     }
 
     /**
@@ -544,8 +525,8 @@ class TaskRun implements Cloneable {
     }
 
     List<String> getOutputEnvNames() {
-        final items = getOutputsByType(EnvOutParam)
-        return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
+        final declaredOutputs = processor.getConfig().getOutputs()
+        return new ArrayList(declaredOutputs.env.values())
     }
 
     Path getCondaEnv() {

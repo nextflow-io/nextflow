@@ -18,7 +18,6 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Const
 import nextflow.Global
@@ -26,13 +25,7 @@ import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.CombineOp
-import nextflow.extension.MergeOp
 import nextflow.script.dsl.ProcessBuilder
-import nextflow.script.params.BaseInParam
-import nextflow.script.params.BaseOutParam
-import nextflow.script.params.EachInParam
-import nextflow.script.params.InputsList
-import nextflow.script.params.OutputsList
 
 /**
  * Models a nextflow process definition
@@ -118,9 +111,9 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         return result
     }
 
-    private InputsList getDeclaredInputs() { config.getInputs() }
+    private ProcessInputs getDeclaredInputs() { config.getInputs() }
 
-    private OutputsList getDeclaredOutputs() { config.getOutputs() }
+    private ProcessOutputs getDeclaredOutputs() { config.getOutputs() }
 
     BaseScript getOwner() { owner }
 
@@ -152,30 +145,12 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // initialise process config
         initialize()
 
-        // create merged input channel
+        // create input channel
         final source = collectInputs(args)
 
         // set output channels
-        // note: the result object must be an array instead of a List to allow process
-        // composition ie. to use the process output as the input in another process invocation
-        if( declaredOutputs.size() ) {
-            final allScalarValues = declaredInputs.allScalarInputs()
-            final hasEachParams = declaredInputs.any { it instanceof EachInParam }
-            final singleton = allScalarValues && !hasEachParams
-
-            // check for feedback channels
-            final feedbackChannels = getFeedbackChannels()
-            if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
-                throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
-
-            for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
-                (declaredOutputs[i] as BaseOutParam).setInto(ch)
-            }
-        }
-
-        // make a copy of the output list because execution can change it
-        final copyOuts = declaredOutputs.clone()
+        final singleton = !CH.isChannelQueue(source)
+        collectOutputs(singleton)
 
         // create the executor
         final executor = session
@@ -189,14 +164,14 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
                 .run(source)
 
         // the result channels
-        assert declaredOutputs.size()>0, "Process output should contains at least one channel"
-        return output = new ChannelOut(copyOuts)
+        // note: the result object must be an array instead of a List to allow process
+        // composition ie. to use the process output as the input in another process invocation
+        return output = new ChannelOut(declaredOutputs)
     }
 
     private DataflowReadChannel collectInputs(Object[] args0) {
         final args = ChannelOut.spread(args0)
-        final hasDeclaredInputs = config.getParams()==null
-        if( hasDeclaredInputs && args.size() != declaredInputs.size() )
+        if( args.size() != declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
 
         // emit value channel if process has no inputs
@@ -207,21 +182,16 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         }
 
         // set input channels
-        for( int i = 0; i < declaredInputs.size(); i++ ) {
-            final param = (declaredInputs[i] as BaseInParam)
-            param.setFrom(args[i])
-            param.init()
-        }
+        for( int i = 0; i < declaredInputs.size(); i++ )
+            declaredInputs[i].bind(args[i])
 
         // normalize args into channels
-        final inputs = hasDeclaredInputs
-            ? declaredInputs.getChannels()
-            : args.collect(ch -> getInChannel(ch))
+        final inputs = declaredInputs.getChannels()
 
         // make sure no more than one queue channel is provided
         int count = 0
         for( int i = 0; i < inputs.size(); i++ )
-            if( CH.isChannelQueue(inputs[i]) && (!hasDeclaredInputs || declaredInputs[i] !instanceof EachInParam) )
+            if( CH.isChannelQueue(inputs[i]) )
                 count += 1
 
         if( count > 1 )
@@ -239,26 +209,22 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         return result
     }
 
-    private DataflowReadChannel getInChannel(Object obj) {
-        if( obj == null )
-            throw new IllegalArgumentException('A process input channel evaluates to null')
-
-        final result = obj instanceof Closure
-            ? obj.call()
-            : obj
-
-        if( result == null )
-            throw new IllegalArgumentException('A process input channel evaluates to null')
-
-        def inChannel
-        if ( result instanceof DataflowReadChannel || result instanceof DataflowBroadcast )
-            inChannel = CH.getReadChannel(result)
-        else {
-            inChannel = CH.value()
-            inChannel.bind(result)
+    private void collectOutputs(boolean singleton) {
+        // emit stdout if no outputs are defined
+        if( declaredOutputs.size() == 0 ) {
+            declaredOutputs.setDefault()
+            return
         }
 
-        return inChannel
+        // check for feedback channels
+        final feedbackChannels = getFeedbackChannels()
+        if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
+            throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
+
+        for(int i=0; i<declaredOutputs.size(); i++ ) {
+            final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
+            declaredOutputs[i].setChannel(ch)
+        }
     }
 
 }

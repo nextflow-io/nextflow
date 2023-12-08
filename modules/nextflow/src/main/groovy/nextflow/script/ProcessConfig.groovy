@@ -23,9 +23,6 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
 import static nextflow.util.CacheHelper.HashMode
-import nextflow.script.params.DefaultOutParam
-import nextflow.script.params.InputsList
-import nextflow.script.params.OutputsList
 
 /**
  * Holds the process configuration properties
@@ -66,19 +63,14 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     private String processName
 
     /**
-     * List of parameter names defined by a process function.
-     */
-    private String[] params
-
-    /**
      * List of process input definitions
      */
-    private InputsList inputs = new InputsList()
+    private ProcessInputs inputs
 
     /**
      * List of process output definitions
      */
-    private OutputsList outputs = new OutputsList()
+    private ProcessOutputs outputs
 
     protected ProcessConfig( BaseScript script ) {
         ownerScript = script
@@ -119,8 +111,14 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     @PackageScope
-    ProcessConfig setParams(String[] params) {
-        this.params = params
+    ProcessConfig setInputs(ProcessInputs inputs) {
+        this.inputs = inputs
+        return this
+    }
+
+    @PackageScope
+    ProcessConfig setOutputs(ProcessOutputs outputs) {
+        this.outputs = outputs
         return this
     }
 
@@ -128,9 +126,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     Object getProperty( String name ) {
 
         switch( name ) {
-            case 'params':
-                return getParams()
-
             case 'inputs':
                 return getInputs()
 
@@ -165,20 +160,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return new TaskConfig(configProperties)
     }
 
-    String[] getParams() {
-        params
-    }
-
-    InputsList getInputs() {
+    ProcessInputs getInputs() {
         inputs
     }
 
-    OutputsList getOutputs() {
+    ProcessOutputs getOutputs() {
         outputs
-    }
-
-    void fakeOutput() {
-        new DefaultOutParam(this)
     }
 
     boolean isCacheable() {

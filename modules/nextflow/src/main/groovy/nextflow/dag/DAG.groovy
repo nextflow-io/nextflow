@@ -30,14 +30,8 @@ import nextflow.NF
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
-import nextflow.script.params.DefaultOutParam
-import nextflow.script.params.EachInParam
-import nextflow.script.params.InParam
-import nextflow.script.params.InputsList
-import nextflow.script.params.OutParam
-import nextflow.script.params.OutputsList
-import nextflow.script.params.TupleInParam
-import nextflow.script.params.TupleOutParam
+import nextflow.script.ProcessInputs
+import nextflow.script.ProcessOutputs
 
 import java.util.concurrent.atomic.AtomicLong
 
@@ -95,7 +89,7 @@ class DAG {
      * @param inputs The list of inputs entering in the process
      * @param outputs the list of outputs leaving the process
      */
-    void addProcessNode( String label, InputsList inputs, OutputsList outputs, TaskProcessor process=null ) {
+    void addProcessNode( String label, ProcessInputs inputs, ProcessOutputs outputs, TaskProcessor process=null ) {
         assert label
         assert inputs!=null
         assert outputs
@@ -234,30 +228,18 @@ class DAG {
 
     }
 
-    private List<ChannelHandler> normalizeInputs( InputsList inputs ) {
+    private List<ChannelHandler> normalizeInputs( ProcessInputs inputs ) {
 
-        inputs.collect { InParam p -> new ChannelHandler(channel: p.rawChannel, label: inputName0(p)) }
-
-    }
-
-    private String inputName0(InParam param) {
-        if( param instanceof TupleInParam ) return null
-        if( param instanceof EachInParam ) return null
-        return param.name
-    }
-
-    private List<ChannelHandler> normalizeOutputs( OutputsList outputs ) {
-
-        def result = []
-        for(OutParam p :outputs) {
-            if( p instanceof DefaultOutParam )
-                break
-            final it = p.getOutChannel()
-            if( it!=null )
-                result << new ChannelHandler(channel: it, label: p instanceof TupleOutParam ? null : p.name)
+        inputs.collect { p ->
+            new ChannelHandler(channel: p.getChannel(), label: p.getName())
         }
+    }
 
-        return result
+    private List<ChannelHandler> normalizeOutputs( ProcessOutputs outputs ) {
+
+        outputs.collect { p ->
+            new ChannelHandler(channel: p.getChannel(), label: p.getName())
+        }
     }
 
     private List<ChannelHandler> normalizeChannels( entry ) {

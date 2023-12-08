@@ -14,49 +14,51 @@
  * limitations under the License.
  */
 
-package nextflow.processor
+package nextflow.script
 
 import groovy.transform.CompileStatic
 
 /**
- * Models a file input directive, which defines the file
- * or set of files to be staged into the task environment.
+ * Models a process file input, which defines a file
+ * or set of files to be staged into a task work directory.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class TaskFileInput implements PathArityAware {
+class ProcessFileInput implements PathArityAware {
+
     private Object value
-    private boolean coerceToPath
+
     private String name
+
+    private boolean coerceToPath
+
     private Object filePattern
 
-    TaskFileInput(Object value, boolean coerceToPath, String name, Map<String,?> opts) {
+    ProcessFileInput(Object value, String name, boolean coerceToPath, Map<String,?> opts) {
         this.value = value
-        this.coerceToPath = coerceToPath
         this.name = name
+        this.coerceToPath = coerceToPath
         this.filePattern = opts.stageAs ?: opts.name
 
-        if( opts.arity )
-            this.setArity(opts.arity.toString())
+        for( Map.Entry<String,?> entry : opts )
+            setProperty(entry.key, entry.value)
+    }
+
+    void setStageAs(String value) {
+        this.filePattern = value
     }
 
     Object getValue(Map ctx) {
         return resolve(ctx, value)
     }
 
-    boolean isPathQualifier() {
-        return coerceToPath
+    String getName() {
+        return name
     }
 
-    String getName(Map ctx) {
-        if( name != null )
-            return name
-
-        if( value != null )
-            return resolve(ctx, value)
-
-        return null
+    boolean isPathQualifier() {
+        return coerceToPath
     }
 
     String getFilePattern(Map ctx) {
@@ -66,7 +68,7 @@ class TaskFileInput implements PathArityAware {
         return filePattern = '*'
     }
 
-    private Object resolve( Map ctx, value ) {
+    protected Object resolve(Map ctx, Object value) {
         if( value instanceof GString )
             return value.cloneAsLazy(ctx)
 

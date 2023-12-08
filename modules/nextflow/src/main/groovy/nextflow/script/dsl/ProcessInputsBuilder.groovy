@@ -17,46 +17,55 @@
 package nextflow.script.dsl
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.processor.TaskFileInput
-import nextflow.script.ProcessConfig
+import nextflow.script.ProcessFileInput
+import nextflow.script.ProcessInput
+import nextflow.script.ProcessInputs
 
 /**
- * Process inputs builder DSL for the {@code ProcessFn} annotation.
+ * Builder for {@link ProcessInputs}.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class ProcessInputsBuilder {
 
-    private ProcessConfig config
+    private ProcessInputs inputs = new ProcessInputs()
 
-    ProcessInputsBuilder(ProcessConfig config) {
-        this.config = config
+    ProcessInputsBuilder env(String name, Object source) {
+        inputs.env.put(name, source)
+        return this
     }
 
-    void env( String name, Object obj ) {
-        final allEnvs = (Map)config.get('env', [:])
-        allEnvs.put(name, obj)
+    ProcessInputsBuilder path(Map opts=[:], Object source) {
+        inputs.files.add(new ProcessFileInput(source, null, true, opts))
+        return this
     }
 
-    void file( Object obj ) {
-        final allFiles = (List)config.get('files', [])
-        allFiles.add(new TaskFileInput(obj, false, null, [:]))
+    ProcessInputsBuilder stdin(Object source) {
+        inputs.stdin = source
+        return this
     }
 
-    void path( Map opts=[:], Object obj ) {
-        final allFiles = (List)config.get('files', [])
-        allFiles.add(new TaskFileInput(obj, true, null, opts))
+    /**
+     * Declare a process input parameter which will be
+     * bound when the task is created and can be referenced by
+     * other process input methods. For example:
+     *
+     *   take 'sample_id'
+     *   take 'files'
+     *
+     *   env('SAMPLE_ID') { sample_id }
+     *   path { files }
+     *
+     * @param name
+     */
+    ProcessInputsBuilder take(String name) {
+        inputs.add(new ProcessInput(name))
+        return this
     }
 
-    void stdin( Object obj ) {
-        config.put('stdin', obj)
-    }
-
-    ProcessConfig getConfig() {
-        return config
+    ProcessInputs build() {
+        return inputs
     }
 
 }

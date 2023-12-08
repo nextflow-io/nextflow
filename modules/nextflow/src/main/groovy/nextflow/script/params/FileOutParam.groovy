@@ -24,7 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
-import nextflow.processor.PathArityAware
+import nextflow.script.PathArityAware
 import nextflow.script.TokenVar
 import nextflow.util.BlankSeparatedList
 /**
@@ -158,14 +158,6 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
     }
 
     @PackageScope String getFilePattern() { filePattern }
-
-    @PackageScope
-    static String clean(String path) {
-        while (path.startsWith('/') ) {
-            path = path.substring(1)
-        }
-        return path
-    }
 
     @PackageScope
     String relativize(String path, Path workDir) {
