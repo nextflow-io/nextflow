@@ -48,7 +48,7 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
     }
 
     void setDefault() {
-        final param = new ProcessOutput(new LazyVar('stdout'), [:])
+        final param = new ProcessOutput(this, new LazyVar('stdout'), [:])
         param.setChannel(new DataflowQueue())
         params.add(param)
     }

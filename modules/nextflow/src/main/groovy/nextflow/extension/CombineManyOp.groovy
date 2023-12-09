@@ -39,17 +39,20 @@ class CombineManyOp {
 
     private List<Integer> iterators
 
-    private boolean singleton
-
     private List<List> queues = []
+
+    private List<Boolean> singletons
+
+    private boolean emitSingleton
 
     private transient List<List> combinations
 
     CombineManyOp(List<DataflowReadChannel> sources, List<Integer> iterators) {
         this.sources = sources
         this.iterators = iterators
-        this.singleton = iterators.size() == 0 && sources.every(ch -> !CH.isChannelQueue(ch))
-        this.queues = sources.collect( it -> [] )
+        this.queues = sources.collect( ch -> [] )
+        this.singletons = sources.collect( ch -> !CH.isChannelQueue(ch) )
+        this.emitSingleton = iterators.size() == 0 && singletons.every()
     }
 
     private Map handler(int index, DataflowWriteChannel target, AtomicInteger counter) {
@@ -58,7 +61,7 @@ class CombineManyOp {
             onNext(target, index, it)
         }
         opts.onComplete = {
-            if( counter.decrementAndGet() == 0 && !singleton )
+            if( counter.decrementAndGet() == 0 && !emitSingleton )
                 target.bind(Channel.STOP)
         }
         return opts
@@ -73,7 +76,9 @@ class CombineManyOp {
 
         // emit the next item if there are no iterators
         if( iterators.size() == 0 ) {
-            final args = queues.collect(q -> q.pop())
+            final args = (0..<queues.size()).collect( i ->
+                singletons[i] ? queues[i].first() : queues[i].pop()
+            )
             target.bind(args)
             return
         }
@@ -82,7 +87,11 @@ class CombineManyOp {
         if( combinations == null )
             combinations = iterators.collect( i -> queues[i].first() ).combinations()
 
-        final args = (0..<queues.size()).collect( i -> i in iterators ? null : queues[i].pop() )
+        final args = (0..<queues.size()).collect( i ->
+            i in iterators
+                ? null
+                : singletons[i] ? queues[i].first() : queues[i].pop()
+        )
         for( List entries : combinations ) {
             for( int k = 0; k < entries.size(); k++ )
                 args[iterators[k]] = entries[k]
@@ -92,7 +101,7 @@ class CombineManyOp {
     }
 
     DataflowWriteChannel apply() {
-        final target = CH.create(singleton)
+        final target = CH.create(emitSingleton)
         final counter = new AtomicInteger(sources.size())
         for( int i = 0; i < sources.size(); i++ )
             DataflowHelper.subscribeImpl( sources[i], handler(i, target, counter) )
