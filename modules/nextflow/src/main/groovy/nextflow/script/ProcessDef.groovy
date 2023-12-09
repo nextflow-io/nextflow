@@ -25,7 +25,7 @@ import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.CombineOp
-import nextflow.script.dsl.ProcessBuilder
+import nextflow.script.dsl.ProcessConfigBuilder
 
 /**
  * Models a nextflow process definition
@@ -90,7 +90,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     protected void initialize() {
         // apply config settings to the process
-        new ProcessBuilder(config).applyConfig((Map)session.config.process, baseName, simpleName, processName)
+        new ProcessConfigBuilder(config).applyConfig((Map)session.config.process, baseName, simpleName, processName)
     }
 
     @Override
