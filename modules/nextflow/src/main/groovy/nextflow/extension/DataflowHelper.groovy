@@ -381,8 +381,8 @@ class DataflowHelper {
 
     @PackageScope
     @CompileStatic
-    static void addToList(List result, Object entry, boolean flat=true)  {
-        if( flat && entry instanceof List ) {
+    static void addToList(List result, entry)  {
+        if( entry instanceof List ) {
             result.addAll(entry)
         }
         else {

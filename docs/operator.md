@@ -334,11 +334,6 @@ A second version of the `combine` operator allows you to combine items that shar
 :language: console
 ```
 
-:::{versionadded} 24.10.0
-:::
-
-By default, the `combine` operator flattens list items into the resulting tuple. You can set `flat: false` to preserve nested list items.
-
 See also [join](#join) and [cross](#cross).
 
 (operator-concat)=

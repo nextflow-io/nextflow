@@ -715,8 +715,9 @@ class OperatorImpl {
     DataflowWriteChannel combine( DataflowReadChannel left, Map params, Object right ) {
         checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
 
-        final op = new CombineOp(left,right,params)
+        final op = new CombineOp(left,right)
         OpCall.current.get().inputs.addAll(op.inputs)
+        if( params?.by != null ) op.pivot = params.by
         final target = op.apply()
         return target
     }

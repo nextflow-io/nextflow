@@ -221,9 +221,8 @@ class ProcessDsl extends ProcessBuilder {
             throw new IllegalArgumentException("Output `tuple` must define at least two elements -- Check process `$processName`")
 
         // separate param options from path options
-        final paramOpts = [optional: opts.optional]
         if( opts.emit )
-            paramOpts.name = opts.remove('emit')
+            opts.name = opts.remove('emit')
 
         // make lazy list with tuple elements
         final target = new LazyList(elements.size())
@@ -244,12 +243,12 @@ class ProcessDsl extends ProcessBuilder {
             }
             else if( item instanceof TokenFileCall ) {
                 // file pattern can be a String or GString
-                final key = _out_path0(item.target, false, [:])
+                final key = _out_path0(item.target, false, [optional: opts.optional])
                 target << new LazyPathCall(key)
             }
             else if( item instanceof TokenPathCall ) {
                 // file pattern can be a String or GString
-                final key = _out_path0(item.target, true, item.opts)
+                final key = _out_path0(item.target, true, item.opts + [optional: opts.optional])
                 target << new LazyPathCall(key)
             }
             else if( item instanceof GString ) {
@@ -265,7 +264,7 @@ class ProcessDsl extends ProcessBuilder {
                 throw new IllegalArgumentException("Invalid `tuple` output parameter declaration -- item: ${item}")
         }
 
-        outputs.addParam(target, paramOpts)
+        outputs.addParam(target, opts)
     }
 
     void _out_val(Map opts=[:], Object target) {

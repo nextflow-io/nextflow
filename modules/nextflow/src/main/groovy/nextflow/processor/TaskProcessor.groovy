@@ -432,9 +432,7 @@ class TaskProcessor {
         // this allows us to manage them independently from the operator life-cycle
         def interceptor = new TaskProcessorInterceptor(source, control, singleton)
         def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
-        def invoke = this.&invokeTask
-
-        this.operator = new DataflowOperator(group, params, invoke)
+        this.operator = new DataflowOperator(group, params, this.&invokeTask)
 
         // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())

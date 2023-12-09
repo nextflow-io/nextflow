@@ -21,10 +21,11 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Const
 import nextflow.Global
+import nextflow.NF
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.CombineOp
+import nextflow.extension.CombineManyOp
 import nextflow.script.dsl.ProcessConfigBuilder
 
 /**
@@ -181,32 +182,23 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             return source
         }
 
-        // set input channels
+        // create input channels
         for( int i = 0; i < declaredInputs.size(); i++ )
             declaredInputs[i].bind(args[i])
 
-        // normalize args into channels
-        final inputs = declaredInputs.getChannels()
-
-        // make sure no more than one queue channel is provided
-        int count = 0
-        for( int i = 0; i < inputs.size(); i++ )
-            if( CH.isChannelQueue(inputs[i]) && !declaredInputs[i].isIterator() )
-                count += 1
-
-        if( count > 1 )
-            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which is not allowed -- consider combining these channels explicitly using the `combine` or `join` operator")
-
         // combine input channels
-        def result = inputs.first()
-
+        final inputs = declaredInputs.getChannels()
         if( inputs.size() == 1 )
-            return result.chainWith( it -> [it] )
+            return inputs.first().chainWith( it -> [it] )
 
-        for( int i = 1; i < inputs.size(); i++ )
-            result = CH.getReadChannel(new CombineOp(result, inputs[i], [flat: false]).apply())
+        final count = (0..<inputs.size()).count(
+            i -> CH.isChannelQueue(inputs[i]) && !declaredInputs[i].isIterator()
+        )
+        if( NF.isStrictMode() && count > 1 )
+            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which will be implicitly mergeed -- consider combining them explicitly with `combine` or `join`, or converting single-item chennels into value channels with `collect` or `first`")
 
-        return result
+        final iterators = (0..<inputs.size()).findAll( i -> declaredInputs[i].isIterator() )
+        return CH.getReadChannel(new CombineManyOp(inputs, iterators).apply())
     }
 
     private void collectOutputs(boolean singleton) {

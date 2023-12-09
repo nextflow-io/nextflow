@@ -19,7 +19,10 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.extension.CH
+import nextflow.extension.ToListOp
 
 /**
  * Models a process input.
@@ -57,28 +60,39 @@ class ProcessInput implements Cloneable {
         if( obj == null )
             throw new IllegalArgumentException('A process input channel evaluates to null')
 
-        final value = obj instanceof Closure
+        def value = obj instanceof Closure
             ? obj.call()
             : obj
 
         if( value == null )
             throw new IllegalArgumentException('A process input channel evaluates to null')
 
-        if( iterator ) {
-            final result = CH.create()
-            CH.emitAndClose(result, value instanceof Collection ? value : [value])
-            return CH.getReadChannel(result)
-        }
+        if( iterator )
+            value = getIteratorChannel(value)
 
-        else if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast ) {
+        if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
             return CH.getReadChannel(value)
+
+        final result = CH.value()
+        result.bind(value)
+        return result
+    }
+
+    private DataflowReadChannel getIteratorChannel(Object value) {
+        def result
+        if( value instanceof DataflowExpression ) {
+            result = value
+        }
+        else if( CH.isChannel(value) ) {
+            def read = CH.getReadChannel(value)
+            result = new ToListOp(read).apply()
+        }
+        else {
+            result = new DataflowVariable()
+            result.bind(value)
         }
 
-        else {
-            final result = CH.value()
-            result.bind(value)
-            return result
-        }
+        return result.chainWith { it instanceof Collection || it == null ? it : [it] }
     }
 
     DataflowReadChannel getChannel() {
