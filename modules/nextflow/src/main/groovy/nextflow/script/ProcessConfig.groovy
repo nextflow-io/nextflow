@@ -110,13 +110,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
-    @PackageScope
     ProcessConfig setInputs(ProcessInputs inputs) {
         this.inputs = inputs
         return this
     }
 
-    @PackageScope
     ProcessConfig setOutputs(ProcessOutputs outputs) {
         this.outputs = outputs
         return this

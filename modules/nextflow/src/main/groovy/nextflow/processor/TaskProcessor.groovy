@@ -81,12 +81,11 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.FileOutParam
-import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.LazyHelper
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly
@@ -458,8 +457,7 @@ class TaskProcessor {
         currentTask.set(task)
 
         // -- map the inputs to a map and use to delegate closure values interpolation
-        makeTaskContextStage1(task, values)
-        makeTaskContextStage2(task)
+        resolveTaskInputs(task, values)
 
         // verify that `when` guard, when specified, is satisfied
         if( !checkWhenGuard(task) )
@@ -645,22 +643,6 @@ class TaskProcessor {
             return false
         }
 
-        // -- when store path is set, only output params of type 'file' can be specified
-        final ctx = task.context
-        def invalid = task.getOutputs().keySet().any {
-            if( it instanceof ValueOutParam ) {
-                return !ctx.containsKey(it.name)
-            }
-            if( it instanceof FileOutParam ) {
-                return false
-            }
-            return true
-        }
-        if( invalid ) {
-            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
-            return false
-        }
-
         if( !task.config.getStoreDir().exists() ) {
             log.trace "[${safeTaskName(task)}] Store dir does not exists > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
@@ -728,7 +710,7 @@ class TaskProcessor {
             return false
         }
 
-        if( task.hasCacheableValues() && !entry.context ) {
+        if( !entry.context ) {
             log.trace "[${safeTaskName(task)}] Missing cache context -- return false"
             return false
         }
@@ -1507,34 +1489,33 @@ class TaskProcessor {
         return script.join('\n')
     }
 
-    final protected void makeTaskContextStage1( TaskRun task, List values ) {
+    final protected void resolveTaskInputs( TaskRun task, List values ) {
 
         final inputs = config.getInputs()
-
-        // -- add variables
-        final vars = [:]
-        for( int i = 0; i < inputs.size(); i++ )
-            vars.put(inputs[i].getName(), values[i])
-
-        task.config.put('vars', vars)
-        task.context.putAll(vars)
-
-        // -- add environment vars, stdin
-        task.config.put('env', new LazyMap(inputs.env))
-        task.config.put('stdin', inputs.stdin)
-    }
-
-    final protected void makeTaskContextStage2( TaskRun task ) {
-
         final ctx = task.context
+
+        // -- add input params to task context
+        for( int i = 0; i < inputs.size(); i++ )
+            ctx.put(inputs[i].getName(), values[i])
+
+        // -- resolve local variables
+        for( def entry : inputs.getVariables() )
+            ctx.put(entry.key, LazyHelper.resolve(ctx, entry.value))
+
+        // -- resolve environment vars
+        for( def entry : inputs.getEnv() )
+            task.env.put(entry.key, LazyHelper.resolve(ctx, entry.value))
+
+        // -- resolve stdin
+        task.stdin = LazyHelper.resolve(ctx, inputs.stdin)
+
+        // -- resolve input files
         final allNames = new HashMap<String,Integer>()
         int count = 0
+        final batch = session.filePorter.newBatch(executor.getStageDir())
 
-        final FilePorter.Batch batch = session.filePorter.newBatch(executor.getStageDir())
-
-        // -- resolve input files against the task context
-        for( def param : config.getInputs().files ) {
-            final val = param.getValue(ctx)
+        for( def param : config.getInputs().getFiles() ) {
+            final val = param.resolve(ctx)
             final normalized = normalizeInputToFiles(val, count, param.isPathQualifier(), batch)
             final resolved = expandWildcards( param.getFilePattern(ctx), normalized )
 
@@ -1571,17 +1552,6 @@ class TaskProcessor {
         session.filePorter.transfer(batch)
     }
 
-    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
-
-        // set hash-code & working directory
-        task.hash = hash
-        task.workDir = folder
-        task.config.workDir = folder
-        task.config.hash = hash.toString()
-        task.config.name = task.getName()
-
-    }
-
     final protected HashCode createTaskHashKey(TaskRun task) {
 
         List keys = [ session.uniqueId, name, task.source ]
@@ -1590,10 +1560,18 @@ class TaskProcessor {
             keys << task.getContainerFingerprint()
 
         // add task inputs
-        keys.add( task.config.get('vars') )
-        keys.add( task.inputFiles )
-        keys.add( task.getInputEnvironment() )
-        keys.add( task.stdin )
+        final inputs = config.getInputs()
+        final inputVars = inputs.getNames() - inputs.getFiles()*.getName()
+        for( String var : inputVars ) {
+            keys.add(var)
+            keys.add(task.context.get(var))
+        }
+        if( task.env )
+            keys.add(task.env)
+        if( task.inputFiles )
+            keys.add(task.inputFiles)
+        if( task.stdin )
+            keys.add(task.stdin)
 
         // add all variable references in the task script but not declared as input/output
         def vars = getTaskGlobalVars(task)
@@ -1724,7 +1702,12 @@ class TaskProcessor {
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
         log.trace "[${safeTaskName(task)}] actual run folder: ${folder}"
 
-        makeTaskContextStage3(task, hash, folder)
+        // set hash-code & working directory
+        task.hash = hash
+        task.workDir = folder
+        task.config.workDir = folder
+        task.config.hash = hash.toString()
+        task.config.name = task.getName()
 
         // add the task to the collection of running tasks
         executor.submit(task)

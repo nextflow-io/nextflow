@@ -23,6 +23,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
 import nextflow.util.BlankSeparatedList
+import nextflow.util.LazyHelper
 /**
  * Models a process file output, which defines a file
  * or set of files to be unstaged from a task work directory.
@@ -35,6 +36,11 @@ import nextflow.util.BlankSeparatedList
 class ProcessFileOutput implements PathArityAware {
 
     private Object target
+
+    /**
+     * Flag to support legacy `file` output.
+     */
+    private boolean pathQualifier
 
     /**
      * When true it will not fail if no files are found.
@@ -74,15 +80,20 @@ class ProcessFileOutput implements PathArityAware {
      */
     String type
 
-    ProcessFileOutput(Object target, Map opts) {
+    ProcessFileOutput(Object target, boolean pathQualifier, Map opts) {
         this.target = target
+        this.pathQualifier = pathQualifier
 
         for( Map.Entry<String,?> entry : opts )
             setProperty(entry.key, entry.value)
     }
 
+    boolean isPathQualifier() {
+        return pathQualifier
+    }
+
     List<String> getFilePatterns(Map context, Path workDir) {
-        final entry = resolve(context, target)
+        final entry = LazyHelper.resolve(context, target)
 
         if( !entry )
             return []
@@ -95,19 +106,13 @@ class ProcessFileOutput implements PathArityAware {
         if( entry instanceof BlankSeparatedList || entry instanceof List )
             return entry.collect( path -> relativize(path.toString(), workDir) )
 
+        // -- literal file names separated by ':' (legacy `file` output)
+        final nameString = entry.toString()
+        if( !pathQualifier && nameString.contains(':') )
+            return nameString.split(/:/).collect { String it-> relativize(it, workDir) }
+
         // -- literal file name
-        return [ relativize(entry.toString(), workDir) ]
-    }
-
-    protected Object resolve(Map ctx, Object value) {
-
-        if( value instanceof GString )
-            return value.cloneAsLazy(ctx)
-
-        if( value instanceof Closure )
-            return ctx.with(value)
-
-        return value.toString()
+        return [ relativize(nameString, workDir) ]
     }
 
     protected String relativize(String path, Path workDir) {

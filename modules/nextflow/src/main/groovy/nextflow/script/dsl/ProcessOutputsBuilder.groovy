@@ -35,8 +35,8 @@ class ProcessOutputsBuilder {
         env(name, name)
     }
 
-    ProcessOutputsBuilder env(String name, String target) {
-        outputs.env.put(name, target)
+    ProcessOutputsBuilder env(String key, String target) {
+        outputs.addEnv(key, target)
         return this
     }
 
@@ -44,8 +44,8 @@ class ProcessOutputsBuilder {
         path(opts, name, name)
     }
 
-    ProcessOutputsBuilder path(Map opts=[:], String name, Object target) {
-        outputs.files.put(name, new ProcessFileOutput(target, opts))
+    ProcessOutputsBuilder path(Map opts=[:], String key, Object target) {
+        outputs.addFile(key, new ProcessFileOutput(target, true, opts))
         return this
     }
 
@@ -54,18 +54,18 @@ class ProcessOutputsBuilder {
      * be evaluated after the task execution. For example:
      *
      *   env 'SAMPLE_ID'           // declare output env 'SAMPLE_ID'
-     *   path '$out0', 'file.txt'  // declare output file 'file.txt'
+     *   path '$file0', 'file.txt' // declare output file 'file.txt'
      *
      *   emit { sample_id }        // variable 'sample_id' in task context
      *   emit { stdout }           // standard output of task script
-     *   emit { [env('SAMPLE_ID'), path('$out0')] }
-     *   emit { new Sample(sample_id, path('$out0')) }
+     *   emit { [env('SAMPLE_ID'), path('$file0')] }
+     *   emit { new Sample(sample_id, path('$file0')) }
      *
      * @param opts
      * @param target
      */
     ProcessOutputsBuilder emit(Map opts=[:], Object target) {
-        outputs.add(new ProcessOutput(outputs, target, opts))
+        outputs.addParam(target, opts)
         return this
     }
 

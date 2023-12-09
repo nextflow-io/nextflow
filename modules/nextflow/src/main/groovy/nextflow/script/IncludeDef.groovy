@@ -32,6 +32,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
+import nextflow.util.LazyVar
 /**
  * Implements a script inclusion
  *
@@ -56,15 +57,11 @@ class IncludeDef {
     @PackageScope Map addedParams
     private Session session
 
-    IncludeDef(TokenVar token, String alias=null) {
+    IncludeDef(LazyVar token, String alias=null) {
         def component = token.name; if(alias) component += " as $alias"
         def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
 
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(token.name, alias)
+        throw new DeprecationException(msg)
     }
 
     protected IncludeDef(List<Module> modules) {

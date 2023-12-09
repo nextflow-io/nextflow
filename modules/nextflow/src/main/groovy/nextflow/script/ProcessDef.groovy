@@ -191,7 +191,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // make sure no more than one queue channel is provided
         int count = 0
         for( int i = 0; i < inputs.size(); i++ )
-            if( CH.isChannelQueue(inputs[i]) )
+            if( CH.isChannelQueue(inputs[i]) && !declaredInputs[i].isIterator() )
                 count += 1
 
         if( count > 1 )

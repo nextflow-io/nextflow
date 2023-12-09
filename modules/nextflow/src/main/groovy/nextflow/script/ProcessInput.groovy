@@ -35,6 +35,11 @@ class ProcessInput implements Cloneable {
 
     private DataflowReadChannel channel
 
+    /**
+     * Flag to support `each` input
+     */
+    private boolean iterator
+
     ProcessInput(String name) {
         this.name = name
     }
@@ -52,27 +57,40 @@ class ProcessInput implements Cloneable {
         if( obj == null )
             throw new IllegalArgumentException('A process input channel evaluates to null')
 
-        final result = obj instanceof Closure
+        final value = obj instanceof Closure
             ? obj.call()
             : obj
 
-        if( result == null )
+        if( value == null )
             throw new IllegalArgumentException('A process input channel evaluates to null')
 
-        def inChannel
-        if ( result instanceof DataflowReadChannel || result instanceof DataflowBroadcast ) {
-            inChannel = CH.getReadChannel(result)
-        }
-        else {
-            inChannel = CH.value()
-            inChannel.bind(result)
+        if( iterator ) {
+            final result = CH.create()
+            CH.emitAndClose(result, value instanceof Collection ? value : [value])
+            return CH.getReadChannel(result)
         }
 
-        return inChannel
+        else if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast ) {
+            return CH.getReadChannel(value)
+        }
+
+        else {
+            final result = CH.value()
+            result.bind(value)
+            return result
+        }
     }
 
     DataflowReadChannel getChannel() {
         return channel
+    }
+
+    void setIterator(boolean iterator) {
+        this.iterator = iterator
+    }
+
+    boolean isIterator() {
+        return iterator
     }
 
 }

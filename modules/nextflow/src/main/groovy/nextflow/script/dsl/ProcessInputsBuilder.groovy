@@ -32,12 +32,12 @@ class ProcessInputsBuilder {
     private ProcessInputs inputs = new ProcessInputs()
 
     ProcessInputsBuilder env(String name, Object source) {
-        inputs.env.put(name, source)
+        inputs.addEnv(name, source)
         return this
     }
 
     ProcessInputsBuilder path(Map opts=[:], Object source) {
-        inputs.files.add(new ProcessFileInput(source, null, true, opts))
+        inputs.addFile(new ProcessFileInput(source, null, true, opts))
         return this
     }
 

@@ -16,15 +16,38 @@
 
 package nextflow.script.dsl
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+import nextflow.processor.TaskOutputCollector
 import nextflow.script.BaseScript
-import nextflow.script.params.*
+import nextflow.script.ProcessDef
+import nextflow.script.ProcessFileInput
+import nextflow.script.ProcessFileOutput
+import nextflow.script.ProcessInputs
+import nextflow.script.ProcessOutput
+import nextflow.script.ProcessOutputs
+import nextflow.script.TokenEnvCall
+import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
+import nextflow.script.TokenStdinCall
+import nextflow.script.TokenStdoutCall
+import nextflow.script.TokenValCall
+import nextflow.util.LazyAware
+import nextflow.util.LazyList
+import nextflow.util.LazyVar
 
 /**
  * Implements the process DSL.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
+@CompileStatic
 class ProcessDsl extends ProcessBuilder {
+
+    private ProcessInputs inputs = new ProcessInputs()
+
+    private ProcessOutputs outputs = new ProcessOutputs()
 
     ProcessDsl(BaseScript ownerScript, String processName) {
         super(ownerScript, processName)
@@ -32,116 +55,282 @@ class ProcessDsl extends ProcessBuilder {
 
     /// INPUTS
 
-    InParam _in_each( Object obj ) {
-        new EachInParam(config).bind(obj)
+    void _in_each(LazyVar var) {
+        _in_val(var)
+        inputs.last().setIterator(true)
     }
 
-    InParam _in_env( Object obj ) {
-        new EnvInParam(config).bind(obj)
+    void _in_each(TokenFileCall file) {
+        _in_file(file.target)
+        inputs.last().setIterator(true)
     }
 
-    InParam _in_file( Object obj ) {
-        new FileInParam(config).bind(obj)
+    void _in_each(TokenPathCall path) {
+        _in_path(path.target)
+        inputs.last().setIterator(true)
     }
 
-    InParam _in_path( Map opts=[:], Object obj ) {
-        new FileInParam(config)
-                .setPathQualifier(true)
-                .setOptions(opts)
-                .bind(obj)
+    void _in_env(LazyVar var) {
+        final param = "\$in${inputs.size()}".toString()
+
+        inputs.addParam(param)
+        inputs.addEnv(var.name, new LazyVar(param))
     }
 
-    InParam _in_stdin( Object obj = null ) {
-        def result = new StdInParam(config)
-        if( obj )
-            result.bind(obj)
-        result
+    void _in_file(Object source) {
+        final param = _in_path0(source, false, [:])
+        inputs.addParam(param)
     }
 
-    InParam _in_tuple( Object... obj ) {
-        if( obj.length < 2 )
+    void _in_path(Map opts=[:], Object source) {
+        final param = _in_path0(source, true, opts)
+        inputs.addParam(param)
+    }
+
+    private String _in_path0(Object source, boolean pathQualifier, Map opts) {
+        if( source instanceof LazyVar ) {
+            final var = (LazyVar)source
+            inputs.addFile(new ProcessFileInput(var, var.name, pathQualifier, opts))
+            return var.name
+        }
+        else if( source instanceof CharSequence ) {
+            final param = "\$in${inputs.size()}"
+            if( !opts.stageAs )
+                opts.stageAs = source.toString()
+            inputs.addFile(new ProcessFileInput(new LazyVar(param), null, pathQualifier, opts))
+            return param
+        }
+        else
+            throw new IllegalArgumentException()
+    }
+
+    void _in_stdin(LazyVar var=null) {
+        final param = var != null
+            ? var.name
+            : "\$in${inputs.size()}".toString()
+
+        inputs.addParam(param)
+        inputs.stdin = new LazyVar(param)
+    }
+
+    @CompileDynamic
+    void _in_tuple(Object... elements) {
+        if( elements.length < 2 )
             throw new IllegalArgumentException("Input `tuple` must define at least two elements -- Check process `$processName`")
-        new TupleInParam(config).bind(obj)
+
+        final param = "\$in${inputs.size()}".toString()
+        inputs.addParam(param)
+
+        for( int i = 0; i < elements.length; i++ ) {
+            final item = elements[i]
+
+            if( item instanceof LazyVar ) {
+                final var = (LazyVar)item
+                throw new IllegalArgumentException("Unqualified input value declaration is not allowed - replace `tuple ${var.name},..` with `tuple val(${var.name}),..`")
+            }
+            else if( item instanceof TokenValCall && item.val instanceof LazyVar ) {
+                inputs.addVariable(item.val.name, new LazyTupleElement(param, i))
+            }
+            else if( item instanceof TokenEnvCall && item.val instanceof LazyVar ) {
+                inputs.addEnv(item.val.name, new LazyTupleElement(param, i))
+            }
+            else if( item instanceof TokenFileCall ) {
+                final name = _in_path0(item.target, false, [:])
+                inputs.addVariable(name, new LazyTupleElement(param, i))
+            }
+            else if( item instanceof TokenPathCall ) {
+                final name = _in_path0(item.target, true, item.opts)
+                inputs.addVariable(name, new LazyTupleElement(param, i))
+            }
+            else if( item instanceof Map ) {
+                throw new IllegalArgumentException("Unqualified input file declaration is not allowed - replace `tuple $item,..` with `tuple path(${item.key}, stageAs:'${item.value}'),..`")
+            }
+            else if( item instanceof GString ) {
+                throw new IllegalArgumentException("Unqualified input file declaration is not allowed - replace `tuple \"$item\".. with `tuple path(\"$item\")..`")
+            }
+            else if( item instanceof TokenStdinCall || item == '-' ) {
+                inputs.stdin = new LazyTupleElement(param, i)
+            }
+            else if( item instanceof String ) {
+                throw new IllegalArgumentException("Unqualified input file declaration is not allowed - replace `tuple '$item',..` with `tuple path('$item'),..`")
+            }
+            else
+                throw new IllegalArgumentException()
+        }
     }
 
-    InParam _in_val( Object obj ) {
-        new ValueInParam(config).bind(obj)
+    void _in_val(LazyVar var) {
+        inputs.addParam(var.name)
     }
 
     /// OUTPUTS
 
-    OutParam _out_env( Object obj ) {
-        new EnvOutParam(config)
-                .bind(obj)
+    void _out_env(Map opts=[:], LazyVar var) {
+        if( opts.emit )
+            opts.name = opts.remove('emit')
+
+        outputs.addEnv(var.name, var.name)
+        outputs.addParam(new LazyEnvCall(var.name), opts)
     }
 
-    OutParam _out_env( Map opts, Object obj ) {
-        new EnvOutParam(config)
-                .setOptions(opts)
-                .bind(obj)
-    }
-
-    OutParam _out_file( Object obj ) {
+    void _out_file(Object target) {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string
-        if( obj instanceof String && obj == '-' )
-            new StdOutParam(config).bind(obj)
-        else
-            new FileOutParam(config).bind(obj)
+        if( target instanceof String && target == '-' ) {
+            _out_stdout()
+            return
+        }
+
+        final key = _out_path0(target, false, [:])
+        outputs.addParam(new LazyPathCall(key), [:])
     }
 
-    OutParam _out_path( Map opts=null, Object obj ) {
+    void _out_path(Map opts=[:], Object target) {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string
-        if( obj instanceof String && obj == '-' )
-            new StdOutParam(config)
-                    .setOptions(opts)
-                    .bind(obj)
+        if( target instanceof String && target == '-' ) {
+            _out_stdout(opts)
+            return
+        }
 
+        // separate param options from path options
+        final paramOpts = [optional: opts.optional]
+        if( opts.emit )
+            paramOpts.name = opts.remove('emit')
+
+        final key = _out_path0(target, true, opts)
+        outputs.addParam(new LazyPathCall(key), paramOpts)
+    }
+
+    private String _out_path0(Object target, boolean pathQualifier, Map opts) {
+        final key = "\$file${outputs.getFiles().size()}".toString()
+        outputs.addFile(key, new ProcessFileOutput(target, pathQualifier, opts))
+        return key
+    }
+
+    void _out_stdout(Map opts=[:]) {
+        if( opts.emit )
+            opts.name = opts.remove('emit')
+
+        outputs.addParam(new LazyVar('stdout'), opts)
+    }
+
+    @CompileDynamic
+    void _out_tuple(Map opts=[:], Object... elements) {
+        if( elements.length < 2 )
+            throw new IllegalArgumentException("Output `tuple` must define at least two elements -- Check process `$processName`")
+
+        // separate param options from path options
+        final paramOpts = [optional: opts.optional]
+        if( opts.emit )
+            paramOpts.name = opts.remove('emit')
+
+        // make lazy list with tuple elements
+        final target = new LazyList(elements.size())
+
+        for( int i = 0; i < elements.length; i++ ) {
+            final item = elements[i]
+
+            if( item instanceof LazyVar ) {
+                throw new IllegalArgumentException("Unqualified output value declaration is not allowed - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`")
+            }
+            else if( item instanceof TokenValCall ) {
+                target << item.val
+            }
+            else if( item instanceof TokenEnvCall && item.val instanceof LazyVar ) {
+                final var = (LazyVar)item.val
+                outputs.addEnv(var.name, var.name)
+                target << new LazyEnvCall(var.name)
+            }
+            else if( item instanceof TokenFileCall ) {
+                // file pattern can be a String or GString
+                final key = _out_path0(item.target, false, [:])
+                target << new LazyPathCall(key)
+            }
+            else if( item instanceof TokenPathCall ) {
+                // file pattern can be a String or GString
+                final key = _out_path0(item.target, true, item.opts)
+                target << new LazyPathCall(key)
+            }
+            else if( item instanceof GString ) {
+                throw new IllegalArgumentException("Unqualified output path declaration is not allowed - replace `tuple \"$item\",..` with `tuple path(\"$item\"),..`")
+            }
+            else if( item instanceof TokenStdoutCall || item == '-' ) {
+                target << new LazyVar('stdout')
+            }
+            else if( item instanceof String ) {
+                throw new IllegalArgumentException("Unqualified output path declaration is not allowed - replace `tuple '$item',..` with `tuple path('$item'),..`")
+            }
+            else
+                throw new IllegalArgumentException("Invalid `tuple` output parameter declaration -- item: ${item}")
+        }
+
+        outputs.addParam(target, paramOpts)
+    }
+
+    void _out_val(Map opts=[:], Object target) {
+        outputs.addParam(target, opts)
+    }
+
+    /// BUILD
+
+    ProcessDef build() {
+        config.setInputs(inputs)
+        config.setOutputs(outputs)
+        super.build()
+    }
+
+}
+
+@CompileStatic
+class LazyTupleElement extends LazyVar {
+    int index
+
+    LazyTupleElement(String name, int index) {
+        super(name)
+        this.index = index
+    }
+
+    @Override
+    Object resolve(Object binding) {
+        final tuple = super.resolve(binding)
+        if( tuple instanceof List )
+            return tuple[index]
         else
-            new FileOutParam(config)
-                    .setPathQualifier(true)
-                    .setOptions(opts)
-                    .bind(obj)
+            throw new IllegalArgumentException("Lazy binding of `${name}[${index}]` failed because `${name}` is not a tuple")
+    }
+}
+
+@CompileStatic
+class LazyEnvCall implements LazyAware {
+    String key
+
+    LazyEnvCall(String key) {
+        this.key = key
     }
 
-    OutParam _out_stdout( Map opts ) {
-        new StdOutParam(config)
-                .setOptions(opts)
-                .bind('-')
+    @Override
+    Object resolve(Object binding) {
+        if( binding !instanceof TaskOutputCollector )
+            throw new IllegalStateException()
+
+        ((TaskOutputCollector)binding).env(key)
+    }
+}
+
+@CompileStatic
+class LazyPathCall implements LazyAware {
+    String key
+
+    LazyPathCall(String key) {
+        this.key = key
     }
 
-    OutParam _out_stdout( obj = null ) {
-        def result = new StdOutParam(config).bind('-')
-        if( obj )
-            result.setInto(obj)
-        result
-    }
+    @Override
+    Object resolve(Object binding) {
+        if( binding !instanceof TaskOutputCollector )
+            throw new IllegalStateException()
 
-    OutParam _out_tuple( Object... obj ) {
-        if( obj.length < 2 )
-            throw new IllegalArgumentException("Output `tuple` must define at least two elements -- Check process `$processName`")
-        new TupleOutParam(config)
-                .bind(obj)
+        ((TaskOutputCollector)binding).path(key)
     }
-
-    OutParam _out_tuple( Map opts, Object... obj ) {
-        if( obj.length < 2 )
-            throw new IllegalArgumentException("Output `tuple` must define at least two elements -- Check process `$processName`")
-        new TupleOutParam(config)
-                .setOptions(opts)
-                .bind(obj)
-    }
-
-    OutParam _out_val( Object obj ) {
-        new ValueOutParam(config)
-                .bind(obj)
-    }
-
-    OutParam _out_val( Map opts, Object obj ) {
-        new ValueOutParam(config)
-                .setOptions(opts)
-                .bind(obj)
-    }
-
 }

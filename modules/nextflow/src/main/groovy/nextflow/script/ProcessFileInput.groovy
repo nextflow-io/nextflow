@@ -17,6 +17,7 @@
 package nextflow.script
 
 import groovy.transform.CompileStatic
+import nextflow.util.LazyHelper
 
 /**
  * Models a process file input, which defines a file
@@ -31,14 +32,17 @@ class ProcessFileInput implements PathArityAware {
 
     private String name
 
-    private boolean coerceToPath
+    /**
+     * Flag to support legacy `file` input.
+     */
+    private boolean pathQualifier
 
     private Object filePattern
 
-    ProcessFileInput(Object value, String name, boolean coerceToPath, Map<String,?> opts) {
+    ProcessFileInput(Object value, String name, boolean pathQualifier, Map<String,?> opts) {
         this.value = value
         this.name = name
-        this.coerceToPath = coerceToPath
+        this.pathQualifier = pathQualifier
         this.filePattern = opts.stageAs ?: opts.name
 
         for( Map.Entry<String,?> entry : opts )
@@ -49,8 +53,8 @@ class ProcessFileInput implements PathArityAware {
         this.filePattern = value
     }
 
-    Object getValue(Map ctx) {
-        return resolve(ctx, value)
+    Object resolve(Map ctx) {
+        return LazyHelper.resolve(ctx, value)
     }
 
     String getName() {
@@ -58,24 +62,14 @@ class ProcessFileInput implements PathArityAware {
     }
 
     boolean isPathQualifier() {
-        return coerceToPath
+        return pathQualifier
     }
 
     String getFilePattern(Map ctx) {
         if( filePattern != null )
-            return resolve(ctx, filePattern)
-
-        return filePattern = '*'
-    }
-
-    protected Object resolve(Map ctx, Object value) {
-        if( value instanceof GString )
-            return value.cloneAsLazy(ctx)
-
-        if( value instanceof Closure )
-            return ctx.with(value)
-
-        return value
+            return LazyHelper.resolve(ctx, filePattern)
+        else
+            return filePattern = '*'
     }
 
 }

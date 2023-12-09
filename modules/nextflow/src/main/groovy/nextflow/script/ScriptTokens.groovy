@@ -20,20 +20,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
-/**
- * Presents a variable definition in the script context.
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-@ToString
-@EqualsAndHashCode
-@TupleConstructor
-class TokenVar {
-
-    /** The variable name */
-    String name
-
-}
 
 /**
  *  A token used by the DSL to identify a 'file' declaration in a 'tuple' parameter, for example:
@@ -72,26 +58,26 @@ class TokenPathCall {
 }
 
 /**
- * An object of this class replace the {@code stdin} token in input map declaration. For example:
+ * An object of this class replace the {@code stdin} token in input tuple declaration. For example:
  * <pre>
  * input:
- *   map( stdin, .. ) from x
+ *   tuple( stdin, .. ) from x
  * </pre>
  *
  * @see nextflow.ast.DslCodeVisitor
- * @see nextflow.script.params.TupleInParam#bind(java.lang.Object[])
+ * @see nextflow.script.dsl.ProcessDsl#_in_tuple(java.lang.Object[])
  */
 class TokenStdinCall { }
 
 /**
- * An object of this class replace the {@code stdout} token in input map declaration. For example:
+ * An object of this class replace the {@code stdout} token in input tuple declaration. For example:
  * <pre>
  * input:
- *   map( stdout, .. ) into x
+ *   tuple( stdout, .. ) into x
  * </pre>
  *
  * @see nextflow.ast.DslCodeVisitor
- * @see nextflow.script.params.TupleOutParam#bind(java.lang.Object[])
+ * @see nextflow.script.dsl.ProcessDsl#_out_tuple(java.util.Map,java.lang.Object[])
  */
 class TokenStdoutCall { }
 

@@ -16,17 +16,12 @@
 
 package nextflow.script
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.exception.MissingFileException
-import nextflow.exception.MissingValueException
-import nextflow.processor.TaskEnvCollector
-import nextflow.processor.TaskFileCollecter
+import nextflow.processor.TaskOutputCollector
 import nextflow.processor.TaskRun
+import nextflow.util.LazyHelper
 /**
  * Models a process output.
  *
@@ -36,9 +31,7 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class ProcessOutput implements Cloneable {
 
-    static enum Shortcuts { STDOUT }
-
-    private ProcessOutputs parent
+    private ProcessOutputs declaredOutputs
 
     private Object target
 
@@ -48,8 +41,8 @@ class ProcessOutput implements Cloneable {
 
     private DataflowWriteChannel channel
 
-    ProcessOutput(ProcessOutputs parent, Object target, Map<String,?> opts) {
-        this.parent = parent
+    ProcessOutput(ProcessOutputs declaredOutputs, Object target, Map<String,?> opts) {
+        this.declaredOutputs = declaredOutputs
         this.target = target
 
         if( opts.name )
@@ -71,102 +64,8 @@ class ProcessOutput implements Cloneable {
     }
 
     Object resolve(TaskRun task) {
-        final ctx = new ResolverContext(parent, optional, task)
-        return resolve0(ctx)
+        final ctx = new TaskOutputCollector(declaredOutputs, optional, task)
+        return LazyHelper.resolve(ctx, target)
     }
 
-    private Object resolve0(ResolverContext ctx) {
-        if( target == Shortcuts.STDOUT )
-            return ctx.stdout()
-
-        if( target instanceof Closure )
-            return ctx.with(target)
-
-        return target
-    }
-
-    static private class ResolverContext {
-
-        private ProcessOutputs parent
-
-        private boolean optional
-
-        private TaskRun task
-
-        ResolverContext(ProcessOutputs parent, boolean optional, TaskRun task) {
-            this.parent = parent
-            this.optional = optional
-            this.task = task
-        }
-
-        /**
-         * Get an environment variable from the task environment.
-         *
-         * @param key
-         */
-        String env(String key) {
-            final varName = parent.env.get(key)
-            final result = env0(task.workDir).get(varName)
-
-            if( result == null && !optional )
-                throw new MissingValueException("Missing environment variable: $varName")
-
-            return result
-        }
-
-        @Memoized
-        static private Map env0(Path workDir) {
-            new TaskEnvCollector(workDir).collect()
-        }
-
-        /**
-         * Get a file or list of files from the task environment.
-         *
-         * @param key
-         */
-        Object path(String key) {
-            final param = parent.files.get(key)
-            final result = new TaskFileCollecter(param, task).collect()
-
-            if( result instanceof Path )
-                task.outputFiles.add(result)
-            else if( result instanceof Collection<Path> )
-                task.outputFiles.addAll(result)
-
-            return result
-        }
-
-        /**
-         * Get the standard output from the task environment.
-         */
-        Object stdout() {
-            final result = task.@stdout
-
-            if( result == null && task.type == ScriptType.SCRIPTLET )
-                throw new IllegalArgumentException("Missing 'stdout' for process > ${task.lazyName()}")
-
-            if( result instanceof Path && !result.exists() )
-                throw new MissingFileException("Missing 'stdout' file: ${result.toUriString()} for process > ${task.lazyName()}")
-
-            return result
-        }
-
-        /**
-         * Get a variable from the task context.
-         *
-         * @param name
-         */
-        @Override
-        Object getProperty(String name) {
-            if( name == 'stdout' )
-                return stdout()
-
-            try {
-                return task.context.get(name)
-            }
-            catch( MissingPropertyException e ) {
-                throw new MissingValueException("Missing variable in emit statement: ${e.property}")
-            }
-        }
-    }
 }

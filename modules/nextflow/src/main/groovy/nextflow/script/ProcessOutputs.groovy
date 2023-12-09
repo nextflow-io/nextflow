@@ -18,6 +18,7 @@ package nextflow.script
 
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.util.LazyVar
 
 /**
  * Models the process outputs.
@@ -27,33 +28,53 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 class ProcessOutputs implements List<ProcessOutput>, Cloneable {
 
     @Delegate
-    private List<ProcessOutput> target = []
+    private List<ProcessOutput> params = []
 
-    Map<String,String> env = [:]
+    private Map<String,String> env = [:]
 
-    Map<String,ProcessFileOutput> files = [:]
+    private Map<String,ProcessFileOutput> files = [:]
 
     @Override
     ProcessOutputs clone() {
         def result = (ProcessOutputs)super.clone()
-        result.target = new ArrayList<>(target.size())
-        for( ProcessOutput param : target )
+        result.params = new ArrayList<>(params.size())
+        for( ProcessOutput param : params )
             result.add((ProcessOutput)param.clone())
         return result
     }
 
-    List<String> getNames() {
-        return target*.getName()
-    }
-
-    List<DataflowWriteChannel> getChannels() {
-        return target*.getChannel()
+    void addParam(Object target, Map opts) {
+        add(new ProcessOutput(this, target, opts))
     }
 
     void setDefault() {
-        final param = new ProcessOutput(ProcessOutput.Shortcuts.STDOUT, [:])
+        final param = new ProcessOutput(new LazyVar('stdout'), [:])
         param.setChannel(new DataflowQueue())
-        target.add(param)
+        params.add(param)
+    }
+
+    void addEnv(String name, Object value) {
+        env.put(name, value)
+    }
+
+    void addFile(String key, ProcessFileOutput file) {
+        files.put(key, file)
+    }
+
+    List<String> getNames() {
+        return params*.getName()
+    }
+
+    List<DataflowWriteChannel> getChannels() {
+        return params*.getChannel()
+    }
+
+    Map<String,String> getEnv() {
+        return env
+    }
+
+    Map<String,ProcessFileOutput> getFiles() {
+        return files
     }
 
 }

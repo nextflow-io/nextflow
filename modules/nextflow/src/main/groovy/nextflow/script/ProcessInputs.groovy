@@ -26,30 +26,60 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 class ProcessInputs implements List<ProcessInput>, Cloneable {
 
     @Delegate
-    private List<ProcessInput> target = []
+    private List<ProcessInput> params = []
 
-    Map<String,?> env = [:]
+    private Map<String,?> vars = [:]
 
-    List<ProcessFileInput> files = []
+    private Map<String,?> env = [:]
+
+    private List<ProcessFileInput> files = []
 
     Object stdin
 
     @Override
     ProcessInputs clone() {
         def result = (ProcessInputs)super.clone()
-        result.target = new ArrayList<>(target.size())
-        for( ProcessInput param : target ) {
-            result.target.add((ProcessInput)param.clone())
+        result.params = new ArrayList<>(params.size())
+        for( ProcessInput param : params ) {
+            result.params.add((ProcessInput)param.clone())
         }
         return result
     }
 
+    void addParam(String name) {
+        add(new ProcessInput(name))
+    }
+
+    void addVariable(String name, Object value) {
+        vars.put(name, value)
+    }
+
+    void addEnv(String name, Object value) {
+        env.put(name, value)
+    }
+
+    void addFile(ProcessFileInput file) {
+        files.add(file)
+    }
+
     List<String> getNames() {
-        return target*.getName()
+        return params*.getName()
     }
 
     List<DataflowReadChannel> getChannels() {
-        return target*.getChannel()
+        return params*.getChannel()
+    }
+
+    Map<String,?> getVariables() {
+        return vars
+    }
+
+    Map<String,?> getEnv() {
+        return env
+    }
+
+    List<ProcessFileInput> getFiles() {
+        return files
     }
 
 }

@@ -34,7 +34,7 @@ import nextflow.script.TokenStdinCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenValRef
-import nextflow.script.TokenVar
+import nextflow.util.LazyVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.MethodNode
@@ -189,8 +189,8 @@ class DslCodeVisitor extends ClassCodeVisitorSupport {
             else if( arg instanceof VariableExpression ) {
                 // the name of the component i.e. process, workflow, etc to import
                 final component = arg.getName()
-                // wrap the name in a `TokenVar` type
-                final token = createX(TokenVar, new ConstantExpression(component))
+                // wrap the name in a `LazyVar` type
+                final token = createX(LazyVar, new ConstantExpression(component))
                 // create a new `IncludeDef` object
                 newArgs.addExpression(createX(IncludeDef, token))
             }
@@ -198,8 +198,8 @@ class DslCodeVisitor extends ClassCodeVisitorSupport {
                 def cast = (CastExpression)arg
                 // the name of the component i.e. process, workflow, etc to import
                 final component = (cast.expression as VariableExpression).getName()
-                // wrap the name in a `TokenVar` type
-                final token = createX(TokenVar, new ConstantExpression(component))
+                // wrap the name in a `LazyVar` type
+                final token = createX(LazyVar, new ConstantExpression(component))
                 // the alias to give it
                 final alias = constX(cast.type.name)
                 newArgs.addExpression( createX(IncludeDef, token, alias) )
@@ -1020,7 +1020,7 @@ class DslCodeVisitor extends ClassCodeVisitorSupport {
     protected Expression varToStrX( Expression expr ) {
         if( expr instanceof VariableExpression ) {
             def name = ((VariableExpression) expr).getName()
-            return createX( TokenVar, new ConstantExpression(name) )
+            return createX( LazyVar, new ConstantExpression(name) )
         }
         else if( expr instanceof PropertyExpression ) {
             // transform an output declaration such
@@ -1067,7 +1067,7 @@ class DslCodeVisitor extends ClassCodeVisitorSupport {
                 return createX( TokenStdoutCall )
 
             else
-                return createX( TokenVar, new ConstantExpression(name) )
+                return createX( LazyVar, new ConstantExpression(name) )
         }
 
         if( expr instanceof MethodCallExpression ) {

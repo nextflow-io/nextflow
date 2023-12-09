@@ -24,7 +24,6 @@ import nextflow.exception.ConfigParseException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
 import nextflow.script.ProcessInputs
 import nextflow.script.ProcessOutputs
@@ -32,6 +31,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessDef
+import nextflow.util.LazyList
 
 /**
  * Builder for {@link ProcessDef}.
@@ -84,10 +84,13 @@ class ProcessBuilder {
             'time'
     ]
 
-    private BaseScript ownerScript
-    private String processName
-    private BodyDef body
-    private ProcessConfig config
+    protected BaseScript ownerScript
+
+    protected String processName
+
+    protected BodyDef body
+
+    protected ProcessConfig config
 
     ProcessBuilder(BaseScript ownerScript, String processName) {
         this.ownerScript = ownerScript
@@ -260,7 +263,7 @@ class ProcessBuilder {
         // -- get the current label, it must be a list
         def allLabels = (List)config.get('label')
         if( !allLabels ) {
-            allLabels = new ConfigList()
+            allLabels = new LazyList()
             config.put('label', allLabels)
         }
 
@@ -293,7 +296,7 @@ class ProcessBuilder {
 
         def result = (List)config.module
         if( result == null ) {
-            result = new ConfigList()
+            result = new LazyList()
             config.put('module', result)
         }
 
@@ -310,7 +313,7 @@ class ProcessBuilder {
 
         def allOptions = (List)config.get('pod')
         if( !allOptions ) {
-            allOptions = new ConfigList()
+            allOptions = new LazyList()
             config.put('pod', allOptions)
         }
 
@@ -332,7 +335,7 @@ class ProcessBuilder {
 
         def dirs = (List)config.get('publishDir')
         if( !dirs ) {
-            dirs = new ConfigList()
+            dirs = new LazyList()
             config.put('publishDir', dirs)
         }
 
@@ -406,7 +409,7 @@ class ProcessBuilder {
         // -- get the current label, it must be a list
         def allSecrets = (List)config.get('secret')
         if( !allSecrets ) {
-            allSecrets = new ConfigList()
+            allSecrets = new LazyList()
             config.put('secret', allSecrets)
         }
 

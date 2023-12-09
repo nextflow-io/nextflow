@@ -39,10 +39,8 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.FileOutParam
-import nextflow.script.params.OutParam
-import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import nextflow.util.ArrayBag
 import org.codehaus.groovy.runtime.MethodClosure
 /**
  * Models a task instance
@@ -81,16 +79,25 @@ class TaskRun implements Cloneable {
     TaskProcessor processor
 
     /**
-     * The list of resolved input files
+     * The map of input environment vars
+     *
+     * @see TaskProcessor#resolveTaskInputs(TaskRun, List)
      */
-    List<FileHolder> inputFiles = []
+    Map<String,String> env = [:]
 
     /**
-     * The list of resolved output files
+     * The list of input files
      *
-     * @see ProcessOutput#path(String)
+     * @see TaskProcessor#resolveTaskInputs(TaskRun, List)
      */
-    Set<Path> outputFiles = []
+    List<FileHolder> inputFiles = new ArrayBag()
+
+    /**
+     * The value to be piped to the process stdin
+     *
+     * @see TaskProcessor#resolveTaskInputs(TaskRun, List)
+     */
+    def stdin
 
     /**
      * The list of resolved task outputs
@@ -99,13 +106,12 @@ class TaskRun implements Cloneable {
      */
     List<Object> outputs = []
 
-
     /**
-     * @return The value to be piped to the process stdin
+     * The list of resolved output files
+     *
+     * @see ProcessOutput.ResolverContext#path(String)
      */
-    def getStdin() {
-        config.get('stdin')
-    }
+    Set<Path> outputFiles = []
 
     /**
      * The exit code returned by executing the task script
@@ -387,30 +393,6 @@ class TaskRun implements Cloneable {
             : getScript()
     }
 
-
-    /**
-     * Check whenever there are values to be cached
-     */
-    boolean hasCacheableValues() {
-
-        if( config?.isDynamic() )
-            return true
-
-        for( OutParam it : outputs.keySet() ) {
-            if( it.class == ValueOutParam ) return true
-            if( it.class == FileOutParam && ((FileOutParam)it).isDynamic() ) return true
-        }
-
-        return false
-    }
-
-    /**
-     * Return the list of all input files staged as inputs by this task execution
-     */
-    List<String> getStagedInputs()  {
-        inputFiles.collect { it.stageName }
-    }
-
     /**
      * @return A map object containing all the task input files as <stage name, store path> pairs
      */
@@ -434,17 +416,6 @@ class TaskRun implements Cloneable {
     }
 
     /**
-     * @return A map containing the task environment defined as input declaration by this task
-     */
-    protected Map<String,String> getInputEnvironment() {
-        final Map<String,String> environment = [:]
-        final allEnvs = config.get('env')
-        for( def key : allEnvs.keySet() )
-            environment.put(key, allEnvs.get(key))
-        return environment
-    }
-
-    /**
      * @return A map representing the task execution environment
      */
     Map<String,String> getEnvironment() {
@@ -453,7 +424,7 @@ class TaskRun implements Cloneable {
         // IMPORTANT: when copying the environment map a LinkedHashMap must be used to preserve
         // the insertion order of the env entries (ie. export FOO=1; export BAR=$FOO)
         final result = new LinkedHashMap( getProcessor().getProcessEnvironment() )
-        result.putAll( getInputEnvironment() )
+        result.putAll( env )
         return result
     }
 
@@ -525,7 +496,7 @@ class TaskRun implements Cloneable {
     }
 
     List<String> getOutputEnvNames() {
-        final declaredOutputs = processor.getConfig().getOutputs()
+        final declaredOutputs = processor.config.getOutputs()
         return new ArrayList(declaredOutputs.env.values())
     }
 
@@ -657,11 +628,12 @@ class TaskRun implements Cloneable {
         // -- initialize the task code to be executed
         this.code = body.closure
 
-        // -- provide arguments directly or via delegate
         if( code instanceof MethodClosure ) {
+            // -- invoke task closure with arguments
             code = code.curry(args)
         }
         else {
+            // -- invoke task closure with delegate
             code = code.clone() as Closure
             code.setDelegate(this.context)
             code.setResolveStrategy(Closure.DELEGATE_ONLY)

@@ -127,7 +127,7 @@ class TaskFileCollecter {
      */
     protected List<Path> excludeStagedInputs(TaskRun task, List<Path> collectedFiles) {
 
-        final List<String> allStagedFiles = task.getStagedInputs()
+        final List<String> allStagedFiles = task.inputFiles.collect { it.stageName }
         final List<Path> result = new ArrayList<>(collectedFiles.size())
 
         for( int i = 0; i < collectedFiles.size(); i++ ) {
