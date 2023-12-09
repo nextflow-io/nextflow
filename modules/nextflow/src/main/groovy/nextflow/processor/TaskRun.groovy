@@ -763,10 +763,7 @@ class TaskRun implements Cloneable {
         final result = new HashMap(variableNames.size())
         final processName = name
 
-        def itr = variableNames.iterator()
-        while( itr.hasNext() ) {
-            final varName = itr.next()
-
+        for( def varName : variableNames ) {
             final p = varName.indexOf('.')
             final baseName = p !=- 1 ? varName.substring(0,p) : varName
 

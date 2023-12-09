@@ -223,10 +223,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
             : processFn.shell() ? 'shell'
             : 'exec'
 
+        // -- variable references
+        final valRefs = processFn.vars().collect( var -> new TokenValRef(var) )
+
+        // -- build process
         final process = builder
             .withInputs(inputs.build())
             .withOutputs(outputs.build())
-            .withBody(this.&"${name}", type, processFn.source())
+            .withBody(this.&"${name}", type, processFn.source(), valRefs)
             .build()
 
         // register process

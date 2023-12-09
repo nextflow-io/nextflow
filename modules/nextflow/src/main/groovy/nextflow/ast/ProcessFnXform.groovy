@@ -94,6 +94,12 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
         // append script source
         annotation.addMember( 'source', constX( getSource(method.getCode()) ) )
 
+        // append variable references so that global vars can be cached
+        final vars = getVariableRefs(method.getCode())
+        annotation.addMember( 'vars', new ListExpression(
+            vars.collect(var -> (Expression)constX(var))
+        ) )
+
         // prepend `task` method parameter
         params.push(new Parameter(new ClassNode(TaskConfig), 'task'))
         method.setParameters(params as Parameter[])
@@ -128,6 +134,12 @@ class ProcessFnXform extends ClassCodeVisitorSupport {
             name,
             new ArgumentListExpression(arg)
         ) )
+    }
+
+    protected List<String> getVariableRefs(Statement stmt) {
+        final visitor = new VariableVisitor(unit)
+        stmt.visit(visitor)
+        return visitor.getAllVariables().collect( ref -> ref.name )
     }
 
     private String getSource(ASTNode node) {

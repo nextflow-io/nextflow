@@ -39,4 +39,5 @@ import java.lang.annotation.Target
     // injected via AST transform
     String[] params()
     String source()
+    String[] vars()
 }
