@@ -1123,16 +1123,29 @@ class BashWrapperBuilderTest extends Specification {
         def builder = new BashWrapperBuilder()
 
         when:
-        def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'])
+        def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'], Map.of())
         then:
         str == '''
             # capture process environment
             set +u
+            set +e
             cd "$NXF_TASK_WORKDIR"
-            echo FOO="${FOO[@]}" > .command.env
-            echo END_FOO >> .command.env
+            
+            nxf_catch() {
+                {
+                    IFS=$'\\n' read -r -d '' "${1}";
+                    IFS=$'\\n' read -r -d '' "${2}";
+                    (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+                } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+            }
+            
+            echo '' > .command.env
+            #
+            echo FOO="${FOO[@]}" >> .command.env
+            echo /FOO/ >> .command.env
+            #
             echo BAR="${BAR[@]}" >> .command.env
-            echo END_BAR >> .command.env
+            echo /BAR/ >> .command.env
             '''
             .stripIndent()
     }
@@ -1147,13 +1160,41 @@ class BashWrapperBuilderTest extends Specification {
         str == '''
             # capture process environment
             set +u
+            set +e
             cd "$NXF_TASK_WORKDIR"
-            echo FOO="${FOO[@]}" > .command.env
-            echo END_FOO >> .command.env
-            echo THIS="$(this --cmd)" >> .command.env
-            echo END_THIS >> .command.env
-            echo THAT="$(other --cmd)" >> .command.env
-            echo END_THAT >> .command.env
+            
+            nxf_catch() {
+                {
+                    IFS=$'\\n' read -r -d '' "${1}";
+                    IFS=$'\\n' read -r -d '' "${2}";
+                    (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+                } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+            }
+            
+            echo '' > .command.env
+            #
+            echo FOO="${FOO[@]}" >> .command.env
+            echo /FOO/ >> .command.env
+            #
+            nxf_catch STDOUT STDERR this --cmd
+            status=$?
+            if [ $status -eq 0 ]; then
+              echo THIS="$STDOUT" >> .command.env
+              echo /THIS/=exit:0 >> .command.env
+            else
+              echo THIS="$STDERR" >> .command.env
+              echo /THIS/=exit:$status >> .command.env
+            fi
+            #
+            nxf_catch STDOUT STDERR other --cmd
+            status=$?
+            if [ $status -eq 0 ]; then
+              echo THAT="$STDOUT" >> .command.env
+              echo /THAT/=exit:0 >> .command.env
+            else
+              echo THAT="$STDERR" >> .command.env
+              echo /THAT/=exit:$status >> .command.env
+            fi
             '''
             .stripIndent()
     }

@@ -16,6 +16,8 @@
 
 package nextflow.executor
 
+import static java.nio.file.StandardOpenOption.*
+
 import java.nio.file.FileSystemException
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -35,11 +37,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
-
-import static java.nio.file.StandardOpenOption.*
-
 import nextflow.util.MemoryUnit
-
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -177,24 +175,36 @@ class BashWrapperBuilder {
         }
     }
 
-    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, Map<String,String> outCmds=Map.<String,String>of()) {
-        def result = new StringBuilder()
-        result.append('\n')
-        result.append('# capture process environment\n')
-        result.append('set +u\n')
-        result.append('cd "$NXF_TASK_WORKDIR"\n')
-        int count=0
+    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, Map<String,String> outCmds) {
+        // load the env template
+        def template = BashWrapperBuilder.class
+            .getResourceAsStream('command-env.txt')
+            .newReader()
+        def binding = Map.of('env_file', TaskRun.CMD_ENV)
+        def result = engine.render(template, binding)
+        // avoid nulls
+        if( outEnvs==null )
+            outEnvs = List.<String>of()
+        if( outCmds==null )
+            outCmds = Map.<String,String>of()
         // out env
-        for( String key : (outEnvs ?: List.<String>of()) ) {
-            result.append "echo $key=\"\${$key[@]}\" "
-            result.append( count++==0 ? '> ' : '>> ' ) .append(TaskRun.CMD_ENV) .append('\n')
-            result.append("echo END_$key >> ") .append(TaskRun.CMD_ENV) .append('\n')
+        for( String key : outEnvs ) {
+            result += "#\n"
+            result += "echo $key=\"\${$key[@]}\" >> ${TaskRun.CMD_ENV}\n"
+            result += "echo /$key/ >> ${TaskRun.CMD_ENV}\n"
         }
         // out cmd
         for( Map.Entry<String,String> cmd : outCmds ) {
-            result.append "echo $cmd.key=\"\$($cmd.value)\" "
-            result.append( count++==0 ? '> ' : '>> ' ) .append(TaskRun.CMD_ENV) .append('\n')
-            result.append("echo END_$cmd.key >> ") .append(TaskRun.CMD_ENV) .append('\n')
+            result += "#\n"
+            result += "nxf_catch STDOUT STDERR ${cmd.value}\n"
+            result += 'status=$?\n'
+            result += 'if [ $status -eq 0 ]; then\n'
+            result += "  echo $cmd.key=\"\$STDOUT\" >> ${TaskRun.CMD_ENV}\n"
+            result += "  echo /$cmd.key/=exit:0 >> ${TaskRun.CMD_ENV}\n"
+            result += 'else\n'
+            result += "  echo $cmd.key=\"\$STDERR\" >> ${TaskRun.CMD_ENV}\n"
+            result += "  echo /$cmd.key/=exit:\$status >> ${TaskRun.CMD_ENV}\n"
+            result += 'fi\n'
         }
         result.toString()
     }
