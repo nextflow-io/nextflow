@@ -257,9 +257,9 @@ class BashWrapperBuilder {
 
         if( outputEnvNames || outputCommands ) {
             if( !isBash(interpreter) && outputEnvNames )
-                throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
+                throw new IllegalArgumentException("Process output of type env is only allowed with Bash process scripts -- Current interpreter: $interpreter")
             if( !isBash(interpreter) && outputCommands )
-                throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
+                throw new IllegalArgumentException("Process output of type cmd is only allowed with Bash process scripts -- Current interpreter: $interpreter")
             script += getOutputEnvCaptureSnippet(outputEnvNames, outputCommands)
         }
 

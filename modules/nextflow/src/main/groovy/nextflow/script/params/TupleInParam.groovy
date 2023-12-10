@@ -18,6 +18,7 @@ package nextflow.script.params
 
 import groovy.transform.InheritConstructors
 import nextflow.NF
+import nextflow.script.TokenCmdCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -75,6 +76,9 @@ class TupleInParam extends BaseInParam {
             }
             else if( item instanceof TokenEnvCall ) {
                 newItem(EnvInParam).bind(item.val)
+            }
+            else if( item instanceof TokenCmdCall ) {
+                throw new IllegalArgumentException('Command input declaration is not supported')
             }
             else if( item instanceof TokenStdinCall ) {
                 newItem(StdInParam)
