@@ -608,7 +608,7 @@ class TaskRun implements Cloneable {
         final result = new LinkedHashMap(items.size())
         for( CmdOutParam it : items.keySet() ) {
             if( !it.name ) throw new IllegalStateException("Missing output command name - offending parameter: $it")
-            result.put(it.name, it.target)
+            result.put(it.name, it.getTarget(context))
         }
         return result
     }

@@ -16,8 +16,10 @@
  */
 
 process foo {
+    input:
+    val shell
     output:
-    cmd 'bash --version', emit: bash_version
+    cmd "$shell --version", emit: shell_version
     '''
     echo Hello
     '''
@@ -25,6 +27,6 @@ process foo {
 
 
 workflow {
-  foo()
-  foo.out.bash_version.view{ it.readLines()[0] }
+  foo('bash')
+  foo.out.shell_version.view{ it.readLines()[0] }
 }

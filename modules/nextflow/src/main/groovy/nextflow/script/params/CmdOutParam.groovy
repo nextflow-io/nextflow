@@ -20,6 +20,8 @@ package nextflow.script.params
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.InheritConstructors
+import groovy.transform.Memoized
+
 /**
  * Model process `output: cmd PARAM` definition
  *
@@ -30,7 +32,7 @@ class CmdOutParam extends BaseOutParam implements OptionalParam {
 
     private static AtomicInteger counter = new AtomicInteger()
 
-    private target
+    private Object target
 
     private int count
 
@@ -43,12 +45,17 @@ class CmdOutParam extends BaseOutParam implements OptionalParam {
     }
 
     BaseOutParam bind( def obj ) {
+        if( obj !instanceof CharSequence )
+            throw new IllegalArgumentException("Invalid argument for command output: $this")
         // the target value object
         target = obj
         return this
     }
 
-    String getTarget() {
-        return target
+    @Memoized
+    String getTarget(Map<String,Object> context) {
+        return target instanceof GString
+            ? target.cloneAsLazy(context).toString()
+            : target.toString()
     }
 }

@@ -31,7 +31,8 @@ class CmdOutParamTest extends Dsl2Spec {
             process hola {
               output:
               cmd 'foo --version' 
-              cmd 'bar --help'
+              cmd "$params.cmd --help"
+              cmd "$tool --test"  
               
               /echo command/ 
             }
@@ -39,21 +40,23 @@ class CmdOutParamTest extends Dsl2Spec {
             workflow { hola() }
             '''
 
-        def binding = [:]
+        def binding = [params:[cmd:'bar'], tool: 'other']
         def process = parseAndReturnProcess(text, binding)
 
         when:
         def outs = process.config.getOutputs() as List<CmdOutParam>
 
         then:
-        outs.size() == 2
+        outs.size() == 3
         and:
-        outs[0].name == 'nxf_out_cmd_1'
-        outs[0].target == 'foo --version'
+        outs[0].getName() == 'nxf_out_cmd_1'
+        outs[0].getTarget(binding) == 'foo --version'
         and:
-        outs[1].name == 'nxf_out_cmd_2'
-        outs[1].target == 'bar --help'
-
+        outs[1].getName() == 'nxf_out_cmd_2'
+        outs[1].getTarget(binding) == 'bar --help'
+        and:
+        outs[2].getName() == 'nxf_out_cmd_3'
+        outs[2].getTarget(binding) == 'other --test'
     }
 
 }
