@@ -1558,14 +1558,11 @@ class TaskProcessor {
             keys << task.getContainerFingerprint()
 
         // add task inputs
-        final inputs = config.getInputs()
-        final inputVars = inputs.getNames() - inputs.getFiles()*.getName()
-        for( String var : inputVars ) {
-            keys.add(var)
-            keys.add(task.context.get(var))
-        }
+        final inputVars = getTaskInputVars(task)
+        if( inputVars )
+            keys.add(inputVars.entrySet())
         if( task.env )
-            keys.add(task.env)
+            keys.add(task.env.entrySet())
         if( task.inputFiles )
             keys.add(task.inputFiles)
         if( task.stdin )
@@ -1669,6 +1666,15 @@ class TaskProcessor {
         }
 
         log.info(buffer.toString())
+    }
+
+    protected Map<String,Object> getTaskInputVars(TaskRun task) {
+        final result = [:]
+        final inputs = config.getInputs()
+        final inputVars = inputs.getNames() - inputs.getFiles()*.getName()
+        for( String var : inputVars )
+            result.put(var, task.context.get(var))
+        return result
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
