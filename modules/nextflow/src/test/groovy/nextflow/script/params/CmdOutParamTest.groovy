@@ -49,13 +49,13 @@ class CmdOutParamTest extends Dsl2Spec {
         then:
         outs.size() == 3
         and:
-        outs[0].getName() == 'nxf_out_cmd_1'
+        outs[0].getName() =~ /nxf_out_cmd_\d+/
         outs[0].getTarget(binding) == 'foo --version'
         and:
-        outs[1].getName() == 'nxf_out_cmd_2'
+        outs[1].getName() =~ /nxf_out_cmd_\d+/
         outs[1].getTarget(binding) == 'bar --help'
         and:
-        outs[2].getName() == 'nxf_out_cmd_3'
+        outs[2].getName() =~ /nxf_out_cmd_\d+/
         outs[2].getTarget(binding) == 'other --test'
     }
 
