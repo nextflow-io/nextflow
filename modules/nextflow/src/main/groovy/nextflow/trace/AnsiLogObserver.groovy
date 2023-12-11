@@ -369,7 +369,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String fmtChop(String str, int cols) {
         if( str.size() <= cols )
             return str
-        return cols>3 ? str[0..(cols-3-1)] + '...' : str[0..cols-1]
+        return str.take(3) + '...' + str.takeRight(cols-3-3)
     }
 
     protected String line(ProgressRecord stats) {
