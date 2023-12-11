@@ -378,14 +378,18 @@ class AnsiLogObserver implements TraceObserver {
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
+        // Only show 'process >' if we have plenty of width available
+        final processlabel = cols > 180 ? ' process >' : '';
+
         if( tot == 0  )
-            return "[$hh] process > $label -"
+            return "[$hh]$processlabel $label -"
 
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
-        final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
+        // Only show %age complete if we have a bit of width available
+        final pct = cols > 120 ? "[${String.valueOf(x).padLeft(3)}%]".toString() : '|';
 
         final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "[${hh}] process > $label $pct $numbs"
+        def result = "[${hh}]$processlabel $label $pct $numbs"
         if( stats.cached )
             result += ", cached: $stats.cached"
         if( stats.stored )
