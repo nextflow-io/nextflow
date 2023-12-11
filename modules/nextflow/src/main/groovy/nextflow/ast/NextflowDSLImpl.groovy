@@ -27,6 +27,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
+import nextflow.script.TokenCmdCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -1121,6 +1122,11 @@ class NextflowDSLImpl implements ASTTransformation {
                 if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
                     return createX( TokenEnvCall, args )
+                }
+
+                if( methodCall.methodAsString == 'cmd' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenCmdCall, args )
                 }
 
                 /*
