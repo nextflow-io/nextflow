@@ -264,7 +264,7 @@ class AnsiLogObserver implements TraceObserver {
 
         // render line
         for( ProgressRecord entry : processes ) {
-            term.a(line(entry))
+            term = line(entry, term)
             term.newline()
         }
         rendered = true
@@ -372,35 +372,52 @@ class AnsiLogObserver implements TraceObserver {
         return str.take(3) + '...' + str.takeRight(cols-3-3)
     }
 
-    protected String line(ProgressRecord stats) {
+    protected Ansi line(ProgressRecord stats, Ansi term) {
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
-        // Only show 'process >' if we have plenty of width available
-        final processlabel = cols > 180 ? ' process >' : '';
-
-        if( tot == 0  )
-            return "[$hh]$processlabel $label -"
-
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
-        // Only show %age complete if we have a bit of width available
-        final pct = cols > 120 ? "[${String.valueOf(x).padLeft(3)}%]".toString() : '|';
+        final pct = "${String.valueOf(x).padLeft(3)}%".toString()
+        final numbs = " ${(int)com} of ${(int)tot}".toString()
 
-        final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "[${hh}]$processlabel $label $pct $numbs"
+        // Hash: []
+        term = term.fg(Color.BLACK).a('[').fg(Color.BLUE).a(hh).fg(Color.BLACK).a('] ')
+
+        // Label: process > sayHello
+        if (cols > 180)
+            term = term.a('process > ')
+        term = term.reset().a(label)
+
+        // No tasks
+        if( tot == 0  ) {
+            term = term.a(" -")
+            return term
+        }
+
+        // Progress: [  0%] 0 of 10
+        if (cols > 120)
+            term = term.fg(Color.BLACK).a(' [').fg(Color.GREEN).a(pct).fg(Color.BLACK).a(']').reset()
+        else
+            term = term.fg(Color.BLACK).a(' |').reset()
+        term = term.a(numbs)
+
+        // Number of tasks:
         if( stats.cached )
-            result += ", cached: $stats.cached"
+            term = term.fg(Color.BLACK).a(", cached: $stats.cached").reset()
         if( stats.stored )
-            result += ", stored: $stats.stored"
+            term = term.a(", stored: $stats.stored")
         if( stats.failed )
-            result += ", failed: $stats.failed"
+            term = term.a(", failed: $stats.failed")
         if( stats.retries )
-            result += ", retries: $stats.retries"
+            term = term.a(", retries: $stats.retries")
         if( stats.terminated && tot )
-            result += stats.errored ? ' \u2718' : ' \u2714'
-        return fmtChop(result, cols)
+            if( stats.errored )
+                term = term.fg(Color.RED).a(' \u2718' ).reset()
+            else
+                term = term.fg(Color.GREEN).a(' \u2714 ').reset()
+        return term
     }
 
     @Override
