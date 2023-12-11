@@ -45,7 +45,11 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
+import static org.fusesource.jansi.Ansi.Attribute
+import static org.fusesource.jansi.Ansi.Color
+import static org.fusesource.jansi.Ansi.ansi
 /**
  * CLI sub-command RUN
  *
@@ -310,7 +314,15 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
-        log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        log.debug "N E X T F L O W  ~  version ${Const.APP_VER}"
+        def fmt = ansi()
+        fmt = fmt.a("\n")
+        fmt = fmt.a(" 🚀  ")
+        fmt = fmt.bg(Color.GREEN).fg(Color.BLACK).a(" N E X T F L O W ").reset()
+        fmt = fmt.fg(Color.BLACK).a("  ~  ")
+        fmt = fmt.fg(Color.GREEN).a("version " + Const.APP_VER).reset()
+        fmt = fmt.a("\n")
+        AnsiConsole.out.println(fmt.eraseLine())
         Plugins.init()
 
         // -- specify the arguments
@@ -398,10 +410,19 @@ class CmdRun extends CmdBase implements HubOptions {
         final ver = NF.dsl2 ? DSL2 : DSL1
         final repo = scriptFile.repository ?: scriptFile.source
         final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
-        if( scriptFile.repository )
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
-        else
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
+        final revision = scriptFile.repository ? scriptFile.revisionInfo : scriptFile.getScriptId()?.substring(0,10)
+
+        log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
+
+        def fmt = ansi()
+        fmt = fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ")
+        fmt = fmt.fg(Color.BLACK).a("[").reset()
+        fmt = fmt.bold().fg(Color.CYAN).a(runName).reset()
+        fmt = fmt.fg(Color.BLACK).a("]")
+        fmt = fmt.a(" DSL${ver} - ")
+        fmt = fmt.fg(Color.MAGENTA).a("revision: ").bold().a(revision)
+        fmt = fmt.reset().a("\n")
+        AnsiConsole.out.println(fmt.eraseLine())
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
