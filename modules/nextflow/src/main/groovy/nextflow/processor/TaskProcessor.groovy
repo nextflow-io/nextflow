@@ -1988,26 +1988,27 @@ class TaskProcessor {
         if( !environment )
             return null
 
-        final List script = []
+        final List exports = []
         for( String name : environment.keySet() ) {
             String value = environment.get(name)
             if( !ENV_VAR_NAME.matcher(name).matches() )
                 log.trace "Illegal environment variable name: '${name}' -- This variable definition is ignored"
             else if( !value ) {
                 log.warn "Environment variable `$name` evaluates to an empty value"
-                script << "export $name=''"
+                exports << "$name=''"
             }
             else if( !escape ) {
-                script << /export $name="$value"/
+                exports << /$name="$value"/
             }
             else {
                 // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${Escape.variable(value)}"/
+                exports << /$name="${Escape.variable(value)}"/
             }
         }
-        script << ''
 
-        return script.join('\n')
+        return exports.size() > 0
+            ? "export ${exports.join(' ')}\n"
+            : ''
     }
 
     final protected int makeTaskContextStage1( TaskRun task, Map secondPass, List values ) {
