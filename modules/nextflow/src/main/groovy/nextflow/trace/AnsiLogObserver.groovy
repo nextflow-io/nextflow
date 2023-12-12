@@ -85,6 +85,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private volatile int cols = 80
 
+    private volatile int rows = 24
+
     private long startTimestamp
 
     private long endTimestamp
@@ -249,6 +251,7 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         cols = TerminalFactory.get().getWidth()
+        rows = TerminalFactory.get().getHeight()
 
         // calc max width
         final now = System.currentTimeMillis()
@@ -263,10 +266,19 @@ class AnsiLogObserver implements TraceObserver {
             lastWidthReset = now
 
         // render line
+        def renderedLines = 0
+        def skippedLines = 0
         for( ProgressRecord entry : processes ) {
-            term = line(entry, term)
-            term.newline()
+            if( renderedLines <= rows - 5 || entry.getTotalCount() > 0 ) {
+                term = line(entry, term)
+                term.newline()
+                renderedLines += 1
+            } else {
+                skippedLines += 1
+            }
         }
+        if( skippedLines > 0 )
+            term.a("Plus $skippedLines more processes waiting for tasks…").newline()
         rendered = true
     }
 
@@ -369,7 +381,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String fmtChop(String str, int cols) {
         if( str.size() <= cols )
             return str
-        return str.take(3) + '...' + str.takeRight(cols-3-3)
+        return str.take(3) + '…' + str.takeRight(cols-1-3)
     }
 
     protected Ansi line(ProgressRecord stats, Ansi term) {
