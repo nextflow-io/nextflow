@@ -787,25 +787,18 @@ class TaskProcessorTest extends Specification {
         when:
         env = TaskProcessor.bashEnvironmentScript([FOO:'hola',BAR:'ciao mondo'])
         then:
-        env ==  '''
-                export FOO="hola"
-                export BAR="ciao mondo"
-                '''
-                .stripIndent().leftTrim()
+        env == 'export FOO="hola" BAR="ciao mondo"\n'
 
         when:
         env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH', HOLA: 'one|two'], true)
         then:
-        env == '''\
-            export PATH="foo:\\$PATH"
-            export HOLA="one\\|two"
-            '''.stripIndent()
+        env == 'export PATH="foo:\\$PATH" HOLA="one\\|two"\n'
         env.charAt(env.size()-1) == '\n' as char
 
         when:
         env = TaskProcessor.bashEnvironmentScript([FOO:null, BAR:''])
         then:
-        env == "export FOO=''\nexport BAR=''\n"
+        env == "export FOO='' BAR=''\n"
 
     }
 
