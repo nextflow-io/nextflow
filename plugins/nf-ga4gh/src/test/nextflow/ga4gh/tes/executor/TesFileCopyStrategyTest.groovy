@@ -32,10 +32,7 @@ class TesFileCopyStrategyTest extends Specification {
         when:
         def script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'],false)
         then:
-        script == '''\
-            export ALPHA="xx"
-            export BETA="yy"
-            '''.stripIndent()
+        script == 'export ALPHA="xx" BETA="yy"\n'
 
         when:
         script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'], true)
