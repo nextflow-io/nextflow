@@ -506,10 +506,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.containsKey('task_env')
         binding.containsKey('container_env')
-        binding.task_env == /\
-                export FOO="aa"
-                export BAR="bb"
-                /.stripIndent()
+        binding.task_env == 'export FOO="aa" BAR="bb"\n'
         binding.container_env == null
 
         when:
@@ -521,8 +518,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.container_env == /\
                 nxf_container_env() {
                 cat << EOF
-                export FOO="aa"
-                export BAR="bb"
+                export FOO="aa" BAR="bb"
                 EOF
                 }
                 /.stripIndent()
@@ -533,7 +529,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.containsKey('task_env')
         binding.containsKey('container_env')
-        binding.task_env == 'export FOO="aa"\nexport BAR="bb"\n'
+        binding.task_env == 'export FOO="aa" BAR="bb"\n'
         binding.container_env == null
         !binding.launch_cmd.contains('nxf_container_env')
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
@@ -1052,11 +1048,7 @@ class BashWrapperBuilderTest extends Specification {
         binding = newBashWrapperBuilder(environment: ENV).makeBinding()
         then:
         binding.container_env == null
-        binding.task_env ==  '''
-                export FOO="hello"
-                export BAR="hello world"
-                export PATH="/some/path:$PATH"
-                '''
+        binding.task_env == 'export FOO="hello" BAR="hello world" PATH="/some/path:$PATH"\n'
                 .stripIndent().leftTrim()
 
         when:
@@ -1069,9 +1061,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.container_env ==  '''
                 nxf_container_env() {
                 cat << EOF
-                export FOO="hello"
-                export BAR="hello world"
-                export PATH="/some/path:\\$PATH"
+                export FOO="hello" BAR="hello world" PATH="/some/path:\\$PATH"
                 EOF
                 }
                 '''
