@@ -409,10 +409,16 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         // Progress: [  0%] 0 of 10
-        if (cols > 120)
-            term = term.fg(Color.BLACK).a(' [').fg(Color.GREEN).a(pct).fg(Color.BLACK).a(']').reset()
-        else
+        if (cols > 120){
+            term = term.fg(Color.BLACK).a(' [')
+            if( pct == "100%" )
+                term = term.fg(Color.GREEN).a(pct)
+            else
+                term = term.fg(Color.YELLOW).a(pct)
+            term = term.fg(Color.BLACK).a(']').reset()
+        } else {
             term = term.fg(Color.BLACK).a(' |').reset()
+        }
         term = term.a(numbs)
 
         // Number of tasks:
