@@ -192,10 +192,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         when:
         def result = strategy.getEnvScript([FOO:1, BAR: 2], false)
         then:
-        result == '''\
-                export FOO="1"
-                export BAR="2"
-                '''.stripIndent()
+        result == 'export FOO="1" BAR="2"\n'
     }
 
     def 'should create task with remote bin' () {
@@ -220,8 +217,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         envScript == '''\
                 chmod +x /work/xx/yy/nextflow-bin/* || true
                 export PATH=/work/xx/yy/nextflow-bin:$PATH
-                export FOO="1"
-                export BAR="2"
+                export FOO="1" BAR="2"
                 '''.stripIndent()
 
         when:

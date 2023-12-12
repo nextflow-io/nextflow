@@ -225,13 +225,7 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
-        binding.task_env == '''\
-                    export FOO="1"
-                    export BAR="any"
-                    export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
-                    export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZ_SAS="12345"
-                    '''.stripIndent()
+        binding.task_env == 'export FOO="1" BAR="any" PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH" AZCOPY_LOG_LOCATION="$PWD/.azcopy_log" AZ_SAS="12345"\n'
 
         binding.helpers_script == '''\
                 # bash helper functions
@@ -388,11 +382,7 @@ class AzFileCopyStrategyTest extends Specification {
 
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
 
-        binding.task_env == '''\
-                    export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
-                    export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZ_SAS="12345"
-                    '''.stripIndent()
+        binding.task_env == 'export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH" AZCOPY_LOG_LOCATION="$PWD/.azcopy_log" AZ_SAS="12345"\n'
 
         binding.helpers_script == '''\
                     # bash helper functions

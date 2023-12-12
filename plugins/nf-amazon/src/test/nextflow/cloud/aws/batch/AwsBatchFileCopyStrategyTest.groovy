@@ -317,10 +317,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         // note: PATH is always removed
         opts.getRemoteBinDir() >> null
         opts.getCliPath() >> null
-        script == '''
-            export FOO="hola"
-            export BAR="world"
-            '''.stripIndent().leftTrim()
+        script == 'export FOO="hola" BAR="world"\n'
 
         when:
         script = copy.getEnvScript(ENV,false)
@@ -331,8 +328,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
-            export FOO="hola"
-            export BAR="world"
+            export FOO="hola" BAR="world"
             '''.stripIndent().leftTrim()
 
         when:
@@ -344,8 +340,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
-            export FOO="hola"
-            export BAR="world"
+            export FOO="hola" BAR="world"
             '''.stripIndent().leftTrim()
 
         when:
@@ -358,8 +353,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
-            export FOO="hola"
-            export BAR="world"
+            export FOO="hola" BAR="world"
             '''.stripIndent().leftTrim()
 
     }
