@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script.params
+package nextflow.processor
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -22,17 +22,17 @@ import spock.lang.Unroll
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class ArityParamTest extends Specification {
+class PathArityAwareTest extends Specification {
 
-    static class DefaultArityParam implements ArityParam {
-        DefaultArityParam() {}
+    static class PathArity implements PathArityAware {
+        PathArity() {}
     }
 
     @Unroll
     def testArity () {
 
         when:
-        def param = new DefaultArityParam()
+        def param = new PathArity()
         param.setArity(VALUE)
         then:
         param.arity.min == MIN
@@ -50,7 +50,7 @@ class ArityParamTest extends Specification {
     def testArityRange () {
 
         when:
-        def range = new ArityParam.Range(MIN, MAX)
+        def range = new PathArityAware.Range(MIN, MAX)
         then:
         range.contains(2) == TWO
         range.toString() == STRING

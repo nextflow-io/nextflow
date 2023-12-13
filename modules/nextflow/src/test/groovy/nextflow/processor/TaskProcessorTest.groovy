@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 
 import groovyx.gpars.agent.Agent
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
@@ -59,7 +60,8 @@ class TaskProcessorTest extends Specification {
             super(name, new NopeExecutor(session: session), session, script, taskConfig, new BodyDef({}, '..'))
         }
 
-        @Override protected void createOperator() { }
+        @Override
+        protected void createOperator(DataflowReadChannel source) { }
     }
 
 

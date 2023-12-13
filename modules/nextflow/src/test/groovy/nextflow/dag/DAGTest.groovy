@@ -22,10 +22,10 @@ import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.script.params.InputsList;
-import nextflow.script.params.InParam;
-import nextflow.script.params.OutputsList;
-import nextflow.script.params.OutParam;
+import nextflow.script.ProcessInput
+import nextflow.script.ProcessInputs
+import nextflow.script.ProcessOutput
+import nextflow.script.ProcessOutputs
 import nextflow.Session
 /**
  *
@@ -293,12 +293,18 @@ class DAGTest extends Specification {
 
         def dag = new DAG()
 
-        def pInList = new InputsList()
-        def ip1 = Mock(InParam) { rawChannel >> chC }
+        def pInList = new ProcessInputs()
+        def ip1 = Mock(ProcessInput) {
+            getChannel() >> chC
+            getName() >> 'in1'
+        }
         pInList.add( ip1 )
 
-        def pOutList = new OutputsList()
-        def op1 = Mock(OutParam) { getOutChannel() >> chE }
+        def pOutList = new ProcessOutputs()
+        def op1 = Mock(ProcessOutput) {
+            getChannel() >> chE
+            getName() >> 'out1'
+        }
         pOutList.add( op1 )
 
         when:

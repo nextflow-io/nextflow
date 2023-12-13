@@ -80,14 +80,6 @@ class TestParser {
 
     @InheritConstructors
     static class TestTaskProcessor extends TaskProcessor {
-        @Override
-        def run () {
-            // this is needed to mimic the out channels normalisation
-            // made by the real 'run' method - check the superclass
-            if ( config.getOutputs().size() == 0 ) {
-                config.fakeOutput()
-            }
-        }
     }
 
     @InheritConstructors

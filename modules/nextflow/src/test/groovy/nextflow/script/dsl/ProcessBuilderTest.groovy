@@ -26,7 +26,7 @@ import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
-import nextflow.script.TokenVar
+import nextflow.util.LazyVar
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -114,9 +114,9 @@ class ProcessBuilderTest extends Specification {
 
         when:
         builder._out_stdout()
-        builder._out_file(new TokenVar('file1')).setInto('ch1')
-        builder._out_file(new TokenVar('file2')).setInto('ch2')
-        builder._out_file(new TokenVar('file3')).setInto('ch3')
+        builder._out_file(new LazyVar('file1')).setInto('ch1')
+        builder._out_file(new LazyVar('file2')).setInto('ch2')
+        builder._out_file(new LazyVar('file3')).setInto('ch3')
 
         then:
         config.outputs.size() == 4
@@ -583,21 +583,21 @@ class ProcessBuilderTest extends Specification {
 
         when:
         def config = new ProcessConfig(label: ['foo', 'other'])
-        new ProcessBuilder(config).applyConfig(settings, "processName", null, null)
+        new ProcessConfigBuilder(config).applyConfig(settings, "processName", null, null)
         then:
         config.cpus == 2
         config.disk == '100.GB'
 
         when:
         config = new ProcessConfig(label: ['foo', 'other', 'nodisk_label'])
-        new ProcessBuilder(config).applyConfig(settings, "processName", null, null)
+        new ProcessConfigBuilder(config).applyConfig(settings, "processName", null, null)
         then:
         config.cpus == 2
         !config.disk
 
         when:
         config = new ProcessConfig(label: ['other', 'nodisk_label'])
-        new ProcessBuilder(config).applyConfig(settings, "processName", null, null)
+        new ProcessConfigBuilder(config).applyConfig(settings, "processName", null, null)
         then:
         config.cpus == 4
         !config.disk

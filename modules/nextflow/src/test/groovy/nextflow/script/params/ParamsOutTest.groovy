@@ -21,8 +21,9 @@ import static test.TestParser.*
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.script.PathArityAware
 import nextflow.processor.TaskContext
-import nextflow.script.TokenVar
+import nextflow.util.LazyVar
 import nextflow.util.BlankSeparatedList
 import test.Dsl2Spec
 /**
@@ -658,7 +659,7 @@ class ParamsOutTest extends Dsl2Spec {
          * val x
          */
         when:
-        param.target = new TokenVar('x')
+        param.target = new LazyVar('x')
         then:
         param.resolve(createTaskContext([x:'foo'])) == 'foo'
 
@@ -965,7 +966,7 @@ class ParamsOutTest extends Dsl2Spec {
         !out0.getGlob()
         !out0.getOptional()
         !out0.getIncludeInputs()
-        out0.getArity() == new ArityParam.Range(1, 1)
+        out0.getArity() == new PathArityAware.Range(1, 1)
 
         and:
         out1.getMaxDepth() == 5
@@ -976,7 +977,7 @@ class ParamsOutTest extends Dsl2Spec {
         out1.getGlob()
         out1.getOptional()
         out1.getIncludeInputs()
-        out1.getArity() == new ArityParam.Range(0, Integer.MAX_VALUE)
+        out1.getArity() == new PathArityAware.Range(0, Integer.MAX_VALUE)
     }
 
     def 'should set file options' () {

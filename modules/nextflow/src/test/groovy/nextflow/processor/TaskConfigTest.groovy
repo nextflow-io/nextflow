@@ -504,7 +504,7 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new TaskConfig()
-        config.publishDir = [ [path: "${-> foo }/${-> bar }", mode: "${-> x }"] ] as ConfigList
+        config.publishDir = [ [path: "${-> foo }/${-> bar }", mode: "${-> x }"] ] as LazyList
         config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
         then:
         config.getPublishDir() == [ PublishDir.create(path: 'world/hello', mode: 'copy') ]
