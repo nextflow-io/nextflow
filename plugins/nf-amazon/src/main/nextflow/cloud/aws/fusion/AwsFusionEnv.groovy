@@ -43,6 +43,9 @@ class AwsFusionEnv implements FusionEnv {
         if( creds ) {
             result.AWS_ACCESS_KEY_ID = creds[0]
             result.AWS_SECRET_ACCESS_KEY = creds[1]
+
+            if( creds.size() > 2 )
+                result.AWS_SESSION_TOKEN = creds[2]
         }
         if( endpoint )
             result.AWS_S3_ENDPOINT = endpoint
@@ -59,6 +62,10 @@ class AwsFusionEnv implements FusionEnv {
         final result = awsConfig.getCredentials()
         if( result )
             return result
+
+        if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') && SysEnv.get('AWS_SESSION_TOKEN') )
+            return List.<String>of(SysEnv.get('AWS_ACCESS_KEY_ID'), SysEnv.get('AWS_SECRET_ACCESS_KEY'), SysEnv.get('AWS_SESSION_TOKEN'))
+
         if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') )
             return List.<String>of(SysEnv.get('AWS_ACCESS_KEY_ID'), SysEnv.get('AWS_SECRET_ACCESS_KEY'))
         else

@@ -77,4 +77,28 @@ class AwsFusionEnvTest extends Specification {
         cleanup:
         Global.config = null
     }
+
+    def 'should return env environment with session token' () {
+        given:
+        SysEnv.push([AWS_ACCESS_KEY_ID: 'x1', AWS_SECRET_ACCESS_KEY: 'y1', AWS_S3_ENDPOINT: 'http://my-host.com', AWS_SESSION_TOKEN: 'z1'])
+        and:
+
+        when:
+        def config = Mock(FusionConfig)
+        def env = new AwsFusionEnv().getEnvironment('s3', Mock(FusionConfig))
+        then:
+        env == [AWS_S3_ENDPOINT:'http://my-host.com']
+
+        when:
+        config = Mock(FusionConfig) { exportStorageCredentials() >> true }
+        env = new AwsFusionEnv().getEnvironment('s3', config)
+        then:
+        env == [AWS_ACCESS_KEY_ID: 'x1',
+                AWS_SECRET_ACCESS_KEY: 'y1',
+                AWS_S3_ENDPOINT:'http://my-host.com',
+                AWS_SESSION_TOKEN: 'z1']
+
+        cleanup:
+        SysEnv.pop()
+    }
 }
