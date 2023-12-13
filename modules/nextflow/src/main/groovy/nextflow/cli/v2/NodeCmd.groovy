@@ -39,7 +39,7 @@ class NodeCmd extends AbstractCmd implements CmdNode.Options {
     @ParentCommand
     private Launcher launcher
 
-    @Option(names = ['--cluster.'], paramLabel = '<name>=<value>', description = 'Define cluster config options')
+    @Option(names = ['--cluster.'], paramLabel = '*', description = 'Define cluster config options (e.g. --cluster.<name>=<value>)')
     Map<String,String> clusterOptions = [:]
 
     @Option(names = ['--bg'], arity = '0', description = 'Start the cluster node daemon in background')

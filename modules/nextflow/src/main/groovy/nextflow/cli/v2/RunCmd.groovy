@@ -90,16 +90,16 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--dump-channels'], arity = '0..1', fallbackValue = '*', paramLabel = '<channels>', description = 'Dump channels for debugging purposes')
     String dumpChannels
 
-    @Option(names = ['--dump-hashes'], fallbackValue = '-', description = 'Dump task hash keys for debugging purposes')
+    @Option(names = ['--dump-hashes'], arity = '0..1', fallbackValue = '-', paramLabel = 'default|json', description = 'Dump task hash keys for debugging purposes')
     String dumpHashes
 
     @Option(names = ['--entry'], arity = '1', paramLabel = '<workflow>', description = 'Entry workflow name to be executed')
     String entryName
 
-    @Option(names = ['-e.','--env.'], paramLabel = '<name>=<value>', description = 'Add the specified variable to execution environment')
+    @Option(names = ['-e.','--env.'], paramLabel = '*', description = 'Add the specified variable to execution environment (e.g. --env.<name>=<value>)')
     Map<String,String> env = [:]
 
-    @Option(names = ['--executor.'], arity = '0..1', fallbackValue = 'true', paramLabel = '<name>[=<value>]', description = 'Set executor options', hidden = true)
+    @Option(names = ['--executor.'], arity = '0..1', fallbackValue = 'true', paramLabel = '*', description = 'Set executor options (e.g. --executor.<name>=<value>)', hidden = true)
     Map<String,String> executorOptions = [:]
 
     @Option(names = ['-E','--export-sys-env'], description = 'Export the current system environment')
@@ -135,7 +135,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--preview'], description = 'Run the workflow script skipping the execution of all processes')
     boolean preview
 
-    @Option(names = ['--process.'], arity = '0..1', fallbackValue = 'true', paramLabel = '<name>[=<value>]', description = 'Set process options' )
+    @Option(names = ['--process.'], arity = '0..1', fallbackValue = 'true', paramLabel = '*', description = 'Set process options (e.g. --process.<name>=<value>)' )
     Map<String,String> processOptions = [:]
 
     @Option(names = ['--profile'], description = 'Use a configuration profile')
@@ -144,7 +144,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--queue-size'], paramLabel = '<value>', description = 'Max number of processes that can be executed in parallel by each executor')
     Integer queueSize
 
-    @Option(names = ['--resume'], arity = '0..1', fallbackValue = 'last', description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
+    @Option(names = ['--resume'], arity = '0..1', fallbackValue = 'last', paramLabel = 'last|<session-id>', description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
     String resume
 
     @Option(names = ['-r','--revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
@@ -165,7 +165,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--with-charliecloud'], arity = '0..1', fallbackValue = '-', paramLabel = '<container>', description = 'Enable process execution in a Charliecloud container runtime')
     String withCharliecloud
 
-    @Option(names = ['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
+    @Option(names = ['-with-cloudcache'], paramLabel = '<path>', description = 'Enable the use of object storage bucket as storage for cache meta-data')
     String withCloudCache
 
     @Option(names = ['--with-conda'], arity = '0..1', fallbackValue = '-', paramLabel = '<name>|<file>', description = 'Use the specified Conda environment, package, or file (must end with .yml|.yaml suffix)')
