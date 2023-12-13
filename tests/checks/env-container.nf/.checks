@@ -31,7 +31,7 @@ process foo {
 }
 
 workflow {
-  channel.value('Hello World!') | foo
+  channel.of('Hello World!', 'Ciao()Mondo!') | foo
 }
 EOF
 
@@ -43,35 +43,39 @@ EOF
 $NXF_CMD run foo.nf | tee stdout
 
 # run tests 
-[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
-[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 2 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 2 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
-[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Ciao()Mondo!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 2 ]] || false
 
 # NF run with trace
 $NXF_CMD run foo.nf -with-trace | tee stdout
 
 # run tests 
-[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
-[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 2 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 2 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
-[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Ciao()Mondo!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 2 ]] || false
 
 # NF run with docker
 $NXF_CMD run foo.nf -with-docker | tee stdout
 
 # run tests 
-[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
-[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 2 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 2 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
-[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Ciao()Mondo!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 2 ]] || false
 
 
 # NF run with docker and trace
 $NXF_CMD run foo.nf -with-trace -with-docker | tee stdout
 
 # run tests 
-[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
-[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 2 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 2 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
-[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Ciao()Mondo!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 2 ]] || false
