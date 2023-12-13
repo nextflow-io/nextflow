@@ -463,10 +463,10 @@ class WorkflowMetadata {
      */
     protected void safeMailNotification() {
         try {
-            def notifier = new WorkflowNotifier()
-            notifier.workflow = this
-            notifier.config = session.config
-            notifier.variables = NF.binding.variables
+            final notifier = new WorkflowNotifier(
+                workflow: this,
+                config: session.config,
+                variables: NF.binding.variables )
             notifier.sendNotification()
         }
         catch (Exception e) {
