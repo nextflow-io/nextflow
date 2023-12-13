@@ -15,12 +15,9 @@
  */
 
 package nextflow
+
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.text.SimpleDateFormat
-
-import static nextflow.extension.Bolts.DATETIME_FORMAT
-
 /**
  * Application main constants
  *
@@ -59,48 +56,6 @@ class Const {
      */
     static public final long APP_TIMESTAMP = 1700857448507
 
-    /**
-     * The app build number
-     */
-    static public final int APP_BUILDNUM = 5891
-
-    /**
-     * The app build time string relative to UTC timezone
-     */
-    static public final String APP_TIMESTAMP_UTC = {
-
-        def tz = TimeZone.getTimeZone('UTC')
-        def fmt = new SimpleDateFormat(DATETIME_FORMAT)
-        fmt.setTimeZone(tz)
-        fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
-
-    } ()
-
-
-    /**
-     * The app build time string relative to local timezone
-     */
-    static public final String APP_TIMESTAMP_LOCAL = {
-
-        def tz = TimeZone.getDefault()
-        def fmt = new SimpleDateFormat(DATETIME_FORMAT)
-        fmt.setTimeZone(tz)
-        fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
-
-    } ()
-
-    static String deltaLocal() {
-        def utc = APP_TIMESTAMP_UTC.split(' ')
-        def loc = APP_TIMESTAMP_LOCAL.split(' ')
-
-        if( APP_TIMESTAMP_UTC == APP_TIMESTAMP_LOCAL ) {
-            return ''
-        }
-
-        def result = utc[0] == loc[0] ? loc[1,-1].join(' ') : loc.join(' ')
-        return "($result)"
-    }
-
 
     private static Path getHomeDir(String appname) {
         def home = System.getenv('NXF_HOME')
@@ -112,19 +67,6 @@ class Const {
 
         return result
     }
-
-    /*
-     * The application 'logo'
-     */
-    static public final String SPLASH =
-
-"""
-      N E X T F L O W
-      version ${APP_VER} build ${APP_BUILDNUM}
-      created ${APP_TIMESTAMP_UTC} ${deltaLocal()}
-      cite doi:10.1038/nbt.3820
-      http://nextflow.io
-"""
 
     static public final String S3_UPLOADER_CLASS = 'nextflow.cloud.aws.nio'
 
