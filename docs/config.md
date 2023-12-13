@@ -1077,8 +1077,8 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
-`notification.binding`
-: An associative array modelling the variables in the template file.
+`notification.attributes`
+: A map object modelling the variables that can be used in the template file.
 
 `notification.enabled`
 : Enables the sending of a notification message when the workflow execution completes.
