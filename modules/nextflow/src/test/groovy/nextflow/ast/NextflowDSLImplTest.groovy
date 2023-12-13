@@ -18,7 +18,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
     def createCompilerConfig() {
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         return config
     }

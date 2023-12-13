@@ -52,7 +52,7 @@ class OpXformTest extends Specification {
     private TokenMultiMapDef eval_multiMap(String stmt) {
 
         def config = new CompilerConfiguration()
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
         def shell = new GroovyShell(config)
         def result = shell.evaluate("""

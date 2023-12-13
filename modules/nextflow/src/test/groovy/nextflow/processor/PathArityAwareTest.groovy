@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.processor
+package nextflow.script
 
 import spock.lang.Specification
 import spock.lang.Unroll
