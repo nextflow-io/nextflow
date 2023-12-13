@@ -24,6 +24,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
+import picocli.CommandLine.Unmatched
 
 /**
  * CLI `inspect` sub-command (v2)
@@ -41,11 +42,11 @@ class InspectCmd extends AbstractCmd implements CmdInspect.Options {
     @ParentCommand
     private Launcher launcher
 
-    @Parameters(index = '0', description = 'Project name or repository url')
+    @Parameters(description = 'Project name or repository url')
     String pipeline
 
-    @Parameters(index = '1..*', description = 'Pipeline script args')
-    List<String> args = []
+    @Unmatched
+    List<String> unmatched = []
 
     @Option(names = ['-concretize'], description = "Build the container images resolved by the inspect command")
     boolean concretize
@@ -68,35 +69,9 @@ class InspectCmd extends AbstractCmd implements CmdInspect.Options {
     @Option(names = ['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
     String revision
 
-    private List<String> pipelineArgs = null
+    List<String> args
 
-    private Map<String,String> pipelineParams = null
-
-    /**
-     * Get the list of pipeline args.
-     */
-    @Override
-    List<String> getArgs() {
-        if( pipelineArgs == null ) {
-            pipelineArgs = ParamsHelper.parseArgs(args)
-            pipelineParams = ParamsHelper.parseParams(args, pipelineArgs)
-        }
-
-        return pipelineArgs
-    }
-
-    /**
-     * Get the map of pipeline params.
-     */
-    @Override
-    Map<String,String> getParams() {
-        if( pipelineParams == null ) {
-            pipelineArgs = ParamsHelper.parseArgs(args)
-            pipelineParams = ParamsHelper.parseParams(args, pipelineArgs)
-        }
-
-        return pipelineParams
-    }
+    Map<String,String> params
 
     @Override
     String getLauncherCli() {
@@ -110,6 +85,9 @@ class InspectCmd extends AbstractCmd implements CmdInspect.Options {
 
     @Override
     void run() {
+        args = ParamsHelper.parseArgs(unmatched)
+        params = ParamsHelper.parseParams(unmatched, args)
+
         final opts = new RunCmd()
         opts.launcher = launcher
         opts.ansiLog = false
