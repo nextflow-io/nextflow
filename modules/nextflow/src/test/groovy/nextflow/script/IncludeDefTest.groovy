@@ -7,7 +7,7 @@ import spock.lang.Unroll
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import nextflow.ast.NextflowXform
+import nextflow.ast.NextflowDSL
 import nextflow.exception.IllegalModulePath
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -174,7 +174,7 @@ class IncludeDefTest extends Specification {
         def binding = new ScriptBinding([params: [foo:1, bar:2]])
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         when:
         def script = (TestScript)new GroovyShell(binding, config).parse(INCLUDE)

@@ -24,13 +24,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
-import nextflow.ast.ProcessFn
-import nextflow.ast.WorkflowFn
 import nextflow.exception.AbortOperationException
 import nextflow.script.dsl.ProcessBuilder
 import nextflow.script.dsl.ProcessDsl
-import nextflow.script.dsl.ProcessInputsBuilder
-import nextflow.script.dsl.ProcessOutputsBuilder
 import nextflow.script.dsl.WorkflowBuilder
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -151,18 +147,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
         include .setSession(session)
     }
 
-    @Override
-    Object getProperty(String name) {
-        try {
-            ExecutionStack.binding().getProperty(name)
-        }
-        catch( MissingPropertyException e ) {
-            if( !ExecutionStack.withinWorkflow() )
-                throw e
-            binding.getProperty(name)
-        }
-    }
-
     /**
      * Invokes custom methods in the task execution context
      *
@@ -175,99 +159,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     @Override
     Object invokeMethod(String name, Object args) {
-        try {
-            ExecutionStack.binding().invokeMethod(name, args)
-        }
-        catch( MissingMethodException e ) {
-            if( !ExecutionStack.withinWorkflow() )
-                throw e
-            binding.invokeMethod(name, args)
-        }
-    }
-
-    private void applyDsl(Object delegate, Class<Closure> clazz) {
-        final cl = clazz.newInstance(this, this)
-        cl.delegate = delegate
-        cl.resolveStrategy = Closure.DELEGATE_FIRST
-        cl.call()
-    }
-
-    private void registerProcessFn(Method method) {
-        final name = method.getName()
-        final processFn = method.getAnnotation(ProcessFn)
-
-        // validate annotation
-        if( processFn.script() && processFn.shell() )
-            throw new IllegalArgumentException("Process function `${name}` cannot have script and shell enabled simultaneously")
-
-        // build process from annotation
-        final builder = new ProcessBuilder(this, name)
-
-        // -- directives
-        applyDsl(builder, processFn.directives())
-
-        // -- inputs
-        final inputs = new ProcessInputsBuilder()
-        applyDsl(inputs, processFn.inputs())
-
-        for( String param : processFn.params() )
-            inputs.take(param)
-
-        // -- outputs
-        final outputs = new ProcessOutputsBuilder()
-        applyDsl(outputs, processFn.outputs())
-
-        // -- process type
-        final type =
-            processFn.script() ? 'script'
-            : processFn.shell() ? 'shell'
-            : 'exec'
-
-        // -- variable references
-        final valRefs = processFn.vars().collect( var -> new TokenValRef(var) )
-
-        // -- build process
-        final process = builder
-            .withInputs(inputs.build())
-            .withOutputs(outputs.build())
-            .withBody(this.&"${name}", type, processFn.source(), valRefs)
-            .build()
-
-        // register process
-        meta.addDefinition(process)
-    }
-
-    private void registerWorkflowFn(Method method) {
-        final name = method.getName()
-        final workflowFn = method.getAnnotation(WorkflowFn)
-
-        // build workflow from annotation
-        final builder = workflowFn.main()
-            ? new WorkflowBuilder(this)
-            : new WorkflowBuilder(this, name)
-
-        // create body
-        final body = new BodyDef( this.&"${name}", workflowFn.source(), 'workflow', [] )
-        builder.withBody(body)
-
-        // register workflow
-        final workflow = builder.build()
-        if( workflowFn.main() )
-            this.entryFlow = workflow
-        meta.addDefinition(workflow)
+        binding.invokeMethod(name, args)
     }
 
     private run0() {
-        // register any process and workflow functions
-        final clazz = this.getClass()
-        for( final method : clazz.getDeclaredMethods() ) {
-            if( method.isAnnotationPresent(ProcessFn) )
-                registerProcessFn(method)
-            if( method.isAnnotationPresent(WorkflowFn) )
-                registerWorkflowFn(method)
-        }
-
-        // execute script
         final result = runScript()
         if( meta.isModule() ) {
             return result

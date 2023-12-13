@@ -141,35 +141,6 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         return "Process `$name` declares ${expected} input ${ch} but ${actual} were specified"
     }
 
-    @Override
-    Object run(Object[] args) {
-        // initialise process config
-        initialize()
-
-        // create input channel
-        final source = collectInputs(args)
-
-        // set output channels
-        final singleton = !CH.isChannelQueue(source)
-        collectOutputs(singleton)
-
-        // create the executor
-        final executor = session
-                .executorFactory
-                .getExecutor(processName, config, taskBody, session)
-
-        // create processor class
-        session
-                .newProcessFactory(owner)
-                .newTaskProcessor(processName, executor, config, taskBody)
-                .run(source)
-
-        // the result channels
-        // note: the result object must be an array instead of a List to allow process
-        // composition ie. to use the process output as the input in another process invocation
-        return output = new ChannelOut(declaredOutputs)
-    }
-
     private DataflowReadChannel collectInputs(Object[] args0) {
         final args = ChannelOut.spread(args0)
         if( args.size() != declaredInputs.size() )
@@ -217,6 +188,35 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
             declaredOutputs[i].setChannel(ch)
         }
+    }
+
+    @Override
+    Object run(Object[] args) {
+        // initialise process config
+        initialize()
+
+        // create input channel
+        final source = collectInputs(args)
+
+        // set output channels
+        // note: the result object must be an array instead of a List to allow process
+        // composition ie. to use the process output as the input in another process invocation
+        final singleton = !CH.isChannelQueue(source)
+        collectOutputs(singleton)
+
+        // create the executor
+        final executor = session
+                .executorFactory
+                .getExecutor(processName, config, taskBody, session)
+
+        // create processor class
+        session
+                .newProcessFactory(owner)
+                .newTaskProcessor(processName, executor, config, taskBody)
+                .run(source)
+
+        // the result channels
+        return output = new ChannelOut(declaredOutputs)
     }
 
 }

@@ -29,12 +29,12 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class OperatorXformTest extends Specification {
+class OpXformTest extends Specification {
 
     private TokenBranchDef eval_branch(String stmt) {
 
         def config = new CompilerConfiguration()
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
         def shell = new GroovyShell(config)
         def result = shell.evaluate("""

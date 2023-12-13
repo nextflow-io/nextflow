@@ -19,7 +19,7 @@ package nextflow.script.dsl
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
-import nextflow.ast.DslCodeVisitor
+import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.exception.ScriptRuntimeException
@@ -130,9 +130,9 @@ class ProcessBuilder {
     private void checkName(String name) {
         if( DIRECTIVES.contains(name) )
             return
-        if( name == DslCodeVisitor.PROCESS_WHEN )
+        if( name == NextflowDSLImpl.PROCESS_WHEN )
             return
-        if( name == DslCodeVisitor.PROCESS_STUB )
+        if( name == NextflowDSLImpl.PROCESS_STUB )
             return
 
         String message = "Unknown process directive: `$name`"

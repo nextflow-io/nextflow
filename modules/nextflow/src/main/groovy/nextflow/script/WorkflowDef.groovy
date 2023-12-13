@@ -24,7 +24,6 @@ import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import org.codehaus.groovy.runtime.MethodClosure
 /**
  * Models a script workflow component
  *
@@ -191,52 +190,15 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     }
 
     private Object run0(Object[] args) {
+        collectInputs(binding, args)
+        // invoke the workflow execution
         final closure = body.closure
-        if( closure instanceof MethodClosure ) {
-            // invoke the workflow function with args
-            final target = closure.owner
-            final name = closure.method
-            final meta = target.metaClass.getMetaMethod(name, args)
-            if( meta == null )
-                throw new MissingMethodException(name, target.getClass(), args)
-            final method = target.getClass().getMethod(name, meta.getNativeParameterTypes())
-            if( method == null )
-                throw new MissingMethodException(name, target.getClass(), args)
-            final result = method.invoke(target, args)
-
-            // apply return value to declared outputs, binding
-            normalizeOutput(result)
-        }
-        else {
-            // invoke the workflow closure with delegate
-            collectInputs(binding, args)
-            closure.setDelegate(binding)
-            closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-            closure.call()
-        }
-
+        closure.delegate = binding
+        closure.setResolveStrategy(Closure.DELEGATE_FIRST)
+        closure.call()
         // collect the workflow outputs
         output = collectOutputs(declaredOutputs)
         return output
-    }
-
-    private void normalizeOutput(Object result) {
-        if( CH.isChannel(result) )
-            result = ['$out0': result]
-
-        if( result instanceof List )
-            result = result.inject([:], (acc, value) -> { acc.put("\$out${acc.size()}".toString(), value); acc })
-
-        if( result instanceof Map<String,?> ) {
-            for( def entry : result ) {
-                declaredOutputs.add(entry.key)
-                binding.setVariable(entry.key, entry.value)
-            }
-        }
-        else if( result instanceof ChannelOut )
-            log.debug "Workflow `$name` > ignoring multi-channel return value"
-        else if( result != null )
-            throw new ScriptRuntimeException("Workflow `$name` emitted unexpected value of type ${result.class.name} -- ${result}")
     }
 
 }

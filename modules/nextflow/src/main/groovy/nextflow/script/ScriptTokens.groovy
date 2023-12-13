@@ -64,7 +64,7 @@ class TokenPathCall {
  *   tuple( stdin, .. ) from x
  * </pre>
  *
- * @see nextflow.ast.DslCodeVisitor
+ * @see nextflow.ast.NextflowDSLImpl
  * @see nextflow.script.dsl.ProcessDsl#_in_tuple(java.lang.Object[])
  */
 class TokenStdinCall { }
@@ -76,7 +76,7 @@ class TokenStdinCall { }
  *   tuple( stdout, .. ) into x
  * </pre>
  *
- * @see nextflow.ast.DslCodeVisitor
+ * @see nextflow.ast.NextflowDSLImpl
  * @see nextflow.script.dsl.ProcessDsl#_out_tuple(java.util.Map,java.lang.Object[])
  */
 class TokenStdoutCall { }

@@ -24,6 +24,8 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowReadChannel
+import nextflow.ast.OpXform
+import nextflow.ast.OpXformImpl
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
@@ -379,11 +381,11 @@ class Nextflow {
      * Marker method to create a closure to be passed to {@link OperatorImpl#branch(DataflowReadChannel, groovy.lang.Closure)}
      * operator.
      *
-     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OperatorXform} AST
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
      * transformation required to interpret the closure content as required for the branch evaluation.
      *
      * @see OperatorImpl#branch(DataflowReadChannel, Closure)
-     * @see OperatorXform
+     * @see OpXformImpl
      *
      * @param closure
      * @return
@@ -394,11 +396,11 @@ class Nextflow {
      * Marker method to create a closure to be passed to {@link OperatorImpl#fork(DataflowReadChannel, Closure)}
      * operator.
      *
-     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OperatorXform} AST
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
      * transformation required to interpret the closure content as required for the branch evaluation.
      *
      * @see OperatorImpl#multiMap(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure) (DataflowReadChannel, Closure)
-     * @see OperatorXform
+     * @see OpXformImpl
      *
      * @param closure
      * @return

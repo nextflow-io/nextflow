@@ -41,7 +41,6 @@ import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.spack.SpackCache
 import nextflow.util.ArrayBag
-import org.codehaus.groovy.runtime.MethodClosure
 /**
  * Models a task instance
  *
@@ -620,24 +619,14 @@ class TaskRun implements Cloneable {
      * 2) extract the process code `source`
      * 3) assign the `script` code to execute
      *
-     * @param body
-     * @param args
+     * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve(BodyDef body, Object[] args) {
+    @PackageScope void resolve(BodyDef body) {
 
         // -- initialize the task code to be executed
-        this.code = body.closure
-
-        if( code instanceof MethodClosure ) {
-            // -- invoke task closure with arguments
-            code = code.curry(args)
-        }
-        else {
-            // -- invoke task closure with delegate
-            code = code.clone() as Closure
-            code.setDelegate(this.context)
-            code.setResolveStrategy(Closure.DELEGATE_ONLY)
-        }
+        this.code = body.closure.clone() as Closure
+        this.code.delegate = this.context
+        this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         // -- set the task source
         this.body = body

@@ -60,7 +60,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 /**
- * Implements the syntax transformations for Nextflow operators.
+ * Implements Nextflow operators xform logic
  *
  * See http://groovy-lang.org/metaprogramming.html#_classcodeexpressiontransformer
  *
@@ -68,72 +68,18 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
  */
 @Slf4j
 @CompileStatic
-class OperatorXform extends ClassCodeExpressionTransformer {
+@GroovyASTTransformation(phase = CompilePhase.CONVERSION)
+class OpXformImpl implements ASTTransformation {
 
-    static final String BRANCH_METHOD_NAME = 'branch'
+    static final public String BRANCH_METHOD_NAME = 'branch'
 
-    static final String BRANCH_CRITERIA_FUN = 'branchCriteria'
+    static final public String BRANCH_CRITERIA_FUN = 'branchCriteria'
 
-    static final String MULTIMAP_METHOD_NAME = 'multiMap'
+    static final public String MULTIMAP_METHOD_NAME = 'multiMap'
 
-    static final String MULTIMAP_CRITERIA_FUN = 'multiMapCriteria'
+    static final public String MULTIMAP_CRITERIA_FUN = 'multiMapCriteria'
 
-    private final SourceUnit unit
-
-    OperatorXform(SourceUnit unit) {
-        this.unit = unit
-    }
-
-    @Override
-    protected SourceUnit getSourceUnit() { unit }
-
-    @Override
-    Expression transform(Expression expr) {
-        if (expr == null)
-            return null
-
-        ClosureExpression body
-        if( (body=isBranchOpCall(expr)) ) {
-            return new BranchTransformer(expr as MethodCallExpression, body).apply()
-        }
-        else if( (body=isMultiMapOpCall(expr)) ) {
-            return new MultiMapTransformer(expr as MethodCallExpression, body).apply()
-        }
-        else if( expr instanceof ClosureExpression) {
-            visitClosureExpression(expr)
-        }
-
-        return super.transform(expr)
-    }
-
-    protected ClosureExpression isBranchOpCall(Expression expr) {
-        final m = ASTHelpers.isMethodCallX(expr)
-        if( m ) {
-            final name = m.methodAsString
-            final args = isArgsX(m.arguments)
-            final ClosureExpression ret = args && args.size()>0 ? isClosureX(args.last()) : null
-            if( name==BRANCH_METHOD_NAME && args.size()==1 )
-                return ret
-            if( name==BRANCH_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
-                return ret
-        }
-        return null
-    }
-
-    protected ClosureExpression isMultiMapOpCall(Expression expr) {
-        final m = ASTHelpers.isMethodCallX(expr)
-        if( m ) {
-            final name = m.methodAsString
-            final args = isArgsX(m.arguments)
-            final ClosureExpression ret = args && args.size()>0 ? isClosureX(args.last()) : null
-            if( name==MULTIMAP_METHOD_NAME && args.size()==1 )
-                return ret
-            if( name==MULTIMAP_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
-                return ret
-
-        }
-        return null
-    }
+    SourceUnit unit
 
     static class BranchCondition {
         String label
@@ -146,6 +92,7 @@ class OperatorXform extends ClassCodeExpressionTransformer {
         }
     }
 
+    @CompileStatic
     class BranchTransformer {
 
         final List<Statement> impl = new ArrayList<>(20)
@@ -400,6 +347,72 @@ class OperatorXform extends ClassCodeExpressionTransformer {
                 else {
                     copy.add(declS(varX(varName), ret_var))
                 }
+            }
+        }
+    }
+
+    @Override
+    void visit(ASTNode[] nodes, SourceUnit source) {
+        this.unit = unit
+        createVisitor().visitClass((ClassNode)nodes[1])
+    }
+
+    protected ClosureExpression isBranchOpCall(Expression expr) {
+        final m = ASTHelpers.isMethodCallX(expr)
+        if( m ) {
+            final name = m.methodAsString
+            final args = isArgsX(m.arguments)
+            final ClosureExpression ret = args && args.size()>0 ? isClosureX(args.last()) : null
+            if( name==BRANCH_METHOD_NAME && args.size()==1 )
+                return ret
+            if( name==BRANCH_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
+                return ret
+        }
+        return null
+    }
+
+    protected ClosureExpression isMultiMapOpCall(Expression expr) {
+        final m = ASTHelpers.isMethodCallX(expr)
+        if( m ) {
+            final name = m.methodAsString
+            final args = isArgsX(m.arguments)
+            final ClosureExpression ret = args && args.size()>0 ? isClosureX(args.last()) : null
+            if( name==MULTIMAP_METHOD_NAME && args.size()==1 )
+                return ret
+            if( name==MULTIMAP_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
+                return ret
+
+        }
+        return null
+    }
+
+
+    /**
+     * Visit AST node to apply operator xforms
+     */
+    protected ClassCodeExpressionTransformer createVisitor() {
+
+        new ClassCodeExpressionTransformer() {
+
+            protected SourceUnit getSourceUnit() { unit }
+
+            @Override
+            Expression transform(Expression expr) {
+                if (expr == null)
+                    return null
+
+                ClosureExpression body
+                if( (body=isBranchOpCall(expr)) ) {
+                    return new BranchTransformer(expr as MethodCallExpression, body).apply()
+                }
+                else if( (body=isMultiMapOpCall(expr)) ) {
+                    return new MultiMapTransformer(expr as MethodCallExpression, body).apply()
+                }
+                else if( expr instanceof ClosureExpression) {
+                    visitClosureExpression(expr)
+                }
+
+                return super.transform(expr)
             }
         }
     }

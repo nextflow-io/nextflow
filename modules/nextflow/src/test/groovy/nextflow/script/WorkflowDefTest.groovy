@@ -6,7 +6,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
-import nextflow.ast.NextflowXform
+import nextflow.ast.NextflowDSL
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -50,7 +50,7 @@ class WorkflowDefTest extends Dsl2Spec {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -137,7 +137,7 @@ class WorkflowDefTest extends Dsl2Spec {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -167,7 +167,7 @@ class WorkflowDefTest extends Dsl2Spec {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -192,7 +192,7 @@ class WorkflowDefTest extends Dsl2Spec {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -214,7 +214,7 @@ class WorkflowDefTest extends Dsl2Spec {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -318,7 +318,7 @@ class WorkflowDefTest extends Dsl2Spec {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -351,7 +351,7 @@ class WorkflowDefTest extends Dsl2Spec {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
             workflow foo { } 

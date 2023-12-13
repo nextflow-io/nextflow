@@ -21,16 +21,12 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
-/**
- * Annotation for workflow functions.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-@interface WorkflowFn {
-    boolean main() default false
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
-    // injected via AST transform
-    String source()
-}
+/**
+ * Marker interface which to apply AST transformation to {@code process} declaration
+ */
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [NextflowDSLImpl])
+@interface NextflowDSL {}

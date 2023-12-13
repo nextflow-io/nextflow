@@ -21,23 +21,12 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
 /**
- * Annotation for process functions.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * Declares Nextflow operators AST xforms
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
-@interface ProcessFn {
-    Class directives() default {->}
-    Class inputs() default {->}
-    Class outputs() default {->}
-
-    boolean script() default false
-    boolean shell() default false
-
-    // injected via AST transform
-    String[] params()
-    String source()
-    String[] vars()
-}
+@GroovyASTTransformationClass(classes = [OpXformImpl])
+@interface OpXform {}

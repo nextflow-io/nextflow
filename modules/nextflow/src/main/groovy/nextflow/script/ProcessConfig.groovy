@@ -134,10 +134,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                 return isCacheable()
 
             case 'ext':
-                if( !configProperties.containsKey(name) ) {
-                    configProperties.put(name, new HashMap())
+                if( !configProperties.containsKey('ext') ) {
+                    configProperties.put('ext', new HashMap())
                 }
-                return configProperties.get(name)
+                return configProperties.get('ext')
 
             default:
                 if( configProperties.containsKey(name) )

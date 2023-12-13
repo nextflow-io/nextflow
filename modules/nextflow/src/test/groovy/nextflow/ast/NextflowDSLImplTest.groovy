@@ -13,7 +13,7 @@ import test.MockExecutorFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DslCodeVisitorTest extends Dsl2Spec {
+class NextflowDSLImplTest extends Dsl2Spec {
 
     def createCompilerConfig() {
         def config = new CompilerConfiguration()

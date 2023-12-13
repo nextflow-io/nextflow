@@ -1,7 +1,7 @@
 package nextflow.script.params
 
 import nextflow.Session
-import nextflow.ast.NextflowXform
+import nextflow.ast.NextflowDSL
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
@@ -114,7 +114,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         and:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     
@@ -155,7 +155,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         and:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
                     

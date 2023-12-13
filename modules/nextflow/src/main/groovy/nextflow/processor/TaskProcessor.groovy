@@ -50,7 +50,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.DslCodeVisitor
+import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
@@ -466,11 +466,8 @@ class TaskProcessor {
             task.resolve(block)
         }
         else {
-            // -- prepend task config to arguments (for process function)
-            values.push(task.config)
-
             // -- resolve the task command script
-            task.resolve(taskBody, values.toArray())
+            task.resolve(taskBody)
         }
 
         // -- verify if exists a stored result for this case,
@@ -1721,7 +1718,7 @@ class TaskProcessor {
     protected boolean checkWhenGuard(TaskRun task) {
 
         try {
-            def pass = task.config.getGuard(DslCodeVisitor.PROCESS_WHEN)
+            def pass = task.config.getGuard(NextflowDSLImpl.PROCESS_WHEN)
             if( pass ) {
                 return true
             }
