@@ -90,7 +90,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--dump-channels'], arity = '0..1', fallbackValue = '*', paramLabel = '<channels>', description = 'Dump channels for debugging purposes')
     String dumpChannels
 
-    @Option(names = ['--dump-hashes'], description = 'Dump task hash keys for debugging purposes')
+    @Option(names = ['--dump-hashes'], fallbackValue = '-', description = 'Dump task hash keys for debugging purposes')
     String dumpHashes
 
     @Option(names = ['--entry'], arity = '1', paramLabel = '<workflow>', description = 'Entry workflow name to be executed')

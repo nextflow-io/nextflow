@@ -83,7 +83,10 @@ class Launcher extends AbstractCmd {
     }
 
     protected int executionStrategy(ParseResult parseResult) {
-        def command = parseResult.subcommand().commandSpec().commandLine().getCommand()
+        if( parseResult.subcommand() )
+            parseResult = parseResult.subcommand()
+
+        def command = parseResult.commandSpec().commandLine().getCommand()
         def args = parseResult.originalArgs() as String[]
 
         // make command line string
