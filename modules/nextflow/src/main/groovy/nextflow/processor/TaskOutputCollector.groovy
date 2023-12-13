@@ -91,7 +91,7 @@ class TaskOutputCollector implements Map<String,?> {
      * Get the standard output from the task environment.
      */
     Object stdout() {
-        final result = task.@stdout
+        final result = task.getStdout()
 
         if( result == null && task.type == ScriptType.SCRIPTLET )
             throw new IllegalArgumentException("Missing 'stdout' for process > ${task.lazyName()}")

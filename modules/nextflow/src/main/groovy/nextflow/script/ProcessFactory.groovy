@@ -81,7 +81,6 @@ class ProcessFactory {
      * @return
      *      The {@code Processor} instance
      */
-    @Deprecated
     TaskProcessor createProcessor( String name, Closure<BodyDef> body ) {
         assert body
         assert config.process instanceof Map
@@ -90,8 +89,8 @@ class ProcessFactory {
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
         final copy = (Closure<BodyDef>)body.clone()
-        copy.delegate = builder
-        copy.resolveStrategy = Closure.DELEGATE_FIRST
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
+        copy.setDelegate(builder)
         final script = copy.call()
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")

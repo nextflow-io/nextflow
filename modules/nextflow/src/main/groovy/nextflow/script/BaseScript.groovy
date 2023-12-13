@@ -17,7 +17,6 @@
 package nextflow.script
 
 import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.Method
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
@@ -25,7 +24,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.script.dsl.ProcessBuilder
 import nextflow.script.dsl.ProcessDsl
 import nextflow.script.dsl.WorkflowBuilder
 /**
