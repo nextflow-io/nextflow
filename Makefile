@@ -38,12 +38,15 @@ clean:
 	rm -rf plugins/*/build
 	./gradlew clean
 
+compileCore:
+	BUILD_PLUGINS=0 ./gradlew compile exportClasspath
+
 compile:
 	./gradlew compile exportClasspath
 	@echo "DONE `date`"
 
 assemble:
-	./gradlew compile assemble
+	./gradlew buildInfo compile assemble
 
 check:
 	./gradlew check

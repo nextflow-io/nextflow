@@ -238,7 +238,6 @@ task buildInfo { doLast {
  * Compile sources and copies all libs to target directory
  */
 task compile {
-    dependsOn buildInfo
     dependsOn allprojects.classes
 }
 
