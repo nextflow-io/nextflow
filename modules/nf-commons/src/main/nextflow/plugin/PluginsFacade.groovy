@@ -397,7 +397,7 @@ class PluginsFacade implements PluginStateListener {
         final bucketDir = config.bucketDir as String
         final executor = Bolts.navigate(config, 'process.executor')
 
-        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') )
+        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') || SysEnv.containsKey('NXF_ENABLE_AWS_SES') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
         if( executor == 'google-lifesciences' || executor == 'google-batch' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
