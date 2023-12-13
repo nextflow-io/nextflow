@@ -14,6 +14,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-cwd="$(realpath $(dirname "$0"))"
+cwd="$(realpath "$(dirname "$0")")"
 
 MAIN_CLASS="nextflow.cli.v2.Launcher" "${cwd}/launch.sh" "$@"

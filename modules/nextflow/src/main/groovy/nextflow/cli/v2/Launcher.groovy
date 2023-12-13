@@ -25,7 +25,6 @@ import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyHelper
@@ -65,6 +64,7 @@ import picocli.CommandLine.ParseResult
         PluginCmd.class,
         PullCmd.class,
         RunCmd.class,
+        SecretsCmd.class,
         SelfUpdateCmd.class,
         ViewCmd.class
     ]
@@ -82,22 +82,22 @@ class Launcher extends AbstractCmd {
         this.options = new CliOptionsV2()
     }
 
-    private int executionStrategy(ParseResult parseResult) {
-        def command = spec.commandLine().getCommand()
+    protected int executionStrategy(ParseResult parseResult) {
+        def command = parseResult.subcommand().commandSpec().commandLine().getCommand()
         def args = parseResult.originalArgs() as String[]
 
         // make command line string
         this.cliString = makeCli(System.getenv('NXF_CLI'), args)
 
         // whether is running a daemon
-        this.daemonMode = command == NodeCmd
+        this.daemonMode = command instanceof NodeCmd
 
         // set the log file name
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
-            else if( command == RunCmd || options.debug || options.trace )
-                options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
+            else if( command instanceof RunCmd || options.debug || options.trace )
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: '.nextflow.log'
         }
 
         LoggerHelper.configureLogger(options, isDaemon())
@@ -116,7 +116,7 @@ class Launcher extends AbstractCmd {
         return exitCode
     }
 
-    private String makeCli(String cli, String... args) {
+    protected String makeCli(String cli, String... args) {
         if( !cli )
             cli = 'nf'
         if( !args )
@@ -174,7 +174,7 @@ class Launcher extends AbstractCmd {
     static class ExecutionExceptionHandler implements IExecutionExceptionHandler {
         int handleExecutionException(Exception ex, CommandLine cmd, ParseResult parseResult) {
             // bold red error message
-            cmd.getErr().println(cmd.getColorScheme().errorText(ex.getMessage()))
+            cmd.getErr().println(cmd.getColorScheme().errorText(ex.getMessage() ?: ''))
 
             return cmd.getExitCodeExceptionMapper() != null
                 ? cmd.getExitCodeExceptionMapper().getExitCode(ex)
@@ -195,10 +195,7 @@ class Launcher extends AbstractCmd {
                 .setExecutionStrategy(launcher::executionStrategy)
                 .setExecutionExceptionHandler(new ExecutionExceptionHandler())
                 .setAllowSubcommandsAsOptionParameters(true)
-
-            // add secrets command if enabled
-            if( SecretsLoader.isEnabled() )
-                cmd.addSubcommand(new SecretsCmd())
+                .setUnmatchedOptionsArePositionalParams(true)
 
             // when the first argument is a file, it's supposed to be a script to be executed
             if( args.length > 0 && !cmd.getCommandSpec().subcommands().containsKey(args[0]) && new File(args[0]).isFile() ) {

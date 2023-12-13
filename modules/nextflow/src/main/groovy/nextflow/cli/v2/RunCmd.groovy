@@ -26,6 +26,7 @@ import picocli.CommandLine.ITypeConverter
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
+import picocli.CommandLine.Unmatched
 
 /**
  * CLI `run` sub-command (v2)
@@ -52,11 +53,11 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @ParentCommand
     private Launcher launcher
 
-    @Parameters(index = '0', description = 'Project name or repository url')
+    @Parameters(description = 'Project name or repository url')
     String pipeline
 
-    @Parameters(index = '1..*', description = 'Pipeline script args')
-    List<String> args = []
+    @Unmatched
+    List<String> unmatched = []
 
     @Option(names = ['--ansi-log'], arity = '1', paramLabel = 'true|false', description = 'Use ANSI logging')
     void setAnsiLog(boolean value) {
@@ -212,21 +213,21 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--with-weblog'], arity = '0..1', fallbackValue = '-', paramLabel = '<url>', description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
-    private List<String> pipelineArgs = null
+    private List<String> args = null
 
-    private Map<String,String> pipelineParams = null
+    private Map<String,String> params = null
 
     /**
      * Get the list of pipeline args.
      */
     @Override
     List<String> getArgs() {
-        if( pipelineArgs == null ) {
-            pipelineArgs = ParamsHelper.parseArgs(args)
-            pipelineParams = ParamsHelper.parseParams(args, pipelineArgs)
+        if( args == null ) {
+            args = ParamsHelper.parseArgs(unmatched)
+            params = ParamsHelper.parseParams(unmatched, args)
         }
 
-        return pipelineArgs
+        return args
     }
 
     /**
@@ -234,12 +235,12 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
      */
     @Override
     Map<String,String> getParams() {
-        if( pipelineParams == null ) {
-            pipelineArgs = ParamsHelper.parseArgs(args)
-            pipelineParams = ParamsHelper.parseParams(args, pipelineArgs)
+        if( params == null ) {
+            args = ParamsHelper.parseArgs(unmatched)
+            params = ParamsHelper.parseParams(unmatched, args)
         }
 
-        return pipelineParams
+        return params
     }
 
     @Override Boolean getWithoutConda() { false }
@@ -262,11 +263,11 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     }
 
     void setArgs(List<String> args) {
-        this.pipelineArgs = args
+        this.args = args
     }
 
     void setParams(Map<String,String> params) {
-        this.pipelineParams = params
+        this.params = params
     }
 
     @Override

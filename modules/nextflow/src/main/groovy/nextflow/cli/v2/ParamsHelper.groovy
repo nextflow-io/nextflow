@@ -40,7 +40,7 @@ class ParamsHelper {
      */
     static List<String> parseArgs(List<String> args) {
         int i = args.findIndexOf { it.startsWith('--') }
-        def resuit = i == -1 ? args : args[0..<i]
+        final resuit = i == -1 ? args : args[0..<i]
 
         for( String arg : resuit )
             if( arg.startsWith('-') )
@@ -51,8 +51,8 @@ class ParamsHelper {
     }
 
     static Map<String,String> parseParams(List<String> args, List<String> parsedArgs) {
-        def i = parsedArgs.size()
-        def result = [:] as Map<String,String>
+        int i = parsedArgs.size()
+        Map<String,String> result = [:]
 
         while( i < args.size() ) {
             String current = args[i++]
