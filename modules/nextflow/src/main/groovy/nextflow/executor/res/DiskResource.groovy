@@ -33,6 +33,7 @@ class DiskResource {
 
     final MemoryUnit request
     final String type
+    final String image
 
     DiskResource( value ) {
         this(request: value)
@@ -43,6 +44,9 @@ class DiskResource {
 
         if( opts.type )
             this.type = opts.type as String
+        
+        if( opts.image )
+            this.image = opts.image as String
     }
 
     private static MemoryUnit toMemoryUnit( value ) {

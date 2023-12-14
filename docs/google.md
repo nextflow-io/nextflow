@@ -147,6 +147,15 @@ disk 100.GB, type: 'pd-standard'
 disk 375.GB, type: 'local-ssd'
 ```
 
+:::{versionadded} 23.11.0-edge
+:::
+
+The `image` option can be used with the `type` option to specify the disk image, in which case the size is ignored:
+
+```groovy
+disk 0, type: 'pd-balanced', image: 'projects/project-id/global/images/ref-disk'
+```
+
 ### Pipeline execution
 
 The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either locally or in a Google Storage bucket.

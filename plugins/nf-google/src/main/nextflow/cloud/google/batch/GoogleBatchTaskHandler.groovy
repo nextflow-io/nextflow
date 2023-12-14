@@ -277,13 +277,20 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // use disk directive for an attached disk if type is specified
         if( disk?.type ) {
+            final diskSpec = AllocationPolicy.Disk.newBuilder()
+                .setType(disk.type)
+
+            // use disk image if specified
+            if ( disk?.image )
+                diskSpec.setImage(disk.image)
+
+            // otherwise use empty disk of specified size
+            else
+                diskSpec.setSizeGb(disk.request.toGiga())
+
             instancePolicy.addDisks(
                 AllocationPolicy.AttachedDisk.newBuilder()
-                    .setNewDisk(
-                        AllocationPolicy.Disk.newBuilder()
-                            .setType(disk.type)
-                            .setSizeGb(disk.request.toGiga())
-                    )
+                    .setNewDisk(diskSpec)
                     .setDeviceName('scratch')
             )
 

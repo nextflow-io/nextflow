@@ -229,6 +229,17 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.findBestMachineType(_, false) >> null
         and:
         req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
+
+        when:
+        req = handler.newSubmitRequest(task, launcher)
+        instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        then:
+        task.getConfig().getDiskResource() >> new DiskResource(request: 0, type: 'pd-standard', image: 'images/ref-disk')
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> null
+        and:
+        instancePolicy.getDisks(0).getNewDisk().getImage() == 'images/ref-disk'
+        instancePolicy.getDisks(0).getNewDisk().getType() == 'pd-standard'
     }
 
     def 'should create the trace record' () {
