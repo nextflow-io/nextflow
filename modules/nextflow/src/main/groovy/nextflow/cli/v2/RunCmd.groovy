@@ -96,10 +96,10 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--entry'], arity = '1', paramLabel = '<workflow>', description = 'Entry workflow name to be executed')
     String entryName
 
-    @Option(names = ['-e','--env'], paramLabel = '<name>=<value>', description = 'Add the specified variable to execution environment')
+    @Option(names = ['-e','--env'], mapFallbackValue = 'true', paramLabel = '<name>[=<value>]', description = 'Add the specified variable to execution environment')
     Map<String,String> env = [:]
 
-    @Option(names = ['--executor'], arity = '0..1', fallbackValue = 'true', paramLabel = '<name>=<value>', description = 'Set executor options', hidden = true)
+    @Option(names = ['--executor'], mapFallbackValue = 'true', paramLabel = '<name>[=<value>]', description = 'Set executor options', hidden = true)
     Map<String,String> executorOptions = [:]
 
     @Option(names = ['-E','--export-sys-env'], description = 'Export the current system environment')
@@ -135,7 +135,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--preview'], description = 'Run the workflow script skipping the execution of all processes')
     boolean preview
 
-    @Option(names = ['--process'], arity = '0..1', fallbackValue = 'true', paramLabel = '<name>=<value>', description = 'Set process options' )
+    @Option(names = ['--process'], mapFallbackValue = 'true', paramLabel = '<name>[=<value>]', description = 'Set process options' )
     Map<String,String> processOptions = [:]
 
     @Option(names = ['--profile'], description = 'Use a configuration profile')
