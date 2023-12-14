@@ -18,6 +18,7 @@ package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.Const
 import nextflow.cli.CliOptions
 import nextflow.exception.AbortOperationException
@@ -267,12 +268,25 @@ class Launcher extends AbstractCmd {
     static String getVersion(boolean full = false) {
 
         if ( full ) {
-            Const.SPLASH
+            SPLASH
         }
         else {
-            "${Const.APP_NAME} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
+            "${Const.APP_NAME} version ${BuildInfo.version}.${BuildInfo.buildNum}"
         }
 
     }
+
+    /*
+     * The application 'logo'
+     */
+    static public final String SPLASH =
+
+"""
+      N E X T F L O W
+      version ${BuildInfo.version} build ${BuildInfo.buildNum}
+      created ${BuildInfo.timestampUTC} ${BuildInfo.timestampDelta}
+      cite doi:10.1038/nbt.3820
+      http://nextflow.io
+"""
 
 }

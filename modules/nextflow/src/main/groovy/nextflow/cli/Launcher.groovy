@@ -593,9 +593,6 @@ class Launcher {
     /*
      * The application 'logo'
      */
-    /*
-     * The application 'logo'
-     */
     static public final String SPLASH =
 
 """
