@@ -23,6 +23,7 @@ dependencies {
     api "org.codehaus.groovy:groovy-json:3.0.19"
     api "org.codehaus.groovy:groovy-templates:3.0.19"
     api "org.codehaus.groovy:groovy-yaml:3.0.19"
+    api 'org.fusesource.jansi:jansi:2.4.0'
     api "org.slf4j:jcl-over-slf4j:2.0.7"
     api "org.slf4j:jul-to-slf4j:2.0.7"
     api "org.slf4j:log4j-over-slf4j:2.0.7"

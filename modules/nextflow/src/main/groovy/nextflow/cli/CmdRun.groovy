@@ -318,11 +318,11 @@ class CmdRun extends CmdBase implements HubOptions {
         def fmt = ansi()
         fmt = fmt.a("\n")
         fmt = fmt.a(" 🚀  ")
-        fmt = fmt.bg(Color.GREEN).fg(Color.BLACK).a(" N E X T F L O W ").reset()
+        fmt = fmt.bgRgb(13, 192, 157).fg(Color.BLACK).a(" N E X T F L O W ").reset()
         fmt = fmt.fg(Color.BLACK).a("  ~  ")
         fmt = fmt.fg(Color.GREEN).a("version " + Const.APP_VER).reset()
         fmt = fmt.a("\n")
-        AnsiConsole.out.println(fmt.eraseLine())
+        AnsiConsole.out().println(fmt.eraseLine())
         Plugins.init()
 
         // -- specify the arguments
@@ -424,7 +424,7 @@ class CmdRun extends CmdBase implements HubOptions {
         fmt = fmt.a(" DSL${ver} - ")
         fmt = fmt.fg(Color.MAGENTA).a("revision: ").bold().a(revision)
         fmt = fmt.reset().a("\n")
-        AnsiConsole.out.println(fmt.eraseLine())
+        AnsiConsole.out().println(fmt.eraseLine())
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
