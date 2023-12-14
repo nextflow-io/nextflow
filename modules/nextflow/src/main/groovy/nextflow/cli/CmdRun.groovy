@@ -410,7 +410,9 @@ class CmdRun extends CmdBase implements HubOptions {
         final ver = NF.dsl2 ? DSL2 : DSL1
         final repo = scriptFile.repository ?: scriptFile.source
         final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
-        final revision = scriptFile.repository ? scriptFile.revisionInfo : scriptFile.getScriptId()?.substring(0,10)
+        final revision = scriptFile.repository
+            ? scriptFile.revisionInfo
+            : scriptFile.getScriptId()?.substring(0,10)
 
         log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
 

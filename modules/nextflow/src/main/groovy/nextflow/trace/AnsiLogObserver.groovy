@@ -273,7 +273,8 @@ class AnsiLogObserver implements TraceObserver {
                 term = line(entry, term)
                 term.newline()
                 renderedLines += 1
-            } else {
+            }
+            else {
                 skippedLines += 1
             }
         }
@@ -398,25 +399,28 @@ class AnsiLogObserver implements TraceObserver {
         term = term.fg(Color.BLACK).a('[').fg(Color.BLUE).a(hh).fg(Color.BLACK).a('] ')
 
         // Label: process > sayHello
-        if (cols > 180)
+        if( cols > 180 )
             term = term.a('process > ')
         term = term.reset().a(label)
 
         // No tasks
-        if( tot == 0  ) {
-            term = term.a(" -")
+        if( tot == 0 ) {
+            term = term.a(' -')
             return term
         }
 
         // Progress: [  0%] 0 of 10
-        if (cols > 120){
-            term = term.fg(Color.BLACK).a(' [')
-            if( pct == "100%" )
-                term = term.fg(Color.GREEN).a(pct)
-            else
-                term = term.fg(Color.YELLOW).a(pct)
-            term = term.fg(Color.BLACK).a(']').reset()
-        } else {
+        if( cols > 120 ) {
+            term = term
+                .fg(Color.BLACK)
+                .a(' [')
+                .fg(pct == '100%' ? Color.GREEN : Color.YELLOW)
+                .a(pct)
+                .fg(Color.BLACK)
+                .a(']')
+                .reset()
+        }
+        else {
             term = term.fg(Color.BLACK).a(' |').reset()
         }
         term = term.a(numbs)
@@ -430,11 +434,11 @@ class AnsiLogObserver implements TraceObserver {
             term = term.a(", failed: $stats.failed")
         if( stats.retries )
             term = term.a(", retries: $stats.retries")
-        if( stats.terminated && tot )
-            if( stats.errored )
-                term = term.fg(Color.RED).a(' \u2718' ).reset()
-            else
-                term = term.fg(Color.GREEN).a(' \u2714 ').reset()
+        if( stats.terminated && tot ) {
+            term = stats.errored
+                ? term.fg(Color.RED).a(' \u2718' ).reset()
+                : term.fg(Color.GREEN).a(' \u2714 ').reset()
+        }
         return term
     }
 
