@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
@@ -373,25 +374,26 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     protected String line(ProgressRecord stats) {
-        final float tot = stats.getTotalCount()
-        final float com = stats.getCompletedCount()
+        final int tot = stats.getTotalCount()
+        final int com = stats.getCompletedCount()
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         if( tot == 0  )
             return "[$hh] process > $label -"
 
-        final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
-        final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
+        final pct0 = tot ? Math.floor((float)com / tot * 100f).toInteger() : 0
+        final pct1 = stats.closed ? String.valueOf(pct0) : '?'
+        final pct = "[${pct1.padLeft(3)}%]".toString()
 
-        final numbs = "${(int)com} of ${(int)tot}".toString()
+        final numbs = "${com} of ${tot}".toString()
         def result = "[${hh}] process > $label $pct $numbs"
         if( stats.cached )
             result += ", cached: $stats.cached"
         if( stats.stored )
             result += ", stored: $stats.stored"
-        if( stats.failed )
-            result += ", failed: $stats.failed"
+        if( stats.ignored )
+            result += ", ignored: $stats.ignored"
         if( stats.retries )
             result += ", retries: $stats.retries"
         if( stats.terminated && tot )
@@ -426,6 +428,11 @@ class AnsiLogObserver implements TraceObserver {
         final exec = handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
         executors[exec] = count+1
+        markModified()
+    }
+
+    @Override
+    synchronized void onProcessClose(TaskProcessor process) {
         markModified()
     }
 
