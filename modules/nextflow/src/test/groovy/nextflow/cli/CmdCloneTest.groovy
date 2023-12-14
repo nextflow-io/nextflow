@@ -19,6 +19,7 @@ package nextflow.cli
 import java.nio.file.Files
 
 import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 /**
@@ -27,6 +28,7 @@ import spock.lang.Specification
  */
 class CmdCloneTest extends Specification {
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 

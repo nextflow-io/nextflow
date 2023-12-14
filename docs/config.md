@@ -169,8 +169,13 @@ The following settings are available:
 `aws.batch.delayBetweenAttempts`
 : Delay between download attempts from S3 (default: `10 sec`).
 
+`aws.batch.executionRole`
+: :::{versionadded} 23.12.0-edge
+  :::
+: The AWS Batch Execution Role ARN that needs to be used to execute the Batch Job. This is mandatory when using AWS Fargate platform type. See [AWS documentation](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) for more details.
+
 `aws.batch.jobRole`
-: The AWS Job Role ARN that needs to be used to execute the Batch Job.
+: The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
 
 `aws.batch.logsGroup`
 : :::{versionadded} 22.09.0-edge
@@ -187,6 +192,11 @@ The following settings are available:
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
+
+`aws.batch.platformType`
+: :::{versionadded} 23.12.0-edge
+  :::
+: Allow specifying the compute platform type used by AWS Batch, that can be either `ec2` or `fargate`. See AWS documentation to learn more about [AWS Fargate platform type](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html) for AWS Batch.
 
 `aws.batch.retryMode`
 : The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`, other options: `legacy`, `adaptive`); this handling is delegated to AWS. To have Nextflow handle retries instead, use `built-in`.
@@ -1139,8 +1149,8 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
-`notification.binding`
-: A map modelling the variables in the template file.
+`notification.attributes`
+: A map object modelling the variables that can be used in the template file.
 
 `notification.enabled`
 : Enables the sending of a notification message when the workflow execution completes.
