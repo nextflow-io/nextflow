@@ -389,6 +389,9 @@ class AnsiLogObserver implements TraceObserver {
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
+        final tagMatch = label =~ /( \(.+\) *)$/
+        final labelTag = tagMatch ? tagMatch.group(1) : ''
+        final labelNoTag = label.replaceFirst(/ \(.+\) *$/, "")
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
@@ -401,7 +404,7 @@ class AnsiLogObserver implements TraceObserver {
         // Label: process > sayHello
         if( cols > 180 )
             term = term.a('process > ')
-        term = term.reset().a(label)
+        term = term.reset().a(labelNoTag).fg(Color.YELLOW).a(labelTag).reset()
 
         // No tasks
         if( tot == 0 ) {
