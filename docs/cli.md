@@ -1524,6 +1524,15 @@ Pipeline parameters can be specified alongside CLI options as before, as long as
 The `nf` command is a near drop-in replacement, by simply using double dashes for long options. The following minor changes were also introduced:
 
 - The `plugins` command was removed (use `plugin` instead)
+
 - The `secrets put` command was removed (use `secrets set` instead)
+
 - The `-deep` option was renamed to `--depth` for `clone`, `pull`, and `run`
+
 - The `-without-*` options were removed from the `run` command
+
+- Clustered short options (e.g. `-xvfShortFile` as a shorthand for `-x -v -f ShortFile`) are not supported. Each option should be specified separately and options with values should be separated by a space or `=`. The following dynamic options are affected by this change:
+  - `node -cluster.<name>=<value>` -> `node --cluster <name>=<value>`
+  - `run -e.<name>=<value>` -> `run (-e|--env) <name>=<value>`
+  - `run -executor.<name>=<value>` -> `run --executor <name>=<value>`
+  - `run -process.<name>=<value>` -> `run --process <name>=<value>`

@@ -199,6 +199,7 @@ class Launcher extends AbstractCmd {
                 .setExecutionStrategy(launcher::executionStrategy)
                 .setExecutionExceptionHandler(new ExecutionExceptionHandler())
                 .setAllowSubcommandsAsOptionParameters(true)
+                .setPosixClusteredShortOptionsAllowed(false)
                 .setUnmatchedOptionsArePositionalParams(true)
 
             // when the first argument is a file, it's supposed to be a script to be executed
