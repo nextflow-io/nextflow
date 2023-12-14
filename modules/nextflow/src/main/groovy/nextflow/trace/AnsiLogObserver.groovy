@@ -417,7 +417,7 @@ class AnsiLogObserver implements TraceObserver {
             term = term
                 .fg(Color.BLACK)
                 .a(' [')
-                .fg(pct == '100%' ? Color.GREEN : Color.YELLOW)
+                .fg(pct == '100%' ? Color.GREEN : Color.BLUE)
                 .a(pct)
                 .fg(Color.BLACK)
                 .a(']')
