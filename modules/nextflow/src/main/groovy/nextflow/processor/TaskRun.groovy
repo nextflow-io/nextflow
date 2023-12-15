@@ -305,6 +305,11 @@ class TaskRun implements Cloneable {
     volatile int failCount
 
     /**
+     * The number of times the submit of the task has been retried
+     */
+    volatile int submitRetries
+
+    /**
      * Mark the task as failed
      */
     volatile boolean failed
@@ -428,8 +433,8 @@ class TaskRun implements Cloneable {
      */
     Map<String,Path> getInputFilesMap() {
 
-        def result = [:]
-        def allFiles = getInputFiles().values()
+        final allFiles = getInputFiles().values()
+        final result = new HashMap<String,Path>(allFiles.size())
         for( List<FileHolder> entry : allFiles ) {
             if( entry ) for( FileHolder it : entry ) {
                 result[ it.stageName ] = it.storePath
@@ -461,7 +466,7 @@ class TaskRun implements Cloneable {
     /**
      * Get the map of *input* objects by the given {@code InParam} type
      *
-     * @param types One ore more subclass of {@code InParam}
+     * @param types One or more subclass of {@code InParam}
      * @return An associative array containing all the objects for the specified type
      */
     def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
@@ -477,7 +482,7 @@ class TaskRun implements Cloneable {
     /**
      * Get the map of *output* objects by the given {@code InParam} type
      *
-     * @param types One ore more subclass of {@code InParam}
+     * @param types One or more subclass of {@code InParam}
      * @return An associative array containing all the objects for the specified type
      */
     def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
@@ -605,8 +610,10 @@ class TaskRun implements Cloneable {
         if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
             return null
 
+        final String arch = config.getArchitecture()?.spackArch
+
         final cache = new SpackCache(processor.session.getSpackConfig())
-        cache.getCachePathFor(config.spack as String)
+        cache.getCachePathFor(config.spack as String, arch)
     }
 
     protected ContainerInfo containerInfo() {
@@ -814,7 +821,7 @@ class TaskRun implements Cloneable {
         return engine.result
     }
 
-    protected placeholderChar() {
+    protected char placeholderChar() {
         (config.placeholder ?: '!') as char
     }
 

@@ -62,7 +62,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
         final result = new StringBuilder()
-        final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
+        final copy = environment ? new LinkedHashMap<String,String>(environment) : Collections.<String,String>emptyMap()
         final path = copy.containsKey('PATH')
         // remove any external PATH
         if( path )

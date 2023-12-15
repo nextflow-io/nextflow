@@ -33,7 +33,7 @@ class RandomSampleTest extends Specification {
     def 'should produce random sample' () {
 
         given:
-        def ch = Channel.from('A'..'Z')
+        def ch = Channel.of('A'..'Z')
         def sampler = new RandomSampleOp(ch, 10)
 
         when:
@@ -48,7 +48,7 @@ class RandomSampleTest extends Specification {
     def 'should produce random sample given a short channel' () {
 
         given:
-        def ch = Channel.from('A'..'J')
+        def ch = Channel.of('A'..'J')
         def sampler = new RandomSampleOp(ch, 20)
 
         when:
@@ -62,7 +62,7 @@ class RandomSampleTest extends Specification {
     def 'should produce random sample given a channel emitting the same number of items as the buffer' () {
 
         given:
-        def ch = Channel.from('A'..'J')
+        def ch = Channel.of('A'..'J')
         def sampler = new RandomSampleOp(ch, 10)
 
         when:
@@ -76,8 +76,8 @@ class RandomSampleTest extends Specification {
     def 'should always produce the same sequence' () {
         given:
         def testSeq = 'A'..'J'
-        def ch1 = Channel.from(testSeq)
-        def ch2 = Channel.from(testSeq)
+        def ch1 = Channel.of(testSeq)
+        def ch2 = Channel.of(testSeq)
         def seed  = 23
         def firstSampler = new RandomSampleOp(ch1, 10, seed)
         def secondSampler = new RandomSampleOp(ch2, 10, seed)

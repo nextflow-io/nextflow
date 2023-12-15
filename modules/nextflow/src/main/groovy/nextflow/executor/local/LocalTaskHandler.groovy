@@ -156,7 +156,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
+        final containerOpts = task.config.getContainerOptions()
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
         log.debug "Launch cmd line: ${cmd}"
 
         final logPath = Files.createTempFile('nf-task','.log')

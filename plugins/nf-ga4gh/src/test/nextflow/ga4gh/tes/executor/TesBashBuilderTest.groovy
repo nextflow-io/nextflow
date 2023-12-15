@@ -41,7 +41,7 @@ class TesBashBuilderTest extends Specification {
                 name: 'Hello 1',
                 workDir: folder,
                 script: 'echo Hello world!',
-        ] as TaskBean )
+        ] as TaskBean, null)
         bash.build()
 
         then:

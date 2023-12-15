@@ -134,10 +134,10 @@ public class CacheHelper {
         if( value instanceof Short )
             return hasher.putShort((Short) value);
 
-         if( value instanceof Integer)
+        if( value instanceof Integer)
             return hasher.putInt((Integer) value);
 
-         if( value instanceof Long )
+        if( value instanceof Long )
             return hasher.putLong((Long) value);
 
         if( value instanceof Float )
@@ -217,6 +217,10 @@ public class CacheHelper {
             return ((CacheFunnel) value).funnel(hasher,mode);
         }
 
+        if( value instanceof Enum ) {
+            return hasher.putUnencodedChars( value.getClass().getName() + "." + value );
+        }
+
         Bolts.debug1(log, FIRST_ONLY, "[WARN] Unknown hashing type: "+value.getClass());
         return hasher.putInt( value.hashCode() );
     }
@@ -226,7 +230,7 @@ public class CacheHelper {
      *
      * @param hasher The current {@code Hasher} object
      * @param file The {@code File} object to hash
-     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object
@@ -240,7 +244,7 @@ public class CacheHelper {
      *
      * @param hasher The current {@code Hasher} object
      * @param path The {@code Path} object to hash
-     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object

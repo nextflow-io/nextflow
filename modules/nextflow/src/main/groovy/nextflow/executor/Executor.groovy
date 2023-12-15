@@ -18,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -33,6 +34,7 @@ import nextflow.script.ScriptType
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 @SupportedScriptTypes( [ScriptType.SCRIPTLET] )
 abstract class Executor {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Pawsey Supercomputing Research Centre
+ * Copyright 2022-2023, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << '-w "$PWD" '
+        result << '-w "$NXF_TASK_WORKDIR" '
 
         if( runOptions )
             result << runOptions.join(' ') << ' '

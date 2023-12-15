@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Pawsey Supercomputing Research Centre
+ * Copyright 2022-2023, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,6 @@ class SpackConfig extends LinkedHashMap {
             return value.tokenize(',').collect(it -> it.trim())
         }
 
-        throw new IllegalArgumentException("Unexected spack.channels value: $value")
+        throw new IllegalArgumentException("Unexpected spack.channels value: $value")
     }
 }

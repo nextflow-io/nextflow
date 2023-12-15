@@ -1,6 +1,6 @@
 package nextflow.cloud.azure.batch
 
-import java.nio.file.FileSystem
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
@@ -9,6 +9,7 @@ import java.nio.file.spi.FileSystemProvider
 import com.azure.storage.blob.BlobClient
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.nio.AzFileSystem
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
 import spock.lang.Specification
@@ -34,7 +35,7 @@ class AzFileCopyStrategyTest extends Specification {
         provider.getScheme() >> 'az'
         provider.readAttributes(_, _, _) >> attr
 
-        def fs = Mock(FileSystem)
+        def fs = Mock(AzFileSystem)
         fs.provider() >> provider
         fs.toString() >> ('az://' + bucket)
         def uri = GroovyMock(URI)
@@ -132,7 +133,9 @@ class AzFileCopyStrategyTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -267,7 +270,9 @@ class AzFileCopyStrategyTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -426,7 +431,9 @@ class AzFileCopyStrategyTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
 

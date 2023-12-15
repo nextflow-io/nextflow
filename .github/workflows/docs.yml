@@ -17,6 +17,6 @@ jobs:
 
       - name: Test docs build
         run: |
-          pip install sphinx sphinx_rtd_theme
           cd docs/
+          pip install -r requirements.txt
           make clean html

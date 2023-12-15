@@ -39,13 +39,22 @@ class AwsFusionEnv implements FusionEnv {
         final result = new HashMap<String,String>()
         final awsConfig = AwsConfig.config()
         final endpoint = awsConfig.s3Config.endpoint
-        final creds = config.exportAwsAccessKeys() ? awsCreds(awsConfig) : List.<String>of()
+        final creds = config.exportStorageCredentials() ? awsCreds(awsConfig) : List.<String>of()
         if( creds ) {
             result.AWS_ACCESS_KEY_ID = creds[0]
             result.AWS_SECRET_ACCESS_KEY = creds[1]
+
+            if( creds.size() > 2 )
+                result.AWS_SESSION_TOKEN = creds[2]
         }
         if( endpoint )
             result.AWS_S3_ENDPOINT = endpoint
+        if( awsConfig.region && awsConfig.s3Config.isCustomEndpoint() )
+            result.FUSION_AWS_REGION = awsConfig.region
+        if( awsConfig.s3Config.storageEncryption )
+            result.FUSION_AWS_SERVER_SIDE_ENCRYPTION = awsConfig.s3Config.storageEncryption
+        if( awsConfig.s3Config.storageKmsKeyId )
+            result.FUSION_AWS_SSEKMS_KEY_ID = awsConfig.s3Config.storageKmsKeyId
         return result
     }
 
@@ -53,6 +62,10 @@ class AwsFusionEnv implements FusionEnv {
         final result = awsConfig.getCredentials()
         if( result )
             return result
+
+        if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') && SysEnv.get('AWS_SESSION_TOKEN') )
+            return List.<String>of(SysEnv.get('AWS_ACCESS_KEY_ID'), SysEnv.get('AWS_SECRET_ACCESS_KEY'), SysEnv.get('AWS_SESSION_TOKEN'))
+
         if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') )
             return List.<String>of(SysEnv.get('AWS_ACCESS_KEY_ID'), SysEnv.get('AWS_SECRET_ACCESS_KEY'))
         else

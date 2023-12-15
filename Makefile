@@ -33,6 +33,7 @@ clean:
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
 	rm -rf build
+	rm -rf buildSrc/build
 	rm -rf modules/*/build
 	rm -rf plugins/*/build
 	./gradlew clean
@@ -42,7 +43,7 @@ compile:
 	@echo "DONE `date`"
 
 assemble:
-	./gradlew compile assemble
+	./gradlew buildInfo compile assemble
 
 check:
 	./gradlew check

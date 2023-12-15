@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
 import spock.lang.Specification
@@ -33,8 +34,29 @@ class WaveAssetsTest extends Specification {
         
         expect:
         new WaveAssets(IMAGE).fingerprint() == CacheHelper.hasher([IMAGE]).hash().toString()
-//        new WaveAssets(IMAGE,BUNDLE).hashKey() == CacheHelper.hasher([IMAGE, BUNDLE]).hash().toString()
 
+    }
+
+    def 'should validate container name' () {
+        when:
+        WaveAssets.validateContainerName('ubuntu')
+        then:
+        noExceptionThrown()
+
+        when:
+        WaveAssets.validateContainerName('ubuntu:latest')
+        then:
+        noExceptionThrown()
+
+        when:
+        WaveAssets.validateContainerName('quay.io/wtsicgp/nanoseq:3.3.0')
+        then:
+        noExceptionThrown()
+
+        when:
+        WaveAssets.validateContainerName('docker://quay.io/wtsicgp/nanoseq:3.3.0')
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }

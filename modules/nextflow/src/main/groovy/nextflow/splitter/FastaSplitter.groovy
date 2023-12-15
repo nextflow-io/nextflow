@@ -79,7 +79,7 @@ class FastaSplitter extends AbstractTextSplitter {
     }
 
     /**
-     * Parse a {@code CharSequence} as a FASTA formatted text, retuning a {@code Map} object
+     * Parse a {@code CharSequence} as a FASTA formatted text, returning a {@code Map} object
      * containing the fields as specified by the @{code record} parameter.
      * <p>
      *  For example:

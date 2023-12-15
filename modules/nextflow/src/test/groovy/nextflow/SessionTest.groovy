@@ -357,7 +357,7 @@ class SessionTest extends Specification {
         def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == CONFIG as ContainerConfig
+        session.containerConfig == new ContainerConfig(CONFIG + [engine:ENGINE])
         session.containerConfig.enabled
         session.containerConfig.engine == ENGINE
 
@@ -525,25 +525,25 @@ class SessionTest extends Specification {
         when:
         text = '''
                 process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
+                    withName:'proc1' { container = 'alpha' }
+                    withName:'proc2' { container = 'beta' }
                 }
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta']
+        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta']
 
 
         when:
         text = '''
                 process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
+                    withName:'proc1' { container = 'alpha' }
+                    withName:'proc2' { container = 'beta' }
                 }
 
                 process.container = 'gamma'
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta', default: 'gamma']
+        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta', 'default': 'gamma']
 
 
         when:

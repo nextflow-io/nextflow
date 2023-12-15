@@ -151,7 +151,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         helper = new AwsBatchHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
-        log.debug "[AWS BATCH] Executor options=$awsOptions"
+        log.debug "[AWS BATCH] Executor ${awsOptions.fargateMode ? '(FARGATE mode) ' : ''}options=$awsOptions"
     }
 
     /**
@@ -303,7 +303,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         reaper.shutdown()
         final waitMsg = "[AWS BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
         final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
-        ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg, )
+        ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
     }
 
 }
