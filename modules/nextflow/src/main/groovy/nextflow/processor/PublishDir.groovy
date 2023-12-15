@@ -294,6 +294,7 @@ class PublishDir {
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
+        this.task = task
 
         apply0(files)
     }
