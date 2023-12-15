@@ -237,7 +237,7 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         if( count ) {
-            term.a("executor > " + line)
+            term.a(Attribute.INTENSITY_FAINT).a("executor > " + line).reset()
             term.newline()
         }
     }
@@ -279,7 +279,8 @@ class AnsiLogObserver implements TraceObserver {
             }
         }
         if( skippedLines > 0 )
-            term.a("Plus $skippedLines more processes waiting for tasks…").newline()
+            term = term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a("Plus ").bold().a(skippedLines).reset()
+            term = term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a(" more processes waiting for tasks…").reset().newline()
         rendered = true
     }
 
@@ -389,8 +390,9 @@ class AnsiLogObserver implements TraceObserver {
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
-        final tagMatch = label =~ /( \(.+\) *)$/
+        final tagMatch = label =~ / \((.+)\)( *)$/
         final labelTag = tagMatch ? tagMatch.group(1) : ''
+        final labelSpaces = tagMatch ? tagMatch.group(2) : ''
         final labelNoTag = label.replaceFirst(/ \(.+\) *$/, "")
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
@@ -399,12 +401,19 @@ class AnsiLogObserver implements TraceObserver {
         final numbs = " ${(int)com} of ${(int)tot}".toString()
 
         // Hash: []
-        term = term.fg(Color.BLACK).a('[').fg(Color.BLUE).a(hh).fg(Color.BLACK).a('] ')
+        term = term.a(Attribute.INTENSITY_FAINT).a('[').reset()
+        term = term.fg(Color.BLUE).a(hh).reset()
+        term = term.a(Attribute.INTENSITY_FAINT).a('] ').reset()
 
         // Label: process > sayHello
         if( cols > 180 )
-            term = term.a('process > ')
-        term = term.reset().a(labelNoTag).fg(Color.YELLOW).a(labelTag).reset()
+            term = term.a(Attribute.INTENSITY_FAINT).a('process > ').reset()
+        term = term.a(labelNoTag)
+        if( labelTag ){
+            term = term.fg(Color.YELLOW).a(Attribute.INTENSITY_FAINT).a(' (').reset()
+            term = term.fg(Color.YELLOW).a(labelTag)
+            term = term.a(Attribute.INTENSITY_FAINT).a(')').reset().a(labelSpaces)
+        }
 
         // No tasks
         if( tot == 0 ) {
@@ -415,22 +424,18 @@ class AnsiLogObserver implements TraceObserver {
         // Progress: [  0%] 0 of 10
         if( cols > 120 ) {
             term = term
-                .fg(Color.BLACK)
-                .a(' [')
-                .fg(pct == '100%' ? Color.GREEN : Color.BLUE)
-                .a(pct)
-                .fg(Color.BLACK)
-                .a(']')
-                .reset()
+                .a(Attribute.INTENSITY_FAINT).a(' [').reset()
+                .fg(pct == '100%' ? Color.GREEN : Color.BLUE).a(pct).reset()
+                .a(Attribute.INTENSITY_FAINT).a(']').reset()
         }
         else {
-            term = term.fg(Color.BLACK).a(' |').reset()
+            term = term.a(Attribute.INTENSITY_FAINT).a(' |').reset()
         }
         term = term.a(numbs)
 
         // Number of tasks:
         if( stats.cached )
-            term = term.fg(Color.BLACK).a(", cached: $stats.cached").reset()
+            term = term.a(Attribute.INTENSITY_FAINT).a(", cached: $stats.cached").reset()
         if( stats.stored )
             term = term.a(", stored: $stats.stored")
         if( stats.failed )

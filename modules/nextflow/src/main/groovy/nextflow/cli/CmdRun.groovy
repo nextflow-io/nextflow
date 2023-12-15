@@ -319,7 +319,7 @@ class CmdRun extends CmdBase implements HubOptions {
         fmt = fmt.a("\n")
         fmt = fmt.a(" 🚀  ")
         fmt = fmt.bgRgb(13, 192, 157).fgRgb(0, 0, 0).bold().a(" N E X T F L O W ").reset()
-        fmt = fmt.fg(Color.BLACK).a("  ~  ").reset().a("version " + Const.APP_VER).reset()
+        fmt = fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + Const.APP_VER).reset()
         fmt = fmt.a("\n")
         AnsiConsole.out().println(fmt.eraseLine())
         Plugins.init()
@@ -416,13 +416,14 @@ class CmdRun extends CmdBase implements HubOptions {
         log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
 
         def fmt = ansi()
-        fmt = fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ")
-        fmt = fmt.fg(Color.BLACK).a("[").reset()
+        fmt = fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
+        fmt = fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
         fmt = fmt.bold().fg(Color.CYAN).a(runName).reset()
-        fmt = fmt.fg(Color.BLACK).a("]")
+        fmt = fmt.a(Attribute.INTENSITY_FAINT).a("]")
         fmt = fmt.a(" DSL${ver} - ")
-        fmt = fmt.fg(Color.MAGENTA).a("revision: ").bold().a(revision)
-        fmt = fmt.reset().a("\n")
+        fmt = fmt.fg(Color.CYAN).a("revision: ").reset()
+        fmt = fmt.fg(Color.CYAN).a(revision).reset()
+        fmt = fmt.a("\n")
         AnsiConsole.out().println(fmt.eraseLine())
     }
 
