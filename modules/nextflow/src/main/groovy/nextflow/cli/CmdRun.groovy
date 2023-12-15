@@ -314,14 +314,19 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
-        log.debug "N E X T F L O W  ~  version ${Const.APP_VER}"
-        def fmt = ansi()
-        fmt = fmt.a("\n")
-        fmt = fmt.a(" 🚀  ")
-        fmt = fmt.bgRgb(13, 192, 157).fgRgb(0, 0, 0).bold().a(" N E X T F L O W ").reset()
-        fmt = fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + Const.APP_VER).reset()
-        fmt = fmt.a("\n")
-        AnsiConsole.out().println(fmt.eraseLine())
+        if( launcher.options.ansiLog ){
+            log.debug "N E X T F L O W  ~  version ${Const.APP_VER}"
+
+            def fmt = ansi()
+            fmt = fmt.a("\n")
+            fmt = fmt.a(" 🚀  ")
+            fmt = fmt.bgRgb(13, 192, 157).fgRgb(0, 0, 0).bold().a(" N E X T F L O W ").reset()
+            fmt = fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + Const.APP_VER).reset()
+            fmt = fmt.a("\n")
+            AnsiConsole.out().println(fmt.eraseLine())
+        } else {
+            log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        }
         Plugins.init()
 
         // -- specify the arguments
@@ -413,18 +418,22 @@ class CmdRun extends CmdBase implements HubOptions {
             ? scriptFile.revisionInfo
             : scriptFile.getScriptId()?.substring(0,10)
 
-        log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
+        if( launcher.options.ansiLog ){
+            log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
 
-        def fmt = ansi()
-        fmt = fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
-        fmt = fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
-        fmt = fmt.bold().fg(Color.CYAN).a(runName).reset()
-        fmt = fmt.a(Attribute.INTENSITY_FAINT).a("]")
-        fmt = fmt.a(" DSL${ver} - ")
-        fmt = fmt.fg(Color.CYAN).a("revision: ").reset()
-        fmt = fmt.fg(Color.CYAN).a(revision).reset()
-        fmt = fmt.a("\n")
-        AnsiConsole.out().println(fmt.eraseLine())
+            def fmt = ansi()
+            fmt = fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
+            fmt = fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
+            fmt = fmt.bold().fg(Color.CYAN).a(runName).reset()
+            fmt = fmt.a(Attribute.INTENSITY_FAINT).a("]")
+            fmt = fmt.a(" DSL${ver} - ")
+            fmt = fmt.fg(Color.CYAN).a("revision: ").reset()
+            fmt = fmt.fg(Color.CYAN).a(revision).reset()
+            fmt = fmt.a("\n")
+            AnsiConsole.out().println(fmt.eraseLine())
+        } else {
+            log.info "${head} [$runName] DSL${ver} - revision: ${revision}"
+        }
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
