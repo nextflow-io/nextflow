@@ -73,13 +73,15 @@ class AnsiLogObserverTest extends Specification {
         'foo'       | 3     | 80   | 'foo'
         'foo'       | 5     | 80   | 'foo  '
 
-        'long_name' | 9     | 5   | 'lo...'
+        'long_name' | 9     | 5   | 'long_'
+        'long_name' | 9     | 6   | 'lon…me'
         'long_name' | 9     | 2   | 'lo'
         'long_name' | 9     | 3   | 'lon'
         'xx'        | 9     | 1   | 'x'
         'xx'        | 9     | 5   | 'xx   '
         'abcd'      | 9     | 5   | 'abcd '
-        '12345678'  | 9     | 5   | '12...'
+        '12345678'  | 9     | 5   | '12345'
+        '12345678'  | 9     | 6   | '123…78'
     }
 
     def 'should chop a string' () {
@@ -91,13 +93,14 @@ class AnsiLogObserverTest extends Specification {
 
         where:
         NAME        | COLS  | EXPECTED
-        'long_name' | 5     | 'lo...'
+        'long_name' | 6     | 'lon…me'
         'long_name' | 2     | 'lo'
         'long_name' | 3     | 'lon'
         'xx'        | 1     | 'x'
         'xx'        | 5     | 'xx'
         'abcd'      | 5     | 'abcd'
-        '12345678'  | 5     | '12...'
+        '12345678'  | 5     | '12345'
+        '12345678'  | 6     | '123…78'
 
     }
 
