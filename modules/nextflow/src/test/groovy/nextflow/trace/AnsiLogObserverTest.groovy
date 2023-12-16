@@ -42,7 +42,7 @@ class AnsiLogObserverTest extends Specification {
         when:
         observer.@labelWidth = stats.name.size()
         then:
-        observer.line(stats) == EXPECTED
+        observer.line(stats).toString() == EXPECTED
 
         where:
         HASH        | SUBMIT  | SUCCEEDED | CACHE | STORE | DONE  | ERR   | EXPECTED

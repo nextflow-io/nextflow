@@ -270,7 +270,7 @@ class AnsiLogObserver implements TraceObserver {
         def skippedLines = 0
         for( ProgressRecord entry : processes ) {
             if( renderedLines <= rows - 5 || entry.getTotalCount() > 0 ) {
-                term = line(entry, term)
+                term.a(line(entry))
                 term.newline()
                 renderedLines += 1
             }
@@ -386,7 +386,8 @@ class AnsiLogObserver implements TraceObserver {
         return cols>5 ? str.take(3) + '…' + str.takeRight(cols-1-3) : str[0..cols-1]
     }
 
-    protected Ansi line(ProgressRecord stats, Ansi term) {
+    protected Ansi line(ProgressRecord stats) {
+        final term = ansi()
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
