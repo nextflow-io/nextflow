@@ -318,10 +318,10 @@ class CmdRun extends CmdBase implements HubOptions {
             log.debug "N E X T F L O W  ~  version ${Const.APP_VER}"
 
             def fmt = ansi()
-            fmt = fmt.a("\n")
-            fmt = fmt.bgRgb(13, 192, 157).fgRgb(0, 0, 0).bold().a(" N E X T F L O W ").reset()
-            fmt = fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + Const.APP_VER).reset()
-            fmt = fmt.a("\n")
+            fmt.a("\n")
+            fmt.bgRgb(13, 192, 157).fgRgb(0, 0, 0).bold().a(" N E X T F L O W ").reset()
+            fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + Const.APP_VER).reset()
+            fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
         } else {
             log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
@@ -421,14 +421,14 @@ class CmdRun extends CmdBase implements HubOptions {
             log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
 
             def fmt = ansi()
-            fmt = fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
-            fmt = fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
-            fmt = fmt.bold().fg(Color.CYAN).a(runName).reset()
-            fmt = fmt.a(Attribute.INTENSITY_FAINT).a("]")
-            fmt = fmt.a(" DSL${ver} - ")
-            fmt = fmt.fg(Color.CYAN).a("revision: ").reset()
-            fmt = fmt.fg(Color.CYAN).a(revision).reset()
-            fmt = fmt.a("\n")
+            fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
+            fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
+            fmt.bold().fg(Color.CYAN).a(runName).reset()
+            fmt.a(Attribute.INTENSITY_FAINT).a("]")
+            fmt.a(" DSL${ver} - ")
+            fmt.fg(Color.CYAN).a("revision: ").reset()
+            fmt.fg(Color.CYAN).a(revision).reset()
+            fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
         } else {
             log.info "${head} [$runName] DSL${ver} - revision: ${revision}"
