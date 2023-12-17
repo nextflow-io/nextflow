@@ -798,7 +798,7 @@ class TaskProcessorTest extends Specification {
         then:
         env == '''\
             export PATH="foo:\\$PATH"
-            export HOLA="one\\|two"
+            export HOLA="one|two"
             '''.stripIndent()
         env.charAt(env.size()-1) == '\n' as char
 
