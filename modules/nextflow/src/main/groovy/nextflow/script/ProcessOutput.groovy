@@ -21,6 +21,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.processor.TaskOutputCollector
 import nextflow.processor.TaskRun
+import nextflow.util.ConfigHelper
 import nextflow.util.LazyHelper
 /**
  * Models a process output.
@@ -37,6 +38,8 @@ class ProcessOutput implements Cloneable {
 
     private String name
 
+    private String topic
+
     private boolean optional
 
     private DataflowWriteChannel channel
@@ -45,14 +48,32 @@ class ProcessOutput implements Cloneable {
         this.declaredOutputs = declaredOutputs
         this.target = target
 
-        if( opts.name )
-            this.name = opts.name
-        if( opts.optional )
-            this.optional = true
+        for( Map.Entry<String,?> entry : opts )
+            setProperty(entry.key, entry.value)
+    }
+
+    void setName(String name) {
+        if( !ConfigHelper.isValidIdentifier(name) ) {
+            final msg = "Output name '$name' is not valid -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            throw new IllegalArgumentException(msg)
+        }
+        this.name = name
     }
 
     String getName() {
         return name
+    }
+
+    void setTopic(String topic) {
+        if( !ConfigHelper.isValidIdentifier(topic) ) {
+            final msg = "Output topic '$topic' is not valid -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            throw new IllegalArgumentException(msg)
+        }
+        this.topic = topic
+    }
+
+    String getTopic() {
+        return topic
     }
 
     void setChannel(DataflowWriteChannel channel) {

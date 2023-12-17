@@ -15,33 +15,30 @@
  *
  */
 
-package io.seqera.wave.plugin
+package nextflow.cloud.google.config
 
-import nextflow.Session
+import nextflow.util.Duration
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WaveObserverTest extends Specification {
+class GoogleRetryOptsTest extends Specification {
 
-    def 'should render containers config' () {
-        given:
-        def sess = Mock(Session) {getConfig() >> [:] }
-        def observer = new WaveObserver(sess)
-        and:
-        Map<String,String> containers = [:]
-        containers.foo = 'quay.io/ubuntu:latest'
-        containers.bar = 'quay.io/alpine:latest'
+    def 'should get retry opts' () {
+        when:
+        def opts1 = new GoogleRetryOpts([:])
+        then:
+        opts1.maxAttempts == 10
+        opts1.multiplier == 2.0d
+        opts1.maxDelay ==  Duration.of('90s')
 
         when:
-        def result = observer.renderContainersConfig(containers)
+        def opts2 = new GoogleRetryOpts([maxAttempts: 5, maxDelay: '5s', multiplier: 10])
         then:
-        result == '''\
-            process { withName: 'foo' { container='quay.io/ubuntu:latest' }}
-            process { withName: 'bar' { container='quay.io/alpine:latest' }}
-            '''.stripIndent(true)
+        opts2.maxAttempts == 5
+        opts2.multiplier == 10d
+        opts2.maxDelay ==  Duration.of('5s')
     }
-
 }

@@ -490,10 +490,6 @@ class Session implements ISession {
         checkConfig()
         notifyFlowBegin()
 
-        if( !NextflowMeta.instance.isDsl2() ) {
-            return
-        }
-
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
@@ -1082,11 +1078,15 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        observers.each { trace -> trace.onFlowBegin() }
+        for( TraceObserver trace : observers ) {
+            trace.onFlowBegin()
+        }
     }
 
     void notifyFlowCreate() {
-        observers.each { trace -> trace.onFlowCreate(this) }
+        for( TraceObserver trace : observers ) {
+            trace.onFlowCreate(this)
+        }
     }
 
     void notifyFilePublish(Path destination, Path source=null) {

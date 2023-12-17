@@ -169,8 +169,13 @@ The following settings are available:
 `aws.batch.delayBetweenAttempts`
 : Delay between download attempts from S3 (default: `10 sec`).
 
+`aws.batch.executionRole`
+: :::{versionadded} 23.12.0-edge
+  :::
+: The AWS Batch Execution Role ARN that needs to be used to execute the Batch Job. This is mandatory when using AWS Fargate platform type. See [AWS documentation](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) for more details.
+
 `aws.batch.jobRole`
-: The AWS Job Role ARN that needs to be used to execute the Batch Job.
+: The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
 
 `aws.batch.logsGroup`
 : :::{versionadded} 22.09.0-edge
@@ -187,6 +192,11 @@ The following settings are available:
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
+
+`aws.batch.platformType`
+: :::{versionadded} 23.12.0-edge
+  :::
+: Allow specifying the compute platform type used by AWS Batch, that can be either `ec2` or `fargate`. See AWS documentation to learn more about [AWS Fargate platform type](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html) for AWS Batch.
 
 `aws.batch.retryMode`
 : The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`, other options: `legacy`, `adaptive`); this handling is delegated to AWS. To have Nextflow handle retries instead, use `built-in`.
@@ -220,7 +230,10 @@ The following settings are available:
 : :::{versionadded} 22.12.0-edge
   :::
 : *Experimental: may change in a future release.*
-: Enable auto retrieval of S3 objects stored with Glacier class store (default: `false`).
+: Enable auto retrieval of S3 objects with a Glacier storage class (default: `false`).
+: :::{note}
+  This feature only works for S3 objects that are downloaded by Nextflow directly. It is not supported for tasks (e.g. when using the AWS Batch executor), since that would lead to many tasks sitting idle for several hours and wasting resources. If you need to restore many objects from Glacier, consider restoring them in a script prior to launching the pipeline.
+  :::
 
 `aws.client.glacierExpirationDays`
 : :::{versionadded} 22.12.0-edge
@@ -276,7 +289,7 @@ The following settings are available:
 `aws.client.storageKmsKeyId`
 : :::{versionadded} 22.05.0-edge
   :::
-: The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket ().
+: The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
 `aws.client.userAgent`
 : The HTTP user agent header passed with all HTTP requests.
@@ -362,6 +375,10 @@ The following settings are available:
 `azure.batch.pools.<name>.fileShareRootPath`
 : *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
+
+`azure.batch.pools.<name>.lowPriority`
+: *New in `nf-azure` version `1.4.0`*
+: Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
@@ -748,7 +765,9 @@ The `google` scope allows you to configure the interactions with Google Cloud, i
 
 Read the {ref}`google-page` page for more information.
 
-The following settings are available:
+#### Cloud Batch
+
+The following settings are available for Google Cloud Batch:
 
 `google.enableRequesterPaysBuckets`
 : When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
@@ -766,16 +785,13 @@ The following settings are available:
 `google.location`
 : The Google Cloud location where jobs are executed (default: `us-central1`).
 
+`google.batch.maxSpotAttempts`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
+
 `google.project`
 : The Google Cloud project ID to use for pipeline execution
-
-`google.region`
-: *Available only for Google Life Sciences*
-: The Google Cloud region where jobs are executed. Multiple regions can be provided as a comma-separated list. Cannot be used with the `google.zone` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
-
-`google.zone`
-: *Available only for Google Life Sciences*
-: The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
 
 `google.batch.allowedLocations`
 : :::{versionadded} 22.12.0-edge
@@ -814,6 +830,50 @@ The following settings are available:
 
 `google.batch.usePrivateAddress`
 : When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
+
+`google.storage.maxAttempts`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
+
+`google.storage.maxDelay`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
+
+`google.storage.multiplier`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
+
+#### Cloud Life Sciences
+
+The following settings are available for Cloud Life Sciences:
+
+`google.enableRequesterPaysBuckets`
+: When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
+
+`google.httpConnectTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+
+`google.httpReadTimeout`
+: :::{versionadded} 23.06.0-edge
+  :::
+: Defines the HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
+
+`google.location`
+: The Google Cloud location where jobs are executed (default: `us-central1`).
+
+`google.project`
+: The Google Cloud project ID to use for pipeline execution
+
+`google.region`
+: The Google Cloud region where jobs are executed. Multiple regions can be provided as a comma-separated list. Cannot be used with the `google.zone` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
+
+`google.zone`
+: The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
 
 `google.lifeSciences.bootDiskSize`
 : Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
@@ -1089,8 +1149,8 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
-`notification.binding`
-: An associative array modelling the variables in the template file.
+`notification.attributes`
+: A map object modelling the variables that can be used in the template file.
 
 `notification.enabled`
 : Enables the sending of a notification message when the workflow execution completes.
@@ -1350,7 +1410,7 @@ The following settings are available:
 `singularity.oci`
 : :::{versionadded} 23.11.0-edge
   :::
-: Enable OCI-mode the allows the use of native OCI-compatible containers with Singularity. See [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+: Enable OCI-mode, that allows running native OCI-compatible containers with Singularity using `crun` or `runc` as low-level runtime. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
 
 `singularity.pullTimeout`
@@ -1806,3 +1866,12 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 : *Experimental: may change in a future release.*
 
 : When `true`, enables process and workflow recursion. See [this GitHub discussion](https://github.com/nextflow-io/nextflow/discussions/2521) for more information.
+
+`nextflow.preview.topic`
+
+: :::{versionadded} 23.11.0-edge
+  :::
+
+: *Experimental: may change in a future release.*
+
+: When `true`, enables {ref}`topic channels <channel-topic>` feature.

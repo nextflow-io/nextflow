@@ -1,8 +1,8 @@
 (amazons3-page)=
 
-# Amazon S3 storage
+# AWS S3 storage
 
-Nextflow includes support for Amazon S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
+Nextflow includes support for AWS S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
 
 ## S3 path
 
@@ -24,10 +24,10 @@ See the {ref}`script-file-io` section to learn more about available file operati
 
 ## Security credentials
 
-Amazon access credentials can be provided in two ways:
+AWS access credentials can be provided in two ways:
 
 1. Using AWS access and secret keys in your pipeline configuration.
-2. Using IAM roles to grant access to S3 storage on Amazon EC2 instances.
+2. Using IAM roles to grant access to S3 storage on AWS EC2 instances.
 
 ### AWS access and secret keys
 
@@ -52,13 +52,13 @@ If the access credentials are not found in the above file, Nextflow looks for AW
 
 More information regarding [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html) are available in the AWS documentation.
 
-### IAM roles with Amazon EC2 instances
+### IAM roles with AWS EC2 instances
 
 When running your pipeline in an EC2 instance, IAM roles can be used to grant access to AWS resources.
 
 In this scenario, you only need to launch the EC2 instance with an IAM role which includes the `AmazonS3FullAccess` policy. Nextflow will detect and automatically acquire the permission to access S3 storage, without any further configuration.
 
-Learn more about [Using IAM Roles to Delegate Permissions to Applications that Run on Amazon EC2](http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-usingrole-ec2instance.html) in the Amazon documentation.
+Learn more about [Using IAM Roles to Delegate Permissions to Applications that Run on AWS EC2](http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-usingrole-ec2instance.html) in the AWS documentation.
 
 ## China regions
 

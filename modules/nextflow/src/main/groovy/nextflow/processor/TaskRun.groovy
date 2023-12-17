@@ -404,7 +404,7 @@ class TaskRun implements Cloneable {
      * @return A map object containing all the task input files as <stage name, store path> pairs
      */
     Map<String,Path> getInputFilesMap() {
-        def result = [:]
+        final result = [:]
         for( FileHolder it : inputFiles )
             result.put(it.stageName, it.storePath)
         return result
