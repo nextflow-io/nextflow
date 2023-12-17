@@ -205,7 +205,7 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize method for singularity' () {
         given:
         def BASE = Paths.get('/abs/path/')
-        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, oci:OCI, baseDir: BASE))
+        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, ociMode: OCI, baseDir: BASE))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
@@ -237,7 +237,7 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize method for OCI direct mode' () {
         given:
         def BASE = Paths.get('/abs/path/')
-        def handler = Spy(new ContainerHandler(engine: 'apptainer', enabled: true, direct:DIRECT, baseDir: BASE))
+        def handler = Spy(new ContainerHandler(engine: 'apptainer', enabled: true, ociAutoPull:AUTO, baseDir: BASE))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
@@ -248,7 +248,7 @@ class ContainerHandlerTest extends Specification {
         result == EXPECTED
 
         where:
-        IMAGE                                       | NORMALIZED                                        | ENGINE            | DIRECT| X          | EXPECTED
+        IMAGE                                       | NORMALIZED                                        | ENGINE            | AUTO  | X | EXPECTED
         null                                        | null                                              | 'singularity'     | false |           0 | null
         ''                                          | null                                              | 'singularity'     | false |           0 | null
         '/abs/path/bar.img'                         | '/abs/path/bar.img'                               | 'singularity'     | false |           0 | '/abs/path/bar.img'

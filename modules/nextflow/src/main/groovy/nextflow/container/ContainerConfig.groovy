@@ -17,6 +17,7 @@
 package nextflow.container
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 
 /**
@@ -55,14 +56,40 @@ class ContainerConfig extends LinkedHashMap {
         get('engine')
     }
 
+    /**
+     * Whenever Singularity or Apptainer container engine can a OCI (Docker)
+     * image without requiring a separate OCI to SIF conversion execution (managed by Nextflow via {@link SingularityCache).
+     *
+     * @return
+     *  {@code true} when the OCI container can be run without an explicit OCI to SIF conversion or {@code false}
+     *  otherwise
+     *
+     */
     boolean canRunOciImage() {
         if( isSingularityOciMode() )
             return true
-        return get('direct')?.toString()=='true' && (getEngine()=='singularity' || getEngine()=='apptainer')
+        if( (getEngine()!='singularity' && getEngine()!='apptainer') )
+            return false
+        return get('ociAutoPull')?.toString()=='true'
     }
 
+    /**
+     * Whenever the Singularity OCI-mode is enabled
+     *
+     * @return {@code true} when Singularity OCI-mode is enabled or {@code false} otherwise
+     */
+    @Memoized
     boolean isSingularityOciMode() {
-        return getEngine()=='singularity' && get('oci')?.toString()=='true'
+        if( getEngine()!='singularity' ) {
+            return false
+        }
+        if( get('oci')?.toString()=='true' ) {
+            log.warn "The setting `singularity.oci` is deprecated - use `singularity.ociNative` instead"
+            return true
+        }
+        if( get('ociMode')?.toString()=='true' )
+            return true
+        return false
     }
 
     List<String> getEnvWhitelist() {
