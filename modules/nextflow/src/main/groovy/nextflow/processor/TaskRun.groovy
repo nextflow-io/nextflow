@@ -392,6 +392,14 @@ class TaskRun implements Cloneable {
             : getScript()
     }
 
+
+    /**
+     * Check whenever there are values to be cached
+     */
+    boolean hasCacheableValues() {
+        return body.type != ScriptType.SCRIPTLET
+    }
+
     /**
      * @return A map object containing all the task input files as <stage name, store path> pairs
      */

@@ -638,6 +638,12 @@ class TaskProcessor {
             return false
         }
 
+        // -- when store path is set, only output params of type 'file' can be specified
+        if( task.inputFiles.size() == 0 ) {
+            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
+            return false
+        }
+
         if( !task.config.getStoreDir().exists() ) {
             log.trace "[${safeTaskName(task)}] Store dir does not exists > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
@@ -705,7 +711,7 @@ class TaskProcessor {
             return false
         }
 
-        if( !entry.context ) {
+        if( task.hasCacheableValues() && !entry.context ) {
             log.trace "[${safeTaskName(task)}] Missing cache context -- return false"
             return false
         }

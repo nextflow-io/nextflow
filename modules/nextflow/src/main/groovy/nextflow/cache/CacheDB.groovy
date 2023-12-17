@@ -139,8 +139,9 @@ class CacheDB implements Closeable {
         final proc = task.processor
         final key = task.hash
 
-        // -- save the task context only if caching is enabled for the process
-        TaskContext ctx = proc.isCacheable() ? task.context : null
+        // save the context map for caching purpose
+        // only the 'cache' is active and
+        TaskContext ctx = proc.isCacheable() && task.hasCacheableValues() ? task.context : null
 
         def record = new ArrayList(3)
         record[0] = trace.serialize()
