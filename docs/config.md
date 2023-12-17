@@ -104,6 +104,11 @@ The following settings are available:
 `apptainer.noHttps`
 : Pull the Apptainer image with http protocol (default: `false`).
 
+`apptainer.ociAutoPull`
+: :::{versionadded} 23.12.0-edge
+  :::
+: When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
+
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
@@ -1407,11 +1412,15 @@ The following settings are available:
 `singularity.noHttps`
 : Pull the Singularity image with http protocol (default: `false`).
 
-`singularity.oci`
-: :::{versionadded} 23.11.0-edge
+`singularity.ociAutoPull`
+: :::{versionadded} 23.12.0-edge
   :::
-: Enable OCI-mode, that allows running native OCI-compatible containers with Singularity using `crun` or `runc` as low-level runtime. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+: When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singulairty 3.11 or later (default: `false`).
 
+`singularity.ociMode`
+: :::{versionadded} 23.12.0-edge
+  :::
+: Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singulairty 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).

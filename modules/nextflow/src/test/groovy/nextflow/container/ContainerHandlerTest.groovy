@@ -205,7 +205,7 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize method for singularity' () {
         given:
         def BASE = Paths.get('/abs/path/')
-        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, oci:OCI, baseDir: BASE))
+        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, ociMode: OCI, baseDir: BASE))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
@@ -230,6 +230,54 @@ class ContainerHandlerTest extends Specification {
         and:
         'docker://library/busybox'                  | 'docker://library/busybox'                        | true  |           0 | 'docker://library/busybox'
         'shub://busybox'                            | 'shub://busybox'                                  | true  |           1 | '/path/to/busybox'
+
+    }
+
+    @Unroll
+    def 'test normalize method for OCI direct mode' () {
+        given:
+        def BASE = Paths.get('/abs/path/')
+        def handler = Spy(new ContainerHandler(engine: 'apptainer', enabled: true, ociAutoPull:AUTO, baseDir: BASE))
+
+        when:
+        def result = handler.normalizeImageName(IMAGE)
+
+        then:
+        1 * handler.normalizeApptainerImageName(IMAGE) >> NORMALIZED
+        X * handler.createApptainerCache(handler.config, NORMALIZED) >> EXPECTED
+        result == EXPECTED
+
+        where:
+        IMAGE                                       | NORMALIZED                                        | ENGINE            | AUTO  | X | EXPECTED
+        null                                        | null                                              | 'singularity'     | false |           0 | null
+        ''                                          | null                                              | 'singularity'     | false |           0 | null
+        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               | 'singularity'     | false |           0 | '/abs/path/bar.img'
+        '/abs/path bar.img'                         | '/abs/path bar.img'                               | 'singularity'     | false |           0 | '/abs/path\\ bar.img'
+        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               | 'singularity'     | false |           0 | '/abs/path/bar.img'
+        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString()  | 'singularity'     | false |           0 | Paths.get('foo.img').toAbsolutePath().toString()
+        'shub://busybox'                            | 'shub://busybox'                                  | 'singularity'     | false |           1 | '/path/to/busybox'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | 'singularity'     | false |           1 | '/path/to/busybox'
+        'foo'                                       | 'docker://foo'                                    | 'singularity'     | false |           1 | '/path/to/foo'
+        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         | 'singularity'     | false |           1 | '/path/to/foo-bar-latest.img'
+        and:
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | 'singularity'     | true  |           0 | 'docker://library/busybox'
+        'shub://busybox'                            | 'shub://busybox'                                  | 'singularity'     | true  |           1 | '/path/to/busybox'
+
+        and:
+        null                                        | null                                              | 'apptainer'     | false |           0 | null
+        ''                                          | null                                              | 'apptainer'     | false |           0 | null
+        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               | 'apptainer'     | false |           0 | '/abs/path/bar.img'
+        '/abs/path bar.img'                         | '/abs/path bar.img'                               | 'apptainer'     | false |           0 | '/abs/path\\ bar.img'
+        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               | 'apptainer'     | false |           0 | '/abs/path/bar.img'
+        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString()  | 'apptainer'     | false |           0 | Paths.get('foo.img').toAbsolutePath().toString()
+        'shub://busybox'                            | 'shub://busybox'                                  | 'apptainer'     | false |           1 | '/path/to/busybox'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | 'apptainer'     | false |           1 | '/path/to/busybox'
+        'foo'                                       | 'docker://foo'                                    | 'apptainer'     | false |           1 | '/path/to/foo'
+        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         | 'apptainer'     | false |           1 | '/path/to/foo-bar-latest.img'
+        and:
+        'docker://library/busybox'                  | 'docker://library/busybox'                        | 'apptainer'     | true  |           0 | 'docker://library/busybox'
+        'shub://busybox'                            | 'shub://busybox'                                  | 'apptainer'     | true  |           1 | '/path/to/busybox'
+
 
     }
 

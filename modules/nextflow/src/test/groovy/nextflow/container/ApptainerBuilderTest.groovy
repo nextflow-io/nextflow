@@ -153,6 +153,11 @@ class ApptainerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home -B "$NXF_TASK_WORKDIR" ubuntu'
 
+        new ApptainerBuilder('ubuntu')
+            .params(oci: true)
+            .build()
+            .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu'
+
     }
 
     def 'should mount home directory if specified' () {

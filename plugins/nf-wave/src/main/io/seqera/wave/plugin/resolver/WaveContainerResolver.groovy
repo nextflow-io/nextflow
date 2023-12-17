@@ -70,8 +70,7 @@ class WaveContainerResolver implements ContainerResolver {
         final freeze = client().config().freezeMode()
         final config = task.getContainerConfig()
         final engine = getContainerEngine0(config)
-        final singularityOciMode = config.singularityOciMode()
-        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !singularityOciMode
+        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !config.canRunOciImage()
         if( !imageName ) {
             // when no image name is provided the module bundle should include a
             // Dockerfile or a Conda recipe or a Spack recipe to build
