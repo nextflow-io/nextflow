@@ -10,6 +10,7 @@ fi
 # normal run
 #
 echo initial run
+$NXF_CMD fs rm s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt || true
 $NXF_RUN -c .config
 
 $NXF_CMD fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
@@ -19,6 +20,7 @@ cmp data.txt .expected || false
 # resume run
 #
 echo resumed run
+$NXF_CMD fs rm s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt || true
 $NXF_RUN -c .config -resume
 
 $NXF_CMD fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
