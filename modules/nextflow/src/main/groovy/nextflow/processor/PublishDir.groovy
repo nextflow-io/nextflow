@@ -134,7 +134,7 @@ class PublishDir {
     }
 
     protected Map<String,Path> getTaskInputs() {
-        return task?.getInputFilesMap()
+        return task ? task.getInputFilesMap() : Map.<String,Path>of()
     }
 
     void setPath( def value ) {
