@@ -37,7 +37,7 @@ rm -rf $NXF_WORK
 
 function run_checks() {
   NXF_SCRIPT="../../$1"
-  NXF_RUN="$NXF_CMD -q run $NXF_SCRIPT" 
+  NXF_RUN="$NXF_CMD -q run $NXF_SCRIPT"
   export NXF_SCRIPT
   export NXF_CMD
   export NXF_RUN
@@ -50,7 +50,7 @@ function run_checks() {
   else
      mkdir -p $1
      cd $1
-     $NXF_RUN > checks.out 
+     $NXF_RUN > checks.out
   fi
   
   ret=$?
