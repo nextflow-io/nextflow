@@ -108,12 +108,12 @@ class EscapeTest extends Specification {
         'foo:bar'   | 'foo:bar'
         'foo!bar'   | 'foo!bar'
         'foo[!x]bar'| 'foo[!x]bar'
+        'foo|bar'   | 'foo|bar'
+        'foo`bar'   | 'foo`bar'
+        'foo&bar'   | 'foo&bar'
+        'foo(x)bar' | 'foo(x)bar'
+        'foo<x>bar' | 'foo<x>bar'
         and:
         '$foo'      | '\\$foo'
-        'foo|bar'   | 'foo\\|bar'
-        'foo`bar'   | 'foo\\`bar'
-        'foo&bar'   | 'foo\\&bar'
-        'foo(x)bar' | 'foo\\(x\\)bar'
-        'foo<x>bar' | 'foo\\<x\\>bar'
     }
 }
