@@ -50,7 +50,14 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        final ref = revision ?: getMainBranch()
+        def ref
+        if (!revision){
+            ref = getMainBranch()
+        } else if (revision.contains('/')){
+            ref = getCommitIdForRevision()
+        } else {
+            ref = revision
+        }
         return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
     }
 
@@ -60,6 +67,11 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     String getMainBranch() {
         invokeAndParseResponse(getMainBranchUrl()) ?. mainbranch ?. name
+    }
+
+    String getCommitIdForRevision(){
+        def resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/branches/$revision")
+        return resp?.target?.hash
     }
 
     @Memoized

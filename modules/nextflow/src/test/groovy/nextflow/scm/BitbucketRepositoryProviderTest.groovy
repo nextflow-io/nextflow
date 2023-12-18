@@ -114,4 +114,28 @@ class BitbucketRepositoryProviderTest extends Specification {
                 .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/hello/src/foo/main.nf'
 
     }
+
+    def 'readbytes' () {
+        given:
+        String CONFIG = '''
+        providers {
+            mybitbucket {
+                server = 'https://bitbucket.org'
+                endpoint = 'https://bitbucket.org'
+                platform = 'bitbucket'
+            }
+        }
+        '''
+
+        def config = new ConfigSlurper().parse(CONFIG)
+        def obj = new ProviderConfig('bitbucket', config.providers.mybitbucket as ConfigObject)
+
+        expect:
+        def bitBucketProvider = new BitbucketRepositoryProvider('endre-seqera-testing/nextflow-hello', obj)
+        bitBucketProvider.setRevision('master')
+        bitBucketProvider.readText('nextflow.config') == "process.container = 'quay.io/nextflow/bash'\n"
+
+        bitBucketProvider.setRevision('feature/1234')
+        bitBucketProvider.readText('nextflow.config') == "process.container = 'quay.io/nextflow/bash'\n"
+    }
 }
