@@ -17,7 +17,7 @@
 
 process foo {
   output:
-  file 'x'
+  path 'x'
 
   '''
   echo -n Hello > x
@@ -26,7 +26,7 @@ process foo {
 
 process bar {
   input:
-  file x
+  path x
   val y
 
   """

@@ -20,7 +20,7 @@ process foo {
     each x
 
     output:
-    file result_data
+    path 'result_data'
 
     """
     echo Hello $x > result_data
