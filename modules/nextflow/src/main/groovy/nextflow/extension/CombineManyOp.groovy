@@ -20,7 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 /**
@@ -55,14 +57,23 @@ class CombineManyOp {
         this.queues = sources.collect( ch -> [] )
         this.singletons = sources.collect( ch -> !CH.isChannelQueue(ch) )
         this.emitSingleton = iterators.size() == 0 && singletons.every()
-        this.emitCombination = iterators.size() == sources.size()
+        this.emitCombination = iterators.size() > 0 && singletons.every()
     }
 
-    private Map handler(int index, DataflowWriteChannel target, AtomicInteger counter) {
+    DataflowWriteChannel apply() {
+        final target = emitSingleton
+            ? new DataflowVariable()
+            : new DataflowQueue()
+        final counter = new AtomicInteger(sources.size())
+        for( int i = 0; i < sources.size(); i++ )
+            DataflowHelper.subscribeImpl( sources[i], eventsMap(i, target, counter) )
+
+        return target
+    }
+
+    private Map eventsMap(int index, DataflowWriteChannel target, AtomicInteger counter) {
         final opts = new LinkedHashMap(2)
-        opts.onNext = {
-            onNext(target, index, it)
-        }
+        opts.onNext = this.&take.curry(target, index)
         opts.onComplete = {
             if( counter.decrementAndGet() == 0 && !emitSingleton && !emitCombination )
                 target.bind(Channel.STOP)
@@ -70,7 +81,7 @@ class CombineManyOp {
         return opts
     }
 
-    private synchronized void onNext(DataflowWriteChannel target, int index, Object value) {
+    private synchronized void take(DataflowWriteChannel target, int index, Object value) {
         queues[index].add(value)
 
         // wait until every source has a value
@@ -121,14 +132,5 @@ class CombineManyOp {
 
             target.bind(new ArrayList(args))
         }
-    }
-
-    DataflowWriteChannel apply() {
-        final target = CH.create(emitSingleton)
-        final counter = new AtomicInteger(sources.size())
-        for( int i = 0; i < sources.size(); i++ )
-            DataflowHelper.subscribeImpl( sources[i], handler(i, target, counter) )
-
-        return target
     }
 }

@@ -43,13 +43,12 @@ class ProcessFileInput implements PathArityAware {
         this.value = value
         this.name = name
         this.pathQualifier = pathQualifier
-        this.filePattern = opts.stageAs ?: opts.name
 
         for( Map.Entry<String,?> entry : opts )
             setProperty(entry.key, entry.value)
     }
 
-    void setStageAs(String value) {
+    void setStageAs(CharSequence value) {
         this.filePattern = value
     }
 

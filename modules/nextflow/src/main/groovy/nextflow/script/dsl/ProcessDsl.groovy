@@ -72,7 +72,6 @@ class ProcessDsl extends ProcessBuilder {
 
     void _in_env(LazyVar var) {
         final param = "\$in${inputs.size()}".toString()
-
         inputs.addParam(param)
         inputs.addEnv(var.name, new LazyVar(param))
     }
@@ -88,6 +87,9 @@ class ProcessDsl extends ProcessBuilder {
     }
 
     private String _in_path0(Object source, boolean pathQualifier, Map opts) {
+        if( !opts.stageAs && opts.name )
+            opts.stageAs = opts.remove('name')
+
         if( source instanceof LazyVar ) {
             final var = (LazyVar)source
             inputs.addFile(new ProcessFileInput(var, var.name, pathQualifier, opts))
@@ -96,7 +98,7 @@ class ProcessDsl extends ProcessBuilder {
         else if( source instanceof CharSequence ) {
             final param = "\$in${inputs.size()}"
             if( !opts.stageAs )
-                opts.stageAs = source.toString()
+                opts.stageAs = source
             inputs.addFile(new ProcessFileInput(new LazyVar(param), null, pathQualifier, opts))
             return param
         }
@@ -104,13 +106,15 @@ class ProcessDsl extends ProcessBuilder {
             throw new IllegalArgumentException()
     }
 
-    void _in_stdin(LazyVar var=null) {
-        final param = var != null
-            ? var.name
-            : "\$in${inputs.size()}".toString()
-
+    void _in_stdin() {
+        final param = "\$in${inputs.size()}".toString()
         inputs.addParam(param)
         inputs.stdin = new LazyVar(param)
+    }
+
+    void _in_stdin(LazyVar var) {
+        inputs.addParam(var.name)
+        inputs.stdin = var
     }
 
     @CompileDynamic
