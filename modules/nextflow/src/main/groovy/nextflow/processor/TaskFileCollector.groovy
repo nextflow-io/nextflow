@@ -42,14 +42,17 @@ class TaskFileCollecter {
 
     private TaskRun task
 
+    private Path workDir
+
     TaskFileCollecter(ProcessFileOutput param, TaskRun task) {
         this.param = param
         this.task = task
+        this.workDir = task.getTargetDir()
     }
 
     Object collect() {
         final List<Path> allFiles = []
-        final filePatterns = param.getFilePatterns(task.context, task.workDir)
+        final filePatterns = param.getFilePatterns(task.context, workDir)
         boolean inputsExcluded = false
 
         for( String filePattern : filePatterns ) {
@@ -57,7 +60,7 @@ class TaskFileCollecter {
 
             final splitter = param.glob ? FilePatternSplitter.glob().parse(filePattern) : null
             if( splitter?.isPattern() ) {
-                result = fetchResultFiles(filePattern, task.workDir)
+                result = fetchResultFiles(filePattern, workDir)
                 if( result && !param.includeInputs ) {
                     result = excludeStagedInputs(task, result)
                     log.trace "Process ${task.lazyName()} > after removing staged inputs: ${result}"
@@ -66,7 +69,7 @@ class TaskFileCollecter {
             }
             else {
                 final path = param.glob ? splitter.strip(filePattern) : filePattern
-                final file = task.workDir.resolve(path)
+                final file = workDir.resolve(path)
                 final exists = checkFileExists(file)
                 if( exists )
                     result = List.of(file)
@@ -132,7 +135,7 @@ class TaskFileCollecter {
 
         for( int i = 0; i < collectedFiles.size(); i++ ) {
             final file = collectedFiles.get(i)
-            final relativeName = task.workDir.relativize(file).toString()
+            final relativeName = workDir.relativize(file).toString()
             if( !allStagedFiles.contains(relativeName) )
                 result.add(file)
         }

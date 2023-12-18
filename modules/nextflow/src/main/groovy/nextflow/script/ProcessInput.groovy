@@ -34,8 +34,6 @@ class ProcessInput implements Cloneable {
 
     private String name
 
-    private Object arg
-
     private DataflowReadChannel channel
 
     /**
@@ -51,19 +49,11 @@ class ProcessInput implements Cloneable {
         return name
     }
 
-    void bind(Object arg) {
-        this.arg = arg
-        this.channel = getInChannel(arg)
+    void bind(Object value) {
+        this.channel = getInChannel(value)
     }
 
-    private DataflowReadChannel getInChannel(Object obj) {
-        if( obj == null )
-            throw new IllegalArgumentException('A process input channel evaluates to null')
-
-        def value = obj instanceof Closure
-            ? obj.call()
-            : obj
-
+    private DataflowReadChannel getInChannel(Object value) {
         if( value == null )
             throw new IllegalArgumentException('A process input channel evaluates to null')
 

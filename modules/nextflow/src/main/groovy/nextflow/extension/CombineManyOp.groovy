@@ -45,6 +45,8 @@ class CombineManyOp {
 
     private boolean emitSingleton
 
+    private boolean emitCombination
+
     private transient List<List> combinations
 
     CombineManyOp(List<DataflowReadChannel> sources, List<Integer> iterators) {
@@ -53,6 +55,7 @@ class CombineManyOp {
         this.queues = sources.collect( ch -> [] )
         this.singletons = sources.collect( ch -> !CH.isChannelQueue(ch) )
         this.emitSingleton = iterators.size() == 0 && singletons.every()
+        this.emitCombination = iterators.size() == sources.size()
     }
 
     private Map handler(int index, DataflowWriteChannel target, AtomicInteger counter) {
@@ -61,7 +64,7 @@ class CombineManyOp {
             onNext(target, index, it)
         }
         opts.onComplete = {
-            if( counter.decrementAndGet() == 0 && !emitSingleton )
+            if( counter.decrementAndGet() == 0 && !emitSingleton && !emitCombination )
                 target.bind(Channel.STOP)
         }
         return opts
@@ -74,6 +77,26 @@ class CombineManyOp {
         if( queues.any(q -> q.size() == 0) )
             return
 
+        // emit singleton value if every source is a singleton
+        if( emitSingleton ) {
+            final args = queues.collect(q -> q.first())
+            target.bind(args)
+            return
+        }
+
+        // emit combinations once if every source is an iterator
+        if( emitCombination ) {
+            emit(target)
+            target.bind(Channel.STOP)
+            return
+        }
+
+        // otherwise emit as many items as are available
+        while( queues.every(q -> q.size() > 0) )
+            emit(target)
+    }
+
+    private void emit(DataflowWriteChannel target) {
         // emit the next item if there are no iterators
         if( iterators.size() == 0 ) {
             final args = (0..<queues.size()).collect( i ->
@@ -96,7 +119,7 @@ class CombineManyOp {
             for( int k = 0; k < entries.size(); k++ )
                 args[iterators[k]] = entries[k]
 
-            target.bind(args)
+            target.bind(new ArrayList(args))
         }
     }
 

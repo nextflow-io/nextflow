@@ -158,18 +158,16 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             declaredInputs[i].bind(args[i])
 
         // combine input channels
-        final inputs = declaredInputs.getChannels()
-        if( inputs.size() == 1 )
-            return inputs.first().chainWith( it -> [it] )
+        final count = declaredInputs.count( param -> CH.isChannelQueue(param) && !param.isIterator() )
+        if( count > 1 ) {
+            final msg = "Process `$processName` received multiple queue channel inputs which will be implicitly mergeed -- consider combining them explicitly with `combine` or `join`, or converting single-item chennels into value channels with `collect` or `first`"
+            if( NF.isStrictMode() )
+                throw new ScriptRuntimeException(msg)
+            log.warn(msg)
+        }
 
-        final count = (0..<inputs.size()).count(
-            i -> CH.isChannelQueue(inputs[i]) && !declaredInputs[i].isIterator()
-        )
-        if( NF.isStrictMode() && count > 1 )
-            throw new ScriptRuntimeException("Process `$name` received multiple queue channel inputs which will be implicitly mergeed -- consider combining them explicitly with `combine` or `join`, or converting single-item chennels into value channels with `collect` or `first`")
-
-        final iterators = (0..<inputs.size()).findAll( i -> declaredInputs[i].isIterator() )
-        return CH.getReadChannel(new CombineManyOp(inputs, iterators).apply())
+        final iterators = (0..<declaredInputs.size()).findAll( i -> declaredInputs[i].isIterator() )
+        return CH.getReadChannel(new CombineManyOp(declaredInputs.getChannels(), iterators).apply())
     }
 
     private void collectOutputs(boolean singleton) {

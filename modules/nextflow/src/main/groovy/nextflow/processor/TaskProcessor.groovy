@@ -639,7 +639,7 @@ class TaskProcessor {
         }
 
         // -- when store path is set, only output params of type 'file' can be specified
-        if( task.inputFiles.size() == 0 ) {
+        if( config.getOutputs().getFiles().size() == 0 ) {
             checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
             return false
         }
@@ -1895,8 +1895,9 @@ class TaskProcessor {
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
+                def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
-                log.trace "<${taskName}> Control message arrived => ${message}"
+                log.trace "<${taskName}> Control message arrived ${channelName} => ${message}"
             }
 
             super.controlMessageArrived(processor, channel, index, message)
@@ -1905,7 +1906,7 @@ class TaskProcessor {
                 // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
                 if( log.isTraceEnabled() )
                     log.trace "<${name}> Poison pill arrived; port: $index"
-                closed.set(true)
+                closed.set(true) // mark the process as closed
                 state.update { StateObj it -> it.poison() }
             }
 

@@ -48,7 +48,7 @@ class TokenPathCall {
 
     TokenPathCall(target) {
         this.target = target
-        this.opts = Collections.emptyMap()
+        this.opts = [:]
     }
 
     TokenPathCall(Map opts, target) {
