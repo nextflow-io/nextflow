@@ -91,15 +91,15 @@ class TaskOutputCollector implements Map<String,?> {
      * Get the standard output from the task environment.
      */
     Object stdout() {
-        final result = task.getStdout()
+        final value = task.@stdout
 
-        if( result == null && task.type == ScriptType.SCRIPTLET )
+        if( value == null && task.type == ScriptType.SCRIPTLET )
             throw new IllegalArgumentException("Missing 'stdout' for process > ${task.lazyName()}")
 
-        if( result instanceof Path && !result.exists() )
-            throw new MissingFileException("Missing 'stdout' file: ${result.toUriString()} for process > ${task.lazyName()}")
+        if( value instanceof Path && !value.exists() )
+            throw new MissingFileException("Missing 'stdout' file: ${value.toUriString()} for process > ${task.lazyName()}")
 
-        return result
+        return value instanceof Path ? ((Path)value).text : value?.toString()
     }
 
     /**
