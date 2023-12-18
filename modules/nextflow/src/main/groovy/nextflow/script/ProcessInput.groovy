@@ -32,8 +32,16 @@ import nextflow.extension.ToListOp
 @CompileStatic
 class ProcessInput implements Cloneable {
 
+    /**
+     * Parameter name under which the input value for each task
+     * will be added to the task context.
+     */
     private String name
 
+    /**
+     * Input channel which is created when the process is invoked
+     * in a workflow.
+     */
     private DataflowReadChannel channel
 
     /**

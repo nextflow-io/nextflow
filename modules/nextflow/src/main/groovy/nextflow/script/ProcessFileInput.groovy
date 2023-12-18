@@ -28,8 +28,17 @@ import nextflow.util.LazyHelper
 @CompileStatic
 class ProcessFileInput implements PathArityAware {
 
+    /**
+     * Lazy expression (e.g. lazy var, closure, GString) which
+     * defines which files to stage in terms of the task inputs.
+     * It is evaluated for each task against the task context.
+     */
     private Object value
 
+    /**
+     * Optional name which, if specified, will be added to the task
+     * context as an escape-aware list of paths.
+     */
     private String name
 
     /**
@@ -37,6 +46,10 @@ class ProcessFileInput implements PathArityAware {
      */
     private boolean pathQualifier
 
+    /**
+     * File pattern which defines how the input files should be named
+     * when they are staged into a task directory.
+     */
     private Object filePattern
 
     ProcessFileInput(Object value, String name, boolean pathQualifier, Map<String,?> opts) {

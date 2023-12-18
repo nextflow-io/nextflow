@@ -28,12 +28,31 @@ class ProcessInputs implements List<ProcessInput>, Cloneable {
     @Delegate
     private List<ProcessInput> params = []
 
+    /**
+     * Input variables which will be evaluated for each task
+     * in terms of the task inputs and added to the task context.
+     */
     private Map<String,?> vars = [:]
 
+    /**
+     * Environment variables which will be evaluated for each
+     * task against the task context and added to the task
+     * environment.
+     */
     private Map<String,?> env = [:]
 
+    /**
+     * Input files which will be evaluated for each task
+     * against the task context and staged into the task
+     * directory.
+     */
     private List<ProcessFileInput> files = []
 
+    /**
+     * Lazy expression which will be evaluated for each task
+     * against the task context and provided as the standard
+     * input to the task.
+     */
     Object stdin
 
     @Override

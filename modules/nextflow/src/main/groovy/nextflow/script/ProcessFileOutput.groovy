@@ -35,6 +35,11 @@ import nextflow.util.LazyHelper
 @CompileStatic
 class ProcessFileOutput implements PathArityAware {
 
+    /**
+     * Lazy expression (e.g. lazy var, closure, GString) which
+     * defines which files to unstage from the task directory.
+     * It will be evaluated for each task against the task directory.
+     */
     private Object target
 
     /**

@@ -32,16 +32,41 @@ import nextflow.util.LazyHelper
 @CompileStatic
 class ProcessOutput implements Cloneable {
 
+    /**
+     * List of declared outputs of the parent process.
+     */
     private ProcessOutputs declaredOutputs
 
+    /**
+     * Lazy expression (e.g. lazy var, closure, GString) which
+     * defines the output value in terms of the task context,
+     * including environment variables, files, and standard output.
+     * It will be evaluated for each task after it is executed. 
+     */
     private Object target
 
+    /**
+     * Optional parameter name under which the output channel
+     * is made available in the process outputs (i.e. `.out`).
+     */
     private String name
 
+    /**
+     * Optional channel topic which this output channel will
+     * be sent to.
+     */
     private String topic
 
+    /**
+     * When true, a task will not fail if any environment
+     * vars or files for this output are missing.
+     */
     private boolean optional
 
+    /**
+     * Output channel which is created when the process is invoked
+     * in a workflow.
+     */
     private DataflowWriteChannel channel
 
     ProcessOutput(ProcessOutputs declaredOutputs, Object target, Map<String,?> opts) {

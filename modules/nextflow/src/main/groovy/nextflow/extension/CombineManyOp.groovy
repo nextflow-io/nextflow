@@ -26,8 +26,8 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 /**
- * Operator for combining many source channels into a single channel,
- * with the option to only merge channels that are not marked as "iterators".
+ * Operator for merging many source channels into a single channel,
+ * with the option to combine channels that are marked as "iterators".
  *
  * @see ProcessDef#collectInputs(Object[])
  *
@@ -41,12 +41,26 @@ class CombineManyOp {
 
     private List<Integer> iterators
 
+    /**
+     * List of queues to receive values from source channels.
+     */
     private List<List> queues = []
 
+    /**
+     * Mask of source channels that are singletons.
+     */
     private List<Boolean> singletons
 
+    /**
+     * True when all source channels are singletons and therefore
+     * the operator should emit a singleton channel.
+     */
     private boolean emitSingleton
 
+    /**
+     * True when all source channels are iterators and therefore
+     * the operator should simply emit the combinations.
+     */
     private boolean emitCombination
 
     private transient List<List> combinations

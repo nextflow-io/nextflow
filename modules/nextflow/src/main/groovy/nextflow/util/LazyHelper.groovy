@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 /**
- * Helper methods for lazy binding and resolution.
+ * Helper methods for lazy evaluation.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -29,7 +29,7 @@ import groovy.transform.ToString
 class LazyHelper {
 
     /**
-     * Resolve a lazy value against a given binding.
+     * Evaluate a lazy expression against a given binding.
      *
      * @param binding
      * @param value
@@ -50,14 +50,14 @@ class LazyHelper {
 }
 
 /**
- * Interface for types that can be lazily resolved
+ * Interface for types that can be lazily evaluated
  */
 interface LazyAware {
     Object resolve(Object binding)
 }
 
 /**
- * A list that can be lazily resolved
+ * A list that can be lazily evaluated
  */
 @CompileStatic
 class LazyList implements LazyAware, List {
@@ -88,7 +88,7 @@ class LazyList implements LazyAware, List {
 }
 
 /**
- * A map whose values can be lazily resolved
+ * A map whose values can be lazily evaluated
  */
 @CompileStatic
 class LazyMap implements Map<String,Object> {
@@ -263,7 +263,7 @@ class LazyMap implements Map<String,Object> {
 }
 
 /**
- * A variable that can be lazily resolved
+ * A variable that can be lazily evaluated
  */
 @CompileStatic
 @EqualsAndHashCode

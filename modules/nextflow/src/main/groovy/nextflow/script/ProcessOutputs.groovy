@@ -30,8 +30,18 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
     @Delegate
     private List<ProcessOutput> params = []
 
+    /**
+     * Environment variables which will be exported from the
+     * task environment for each task and made available to
+     * process outputs.
+     */
     private Map<String,String> env = [:]
 
+    /**
+     * Output files which will be unstaged from the task
+     * directory for each task and made available to process
+     * outputs.
+     */
     private Map<String,ProcessFileOutput> files = [:]
 
     @Override
