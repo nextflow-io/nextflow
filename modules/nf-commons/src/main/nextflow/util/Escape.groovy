@@ -29,11 +29,11 @@ import nextflow.extension.FilesEx
 @CompileStatic
 class Escape {
 
-    private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', ';']
+    final private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', ';']
 
-    private static List<String> VAR_CHARS = ['$', "'", '"', '(', ')', '\\', '&', '|', '<', '>', '`']
+    final private static List<String> VAR_CHARS = ['$']
 
-    private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
+    final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
 
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false) {
         def copy = new StringBuilder(str.size() +10)
