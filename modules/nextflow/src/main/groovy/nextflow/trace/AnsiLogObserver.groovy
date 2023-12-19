@@ -444,9 +444,9 @@ class AnsiLogObserver implements TraceObserver {
             term.a(", retries: $stats.retries")
         if( stats.terminated && tot ) {
             if( stats.errored )
-                term.fg(Color.RED).a(' \u2718' ).reset()
+                term.fg(Color.RED).a(' \u2718').reset()
             else
-                term.fg(Color.GREEN).a(' \u2714 ').reset()
+                term.fg(Color.GREEN).a(' \u2714').reset()
         }
         return term
     }
