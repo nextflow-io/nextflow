@@ -285,10 +285,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 
-            def machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
-            if( !machineType ) {
-
-            }
+            final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
 
             if( machineType ) {
                 instancePolicy.setMachineType(machineType.type)
