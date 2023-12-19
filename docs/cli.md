@@ -1502,7 +1502,8 @@ nextflow run <my script> --foo Hello
 Then, the parameter can be accessed in the pipeline script using the `params.foo` identifier.
 
 :::{note}
-When the parameter name is formatted using `camelCase`, a second parameter is created with the same value using `kebab-case`, and vice versa.
+Parameter names formatted using `camelCase`, `snake_case`, or `kebab-case` are treated as the same. For example
+`--paramName`, `--param_name`, and `--param-name` can be used interchangeably.
 :::
 
 :::{warning}
