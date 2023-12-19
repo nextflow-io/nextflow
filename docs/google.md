@@ -90,44 +90,77 @@ Read the {ref}`Google configuration<config-google>` section to learn more about 
 
 ### Process definition
 
-Processes can be defined as usual and by default the `cpus` and `memory` directives are used to find the cheapest machine type available at current location that fits the requested resources. If `memory` is not specified, 1GB of memory is allocated per cpu.
+By default, the `cpus` and `memory` directives are used to find the cheapest machine type that is available at the current
+location and that fits the requested resources. If `memory` is not specified, 1 GB of memory is allocated per CPU.
 
-:::{versionadded} 23.02.0-edge
-The `machineType` directive can be a list of patterns separated by comma. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
-
-Alternatively it can also be used to define a specific predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or a custom machine type.
-:::
-
-Examples:
+The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute
+Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
 ```groovy
-process automatic_resources_task {
+process myTask {
     cpus 8
     memory '40 GB'
 
     """
-    <Your script here>
+    your_command --here
     """
 }
 
-process allowing_some_series {
+process anotherTask {
+    machineType 'n1-highmem-8'
+
+    """
+    your_command --here
+    """
+}
+```
+
+:::{versionadded} 23.02.0-edge
+:::
+
+The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
+number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
+
+```groovy
+process myTask {
     cpus 8
     memory '20 GB'
     machineType 'n2-*,c2-*,m3-*'
 
     """
-    <Your script here>
-    """
-}
-
-process predefined_resources_task {
-    machineType 'n1-highmem-8'
-
-    """
-    <Your script here>
+    your_command --here
     """
 }
 ```
+
+:::{versionadded} 23.12.0-edge
+:::
+
+The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
+specified as `template://<instance-template>`. For example:
+
+```groovy
+process myTask {
+    cpus 8
+    memory '20 GB'
+    machineType 'template://my-template'
+
+    """
+    your_command --here
+    """
+}
+```
+
+:::{note}
+Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
+config options: `cpuPlatform`, `preemptible`, and `spot`.
+:::
+
+To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
+
+To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB.
+See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
+
 
 :::{versionadded} 23.06.0-edge
 :::

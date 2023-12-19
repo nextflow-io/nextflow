@@ -176,16 +176,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final accel = task.config.getAccelerator()
         // add nvidia specific driver paths
         // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if(  accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
+        if( accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
             container
                 .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
                 .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
         }
 
-        def containerOptions= task.config.getContainerOptions() ?: ''
+        def containerOptions = task.config.getContainerOptions() ?: ''
         // accelerator requires privileged option
         // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() || fusionEnabled()) {
+        if( task.config.getAccelerator() || fusionEnabled() ) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
         }
@@ -226,9 +226,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         // instance policy
+        // allocation policy
         final allocationPolicy = AllocationPolicy.newBuilder()
         final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
-        final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
         if( executor.config.getAllowedLocations() )
             allocationPolicy.setLocation(
@@ -236,80 +236,107 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .addAllAllowedLocations( executor.config.getAllowedLocations() )
             )
 
-        if( task.config.getAccelerator() ) {
-            final accelerator = AllocationPolicy.Accelerator.newBuilder()
-                .setCount( task.config.getAccelerator().getRequest() )
-
-            if( task.config.getAccelerator().getType() )
-                accelerator.setType( task.config.getAccelerator().getType() )
-
-            instancePolicy.addAccelerators(accelerator)
-            instancePolicyOrTemplate.setInstallGpuDrivers(true)
-        }
-
-        if( fusionEnabled() && !disk ) {
-            disk = new DiskResource(request: '375 GB', type: 'local-ssd')
-            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
-        }
-
-        if( executor.config.cpuPlatform ) {
-            instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
-        }
-
-        final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
-        if( machineType ) {
-            instancePolicy.setMachineType(machineType.type)
-            machineInfo = new CloudMachineInfo(
-                    type: machineType.type,
-                    zone: machineType.location,
-                    priceModel: machineType.priceModel
-            )
-        }
-
-        // When using local SSD not all the disk sizes are valid and depends on the machine type
-        if( disk?.type == 'local-ssd' && machineType ) {
-            final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
-            if( validSize != disk.request ) {
-                disk = new DiskResource(request: validSize, type: 'local-ssd')
-                log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adjusting local disk size to: $validSize"
-            }
-        }
-
-        // use disk directive for an attached disk if type is specified
-        if( disk?.type ) {
-            instancePolicy.addDisks(
-                AllocationPolicy.AttachedDisk.newBuilder()
-                    .setNewDisk(
-                        AllocationPolicy.Disk.newBuilder()
-                            .setType(disk.type)
-                            .setSizeGb(disk.request.toGiga())
-                    )
-                    .setDeviceName('scratch')
-            )
-
-            taskSpec.addVolumes(
-                Volume.newBuilder()
-                    .setDeviceName('scratch')
-                    .setMountPath('/tmp')
-            )
-        }
-
         if( executor.config.serviceAccountEmail )
             allocationPolicy.setServiceAccount(
                 ServiceAccount.newBuilder()
-                    .setEmail(executor.config.serviceAccountEmail)
+                    .setEmail( executor.config.serviceAccountEmail )
             )
 
-        if( executor.config.preemptible )
-            instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
+        allocationPolicy.putAllLabels( task.config.getResourceLabels() )
 
-        if( executor.config.spot )
-            instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
+        // use instance template if specified
+        if( task.config.getMachineType()?.startsWith('template://') ) {
+            if( task.config.getAccelerator() )
+                log.warn1 'Process directive `accelerator` ignored because an instance template was specified'
 
-        allocationPolicy.addInstances(
+            if( task.config.getDisk() )
+                log.warn1 'Process directive `disk` ignored because an instance template was specified'
+
+            if( executor.config.cpuPlatform )
+                log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
+
+            if( executor.config.preemptible )
+                log.warn1 'Config option `google.batch.premptible` ignored because an instance template was specified'
+
+            if( executor.config.spot )
+                log.warn1 'Config option `google.batch.spot` ignored because an instance template was specified'
+
             instancePolicyOrTemplate
-                .setPolicy(instancePolicy)
-        )
+                .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
+                .setInstanceTemplate( task.config.getMachineType().minus('template://') )
+        }
+
+        // otherwise create instance policy
+        else {
+            final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
+
+            if( task.config.getAccelerator() ) {
+                final accelerator = AllocationPolicy.Accelerator.newBuilder()
+                    .setCount( task.config.getAccelerator().getRequest() )
+
+                if( task.config.getAccelerator().getType() )
+                    accelerator.setType( task.config.getAccelerator().getType() )
+
+                instancePolicy.addAccelerators(accelerator)
+                instancePolicyOrTemplate.setInstallGpuDrivers(true)
+            }
+
+            if( fusionEnabled() && !disk ) {
+                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
+            }
+
+            final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
+            if( machineType ) {
+                instancePolicy.setMachineType(machineType.type)
+                machineInfo = new CloudMachineInfo(
+                        type: machineType.type,
+                        zone: machineType.location,
+                        priceModel: machineType.priceModel
+                )
+            }
+
+            // When using local SSD not all the disk sizes are valid and depends on the machine type
+            if( disk?.type == 'local-ssd' && machineType ) {
+                final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
+                if( validSize != disk.request ) {
+                    disk = new DiskResource(request: validSize, type: 'local-ssd')
+                    log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adjusting local disk size to: $validSize"
+                }
+            }
+
+            // use disk directive for an attached disk if type is specified
+            if( disk?.type ) {
+                instancePolicy.addDisks(
+                    AllocationPolicy.AttachedDisk.newBuilder()
+                        .setNewDisk(
+                            AllocationPolicy.Disk.newBuilder()
+                                .setType(disk.type)
+                                .setSizeGb(disk.request.toGiga())
+                        )
+                        .setDeviceName('scratch')
+                )
+
+                taskSpec.addVolumes(
+                    Volume.newBuilder()
+                        .setDeviceName('scratch')
+                        .setMountPath('/tmp')
+                )
+            }
+
+            if( executor.config.cpuPlatform )
+                instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
+
+            if( executor.config.preemptible )
+                instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
+
+            if( executor.config.spot )
+                instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
+
+            instancePolicyOrTemplate.setPolicy( instancePolicy )
+        }
+
+        allocationPolicy.addInstances(instancePolicyOrTemplate)
 
         // network policy
         final networkInterface = AllocationPolicy.NetworkInterface.newBuilder()
@@ -333,8 +360,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 AllocationPolicy.NetworkPolicy.newBuilder()
                     .addNetworkInterfaces(networkInterface)
             )
-
-        allocationPolicy.putAllLabels(task.config.getResourceLabels())
 
         // create the job
         return Job.newBuilder()
