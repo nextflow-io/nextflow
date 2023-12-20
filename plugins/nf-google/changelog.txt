@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.10.0 - 20 Dec 2023
+- Add ability to disable Cloudinfo service (#4606) [f7251895]
+- Add support for Instance template to Google Batch [df7ed294]
+- Improve GLS tests [ci fast] [58590b1c]
+
 1.9.0 - 24 Nov 2023
 - Add labels field in Job request for Google Batch (#4538) [627c595e]
 - Add Google Batch native retry on spot termination (#4500) [ea1c1b70]
