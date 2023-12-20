@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
+import nextflow.BuildInfo
 import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
@@ -310,7 +311,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
-        log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
         Plugins.init()
 
         // -- specify the arguments

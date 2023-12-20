@@ -46,17 +46,6 @@ class Const {
      */
     static public final Path APP_HOME_DIR = getHomeDir(APP_NAME)
 
-    /**
-     * The application version
-     */
-    static public final String APP_VER = "23.11.0-edge"
-
-    /**
-     * The app build time as linux/unix timestamp
-     */
-    static public final long APP_TIMESTAMP = 1700857448507
-
-
     private static Path getHomeDir(String appname) {
         def home = System.getenv('NXF_HOME')
         def result = home ? Paths.get(home) : Paths.get(System.getProperty("user.home")).resolve(".$appname")
