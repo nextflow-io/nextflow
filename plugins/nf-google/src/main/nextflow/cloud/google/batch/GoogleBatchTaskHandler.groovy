@@ -17,7 +17,6 @@
 
 package nextflow.cloud.google.batch
 
-
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
@@ -287,6 +286,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             }
 
             final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
+
             if( machineType ) {
                 instancePolicy.setMachineType(machineType.type)
                 machineInfo = new CloudMachineInfo(
@@ -494,32 +494,38 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
+    protected GoogleBatchMachineTypeSelector.MachineType bestMachineType0(int cpus, int memory, String location, boolean spot, boolean localSSD, List<String> families) {
+        return GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, localSSD, families)
+    }
+
     protected GoogleBatchMachineTypeSelector.MachineType findBestMachineType(TaskConfig config, boolean localSSD) {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
         final spot = executor.config.spot ?: executor.config.preemptible
-        final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
+        final machineType = config.getMachineType()
+        final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
-            return GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, localSSD, families)
+            if( executor.isCloudinfoEnabled() ) {
+                return bestMachineType0(cpus, memory, location, spot, localSSD, families)
+            }
         }
         catch (Exception e) {
-            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `${task.lazyName()}` - ${e.message}"
-
-            // Check if a specific machine type was provided by the user
-            if( config.getMachineType() && !config.getMachineType().contains(',') && !config.getMachineType().contains('*') )
-                return new GoogleBatchMachineTypeSelector.MachineType(
-                        type: config.getMachineType(),
-                        location: location,
-                        priceModel: priceModel
-                )
-
-            // Fallback to Google Batch automatically deduce from requested resources
-            return null
+            log.debug "[GOOGLE BATCH] Cannot select machine type using Seqera Cloudinfo for task: `${task.lazyName()}` - ${e.message}"
         }
 
+        // Check if a specific machine type was provided by the user
+        if( machineType && !machineType.contains(',') && !machineType.contains('*') )
+            return new GoogleBatchMachineTypeSelector.MachineType(
+                type: machineType,
+                location: location,
+                priceModel: priceModel
+            )
+
+        // Fallback to Google Batch automatically deduce from requested resources
+        return null
     }
 
 }

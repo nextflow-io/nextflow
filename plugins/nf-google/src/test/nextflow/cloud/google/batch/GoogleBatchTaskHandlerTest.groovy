@@ -17,15 +17,16 @@
 
 package nextflow.cloud.google.batch
 
+import java.nio.file.Path
+
 import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.StatusEvent
-import com.google.cloud.batch.v1.TaskExecution
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
-import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
@@ -442,5 +443,61 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.getJobExitCode() == 50001
         handler.getJobExitCode() == null
+    }
+
+    def 'should find best instance type' () {
+        given:
+        def workDir = Path.of('/work/dir')
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+             hashLog >> '1234567890'
+             getWorkDir() >> workDir
+        }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> client
+            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            isCloudinfoEnabled() >> true
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        and:
+        def config = Mock(TaskConfig)
+        def machineType = GroovyMock(GoogleBatchMachineTypeSelector.MachineType)
+
+        when:
+        def result = handler.findBestMachineType(config, false)
+        then:
+        1 * handler.bestMachineType0(_,_,_,_,_,_) >> machineType
+        and:
+        result == machineType
+    }
+
+    def 'should disable cloudinfo' () {
+        given:
+        SysEnv.push(NXF_CLOUDINFO_ENABLED: 'false')
+
+        def workDir = Path.of('/work/dir')
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            hashLog >> '1234567890'
+            getWorkDir() >> workDir
+        }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> client
+            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            isCloudinfoEnabled() >> false
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        and:
+        def config = Mock(TaskConfig)
+
+        when:
+        def result = handler.findBestMachineType(config, false)
+        then:
+        0 * handler.bestMachineType0(_,_,_,_,_,_) >> null
+        and:
+        result == null
+
+        cleanup:
+        SysEnv.pop()
     }
 }

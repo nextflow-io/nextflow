@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.logging.BatchLogging
@@ -123,5 +124,9 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
+    }
+
+    boolean isCloudinfoEnabled() {
+        return Boolean.parseBoolean(SysEnv.get('NXF_CLOUDINFO_ENABLED', 'true') )
     }
 }
