@@ -17,6 +17,7 @@ NEXTFLOW CHANGE-LOG
 - Improve GLS tests [58590b1c]
 - Load nf-amazon when AWS SES is enabled [887f06f4]
 - Move build num & timestamp to BuildInfo class [ec8083d4]
+- Move app version to BuildInfo class [c7d749e8]
 - Remove deprecated Wave observer [0e009ef7]
 - Remove undocumented userEmulation mode (#4596) [f6c79788]
 - Remove unused DSL2 check [e9ee3b2c]
