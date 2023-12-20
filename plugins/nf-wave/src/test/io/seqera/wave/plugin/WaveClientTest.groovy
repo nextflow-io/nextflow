@@ -527,7 +527,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.1
+                FROM mambaorg/micromamba:1.5.5
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
                     && micromamba install -y -n base conda-forge::procps-ng \\
@@ -566,7 +566,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.1
+                FROM mambaorg/micromamba:1.5.5
                 RUN \\
                     micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/conda-lock.yml \\
                     && micromamba install -y -n base conda-forge::procps-ng \\
@@ -642,7 +642,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.1
+                FROM mambaorg/micromamba:1.5.5
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
                     && micromamba install -y -n base conda-forge::procps-ng \\
@@ -723,7 +723,7 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.5.1
+                From: mambaorg/micromamba:1.5.5
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
@@ -766,7 +766,7 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.5.1
+                From: mambaorg/micromamba:1.5.5
                 %post
                     micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/lock-file.yaml
                     micromamba install -y -n base conda-forge::procps-ng
@@ -800,7 +800,7 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.5.1
+                From: mambaorg/micromamba:1.5.5
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
