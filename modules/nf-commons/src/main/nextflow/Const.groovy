@@ -46,9 +46,18 @@ class Const {
      */
     static public final Path APP_HOME_DIR = getHomeDir(APP_NAME)
 
+    static Path sysHome() {
+        def home = System.getProperty("user.home")
+        if( !home || home=='?' )
+            home = System.getenv('HOME')
+        if( !home )
+            throw new IllegalStateException("Unable to detect system home path - Make sure the variable HOME or NXF_HOME is defined in your environment")
+        return Path.of(home)
+    }
+
     private static Path getHomeDir(String appname) {
-        def home = System.getenv('NXF_HOME')
-        def result = home ? Paths.get(home) : Paths.get(System.getProperty("user.home")).resolve(".$appname")
+        final home = System.getenv('NXF_HOME')
+        final result = home ? Paths.get(home) : sysHome().resolve(".$appname")
 
         if( !result.exists() && !result.mkdir() ) {
             throw new IllegalStateException("Cannot create path '${result}' -- check file system access permission")
