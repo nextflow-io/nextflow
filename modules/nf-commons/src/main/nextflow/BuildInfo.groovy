@@ -74,8 +74,8 @@ class BuildInfo {
             return ''
         }
 
-        final utc = getTimestampUTC().split(' ')
-        final loc = getTimestampLocal().split(' ')
+        final utc = getTimestampUTC().tokenize(' ')
+        final loc = getTimestampLocal().tokenize(' ')
 
         final result = utc[0] == loc[0] ? loc[1,-1].join(' ') : loc.join(' ')
         return "($result)"
