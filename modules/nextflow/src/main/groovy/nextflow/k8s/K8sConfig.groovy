@@ -116,6 +116,10 @@ class K8sConfig implements Map<String,Object> {
         target.storageSubPath
     }
 
+    String fuseDevicePlugin() {
+        target.fuseDevicePlugin ?: 'nextflow.io/fuse'
+    }
+
     /**
      * Whenever the pod should honour the entrypoint defined by the image (default: false)
      *
