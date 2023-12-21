@@ -171,8 +171,8 @@ class ScriptParser {
         final String className = computeClassName(scriptText)
         try {
             final parsed = scriptPath && session.debug
-                    ? interpreter.parse(scriptPath.toFile())
-                    : interpreter.parse(scriptText, className)
+                    ? interpreter.parse("path '''${scriptPath}'''", className)
+                    : interpreter.parse("text '''${scriptText}'''", className)
             if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
