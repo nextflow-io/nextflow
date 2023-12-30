@@ -45,10 +45,6 @@ class Plugins {
         INSTANCE.init(root, mode, pluginManager)
     }
 
-    static synchronized void setup(Map config = Collections.emptyMap()) {
-        INSTANCE.setup(config)
-    }
-
     /**
      * @param config
      */
