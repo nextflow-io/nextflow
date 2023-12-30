@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class SubmitContainerTokenRequest {
     String towerEndpoint
 
     /**
-     * The ID of the executed container
+     * The ID of the workflow that submitted this container request
      */
     String workflowId
 
@@ -75,6 +75,11 @@ class SubmitContainerTokenRequest {
      * Conda recipe file used to build the container
      */
     String condaFile
+
+    /**
+     * Spack recipe file used to build the container
+     */
+    String spackFile
 
     /**
      * The request container platform
@@ -100,5 +105,20 @@ class SubmitContainerTokenRequest {
      * Request unique fingerprint
      */
     String fingerprint
+
+    /**
+     * Enable freeze container mode
+     */
+    boolean freeze
+
+    /**
+     * Specify the format of the container file
+     */
+    String format
+
+    /**
+     * When {@code true} build requests are carried out in dry-run mode.
+     */
+    Boolean dryRun
 
 }

@@ -18,6 +18,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -30,6 +31,7 @@ import nextflow.processor.TaskRun
  * @author Vanessa Sochat <sochat1@llnl.gov>
  */
 @Slf4j
+@CompileStatic
 class FluxExecutor extends AbstractGridExecutor {
 
     static final private Pattern SUBMIT_REGEX = ~/(ƒ.+)/
@@ -68,12 +70,12 @@ class FluxExecutor extends AbstractGridExecutor {
             result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '--cores-per-task=' + task.config.cpus.toString()
+        if( task.config.getCpus() > 1 ) {
+            result << '--cores-per-task=' + task.config.getCpus().toString()
         }
 
         // Time limit in minutes when no units provided
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             result << '--time-limit=' + task.config.getTime().format('mm')
         }
 
@@ -94,7 +96,7 @@ class FluxExecutor extends AbstractGridExecutor {
             // Split by space
             for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
                 if ( item ) {
-                    result << item.stripIndent().trim()
+                    result << item.stripIndent(true).trim()
                 }
             }
         }
@@ -153,7 +155,7 @@ class FluxExecutor extends AbstractGridExecutor {
      *  Maps Flux job status to nextflow status
      *  see https://flux-framework.readthedocs.io/projects/flux-core/en/latest/man1/flux-jobs.html#job-status
      */
-    static private Map STATUS_MAP = [
+    static private Map<String,QueueStatus> STATUS_MAP = [
             'D': QueueStatus.HOLD,      // (depend)
             'R': QueueStatus.RUNNING,   // (running)
             'S': QueueStatus.PENDING,   // (scheduled)
@@ -164,7 +166,7 @@ class FluxExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         text.eachLine { String line ->
             def cols = line.split(/\s+/)

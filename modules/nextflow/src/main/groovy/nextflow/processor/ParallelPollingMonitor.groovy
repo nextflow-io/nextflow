@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +55,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     @Override
     protected boolean canSubmit(TaskHandler handler) {
-        return super.canSubmit(handler) && semaphore.tryAcquire()
+        return super.canSubmit(handler) && semaphore?.tryAcquire()
     }
 
     protected RateLimiter createSubmitRateLimit() {
@@ -96,7 +95,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     @Override
     boolean evict(TaskHandler handler) {
-        semaphore.release()
+        semaphore?.release()
         return super.evict(handler)
     }
 }

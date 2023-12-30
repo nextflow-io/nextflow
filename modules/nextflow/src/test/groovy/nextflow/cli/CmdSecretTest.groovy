@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +59,7 @@ class CmdSecretTest extends Specification {
         tempDir?.deleteDir()
     }
 
-    def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {
+    def 'should validate #COMMAND does not accept #ARGUMENTS' () {
         when:
         new CmdSecret(args: [COMMAND] + ARGUMENTS).run()
 

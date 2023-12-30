@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +16,7 @@
 
 package nextflow.k8s
 
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodSecurityContext
@@ -25,7 +24,6 @@ import nextflow.k8s.model.PodVolumeClaim
 import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -210,7 +208,7 @@ class K8sConfigTest extends Specification {
         when:
         def cfg = new K8sConfig()
         then:
-        cfg.getNextflowImageName() ==  "nextflow/nextflow:${Const.APP_VER}"
+        cfg.getNextflowImageName() ==  "nextflow/nextflow:${BuildInfo.version}"
 
         when:
         cfg = new K8sConfig(nextflow: [image: 'foo/bar:1.0'])

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import static java.nio.file.StandardCopyOption.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.function.Predicate
+import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
 import dev.failsafe.Failsafe
@@ -30,7 +31,9 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
@@ -56,6 +59,8 @@ import org.pf4j.util.FileUtils
 @CompileStatic
 class PluginUpdater extends UpdateManager {
 
+    static final public Pattern META_REGEX = ~/(.+)-(\d+\.\d+\.\d+\S*)-meta\.json/
+
     private CustomPluginManager pluginManager
 
     private Path pluginsStore
@@ -78,7 +83,51 @@ class PluginUpdater extends UpdateManager {
     static private List<UpdateRepository> wrap(URL repo) {
         List<UpdateRepository> result = new ArrayList<>(1)
         result << new DefaultUpdateRepository('nextflow.io', repo)
+        result.addAll(customRepos())
         return result
+    }
+
+    static private List<DefaultUpdateRepository> customRepos() {
+        final repos = SysEnv.get('NXF_PLUGINS_TEST_REPOSITORY')
+        if( !repos )
+            return List.of()
+        // warn the user that a custom
+        final msg = """\
+                        =======================================================================
+                        =                                WARNING                                    =
+                        = You are running this script using a un-official plugin repository.        =
+                        =                                                                           =
+                        = ${repos}
+                        =                                                                           =
+                        = This is only meant to be used for plugin testing purposes.                =
+                        =============================================================================
+                        """.stripIndent(true)
+        log.warn(msg)
+        final result = new ArrayList<DefaultUpdateRepository>(10)
+        // the repos string can contain one or more plugin repository uri separated by comma
+        for( String it : repos.tokenize(',') )
+            result.add(customRepo(it))
+        return result
+    }
+
+    static private DefaultUpdateRepository customRepo(String uri) {
+        // Check if it's a plugin meta file. The name must match the pattern `<plugin id>-X.Y.Z-meta.json`
+        final matcher = META_REGEX.matcher(uri.tokenize('/')[-1])
+        if( matcher.matches() ) {
+            try {
+                final pluginId = matcher.group(1)
+                final temp = File.createTempFile('nxf-','json')
+                temp.deleteOnExit()
+                temp.text = /[{"id":"${pluginId}", "releases":[ ${new URL(uri).text} ]}]/
+                uri = 'file://' + temp.absolutePath
+            }
+            catch (FileNotFoundException e) {
+                throw new IllegalArgumentException("Provided repository URL does not exist or cannot be accessed: $uri")
+            }
+        }
+        // create the update repository instance
+        final fileName = uri.tokenize('/')[-1]
+        return new DefaultUpdateRepository('uri', new URL(uri), fileName)
     }
 
     /**
@@ -176,7 +225,7 @@ class PluginUpdater extends UpdateManager {
             safeMove(dir, pluginPath)
         }
         catch (IOException e) {
-            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder");
+            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder")
         }
 
         return pluginPath
@@ -270,8 +319,14 @@ class PluginUpdater extends UpdateManager {
 
         if( version == null )
             version = getLastPluginRelease(id)?.version
-        if( !version )
-            throw new IllegalStateException("Cannot find latest version of $id plugin")
+
+        final offline = SysEnv.get('NXF_OFFLINE')=='true'
+        if( !version ) {
+            final msg = offline
+                ? "Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode"
+                : "Cannot find latest version of $id plugin"
+            throw new IllegalStateException(msg)
+        }
 
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
@@ -315,7 +370,7 @@ class PluginUpdater extends UpdateManager {
         // resolve the plugins
         pluginManager.resolvePlugins()
         // finally start it
-        PluginState state = pluginManager.startPlugin(id);
+        PluginState state = pluginManager.startPlugin(id)
         return PluginState.STARTED == state
     }
 
@@ -333,13 +388,13 @@ class PluginUpdater extends UpdateManager {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
 
-        PluginInfo pluginInfo = getPluginsMap().get(id);
+        PluginInfo pluginInfo = getPluginsMap().get(id)
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")
         }
 
         if (!pluginManager.deletePlugin(id)) {
-            return false;
+            return false
         }
 
         load0(id, version)
@@ -396,7 +451,7 @@ class PluginUpdater extends UpdateManager {
             if( !versionManager.checkVersionConstraint(rel.version, verConstraint) || !rel.url )
                 continue
 
-            if( versionManager.checkVersionConstraint(Const.APP_VER, rel.requires) )
+            if( versionManager.checkVersionConstraint(BuildInfo.version, rel.requires) )
                 return rel
         }
 

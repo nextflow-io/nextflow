@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,10 +79,33 @@ class RepositoryProviderTest extends Specification {
         when:
         result = provider.getAuthObfuscated()
         then:
-        provider.getUser() >> 'foo123'
-        provider.getPassword() >> 'bar456'
+        provider.getUser() >> 'foo1234567890'
+        provider.getPassword() >> 'bar4567890'
         and:
         result == 'foo****:bar****'
 
+    }
+
+    def 'should auth using credentials' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        and:
+        def conn = Mock(HttpURLConnection)
+
+        when:
+        provider.auth(conn)
+        then:
+        1 * provider.getUser() >> null
+        1 * provider.hasCredentials()
+        0 * conn.setRequestProperty('Authorization', _)
+
+        when:
+        provider.auth(conn)
+        then:
+        _ * provider.getUser() >> 'foo'
+        _ * provider.getPassword() >> 'bar'
+        1 * provider.hasCredentials()
+        and:
+        1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
     }
 }

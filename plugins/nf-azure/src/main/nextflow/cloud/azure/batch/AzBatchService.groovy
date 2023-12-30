@@ -16,9 +16,6 @@
 
 package nextflow.cloud.azure.batch
 
-import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
-import com.microsoft.azure.batch.auth.BatchCredentials
-
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -26,6 +23,8 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
+import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
+import com.microsoft.azure.batch.auth.BatchCredentials
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
@@ -39,7 +38,11 @@ import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
+import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
+import com.microsoft.azure.batch.protocol.models.MetadataItem
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
+import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
+import com.microsoft.azure.batch.protocol.models.OnAllTasksComplete
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -51,6 +54,7 @@ import com.microsoft.azure.batch.protocol.models.PoolState
 import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.StartTask
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
+import com.microsoft.azure.batch.protocol.models.TaskConstraints
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
 import com.microsoft.azure.batch.protocol.models.TaskSchedulingPolicy
 import com.microsoft.azure.batch.protocol.models.UserIdentity
@@ -65,6 +69,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -72,6 +77,8 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.fusion.FusionHelper
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
@@ -268,7 +275,7 @@ class AzBatchService implements Closeable {
             if (!config.batch().accountName)
                 throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
             if (!config.batch().accountKey)
-                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
 
             return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
 
@@ -392,22 +399,41 @@ class AzBatchService implements Closeable {
         // custom container settings
         if( task.config.getContainerOptions() )
             opts += "${task.config.getContainerOptions()} "
+        // fusion environment settings
+        final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
+        final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
+        if( fusionEnabled ) {
+            opts += "--privileged "
+            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
+                opts += "-e $it.key=$it.value "
+            }
+        }
         // config overall container settings
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 .withContainerRunOptions(opts)
-
+        // submit command line
+        final String cmd = fusionEnabled
+                ? launcher.fusionSubmitCli(task).join(' ')
+                : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
+        // cpus and memory
         final slots = computeSlots(task, pool)
+        // max wall time
+        final constraints = new TaskConstraints()
+        if( task.config.getTime() )
+            constraints.withMaxWallClockTime( new Period(task.config.getTime().toMillis()) )
+
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
         return new TaskAddParameter()
                 .withId(taskId)
                 .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
                 .withContainerSettings(containerOpts)
-                .withCommandLine("sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'")
+                .withCommandLine(cmd)
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
+                .withConstraints(constraints)
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
@@ -538,9 +564,10 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        final key = CacheHelper.hasher([vmType.name, opts]).hash().toString()
+        final metadata = task.config.getResourceLabels()
+        final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
-        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts)
+        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
     protected void checkPool(CloudPool pool, AzVmPoolSpec spec) {
@@ -663,7 +690,6 @@ class AzBatchService implements Closeable {
                 .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
                 .withResourceFiles(resourceFiles)
 
-
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
@@ -673,6 +699,20 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
+
+        // resource labels
+        if( spec.metadata ) {
+            final metadata = spec.metadata.collect { name, value ->
+                new MetadataItem()
+                    .withName(name)
+                    .withValue(value)
+            }
+            poolParams.withMetadata(metadata)
+        }
+
+        // virtual network
+        if( spec.opts.virtualNetwork )
+            poolParams.withNetworkConfiguration( new NetworkConfiguration().withSubnetId(spec.opts.virtualNetwork) )
 
         // scheduling policy
         if( spec.opts.schedulePolicy ) {
@@ -709,7 +749,12 @@ class AzBatchService implements Closeable {
                     .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) )
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
-        else {
+        else if( spec.opts.lowPriority ) {
+            log.debug "Creating low-priority pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
+            poolParams
+                .withTargetLowPriorityNodes(spec.opts.vmCount)
+        }
+        else  {
             log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
             poolParams
                     .withTargetDedicatedNodes(spec.opts.vmCount)
@@ -719,48 +764,70 @@ class AzBatchService implements Closeable {
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
+        final target = opts.lowPriority ? 'TargetLowPriorityNodes' : 'TargetDedicatedNodes'
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
-        def DEFAULT_FORMULA = '''
+        final DEFAULT_FORMULA = """
             // Get pool lifetime since creation.
             lifespan = time() - time("{{poolCreationTime}}");
             interval = TimeInterval_Minute * {{scaleInterval}};
             
             // Compute the target nodes based on pending tasks.
-            // $PendingTasks == The sum of $ActiveTasks and $RunningTasks
-            $samples = $PendingTasks.GetSamplePercent(interval);
-            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(interval)));
-            $targetVMs = $tasks > 0 ? $tasks : max(0, $TargetDedicatedNodes/2);
-            targetPoolSize = max(0, min($targetVMs, {{maxVmCount}}));
+            // \$PendingTasks == The sum of \$ActiveTasks and \$RunningTasks
+            \$samples = \$PendingTasks.GetSamplePercent(interval);
+            \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(interval)));
+            \$targetVMs = \$tasks > 0 ? \$tasks : max(0, \$TargetDedicatedNodes/2);
+            targetPoolSize = max(0, min(\$targetVMs, {{maxVmCount}}));
             
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
-            $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
-            $NodeDeallocationOption = taskcompletion;
-            '''.stripIndent()
+            \$${target} = lifespan < interval ? {{vmCount}} : targetPoolSize;
+            \$NodeDeallocationOption = taskcompletion;
+            """.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
+        final vars = poolCreationBindings(opts, Instant.now())
+        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
+        log.debug "Pool autoscale formula:\n$result"
+        return result
+    }
+
+    protected Map poolCreationBindings(AzPoolOpts opts, Instant time) {
         final vars = new HashMap<String, String>()
         vars.scaleInterval = opts.scaleInterval.minutes
         vars.vmCount = opts.vmCount
         vars.maxVmCount = opts.maxVmCount
-        vars.poolCreationTime = Instant.now().toString()
-        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
-        log.debug "Pool autoscale formula:\n$result"
-        return result
+        vars.poolCreationTime = time.truncatedTo(ChronoUnit.MICROS).toString()
+        return vars
     }
 
     void deleteTask(AzTaskKey key) {
         apply(() -> client.taskOperations().deleteTask(key.jobId, key.taskId))
     }
 
-    protected void cleanupJobs() {
-        for( Map.Entry<TaskProcessor,String> entry : allJobIds ) {
-            final proc = entry.key
-            final jobId = entry.value
-            if( proc.hasErrors() ) {
-                log.debug "Preserving Azure job with error: ${jobId}"
-                continue
-            }
+    /**
+     * Set all jobs to terminate on completion.
+     */
+    protected void terminateJobs() {
+        for( String jobId : allJobIds.values() ) {
+            try {
+                log.trace "Setting Azure job ${jobId} to terminate on completion"
 
+                CloudJob job = apply(() -> client.jobOperations().getJob(jobId))
+                final poolInfo = job.poolInfo()
+
+                JobUpdateParameter jobParameter = new JobUpdateParameter()
+                        .withOnAllTasksComplete(OnAllTasksComplete.TERMINATE_JOB)
+                        .withPoolInfo(poolInfo)
+
+                apply(() -> client.jobOperations().updateJob(jobId, jobParameter))
+            }
+            catch (Exception e) {
+                log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+            }
+        }
+    }
+
+    protected void cleanupJobs() {
+        for( String jobId : allJobIds.values() ) {
             try {
                 log.trace "Deleting Azure job ${jobId}"
                 apply(() -> client.jobOperations().deleteJob(jobId))
@@ -772,7 +839,7 @@ class AzBatchService implements Closeable {
     }
 
     protected void cleanupPools() {
-        for( String poolId : allPools.keySet()) {
+        for( String poolId : allPools.keySet() ) {
             try {
                 apply(() -> client.poolOperations().deletePool(poolId))
             }
@@ -793,12 +860,20 @@ class AzBatchService implements Closeable {
         }
         return identity
     }
+
     @Override
     void close() {
-        // cleanup app successful jobs
-        if( config.batch().deleteJobsOnCompletion!=Boolean.FALSE ) {
+        // terminate all jobs to prevent them from occupying quota
+        if( config.batch().terminateJobsOnCompletion ) {
+            terminateJobs()
+        }
+
+        // delete all jobs
+        if( config.batch().deleteJobsOnCompletion ) {
             cleanupJobs()
         }
+
+        // delete all autopools
         if( config.batch().canCreatePool() && config.batch().deletePoolsOnCompletion ) {
             cleanupPools()
         }
@@ -815,7 +890,7 @@ class AzBatchService implements Closeable {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}", event.lastFailure)
+                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
             }
         }
         return RetryPolicy.<T>builder()

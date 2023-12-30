@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,7 @@ package nextflow.cli
 import java.nio.file.Files
 
 import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 /**
@@ -27,6 +27,7 @@ import spock.lang.Specification
  */
 class CmdCloneTest extends Specification {
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 

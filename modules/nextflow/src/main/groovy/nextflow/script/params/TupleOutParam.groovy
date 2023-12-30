@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +36,8 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
 
     String getName() { toString() }
 
+    List<BaseOutParam> getInner() { inner }
+
     TupleOutParam clone() {
         final copy = (TupleOutParam)super.clone()
         copy.inner = new ArrayList<>(10)
@@ -50,9 +51,7 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
 
         for( def item : obj ) {
             if( item instanceof TokenVar ) {
-                if( NF.dsl2 )
-                    throw new DeprecationException("Unqualified output value declaration has been deprecated - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`")
-                create(ValueOutParam).bind(item)
+                throw new IllegalArgumentException("Unqualified output value declaration is not allowed - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`")
             }
             else if( item instanceof TokenValCall ) {
                 create(ValueOutParam).bind(item.val)
@@ -61,17 +60,13 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
                 create(EnvOutParam).bind(item.val)
             }
             else if( item instanceof GString ) {
-                if( NF.dsl2 )
-                    throw new DeprecationException("Unqualified output path declaration has been deprecated - replace `tuple \"$item\",..` with `tuple path(\"$item\"),..`")
-                create(FileOutParam).bind(item)
+                throw new IllegalArgumentException("Unqualified output path declaration is not allowed - replace `tuple \"$item\",..` with `tuple path(\"$item\"),..`")
             }
             else if( item instanceof TokenStdoutCall || item == '-'  ) {
                 create(StdOutParam).bind('-')
             }
             else if( item instanceof String ) {
-                if( NF.dsl2 )
-                    throw new DeprecationException("Unqualified output path declaration has been deprecated - replace `tuple '$item',..` with `tuple path('$item'),..`")
-                create(FileOutParam).bind(item)
+                throw new IllegalArgumentException("Unqualified output path declaration is not allowed - replace `tuple '$item',..` with `tuple path('$item'),..`")
             }
             else if( item instanceof TokenFileCall ) {
                 // note that 'filePattern' can be a string or a GString

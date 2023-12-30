@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -276,7 +275,7 @@ class Bolts {
     }
 
     /**
-     * Check if a alphabetic characters in a string are lowercase. Non alphabetic characters are ingored
+     * Check if a alphabetic characters in a string are lowercase. Non alphabetic characters are ignored
      * @param self The string to check
      * @return {@true} if the string contains no uppercase characters, {@code false} otherwise
      */
@@ -893,6 +892,7 @@ class Bolts {
         }
     }
 
+    @Deprecated
     static redact(String self, int max=5, String suffix='...') {
         if( !self )
             return self

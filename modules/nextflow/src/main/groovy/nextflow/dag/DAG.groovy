@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +39,9 @@ import nextflow.script.params.OutParam
 import nextflow.script.params.OutputsList
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
+
+import java.util.concurrent.atomic.AtomicLong
+
 /**
  * Model a direct acyclic graph of the pipeline execution.
  *
@@ -81,10 +83,8 @@ class DAG {
         dataflowBroadcastLookup.put(readChannel, broadcastChannel)
     }
 
-    @PackageScope
     List<Vertex> getVertices() { vertices }
 
-    @PackageScope
     List<Edge> getEdges() { edges }
 
     boolean isEmpty() { edges.size()==0 && vertices.size()==0 }
@@ -378,8 +378,9 @@ class DAG {
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
     @ToString(includeNames = true, includes = 'label,type', includePackage=false)
-    @PackageScope
     class Vertex {
+
+        static private AtomicLong nextID = new AtomicLong()
 
         /**
          * The vertex label
@@ -397,6 +398,11 @@ class DAG {
         List<DataflowProcessor> operators
 
         TaskProcessor process
+
+        /**
+         * unique Id
+         */
+        final long id = nextID.getAndIncrement()
 
         /**
          * Create a DAG vertex instance
@@ -420,7 +426,7 @@ class DAG {
         /**
          * @return The unique name for this node
          */
-        String getName() { "p${getOrder()}" }
+        String getName() { "v${getOrder()}" }
 
         boolean isActive() {
             operators?.any { DataflowHelper.isProcessorActive(it) }
@@ -433,10 +439,11 @@ class DAG {
      *
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
-    @PackageScope
     @ToString(includeNames = true, includes = 'label,from,to', includePackage=false)
     @MapConstructor
     class Edge {
+
+        static private AtomicLong nextID = new AtomicLong()
 
         /**
          * The Dataflow channel that originated this graph edge
@@ -457,6 +464,11 @@ class DAG {
          * A descriptive label
          */
         String label
+
+        /**
+         * unique Id
+         */
+        final long id = nextID.getAndIncrement()
 
     }
 

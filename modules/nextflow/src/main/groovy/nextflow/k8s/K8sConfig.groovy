@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
@@ -33,7 +32,6 @@ import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
 import nextflow.util.Duration
-
 /**
  * Model Kubernetes specific settings defined in the nextflow
  * configuration file
@@ -167,7 +165,7 @@ class K8sConfig implements Map<String,Object> {
     String getServiceAccount() { target.serviceAccount }
 
     String getNextflowImageName() {
-        final defImage = "nextflow/nextflow:${Const.APP_VER}"
+        final defImage = "nextflow/nextflow:${BuildInfo.version}"
         return target.navigate('nextflow.image', defImage)
     }
 

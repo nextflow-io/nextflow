@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.processor
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -29,6 +29,7 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 @EqualsAndHashCode
 @PackageScope
 class StateObj implements Serializable, Cloneable {
@@ -47,7 +48,7 @@ class StateObj implements Serializable, Cloneable {
      */
     void incSubmitted() {
         if( poisoned )
-            log.debug "Oops.. Cannot process more messages after Poison-Pill was received"
+            log.debug "Cannot process more messages after Poison-Pill was received"
         else
             submitted++
     }
@@ -57,7 +58,7 @@ class StateObj implements Serializable, Cloneable {
      */
     void incCompleted() {
         if( completed >= submitted ) {
-            log.debug "Oops.. Processed messages ($submitted) should not overcome received messages ($submitted) count"
+            log.debug "Processed messages ($submitted) should not overcome received messages ($submitted) count"
         }
         completed++
     }
