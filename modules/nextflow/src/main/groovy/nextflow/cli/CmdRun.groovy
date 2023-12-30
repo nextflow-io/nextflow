@@ -30,7 +30,6 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.BuildInfo
-import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
