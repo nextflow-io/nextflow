@@ -22,6 +22,7 @@ import java.nio.file.Path
 import org.pf4j.PluginManager
 
 /**
+ * Define the contract for plugin service
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

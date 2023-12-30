@@ -19,6 +19,7 @@ package nextflow.scm
 
 
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.plugin.Priority
@@ -103,7 +104,7 @@ class RepositoryFactory implements ExtensionPoint {
     static RepositoryProvider newRepositoryProvider(ProviderConfig config, String project) {
         // check if it's needed to load new plugins
         if( (config.name=='codecommit' || config.platform=='codecommit') && !codeCommitLoaded ) {
-            Plugins.startIfMissing('nf-codecommit')
+            App.pluginService.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
             factories0=null
         }
@@ -121,7 +122,7 @@ class RepositoryFactory implements ExtensionPoint {
     static ProviderConfig newProviderConfig(String name, Map<String,Object> attrs) {
         // check if it's needed to load new plugins
         if( (name=='codecommit' || attrs.platform=='codecommit') && !codeCommitLoaded ) {
-            Plugins.startIfMissing('nf-codecommit')
+            App.pluginService.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
             factories0=null
         }
@@ -135,7 +136,7 @@ class RepositoryFactory implements ExtensionPoint {
 
     static ProviderConfig getProviderConfig(List<ProviderConfig> providers, GitUrl url) {
         if( url.domain.startsWith('git-codecommit.') && url.domain.endsWith('.amazonaws.com') && !codeCommitLoaded ) {
-            Plugins.startIfMissing('nf-codecommit')
+            App.pluginService.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
             factories0=null
         }

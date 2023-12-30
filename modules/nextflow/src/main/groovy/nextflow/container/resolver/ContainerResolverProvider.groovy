@@ -17,14 +17,19 @@
 
 package nextflow.container.resolver
 
-
-import nextflow.plugin.Plugins
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
+import nextflow.plugin.PluginService
 /**
  * Load an instance of {@link ContainerResolver}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Singleton
 class ContainerResolverProvider {
+
+    @Inject
+    private PluginService pluginService
 
     /**
      * Load the {@link ContainerResolver} instance via the plugin system.
@@ -34,8 +39,8 @@ class ContainerResolverProvider {
      *
      * @return The {@link ContainerResolver} instance
      */
-    static synchronized ContainerResolver load() {
-        final resolvers = Plugins.getPriorityExtensions(ContainerResolver)
+    synchronized ContainerResolver load() {
+        final resolvers = pluginService.getPriorityExtensions(ContainerResolver)
         if( !resolvers )
             throw new IllegalStateException("Cannot load ${ContainerResolver.class.simpleName}")
         return resolvers.first()

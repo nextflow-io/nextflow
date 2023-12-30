@@ -35,7 +35,7 @@ class Plugins {
 
     public static final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
 
-    private final static PluginService INSTANCE = App.context().getBean(PluginService)
+    private final static PluginService INSTANCE = App.get(PluginService)
 
     static PluginManager getManager() { INSTANCE.manager }
 

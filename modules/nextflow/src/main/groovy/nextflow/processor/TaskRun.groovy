@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap
 import com.google.common.hash.HashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.container.ContainerConfig
@@ -630,7 +631,7 @@ class TaskRun implements Cloneable {
         if( !configImage )
             configImage = null
 
-        final res = ContainerResolverProvider.load()
+        final res = App.get(ContainerResolverProvider).load()
         final info = res.resolveImage(this, configImage as String)
         return info
     }

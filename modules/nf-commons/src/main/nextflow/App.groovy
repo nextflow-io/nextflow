@@ -20,8 +20,10 @@ package nextflow
 import groovy.transform.Memoized
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.Environment
+import nextflow.plugin.PluginService
 
 /**
+ * Creates Micronaut application context
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -36,5 +38,9 @@ class App {
 
     static <T> T get(Class<T> clazz) {
         context().getBean(clazz)
+    }
+
+    static PluginService getPluginService() {
+        get(PluginService)
     }
 }

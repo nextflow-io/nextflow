@@ -16,10 +16,6 @@
 
 package nextflow.script
 
-import nextflow.exception.ScriptCompilationException
-import nextflow.plugin.extension.PluginExtensionProvider
-import nextflow.plugin.Plugins
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -29,9 +25,12 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
+import nextflow.exception.ScriptCompilationException
+import nextflow.plugin.extension.PluginExtensionProvider
 /**
  * Implements a script inclusion
  *
@@ -202,8 +201,8 @@ class IncludeDef {
             throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot start with a slash character - offending value: '$pluginId'")
         if( pluginId.contains('@') )
             throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot contain a specific version requirement - offending value: '$pluginId'")
-        Plugins.startIfMissing(pluginId)
-        if( !Plugins.isStarted(pluginId) )
+        App.pluginService.startIfMissing(pluginId)
+        if( !App.pluginService.isStarted(pluginId) )
             throw new IllegalArgumentException("Unable start plugin with Id '$pluginId'")
         final Map<String,String> declaredNames = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
         log.debug "Loading included plugin extensions with names: $declaredNames; plugin Id: $pluginId"
