@@ -36,10 +36,6 @@ interface PluginService {
 
     void load(Map config)
 
-    void setup()
-
-    void setup(Map config)
-
     void start(String pluginId)
 
     void stop()

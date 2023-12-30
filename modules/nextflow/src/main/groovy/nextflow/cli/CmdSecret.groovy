@@ -108,7 +108,7 @@ class CmdSecret extends CmdBase implements UsageAware {
         }
 
         // setup the plugins system and load the secrets provider
-        App.get(PluginService).setup()
+        App.get(PluginService).init()
         provider = App.get(SecretsLoader).load()
 
         // run the command

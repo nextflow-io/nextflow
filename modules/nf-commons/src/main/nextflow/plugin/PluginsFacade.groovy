@@ -227,13 +227,6 @@ class PluginsFacade implements PluginStateListener, PluginService {
         }
     }
 
-    @Override
-    synchronized void setup(Map config = Collections.emptyMap()) {
-        init()
-        load(config)
-    }
-
-    @Override
     void load(Map config) {
         if( !manager )
             throw new IllegalArgumentException("Plugin system has not been initialized")
