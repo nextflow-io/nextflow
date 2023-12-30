@@ -37,7 +37,7 @@ class CmdConsole extends CmdBase {
     String getName() { 'console' }
 
     void run() {
-        Plugins.setup()
+        Plugins.init()
         Plugins.start('nf-console')
         final console = Plugins.getExtension(ConsoleExtension)
         if( !console )

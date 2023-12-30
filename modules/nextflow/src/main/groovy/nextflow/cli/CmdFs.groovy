@@ -215,7 +215,7 @@ class CmdFs extends CmdBase implements UsageAware {
             return
         }
 
-        Plugins.setup()
+        Plugins.init()
         final session = createSession()
         try {
             run0()

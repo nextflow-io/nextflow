@@ -96,7 +96,7 @@ class CmdClean extends CmdBase implements CacheBase {
         init()
         validateOptions()
         createSession()
-        Plugins.setup()
+        Plugins.init()
         listIds().each { entry -> cleanup(entry) }
     }
 

@@ -25,7 +25,8 @@ class PluginsFacadeTest extends Specification {
         plugins.indexUrl = 'http://localhost:9900/plugins.json'
 
         when:
-        plugins.setup([plugins: [ 'nf-console@1.0.0' ]])
+        plugins.init()
+        plugins.load([plugins: [ 'nf-console@1.0.0' ]])
         then:
         folder.resolve('nf-console-1.0.0').exists()
 
