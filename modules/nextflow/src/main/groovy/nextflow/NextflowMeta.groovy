@@ -1,5 +1,7 @@
 package nextflow
 
+import static nextflow.extension.Bolts.*
+
 import java.text.SimpleDateFormat
 import java.util.regex.Pattern
 
@@ -9,8 +11,6 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.util.VersionNumber
-import static nextflow.extension.Bolts.DATETIME_FORMAT
-
 /**
  * Models nextflow script properties and metadata
  * 
@@ -23,6 +23,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 @EqualsAndHashCode
 class NextflowMeta {
 
+    private static final String DSL1_EOL_MESSAGE = "Nextflow DSL1 is no longer supported — Update your script to DSL2, or use Nextflow 22.10.x or earlier"
     private static final Pattern DSL_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*(\d))\s*(;?\s*)?(;?\/{2}.*)?$/
 
     private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
@@ -42,19 +43,28 @@ class NextflowMeta {
         volatile float dsl
         boolean strict
         boolean recursion
+        boolean topic
 
         void setDsl( float num ) {
-            if( num != 2 && num != 1 )
+            if( num == 1 )
+                throw new IllegalArgumentException(DSL1_EOL_MESSAGE)
+            if( num != 2 )
                 throw new IllegalArgumentException("Not a valid DSL version number: $num")
             if( num == 2 && !ignoreWarnDsl2 )
-                log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD -- Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
+                log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD. Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
             dsl = num
         }
 
         void setRecursion(Boolean recurse) {
             if( recurse )
-                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASE"
+                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recurse
+        }
+
+        void setTopic(Boolean value) {
+            if( topic )
+                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.topic = value
         }
     }
 
@@ -77,9 +87,9 @@ class NextflowMeta {
     final Features enable = new Features()
 
     private NextflowMeta() {
-        version = new VersionNumber(Const.APP_VER)
-        build = Const.APP_BUILDNUM
-        timestamp = Const.APP_TIMESTAMP_UTC
+        version = new VersionNumber(BuildInfo.version)
+        build = BuildInfo.buildNum as int
+        timestamp = BuildInfo.timestampUTC
     }
 
     protected NextflowMeta(String ver, int build, String timestamp ) {
@@ -102,11 +112,8 @@ class NextflowMeta {
         result.version = version.toString()
         result.build = build
         result.timestamp = parseDateStr(timestamp)
-        if( isDsl2Final() ) {
+        if( isDsl2() ) {
             result.enable = featuresMap()
-        }
-        else if( isDsl2() ) {
-            result.preview = featuresMap()
         }
         return result
     }
@@ -125,17 +132,6 @@ class NextflowMeta {
         enable.dsl == 2f
     }
 
-    /**
-     * As of the removal of DSL2 preview mode, the semantic of this method
-     * is identical to {@link #isDsl2()}.
-     * @return
-     *  {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
-     */
-    @Deprecated
-    boolean isDsl2Final() {
-        enable.dsl == 2f
-    }
-
     void enableDsl2() {
         this.enable.dsl = 2f
     }
@@ -145,7 +141,9 @@ class NextflowMeta {
     }
 
     void enableDsl(String value) {
-        if( value !in ['1','2'] ) {
+        if( value == '1' )
+            throw new AbortOperationException(DSL1_EOL_MESSAGE)
+        if( value != '2' ) {
             throw new AbortOperationException("Invalid Nextflow DSL value: $value")
         }
         this.enable.dsl = value=='1' ? 1f : 2f
@@ -169,7 +167,7 @@ class NextflowMeta {
             return ver
         }
         else if( mode == 'preview' )
-            throw new IllegalArgumentException("Preview nextflow mode 'preview' is not supported anymore -- Please use `nextflow.enable.dsl=2` instead")
+            throw new IllegalArgumentException("Preview nextflow mode ('preview') is no longer supported —- use `nextflow.enable.dsl=2` instead")
         else
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
     }

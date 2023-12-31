@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +96,7 @@ class GroupTupleOp {
         final len = tuple.size()
 
         final List items = groups.getOrCreate(key) {    // get the group for the specified key
-            def result = new ArrayList(len)             // create if does not exists
+            def result = new ArrayList(len)             // create if does not exist
             for( int i=0; i<len; i++ )
                 result[i] = (i in indices ? tuple[i] : new ArrayBag())
             return result
@@ -105,8 +104,12 @@ class GroupTupleOp {
 
         int count=-1
         for( int i=0; i<len; i++ ) {                    // append the values in the tuple
-            if( ! (i in indices) ) {
+            if( i !in indices ) {
                 def list = (items[i] as List)
+                if( list==null ) {
+                    list = new ArrayBag()
+                    items.add(i, list)
+                }
                 list.add( tuple[i] )
                 count=list.size()
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,10 @@ class SysEnv {
 
     private static final List<Map<String,String>> history = new ArrayList<Map<String,String>>()
 
+    static boolean containsKey(String key) {
+        return holder.containsKey(key)
+    }
+    
     static Map<String,String> get()  {
         return holder
     }

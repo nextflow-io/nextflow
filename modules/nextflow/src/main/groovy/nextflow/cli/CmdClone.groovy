@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +40,9 @@ class CmdClone extends CmdBase implements HubOptions {
     @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
     @Override
     final String getName() { NAME }
 
@@ -67,7 +69,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
-        manager.clone(target, revision)
+        manager.clone(target, revision, deep)
         print "\r"
         println "${manager.project} cloned to: $target"
     }

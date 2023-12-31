@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +15,16 @@
  */
 
 package nextflow.container
+
+
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 /**
  * Helper methods to handle Docker containers
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
@@ -29,15 +32,11 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean remove = true
 
-    private boolean userEmulation
-
     private String registry
 
     private String name
 
     private boolean tty
-
-    private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
 
     private String removeCommand
 
@@ -48,6 +47,10 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
     private boolean legacy = System.getenv('NXF_DOCKER_LEGACY')=='true'
 
     private String mountFlags0
+
+    private String device
+
+    private String capAdd
 
     DockerBuilder( String name ) {
         this.image = name
@@ -66,8 +69,8 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
-        if ( params.containsKey('userEmulation') )
-            this.userEmulation = params.userEmulation?.toString() == 'true'
+        if ( params.userEmulation?.toString() == 'true' )
+            log.warn1("Undocumented setting `docker.userEmulation` is not supported any more - consider to remove it from your config")
 
         if ( params.containsKey('remove') )
             this.remove = params.remove?.toString() == 'true'
@@ -95,6 +98,12 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( params.containsKey('privileged') )
             this.privileged = params.privileged?.toString() == 'true'
+
+        if( params.containsKey('device') )
+            this.device = params.device
+
+        if( params.containsKey('capAdd') )
+            this.capAdd = params.capAdd
 
         return this
     }
@@ -141,12 +150,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( temp )
             result << "-v $temp:/tmp "
 
-        if( userEmulation )
-            result << USER_AND_HOME_EMULATION << ' '
-
         // mount the input folders
         result << makeVolumes(mounts)
-        result << '-w "$PWD" '
+        result << '-w "$NXF_TASK_WORKDIR" '
 
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '
@@ -156,6 +162,12 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( privileged )
             result << '--privileged '
+
+        if( device )
+            result << '--device ' << device << ' '
+
+        if( capAdd )
+            result << '--cap-add ' << capAdd << ' '
 
         // the name is after the user option so it has precedence over any options provided by the user
         if( name )
@@ -177,9 +189,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         }
 
         if( kill )  {
-            killCommand = 'docker kill '
+            killCommand = 'docker stop '
             // if `kill` is a string it is interpreted as a the kill signal
-            if( kill instanceof String ) killCommand += "-s $kill "
+            if( kill instanceof String ) killCommand = "docker kill -s $kill "
             killCommand += name
             // prefix with sudo if required
             if( sudo ) killCommand = 'sudo ' + killCommand

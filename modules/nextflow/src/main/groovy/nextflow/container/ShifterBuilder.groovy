@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +70,7 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
             STATUS=\$(shifterimg -v pull $image | tail -n2 | head -n1 | awk \'{print \$6}\')
             [[ \$STATUS == "FAILURE" || -z \$STATUS ]] && echo "Shifter failed to pull image \'$image\'" >&2  && exit 1
         done
-        """.stripIndent()
+        """.stripIndent(true)
         result += run
         return result
     }
@@ -95,6 +94,9 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
         }
         else if( env instanceof String && env.contains('=') ) {
             result << env
+        }
+        else if( env instanceof String ) {
+            result << "\${$env:+\"$env=\$$env\"}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")

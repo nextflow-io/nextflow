@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,11 +50,6 @@ class NF {
         NextflowMeta.instance.isDsl2()
     }
 
-    @Deprecated
-    static boolean isDsl2Final() {
-        NextflowMeta.instance.isDsl2Final()
-    }
-
     static Binding getBinding() {
         isDsl2() ? ExecutionStack.binding() : session().getBinding()
     }
@@ -72,5 +66,9 @@ class NF {
 
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
+    }
+
+    static boolean isTopicChannelEnabled() {
+        NextflowMeta.instance.preview.topic
     }
 }

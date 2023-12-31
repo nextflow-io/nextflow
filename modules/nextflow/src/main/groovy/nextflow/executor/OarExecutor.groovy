@@ -18,6 +18,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -29,6 +30,7 @@ import nextflow.processor.TaskRun
  *
  */
 @Slf4j
+@CompileStatic
 class OarExecutor extends AbstractGridExecutor {
 
     /**
@@ -51,24 +53,24 @@ class OarExecutor extends AbstractGridExecutor {
                 result << "-p" << "\"memnode=1\""
             }
             else {
-                result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\""
+                result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\"".toString()
             }
         }
 
-        if( task.config.cpus > 1) {
-            if( task.config.time ) {
+        if( task.config.getCpus() > 1) {
+            if( task.config.getTime() ) {
                 // cpu + time set
-                result << "-l" << "/nodes=1/core=${task.config.cpus.toString()},walltime=${task.config.getTime().format('HH:mm:ss')}"
+                result << "-l" << "/nodes=1/core=${task.config.getCpus().toString()},walltime=${task.config.getTime().format('HH:mm:ss')}".toString()
             }
             else {
                 // just cpu set
-                result << "-l" << "/nodes=1/core=${task.config.cpus.toString()}"
+                result << "-l" << "/nodes=1/core=${task.config.getCpus().toString()}".toString()
             }
         }
         else {
-            if( task.config.time ) {
+            if( task.config.getTime() ) {
                 // just time set
-                result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}"
+                result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}".toString()
             }
         }
         
@@ -101,7 +103,7 @@ class OarExecutor extends AbstractGridExecutor {
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
         // Scripts need to be executable
         scriptFile.setPermissions(7,0,0)
-        return ["oarsub", "-S", "./${scriptFile.getName()}"]
+        return ["oarsub", "-S", "./${scriptFile.getName()}".toString()]
     }
 
     /**
@@ -114,10 +116,10 @@ class OarExecutor extends AbstractGridExecutor {
     
     @Override
     def parseJobId(String text) {
-    for( String line : text.readLines() ) {
-        def m = SUBMIT_REGEX.matcher(line)
-        if( m.matches() ) {
-            return m.group(1).toString()
+        for( String line : text.readLines() ) {
+            def m = SUBMIT_REGEX.matcher(line)
+            if( m.matches() ) {
+                return m.group(1).toString()
             }
         }
         throw new IllegalStateException("Invalid OAR submit response:\n$text\n\n")
@@ -132,14 +134,14 @@ class OarExecutor extends AbstractGridExecutor {
         // see page 21 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
         String cmd = 'oarstat -f'
         if( queue ) cmd += ' ' + queue
-        return ['sh','-c', "$cmd | egrep '(Job_Id:|state =)' ".toString()]
+        return ['sh','-c', "$cmd | grep -E '(Job_Id:|state =)' ".toString()]
     }
 
     /*
      *  Maps OAR job status to nextflow status
      *  see page 134 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
      */
-    static private Map DECODE_STATUS = [
+    static private Map<String,QueueStatus> DECODE_STATUS = [
             'toLaunch': QueueStatus.RUNNING,			// (the OAR scheduler has attributed some nodes to the job. So it will be launched.)
             'Launching': QueueStatus.RUNNING,			// (OAR has launched the job and will execute the user command on the first node.)
             'Running': QueueStatus.RUNNING,				// (the user command is executing on the first node.)
@@ -162,7 +164,7 @@ class OarExecutor extends AbstractGridExecutor {
 
         final JOB_ID = 'Job_Id:'
         final JOB_STATUS = 'state ='
-        final result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
 
         String id = null
         String status = null

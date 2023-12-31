@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -270,8 +269,8 @@ class BranchOpTest extends Dsl2Spec  {
                 bar: it>=5
             }
 
-            bra1 = Channel.from(1,2,3).branch(criteria)  
-            bra2 = Channel.from(6,7,8).branch(criteria)  
+            bra1 = Channel.of(1,2,3).branch(criteria)  
+            bra2 = Channel.of(6,7,8).branch(criteria)  
             
             bra1.foo.view { "foo:$it" }
             bra2.bar.view { "bar:$it" }

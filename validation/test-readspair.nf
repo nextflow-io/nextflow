@@ -1,8 +1,14 @@
-nextflow.enable.dsl=1
+workflow {
+    reads_pair()
+    reads_pair
+        .out.view()
+        .collect()
+        .subscribe { assert it.name == ['test.R1.fastq','test.R2.fastq'] }
+}
 
 process reads_pair {
     output:
-      file("reads/*") into ch_out
+      file("reads/*")
 
     script:
       """
@@ -11,4 +17,3 @@ process reads_pair {
       """
 }
 
-assert ch_out.view().val.collect { it.name } == ['test.R1.fastq','test.R2.fastq'] 

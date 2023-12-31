@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -441,10 +440,8 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
     def 'should create pipeline actions with keepalive' () {
         given:
-        def helper = Spy(GoogleLifeSciencesHelper)
-        helper.config = Mock(GoogleLifeSciencesConfig) {
-            getKeepAliveOnFailure() >> true
-        }
+        def config = new GoogleLifeSciencesConfig(keepAliveOnFailure: true)
+        def helper = Spy(new GoogleLifeSciencesHelper(config: config))
         and:
         def req = Mock(GoogleLifeSciencesSubmitRequest)
 

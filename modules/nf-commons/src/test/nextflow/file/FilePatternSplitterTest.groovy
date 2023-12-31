@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +112,8 @@ class FilePatternSplitterTest extends Specification {
         'test/data/file[a-b]'                   | 'test/data/'      | 'file[a-b]'           | null
         'test/data[a-b]/file'                   | 'test/'           | 'data[a-b]/file'      | null
         '/some/path\\[a-b\\]/data{a,b}/file\\?' | '/some/path[a-b]/'| 'data{a,b}/file\\?'   | null
-
+        's3://foo/bar/*'                        | 'foo/bar/'        | '*'                   | 's3'
+        's3://foo/bar/file.txt'                 | 'foo/bar/'        | 'file.txt'            | 's3'
     }
 
     def 'should strip glob escape chars' () {

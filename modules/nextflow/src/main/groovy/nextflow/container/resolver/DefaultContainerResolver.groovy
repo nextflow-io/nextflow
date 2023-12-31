@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-final class DefaultContainerResolver implements ContainerResolver {
+class DefaultContainerResolver implements ContainerResolver {
 
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
@@ -39,10 +39,20 @@ final class DefaultContainerResolver implements ContainerResolver {
             return ContainerInfo.EMPTY
         }
 
-        final cfg = task.getContainerConfig()
-        final handler = new ContainerHandler(cfg, task.processor.executor)
-        final ret = handler.normalizeImageName(imageName)
+        final ret = resolveImage0(task, imageName)
         return new ContainerInfo(imageName, ret, ret)
+    }
+
+    private String resolveImage0(TaskRun task, String imageName) {
+        final cfg = task.getContainerConfig()
+        final handler = new ContainerHandler(cfg)
+        return handler.normalizeImageName(imageName)
+    }
+
+    ContainerInfo resolveImage(TaskRun task, String imageName, String hashKey) {
+        assert imageName
+        final ret = resolveImage0(task, imageName)
+        return new ContainerInfo(imageName, ret, hashKey)
     }
 
 }

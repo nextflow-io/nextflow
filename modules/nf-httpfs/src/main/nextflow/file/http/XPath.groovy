@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +34,8 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class XPath implements Path {
+
+    static final public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
 
     private static final String[] EMPTY = []
 
@@ -271,7 +272,7 @@ class XPath implements Path {
     }
 
     /**
-     * @return The unique hash code for this pah
+     * @return The unique hash code for this path
      */
     @Override
     int hashCode() {
@@ -282,11 +283,11 @@ class XPath implements Path {
      * Path factory method.
      *
      * @param str
-     *      A fully qualified URI path string e.g. {@code http://www.host.name/data.file.txt}
+     *      A fully qualified URI path string, e.g. {@code http://www.host.name/data.file.txt}
      * @return
      *      The corresponding {@link XPath} object
      * @throws
-     *      ProviderMismatchException When the URI scheme does not match any supported protocol i.e. {@code ftp},
+     *      ProviderMismatchException When the URI scheme does not match any supported protocol, i.e. {@code ftp},
      *      {@code http}, {@code https}
      */
     static XPath get(String str) {
@@ -295,7 +296,7 @@ class XPath implements Path {
 
         def uri = new URI(null,null,str,null,null)
 
-        if( uri.scheme && !XFileSystemProvider.ALL_SCHEMES.contains(uri.scheme))
+        if( uri.scheme && !ALL_SCHEMES.contains(uri.scheme))
             throw new ProviderMismatchException()
 
         uri.authority ? (XPath)Paths.get(uri) : new XPath(null, str)

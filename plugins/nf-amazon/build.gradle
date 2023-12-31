@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,21 +34,28 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:1.7.10'
-    compileOnly 'org.pf4j:pf4j:3.4.1'
+    compileOnly 'org.slf4j:slf4j-api:2.0.7'
+    compileOnly 'org.pf4j:pf4j:3.10.0'
 
-    api ('javax.xml.bind:jaxb-api:2.3.1')
-    api ('com.amazonaws:aws-java-sdk-s3:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-ec2:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-batch:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-iam:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-ecs:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-logs:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-sts:1.12.129')
+    api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
+    api ('com.amazonaws:aws-java-sdk-s3:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-ec2:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-batch:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-iam:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-ecs:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-logs:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-sts:1.12.604')
+    api ('com.amazonaws:aws-java-sdk-ses:1.12.604')
+    api ('software.amazon.awssdk:sso:2.20.89')
+    api ('software.amazon.awssdk:ssooidc:2.20.89')
+
+    constraints {
+        api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
+    }
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.13"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.13"
+    testImplementation "org.codehaus.groovy:groovy:3.0.19"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.19"
 }

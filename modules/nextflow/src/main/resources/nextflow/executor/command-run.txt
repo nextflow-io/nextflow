@@ -1,6 +1,5 @@
 ##
-##  Copyright 2020-2022, Seqera Labs
-##  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+##  Copyright 2013-2023, Seqera Labs
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -91,14 +90,20 @@ nxf_fs_rsync() {
   rsync -rRl $1 $2
 }
 
+nxf_fs_rclone() {
+  rclone copyto $1 $2/$1
+}
+
+nxf_fs_fcp() {
+  fcp $1 $2/$1
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
-    printf $exit_status {{exit_file}}
+    printf -- $exit_status {{exit_file}}
     set +u
-    [[ "$tee1" ]] && kill $tee1 2>/dev/null
-    [[ "$tee2" ]] && kill $tee2 2>/dev/null
-    [[ "$ctmp" ]] && rm -rf $ctmp || true
     {{cleanup_cmd}}
+    {{sync_cmd}}
     exit $exit_status
 }
 
@@ -137,24 +142,18 @@ nxf_main() {
     {{before_script}}
     {{module_load}}
     {{conda_activate}}
+    {{spack_activate}}
     set -u
     {{task_env}}
     {{secrets_env}}
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
     {{stage_cmd}}
 
     set +e
-    ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
-    local cout=$ctmp/.command.out; mkfifo $cout
-    local cerr=$ctmp/.command.err; mkfifo $cerr
-    tee {{stdout_file}} < $cout &
-    tee1=$!
-    tee {{stderr_file}} < $cerr >&2 &
-    tee2=$!
-    ( nxf_launch ) >$cout 2>$cerr &
+    (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    wait $tee1 $tee2
     {{unstage_cmd}}
     {{after_script}}
 }

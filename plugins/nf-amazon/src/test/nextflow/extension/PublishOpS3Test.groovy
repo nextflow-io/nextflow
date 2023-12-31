@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +32,8 @@ class PublishOpS3Test extends BaseSpec {
 
     def 'should infer task dir' () {
         given:
+        Global.config = Collections.emptyMap()
+        and:
         def BASE = '/some/work/dir' as Path
         def BUCKET_DIR = 's3://other/bucket/dir' as Path
         def sess = Mock(Session) {

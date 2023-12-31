@@ -45,6 +45,7 @@ class ExecutorFactory {
     final static Map<String, Class<? extends Executor>> BUILT_IN_EXECUTORS = [
             'nope': NopeExecutor,
             'local': LocalExecutor,
+            'flux': FluxExecutor,
             'sge':  SgeExecutor,
             'oge':  SgeExecutor,
             'uge':  SgeExecutor,
@@ -211,7 +212,7 @@ class ExecutorFactory {
     }
 
     /**
-     * Find out the 'executor' to be used in the process definition or in teh session configuration object
+     * Find out the 'executor' to be used in the process definition or in the session configuration object
      *
      * @param taskConfig
      */

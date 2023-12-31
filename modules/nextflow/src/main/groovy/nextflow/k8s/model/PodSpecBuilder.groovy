@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,6 +78,8 @@ class PodSpecBuilder {
 
     String memory
 
+    String disk
+
     String serviceAccount
 
     boolean automountServiceAccountToken = true
@@ -88,6 +89,8 @@ class PodSpecBuilder {
     Collection<PodMountConfig> configMaps = []
 
     Collection<PodMountCsiEphemeral> csiEphemerals = []
+
+    Collection<PodMountEmptyDir> emptyDirs = []
 
     Collection<PodMountSecret> secrets = []
 
@@ -108,6 +111,14 @@ class PodSpecBuilder {
     boolean privileged
 
     int activeDeadlineSeconds
+
+    Map<String,List<String>> capabilities
+
+    List<String> devices
+
+    Map<String,?> resourcesLimits
+
+    String schedulerName
 
     /**
      * @return A sequential volume unique identifier
@@ -180,6 +191,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withDisk(String disk) {
+        this.disk = disk
+        return this
+    }
+
+    PodSpecBuilder withDisk(MemoryUnit disk)  {
+        this.disk = "${disk.mega}Mi".toString()
+        return this
+    }
+
     PodSpecBuilder withAccelerator(AcceleratorResource acc) {
         this.accelerator = acc
         return this
@@ -246,6 +267,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
+        this.emptyDirs.addAll(emptyDirs)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
+        this.emptyDirs.add(emptyDir)
+        return this
+    } 
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -271,8 +302,21 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withCapabilities(Map<String,List<String>> cap) {
+        this.capabilities = cap
+        for( String it : cap.keySet() ) {
+            if( it !in ['add','drop']) throw new IllegalArgumentException("K8s capability action can be either 'add' or 'drop' - offending value '$it'")
+        }
+        return this
+    }
+
     PodSpecBuilder withActiveDeadline(int seconds) {
         this.activeDeadlineSeconds = seconds
+        return this
+    }
+
+    PodSpecBuilder withResourcesLimits(Map<String,?> limits) {
+        this.resourcesLimits = limits
         return this
     }
 
@@ -291,6 +335,12 @@ class PodSpecBuilder {
         // -- csi ephemeral volumes
         if( opts.getMountCsiEphemerals() )
             csiEphemerals.addAll( opts.getMountCsiEphemerals() )
+        // -- emptyDirs
+        if( opts.getMountEmptyDirs() )
+            emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- host paths
+        if( opts.getMountHostPaths() )
+            hostMounts.addAll( opts.getMountHostPaths() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
@@ -326,6 +376,8 @@ class PodSpecBuilder {
             tolerations.addAll(opts.tolerations)
         // -- privileged
         privileged = opts.privileged
+        // -- scheduler name
+        schedulerName = opts.schedulerName
 
         return this
     }
@@ -367,10 +419,17 @@ class PodSpecBuilder {
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
 
+        final secContext = new LinkedHashMap(10)
         if( privileged ) {
             // note: privileged flag needs to be defined in the *container* securityContext
             // not the 'spec' securityContext (see below)
-            container.securityContext = [ privileged: true ]
+            secContext.privileged =true
+        }
+        if( capabilities ) {
+            secContext.capabilities = capabilities
+        }
+        if( secContext ) {
+            container.securityContext = secContext
         }
 
         final spec = [
@@ -380,6 +439,9 @@ class PodSpecBuilder {
 
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
+
+        if( schedulerName )
+            spec.schedulerName = schedulerName
 
         if( affinity )
             spec.affinity = affinity
@@ -438,6 +500,14 @@ class PodSpecBuilder {
             container.resources = addAcceleratorResources(this.accelerator, container.resources as Map)
         }
 
+        if( this.disk ) {
+            container.resources = addDiskResources(this.disk, container.resources as Map)
+        }
+
+        if( this.resourcesLimits ) {
+            container.resources = addResourcesLimits(this.resourcesLimits, container.resources as Map)
+        }
+
         // add storage definitions ie. volumes and mounts
         final List<Map> mounts = []
         final List<Map> volumes = []
@@ -475,6 +545,13 @@ class PodSpecBuilder {
             volumes << [name: name, csi: entry.csi]
         }
 
+        // -- emptyDir volumes
+        for( PodMountEmptyDir entry : emptyDirs ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath]
+            volumes << [name: name, emptyDir: entry.emptyDir]
+        }
+
         // -- secret volumes
         for( PodMountSecret entry : secrets ) {
             final name = nextVolName()
@@ -500,30 +577,30 @@ class PodSpecBuilder {
     Map buildAsJob() {
         final pod = build()
 
-        // job metadata
-        final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
-        metadata.namespace = this.namespace ?: 'default'
+        return [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: pod.metadata,
+            spec: [
+                backoffLimit: 0,
+                template: [
+                    metadata: pod.metadata,
+                    spec: pod.spec
+                ]
+            ]
+        ]
+    }
 
-        // job spec
-        final spec = new LinkedHashMap<String,Object>()
-        spec.backoffLimit = 0
-        spec.template = [spec: pod.spec]
+    @PackageScope
+    Map addResourcesLimits(Map limits, Map result) {
+        if( result == null )
+            result = new LinkedHashMap(10)
 
-        if( labels )
-            metadata.labels = sanitize(labels, MetaType.LABEL)
-
-        if( annotations )
-            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
-
-        final result = [
-                apiVersion: 'batch/v1',
-                kind: 'Job',
-                metadata: metadata,
-                spec: spec ]
+        final limits0 = result.limits as Map ?: new LinkedHashMap(10)
+        limits0.putAll( limits )
+        result.limits = limits0
 
         return result
-
     }
 
     @PackageScope
@@ -549,6 +626,22 @@ class PodSpecBuilder {
 
         final lim = res.limits as Map ?: new LinkedHashMap(10)
         lim.memory = memory
+        res.limits = lim
+
+        return res
+    }
+
+    @PackageScope
+    Map addDiskResources(String diskRequest, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(10)
+
+        final req = res.requests as Map ?: new LinkedHashMap(10)
+        req.'ephemeral-storage' = diskRequest
+        res.requests = req
+
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
+        lim.'ephemeral-storage' = diskRequest
         res.limits = lim
 
         return res

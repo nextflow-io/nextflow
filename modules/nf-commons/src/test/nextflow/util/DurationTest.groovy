@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +61,8 @@ class DurationTest extends Specification {
         Duration.of('1days').toHours() == 24
         Duration.of('1day').toHours() == 24
         Duration.of('1d').toHours() == 24
+
+        Duration.of('30d').toMillis() == 30 * DAY
 
     }
 

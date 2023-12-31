@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.executor.Executor
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -43,11 +42,8 @@ class ContainerHandler {
 
     private Path baseDir
 
-    private Executor executor
-
-    ContainerHandler(Map containerConfig, Executor executor=null) {
+    ContainerHandler(Map containerConfig) {
         this(containerConfig, CWD)
-        this.executor = executor
     }
 
     ContainerHandler(Map containerConfig, Path dir) {
@@ -60,11 +56,6 @@ class ContainerHandler {
     Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {
-        // when the executor is container native, it's assumed
-        // the use of docker plain image name format
-        if( executor?.isContainerNative() ) {
-            return normalizeDockerImageName(imageName)
-        }
         final engine = config.getEngine()
         if( engine == 'shifter' ) {
             return normalizeShifterImageName(imageName)
@@ -76,8 +67,11 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
+                return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
@@ -85,8 +79,11 @@ class ContainerHandler {
             final normalizedImageName = normalizeApptainerImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
+                return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createApptainerCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
@@ -94,6 +91,8 @@ class ContainerHandler {
             // if the imagename starts with '/' it's an absolute path
             // otherwise we assume it's in a remote registry and pull it from there
             final requiresCaching = !imageName.startsWith('/')
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
             return Escape.path(result)
         }
@@ -150,7 +149,7 @@ class ContainerHandler {
      * @return Image name in Docker canonical format
      */
      @PackageScope
-     String normalizeDockerImageName( String imageName) {
+     String normalizeDockerImageName(String imageName) {
 
         if( !imageName )
             return null
@@ -168,7 +167,7 @@ class ContainerHandler {
         return reg + imageName
     }
 
-     static boolean isAbsoluteDockerName(String image) {
+    static boolean isAbsoluteDockerName(String image) {
         def p = image.indexOf('/')
         if( p==-1 )
             return false
@@ -197,7 +196,7 @@ class ContainerHandler {
     }
 
 
-    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:\. ]+:\/\/(.*)/
+    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:. ]+:\/\/(.*)/
 
     /**
      * Normalize Singularity image name resolving the absolute path or
@@ -233,7 +232,7 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image in the docker hub
         // prefix it with the `docker://` pseudo protocol used by singularity to download it
-        return "docker://${img}"
+        return "docker://${normalizeDockerImageName(img)}"
     }
 
     /**
@@ -270,6 +269,6 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image in the docker hub
         // prefix it with the `docker://` pseudo protocol used by apptainer to download it
-        return "docker://${img}"
+        return "docker://${normalizeDockerImageName(img)}"
     }
 }

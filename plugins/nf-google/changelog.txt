@@ -1,5 +1,73 @@
 nf-google changelog
 ===================
+1.10.0 - 20 Dec 2023
+- Add ability to disable Cloudinfo service (#4606) [f7251895]
+- Add support for Instance template to Google Batch [df7ed294]
+- Improve GLS tests [ci fast] [58590b1c]
+
+1.9.0 - 24 Nov 2023
+- Add labels field in Job request for Google Batch (#4538) [627c595e]
+- Add Google Batch native retry on spot termination (#4500) [ea1c1b70]
+- Add ability detect Google Batch spot interruption (#4462) [d49f02ae]
+- Add Retry policy to Google Storage (#4524) [c271bb18]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix Bypass Google Batch Price query if task cpus and memory are defined (#4521) [7f8f20d3]
+- Update logging filter for Google Batch provider. (#4488) [66a3ed19]
+
+1.8.3 - 10 Oct 2023
+- Add setting to enable the use of sync command [f0d5cc5c]
+- Fix Google Batch do not stop running jobs (#4381) [3d6b7358]
+
+1.8.2 - 28 Sep 2023
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [9b3741e3]
+
+1.8.1 - 22 Jul 2023
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Bump Groovy 3.0.18 [207eb535]
+
+1.8.0 - 14 Jun 2023
+- Add httpConnectTimeout and httpReadTimeout to Google options (#3974) [49fa15f7]
+- Add disk resource with type option for Google Batch (#3861) [166b3638]
+- Prevent null exit code when Google batch is unable to access exit status [f68a39ec]
+- Fix S3 path normalization [b75ec444]
+- Fix invalid machine type setting when no valid machine type is found (#3961) [5eb93971]
+- Fix Google Batch default instance family types (#3960) [ci fast] [b5257cd7]
+
+1.7.4 - 15 May 2023
+- Update logging libraries [d7eae86e]
+- Improve task out redirect remove the use of mkfifo (#3863) [efedec74]
+- Bump groovy 3.0.17 [cfe4ba56]
+
+1.7.3 - 15 Apr 2023
+- Bump gson:2.10.1 [83ca1e32]
+
+1.7.2 - 1 Apr 2023
+- Fix issue checking google batch script launcher type [39c3a517]
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
+1.7.1 - 23 Mar 2023
+- Fix Google Batch logging exception [d7e38e9e]
+- Add error message for missing container image with Google Batch (#3747) [6419e68f]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
+1.7.0 - 21 Feb 2023
+- Add Fusion support for Google Batch (#3577) [d5fbab4f]
+- Add Header provider to Google Batch client [20979929]
+- Bump groovy 3.0.15 [7a3ebc7d]
+
+1.6.0 - 14 Jan 2023
+- Refactor Google Batch executor [c0a25fc2]
+- Improve container native executor configuration [03126371]
+- Bump groovy 3.0.14 [7c204236]
+
+1.5.0 - 13 Dec 2022
+- Add allowedLocations option to google batch (#3453) [c619eb81]
+- Add warning on Google Logs failure [bdbcdde9]
+- Fix Quote the logName in the Cloud Logging filter (#3464) [b3975063]
+- Fix a few issues in BatchLogging.groovy (#3443) [e2bbcf15]
+- Fix Error & info messages, code comments language fixes (#3475) [29ae36ca]
+- Bump nf-google@1.5.0 [c07dcec2]
+
 1.4.5 - 13 Nov 2022
 - Fix support for serviceAccountEmail and GPU accelerator [7f7007a8] #7f7007a8
 - Bump Google Batch sdk 0.5.0

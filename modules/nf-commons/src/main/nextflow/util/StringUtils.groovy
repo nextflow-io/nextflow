@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.regex.Pattern
 
 import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
+
 /**
  * String helper routines
  *
@@ -33,6 +34,10 @@ class StringUtils {
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z0-9]*):\\/\\/(.+)/
     static final private Pattern URL_PASSWORD = ~/^[a-zA-Z][a-zA-Z0-9]*:\\/\\/(.+)@.+/
 
+    /**
+     * Deprecated. Use {@link nextflow.file.FileHelper#getUrlProtocol(java.lang.String)} instead
+     */
+    @Deprecated
     static String getUrlProtocol(String str) {
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
@@ -40,6 +45,10 @@ class StringUtils {
 
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
+    /**
+     * Deprecated. Use {@link nextflow.file.FileHelper#baseUrl(java.lang.String)} instead
+     */
+    @Deprecated
     static String baseUrl(String url) {
         if( !url )
             return null
@@ -47,7 +56,7 @@ class StringUtils {
         return m.matches() ? m.group(1).toLowerCase() : null
     }
 
-    static private Pattern multilinePattern = ~/"?(password|token|secret|license)"?\s?[:=]\s?"?(\w+)"?/
+    static private Pattern multilinePattern = ~/["']?(password|token|secret|license)["']?\s?[:=]\s?["']?(\w+)["']?/
 
     static String stripSecrets(String message) {
         if (message == null) {
@@ -98,7 +107,7 @@ class StringUtils {
         if( !value )
             return '(empty)'
         final str = value.toString()
-        return str.length()>=5 ? str[0..2] + '****' : '****'
+        return str.length()>=10 ? str[0..2] + '****' : '****'
     }
 
     static String redactUrlPassword(value) {

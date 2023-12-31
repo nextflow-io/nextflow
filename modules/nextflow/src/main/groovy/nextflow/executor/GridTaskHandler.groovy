@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,12 +29,15 @@ import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -46,7 +48,8 @@ import nextflow.util.Throttle
  * Handles a job execution in the underlying grid platform
  */
 @Slf4j
-class GridTaskHandler extends TaskHandler {
+@CompileStatic
+class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     /** The target executor platform */
     final AbstractGridExecutor executor
@@ -75,7 +78,7 @@ class GridTaskHandler extends TaskHandler {
 
     private Duration sanityCheckInterval
 
-    final static private READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
+    static private final Duration READ_TIMEOUT = Duration.of('270sec') // 4.5 minutes
 
     BatchCleanup batch
 
@@ -100,16 +103,17 @@ class GridTaskHandler extends TaskHandler {
     protected ProcessBuilder createProcessBuilder() {
 
         // -- log the qsub command
-        def cli = executor.getSubmitCommandLine(task, wrapperFile)
+        final cli = executor.getSubmitCommandLine(task, wrapperFile)
         log.trace "start process ${task.name} > cli: ${cli}"
 
         /*
          * launch 'sub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
-                .command( cli as String[] )
-                .redirectErrorStream(true)
-                .directory(task.workDir.toFile())
+            .command( cli as String[] )
+            .redirectErrorStream(true)
+        if( !fusionEnabled() )
+            builder .directory(task.workDir.toFile())
 
         return builder
     }
@@ -142,12 +146,13 @@ class GridTaskHandler extends TaskHandler {
             void accept(ExecutionAttemptedEvent event) throws Throwable {
                 final failure = event.getLastFailure()
                 if( failure instanceof ProcessNonZeroExitStatusException ) {
+                    final failure0 = (ProcessNonZeroExitStatusException)failure
                     final msg = """\
                         Failed to submit process '${task.name}'
                          - attempt : ${event.attemptCount}
-                         - command : ${CmdLineHelper.toLine(failure.command)}
-                         - reason  : $failure.reason
-                        """.stripIndent()
+                         - command : ${failure0.command}
+                         - reason  : ${failure0.reason}
+                        """.stripIndent(true)
                     log.warn msg
 
                 } else {
@@ -176,6 +181,7 @@ class GridTaskHandler extends TaskHandler {
         try {
             // -- forward the job launcher script to the command stdin if required
             if( pipeScript ) {
+                log.trace "[${executor.name.toUpperCase()}] Submit STDIN command ${task.name} >\n${pipeScript.indent()}"
                 process.out << pipeScript
                 process.out.close()
             }
@@ -183,9 +189,10 @@ class GridTaskHandler extends TaskHandler {
             // -- wait the the process completes
             final result = process.text
             final exitStatus = process.waitFor()
+            final cmd = launchCmd0(builder,pipeScript)
 
             if( exitStatus ) {
-                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, builder.command())
+                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, cmd)
             }
 
             // -- return the process stdout
@@ -199,7 +206,47 @@ class GridTaskHandler extends TaskHandler {
             process.destroy()
         }
     }
-    
+
+    protected BashWrapperBuilder createTaskWrapper(TaskRun task) {
+        return fusionEnabled()
+            ? fusionLauncher()
+            : executor.createBashWrapperBuilder(task)
+    }
+
+    protected String stdinLauncherScript() {
+        return fusionEnabled() ? fusionStdinWrapper() : wrapperFile.text
+    }
+
+    protected String fusionStdinWrapper() {
+        final submit = fusionSubmitCli()
+        final launcher = fusionLauncher()
+        final config = task.getContainerConfig()
+        final containerOpts = task.config.getContainerOptions()
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+        // create an inline script to launch the job execution
+        return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+    }
+
+    protected String submitDirective(TaskRun task) {
+        final remoteLog = task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        // replaces the log file with a null file because the cluster submit tool
+        // cannot write to a file hosted in a remote object storage
+        final result = executor
+                .getHeaders(task)
+                .replaceAll(remoteLog, '/dev/null')
+        return result
+    }
+
+    protected String launchCmd0(ProcessBuilder builder, String pipeScript) {
+        def result = CmdLineHelper.toLine(builder.command())
+        if( pipeScript ) {
+            result = "cat << 'LAUNCH_COMMAND_EOF' | ${result}\n"
+            result += pipeScript.trim() + '\n'
+            result += 'LAUNCH_COMMAND_EOF\n'
+        }
+        return result
+    }
+
     /*
      * {@inheritDocs}
      */
@@ -208,11 +255,11 @@ class GridTaskHandler extends TaskHandler {
         ProcessBuilder builder = null
         try {
             // -- create the wrapper script
-            executor.createBashWrapperBuilder(task).build()
+            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
-            final stdinScript = executor.pipeLauncherScript() ? wrapperFile.text : null
+            final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
             // -- save the JobId in the
@@ -226,8 +273,11 @@ class GridTaskHandler extends TaskHandler {
             if( e instanceof ProcessNonZeroExitStatusException ) {
                 task.exitStatus = e.getExitStatus()
                 task.stdout = e.getReason()
+                task.script = e.getCommand()
             }
-            task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
+            else {
+                task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
+            }
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }
@@ -265,7 +315,7 @@ class GridTaskHandler extends TaskHandler {
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
          */
-        def exitAttrs = null
+        BasicFileAttributes exitAttrs = null
         if( !exitFile || !(exitAttrs=FileHelper.readAttributes(exitFile)) || !exitAttrs.lastModifiedTime()?.toMillis() ) {
             if( log.isTraceEnabled() ) {
                 if( !exitFile )
@@ -325,13 +375,14 @@ class GridTaskHandler extends TaskHandler {
             }
             catch( Exception e ) {
                 log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
+                return Integer.MAX_VALUE
             }
         }
 
         else {
             /*
              * Since working with NFS it may happen that the file exists BUT it is empty due to network latencies,
-             * before retuning an invalid exit code, wait some seconds.
+             * before returning an invalid exit code, wait some seconds.
              *
              * More in detail:
              * 1) the very first time that arrive here initialize the 'exitTimestampMillis' to the current timestamp
@@ -350,9 +401,8 @@ class GridTaskHandler extends TaskHandler {
                 return null
             }
             log.warn "Unable to read command status from: ${exitFile.toUriString()} after $delta ms"
+            return -1
         }
-
-        return Integer.MAX_VALUE
     }
 
     @Override
@@ -398,7 +448,7 @@ class GridTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
 
         // verify the exit file exists
-        def exit
+        Integer exit
         if( isRunning() && (exit = readExitStatus()) != null ) {
             // finalize the task
             task.exitStatus = exit
@@ -428,7 +478,7 @@ class GridTaskHandler extends TaskHandler {
                 return true
             }
             // if the task is not complete (ie submitted or running)
-            // AND the work-dir does not exists ==> something is wrong
+            // AND the work-dir does not exist ==> something is wrong
             task.error = new ProcessException("Task work directory is missing (!)")
             // sanity check does not pass
             return false
@@ -461,7 +511,7 @@ class GridTaskHandler extends TaskHandler {
      * @return An {@link nextflow.trace.TraceRecord} instance holding task runtime information
      */
     @Override
-    public TraceRecord getTraceRecord() {
+    TraceRecord getTraceRecord() {
         def trace = super.getTraceRecord()
         trace.put('native_id', jobId)
         return trace

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,7 +99,7 @@ class SingularityCache {
     }
 
     /**
-     * Create the specified directory if not exists
+     * Create the specified directory if it does not exist
      *
      * @param
      *      str A path string representing a folder where store the singularity images once downloaded
@@ -155,7 +154,8 @@ class SingularityCache {
 
         def workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
-            throw new IOException("Cannot store ${appName} image to a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `NXF_${envPrefix}_CACHEDIR` env variable")
+            // when the work dir is a remote path use the local launch directory to cache image files
+            workDir = Path.of('.nextflow').toAbsolutePath()
         }
 
         missingCacheDir = true
@@ -224,7 +224,7 @@ class SingularityCache {
             return libraryPath
         }
 
-        // check for the image in teh cache dir
+        // check for the image in the cache dir
         // if the image does not exist in the cache dir, download it
         final localPath = localCachePath(imageUrl)
         if( localPath.exists() ) {
@@ -260,7 +260,7 @@ class SingularityCache {
         log.trace "${appName} pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
-            log.warn1 "${appName} cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent -- Use env variable NXF_${envPrefix}_CACHEDIR to specify a different location"
+            log.warn1 "${appName} cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent -- Use the environment variable NXF_${envPrefix}_CACHEDIR to specify a different location"
 
         log.info "Pulling ${appName} image $imageUrl [cache $targetPath]"
 
@@ -287,7 +287,7 @@ class SingularityCache {
         log.trace """${appName} pull
                      command: $cmd
                      timeout: $pullTimeout
-                     folder : $storePath""".stripIndent()
+                     folder : $storePath""".stripIndent(true)
 
         final max = pullTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])

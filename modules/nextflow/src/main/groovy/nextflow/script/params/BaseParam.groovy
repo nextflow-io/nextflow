@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +17,8 @@
 package nextflow.script.params
 
 import groovy.util.logging.Slf4j
-
+import nextflow.exception.ScriptRuntimeException
+import nextflow.script.TokenVar
 /**
  * Base class for input/output parameters
  *
@@ -97,7 +97,7 @@ abstract class BaseParam implements Cloneable {
     /**
      * Initialize the parameter fields if needed
      */
-    final protected void init() {
+    final void init() {
         if( initialized ) return
         lazyInit()
 
@@ -142,4 +142,29 @@ abstract class BaseParam implements Cloneable {
         return mapIndex >= 0
     }
 
+    /**
+     * Report missing method calls as possible syntax errors.
+     */
+    def methodMissing( String name, def args ) {
+        throw new ScriptRuntimeException("Invalid function call `${name}(${argsToString0(args)})` -- possible syntax error")
+    }
+
+    private String argsToString0(args) {
+        if( args instanceof Object[] )
+            args = Arrays.asList(args)
+        if( args instanceof List ) {
+            final result = new ArrayList()
+            for( def it : args )
+                result.add(argsToString1(it))
+            return result.join(',')
+        }
+        return argsToString1(args)
+    }
+
+    private String argsToString1(arg) {
+        if( arg instanceof TokenVar )
+            return arg.name
+        else
+            return String.valueOf((Object)arg)
+    }
 }

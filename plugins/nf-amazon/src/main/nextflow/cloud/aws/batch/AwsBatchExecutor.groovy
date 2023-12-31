@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +22,18 @@ import java.util.concurrent.TimeUnit
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.ecs.model.AccessDeniedException
-import com.upplication.s3fs.S3Path
+import com.amazonaws.services.logs.model.ResourceNotFoundException
+import nextflow.cloud.aws.nio.S3Path
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.AmazonClientFactory
+import nextflow.cloud.aws.AwsClientFactory
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionHelper
 import nextflow.extension.FilesEx
 import nextflow.processor.ParallelPollingMonitor
 import nextflow.processor.TaskHandler
@@ -54,8 +55,6 @@ import org.pf4j.ExtensionPoint
 @ServiceName('awsbatch')
 @CompileStatic
 class AwsBatchExecutor extends Executor implements ExtensionPoint {
-
-    private Map<String,String> sysEnv = System.getenv()
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -91,6 +90,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     final boolean isContainerNative() {
         return true
+    }
+
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
     }
 
     /**
@@ -138,7 +142,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * retrieve config and credentials and create AWS client
          */
-        final driver = new AmazonClientFactory(session.config)
+        final driver = new AwsClientFactory(new AwsConfig(session.config.aws as Map))
 
         /*
          * create a proxy for the aws batch client that manages the request throttling
@@ -147,7 +151,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         helper = new AwsBatchHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
-        log.debug "[AWS BATCH] Executor options=$awsOptions"
+        log.debug "[AWS BATCH] Executor ${awsOptions.fargateMode ? '(FARGATE mode) ' : ''}options=$awsOptions"
     }
 
     /**
@@ -249,7 +253,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     @Override
     boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session, sysEnv)
+        return FusionHelper.isFusionEnabled(session)
     }
 
     protected void logRateLimitChange(RateUnit rate) {
@@ -280,10 +284,13 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         try {
             return helper.getTaskLogStream(jobId)
         }
+        catch (ResourceNotFoundException e) {
+            log.debug "Unable to find AWS Cloudwatch logs for Batch Job id=$jobId - ${e.message}"
+        }
         catch (Exception e) {
             log.debug "Unable to retrieve AWS Cloudwatch logs for Batch Job id=$jobId | ${e.message}", e
-            return null
         }
+        return null
     }
 
     @Override
@@ -296,7 +303,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         reaper.shutdown()
         final waitMsg = "[AWS BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
         final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
-        ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg, )
+        ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
     }
 
 }

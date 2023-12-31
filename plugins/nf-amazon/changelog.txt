@@ -1,5 +1,101 @@
 nf-amazon changelog
 ===================
+2.3.0 - 20 Dec 2023
+- Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
+- Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
+
+2.2.0 - 24 Nov 2023
+- Add support for FUSION_AWS_REGION (#4481) [8f8b09fa]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix typos (#4519) [ci fast] [6b1ea726]
+- Fix Fusion symlinks when publishing files (#4348) [89f09fe0]
+- Bump javax.xml.bind:jaxb-api:2.4.0-b180830.0359
+
+2.1.4 - 10 Oct 2023
+- Improve S3 endpoint validation [2b9ae6aa]
+- Add -cloudcache CLI option (#4385) [73fda582]
+
+2.1.3 - 28 Sep 2023
+- Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
+- Fix List of S3 bucket for custom endpoint [4327fa58]
+- Fix support for S3 custom endpoint with anonymous access [03752815]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
+
+2.1.2 - 10 Sep 2023
+- Disable staging script for remote work dir (#4282) [80f7cd46]
+- Allow setting shell directive when using the trace file. (#4210) [7d6ad624]
+- Bump groovy 3.0.19 [cb411208]
+
+2.1.1 - 5 Aug 2023
+- Fix glob resolution for remove files [19a72c40]
+- Fix Option fixOwnership traverse parent directories [f2a2ea35]
+
+2.1.0 - 22 Jul 2023
+- Add support for AWS SSO credentials provider (#4045) [53e33cde]
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Ignore accelerator type for AWS Batch (#4043) [263ecca8]
+- Bump Groovy 3.0.18 [207eb535]
+
+2.0.1 - 14 Jun 2023
+- Add support for AWS SES as mail sending provider [df85d443]
+- Fix access to public S3 bucket when no creds are provided (#3992) [cf8ba466]
+- Fix S3 path normalization [b75ec444]
+
+2.0.0 - 15 May 2023
+- Add fusion.exportStorageCredentials option [ci fast] [acb6aedf]
+- Fix AWS SSE env propagation to Fusion [e24608c3]
+- Fix string comparison in S3 client (#3875) [ci fast] [9344d294]
+- Preview support for virtual threads (#3871) [5c429046]
+- Refactor the AWS configuration  (#3498) [a74e42d9]
+- Rename AmazonS3Client to S3Client [cc59596a]
+- Rename com.upplication.s3fs package to nextflow.cloud.aws.nio [a2f3bb24]
+- Security fixes [973b7bea]
+- Update logging libraries [d7eae86e]
+- Bump groovy 3.0.17 [cfe4ba56]
+
+1.16.2 - 15 Apr 2023
+- Update plugin deps [83e8fd6a]
+
+1.16.1 - 1 Apr 2023
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
+1.16.0 - 19 Mar 2023
+- Remove unused classes [9fa8d75b]
+- Add support for AWS S3 Glacier Retrieval Tier (#3680) [fab6bd5e]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
+1.15.0 - 21 Feb 2023
+- Improve AWS batch error logging [8f4884c1]
+- Remove deprecated buckets field [0a355ac3]
+- Add support for fusion tags (#3609) [ci fast] [8385ec22]
+- Add nextflow tags to AWS Batch job def [b465ac52]
+- Use Fusion as launcher (#3584) [34a27733]
+- Bump FUSION_ prefix variables [ci fast] [a7282d64]
+- Fix serialization of S3 paths with spaces (#3565) [ce487624]
+- Bump groovy 3.0.15 [7a3ebc7d]
+
+1.14.0 - 14 Jan 2023
+- Add `schedulingPriority` option to AWS Batch (use with `shareIdentifier`) (#3505) [06960bb2]
+- Fix FilePorter concurrency issue (#3511) [11ccfa26]
+- Fix support for AWS ACL for Batch #2671 [a9644919]
+- Improve container native executor configuration [03126371]
+- Improve AWS batch exit code reporting [d1bb2fe2]
+- Refactor Fusion config [902e5b34]
+- Refactor Fusion package [52f4c5d5]
+- Remove unnecessary Fusion env var [dfa47556]
+- Bump groovy 3.0.14 [7c204236]
+
+1.13.0 - 13 Dec 2022
+- Add support for AWS Glacier restore [b6110766]
+- Add support for S3 storageClass to publishDir [066f9203]
+- Fix math overflow when copying large AWS S3 files [f32ea0ba]
+- Bump AWS sdk version 1.12.351 [4dd82b66]
+- Rewrite fetchIamRole and fetchRegion to use AWS SDK (#3425) [ci skip] [e350f319]
+- Bump nf-amazon@1.13.0 [ccaab713]
+
+1.12.0 - 21 Nov 2022
+- Improve S3 thread pool config [41021cbc]
+
 1.11.0 - 3 Oct 2022
 - Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
 - Get rid of  file name rolling for report files [a762ed59] <Paolo Di Tommaso>
@@ -40,7 +136,7 @@ nf-amazon changelog
 
 1.9.0 - 1 Aug 2022
 - Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
-- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix NPE while setting S3 ObjectMetadata #3031 [d6163431] <Jorge Aguilera>
 - Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b] <Paolo Di Tommaso>
 - Fix AWS Batch job definition conflict (#3048) [e5084418] <Paolo Di Tommaso>
 - Improve S3 file upload/download via Transfer manager [7e8d2a5a] [b7bf9fe5] <Jorge Aguilera>

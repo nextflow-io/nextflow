@@ -1,4 +1,5 @@
 /*
+ * Copyright 2023, Seqera Labs
  * Copyright 2022, Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,12 +21,14 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -56,6 +59,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     final boolean isContainerNative() {
         return true
+    }
+
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
     }
 
     @Override
@@ -110,5 +118,15 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     void shutdown() {
         client.shutdown()
+        logging.close()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
+
+    boolean isCloudinfoEnabled() {
+        return Boolean.parseBoolean(SysEnv.get('NXF_CLOUDINFO_ENABLED', 'true') )
     }
 }

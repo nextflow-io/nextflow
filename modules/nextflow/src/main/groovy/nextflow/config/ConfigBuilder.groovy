@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +39,6 @@ import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
-import nextflow.trace.WebLogObserver
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -323,7 +321,7 @@ class ConfigBuilder {
     }
 
     protected Map configVars() {
-        // this is needed to make sure to re-use the same
+        // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
         return cacheableConfigVars(baseDir)
@@ -565,7 +563,7 @@ class ConfigBuilder {
         }
 
         if( cmdRun.withoutConda && config.conda instanceof Map ) {
-            // disable docker execution
+            // disable conda execution
             log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
             config.conda.enabled = false
         }
@@ -577,6 +575,19 @@ class ConfigBuilder {
             config.conda.enabled = true
         }
 
+        if( cmdRun.withoutSpack && config.spack instanceof Map ) {
+            // disable spack execution
+            log.debug "Disabling execution with Spack as requested by command-line option `-without-spack`"
+            config.spack.enabled = false
+        }
+
+        // -- apply the spack environment
+        if( cmdRun.withSpack ) {
+            if( cmdRun.withSpack != '-' )
+                config.process.spack = cmdRun.withSpack
+            config.spack.enabled = true
+        }
+
         // -- sets the resume option
         if( cmdRun.resume )
             config.resume = cmdRun.resume
@@ -584,9 +595,10 @@ class ConfigBuilder {
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 
-        // -- sets `dumpKeys` option
-        if( cmdRun.dumpHashes )
-            config.dumpHashes = cmdRun.dumpHashes
+        // -- sets `dumpHashes` option
+        if( cmdRun.dumpHashes ) {
+            config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
+        }
 
         if( cmdRun.dumpChannels )
             config.dumpChannels = cmdRun.dumpChannels.tokenize(',')
@@ -666,7 +678,7 @@ class ConfigBuilder {
             if( cmdRun.withWebLog != '-' )
                 config.weblog.url = cmdRun.withWebLog
             else if( !config.weblog.url )
-                config.weblog.url = WebLogObserver.DEF_URL
+                config.weblog.url = 'http://localhost'
         }
 
         // -- sets tower options
@@ -691,14 +703,24 @@ class ConfigBuilder {
                 config.wave.endpoint = 'https://wave.seqera.io'
         }
 
-        // -- nextflow setting
-        if( cmdRun.dsl1 || cmdRun.dsl2 ) {
-            if( config.nextflow !instanceof Map )
-                config.nextflow = [:]
-            if( cmdRun.dsl1 )
-                config.nextflow.enable.dsl = 1
-            if( cmdRun.dsl2 )
-                config.nextflow.enable.dsl = 2
+        // -- set fusion options
+        if( cmdRun.withFusion ) {
+            if( !(config.fusion instanceof Map) )
+                config.fusion = [:]
+            config.fusion.enabled = cmdRun.withFusion == 'true'
+        }
+
+        // -- set cloudcache options
+        final envCloudPath = env.get('NXF_CLOUDCACHE_PATH')
+        if( cmdRun.cloudCachePath || envCloudPath ) {
+            if( !(config.cloudcache instanceof Map) )
+                config.cloudcache = [:]
+            if( !config.cloudcache.isSet('enabled') )
+                config.cloudcache.enabled = true
+            if( cmdRun.cloudCachePath && cmdRun.cloudCachePath != '-' )
+                config.cloudcache.path = cmdRun.cloudCachePath
+            else if( !config.cloudcache.isSet('path') && envCloudPath )
+                config.cloudcache.path = envCloudPath
         }
 
         // -- add the command line parameters to the 'taskConfig' object
@@ -721,6 +743,10 @@ class ConfigBuilder {
 
         if( cmdRun.withSingularity ) {
             configContainer(config, 'singularity', cmdRun.withSingularity)
+        }
+
+        if( cmdRun.withApptainer ) {
+            configContainer(config, 'apptainer', cmdRun.withApptainer)
         }
 
         if( cmdRun.withCharliecloud ) {
@@ -765,8 +791,8 @@ class ConfigBuilder {
                 return true
 
             def result = process
-                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
-                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
+                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
 
             return result as boolean
         }

@@ -8,7 +8,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-import nextflow.Const
+import nextflow.BuildInfo
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
 import org.pf4j.PluginWrapper
@@ -248,9 +248,9 @@ class PluginUpdaterTest extends Specification {
     def 'should find matching plugin' () {
         given:
         def r1 = new PluginInfo.PluginRelease(version: '1.4.0', url: 'http://xyz')
-        def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz', requires: ">=${Const.APP_VER}")
-        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: ">=${Const.APP_VER}")
-        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: ">=${Const.APP_VER}")
+        def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz', requires: ">=${BuildInfo.version}")
+        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: ">=${BuildInfo.version}")
+        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: ">=${BuildInfo.version}")
         def r5 = new PluginInfo.PluginRelease(version: '3.0.0', url: 'http://xyz', requires: '99.01.0')
         def PLUGINS = [
                 'nf-foo': new PluginInfo(id:'nf-foo', releases: [r1, r2, r3, r4, r5]),
@@ -383,6 +383,23 @@ class PluginUpdaterTest extends Specification {
         'nf-amazon'     | '1.0.0'       | '1.0.0'   | false
         'nf-amazon'     | '1.0.0'       | '1.1.0'   | false
         'nf-amazon'     | '1.1.0'       | '1.0.0'   | true
+
+    }
+
+    @Unroll
+    def 'should match meta file name' () {
+        when:
+        def matcher = PluginUpdater.META_REGEX.matcher(FILE_NAME)
+        then:
+        matcher.matches() == EXPECTED
+        !EXPECTED || matcher.group(1) == PLUGIN
+        
+        where:
+        FILE_NAME                               | EXPECTED  | PLUGIN
+        'foo'                                   | false     | null
+        'foo.json'                              | false     | null
+        'nf-foo-1.0.0-meta.json'                | true      | 'nf-foo'
+        'xpack-google-1.0.0-beta.3-meta.json'   | true      | 'xpack-google'
 
     }
 }

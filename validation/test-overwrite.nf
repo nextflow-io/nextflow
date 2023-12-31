@@ -1,4 +1,6 @@
-nextflow.enable.dsl=1
+workflow {
+  foo()
+}
 
 process foo {
   container = 'quay.io/nextflow/bash'

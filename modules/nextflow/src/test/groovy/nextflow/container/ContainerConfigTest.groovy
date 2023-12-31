@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +59,61 @@ class ContainerConfigTest extends Specification {
         [:]                             | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | true
         [entrypointOverride: false]     | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | false
 
+    }
+
+    @Unroll
+    def 'should validate oci mode and direct mode' () {
+
+        when:
+        def cfg = new ContainerConfig(OPTS)
+        then:
+        cfg.isSingularityOciMode() == OCI_MODE
+        cfg.canRunOciImage() == AUTO_PULL
+
+        where:
+        OPTS                                        | OCI_MODE  | AUTO_PULL
+        [:]                                         | false     | false
+        [oci:true]                                  | false     | false
+        [oci:false]                                 | false     | false
+        [ociMode:true]                              | false     | false
+        and:
+        [engine:'docker', oci:true]                 | false     | false
+        [engine:'singularity']                      | false     | false
+        [engine:'singularity', oci:false]           | false     | false
+        [engine:'singularity', ociAutoPull:false]   | false     | false
+        and:
+        [engine:'singularity', oci:true]            | true      | true
+        [engine:'singularity', ociMode:true]        | true      | true
+        [engine:'apptainer', oci:true]              | false     | false
+        [engine:'apptainer', ociMode:true]          | false     | false
+        and:
+        [engine:'singularity', ociAutoPull:true]    | false         | true
+        [engine:'apptainer', ociAutoPull:true]      | false         | true
+
+    }
+
+    def 'should get fusion options' () {
+        when:
+        def cfg = new ContainerConfig(OPTS)
+
+        then:
+        cfg.fusionOptions() == EXPECTED
+        
+        where:
+        OPTS                                            | EXPECTED
+        [:]                                             | null
+        [engine:'docker']                               | '--rm --privileged'
+        [engine:'podman']                               | '--rm --privileged'
+        and:
+        [engine: 'singularity']                         | null
+        [engine: 'singularity', ociMode:true]           | '-B /dev/fuse'
+        [engine: 'singularity', ociAutoPull: true]      | null
+        [engine: 'apptainer', oci:true]                 | null
+        and:
+        [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
+        [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'
+        and:
+        [engine:'sarus', fusionOptions:'--other']       | '--other'
     }
 
 }
