@@ -32,7 +32,7 @@ import nextflow.secret.SecretsProvider
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Manage pipeline secrets (preview)")
+@Parameters(commandDescription = "Manage pipeline secrets")
 class CmdSecret extends CmdBase implements UsageAware {
 
     interface SubCmd {
