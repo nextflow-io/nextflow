@@ -474,7 +474,7 @@ class Launcher {
      */
     int run() {
         /*
-         * boostrap the application content
+         * bootstrap the application content
          */
         App.start()
 

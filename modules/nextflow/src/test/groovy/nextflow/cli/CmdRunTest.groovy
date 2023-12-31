@@ -385,7 +385,7 @@ class CmdRunTest extends AppSpec {
         def warning = capture
                 .toString()
                 .readLines()
-                .findAll {  { !it.contains("No 'plugins' root") }}   // this is needed by an exected warning reported by the plugin system
+                .findAll {  { !it.contains("No 'plugins' root") }}   // this is needed by an executed warning reported by the plugin system
                 .findResults { line -> line.contains('WARN') ? line : null }
                 .join('\n')
         and:

@@ -28,7 +28,7 @@ import org.pf4j.PluginManager
  */
 interface PluginService {
 
-    final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+    final static String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
 
     void init()
 
