@@ -16,7 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
-import java.nio.file.FileSystems
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -26,12 +26,12 @@ import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.processor.TaskBean
 import nextflow.util.Duration
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AwsBatchScriptLauncherTest extends Specification {
+class AwsBatchScriptLauncherTest extends AppSpec {
 
     def setup() {
         new Session()

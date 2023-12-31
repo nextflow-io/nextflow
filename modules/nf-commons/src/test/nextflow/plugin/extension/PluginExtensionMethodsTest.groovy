@@ -21,8 +21,6 @@ import java.nio.file.Path
 
 import nextflow.Channel
 import nextflow.exception.DuplicateModuleFunctionException
-import nextflow.plugin.Plugins
-import nextflow.plugin.TestPluginManager
 import spock.lang.Shared
 import spock.lang.TempDir
 import test.Dsl2Spec
@@ -36,24 +34,27 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
     @Shared
     Path folder
 
-    @Shared String pluginsMode
+    /*
+     * This test requires the use of a custom plugin manager that needs to be
+     * injected via the Micronaut factory. For this reason it's important
+     * the following properties are set before the Micronaut context is started
+     * therefore before the method `App.start` is invoked
+     * See the class `TestPluginFactory`
+     */
+    def setupSpec() {
+        System.setProperty('pf4j.mode', 'dev')
+        System.setProperty('nextflow.plugin.factory', 'TestPluginFactory')
+    }
+
+    def cleanupSpec() {
+        PluginExtensionProvider.reset()
+        System.clearProperty('pf4j.mode')
+    }
 
     def setup() {
         // reset previous instances
         PluginExtensionProvider.reset()
-        // this need to be set *before* the plugin manager class is created
-        pluginsMode = System.getProperty('pf4j.mode')
-        System.setProperty('pf4j.mode', 'dev')
-        // the plugin root should
-        def root = Path.of('.').toAbsolutePath().normalize()
-        def manager = new TestPluginManager(root)
-        Plugins.init(root, 'dev', manager)
-    }
 
-    def cleanup() {
-        Plugins.stop()
-        PluginExtensionProvider.reset()
-        pluginsMode ? System.setProperty('pf4j.mode',pluginsMode) : System.clearProperty('pf4j.mode')
     }
 
     def 'should execute custom operator extension/1' () {

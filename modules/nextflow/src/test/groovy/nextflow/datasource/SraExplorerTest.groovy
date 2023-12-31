@@ -22,12 +22,12 @@ import java.nio.file.Path
 import nextflow.Const
 import spock.lang.IgnoreIf
 import spock.lang.Requires
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SraExplorerTest extends Specification {
+class SraExplorerTest extends AppSpec {
 
     def 'should return query url' () {
         when:

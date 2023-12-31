@@ -16,15 +16,15 @@
 
 package nextflow.cli
 
-import spock.lang.Specification
 import java.nio.file.Files
 
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
-class CmdCleanTest extends Specification {
+class CmdCleanTest extends AppSpec {
 
     def 'empty folder' () {
 

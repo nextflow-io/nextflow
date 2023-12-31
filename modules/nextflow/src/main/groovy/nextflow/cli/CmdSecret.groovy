@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.App
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.PluginService
 import nextflow.secret.SecretsLoader
 import nextflow.secret.SecretsProvider
 /**
@@ -108,8 +107,7 @@ class CmdSecret extends CmdBase implements UsageAware {
         }
 
         // setup the plugins system and load the secrets provider
-        App.get(PluginService).init()
-        provider = App.get(SecretsLoader).load()
+        provider = App.instance.getBean(SecretsLoader).load()
 
         // run the command
         try {

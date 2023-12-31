@@ -23,14 +23,14 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import spock.lang.Requires
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Requires({System.getenv('AZURE_STORAGE_ACCOUNT_NAME') && System.getenv('AZURE_STORAGE_ACCOUNT_KEY')})
-class FileHelperAzTest extends Specification {
+class FileHelperAzTest extends AppSpec {
 
     def setupSpec() {
         def CONFIG = [azure: [
@@ -46,6 +46,15 @@ class FileHelperAzTest extends Specification {
         Global.session = null
     }
 
+    private Path asPath(String str) {
+        if( str==null )
+            return null
+        if( str.startsWith('az://'))
+            return FileSystemPathFactory.parse(str)
+        if( str.startsWith('/'))
+            return Path.of(str)
+        throw new IllegalStateException("Unexpected file path: $str")
+    }
 
     @Unroll
     def 'should convert to canonical path with base' () {
@@ -53,7 +62,7 @@ class FileHelperAzTest extends Specification {
         SysEnv.push(NXF_FILE_ROOT: 'az://host.com/work')
 
         expect:
-        FileHelper.toCanonicalPath(VALUE) == EXPECTED
+        FileHelper.toCanonicalPath(VALUE) == asPath(EXPECTED)
 
         cleanup:
         SysEnv.pop()
@@ -61,16 +70,16 @@ class FileHelperAzTest extends Specification {
         where:
         VALUE                       | EXPECTED
         null                        | null
-        'file.txt'                  | FileHelper.asPath('az://host.com/work/file.txt')
-        Path.of('file.txt')         | FileHelper.asPath('az://host.com/work/file.txt')
+        'file.txt'                  | 'az://host.com/work/file.txt'
+        Path.of('file.txt')         | 'az://host.com/work/file.txt'
         and:
-        './file.txt'                | FileHelper.asPath('az://host.com/work/file.txt')
-        '.'                         | FileHelper.asPath('az://host.com/work')
-        './'                        | FileHelper.asPath('az://host.com/work')
-        '../file.txt'               | FileHelper.asPath('az://host.com/file.txt')
+        './file.txt'                | 'az://host.com/work/file.txt'
+        '.'                         | 'az://host.com/work'
+        './'                        | 'az://host.com/work'
+        '../file.txt'               | 'az://host.com/file.txt'
         and:
-        '/file.txt'                 | Path.of('/file.txt')
-        Path.of('/file.txt')        | Path.of('/file.txt')
+        '/file.txt'                 | '/file.txt'
+        Path.of('/file.txt')        | '/file.txt'
 
     }
 

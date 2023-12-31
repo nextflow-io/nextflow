@@ -12,39 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.cli
+package test
 
-import java.nio.file.Files
 
-import spock.lang.IgnoreIf
-import spock.lang.Requires
-import test.AppSpec
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdCloneTest extends AppSpec {
+class AppSpec extends Specification {
 
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testClone() {
+    def setup() {
+        nextflow.App.start()
+    }
 
-        given:
-        def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def dir = Files.createTempDirectory('test')
-        def cmd = new CmdClone(hubUser: accessToken)
-        cmd.args = ['nextflow-io/hello', dir.toFile().toString()]
-
-        when:
-        cmd.run()
-
-        then:
-        dir.resolve('README.md').exists()
-
-        cleanup:
-        dir?.deleteDir()
+    def cleanup() {
+        nextflow.App.shutdown()
     }
 
 }

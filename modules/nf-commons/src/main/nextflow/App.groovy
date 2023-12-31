@@ -17,30 +17,68 @@
 
 package nextflow
 
-import groovy.transform.Memoized
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.Environment
 import nextflow.plugin.PluginService
-
 /**
  * Creates Micronaut application context
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@CompileStatic
 class App {
 
-    @Memoized
-    static synchronized ApplicationContext context() {
+    private static Object lock = new Object()
+
+    private static App app
+
+    private ApplicationContext context
+
+    static App getInstance() {
+        if( !app )
+            throw new IllegalStateException("Application context has not been started")
+        return app
+    }
+
+    static App start() {
+        synchronized (lock) {
+            if( app )
+                throw new IllegalStateException("Application context has been already started")
+            return app = new App()
+        }
+    }
+
+    static void shutdown(boolean quietly=false) {
+        if( !app ) {
+            final msg = "Application context has not been started"
+            if( quietly ) {
+                log.debug msg
+                return
+            }
+            throw new IllegalStateException(msg)
+        }
+        app.context.stop()
+        app = null
+    }
+
+    private App() {
         final props = ['micronaut.bootstrap.context': 'false'] as Map<String,Object>
-        final result = ApplicationContext.run(props, Environment.CLI)
-        return result
+        context = ApplicationContext.run(props, Environment.CLI)
     }
 
-    static <T> T get(Class<T> clazz) {
-        context().getBean(clazz)
+    ApplicationContext context() {
+        return context
     }
 
-    static PluginService getPluginService() {
-        get(PluginService)
+    <T> T getBean(Class<T> clazz) {
+        context.getBean(clazz)
     }
+
+    PluginService getPluginService() {
+        context.getBean(PluginService)
+    }
+
 }

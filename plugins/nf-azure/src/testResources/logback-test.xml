@@ -24,6 +24,8 @@
     <logger name="org.apache.http.wire" level="INFO" />
     <logger name="reactor" level="INFO" />
     <logger name="io.netty" level="INFO" />
+    <logger name="org.pf4j" level="INFO" />
+    <logger name="io.micronaut" level="INFO" />
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

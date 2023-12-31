@@ -29,7 +29,6 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import io.micronaut.context.ApplicationContext
 import nextflow.App
 import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
@@ -37,7 +36,6 @@ import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
@@ -51,7 +49,7 @@ import org.eclipse.jgit.api.errors.GitAPIException
  */
 @Slf4j
 @CompileStatic
-class Launcher implements Closeable {
+class Launcher {
 
     /**
      * Create the application command line parser
@@ -77,8 +75,6 @@ class Launcher implements Closeable {
 
     private String colsString
 
-    private ApplicationContext context
-
     /**
      * Create a launcher object and parse the command line parameters
      *
@@ -88,14 +84,7 @@ class Launcher implements Closeable {
         init()
     }
 
-    @Override
-    void close() throws IOException {
-        context?.close()
-    }
-
     protected void init() {
-        context = App.context()
-
         allCommands = (List<CmdBase>)[
                 new CmdClean(),
                 new CmdClone(),
@@ -114,11 +103,9 @@ class Launcher implements Closeable {
                 new CmdHelp(),
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
+                new CmdSecret(),
                 new CmdInspect()
         ]
-
-        if(App.get(SecretsLoader).isEnabled())
-            allCommands.add(new CmdSecret())
 
         // legacy command
         final cmdCloud = SpuriousDeps.cmdCloud()
@@ -486,6 +473,10 @@ class Launcher implements Closeable {
      * Launch the pipeline execution
      */
     int run() {
+        /*
+         * boostrap the application content
+         */
+        App.start()
 
         /*
          * setup environment
@@ -562,6 +553,9 @@ class Launcher implements Closeable {
             return(1)
         }
 
+        finally {
+            App.shutdown(true)
+        }
     }
 
     /**
@@ -680,13 +674,10 @@ class Launcher implements Closeable {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
-        try (Launcher launcher = new Launcher()) {
-            final status =  launcher.command(args).run()
-            if( status )
-                System.exit(status)
-        }
+        final status = new Launcher() .command(args) .run()
+        if( status )
+            System.exit(status)
     }
-
 
     /**
      * Print the application version number

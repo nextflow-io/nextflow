@@ -21,9 +21,8 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.plugin.Plugins
+import nextflow.App
 import org.pf4j.ExtensionPoint
-
 /**
  * Factory class that create an instance of the {@link CacheDB}
  * 
@@ -36,7 +35,7 @@ abstract class CacheFactory implements ExtensionPoint {
     protected abstract CacheDB newInstance(UUID uniqueId, String runName, Path home=null)
 
     static CacheDB create(UUID uniqueId, String runName, Path home=null) {
-        final all = Plugins.getPriorityExtensions(CacheFactory)
+        final all = App.instance.pluginService.getPriorityExtensions(CacheFactory)
         if( !all )
             throw new IllegalStateException("Unable to find Nextflow cache factory")
         final factory = all.first()

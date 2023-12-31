@@ -20,7 +20,6 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.App
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
 /**
@@ -49,8 +48,6 @@ class CmdClone extends CmdBase implements HubOptions {
 
     @Override
     void run() {
-        // init plugin system
-        App.getPluginService()
         // the pipeline name
         String pipeline = args[0]
         final manager = new AssetManager(pipeline, this)

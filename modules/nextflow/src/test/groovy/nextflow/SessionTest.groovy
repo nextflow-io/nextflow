@@ -25,19 +25,19 @@ import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
 import nextflow.trace.WorkflowStatsObserver
-import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SessionTest extends Specification {
+class SessionTest extends AppSpec {
 
 
     def 'test baseDir and binDir'() {

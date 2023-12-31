@@ -27,13 +27,13 @@ import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BashWrapperBuilderTest extends Specification {
+class BashWrapperBuilderTest extends AppSpec {
 
     def setupSpec() {
         new Session()

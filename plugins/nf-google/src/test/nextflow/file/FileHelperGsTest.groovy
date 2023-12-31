@@ -22,19 +22,17 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
-import nextflow.SysEnv
-import spock.lang.Ignore
-import spock.lang.Specification
-
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
+import spock.lang.Ignore
 import spock.lang.Unroll
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileHelperGsTest extends Specification {
+class FileHelperGsTest extends AppSpec {
 
     def 'should parse google storage path' () {
 

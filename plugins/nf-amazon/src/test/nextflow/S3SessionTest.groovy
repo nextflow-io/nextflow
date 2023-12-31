@@ -20,14 +20,23 @@ package nextflow
 import java.nio.file.Path
 
 import nextflow.file.FileHelper
-import spock.lang.Specification
+import nextflow.file.FileSystemPathFactory
 import spock.lang.Unroll
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class S3SessionTest extends Specification {
+class S3SessionTest extends AppSpec {
+
+    private Path asPath(String str) {
+        if( str==null )
+            return null
+        if( str.startsWith('s3://'))
+            return FileSystemPathFactory.parse(str)
+        else
+            return Path.of(str)
+    }
 
     @Unroll
     def 'should get cloud cache path' () {
@@ -35,13 +44,13 @@ class S3SessionTest extends Specification {
         def session = Spy(Session)
 
         expect:
-        session.cloudCachePath(CONFIG, FileHelper.asPath(WORKDIR)) == EXPECTED
+        session.cloudCachePath(CONFIG, FileHelper.asPath(WORKDIR)) == asPath(EXPECTED)
 
         where:
         CONFIG                                  | WORKDIR           | EXPECTED
         null                                    | '/foo'            | null
-        [enabled:true]                          | 's3://foo/work'   | FileHelper.asPath('s3://foo/work')
-        [enabled:true, path:'s3://this/that']   | '/foo'            | FileHelper.asPath('s3://this/that')
+        [enabled:true]                          | 's3://foo/work'   | 's3://foo/work'
+        [enabled:true, path:'s3://this/that']   | '/foo'            | 's3://this/that'
 
     }
 

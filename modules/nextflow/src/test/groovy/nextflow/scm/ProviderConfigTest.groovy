@@ -16,14 +16,14 @@
 
 package nextflow.scm
 
-import spock.lang.Specification
-import spock.lang.Unroll
 
+import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ProviderConfigTest extends Specification {
+class ProviderConfigTest extends AppSpec {
 
     static final String CONFIG = '''
         providers {

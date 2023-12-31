@@ -11,13 +11,12 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzPathFactory
 import nextflow.processor.TaskBean
 import spock.lang.Requires
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BashWrapperBuilderWithAzTest extends Specification {
+class BashWrapperBuilderWithAzTest extends AppSpec {
 
     @Requires({System.getenv('AZURE_STORAGE_ACCOUNT_NAME') && System.getenv('AZURE_STORAGE_ACCOUNT_KEY')})
     def 'should include az helpers' () {

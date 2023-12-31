@@ -28,14 +28,13 @@ import nextflow.mail.Mail
 import nextflow.mail.Mailer
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
-import spock.lang.Specification
+import test.AppSpec
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WorkflowNotifierTest extends Specification {
+class WorkflowNotifierTest extends AppSpec {
 
     def 'should load notification text template' () {
 

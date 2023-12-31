@@ -25,13 +25,13 @@ import nextflow.NextflowMeta
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.script.WorkflowMetadata
-import spock.lang.Specification
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ReportObserverTest extends Specification {
+class ReportObserverTest extends AppSpec {
 
     def setupSpec() {
         TraceRecord.TIMEZONE = TimeZone.getTimeZone('UTC') // note: set the timezone to be sure the time string does not change on CI test servers

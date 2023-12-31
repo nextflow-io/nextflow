@@ -334,7 +334,7 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        if( App.get(SecretsLoader).isEnabled() )
+        if( App.instance.getBean(SecretsLoader).isEnabled() )
             binding.put('secrets', new SecretsContext())
         return binding
     }

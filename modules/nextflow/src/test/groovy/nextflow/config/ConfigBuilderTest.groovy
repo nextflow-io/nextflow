@@ -29,13 +29,13 @@ import nextflow.exception.ConfigParseException
 import nextflow.trace.TraceHelper
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConfigBuilderTest extends Specification {
+class ConfigBuilderTest extends AppSpec {
 
     def setup() {
         TraceHelper.testTimestampFmt = '20221001'

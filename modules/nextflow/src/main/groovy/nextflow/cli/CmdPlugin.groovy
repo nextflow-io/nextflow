@@ -17,14 +17,13 @@
 
 package nextflow.cli
 
+import static nextflow.cli.PluginExecAware.*
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.App
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
-import static nextflow.cli.PluginExecAware.CMD_SEP
-
 /**
  * Plugin manager command
  * 
@@ -46,13 +45,11 @@ class CmdPlugin extends CmdBase {
     void run() {
         if( !args )
             throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
-        // setup plugins system
-        App.getPluginService()
         // check for the plugins install
         if( args[0] == 'install' ) {
             if( args.size()!=2 )
                 throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
-            Plugins.pull(args[1].tokenize(','))
+            App.instance.pluginService.pullPlugins(args[1].tokenize(','))
         }
         // plugin run command
         else if( args[0].contains(CMD_SEP) ) {
@@ -62,8 +59,8 @@ class CmdPlugin extends CmdBase {
             final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
 
             // push back the command as the first item
-            Plugins.start(target)
-            final wrapper = Plugins.manager.getPlugin(target)
+            App.instance.pluginService.start(target)
+            final wrapper = App.instance.pluginService.manager.getPlugin(target)
             if( !wrapper )
                 throw new AbortOperationException("Cannot find target plugin: $target")
             final plugin = wrapper.getPlugin()

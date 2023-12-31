@@ -23,13 +23,12 @@ import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FusionHelperTest extends Specification {
+class FusionHelperTest extends AppSpec {
 
     def 'should make foreign path to fusion paths' () {
         when:

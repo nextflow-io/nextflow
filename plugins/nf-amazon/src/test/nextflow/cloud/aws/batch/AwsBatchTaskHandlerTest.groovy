@@ -53,13 +53,13 @@ import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AwsBatchTaskHandlerTest extends Specification {
+class AwsBatchTaskHandlerTest extends AppSpec {
 
     def 'should normalise a task name'() {
         given:

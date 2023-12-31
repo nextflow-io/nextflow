@@ -28,6 +28,8 @@ import org.pf4j.PluginManager
  */
 interface PluginService {
 
+    final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+
     void init()
 
     void init(boolean embeddedMode)
@@ -41,6 +43,16 @@ interface PluginService {
     void stop()
 
     <T> List<T> getExtensions(Class<T> type)
+
+    default <T> T getExtension(Class<T> type) {
+        final allExtensions = getExtensions(type)
+        return allExtensions ? allExtensions.first() : null
+    }
+
+    default <T> List<T> getExtensionsInPluginId(Class<T> type, String pluginId) {
+        final allExtensions = getExtensions(type, pluginId)
+        return allExtensions
+    }
 
     <T> List<T> getExtensions(Class<T> type, String pluginId)
 

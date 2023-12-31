@@ -17,29 +17,31 @@
 
 package nextflow.plugin
 
+import java.nio.file.Path
+
 import io.micronaut.context.annotation.Context
-import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Primary
+import io.micronaut.context.annotation.Replaces
+import io.micronaut.context.annotation.Requires
+
 /**
- * Implements a factory class for {@link PluginService}
+ * A plugin factory for unit testing
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Factory
-class PluginFactory {
+@io.micronaut.context.annotation.Factory
+@Replaces(PluginFactory)
+class TestPluginFactory {
 
+    @Primary
     @Context
+    @Requires(property = 'nextflow.plugin.factory', value = 'TestPluginFactory')
     PluginService create() {
+        final root = Path.of('.').toAbsolutePath().normalize()
+        final manager = new TestPluginManager(root)
         final result = new PluginServiceImpl()
-        result.init(false)
+        result.init(root, 'dev', manager)
         return result
     }
 
-
-//    @Named('embeddable')
-//    @Singleton
-//    PluginService createEmbeddableService() {
-//        final result = new PluginServiceImpl()
-//        result.init(true)
-//        return result
-//    }
 }

@@ -24,7 +24,6 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.App
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
@@ -69,7 +68,6 @@ class CmdConfig extends CmdBase {
 
     @Override
     void run() {
-        App.getPluginService()
         Path base = null
         if( args ) base = getBaseDir(args[0])
         if( !base ) base = Paths.get('.')

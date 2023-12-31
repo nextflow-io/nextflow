@@ -32,12 +32,12 @@ import groovy.transform.CompileStatic
 import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.IgnoreIf
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class HttpFilesTests extends Specification {
+class HttpFilesTests extends AppSpec {
 
     @Rule
     WireMockRule wireMockRule = new WireMockRule(18080)

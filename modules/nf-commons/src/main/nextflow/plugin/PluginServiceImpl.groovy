@@ -38,7 +38,7 @@ import org.pf4j.PluginStateListener
  */
 @Slf4j
 @CompileStatic
-class PluginsFacade implements PluginStateListener, PluginService {
+class PluginServiceImpl implements PluginStateListener, PluginService {
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
@@ -49,10 +49,10 @@ class PluginsFacade implements PluginStateListener, PluginService {
     private PluginUpdater updater
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
-    private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
+    private String indexUrl = DEFAULT_PLUGINS_REPO
     private boolean embedded
 
-    PluginsFacade() {
+    PluginServiceImpl() {
         mode = getPluginsMode()
         root = getPluginsDir()
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
@@ -60,7 +60,7 @@ class PluginsFacade implements PluginStateListener, PluginService {
         System.setProperty('pf4j.mode', mode)
     }
 
-    PluginsFacade(Path root, String mode=PROD_MODE) {
+    PluginServiceImpl(Path root, String mode=PROD_MODE) {
         this.mode = mode
         this.root = root
         System.setProperty('pf4j.mode', mode)

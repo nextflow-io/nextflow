@@ -330,7 +330,7 @@ class BashWrapperBuilder {
     }
 
     protected String getSecretsEnv() {
-        final secretsLoader = App.get(SecretsLoader)
+        final secretsLoader = App.instance.getBean(SecretsLoader)
         return secretsLoader.isEnabled()
                 ? secretsLoader.load() .getSecretsEnv(secretNames)
                 : null

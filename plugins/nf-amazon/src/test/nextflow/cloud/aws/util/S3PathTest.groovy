@@ -2,14 +2,13 @@ package nextflow.cloud.aws.util
 
 import nextflow.cloud.aws.nio.S3Path
 import nextflow.file.FileHelper
-import spock.lang.Specification
 import spock.lang.Unroll
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class S3PathTest extends Specification {
+class S3PathTest extends AppSpec {
 
     @Unroll
     def 'should convert to uri string' () {

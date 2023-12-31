@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.file.FileHelper
 import org.junit.Rule
-import spock.lang.Specification
 import spock.lang.Timeout
+import test.AppSpec
 import test.TemporaryPath
 import test.TestHelper
 /**
@@ -34,7 +34,7 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(value = 1, unit = TimeUnit.MINUTES)
-class ChannelTest extends Specification {
+class ChannelTest extends AppSpec {
 
     def setupSpec() {
         new Session()

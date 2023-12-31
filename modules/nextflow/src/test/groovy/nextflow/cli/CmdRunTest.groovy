@@ -16,22 +16,20 @@
 
 package nextflow.cli
 
-
 import java.nio.file.Files
 
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import org.junit.Rule
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 import test.OutputCapture
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdRunTest extends Specification {
+class CmdRunTest extends AppSpec {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -387,6 +385,7 @@ class CmdRunTest extends Specification {
         def warning = capture
                 .toString()
                 .readLines()
+                .findAll {  { !it.contains("No 'plugins' root") }}   // this is needed by an exected warning reported by the plugin system
                 .findResults { line -> line.contains('WARN') ? line : null }
                 .join('\n')
         and:

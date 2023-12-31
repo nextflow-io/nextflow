@@ -22,16 +22,16 @@ import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TaskHandlerTest extends Specification {
+class TaskHandlerTest extends AppSpec {
 
-    def static final long KB = 1024
+    static final long KB = 1024
 
     def 'test get trace record'() {
 

@@ -20,14 +20,13 @@ package nextflow.cloud.google.batch
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
-import spock.lang.Specification
 import spock.lang.Unroll
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GoogleBatchScriptLauncherTest extends Specification{
+class GoogleBatchScriptLauncherTest extends AppSpec {
 
     @Unroll
     def 'should convert to container path' () {

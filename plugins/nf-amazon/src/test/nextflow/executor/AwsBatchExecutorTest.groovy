@@ -10,13 +10,12 @@ package nextflow.executor
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.aws.batch.AwsBatchExecutor
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AwsBatchExecutorTest extends Specification {
+class AwsBatchExecutorTest extends AppSpec {
 
     def 'should check is fusion' () {
         given:

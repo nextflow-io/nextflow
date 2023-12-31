@@ -27,7 +27,6 @@ import com.google.common.hash.HashCode
 import groovy.text.Template
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.App
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -140,7 +139,6 @@ class CmdLog extends CmdBase implements CacheBase {
      */
     @Override
     void run() {
-        App.getPluginService()
         init()
 
         // -- show the list of expected fields and exit

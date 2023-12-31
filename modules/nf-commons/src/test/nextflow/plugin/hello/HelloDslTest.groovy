@@ -19,17 +19,15 @@ package nextflow.plugin.hello
 
 import nextflow.Channel
 import nextflow.plugin.extension.PluginExtensionProvider
-import spock.lang.Specification
 import spock.lang.Timeout
+import test.AppSpec
 import test.MockScriptRunner
-
-
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *
  */
 @Timeout(10)
-class HelloDslTest extends Specification{
+class HelloDslTest extends AppSpec {
 
     def setup () {
         def ext = new PluginExtensionProvider(){

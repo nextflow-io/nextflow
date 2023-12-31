@@ -201,8 +201,8 @@ class IncludeDef {
             throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot start with a slash character - offending value: '$pluginId'")
         if( pluginId.contains('@') )
             throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot contain a specific version requirement - offending value: '$pluginId'")
-        App.pluginService.startIfMissing(pluginId)
-        if( !App.pluginService.isStarted(pluginId) )
+        App.instance.pluginService.startIfMissing(pluginId)
+        if( !App.instance.pluginService.isStarted(pluginId) )
             throw new IllegalArgumentException("Unable start plugin with Id '$pluginId'")
         final Map<String,String> declaredNames = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
         log.debug "Loading included plugin extensions with names: $declaredNames; plugin Id: $pluginId"

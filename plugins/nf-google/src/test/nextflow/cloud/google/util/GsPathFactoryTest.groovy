@@ -21,14 +21,13 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.config.GoogleRetryOpts
-import spock.lang.Specification
 import spock.lang.Unroll
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GsPathFactoryTest extends Specification {
+class GsPathFactoryTest extends AppSpec {
 
     @Unroll
     def 'should create gs path #PATH' () {

@@ -22,9 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
-import nextflow.plugin.Plugins
+import nextflow.App
 import org.pf4j.ExtensionPoint
-
 /**
  * Define extension methods for supporting pluggable file remote file systems e.g. AWS S3 or Google Storage
  *
@@ -90,7 +89,7 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
 
     private static List<FileSystemPathFactory> factories0() {
         final factories = new ArrayList(10)
-        final itr = Plugins.getPriorityExtensions(FileSystemPathFactory).iterator()
+        final itr = App.instance.pluginService.getPriorityExtensions(FileSystemPathFactory).iterator()
         while( itr.hasNext() )
             factories.add(itr.next())
         log.trace "File system path factories: ${factories}"

@@ -25,12 +25,12 @@ import nextflow.file.http.XPath
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class LocalTaskHandlerTest extends Specification {
+class LocalTaskHandlerTest extends AppSpec {
 
     def 'should create local process builder' () {
         given:

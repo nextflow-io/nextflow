@@ -11,7 +11,7 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class PluginsFacadeTest extends Specification {
+class PluginServiceImplTest extends Specification {
 
     def 'should setup plugins' () {
         given:
@@ -20,7 +20,7 @@ class PluginsFacadeTest extends Specification {
         server.start()
         and:
         def folder = Files.createTempDirectory('test')
-        def plugins = new PluginsFacade(folder)
+        def plugins = new PluginServiceImpl(folder)
         plugins.env = [:]
         plugins.indexUrl = 'http://localhost:9900/plugins.json'
 
@@ -42,7 +42,7 @@ class PluginsFacadeTest extends Specification {
                 'delta': new PluginSpec('delta', '0.1.0'),
         ])
 
-        def handler = new PluginsFacade(defaultPlugins: defaults)
+        def handler = new PluginServiceImpl(defaultPlugins: defaults)
         and:
         def cfg = [plugins: [ 'foo@1.2.3', 'bar@3.2.1', 'delta', 'omega' ]]
 
@@ -74,7 +74,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-wave': new PluginSpec('nf-wave', '0.1.0')
         ])
         and:
-        def handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        def handler = new PluginServiceImpl(defaultPlugins: defaults, env: [:])
 
         when:
         def result = handler.pluginsRequirement([:])
@@ -82,67 +82,67 @@ class PluginsFacadeTest extends Specification {
         result == []
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([:])
         then:
         result == []
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([tower:[enabled:false]])
         then:
         result == []
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([tower:[enabled:true]])
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [TOWER_ACCESS_TOKEN:'xyz'])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [TOWER_ACCESS_TOKEN:'xyz'])
         result = handler.pluginsRequirement([:])
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [:])
         result = handler.pluginsRequirement([wave:[enabled:true]])
         then:
         result == [ new PluginSpec('nf-wave', '0.1.0') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [:])
         result = handler.pluginsRequirement([plugins: [ 'foo@1.2.3']])
         then:
         result == [ new PluginSpec('foo', '1.2.3') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [:])
         result = handler.pluginsRequirement([plugins: [ 'nf-amazon@1.2.3']])
         then:
         result == [ new PluginSpec('nf-amazon', '1.2.3') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [:])
         result = handler.pluginsRequirement([plugins: [ 'nf-amazon']])
         then:
         result == [ new PluginSpec('nf-amazon', '0.1.0') ] // <-- config is taken from the default config
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
         result = handler.pluginsRequirement([plugins: [ 'nf-amazon@1.2.3']])
         then:
         result == [ new PluginSpec('nf-amazon', '1.2.3'), new PluginSpec('nf-google','2.0.0') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
         result = handler.pluginsRequirement([:])
         then:
         result == [ new PluginSpec('nf-google','2.0.0') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        handler = new PluginServiceImpl(defaultPlugins: defaults, env: [:])
         result = handler.pluginsRequirement([cloudcache:[enabled:true]])
         then:
         result == [ new PluginSpec('nf-cloudcache', '0.1.0') ]
@@ -160,7 +160,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
-        def handler = new PluginsFacade(defaultPlugins: defaults)
+        def handler = new PluginServiceImpl(defaultPlugins: defaults)
 
         when:
         def plugins = handler.defaultPluginsConf([process:[executor: 'awsbatch']])
@@ -206,7 +206,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
-        def handler = new PluginsFacade(defaultPlugins: defaults)
+        def handler = new PluginServiceImpl(defaultPlugins: defaults)
 
         when:
         def plugins = handler.defaultPluginsConf([workDir: 's3://foo'])
@@ -251,7 +251,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
-        def handler = new PluginsFacade(defaultPlugins: defaults)
+        def handler = new PluginServiceImpl(defaultPlugins: defaults)
 
         when:
         def plugins = handler.defaultPluginsConf([bucketDir: 's3://foo'])
@@ -294,7 +294,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
-        def handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT: 'nf-amazon,nf-tower@1.0.1,nf-foo@2.2.0,nf-bar'])
+        def handler = new PluginServiceImpl(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT: 'nf-amazon,nf-tower@1.0.1,nf-foo@2.2.0,nf-bar'])
 
         when:
         def plugins = handler.defaultPluginsConf([:])
@@ -309,7 +309,7 @@ class PluginsFacadeTest extends Specification {
     @Unroll
     def 'should validate plugins mode' () {
         given:
-        def facade = new PluginsFacade(env: ENV)
+        def facade = new PluginServiceImpl(env: ENV)
         expect:
         facade.getPluginsMode() == EXPECTED
         where:
@@ -322,7 +322,7 @@ class PluginsFacadeTest extends Specification {
     @Unroll
     def 'should validate plugins default' () {
         given:
-        def facade = new PluginsFacade(env: ENV)
+        def facade = new PluginServiceImpl(env: ENV)
         expect:
         facade.getPluginsDefault() == EXPECTED
         where:
@@ -337,7 +337,7 @@ class PluginsFacadeTest extends Specification {
     @Unroll
     def 'should validate plugins dir' () {
         given:
-        def facade = new PluginsFacade(env: ENV)
+        def facade = new PluginServiceImpl(env: ENV)
         expect:
         facade.getPluginsDir() == EXPECTED
         where:
@@ -350,7 +350,7 @@ class PluginsFacadeTest extends Specification {
     @Unroll
     def 'should merge plugins' () {
         given:
-        def facade = new PluginsFacade()
+        def facade = new PluginServiceImpl()
         def configPlugins = CONFIG.tokenize(',').collect { PluginSpec.parse(it) }
         def defaultPlugins = DEFAULT.tokenize(',').collect { PluginSpec.parse(it) }
         def expectedPlugins = EXPECTED.tokenize(',').collect { PluginSpec.parse(it) }
@@ -380,7 +380,7 @@ class PluginsFacadeTest extends Specification {
 
     def 'should get priority from object' () {
         given:
-        def facade = new PluginsFacade()
+        def facade = new PluginServiceImpl()
         expect:
         facade.priority0('foo') == 0
         facade.priority0(new Foo()) == 100
@@ -411,7 +411,7 @@ class PluginsFacadeTest extends Specification {
         and:
         def THE_LIST = [yyy, xxx, zzz, www]; THE_LIST.shuffle()
         and:
-        def facade = Spy( new PluginsFacade() ) {
+        def facade = Spy( new PluginServiceImpl() ) {
             getExtensions(Foo) >> THE_LIST
         }
 

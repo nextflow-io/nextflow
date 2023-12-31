@@ -1,6 +1,6 @@
 May-18 21:16:09.405 [main] DEBUG nextflow.cli.Launcher - $> ../../launch.sh -q run splitjson-with-path.nf
 May-18 21:16:09.489 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 23.05.0-edge
-May-18 21:16:09.531 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=dev; embedded=false; plugins-dir=/home/bent/projects/nextflow-io_nextflow/plugins; core-plugins: nf-amazon@2.0.0,nf-azure@1.1.0,nf-codecommit@0.1.5,nf-console@1.0.6,nf-ga4gh@1.0.6,nf-google@1.7.4,nf-tower@1.5.13,nf-wave@0.9.0
+May-18 21:16:09.531 [main] DEBUG nextflow.plugin.PluginServiceImpl - Setting up plugin manager > mode=dev; embedded=false; plugins-dir=/home/bent/projects/nextflow-io_nextflow/plugins; core-plugins: nf-amazon@2.0.0,nf-azure@1.1.0,nf-codecommit@0.1.5,nf-console@1.0.6,nf-ga4gh@1.0.6,nf-google@1.7.4,nf-tower@1.5.13,nf-wave@0.9.0
 May-18 21:16:09.531 [main] DEBUG nextflow.plugin.DevPluginManager - Add plugin root repository: /home/bent/projects/nextflow-io_nextflow/plugins
 May-18 21:16:09.535 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
 May-18 21:16:09.536 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
@@ -16,8 +16,8 @@ May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-con
 May-18 21:16:09.565 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-azure@1.1.0' resolved
 May-18 21:16:09.612 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
 May-18 21:16:09.623 [main] INFO  nextflow.cli.CmdRun - Launching `splitjson-with-path.nf` [sad_hawking] DSL2 - revision: 75f20d5d34
-May-18 21:16:09.624 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
-May-18 21:16:09.624 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+May-18 21:16:09.624 [main] DEBUG nextflow.plugin.PluginServiceImpl - Plugins default=[]
+May-18 21:16:09.624 [main] DEBUG nextflow.plugin.PluginServiceImpl - Plugins resolved requirement=[]
 May-18 21:16:09.634 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/bent/.nextflow/secrets/store.json
 May-18 21:16:09.638 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@72805168] - activable => nextflow.secret.LocalSecretsProvider@72805168
 May-18 21:16:09.687 [main] DEBUG nextflow.Session - Session UUID: cd50afbf-cb5d-4dc2-87de-474cdc70dcc6

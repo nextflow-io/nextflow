@@ -1,6 +1,5 @@
 package nextflow.cloud.azure.batch
 
-
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
@@ -12,12 +11,12 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzFileSystem
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AzFileCopyStrategyTest extends Specification {
+class AzFileCopyStrategyTest extends AppSpec {
 
     protected Path mockAzPath(String path, boolean isDir=false) {
         assert path.startsWith('az://')

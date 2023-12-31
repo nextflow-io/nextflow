@@ -16,21 +16,19 @@
 
 package nextflow.cloud.google
 
-import java.nio.file.Paths
-
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
-import spock.lang.Specification
-
 import java.nio.file.FileSystem
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.spi.FileSystemProvider
 
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-abstract class GoogleSpecification extends Specification {
+abstract class GoogleSpecification extends AppSpec {
 
     protected Path mockGsPath(String path, boolean isDir=false) {
         assert path.startsWith('gs://')

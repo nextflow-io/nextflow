@@ -17,11 +17,9 @@
 
 package nextflow.scm
 
-
 import groovy.util.logging.Slf4j
 import nextflow.App
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
 import nextflow.plugin.Priority
 import nextflow.util.StringUtils
 import org.pf4j.ExtensionPoint
@@ -96,7 +94,7 @@ class RepositoryFactory implements ExtensionPoint {
         if( factories0 )
             return factories0
         // scan for available plugins
-        final result = Plugins.getPriorityExtensions(RepositoryFactory)
+        final result = App.instance.pluginService.getPriorityExtensions(RepositoryFactory)
         log.debug "Found Git repository result: ${ result.collect(it->it.class.simpleName) }"
         return factories0=result
     }
@@ -104,7 +102,7 @@ class RepositoryFactory implements ExtensionPoint {
     static RepositoryProvider newRepositoryProvider(ProviderConfig config, String project) {
         // check if it's needed to load new plugins
         if( (config.name=='codecommit' || config.platform=='codecommit') && !codeCommitLoaded ) {
-            App.pluginService.startIfMissing('nf-codecommit')
+            App.instance.pluginService.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
             factories0=null
         }
@@ -122,7 +120,7 @@ class RepositoryFactory implements ExtensionPoint {
     static ProviderConfig newProviderConfig(String name, Map<String,Object> attrs) {
         // check if it's needed to load new plugins
         if( (name=='codecommit' || attrs.platform=='codecommit') && !codeCommitLoaded ) {
-            App.pluginService.startIfMissing('nf-codecommit')
+            App.instance.pluginService.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
             factories0=null
         }
@@ -136,7 +134,7 @@ class RepositoryFactory implements ExtensionPoint {
 
     static ProviderConfig getProviderConfig(List<ProviderConfig> providers, GitUrl url) {
         if( url.domain.startsWith('git-codecommit.') && url.domain.endsWith('.amazonaws.com') && !codeCommitLoaded ) {
-            App.pluginService.startIfMissing('nf-codecommit')
+            App.instance.pluginService.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
             factories0=null
         }

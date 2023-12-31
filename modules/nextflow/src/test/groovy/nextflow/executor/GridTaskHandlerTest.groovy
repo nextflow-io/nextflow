@@ -28,13 +28,13 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import spock.lang.Specification
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GridTaskHandlerTest extends Specification {
+class GridTaskHandlerTest extends AppSpec {
 
     def 'should check retry predicate' () {
         given:

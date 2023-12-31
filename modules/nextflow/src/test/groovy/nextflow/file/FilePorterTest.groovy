@@ -25,14 +25,14 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
 import spock.lang.Ignore
-import spock.lang.Specification
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class FilePorterTest extends Specification {
+class FilePorterTest extends AppSpec {
 
 
     def 'should get the max retries value' () {

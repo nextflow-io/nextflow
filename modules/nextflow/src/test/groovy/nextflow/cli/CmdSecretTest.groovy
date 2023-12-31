@@ -21,16 +21,15 @@ import java.nio.file.Path
 
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
 import org.junit.Rule
 import spock.lang.Shared
-import spock.lang.Specification
+import test.AppSpec
 import test.OutputCapture
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class CmdSecretTest extends Specification {
+class CmdSecretTest extends AppSpec {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -40,10 +39,6 @@ class CmdSecretTest extends Specification {
 
     @Shared
     File secretFile
-
-    def cleanup(){
-        Plugins.stop()
-    }
 
     def setupSpec(){
         tempDir = Files.createTempDirectory('test').toAbsolutePath()

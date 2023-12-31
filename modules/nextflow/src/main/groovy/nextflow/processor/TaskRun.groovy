@@ -631,7 +631,7 @@ class TaskRun implements Cloneable {
         if( !configImage )
             configImage = null
 
-        final res = App.get(ContainerResolverProvider).load()
+        final res = App.instance.getBean(ContainerResolverProvider).load()
         final info = res.resolveImage(this, configImage as String)
         return info
     }

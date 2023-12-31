@@ -23,12 +23,12 @@ import nextflow.container.ContainerConfig
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CrgExecutorTest extends Specification {
+class CrgExecutorTest extends AppSpec {
 
     def testQsubCliCommand () {
 

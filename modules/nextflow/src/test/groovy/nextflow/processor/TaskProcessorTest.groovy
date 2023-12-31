@@ -44,14 +44,14 @@ import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TaskProcessorTest extends Specification {
+class TaskProcessorTest extends AppSpec {
 
     static class DummyProcessor extends TaskProcessor {
 

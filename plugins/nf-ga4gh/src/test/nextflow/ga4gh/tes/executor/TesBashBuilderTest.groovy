@@ -19,13 +19,12 @@ package nextflow.ga4gh.tes.executor
 import java.nio.file.Files
 
 import nextflow.processor.TaskBean
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TesBashBuilderTest extends Specification {
+class TesBashBuilderTest extends AppSpec {
 
 
     def 'test bash wrapper' () {

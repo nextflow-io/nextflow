@@ -18,13 +18,13 @@
 package nextflow.cli
 
 
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdInspectTest extends Specification {
+class CmdInspectTest extends AppSpec {
 
     @Unroll
     def 'should ask for confirmation' () {

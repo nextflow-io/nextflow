@@ -20,13 +20,12 @@ package nextflow.file
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import nextflow.Global
 import nextflow.Session
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GsPathTest extends Specification {
+class GsPathTest extends AppSpec {
 
     def 'should check equals and hashcode' () {
         given:

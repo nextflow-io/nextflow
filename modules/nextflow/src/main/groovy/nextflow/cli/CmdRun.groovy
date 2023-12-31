@@ -30,16 +30,15 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.App
-import nextflow.Session
 import nextflow.BuildInfo
 import nextflow.NF
 import nextflow.NextflowMeta
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.plugin.PluginService
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
@@ -290,7 +289,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Override
     void run() {
-        final pluginService = App.get(PluginService)
+        final pluginService = App.instance.pluginService
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
@@ -314,7 +313,6 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
-        pluginService.init()
 
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
@@ -337,7 +335,7 @@ class CmdRun extends CmdBase implements HubOptions {
         pluginService.load(cfg)
 
         // -- load secret provider
-        final secretsLoader = App.get(SecretsLoader)
+        final secretsLoader = App.instance.getBean(SecretsLoader)
         if( secretsLoader.isEnabled() ) {
             final provider = secretsLoader.load()
             config.withSecretProvider(provider)

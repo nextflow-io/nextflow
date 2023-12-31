@@ -16,8 +16,6 @@
 
 package nextflow
 
-import static nextflow.Const.*
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -48,9 +46,6 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
-import nextflow.util.Threads
-import nextflow.util.ThreadPoolManager
-import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
@@ -74,6 +69,8 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.ThreadPoolManager
+import nextflow.util.Threads
 import nextflow.util.VersionNumber
 import org.apache.commons.lang.exception.ExceptionUtils
 import sun.misc.Signal
@@ -408,7 +405,7 @@ class Session implements ISession {
         // set the byte-code target directory
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
-        this.executorFactory = new ExecutorFactory(Plugins.manager)
+        this.executorFactory = new ExecutorFactory(App.instance.pluginService.manager)
         this.observers = createObservers()
         this.statsEnabled = observers.any { it.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
@@ -446,7 +443,7 @@ class Session implements ISession {
         statsObserver = new WorkflowStatsObserver(this)
         result.add(statsObserver)
 
-        for( TraceObserverFactory f : Plugins.getExtensions(TraceObserverFactory) ) {
+        for( TraceObserverFactory f : App.instance.pluginService.getExtensions(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
@@ -683,7 +680,7 @@ class Session implements ISession {
             cache?.close()
 
             // -- shutdown plugins
-            Plugins.stop()
+            App.instance.pluginService.stop()
 
             // -- cleanup script classes dir
             classesDir?.deleteDir()

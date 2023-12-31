@@ -34,8 +34,8 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.io.LogOutputStream
-import nextflow.plugin.Plugins
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.parser.Parser
@@ -364,7 +364,7 @@ class Mailer {
 
     protected MailProvider provider() {
         // load all providers
-        final providers = Plugins.getExtensions(MailProvider)
+        final providers = App.instance.pluginService.getExtensions(MailProvider)
         // find the AWS provider
         final awsProvider = providers.find(it -> it.name()=='aws-ses')
         // check if it can use the aws provider

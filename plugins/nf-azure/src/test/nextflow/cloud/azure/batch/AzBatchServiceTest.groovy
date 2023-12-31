@@ -18,13 +18,13 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.joda.time.Period
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AzBatchServiceTest extends Specification {
+class AzBatchServiceTest extends AppSpec {
 
     static long _1GB = 1024 * 1024 * 1024
 

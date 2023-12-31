@@ -325,7 +325,7 @@ class FileHelper {
         // find out the default plugin for the given scheme and try to load it
         final pluginId = PLUGINS_MAP.get(scheme)
         if( pluginId ) try {
-            if(App.pluginService.startIfMissing(pluginId) ) {
+            if(App.instance.pluginService.startIfMissing(pluginId) ) {
                 log.debug "Started plugin '$pluginId' required to handle file: $str"
                 // return true to signal a new plugin was loaded
                 return true

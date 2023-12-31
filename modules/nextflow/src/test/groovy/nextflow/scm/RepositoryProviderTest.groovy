@@ -16,13 +16,13 @@
 
 package nextflow.scm
 
-import spock.lang.Specification
 
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class RepositoryProviderTest extends Specification {
+class RepositoryProviderTest extends AppSpec {
 
     def 'should create repository provider object' () {
 

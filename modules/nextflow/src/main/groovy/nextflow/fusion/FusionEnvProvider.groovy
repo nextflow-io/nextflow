@@ -17,18 +17,19 @@
 
 package nextflow.fusion
 
-
-import nextflow.plugin.Plugins
+import groovy.transform.CompileStatic
+import nextflow.App
 /**
  * Provider strategy for {@link FusionEnv}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class FusionEnvProvider {
 
     Map<String,String> getEnvironment(String scheme) {
         final config = FusionConfig.getConfig()
-        final list = Plugins.getExtensions(FusionEnv)
+        final list = App.instance.pluginService.getExtensions(FusionEnv)
         final result = new HashMap<String,String>()
         for( FusionEnv it : list ) {
             final env = it.getEnvironment(scheme,config)

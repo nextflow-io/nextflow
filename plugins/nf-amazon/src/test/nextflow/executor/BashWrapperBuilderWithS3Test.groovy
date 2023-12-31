@@ -24,12 +24,12 @@ import nextflow.cloud.aws.batch.AwsBatchFileCopyStrategy
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.processor.TaskBean
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BashWrapperBuilderWithS3Test extends Specification {
+class BashWrapperBuilderWithS3Test extends AppSpec {
 
     def 'should include s3 helpers' () {
         given:
