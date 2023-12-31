@@ -24,9 +24,8 @@ import nextflow.trace.TraceHelper
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
-import spock.lang.Specification
 import spock.lang.Timeout
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -34,7 +33,7 @@ import spock.lang.Timeout
 @Timeout(30)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('AZURE_STORAGE_ACCOUNT_NAME') && System.getenv('AZURE_STORAGE_ACCOUNT_KEY')})
-class AzNioTest extends Specification implements AzBaseSpec {
+class AzNioTest extends AppSpec implements AzBaseSpec {
 
     @Shared
     BlobServiceClient storageClient
