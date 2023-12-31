@@ -230,16 +230,6 @@ container freeze mode, the container repository authentication needs to be manag
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
-`wave.report.enabled` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`).
-
-`wave.report.file` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: The name of the containers report file (default: `'containers-<timestamp>.config'`).
-
 `wave.retryPolicy.delay`
 : :::{versionadded} 22.06.0-edge
   :::
