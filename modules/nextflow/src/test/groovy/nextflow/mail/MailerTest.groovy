@@ -16,22 +16,21 @@
 
 package nextflow.mail
 
-import spock.lang.IgnoreIf
-import spock.lang.Specification
-import spock.lang.Unroll
-
-import java.nio.file.Files
-import java.nio.file.Path
 import javax.mail.Message
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
+import java.nio.file.Files
+import java.nio.file.Path
 
 import org.subethamail.wiser.Wiser
+import spock.lang.IgnoreIf
+import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
+import test.AppSpec
 
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-class MailerTest extends Specification {
+class MailerTest extends AppSpec {
 
 
     def 'should return config properties'() {
