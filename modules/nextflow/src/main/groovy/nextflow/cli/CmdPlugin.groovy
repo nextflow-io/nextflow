@@ -20,6 +20,7 @@ package nextflow.cli
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import nextflow.App
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import static nextflow.cli.PluginExecAware.CMD_SEP
@@ -46,7 +47,7 @@ class CmdPlugin extends CmdBase {
         if( !args )
             throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
         // setup plugins system
-        Plugins.init()
+        App.getPluginService()
         // check for the plugins install
         if( args[0] == 'install' ) {
             if( args.size()!=2 )

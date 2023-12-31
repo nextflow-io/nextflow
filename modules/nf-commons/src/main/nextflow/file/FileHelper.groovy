@@ -47,7 +47,6 @@ import nextflow.Global
 import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
-import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
 /**

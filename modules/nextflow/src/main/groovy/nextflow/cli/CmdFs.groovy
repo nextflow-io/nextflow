@@ -27,6 +27,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.Global
 import nextflow.Session
 import nextflow.config.ConfigBuilder
@@ -215,7 +216,7 @@ class CmdFs extends CmdBase implements UsageAware {
             return
         }
 
-        Plugins.init()
+        App.getPluginService()
         final session = createSession()
         try {
             run0()

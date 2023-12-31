@@ -15,6 +15,7 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.FileVisitResult
 import java.nio.file.FileVisitor
 import java.nio.file.Files
@@ -28,17 +29,16 @@ import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cache.CacheDB
+import nextflow.App
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
+import nextflow.cache.CacheDB
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.plugin.Plugins
 import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile.Record
-
 /**
  * Implements cache clean up command
  *
@@ -96,7 +96,7 @@ class CmdClean extends CmdBase implements CacheBase {
         init()
         validateOptions()
         createSession()
-        Plugins.init()
+        App.getPluginService()
         listIds().each { entry -> cleanup(entry) }
     }
 

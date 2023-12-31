@@ -23,8 +23,6 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import io.micronaut.context.annotation.Context
-import jakarta.inject.Singleton
 import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
@@ -39,8 +37,6 @@ import org.pf4j.PluginStateListener
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@Context
-@Singleton
 @CompileStatic
 class PluginsFacade implements PluginStateListener, PluginService {
 

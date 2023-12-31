@@ -15,6 +15,9 @@
  */
 
 package nextflow.cli
+
+import static nextflow.cli.CmdHelper.*
+
 import java.nio.file.Path
 
 import ch.artecat.grengine.Grengine
@@ -24,16 +27,13 @@ import com.google.common.hash.HashCode
 import groovy.text.Template
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.plugin.Plugins
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskTemplateEngine
 import nextflow.trace.TraceRecord
 import nextflow.ui.TableBuilder
-
-import static nextflow.cli.CmdHelper.fixEqualsOp
-
 /**
  * Implements the `log` command to print tasks runtime information of an execute pipeline
  *
@@ -140,7 +140,7 @@ class CmdLog extends CmdBase implements CacheBase {
      */
     @Override
     void run() {
-        Plugins.init()
+        App.getPluginService()
         init()
 
         // -- show the list of expected fields and exit

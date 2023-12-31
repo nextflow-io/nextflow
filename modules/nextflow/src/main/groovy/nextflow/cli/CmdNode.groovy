@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.config.ConfigBuilder
 import nextflow.daemon.DaemonLauncher
 import nextflow.plugin.Plugins
@@ -140,7 +141,7 @@ class CmdNode extends CmdBase {
      * @throws IllegalStateException when no class implementing {@code DaemonLauncher} is available
      */
     static DaemonLauncher loadDaemonFirst() {
-        Plugins.init()
+        App.getPluginService()
         final loader = Plugins.getExtension(DaemonLauncher)
         if( !loader )
             throw new IllegalStateException("No cluster services are available -- Cannot launch Nextflow in cluster mode")
