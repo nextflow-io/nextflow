@@ -169,18 +169,18 @@ class AstBuilder {
             ? ctx.processOutputs().processDirective().collect(this.&processOutput)
             : []
         final when = ctx.processWhen()
-            ? [ callX(varX('this'), varX('when'), expression(ctx.processWhen().expression())) ]
+            ? [ callX(varX('this'), 'when', expression(ctx.processWhen().expression())) ]
             : []
         final type = processType(ctx.processExec())
         final exec = closureX(block(ctx.processExec().blockStatements()))
         final stub = ctx.processExec().processStub()
-            ? [ callX(varX('this'), varX('stub'), closureX(block(ctx.processExec().processStub().blockStatements()))) ]
+            ? [ callX(varX('this'), 'stub', closureX(block(ctx.processExec().processStub().blockStatements()))) ]
             : []
         final bodyDef = createX(
             BodyDef,
             argsX([
                 exec,
-                constX(ctx.text), // TODO: source code formatting
+                constX(ctx.processExec().blockStatements().text), // TODO: source code formatting
                 constX(type),
                 new ListExpression() // TODO: variable references (see VariableVisitor)
             ])
@@ -189,7 +189,7 @@ class AstBuilder {
         final closure = closureX(new BlockStatement(statements, new VariableScope()))
         final arguments = [constX(ctx.name.text), closure]
 
-        stmt(callX(varX('this'), constX('process'), argsX(arguments as List<Expression>)))
+        stmt(callX(varX('this'), 'process', argsX(arguments as List<Expression>)))
     }
 
     private static MethodCallExpression processDirective(ProcessDirectiveContext ctx) {
@@ -197,11 +197,15 @@ class AstBuilder {
     }
 
     private static MethodCallExpression processInput(ProcessDirectiveContext ctx) {
-        processMethodCall(ctx, '_in_')
+        final result = processMethodCall(ctx, '_in_')
+        fixProcessInputOutputs(result)
+        return result
     }
 
     private static MethodCallExpression processOutput(ProcessDirectiveContext ctx) {
-        processMethodCall(ctx, '_out_')
+        final result = processMethodCall(ctx, '_out_')
+        fixProcessInputOutputs(result)
+        return result
     }
 
     private static MethodCallExpression processMethodCall(ProcessDirectiveContext ctx, String prefix) {
@@ -209,6 +213,73 @@ class AstBuilder {
         final method = prefix + ctx.identifier().text
         final arguments = methodArguments(ctx.enhancedArgumentList())
         callX(object, method, arguments)
+    }
+
+    private static void fixProcessInputOutputs(MethodCallExpression methodCall) {
+        final name = methodCall.methodAsString
+        final withinTuple = name == '_in_tuple' || name == '_out_tuple'
+        final withinEach = name == '_in_each'
+
+        varToConstX(methodCall.getArguments(), withinTuple, withinEach)
+    }
+
+    private static Expression varToConstX(Expression expr, boolean withinTuple, boolean withinEach) {
+        if( expr instanceof VariableExpression ) {
+            final name = ((VariableExpression) expr).getName()
+
+            if( name == 'stdin' && withinTuple )
+                return createX( TokenStdinCall )
+
+            if ( name == 'stdout' && withinTuple )
+                return createX( TokenStdoutCall )
+
+            return createX( TokenVar, new ConstantExpression(name) )
+        }
+
+        if( expr instanceof MethodCallExpression ) {
+            final methodCall = (MethodCallExpression)expr
+            final name = methodCall.methodAsString
+            final args = methodCall.arguments
+
+            if( name == 'env' && withinTuple )
+                return createX( TokenEnvCall, (TupleExpression) varToStrX(args) )
+
+            if( name == 'file' && (withinTuple || withinEach) )
+                return createX( TokenFileCall, (TupleExpression) varToConstX(args, withinTuple, withinEach) )
+
+            if( name == 'path' && (withinTuple || withinEach) )
+                return createX( TokenPathCall, (TupleExpression) varToConstX(args, withinTuple, withinEach) )
+
+            if( name == 'val' && withinTuple )
+                return createX( TokenValCall, (TupleExpression) varToStrX(args) )
+        }
+
+        if( expr instanceof TupleExpression ) {
+            final args = expr.getExpressions()
+            int i = 0
+            for( Expression item : args )
+                args[i++] = varToConstX(item, withinTuple, withinEach)
+            return expr
+        }
+
+        return expr
+    }
+
+    private static Expression varToStrX(Expression expr) {
+        if( expr instanceof VariableExpression ) {
+            final name = ((VariableExpression) expr).getName()
+            return createX( TokenVar, new ConstantExpression(name) )
+        }
+
+        if( expr instanceof TupleExpression ) {
+            final args = expr.getExpressions()
+            int i = 0
+            for( Expression item : args )
+                args[i++] = varToStrX(item)
+            return expr
+        }
+
+        return expr
     }
 
     private static String processType(ProcessExecContext ctx) {
@@ -247,7 +318,7 @@ class AstBuilder {
             ? [constX(ctx.name.text), closure]
             : [closure]
 
-        stmt(callX(varX('this'), constX('workflow'), argsX(arguments as List<Expression>)))
+        stmt(callX(varX('this'), 'workflow', argsX(arguments as List<Expression>)))
     }
 
     private static MethodNode method(FunctionDefContext ctx) {
@@ -501,14 +572,21 @@ class AstBuilder {
     private static GStringExpression gstring(GstringContext ctx) {
         final strings = gstringParts(ctx)
         final values = ctx.gstringValue().collect( ctx1 -> expression(ctx1.expression()) )
-        new GStringExpression(ctx.text, strings, values)
+        new GStringExpression(unquote(ctx.text), strings, values)
     }
 
     private static List<ConstantExpression> gstringParts(GstringContext ctx) {
         final strings = []
-        strings.add(ctx.GStringBegin().text[1..-1])
-        strings.addAll(ctx.GStringPart()*.text)
-        strings.add(ctx.GStringEnd().text[0..<-1])
+
+        final begin = ctx.GStringBegin().text
+        strings.add(begin.startsWith('"""') ? begin[3..<-1] : begin[1..<-1])
+
+        for( final part : ctx.GStringPart() )
+            strings.add(part.text[0..<-1])
+
+        final end = ctx.GStringEnd().text
+        strings.add(begin.startsWith('"""') ? end[0..<-3] : end[0..<-1])
+
         return strings.collect( str -> constX(str) )
     }
 
@@ -587,9 +665,9 @@ class AstBuilder {
             return [expression.objectExpression, expression.property]
 
         if( expression instanceof VariableExpression )
-            return [varX('this'), expression]
+            return [varX('this'), constX(expression.text)]
 
-        return [expression, varX('call')]
+        return [expression, constX('call')]
     }
 
     private static Expression methodArguments(ArgumentListContext ctx) {
@@ -674,13 +752,13 @@ class AstBuilder {
     private static Expression pathElement(Expression expression, PathElementContext ctx) {
         if( ctx instanceof PropertyPathExprAltContext ) {
             final prop =
-                ctx.keywords() ? varX(ctx.keywords().text) :
-                ctx.identifier() ? varX(ctx.identifier().text) :
-                /* ctx.stringLiteral() */ constX(unquote(ctx.stringLiteral().text))
+                ctx.keywords() ? ctx.keywords().text :
+                ctx.identifier() ? ctx.identifier().text :
+                /* ctx.stringLiteral() */ unquote(ctx.stringLiteral().text)
             final safe = ctx.SAFE_DOT() != null || ctx.SPREAD_DOT() != null
             final result = ctx.AT()
-                ? new AttributeExpression(expression, prop, safe)
-                : new PropertyExpression(expression, prop, safe)
+                ? new AttributeExpression(expression, constX(prop), safe)
+                : new PropertyExpression(expression, constX(prop), safe)
             if( ctx.SPREAD_DOT() )
                 result.setSpreadSafe(true)
             return result
@@ -798,7 +876,12 @@ class AstBuilder {
     /// HELPERS
 
     private static String unquote(String text) {
-        text?[1..<-1]
+        if( !text )
+            return null
+        else if( text.startsWith('"""') || text.startsWith("'''") )
+            return text[3..<-3]
+        else
+            return text[1..<-1]
     }
 
 }

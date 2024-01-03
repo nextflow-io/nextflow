@@ -22,7 +22,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.antlr.AstBuilder
+import nextflow.NF
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
@@ -138,37 +138,53 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         @Override
-        void visitMethod(MethodNode method) {
-            if( method.public && !method.static && !method.synthetic && !method.metaDataMap?.'org.codehaus.groovy.ast.MethodNode.isScriptBody') {
-                if( !isIllegalName(method.name, method))
-                    functionNames.add(method.name)
+        void visitMethod(MethodNode node) {
+            if( node.public && !node.static && !node.synthetic && !node.metaDataMap?.'org.codehaus.groovy.ast.MethodNode.isScriptBody') {
+                if( !isIllegalName(node.name, node))
+                    functionNames.add(node.name)
+            }
+            super.visitMethod(node)
+        }
+
+        @Override
+        void visitMethodCallExpression(MethodCallExpression methodCall) {
+            // pre-condition to be verified to apply the transformation
+            final preCondition = methodCall.objectExpression?.getText() == 'this'
+            final methodName = methodCall.getMethodAsString()
+
+            /*
+             * intercept the *process* method in order to transform the script closure
+             */
+            if( methodName == 'process' && preCondition ) {
+
+                // clear block label
+                bodyLabel = null
+                currentLabel = null
+                convertProcessDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
+            }
+            else if( methodName == 'workflow' && preCondition ) {
+                convertWorkflowDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
             }
 
-            if( method.name != 'run' )
-                return
+            // just apply the default behavior
+            else {
+                super.visitMethodCallExpression(methodCall)
+            }
 
-            // get proxy script path
-            final block = (BlockStatement)method.code
-            final stmt = (ExpressionStatement)block.statements.first()
-            final methodCall = (MethodCallExpression)stmt.expression
-            final type = methodCall.getMethodAsString()
-            final args = (TupleExpression)methodCall.getArguments()
-            final arg = args.getExpression(0)
-            final strX = (ConstantExpression)arg
-            final proxy = (String)strX.value
+        }
 
-            // build ast of proxy script using Nextflow parser
-            final module = type == 'path'
-                ? AstBuilder.fromFileName(proxy)
-                : AstBuilder.fromString(proxy)
-
-            // insert proxy code
-            method.code = new BlockStatement(
-                module.statements,
-                block.variableScope
-            )
-
-            // TODO: add function definitions from proxy script
+        @Override
+        void visitExpressionStatement(ExpressionStatement stm) {
+            if( stm.text.startsWith('this.include(') && stm.getExpression() instanceof MethodCallExpression )  {
+                final methodCall = (MethodCallExpression)stm.getExpression()
+                convertIncludeDef(methodCall)
+                // this is necessary to invoke the `load` method on the include definition
+                final loadCall = new MethodCallExpression(methodCall, 'load0', new ArgumentListExpression(new VariableExpression('params')))
+                stm.setExpression(loadCall)
+            }
+            super.visitExpressionStatement(stm)
         }
 
         protected void convertIncludeDef(MethodCallExpression call) {

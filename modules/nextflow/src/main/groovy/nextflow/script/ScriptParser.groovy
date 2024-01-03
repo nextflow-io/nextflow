@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowDSL
+import nextflow.ast.NextflowParser
 import nextflow.ast.NextflowXform
 import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
@@ -121,7 +121,7 @@ class ScriptParser {
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowParser))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
@@ -170,9 +170,8 @@ class ScriptParser {
         this.scriptPath = scriptPath
         final String className = computeClassName(scriptText)
         try {
-            final parsed = scriptPath && session.debug
-                    ? interpreter.parse("path '''${scriptPath}'''", className)
-                    : interpreter.parse("text '''${scriptText}'''", className)
+            final source = scriptPath ? scriptPath.text : scriptText
+            final parsed = interpreter.parse("'${source.bytes.encodeBase64().toString()}'", className)
             if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
