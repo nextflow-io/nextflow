@@ -55,7 +55,7 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
-        if( mode=='dev' && root.toString()=='plugins' && !isRunningFromDistArchive() )
+        if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
@@ -219,11 +219,6 @@ class PluginsFacade implements PluginStateListener {
             manager.startPlugins()
             this.embedded = embedded
         }
-    }
-
-    synchronized void setup(Map config = Collections.emptyMap()) {
-        init()
-        load(config)
     }
 
     void load(Map config) {
@@ -397,7 +392,7 @@ class PluginsFacade implements PluginStateListener {
         final bucketDir = config.bucketDir as String
         final executor = Bolts.navigate(config, 'process.executor')
 
-        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') )
+        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') || env.containsKey('NXF_ENABLE_AWS_SES') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
         if( executor == 'google-lifesciences' || executor == 'google-batch' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )

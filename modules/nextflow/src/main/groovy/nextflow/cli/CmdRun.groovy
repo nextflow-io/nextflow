@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
@@ -310,7 +310,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
-        log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
         Plugins.init()
 
         // -- specify the arguments
@@ -412,7 +412,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- script can still override the DSL version
         final scriptDsl = NextflowMeta.checkDslMode(scriptText)
         if( scriptDsl ) {
-            log.debug("Applied DSL=$scriptDsl from script declararion")
+            log.debug("Applied DSL=$scriptDsl from script declaration")
             return scriptDsl
         }
         else if( dsl ) {
@@ -677,7 +677,7 @@ class CmdRun extends CmdBase implements HubOptions {
             result.putAll(json)
         }
         catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
+            throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
         }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: ${file.toUriString()} - Cause: ${e.message}", e)
@@ -691,7 +691,7 @@ class CmdRun extends CmdBase implements HubOptions {
             result.putAll(yaml)
         }
         catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
+            throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
         }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)

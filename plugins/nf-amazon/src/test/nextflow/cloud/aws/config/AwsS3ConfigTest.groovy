@@ -39,6 +39,7 @@ class AwsS3ConfigTest extends Specification {
         !client.s3Acl
         !client.pathStyleAccess
         !client.anonymous
+        !client.isCustomEndpoint()
     }
 
     def 'should set config' () {
@@ -138,5 +139,20 @@ class AwsS3ConfigTest extends Specification {
         cleanup:
         SysEnv.pop()
 
+    }
+
+    @Unroll
+    def 'should check is custom endpoint' () {
+        given:
+        def config = new AwsS3Config(CONFIG)
+
+        expect:
+        config.isCustomEndpoint() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG
+        false       | [:]
+        false       | [endpoint: 'https://s3.us-east-2.amazonaws.com']
+        true        | [endpoint: 'https://foo.com']
     }
 }
