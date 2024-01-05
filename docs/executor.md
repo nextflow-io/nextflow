@@ -270,7 +270,7 @@ Nextflow manages each process as a separate job that is submitted to the cluster
 
 The pipeline must be launched from a node where the `hq` command is available, which is typically the cluster login node.
 
-To enable the HTCondor executor, set `process.executor = 'hyperqueue'` in the `nextflow.config` file.
+To enable the HyperQueue executor, set `process.executor = 'hq'` in the `nextflow.config` file.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
