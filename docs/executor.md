@@ -249,6 +249,7 @@ To enable the HTCondor executor, set `process.executor = 'condor'` in the `nextf
 Resource requests and other job characteristics can be controlled via the following process directives:
 
 - {ref}`process-clusterOptions`
+- {ref}`process-container`
 - {ref}`process-cpus`
 - {ref}`process-disk`
 - {ref}`process-memory`
