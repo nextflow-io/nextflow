@@ -84,7 +84,7 @@ class ContainerConfig extends LinkedHashMap {
             return false
         }
         if( get('oci')?.toString()=='true' ) {
-            log.warn "The setting `singularity.oci` is deprecated - use `singularity.ociNative` instead"
+            log.warn "The setting `singularity.oci` is deprecated - use `singularity.ociMode` instead"
             return true
         }
         if( get('ociMode')?.toString()=='true' )
