@@ -92,7 +92,7 @@ abstract class CliOptions {
         @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
         boolean quiet
 
-        @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
+        @Parameter(names = ['-bg','-background'], description = 'Execute nextflow in background', arity = 0)
         boolean background
 
         @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )

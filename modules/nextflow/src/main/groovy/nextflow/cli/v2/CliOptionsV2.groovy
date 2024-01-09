@@ -32,7 +32,7 @@ class CliOptionsV2 extends CliOptions {
 
     void setAnsiLog(boolean value) { ansiLogCli = value }
 
-    @Option(names = ['--bg'], arity = '0', description = 'Execute nextflow in background')
+    @Option(names = ['--bg','--background'], arity = '0', description = 'Execute nextflow in background')
     boolean background
 
     @Option(names = ['-C'], split = ',', description = 'Use the specified configuration file(s), overriding any defaults')
@@ -56,7 +56,7 @@ class CliOptionsV2 extends CliOptions {
     @Option(names = ['-q','--quiet'], description = 'Do not print information messages')
     boolean quiet
 
-    @Option(names = ['-remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
+    @Option(names = ['--remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
     boolean remoteDebug
 
     @Option(names = ['--self-update'], arity = '0', description = 'Update Nextflow to the latest version', hidden = true)
