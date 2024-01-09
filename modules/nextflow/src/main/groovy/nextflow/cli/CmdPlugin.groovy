@@ -26,7 +26,7 @@ import static nextflow.cli.PluginExecAware.CMD_SEP
 
 /**
  * Plugin manager command
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

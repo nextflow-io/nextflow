@@ -271,7 +271,7 @@ class FilePorterTest extends Specification {
 
         and:
         def porter = new FilePorter(sess)
-        
+
         when:
         def transfer1 = porter.createFileTransfer(local, foreign)
         then:

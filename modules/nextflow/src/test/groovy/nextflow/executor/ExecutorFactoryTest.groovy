@@ -91,7 +91,7 @@ class ExecutorFactoryTest extends Specification {
         result.is(executor)
 
     }
-    
+
 
     def 'should check type supported'() {
 

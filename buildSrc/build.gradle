@@ -19,7 +19,7 @@ gradlePlugin {
     website = 'https://www.nextflow.io/'
     vcsUrl = 'https://github.com/nextflow-io/nextflow'
     description = 'Helper plugin for Nextflow project build'
-    
+
     plugins {
         create("nextflowPlugin") {
             id = 'io.nextflow.nf-build-plugin'

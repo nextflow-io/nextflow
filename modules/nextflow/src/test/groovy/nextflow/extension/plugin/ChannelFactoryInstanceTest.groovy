@@ -157,17 +157,17 @@ class ChannelFactoryInstanceTest extends Specification {
         def SCRIPT = '''
             def ch1 = channel.alpha([1,2,3])
             def ch2 = channel.omega(['X','Y','Z'])
-            
+
             process sayHello {
               input:
                 val x
                 val y
-              output: 
+              output:
                 val z
               exec:
                 z = "$x $y"
             }
-            
+
             workflow {
               main: sayHello(ch1, ch2)
               emit: sayHello.out.toSortedList()

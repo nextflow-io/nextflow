@@ -167,7 +167,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // initialise process config
         initialize()
 
-        // get params 
+        // get params
         final params = ChannelOut.spread(args)
         // sanity check
         if( params.size() != declaredInputs.size() )

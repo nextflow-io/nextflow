@@ -169,14 +169,14 @@ class MustacheTemplateEngineTest extends Specification {
         when:
         def template = '''\
             {{foo}}
-            
+
             {{bar}}!
             '''.stripIndent()
         def result = mustache.render(template, binding)
         then:
         result == '''\
                 Hello
-                
+
                 world!
                 '''.stripIndent()
     }

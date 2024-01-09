@@ -16,7 +16,7 @@ class PluginSpecTest extends Specification {
         spec.id == ID
         spec.version == VER
 
-        
+
         where:
         FQID        | ID    | VER
         'foo@1.0'   | 'foo' | '1.0'

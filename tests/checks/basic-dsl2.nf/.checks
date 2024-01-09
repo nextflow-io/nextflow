@@ -1,7 +1,7 @@
 set -e
 
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN | tee .stdout
 
@@ -10,7 +10,7 @@ diff .expected .stdout || false
 
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -resume | tee .stdout
 

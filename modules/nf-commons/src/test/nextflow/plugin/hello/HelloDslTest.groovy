@@ -44,7 +44,7 @@ class HelloDslTest extends Specification{
     def 'should perform a hi and create a channel' () {
         when:
         def SCRIPT = '''
-            channel.reverse('hi!') 
+            channel.reverse('hi!')
             '''
         and:
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
@@ -58,13 +58,13 @@ class HelloDslTest extends Specification{
         def SCRIPT = '''
             channel
                 .of('Bye bye folks')
-                .goodbye() 
+                .goodbye()
             '''
         and:
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
         then:
         result.val == 'Bye bye folks'
         result.val == Channel.STOP
-        
+
     }
 }

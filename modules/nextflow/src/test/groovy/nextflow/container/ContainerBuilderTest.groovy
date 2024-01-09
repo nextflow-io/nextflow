@@ -52,7 +52,7 @@ class ContainerBuilderTest extends Specification {
         result = builder.makeEnv('FOO=hello')
         then:
         result.toString() == '-e "FOO=hello"'
-        
+
         when:
         result = builder.makeEnv( 'FOO' )
         then:

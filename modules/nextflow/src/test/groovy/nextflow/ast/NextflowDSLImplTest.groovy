@@ -30,18 +30,18 @@ class NextflowDSLImplTest extends Dsl2Spec {
         def config = createCompilerConfig()
 
         def SCRIPT = '''
-            def foo() { 
-                return 0 
+            def foo() {
+                return 0
             }
-            
-            def bar() { 
-                return 1 
+
+            def bar() {
+                return 1
             }
-            
-            private baz() { 
-                return 2 
+
+            private baz() {
+                return 2
             }
-            
+
             process alpha {
               /hello/
             }
@@ -61,7 +61,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
             process alpha {
               /hello/
             }
-        
+
             process alpha {
               /world/
             }
@@ -83,7 +83,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
             workflow alpha {
               /hello/
             }
-        
+
             workflow alpha {
               /world/
             }
@@ -135,11 +135,11 @@ class NextflowDSLImplTest extends Dsl2Spec {
             process alpha {
               /hello/
             }
-        
+
             process beta {
               /world/
             }
-            
+
             workflow {
               alpha(); beta()
             }

@@ -8,7 +8,7 @@ import nextflow.trace.TraceRecord
 /**
  * Implements a {@link TaskHandler} instance for nextflow stored task ie.
  * tasks whose execution is skipped due the use of the `storeDir` directive.
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

@@ -449,8 +449,8 @@ class ConfigBuilderTest extends Specification {
         and:
         def params = Files.createTempFile('test', '.yml')
         params.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             theta: "${baseDir}/something"
             '''.stripIndent()
@@ -494,8 +494,8 @@ class ConfigBuilderTest extends Specification {
         setup:
         def params = Files.createTempFile('test', '.yml')
         params.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             '''.stripIndent()
         and:
@@ -508,7 +508,7 @@ class ConfigBuilderTest extends Specification {
         params.delta = 'Foo'
         params.gamma = "I'm gamma"
         params.omega = "I'm the last"
-        
+
         process {
           publishDir = [path: params.alpha]
         }
@@ -1870,7 +1870,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.stubRun == true
     }
-    
+
     def 'should merge profiles' () {
         given:
         def ENV = [:]
@@ -1880,7 +1880,7 @@ class ConfigBuilderTest extends Specification {
         def CONFIG = '''
                 process.container = 'base'
                 process.executor = 'local'
-                
+
                 profiles {
                     cfg1 {
                       process.executor = 'sge'
@@ -2036,7 +2036,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def file2 = folder.resolve('nextflow.config')
         file2.text = """
-            includeConfig "$file1" 
+            includeConfig "$file1"
             """
 
         def cfg2 = new ConfigBuilder().buildConfig0([:], [file2])
@@ -2055,10 +2055,10 @@ class ConfigBuilderTest extends Specification {
         def file1 = folder.resolve('test.conf')
         file1.text = '''
             process {
-                ext { args = "Hello World!" } 
-                cpus = 1 
+                ext { args = "Hello World!" }
+                cpus = 1
                 withName:BAR {
-                    ext { args = "Ciao mondo!" } 
+                    ext { args = "Ciao mondo!" }
                     cpus = 2
                 }
             }
@@ -2086,8 +2086,8 @@ class ConfigBuilderTest extends Specification {
         def file1 = folder.resolve('test.conf')
         file1.text = '''
             process {
-                ext.args = "Hello World!" 
-                cpus = 1 
+                ext.args = "Hello World!"
+                cpus = 1
                 withName:BAR {
                     ext.args = "Ciao mondo!"
                     cpus = 2
@@ -2113,15 +2113,15 @@ class ConfigBuilderTest extends Specification {
         def file1 = folder.resolve('file1.conf')
 
         file1.text = """
-            params.alpha = 1 
-            params.delta = 2 
-            
+            params.alpha = 1
+            params.delta = 2
+
             profiles {
                 foo {
-                    params.delta = 20 
-                    params.gamma = 30 
-                    
-                    process {  
+                    params.delta = 20
+                    params.gamma = 30
+
+                    process {
                         cpus = params.alpha
                     }
                 }
@@ -2145,18 +2145,18 @@ class ConfigBuilderTest extends Specification {
 
         file1.text = """
             params {
-                alpha = 1 
-                delta = 2 
+                alpha = 1
+                delta = 2
             }
-            
+
             profiles {
                 foo {
                     params {
-                        delta = 20 
+                        delta = 20
                         gamma = 30
                     }
 
-                    process {  
+                    process {
                         cpus = params.alpha
                     }
                 }
@@ -2179,24 +2179,24 @@ class ConfigBuilderTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('file1.conf')
 
-        file1.text = '''    
+        file1.text = '''
             profiles {
                 foo {
                     params {
-                        alpha = 1 
-                        delta = 2 
+                        alpha = 1
+                        delta = 2
                     }
                 }
 
                 bar {
                     params {
-                        delta = 20 
-                        gamma = 30 
+                        delta = 20
+                        gamma = 30
                     }
-                    
+
                     process {
                         cpus = params.alpha
-                    }                
+                    }
                 }
             }
             '''
@@ -2226,13 +2226,13 @@ class ConfigBuilderTest extends Specification {
             baz {
                 x = "Ciao"
                 y = "mundo"
-                z { 
+                z {
                     alpha = "Hallo"
                     beta  = "World"
                 }
             }
-            
-        }        
+
+        }
         """
 
         when:
@@ -2308,7 +2308,7 @@ class ConfigBuilderTest extends Specification {
         def config = folder.resolve('nf.config')
         config.text = '''\
         params.test.foo = "foo_def"
-        params.test.bar = "bar_def"        
+        params.test.bar = "bar_def"
         '''.stripIndent()
 
         when:
@@ -2319,7 +2319,7 @@ class ConfigBuilderTest extends Specification {
         cfg1.params.test.foo == "foo_def"
         cfg1.params.test.bar == "bar_def"
 
-        
+
         when:
         def cfg2 = new ConfigBuilder()
                 .setOptions( new CliOptions(userConfig: [config.toString()]))
@@ -2373,12 +2373,12 @@ class ConfigBuilderTest extends Specification {
         def config = folder.resolve('nf.yaml')
         config.text = '''\
             title: "something"
-            nested: 
+            nested:
               name: "Mike"
               and:
                 more: nesting
                 still:
-                  another: layer      
+                  another: layer
         '''.stripIndent()
 
         when:
@@ -2423,13 +2423,13 @@ class ConfigBuilderTest extends Specification {
                foo = 'Hello world'
                awsKey = '[secret]'
             }
-            
+
             process {
                executor = { 'local' }
             }
 
             workDir = 'work'
-            
+
             tower {
                enabled = true
                endpoint = 'http://foo.com'
@@ -2452,19 +2452,19 @@ class ConfigBuilderTest extends Specification {
             load_config = null
             present = true
         }
-        
+
         profiles {
             test { includeConfig 'test.conf' }
         }
-        
+
         if (params.load_config) {
             includeConfig 'process.conf'
-        }        
+        }
         '''
         test.text = '''
         params {
             load_config = true
-        }    
+        }
         '''
 
         process.text = '''
@@ -2472,7 +2472,7 @@ class ConfigBuilderTest extends Specification {
             withName: FOO {
                 ext.args = '--quiet'
             }
-        }        
+        }
         params{
             another = true
         }

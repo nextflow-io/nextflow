@@ -38,7 +38,7 @@ class GoogleBatchScriptLauncherTest extends Specification{
         def path = CloudStorageFileSystem.forBucket(BUCKET).getPath(PATH)
         launcher.toContainerMount(path, PARENT) == EXPECTED
         and:
-        launcher.getContainerMounts() == [MOUNTS] 
+        launcher.getContainerMounts() == [MOUNTS]
         where:
         BUCKET  | PATH          | PARENT    | EXPECTED                              | MOUNTS
         'foo'   | '/'           | false     | Paths.get('/mnt/disks/foo')           | '/mnt/disks/foo:/mnt/disks/foo:rw'

@@ -33,7 +33,7 @@ class ConfigParserTest extends Specification {
 
         expect:
         parser.parseSection(LINE) == EXPECTED
-        
+
         where:
         LINE            | EXPECTED
         'foo'           | null
@@ -48,11 +48,11 @@ class ConfigParserTest extends Specification {
         def parser = new ConfigParser()
         def CONFIG = '''
         [foo]
-        one = 1 
-        two = 2 
+        one = 1
+        two = 2
         [bar]
         alpha = 3
-        gamma = 4        
+        gamma = 4
         '''.stripIndent()
 
         when:
@@ -110,12 +110,12 @@ class ConfigParserTest extends Specification {
         def CONFIG3 = '''
         [alpha]
         a2
-        
+
         [beta]
         b2
-        
+
         [omega]
-        z9        
+        z9
         '''.stripIndent()
 
         when:

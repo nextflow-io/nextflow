@@ -9,7 +9,7 @@ echo "echo Hola mundo" > bin/hello.sh
 chmod +x bin/hello.sh
 
 #
-# create the nextflow config file 
+# create the nextflow config file
 #
 cat << EOF > nextflow.config
 env.FOO = 'HOLA'
@@ -17,15 +17,15 @@ process.container = 'quay.io/nextflow/bash'
 EOF
 
 #
-# create the nextflow script 
+# create the nextflow script
 #
 cat << EOF > foo.nf
 process foo {
   echo true
-  input: 
+  input:
   env BAR
   '''
-  env | sort 
+  env | sort
   hello.sh
   '''
 }
@@ -36,13 +36,13 @@ workflow {
 EOF
 
 #
-# not the testing part 
+# not the testing part
 #
 
-# NF plain run  
+# NF plain run
 $NXF_CMD run foo.nf | tee stdout
 
-# run tests 
+# run tests
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
 [[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
@@ -51,7 +51,7 @@ $NXF_CMD run foo.nf | tee stdout
 # NF run with trace
 $NXF_CMD run foo.nf -with-trace | tee stdout
 
-# run tests 
+# run tests
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
 [[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
@@ -60,7 +60,7 @@ $NXF_CMD run foo.nf -with-trace | tee stdout
 # NF run with docker
 $NXF_CMD run foo.nf -with-docker | tee stdout
 
-# run tests 
+# run tests
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
 [[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
@@ -70,7 +70,7 @@ $NXF_CMD run foo.nf -with-docker | tee stdout
 # NF run with docker and trace
 $NXF_CMD run foo.nf -with-trace -with-docker | tee stdout
 
-# run tests 
+# run tests
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
 [[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
 [[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false

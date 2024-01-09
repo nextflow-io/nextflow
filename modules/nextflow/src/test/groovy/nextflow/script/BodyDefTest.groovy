@@ -80,7 +80,7 @@ class BodyDefTest extends Dsl2Spec {
           println $x + $y + $z
           /
         }
-        
+
         workflow { hola() }
         '''
         when:
@@ -124,7 +124,7 @@ class BodyDefTest extends Dsl2Spec {
                     """
                 }
 
-                workflow { 
+                workflow {
                     simpleTask('hola')
                 }
                 '''

@@ -64,7 +64,7 @@ class GsBashLib extends BashFunLib<GsBashLib> {
             if [[ $project ]]; then
               opts+=('-u' "$project")
             fi
-             
+
             ## download assuming it's a file download
             mkdir -p $basedir
             ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {

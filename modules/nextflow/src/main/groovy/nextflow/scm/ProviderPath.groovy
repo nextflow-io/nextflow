@@ -36,7 +36,7 @@ import groovy.util.logging.Slf4j
  * @see nextflow.config.ConfigParser
  * @see nextflow.config.ConfigBase
  *
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @EqualsAndHashCode

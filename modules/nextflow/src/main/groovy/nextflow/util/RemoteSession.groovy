@@ -74,7 +74,7 @@ class RemoteSession implements Serializable, Closeable {
     }
 
     List<Path> getClasspath() { resolvedClasspath }
-    
+
     /**
      * @param path A {@link File} representing either a regular file or a directory
      * @return The source path as a string. It guarantees that a directory path ends with a slash character

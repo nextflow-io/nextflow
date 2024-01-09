@@ -72,7 +72,7 @@ class WaveCmdEntryTest extends Specification implements TarHelper {
         json.layers[0].location == gzipFile.toUri().toString()
         json.layers[0].tarDigest == 'sha256:f556b94e9b6f5f72b86e44833614b465df9f65cb4210e3f4416292dca1618360'
         json.layers[0].gzipDigest == 'sha256:e58685a82452a11faa926843e7861c94bdb93e2c8f098b5c5354ec9b6fee2b68'
-        
+
         when:
         def tar = uncompress(Files.readAllBytes(gzipFile))
         untar( new ByteArrayInputStream(tar), untarPath )

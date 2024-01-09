@@ -247,5 +247,5 @@ class ExecutorFactory {
             log.warn "Unable to gracefully shutdown executor: $exec.name", e
         }
     }
-    
+
 }

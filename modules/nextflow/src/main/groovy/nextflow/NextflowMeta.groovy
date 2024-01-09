@@ -13,7 +13,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.util.VersionNumber
 /**
  * Models nextflow script properties and metadata
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -125,7 +125,7 @@ class NextflowMeta {
 
     /**
      * Determine if the workflow script uses DSL2 mode
-     * 
+     *
      * {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
      */
     boolean isDsl2() {

@@ -162,7 +162,7 @@ class CmdFs extends CmdBase implements UsageAware {
                     size          : ${attr.size()}
                     is directory  : ${attr.isDirectory()}
                     last modified : ${attr.lastModifiedTime() ?: '-'}
-                    creation time : ${attr.creationTime() ?: '-'}                    
+                    creation time : ${attr.creationTime() ?: '-'}
                     """.stripIndent()
             }
             catch (IOException e) {

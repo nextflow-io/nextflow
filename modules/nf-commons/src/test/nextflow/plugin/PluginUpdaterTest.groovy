@@ -393,7 +393,7 @@ class PluginUpdaterTest extends Specification {
         then:
         matcher.matches() == EXPECTED
         !EXPECTED || matcher.group(1) == PLUGIN
-        
+
         where:
         FILE_NAME                               | EXPECTED  | PLUGIN
         'foo'                                   | false     | null

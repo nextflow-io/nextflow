@@ -1,4 +1,4 @@
-FROM alpine 
+FROM alpine
 
 RUN apk update && apk add bash cowsay \
         --update-cache \

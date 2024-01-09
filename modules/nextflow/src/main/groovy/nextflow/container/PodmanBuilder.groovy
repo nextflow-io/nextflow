@@ -42,7 +42,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
     private String device
 
     private String capAdd
-    
+
     PodmanBuilder( String name ) {
         this.image = name
     }

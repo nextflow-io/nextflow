@@ -71,7 +71,7 @@ class SequentialFileStoreTest extends Specification {
         given:
         Path file = tempDir.newFile()
         def HELLO = 'Hello world'.getBytes()
-        def store = new SequentialFileStore(file) 
+        def store = new SequentialFileStore(file)
 
         when:
         10.times {

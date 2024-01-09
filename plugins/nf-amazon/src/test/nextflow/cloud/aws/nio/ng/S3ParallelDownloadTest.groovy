@@ -72,7 +72,7 @@ class S3ParallelDownloadTest extends Specification {
     def 'should download small file' () {
         given:
         def downloader = new S3ParallelDownload(s3Client)
-        
+
         when:
         def stream = downloader.download('nextflow-ci','hello.txt')
         then:

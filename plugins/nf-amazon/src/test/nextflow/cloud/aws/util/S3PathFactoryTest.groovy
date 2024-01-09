@@ -24,7 +24,7 @@ class S3PathFactoryTest extends Specification {
         then:
         str == S3_PATH
 
-        
+
         where:
         S3_PATH                                                 | BUCKET        | KEY
         's3://cbcrg-eu/raw/x_r1.fq'                             | 'cbcrg-eu'    | 'raw/x_r1.fq'

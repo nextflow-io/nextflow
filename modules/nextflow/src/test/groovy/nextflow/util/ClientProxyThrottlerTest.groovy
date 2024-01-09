@@ -97,7 +97,7 @@ class ClientProxyThrottlerTest extends Specification {
         for( int i=0; i<5; i++ ) {
             proxy.runThis( { log.info "tick=${count++}" } )
         }
- 
+
         long delta = System.currentTimeMillis()-begin
         then:
         delta > 3_000

@@ -14,7 +14,7 @@ params.genome = "$baseDir/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.f
 process buildIndex {
     input:
     path genome
-     
+
     output:
     path 'genome.index*'
 
@@ -26,30 +26,30 @@ process buildIndex {
 /*
  * Step 2. Maps each read-pair by using Tophat2 mapper tool
  */
-process mapping {     
+process mapping {
     input:
     path genome
     path index
     tuple val(pair_id), path(reads)
- 
+
     output:
     tuple val(pair_id), path("tophat_out/accepted_hits.bam")
- 
+
     """
     tophat2 genome.index ${reads}
     """
 }
 
 /*
- * Step 3. Assembles the transcript by using the "cufflinks" 
+ * Step 3. Assembles the transcript by using the "cufflinks"
  * and publish the transcript output files into the `results` folder
  */
 process makeTranscript {
     publishDir "results"
-    
+
     input:
     tuple val(pair_id), path(bam_file)
-     
+
     output:
     tuple val(pair_id), path('transcripts.gtf')
 

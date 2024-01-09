@@ -202,7 +202,7 @@ The following configuration options are available:
 : The level of logging emitted by the Fusion client.
 
 `fusion.logOutput`
-: Where the logging output is written. 
+: Where the logging output is written.
 
 `fusion.privileged`
 : :::{versionadded} 23.10.0

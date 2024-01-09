@@ -1,5 +1,5 @@
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN -c ../../template.config | tee stdout
 
@@ -13,7 +13,7 @@ $NXF_RUN -c ../../template.config | tee stdout
 
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -c ../../template.config  -resume | tee stdout
 

@@ -20,12 +20,12 @@ workflow {
 
 process foo {
   memory { x.size() < 10.B  ? 100.MB : 200.MB }
-  
-  input: 
+
+  input:
   file x
-  
+
   script:
   """
-  echo task=$x mem=$task.memory 
+  echo task=$x mem=$task.memory
   """
 }

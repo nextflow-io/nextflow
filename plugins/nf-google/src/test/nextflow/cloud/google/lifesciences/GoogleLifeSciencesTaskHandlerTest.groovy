@@ -256,7 +256,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
 
     }
 
-    
+
     def 'should check if it is running'(){
         given:
         // -- task

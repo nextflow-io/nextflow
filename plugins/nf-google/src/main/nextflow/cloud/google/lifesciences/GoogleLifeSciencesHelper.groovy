@@ -160,7 +160,7 @@ class GoogleLifeSciencesHelper {
 
     protected List<Action> createActions(GoogleLifeSciencesSubmitRequest req) {
         final List<Action> result = []
-        if( config.sshDaemon || config.keepAliveOnFailure ) 
+        if( config.sshDaemon || config.keepAliveOnFailure )
             result.add(createSshDaemonAction(req))
         result.add(createStagingAction(req))
         result.add(createMainAction(req))
@@ -220,7 +220,7 @@ class GoogleLifeSciencesHelper {
         if( req.bootDiskSizeGb ) {
             vm.setBootDiskSizeGb(req.bootDiskSizeGb)
         }
-        
+
         if( req.cpuPlatform ) {
             vm.setCpuPlatform(req.cpuPlatform)
         }

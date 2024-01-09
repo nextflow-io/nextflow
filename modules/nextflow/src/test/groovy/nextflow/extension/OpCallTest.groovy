@@ -57,7 +57,7 @@ class OpCallTest extends Specification {
         op.outputs == [result] as Set
         result instanceof DataflowQueue
         result.val == 1
-        result.val == 2 
+        result.val == 2
 
     }
 

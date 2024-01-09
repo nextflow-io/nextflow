@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 
 /**
  * Model Spack configuration
- * 
+ *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
 @CompileStatic

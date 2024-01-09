@@ -310,7 +310,7 @@ class TaskProcessor {
      * @return The processor unique id
      */
     int getId() { id }
-  
+
     /**
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
@@ -1431,7 +1431,7 @@ class TaskProcessor {
                     fairBuffers.remove(0)
                     // increase the index of the next emission
                     currentEmission++
-                    // take the next emissions 
+                    // take the next emissions
                     emissions = fairBuffers[0]
                 }
             }
@@ -1545,7 +1545,7 @@ class TaskProcessor {
                 ? List.of(line,'')
                 : List.of(line.substring(0,p), line.substring(p+1))
     }
-    
+
     /**
      * Collects the process 'std output'
      *
@@ -1817,7 +1817,7 @@ class TaskProcessor {
 
         if( obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
-        
+
         if( !(obj instanceof CharSequence) )
             throw new ProcessUnrecoverableException("Not a valid path value type: ${obj.getClass().getName()} ($obj)")
 
@@ -1830,7 +1830,7 @@ class TaskProcessor {
             return FileHelper.asPath(str)
         if( !str )
             throw new ProcessUnrecoverableException("Path value cannot be empty")
-        
+
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
@@ -2132,7 +2132,7 @@ class TaskProcessor {
         if( modules ) {
             keys.addAll(modules)
         }
-        
+
         final conda = task.getCondaEnv()
         if( conda ) {
             keys.add(conda)

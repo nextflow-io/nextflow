@@ -92,7 +92,7 @@ class NextflowTest extends Specification {
         uri.authority == AUTH
         uri.path == PATH
         uri.query == QUERY
-        
+
         where:
         LOCATION                            | SCHEME    | AUTH      | PATH              | QUERY
         'http://foo.com/some/file.txt'      | 'http'    | 'foo.com' | '/some/file.txt'  | null

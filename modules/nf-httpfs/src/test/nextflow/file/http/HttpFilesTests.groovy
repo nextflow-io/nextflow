@@ -305,7 +305,7 @@ class HttpFilesTests extends Specification {
             for( Map.Entry<String,String> entry : allHeaders.entrySet() ) {
                 header.set(entry.key, entry.value)
             }
-            
+
             header.set("Content-Type", "text/plain")
             request.sendResponseHeaders(respCode.call(), body.size())
 

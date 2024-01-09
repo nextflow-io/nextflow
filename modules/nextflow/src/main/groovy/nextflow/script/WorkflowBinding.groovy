@@ -142,7 +142,7 @@ class WorkflowBinding extends Binding  {
         catch( MissingPropertyException e ) {
             if( !meta )
                  throw e
-            
+
             def component = getComponent0(name)
             if( component )
                 return component

@@ -272,12 +272,12 @@ class TraceRecordTest extends Specification {
         rec.secureEnvString('AWS_KEY=12345') == 'AWS_KEY=[secure]'
 
         rec.secureEnvString('''\
-                foo=hello    
+                foo=hello
                 aws_key=d7sds89
                 git_token=909s-ds-'''
                 .stripIndent() ) ==
                 '''\
-                foo=hello    
+                foo=hello
                 aws_key=[secure]
                 git_token=[secure]'''.stripIndent()
 

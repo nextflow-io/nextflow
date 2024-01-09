@@ -73,14 +73,14 @@ class AzBashLib extends BashFunLib<AzBashLib> {
               azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
             fi
         }
-        
+
         nxf_az_download() {
             local source=$1
             local target=$2
             local basedir=$(dirname $2)
             local ret
             mkdir -p "$basedir"
-        
+
             ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
                 mkdir -p $target

@@ -44,7 +44,7 @@ class WaveFactory implements TraceObserverFactory {
             wave.enabled = false
             return List.of()
         }
-        
+
         if( fusion.enabled ) {
             checkWaveRequirement(session, wave, 'Fusion')
         }

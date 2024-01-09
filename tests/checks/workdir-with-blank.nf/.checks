@@ -2,7 +2,7 @@ set -e
 mkdir 'w o r k d i r'
 
 #
-# run using a workdir containing blanks 
+# run using a workdir containing blanks
 #
 echo ''
 $NXF_RUN -w "$PWD/w o r k d i r" > stdout
@@ -10,7 +10,7 @@ $NXF_RUN -w "$PWD/w o r k d i r" > stdout
 
 
 #
-# the same using scracth 
+# the same using scracth
 #
 echo ''
 $NXF_RUN -w "$PWD/w o r k d i r" -process.scratch true > stdout
@@ -18,7 +18,7 @@ $NXF_RUN -w "$PWD/w o r k d i r" -process.scratch true > stdout
 
 
 #
-# the same using Docker 
+# the same using Docker
 #
 # Disabled - See https://github.com/docker/docker/issues/17967
 #echo ''

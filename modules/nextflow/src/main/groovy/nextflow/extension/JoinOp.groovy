@@ -138,7 +138,7 @@ class JoinOp {
                     target << Channel.STOP
                 }
             }}
-        
+
         return result
     }
 

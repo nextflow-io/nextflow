@@ -241,7 +241,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.enableRequesterPaysBuckets == true
 
     }
-    
+
     def 'should config cpuPlatform' () {
         when:
         def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])

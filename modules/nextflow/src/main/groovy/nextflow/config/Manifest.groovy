@@ -56,7 +56,7 @@ class Manifest {
     }
 
     String getDescription() {
-        target.description 
+        target.description
     }
 
     String getAuthor() {

@@ -160,8 +160,8 @@ class WaveConfig {
         return containerConfigUrl ?: Collections.<URL>emptyList()
     }
 
-    Duration tokensCacheMaxDuration() { 
-        return tokensCacheMaxDuration 
+    Duration tokensCacheMaxDuration() {
+        return tokensCacheMaxDuration
     }
 
     @Deprecated

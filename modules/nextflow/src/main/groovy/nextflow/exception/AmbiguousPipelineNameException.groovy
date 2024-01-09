@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 /**
  * Exception thrown when a user specifies a pipeline name
  * that identifies two or more Git repositories
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

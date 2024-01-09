@@ -325,7 +325,7 @@ class ConfigDiscoveryTest extends Specification {
                 - name: experimenter
                   user:
                     password: some-password
-                    username: exp        
+                    username: exp
         '''.stripIndent()
 
         when:

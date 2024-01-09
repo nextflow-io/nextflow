@@ -39,7 +39,7 @@ class BashFunLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -57,7 +57,7 @@ class BashFunLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else

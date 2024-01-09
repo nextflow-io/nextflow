@@ -73,7 +73,7 @@ class OarExecutor extends AbstractGridExecutor {
                 result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}".toString()
             }
         }
-        
+
         // the requested queue name
         if( task.config.queue ) {
             result << '-q' << (task.config.queue.toString())
@@ -113,7 +113,7 @@ class OarExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     static private Pattern SUBMIT_REGEX = ~/OAR_JOB_ID=(\d+)/
-    
+
     @Override
     def parseJobId(String text) {
         for( String line : text.readLines() ) {

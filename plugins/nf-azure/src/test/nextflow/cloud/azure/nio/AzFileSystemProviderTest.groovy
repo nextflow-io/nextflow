@@ -161,5 +161,5 @@ class AzFileSystemProviderTest extends Specification {
         fs == FS
 
     }
-    
+
 }

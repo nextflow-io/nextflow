@@ -34,7 +34,7 @@ class BasicCliOptsTest extends Specification {
         then:
         cli.options == OPTS
         cli.args == ARGS
-        
+
         where:
         CLI                                 | OPTS                                  | ARGS
         null                                | [:]                                   | []

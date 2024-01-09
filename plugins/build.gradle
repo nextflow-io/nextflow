@@ -50,7 +50,7 @@ subprojects {
     apply plugin: 'groovy'
     apply plugin: 'io.nextflow.nf-build-plugin'
     apply plugin: 'maven-publish'
-    
+
     repositories {
         mavenLocal()
         mavenCentral()
@@ -150,7 +150,7 @@ subprojects {
     }
 
     /*
-     * publish jars maven repo on S3 
+     * publish jars maven repo on S3
      */
     publishing {
         publications {

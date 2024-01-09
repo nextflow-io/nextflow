@@ -68,7 +68,7 @@ class XPathTest extends Specification {
         uri.path == PATH
         uri.query == QUERY
         uri.scheme == SCHEME
-        
+
         where:
         LOCATION                                | SCHEME    |  AUTH             | PATH          | QUERY
         'http://www.nextflow.io/abc/d.txt'      | 'http'    | 'www.nextflow.io' | '/abc/d.txt'  | null

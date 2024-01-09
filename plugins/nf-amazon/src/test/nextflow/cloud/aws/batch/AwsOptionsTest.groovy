@@ -99,7 +99,7 @@ class AwsOptionsTest extends Specification {
         def opts = new AwsOptions(sess)
         then:
         opts.maxParallelTransfers == 5
-        opts.maxTransferAttempts == 3 
+        opts.maxTransferAttempts == 3
         opts.delayBetweenAttempts.seconds == 9
         opts.storageClass == 'STANDARD'
         opts.storageEncryption == 'AES256'
@@ -242,7 +242,7 @@ class AwsOptionsTest extends Specification {
         [aws:[batch:[platformType: 'fargate', cliPath: 's5cmd --foo']]]             | null              | 's5cmd --foo'
         [aws:[batch:[platformType: 'fargate', cliPath: '/some/path/s5cmd --foo']]]  | null              | '/some/path/s5cmd --foo'
     }
-    
+
     def 'should parse s3 acl' ( ) {
         when:
         def opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'PublicRead']]))

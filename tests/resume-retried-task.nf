@@ -17,14 +17,14 @@
 
 process foo {
     errorStrategy 'retry'
-    maxRetries 3 
+    maxRetries 3
 
     script:
     if( task.attempt < 3 )
 	"""
-    exit 1 
+    exit 1
 	"""
-    else 
+    else
     """
     echo ciao
     """

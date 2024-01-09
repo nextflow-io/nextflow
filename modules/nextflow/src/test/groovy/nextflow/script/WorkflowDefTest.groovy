@@ -53,21 +53,21 @@ class WorkflowDefTest extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
             workflow alpha {
               print 'Hello world'
             }
-        
+
             workflow bravo() {
               take: foo
               take: bar
               main:
                 print foo
                 print bar
-              emit: 
+              emit:
                 foo+bar
             }
-            
+
             workflow delta() {
                 take: foo
                 take: bar
@@ -96,12 +96,12 @@ class WorkflowDefTest extends Dsl2Spec {
               main:
                 print foo
                 print bar
-              emit: 
+              emit:
                 foo+bar
               '''.stripIndent(true)
 
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
-        meta.getWorkflow('delta') .declaredVariables == [] 
+        meta.getWorkflow('delta') .declaredVariables == []
         meta.getWorkflow('delta') .source.stripIndent(true) == '''\
                 take: foo
                 take: bar
@@ -111,13 +111,13 @@ class WorkflowDefTest extends Dsl2Spec {
 
         meta.getWorkflow('empty') .source == ''
         meta.getWorkflow('empty') .declaredInputs == []
-        meta.getWorkflow('empty') .declaredVariables == [] 
+        meta.getWorkflow('empty') .declaredVariables == []
     }
 
     def 'should define anonymous workflow' () {
 
         def SCRIPT = '''
-                    
+
             workflow {
               print 1
               print 2
@@ -140,15 +140,15 @@ class WorkflowDefTest extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
             workflow alpha {
               take: foo
               emit: bar
-              emit: baz  
-              
+              emit: baz
+
               main: "$x world"
             }
-       
+
         '''
 
         when:
@@ -170,14 +170,14 @@ class WorkflowDefTest extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
             workflow {
-              publish: 
+              publish:
                 foo
                 bar to: 'some/path'
                 baz.out to: 'other/path'
-              main:   
-                x = 1 
+              main:
+                x = 1
             }
         '''
 
@@ -195,11 +195,11 @@ class WorkflowDefTest extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
             workflow alpha {
               publish: foo
-              main:   
-                x = 1 
+              main:
+                x = 1
             }
         '''
 
@@ -217,13 +217,13 @@ class WorkflowDefTest extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
             workflow alpha {
               take: foo
               main: println foo
               take: bar
             }
-       
+
         '''
 
         when:
@@ -242,11 +242,11 @@ class WorkflowDefTest extends Dsl2Spec {
         // does NOT define an implicit `it` parameter that would clash
         // with the `it` used by the inner closure
 
-        def SCRIPT = """       
-        
+        def SCRIPT = """
+
         workflow {
-            Channel.empty().map { id -> id +1 }  
-            Channel.empty().map { it -> def id = it+1 }  
+            Channel.empty().map { id -> id +1 }
+            Channel.empty().map { it -> def id = it+1 }
         }
         """
 
@@ -321,14 +321,14 @@ class WorkflowDefTest extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
             workflow alpha {
               take:
                 foo
               main:
-                print x 
-              emit: 
-                foo  
+                print x
+              emit:
+                foo
             }
         '''
 
@@ -341,9 +341,9 @@ class WorkflowDefTest extends Dsl2Spec {
                             take:
                               foo
                             main:
-                              print x 
-                            emit: 
-                              foo  
+                              print x
+                            emit:
+                              foo
                             '''.stripIndent(true)
     }
 
@@ -354,7 +354,7 @@ class WorkflowDefTest extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-            workflow foo { } 
+            workflow foo { }
         '''
 
         when:

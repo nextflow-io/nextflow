@@ -118,7 +118,7 @@ class AzBatchServiceTest extends Specification {
         expect:
         svc.computeScore(CPUS, MemoryUnit.of(MEM), VM) == EXPECTED
 
-        
+
         where:
         CPUS    | MEM       | VM                                            | EXPECTED
         1       | '10 MB'   | [numberOfCores: 1, memoryInMb: 10]            | 0.0
@@ -133,7 +133,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
         def svc = new AzBatchService(exec)
-        
+
         when:
         def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), null)
         then:
@@ -206,7 +206,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
         def svc = new AzBatchService(exec)
-        
+
         expect:
         svc.computeSlots(CPUS, MemoryUnit.of(MEM * _1GB), VM_CPUS, MemoryUnit.of(VM_MEM*_1GB)) == EXPECTED
 
@@ -471,7 +471,7 @@ class AzBatchServiceTest extends Specification {
         def result = svc.specFromPoolConfig(POOL_ID)
         then:
         1 * svc.getPool(_) >> new CloudPool(vmSize: 'Standard_D2_v2')
-        and:        
+        and:
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
         and:

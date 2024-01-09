@@ -255,7 +255,7 @@ class CmdClean extends CmdBase implements CacheBase {
                     result = false
                     if(!quiet) System.err.println "Failed to remove ${dir.toUriString()}"
                 }
-                
+
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })

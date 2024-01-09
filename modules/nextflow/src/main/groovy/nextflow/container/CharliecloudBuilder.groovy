@@ -93,7 +93,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         return rootPath
     }
-    
+
     @Override
     protected String composeVolumePath(String path, boolean readOnlyInputs = false) {
         def mountCmd = "-b ${escape(path)}"

@@ -24,7 +24,7 @@ import nextflow.util.Duration
 
 /**
  * Model retry policy configuration
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includePackage = false, includeNames = true)

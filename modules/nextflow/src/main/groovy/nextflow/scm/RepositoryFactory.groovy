@@ -139,7 +139,7 @@ class RepositoryFactory implements ExtensionPoint {
             codeCommitLoaded=true
             factories0=null
         }
-        
+
         final provider = factories().findResult( it -> it.getConfig(providers, url) )
         if( !provider ) {
             throw new AbortOperationException("Unable to find a Git provider config for ${url}")

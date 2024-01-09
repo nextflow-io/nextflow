@@ -26,7 +26,7 @@ import nextflow.exception.AbortOperationException
  *
  * See for details
  *  https://confluence.atlassian.com/bitbucketserver
- *  
+ *
  * @author Piotr Faba <piotr.faba@ardigen.com>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

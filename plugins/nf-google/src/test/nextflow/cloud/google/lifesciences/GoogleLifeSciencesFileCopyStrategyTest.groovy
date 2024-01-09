@@ -234,5 +234,5 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
             '''.stripIndent()
     }
 
-    
+
 }

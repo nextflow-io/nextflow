@@ -38,7 +38,7 @@ import nextflow.util.CacheHelper
  *
  * The file must only the accessible to the running user and it should accessible via a shared
  * file system when using a batch scheduler based executor
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

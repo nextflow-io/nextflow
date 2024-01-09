@@ -198,7 +198,7 @@ class ContainerHandlerTest extends Specification {
         0 * handler.normalizeDockerImageName(IMAGE) >> null
         and:
         result == 'shifter://image'
-            
+
     }
 
     @Unroll
@@ -311,7 +311,7 @@ class ContainerHandlerTest extends Specification {
         def result = handler.normalizeImageName(IMG)
         then:
         TIMES * handler.createSingularityCache(_, NORM) >> EXPECTED
-        
+
         then:
         result == EXPECTED
 

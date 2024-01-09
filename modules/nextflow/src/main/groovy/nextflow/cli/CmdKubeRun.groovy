@@ -24,7 +24,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.k8s.K8sDriverLauncher
 /**
  * Extends `run` command to support Kubernetes deployment
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

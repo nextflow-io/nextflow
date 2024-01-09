@@ -1,8 +1,8 @@
 process foo {
   fair true
   input:
-  val x 
-  output: 
+  val x
+  output:
   tuple val(task.index), val(x)
 
   script:

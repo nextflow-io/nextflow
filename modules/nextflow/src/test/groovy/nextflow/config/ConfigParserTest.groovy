@@ -45,11 +45,11 @@ class ConfigParserTest extends Specification {
             id 'foo'
             id 'bar'
             id 'bar'
-        } 
-             
+        }
+
         process {
             cpus = 1
-            mem = 2 
+            mem = 2
         }
         '''
 
@@ -68,7 +68,7 @@ class ConfigParserTest extends Specification {
         profiles {
             plugins {
                 id 'foo'
-            } 
+            }
         }
         '''
 
@@ -509,7 +509,7 @@ class ConfigParserTest extends Specification {
 
         given:
         ConfigObject result
-        def CONFIG = '''   
+        def CONFIG = '''
            str1 = 'hello'
            str2 = "${str1} world"
            closure1 = { "$str" }
@@ -551,19 +551,19 @@ class ConfigParserTest extends Specification {
 
     def 'should handle extend mem and duration units' () {
         ConfigObject result
-        def CONFIG = '''   
+        def CONFIG = '''
             mem1 = 1.GB
             mem2 = 1_000_000.toMemory()
             mem3 = MemoryUnit.of(2_000)
             time1 = 2.hours
             time2 = 60_000.toDuration()
             time3 = Duration.of(120_000)
-            flag = 10000 < 1.GB 
+            flag = 10000 < 1.GB
            '''
 
         when:
         result = new ConfigParser()
-                .parse(CONFIG)   
+                .parse(CONFIG)
         then:
         result.mem1 instanceof MemoryUnit
         result.mem1 == MemoryUnit.of('1 GB')
@@ -599,11 +599,11 @@ class ConfigParserTest extends Specification {
 
         folder.resolve('conf/remote.config').text = '''
         process {
-            cpus = 4 
+            cpus = 4
             memory = '10GB'
         }
         '''
-        
+
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
         def cfg = new ConfigBuilder().buildGivenFiles(url)

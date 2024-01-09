@@ -33,12 +33,12 @@ class TupleOutParamTest extends Dsl2Spec {
             process hola {
               output:
                 tuple val(x)
-                tuple val(y), stdout, file('*.fa') 
+                tuple val(y), stdout, file('*.fa')
                 tuple stdout, val(z)
 
               return ''
             }
-            
+
             workflow {
               hola()
             }
@@ -97,7 +97,7 @@ class TupleOutParamTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               hola()
             }
@@ -150,10 +150,10 @@ class TupleOutParamTest extends Dsl2Spec {
             process hola {
               output:
                 tuple env(FOO), env(BAR)
-              
-              /echo command/ 
+
+              /echo command/
             }
-            
+
             workflow {
               hola()
             }

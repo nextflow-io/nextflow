@@ -147,7 +147,7 @@ nxf_trace_linux() {
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
     trap 'kill $mem_proc' ERR
-    
+
     /bin/bash -ue {{folder}}/.command.sh &
     local task=$!
 

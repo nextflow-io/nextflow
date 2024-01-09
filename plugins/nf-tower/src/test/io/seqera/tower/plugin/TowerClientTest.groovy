@@ -114,7 +114,7 @@ class TowerClientTest extends Specification {
         'a_b_c'     | 'aBC'
         'foo__bar'  | 'fooBar'
     }
-    
+
 
     def 'should validate URL' () {
         given:
@@ -197,7 +197,7 @@ class TowerClientTest extends Specification {
         def observer = Spy(TowerClient)
         observer.@httpClient = client
         observer.@workflowId = 'xyz-123'
-        
+
         def nowTs = System.currentTimeMillis()
         def submitTs = nowTs-2000
         def startTs = nowTs-1000

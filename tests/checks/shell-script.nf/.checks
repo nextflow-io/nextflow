@@ -1,5 +1,5 @@
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN | tee stdout
 
@@ -9,7 +9,7 @@ $NXF_RUN | tee stdout
 
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -resume | tee stdout
 
@@ -19,7 +19,7 @@ $NXF_RUN -resume | tee stdout
 
 
 #
-# run changing params does not hit cache 
+# run changing params does not hit cache
 #
 $NXF_RUN -resume --data xxx | tee stdout
 

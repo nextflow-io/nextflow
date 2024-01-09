@@ -5,8 +5,8 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 
 /**
- * Helper class to hide sensitive data 
- * 
+ * Helper class to hide sensitive data
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -24,7 +24,7 @@ class SecretHelper {
     static Object hideSecrets( obj ) {
         if( obj == null )
             return null
-        
+
         if( obj instanceof Map ) {
             final names = obj.keySet()
             for( String n : names )  {
@@ -44,10 +44,10 @@ class SecretHelper {
         else if( obj.getClass().isArray() ) {
             for( Object item : ((Object[])obj) ) {
                 hideSecrets(item)
-            }    
+            }
         }
 
         return obj
     }
-    
+
 }

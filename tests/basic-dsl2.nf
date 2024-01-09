@@ -1,13 +1,13 @@
 #!/usr/bin/env nextflow
 
-/* 
- * Command line input parameter 
+/*
+ * Command line input parameter
  */
 params.in = "$baseDir/data/sample.fa"
 
 
-/* 
- * split a fasta file in multiple files 
+/*
+ * split a fasta file in multiple files
  */
 process splitSequences {
 
@@ -23,14 +23,14 @@ process splitSequences {
 
 }
 
-/* 
- * Simple reverse the sequences 
+/*
+ * Simple reverse the sequences
  */
 process reverse {
 
     input:
     path x
-    
+
     output:
     stdout
 

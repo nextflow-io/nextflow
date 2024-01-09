@@ -100,7 +100,7 @@ class ChannelTest extends Specification {
         then:
         result.val == null
         result.val == Channel.STOP
-        
+
 
     }
 
@@ -468,7 +468,7 @@ class ChannelTest extends Specification {
         def file3 = Files.createFile(folder.resolve('file3.log'))
         and:
         SysEnv.push(NXF_FILE_ROOT: folder.toString())
-        
+
         when:
         List<Path> result = Channel
                 .fromPath( '*.txt' )
@@ -528,7 +528,7 @@ class ChannelTest extends Specification {
         // weird hack to prevent test failing on Github Action test with Java 15
         println "testFromPathWithLinks content = " + folder.list()
         sleep 100
-        
+
         // -- by default traverse symlinks
         when:
         def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/**/*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
@@ -950,7 +950,7 @@ class ChannelTest extends Specification {
                 Paths.get('/data/SRR389222_sub2.fastq.gz'),
                 Paths.get('/data/SRR389222_sub3.fastq.gz')
         ]
-        
+
         when:
         def result = Channel.fromFilePairs(files)
         then:

@@ -79,7 +79,7 @@ class TowerClient implements TraceObserver {
         TraceRecord trace
         boolean completed
     }
-    
+
 
     private Session session
 
@@ -269,7 +269,7 @@ class TowerClient implements TraceObserver {
     @Override
     void onFlowCreate(Session session) {
         log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
-        
+
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
         this.runName = session.getRunName()
@@ -725,7 +725,7 @@ class TowerClient implements TraceObserver {
             def cause = parseCause(resp.cause)
             def msg = """\
                 Unexpected HTTP response.
-                Failed to send message to ${endpoint} -- received 
+                Failed to send message to ${endpoint} -- received
                 - status code : $resp.code
                 - response msg: $resp.message
                 """.stripIndent(true)
@@ -746,7 +746,7 @@ class TowerClient implements TraceObserver {
                 Unexpected Tower response
                 - endpoint url: $endpoint
                 - status code : $resp.code
-                - response msg: ${resp.message} 
+                - response msg: ${resp.message}
                 """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"

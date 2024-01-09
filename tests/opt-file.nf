@@ -16,7 +16,7 @@
  */
 
 process foo {
-  output: 
+  output:
   path 'missing.txt', optional: true
 
   '''
@@ -25,7 +25,7 @@ process foo {
 }
 
 process bar {
-  input: 
+  input:
   file x
 
   '''

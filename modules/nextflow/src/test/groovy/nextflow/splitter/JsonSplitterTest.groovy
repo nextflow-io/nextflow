@@ -84,7 +84,7 @@ class JsonSplitterTest extends Specification {
     def testSplitArray() {
         when:
         def items = new JsonSplitter().target(jsonArray).list()
-        
+
         then:
         items.size() == 3
         items[0] instanceof Map
@@ -97,7 +97,7 @@ class JsonSplitterTest extends Specification {
     def testSplitArrayLimit() {
         when:
         def items = new JsonSplitter(limit: 2).target(jsonArray).list()
-        
+
         then:
         items.size() == 2
         items[0]['beaconId'] == 'se.nbis.swefreq'
@@ -157,7 +157,7 @@ class JsonSplitterTest extends Specification {
         def items = JsonSplitter.fromJson(jr)
         jr.close()
         r.close()
-        
+
         then:
         items instanceof List
         items[0] == true

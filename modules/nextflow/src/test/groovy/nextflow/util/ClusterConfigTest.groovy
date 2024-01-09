@@ -24,7 +24,7 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ClusterConfigTest extends Specification {
-    
+
     def testGetAttribute() {
 
         when:

@@ -1,5 +1,5 @@
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN -c ../../config-vars.config | tee stdout
 
@@ -9,7 +9,7 @@ $NXF_RUN -c ../../config-vars.config | tee stdout
 
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -c ../../config-vars.config -resume | tee stdout
 

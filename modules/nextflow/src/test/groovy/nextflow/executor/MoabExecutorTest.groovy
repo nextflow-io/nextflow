@@ -57,7 +57,7 @@ class MoabExecutorTest extends Specification {
     def 'should cancel a task' () {
         given:
         def exec = new MoabExecutor()
-        
+
         expect:
         exec.killTaskCommand('123') == ['mjobctl', '-c', '123']
         exec.killTaskCommand(['111','222','333']) == ['mjobctl', '-c', '111,222,333']

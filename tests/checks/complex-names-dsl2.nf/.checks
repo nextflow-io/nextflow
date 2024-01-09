@@ -1,14 +1,14 @@
 set -e
 
 #
-# basic run 
+# basic run
 #
 echo ''
 $NXF_RUN > stdout
 [[ `<stdout grep -c 'Hello world!'` == 1 ]] || false
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > bar'` == 1 ]] || false
-( cd foo; 
+( cd foo;
 [[ -s f1.fa ]] || false
 [[ -s f2.fa ]] || false
 [[ -s f3.fa ]] || false
@@ -22,15 +22,15 @@ $NXF_RUN > stdout
 )
 
 #
-# resume 
-# 
-rm -rf foo 
+# resume
+#
+rm -rf foo
 echo ''
 $NXF_RUN -resume > stdout
 [[ `<stdout grep -c 'Hello world!'` == 1 ]] || false
 [[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo'` == 1 ]] || false
 [[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > bar'` == 1 ]] || false
-( cd foo; 
+( cd foo;
 [[ -s f1.fa ]] || false
 [[ -s f2.fa ]] || false
 [[ -s f3.fa ]] || false

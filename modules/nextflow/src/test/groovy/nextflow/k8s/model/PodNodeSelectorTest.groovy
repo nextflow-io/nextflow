@@ -26,7 +26,7 @@ class PodNodeSelectorTest extends Specification {
 
     def 'should create node selector' () {
 
-        expect: 
+        expect:
         new PodNodeSelector(selector).toSpec() == spec
 
         where:

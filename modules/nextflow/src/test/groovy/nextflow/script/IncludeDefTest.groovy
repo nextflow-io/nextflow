@@ -48,7 +48,7 @@ class IncludeDefTest extends Specification {
 
         def include = Spy(IncludeDef)
         include.getOwnerPath() >> script
-        
+
         when:
         def result = include.realModulePath( 'mod-x.nf')
         then:
@@ -135,7 +135,7 @@ class IncludeDefTest extends Specification {
 
     }
 
-    // ==== DSL tests === 
+    // ==== DSL tests ===
 
     static class TestInclude extends IncludeDef {
         boolean loadInvoked

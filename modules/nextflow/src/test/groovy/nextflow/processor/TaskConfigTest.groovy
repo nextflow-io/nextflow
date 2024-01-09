@@ -500,7 +500,7 @@ class TaskConfigTest extends Specification {
         process.publishDir '/there', pattern: '*.fq'
         def dirs = process.createTaskConfig().getPublishDir()
         then:
-        dirs.size() == 2 
+        dirs.size() == 2
         dirs[0].path == Paths.get('/here')
         dirs[0].pattern == null
         dirs[1].path == Paths.get('/there')
@@ -556,7 +556,7 @@ class TaskConfigTest extends Specification {
         def process = new ProcessConfig(script)
         process.pod secret: 'foo', mountPath: '/this'
         process.pod secret: 'bar', env: 'BAR_XXX'
-        
+
         then:
         process.get('pod') == [
                     [secret: 'foo', mountPath: '/this'],
@@ -578,7 +578,7 @@ class TaskConfigTest extends Specification {
         process.accelerator 5
         def res = process.createTaskConfig().getAccelerator()
         then:
-        res.limit == 5 
+        res.limit == 5
         res.request == 5
 
         when:

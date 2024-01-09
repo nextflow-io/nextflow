@@ -9,14 +9,14 @@ if [ -z "$AWS_ACCESS_KEY_ID" ]; then
 fi
 
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN -c .config | tee .stdout
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
 [[ `check_kms_key` == 1 ]] || false
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -c .config  -resume | tee .stdout
 [[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false

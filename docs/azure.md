@@ -81,10 +81,10 @@ azure {
 }
 ```
 
-The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount. 
+The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount.
 
 :::{warning}
-Azure File shares do not support authentication and management with Active Directory. The storage account key must be 
+Azure File shares do not support authentication and management with Active Directory. The storage account key must be
 set in the configuration if a share is mounted.
 :::
 
@@ -346,7 +346,7 @@ When using containers hosted in a private registry, the registry name must also 
 :::{versionadded} 23.03.0-edge
 :::
 
-Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the 
+Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the
 `virtualNetwork` option can be added to the pool settings as follows:
 
 ```groovy

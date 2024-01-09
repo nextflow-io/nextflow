@@ -84,7 +84,7 @@ class K8sDriverLauncherTest extends Specification {
         k8sConfig.getStorageMountPath() == '/mnt'
 
     }
- 
+
 
     @Unroll
     def 'should get cmd cli' () {
@@ -221,8 +221,8 @@ class K8sDriverLauncherTest extends Specification {
         driver.getLaunchCli() >> 'nextflow run foo'
 
         spec == [
-            apiVersion: 'batch/v1', 
-            kind: 'Job', 
+            apiVersion: 'batch/v1',
+            kind: 'Job',
             metadata: metadata,
             spec: [
                 backoffLimit: 0,

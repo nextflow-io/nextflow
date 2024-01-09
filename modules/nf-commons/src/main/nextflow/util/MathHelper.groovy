@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 
 /**
  * Math helper functions
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

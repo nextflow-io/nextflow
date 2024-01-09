@@ -70,7 +70,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         def volumes = [GCS_VOL]
         def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
-        
+
         and:
         def handler = Spy(new GoogleBatchTaskHandler(task, exec))
 

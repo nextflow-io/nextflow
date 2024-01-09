@@ -186,7 +186,7 @@ abstract class Executor {
     }
 
     /**
-     * @return {@code true} when the executor uses fusion file system 
+     * @return {@code true} when the executor uses fusion file system
      */
     boolean isFusionEnabled() {
         return false

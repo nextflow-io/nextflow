@@ -58,5 +58,5 @@ class S3PathSerializer extends Serializer<S3Path> implements SerializerRegistran
         log.trace "S3Path de-serialization > scheme: $scheme; path: $path"
         return (S3Path) S3PathFactory.create("s3://${path}")
     }
-    
+
 }

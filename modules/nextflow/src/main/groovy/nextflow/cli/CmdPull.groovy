@@ -71,7 +71,7 @@ class CmdPull extends CmdBase implements HubOptions {
 
         // init plugin system
         Plugins.init()
-        
+
         list.each {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)

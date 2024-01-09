@@ -801,7 +801,7 @@ class AssetManager {
         result.current = current    // current branch name
         result.master = master      // master branch name
         result.branches = branches  // collection of branches
-        result.tags = tags          // collect of tags 
+        result.tags = tags          // collect of tags
         return result
     }
 
@@ -1086,7 +1086,7 @@ class AssetManager {
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath
-        
+
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {

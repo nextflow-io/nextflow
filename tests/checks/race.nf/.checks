@@ -1,7 +1,7 @@
 #
 # run normal mode
 #
-$NXF_RUN 
+$NXF_RUN
 
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > proc1'` == 3 ]] || false
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > proc2'` == 3 ]] || false
@@ -12,7 +12,7 @@ $NXF_RUN
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > proc7'` == 3 ]] || false
 
 
-$NXF_RUN 
+$NXF_RUN
 
 [[ `grep INFO .nextflow.log | grep -c '\[skipping\] Stored process > proc1'` == 3 ]] || false
 [[ `grep INFO .nextflow.log | grep -c '\[skipping\] Stored process > proc2'` == 3 ]] || false

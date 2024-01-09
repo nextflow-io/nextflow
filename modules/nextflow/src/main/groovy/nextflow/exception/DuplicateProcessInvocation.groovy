@@ -21,7 +21,7 @@ import groovy.transform.InheritConstructors
 /**
  * Thrown when the same process is invoke more than one
  * time in the same woekflow scope
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors

@@ -141,7 +141,7 @@ class LocalPollingMonitorTest extends Specification {
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
-        
+
         expect:
         monitor.canSubmit(handler) == true
         monitor.availCpus == 1

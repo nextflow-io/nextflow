@@ -22,7 +22,7 @@ import groovy.transform.InheritConstructors
 /**
  * Exception thrown when a module define a custom function
  * more once with a different signature
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors

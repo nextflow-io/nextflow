@@ -48,11 +48,11 @@ This software includes source code and libraries developed by:
     Azure SDK for Java
     Copyright (c) 2015 Microsoft Corp
     Licensed under MIT License (MIT)
-    
+
     Failsafe
     Copyright Jonathan Halterman and friends
     Released under the Apache 2.0 license
-           
+
     Gpars
     Copyright (c) 2008-2011, The Gpars authors
     Licensed under the Apache License, Version 2.0
@@ -69,7 +69,7 @@ This software includes source code and libraries developed by:
     Google API Java client
     Copyright 2019, Google Inc
     Licensed under the Apache License, Version 2.0
-    
+
     Gson
     https://github.com/google/gson
     Copyright 2008 Google Inc.
@@ -95,7 +95,7 @@ This software includes source code and libraries developed by:
     https://github.com/FasterXML/jackson-databind
     Copyright The Jackson authors
     Licensed under Apache License, Version 2.0
-    
+
     JCommander
     Copyright (c) 2010 Cedric Beust
     Licensed under Apache License, Version 2.0

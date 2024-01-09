@@ -503,7 +503,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         if( opts.executionRole )
             container.setExecutionRoleArn(opts.executionRole)
-        
+
         final logsGroup = opts.getLogsGroup()
         if( logsGroup )
             container.setLogConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
@@ -552,7 +552,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    @Memoized 
+    @Memoized
     LogConfiguration getLogConfiguration(String name, String region) {
         new LogConfiguration()
             .withLogDriver('awslogs')

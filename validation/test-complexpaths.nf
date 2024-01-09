@@ -16,7 +16,7 @@ process foo {
   script:
   $/
   echo A > hello.txt
-  echo B > sample.zip 
+  echo B > sample.zip
   echo C > sample.html
   echo D > 01_A\(R1\).fastq
   echo E > 01_A\(R2\).fastq
@@ -32,7 +32,7 @@ process foo {
 process bar {
   debug true
   container 'debian:latest'
-  input: 
+  input:
   file '*'
 
   script:

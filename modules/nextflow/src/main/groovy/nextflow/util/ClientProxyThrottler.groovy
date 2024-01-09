@@ -26,7 +26,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  *
  * WARN: the caller class/method should not be compile static
  *
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

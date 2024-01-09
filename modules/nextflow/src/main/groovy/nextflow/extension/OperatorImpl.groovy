@@ -1159,7 +1159,7 @@ class OperatorImpl {
         final result = new SplitOp( source, 'splitJson', opts ).apply()
         return result
     }
-    
+
     DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {
         final splitter = new TextSplitter()
         final result = countOverChannel( source, splitter, opts )

@@ -95,7 +95,7 @@ class CharliecloudCache {
         def result = Paths.get(str)
         if( !result.exists() ) {
             log.info "Charliecloud cache directory: $str does not exist -- Charliecloud will attempt to initialize it at the specified location"
-        } 
+        }
         else if( !result.resolve('img').exists() || !result.resolve('dlcache').exists() ) {
             throw new IOException("Charliecloud cache directory exists but seems invalid: $str -- See https://hpc.github.io/charliecloud/faq.html#storage-directory-seems-invalid")
         }

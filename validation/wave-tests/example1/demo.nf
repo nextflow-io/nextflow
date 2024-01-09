@@ -7,6 +7,6 @@ process foo {
   """
 }
 
-workflow { 
+workflow {
   foo()
 }

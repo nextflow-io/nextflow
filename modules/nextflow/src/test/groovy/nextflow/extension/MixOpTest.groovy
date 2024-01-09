@@ -33,7 +33,7 @@ class MixOpTest extends Dsl2Spec {
             c2 = Channel.of( 'a','b' )
             c3 = Channel.value( 'z' )
             c1.mix(c2,c3)
-            
+
         ''') .toList().val
 
         then:

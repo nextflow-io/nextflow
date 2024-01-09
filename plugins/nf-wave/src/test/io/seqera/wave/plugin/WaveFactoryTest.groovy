@@ -56,7 +56,7 @@ class WaveFactoryTest extends Specification {
 
         expect:
         factory.isAwsBatchFargateMode(CONFIG) == EXPECTED
-        
+
         where:
         CONFIG                                  | EXPECTED
         [:]                                     | false

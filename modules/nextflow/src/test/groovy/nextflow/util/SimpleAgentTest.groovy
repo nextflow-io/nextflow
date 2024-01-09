@@ -40,7 +40,7 @@ class SimpleAgentTest extends Specification {
         result == [1,2,3]
         and:
         agent.getValue() == agent.getQuickValue()
-        
+
         // changing the state object does not modify the
         // result because it's a clone of the original one
         when:

@@ -114,7 +114,7 @@ class CmdConfigTest extends Specification {
                        executor = 'slurm'
                        queue = 'long'
                     }
-                    
+
                     docker {
                        enabled = true
                     }
@@ -203,17 +203,17 @@ class CmdConfigTest extends Specification {
             author = 'me'
             mainScript = 'foo.nf'
         }
-        
+
         process {
           queue = 'cn-el7'
-          cpus = 4 
+          cpus = 4
           memory = 10.GB
           time = 5.h
           ext.other = { 10.GB * task.attempt }
         }
         '''
         def buffer = new ByteArrayOutputStream()
-        // command definition 
+        // command definition
         def cmd = new CmdConfig()
         cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
         cmd.stdout = buffer
@@ -221,14 +221,14 @@ class CmdConfigTest extends Specification {
 
         when:
         cmd.run()
-        
+
         then:
         buffer.toString() == '''
         manifest {
            author = 'me'
            mainScript = 'foo.nf'
         }
-        
+
         process {
            queue = 'cn-el7'
            cpus = 4
@@ -254,12 +254,12 @@ class CmdConfigTest extends Specification {
         X1 = 'SOMETHING'
         X2 = [X1]
         X3 = [p:111, q:'bbb']
-        
+
         params {
           alpha = ["${X1}/a", "b", "c"]
           delta = [ X2, 'z' ]
           gamma = [p: "${X1}/a", q: X2, 'r-r': 'X1']
-          omega = X3 
+          omega = X3
         }
         '''
 
@@ -278,7 +278,7 @@ class CmdConfigTest extends Specification {
         X1 = 'SOMETHING'
         X2 = ['SOMETHING']
         X3 = [p:111, q:'bbb']
-        
+
         params {
            alpha = ['SOMETHING/a', 'b', 'c']
            delta = [['SOMETHING'], 'z']
@@ -332,19 +332,19 @@ class CmdConfigTest extends Specification {
             params {
                foo = 'baz'
             }
-            
+
             profiles {
                test {
                   params {
                     foo = 'foo'
                   }
-                  profiles {                      
+                  profiles {
                       debug {
                         cleanup = false
-                      }                    
+                      }
                   }
                }
-            }        
+            }
         '''
 
         def buffer = new ByteArrayOutputStream()

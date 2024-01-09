@@ -101,7 +101,7 @@ class DirWatcherTest extends Specification {
         folder.resolve('ciao.txt').delete()
         TestHelper.stopUntil { results.size() == 2 }
         watcher.terminate()
-        
+
         then:
         results.size() == 2
         results.contains('hello.txt')

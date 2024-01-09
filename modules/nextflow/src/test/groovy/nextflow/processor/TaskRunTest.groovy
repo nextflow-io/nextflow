@@ -755,7 +755,7 @@ class TaskRunTest extends Specification {
         def vars = task.getVariableNames()
         then:
         1 * task.context.getVariableNames() >> ['foo']
-        and: 
+        and:
         vars == ['foo'] as Set
     }
 

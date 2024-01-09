@@ -44,7 +44,7 @@ class CharliecloudBuilderTest extends Specification {
                 .params(runOptions: '-j --no-home')
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" -j --no-home busybox --'
-        
+
         new CharliecloudBuilder('busybox')
                 .params(temp: '/foo')
                 .build()

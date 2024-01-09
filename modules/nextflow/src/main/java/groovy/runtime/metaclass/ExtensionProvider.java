@@ -31,5 +31,5 @@ public interface ExtensionProvider {
     Object invokeExtensionMethod(Object channel, String method, Object[] args);
 
     Set<String> operatorNames();
-    
+
 }

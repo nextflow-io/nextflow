@@ -15,11 +15,11 @@ git:
   submodules: false
 branches:
   only:
-  - master  
+  - master
 before_script:
 - rm $HOME/.gitconfig
 - mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
 - curl -fsSL get.nextflow.io | bash
 - docker pull nextflow/examples
 script:
-- export WITH_DOCKER='-with-docker'; export NXF_CMD=$PWD/nextflow; cd checks/ && bash run.sh 
+- export WITH_DOCKER='-with-docker'; export NXF_CMD=$PWD/nextflow; cd checks/ && bash run.sh

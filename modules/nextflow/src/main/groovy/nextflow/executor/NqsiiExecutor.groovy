@@ -23,7 +23,7 @@ import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the NQSII cluster
  *
- * Read more 
+ * Read more
  *   https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster
  *   https://wickie.hlrs.de/platforms/index.php/Batch_system
  *

@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 /**
  * Helper class that holds a reference system environment and
  * allow to swap to a different one for testing purposes
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -41,7 +41,7 @@ class SysEnv {
     static boolean containsKey(String key) {
         return holder.containsKey(key)
     }
-    
+
     static Map<String,String> get()  {
         return holder
     }

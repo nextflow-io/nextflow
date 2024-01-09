@@ -18,7 +18,7 @@
 package nextflow.util
 
 
-import spock.lang.Specification 
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -47,5 +47,5 @@ class ProxyConfigTest extends Specification {
         ProxyConfig.parse('foo:123') == new ProxyConfig(host: 'foo', port: '123')
 
     }
-    
+
 }

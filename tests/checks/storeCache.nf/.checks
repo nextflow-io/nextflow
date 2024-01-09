@@ -14,7 +14,7 @@ grep 'cache/Hello.txt' stdout
 
 
 #
-# run normal mode 
+# run normal mode
 #
 echo ''
 $NXF_RUN | tee stdout
@@ -27,7 +27,7 @@ grep 'cache/Hello.txt' stdout
 
 
 #
-# run resume mode 
+# run resume mode
 #
 echo ''
 $NXF_RUN -resume| tee stdout

@@ -22,7 +22,7 @@ process stress_100mega {
 
 process stress_200mega {
   memory 250.MB
-  // note: mem usage should not be aggregated 
+  // note: mem usage should not be aggregated
   """
   stress -m 1 --vm-bytes 200000000 -t 5
   stress -m 1 --vm-bytes 100000000 -t 5

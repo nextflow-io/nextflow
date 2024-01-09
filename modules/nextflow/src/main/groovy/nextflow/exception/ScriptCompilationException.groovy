@@ -20,7 +20,7 @@ import groovy.transform.InheritConstructors
 
 /**
  * Exception thrown when a script parsing fails due to
- * compilation errors 
+ * compilation errors
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -3,7 +3,7 @@ export NXF_ASSETS=$PWD/assets
 cp .config nextflow.config
 
 #
-# First run test `success` is `true` 
+# First run test `success` is `true`
 #
 echo ''
 $NXF_RUN -name first > stdout
@@ -18,8 +18,8 @@ $NXF_RUN -name first > stdout
 [[ `grep -c 'runName: first' stdout` == 1 ]] || false
 
 #
-# Second run test `success` if `false` 
-# 
+# Second run test `success` if `false`
+#
 echo ''
 $NXF_RUN -name second --command xxx > stdout || true
 

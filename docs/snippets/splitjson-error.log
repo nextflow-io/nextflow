@@ -25,7 +25,7 @@ May-18 21:16:09.687 [main] DEBUG nextflow.Session - Run name: sad_hawking
 May-18 21:16:09.688 [main] DEBUG nextflow.Session - Executor pool size: 12
 May-18 21:16:09.693 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
 May-18 21:16:09.697 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=36; workQueue=LinkedBlockingQueue[10000]; allowCoreThreadTimeout=false
-May-18 21:16:09.718 [main] DEBUG nextflow.cli.CmdRun - 
+May-18 21:16:09.718 [main] DEBUG nextflow.cli.CmdRun -
   Version: 23.05.0-edge build 5864
   Created: 19-05-2023 02:15 UTC (18-05-2023 21:15 CDT)
   System: Linux 5.10.16.3-microsoft-standard-WSL2
@@ -41,9 +41,9 @@ May-18 21:16:09.771 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow ca
 May-18 21:16:09.777 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
 May-18 21:16:09.841 [main] DEBUG nextflow.Session - Session start
 May-18 21:16:10.198 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
-May-18 21:16:10.259 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: 
+May-18 21:16:10.259 [main] DEBUG nextflow.Session - Workflow process names [dsl2]:
 May-18 21:16:10.260 [main] DEBUG nextflow.Session - Igniting dataflow network (1)
-May-18 21:16:10.260 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+May-18 21:16:10.260 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination
 May-18 21:16:10.260 [main] DEBUG nextflow.Session - Session await
 May-18 21:16:10.260 [main] DEBUG nextflow.Session - Session await > all processes finished
 May-18 21:16:10.261 [main] DEBUG nextflow.Session - Session await > all barriers passed

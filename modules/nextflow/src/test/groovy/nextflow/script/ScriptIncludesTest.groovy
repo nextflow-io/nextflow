@@ -46,15 +46,15 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include { Foo } from "$MODULE" 
-        
+        include { Foo } from "$MODULE"
+
         process foo {
             input:
                 val value
-        
+
             output:
                 path '*.txt'
-        
+
             script:
                 "echo 'hello'"
         }
@@ -83,24 +83,24 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         def alpha() {
           return 'this is alpha result'
-        }   
-        
-        def bravo(x) { 
+        }
+
+        def bravo(x) {
           return x.reverse()
         }
-        
+
         def gamma(x,y) {
           return "$x and $y"
         }
         '''
 
-        SCRIPT.text = """  
-        include { alpha; bravo; gamma } from "$MODULE" 
-   
+        SCRIPT.text = """
+        include { alpha; bravo; gamma } from "$MODULE"
+
         def local_func() {
           return "I'm local"
         }
-   
+
         ret1 = alpha()
         ret2 = bravo('Hello')
         ret3 = gamma('Hola', 'mundo')
@@ -129,11 +129,11 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         def foo(str) {
           return str.reverse()
-        }   
+        }
         '''
 
-        SCRIPT.text = """  
-        include { foo } from "$MODULE" 
+        SCRIPT.text = """
+        include { foo } from "$MODULE"
         workflow {
            emit:
            channel.of('hello world').map { foo(it) }
@@ -162,12 +162,12 @@ class ScriptIncludesTest extends Dsl2Spec {
         }
         '''
 
-        SCRIPT.text = """  
-        include { foo } from "$MODULE" 
+        SCRIPT.text = """
+        include { foo } from "$MODULE"
         workflow {
            emit:
-           channel.of('hello world').map { 
-            [ witharg : foo(it), withdefault : foo() ] 
+           channel.of('hello world').map {
+            [ witharg : foo(it), withdefault : foo() ]
            }
         }
         """
@@ -179,7 +179,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         map
         map.witharg == 'hello world'.reverse()
         map.withdefault == 'foo'.reverse()
-        
+
         cleanup:
         NextflowMeta.instance.strictMode(false)
     }
@@ -198,14 +198,14 @@ class ScriptIncludesTest extends Dsl2Spec {
         }
         def foo(c1, c2){
             return c1+"-"+c2
-        }   
+        }
         '''
 
-        SCRIPT.text = """  
-        include { foo } from "$MODULE" 
+        SCRIPT.text = """
+        include { foo } from "$MODULE"
         workflow {
            emit:
-           channel.fromList( foo() ).flatMap { foo(it, it*2) } 
+           channel.fromList( foo() ).flatMap { foo(it, it*2) }
         }
         """
 
@@ -235,14 +235,14 @@ class ScriptIncludesTest extends Dsl2Spec {
         }
         def foo(c1, c2){
             return c1+"-"+c2
-        }   
+        }
         '''
 
-        SCRIPT.text = """  
-        include { foo } from "$MODULE" 
+        SCRIPT.text = """
+        include { foo } from "$MODULE"
         workflow {
            emit:
-           channel.of( foo(1, 2, 3) ) 
+           channel.of( foo(1, 2, 3) )
         }
         """
 
@@ -264,34 +264,34 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = "$data mundo"
-        }     
-        
+        }
+
         process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
+            exec:
               result = data.toUpperCase()
-        }   
-        
+        }
+
         workflow alpha {
             take: data
             main: foo(data)
                   bar(foo.output)
             emit: bar.out
         }
-        
+
         '''
 
         SCRIPT.text = """
-        include { alpha } from "$MODULE" 
-   
+        include { alpha } from "$MODULE"
+
         workflow {
             main: alpha('Hello')
-            emit: alpha.out 
+            emit: alpha.out
         }
         """
 
@@ -314,19 +314,19 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = "$data mundo"
-        }     
-        
+        }
+
         process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
+            exec:
               result = data.toUpperCase()
-        }   
-        
+        }
+
         '''
 
         SCRIPT.text = """
@@ -336,12 +336,12 @@ class ScriptIncludesTest extends Dsl2Spec {
             take: data
             main: foo(data)
                   bar(foo.output)
-            emit: bar.out      
+            emit: bar.out
         }
-   
+
         workflow {
             main: alpha('Hello')
-            emit: alpha.out 
+            emit: alpha.out
         }
         """
 
@@ -366,29 +366,29 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = "$data mundo"
-        }     
-        
+        }
+
         process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
+            exec:
               result = data.toUpperCase()
-        }   
-        
+        }
+
         '''
 
         SCRIPT.text = """
         include { foo; bar } from "$MODULE"
-   
+
         data = 'Hello'
         workflow {
             main: foo(data)
                   bar(foo.output)
-            emit: bar.out 
+            emit: bar.out
         }
         """
 
@@ -408,29 +408,29 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = "$data mundo"
-        }     
-        
+        }
+
         process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
+            exec:
               result = data.toUpperCase()
-        }   
-        
+        }
+
         '''
 
         SCRIPT.text = """
-        include { foo; bar } from "$MODULE" 
-   
+        include { foo; bar } from "$MODULE"
+
         workflow {
             data = 'Hello'
             foo(data)
             bar(foo.output)
-            emit: bar.out 
+            emit: bar.out
         }
         """
 
@@ -455,19 +455,19 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         process foo {
           input: val sample
-          output: stdout 
+          output: stdout
           script:
           /echo Hello $sample/
-        }        
+        }
         '''
 
         SCRIPT.text = """
-        include { foo } from "$MODULE" 
+        include { foo } from "$MODULE"
         hello_ch = Channel.of('world')
-        
+
         workflow {
             main: foo(hello_ch)
-            emit: foo.out 
+            emit: foo.out
         }
         """
 
@@ -490,11 +490,11 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: 
+          input:
             val sample
             tuple val(pairId), val(reads)
-          output: 
-            stdout 
+          output:
+            stdout
           script:
             /echo sample=$sample pairId=$pairId reads=$reads/
         }
@@ -507,7 +507,7 @@ class ScriptIncludesTest extends Dsl2Spec {
           main: ch1 = Channel.of('world')
                 ch2 = Channel.value(['x', '/some/file'])
                 foo(ch1, ch2)
-          emit: foo.out  
+          emit: foo.out
         }
         """
 
@@ -528,9 +528,9 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: 
+          input:
             val alpha
-          output: 
+          output:
             val delta
             val gamma
           script:
@@ -538,21 +538,21 @@ class ScriptIncludesTest extends Dsl2Spec {
             gamma = 'world'
             /nope/
         }
-        
+
         process bar {
            input:
              val xx
-             val yy 
+             val yy
            output:
              stdout
            script:
-            /echo $xx $yy/            
+            /echo $xx $yy/
         }
         '''
 
         and:
-        SCRIPT.text = """  
-        include { foo; bar } from './module.nf'        
+        SCRIPT.text = """
+        include { foo; bar } from './module.nf'
 
         workflow {
             main: bar( foo('Ciao') )
@@ -575,9 +575,9 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: 
+          input:
             val alpha
-          output: 
+          output:
             val delta
             val gamma
           script:
@@ -585,28 +585,28 @@ class ScriptIncludesTest extends Dsl2Spec {
             gamma = 'world'
             /nope/
         }
-        
+
         process bar {
            input:
              val xx
-             val yy 
+             val yy
            output:
              stdout
            script:
-            /echo $xx $yy/            
+            /echo $xx $yy/
         }
         '''
 
         and:
-        SCRIPT.text = """ 
-        include { foo } from './module.nf'        
-        
+        SCRIPT.text = """
+        include { foo } from './module.nf'
+
         workflow {
           main: (ch0, ch1) = foo('Ciao')
           emit: ch0; ch1
         }
         """
-        
+
         when:
         def result = dsl_eval(SCRIPT)
         then:
@@ -622,11 +622,11 @@ class ScriptIncludesTest extends Dsl2Spec {
         def SCRIPT = folder.resolve('main.nf')
 
         MODULE.text = '''
-        params.foo = 'x' 
+        params.foo = 'x'
         params.bar = 'y'
-        
+
         process foo {
-          output: stdout 
+          output: stdout
           script:
           /echo $params.foo $params.bar/
         }
@@ -634,12 +634,12 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         // inject params in the module
         // and invoke the process 'foo'
-        SCRIPT.text = """     
+        SCRIPT.text = """
         include { foo } from "./module.nf" params(foo:'Hello', bar: 'world')
-            
-        workflow { 
+
+        workflow {
             main: foo()
-            emit: foo.out 
+            emit: foo.out
         }
         """
 
@@ -649,7 +649,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         then:
         noExceptionThrown()
         result.val == 'echo Hello world'
-        
+
     }
 
 
@@ -663,13 +663,13 @@ class ScriptIncludesTest extends Dsl2Spec {
         def foo(str) {
           str.reverse()
         }
-        
+
         def bar(a, b) {
           return "$a $b!"
         }
         '''
 
-        SCRIPT.text = """  
+        SCRIPT.text = """
         include { foo; bar } from './module.nf'
 
         def str = foo('dlrow')
@@ -691,24 +691,24 @@ class ScriptIncludesTest extends Dsl2Spec {
         def MODULE = folder.resolve('module.nf')
         def SCRIPT = folder.resolve('main.nf')
 
-        MODULE.text = '''     
+        MODULE.text = '''
         params.x = 'Hello world'
-        FOO = params.x   
-        
+        FOO = params.x
+
         process foo {
-          output: stdout 
+          output: stdout
           script:
           "echo $FOO"
         }
         '''
 
-        SCRIPT.text = """ 
+        SCRIPT.text = """
         include { foo } from './module.nf' params(x: 'Hola mundo')
-        
+
         workflow {
             main: foo()
             emit: foo.out
-        }    
+        }
         """
 
         when:
@@ -725,15 +725,15 @@ class ScriptIncludesTest extends Dsl2Spec {
         def MODULE = folder.resolve('module.nf')
         def SCRIPT = folder.resolve('main.nf')
 
-        MODULE.text = '''     
+        MODULE.text = '''
         process foo {
-            /hello/ 
-        }      
-        
-        workflow { foo() } 
+            /hello/
+        }
+
+        workflow { foo() }
         '''
 
-        SCRIPT.text = """ 
+        SCRIPT.text = """
         include { foo } from './module.nf'
         println 'hello'
         """
@@ -752,15 +752,15 @@ class ScriptIncludesTest extends Dsl2Spec {
         def MODULE = folder.resolve('org/bio.nf')
         def SCRIPT = folder.resolve('main.nf')
 
-        MODULE.text = '''     
+        MODULE.text = '''
         process foo {
-            /hello/ 
-        }      
+            /hello/
+        }
         '''
 
-        SCRIPT.text = """ 
-        include { foo } from './org/bio' 
-        
+        SCRIPT.text = """
+        include { foo } from './org/bio'
+
         workflow {
             foo()
         }
@@ -781,9 +781,9 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         def alpha() {
           return 'this is alpha result'
-        }   
-        
-        def bravo(x) { 
+        }
+
+        def bravo(x) {
           return x.reverse()
         }
 
@@ -842,16 +842,16 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = data.toUpperCase()
-        }     
+        }
         '''
 
         SCRIPT.text = """
-        include { foo } from "$MODULE" 
-        include { foo as bar } from "$MODULE"  
+        include { foo } from "$MODULE"
+        include { foo as bar } from "$MODULE"
 
         workflow {
             foo('Hello')
@@ -881,24 +881,24 @@ class ScriptIncludesTest extends Dsl2Spec {
                 output: stdout
                 shell: "echo Hello"
             }
-            
+
             process consumer {
                 input: file "foo"
                 output: stdout
                 shell:
                 "cmd consumer 1"
             }
-            
+
             process another_consumer {
                 input: file "foo"
                 output: stdout
                 shell: "cmd consumer 2"
             }
-            
+
             workflow flow1 {
                 emit: producer | consumer | map { it.toUpperCase() }
             }
-            
+
             workflow flow2 {
                 emit: producer | another_consumer | map { it.toUpperCase() }
             }
@@ -906,12 +906,12 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         def result = dsl_eval("""
-            include { flow1; flow2 } from "$MODULE" 
-  
-            workflow { 
+            include { flow1; flow2 } from "$MODULE"
+
+            workflow {
               flow1()
               flow2()
-              emit: 
+              emit:
               flow1.out
               flow2.out
             }
@@ -934,15 +934,15 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = data.toUpperCase()
-        }     
+        }
         '''
 
         SCRIPT.text = """
-        include { foo; foo as bar } from "$MODULE" 
+        include { foo; foo as bar } from "$MODULE"
 
         workflow {
             foo('Hello')
@@ -970,17 +970,17 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         params.alpha = 'first'
         params.omega = 'last'
-        
+
         process foo {
           output: val result
           exec:
             result = "$params.alpha $params.omega".toUpperCase()
-        }     
+        }
         '''
 
         SCRIPT.text = """
         params.alpha = 'owner'
-        include { foo } from "$MODULE" 
+        include { foo } from "$MODULE"
 
         workflow {
             foo()
@@ -1005,12 +1005,12 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         params.alpha = 'first'
         params.omega = 'last'
-        
+
         process foo {
           output: val result
           exec:
             result = "$params.alpha $params.omega".toUpperCase()
-        }     
+        }
         '''
 
         SCRIPT.text = """
@@ -1040,16 +1040,16 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         params.alpha = 'first'
         params.omega = 'last'
-        
+
         process foo {
           output: val result
           exec:
             result = "$params.alpha $params.omega".toUpperCase()
-        }     
+        }
         '''
 
         SCRIPT.text = """
-        params.alpha = 'one' 
+        params.alpha = 'one'
         params.omega = 'two'
 
         include { foo } from "$MODULE" addParams(omega:'zzz')
@@ -1082,12 +1082,12 @@ class ScriptIncludesTest extends Dsl2Spec {
         """
 
         SCRIPT.text = """
-        include { foo } from "$MODULE" 
+        include { foo } from "$MODULE"
 
         assert moduleDir == file("$folder")
         assert projectDir == file("$folder")
         assert launchDir == file('.')
-        
+
         workflow { true }
         """
 
@@ -1106,11 +1106,11 @@ class ScriptIncludesTest extends Dsl2Spec {
         def SCRIPT = folder.resolve('main.nf')
 
         MODULE.text = '''
-        params.foo = 'x' 
+        params.foo = 'x'
         params.bar = 'y'
-        
+
         process foo {
-          output: stdout 
+          output: stdout
           script:
           /echo $params.foo $params.bar/
         }
@@ -1120,10 +1120,10 @@ class ScriptIncludesTest extends Dsl2Spec {
         // and invoke the process 'foo'
         SCRIPT.text = """
         include foo from "./module.nf" params(foo:'Hello', bar: 'world')
-            
-        workflow { 
+
+        workflow {
             main: foo()
-            emit: foo.out 
+            emit: foo.out
         }
         """
 
@@ -1143,7 +1143,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def SCRIPT = folder.resolve('main.nf')
 
         MODULE.text = '''
-        
+
         process foo {
           script:
           /echo hello/
@@ -1151,7 +1151,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        workflow { 
+        workflow {
             include { foo } from "./module.nf"
             foo()
         }

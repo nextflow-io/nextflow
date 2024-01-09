@@ -1,4 +1,4 @@
-CLUSTAL FORMAT for T-COFFEE Version_11.00.8cbe486 [http://www.tcoffee.org] [MODE:  ], CPU=0.00 sec, SCORE=338, Nseq=18, Len=694 
+CLUSTAL FORMAT for T-COFFEE Version_11.00.8cbe486 [http://www.tcoffee.org] [MODE:  ], CPU=0.00 sec, SCORE=338, Nseq=18, Len=694
 
 lcl|1VIE_A      VF-------PS----NA---------------------------T-----
 lcl|1IHU_A      MQFL-----QNIPPY-LFFTGKGGVGKTSISCATAIRLAEQGKRVLLVST
@@ -18,7 +18,7 @@ lcl|1YCS_B_3    PEITGQVSLPP---GKR---------------------------TNL---
 lcl|1ABO_B_1    MND------PN-----L---------------------------------
 lcl|1ABO_A_1    MND------PN-----L---------------------------------
 lcl|1PHT_A_1    MS------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      -----------F------------------------GM-GDRVR------
 lcl|1IHU_A      DPASNVGQVFSQTIGNTIQAIASVPGLSALEIDPQAAAQQYRARIVDPIK
@@ -38,7 +38,7 @@ lcl|1YCS_B_3    ------RKTGSER-----------------------IAHGMRVKF-----
 lcl|1ABO_B_1    ----------------------------------------FVA-------
 lcl|1ABO_A_1    ----------------------------------------FVA-------
 lcl|1PHT_A_1    --------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      --------------------------KKSGA-------------------
 lcl|1IHU_A      GVLPDDVVSSINEQLSGACTTEIAAFDE-FTGLLTDASLLTRFDHIIFDT
@@ -58,7 +58,7 @@ lcl|1YCS_B_3    --------------------------NPLPLALLLDSSLEGEFDLV----
 lcl|1ABO_B_1    --------------------------------------------------
 lcl|1ABO_A_1    --------------------------------------------------
 lcl|1PHT_A_1    --------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      APTGHTIRLLQLPGAWSSFIDSNPEGASCLGPMAGLEKQREQYAYAVEAL
@@ -78,7 +78,7 @@ lcl|1YCS_B_3    --------------------------------------------------
 lcl|1ABO_B_1    --------------------------------------------------
 lcl|1ABO_A_1    --------------------------------------------------
 lcl|1PHT_A_1    --------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      SDPKRTRLVLVARLQKSTLQEVARTHLELAAIGLKNQYLVINGVLPKTEA
@@ -98,7 +98,7 @@ lcl|1YCS_B_3    --------------------------------------------------
 lcl|1ABO_B_1    --------------------------------------------------
 lcl|1ABO_A_1    --------------------------------------------------
 lcl|1PHT_A_1    --------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      ANDTLAAAI----------WEREQEALANLPADLAGLPTDTLFLQPVNMV
@@ -118,7 +118,7 @@ lcl|1YCS_B_3    -----QRIIYEVDDPSLPND-----------------------------E
 lcl|1ABO_B_1    --------------------------------------------------
 lcl|1ABO_A_1    --------------------------------------------------
 lcl|1PHT_A_1    -------------A------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      GVSALSRLLSTQPVASPSSDEYLQQRPDIPSLSALVDDIARNEHGLI---
@@ -138,7 +138,7 @@ lcl|1YCS_B_3    GITALHN------------------------------AVCAGHTEIVKFL
 lcl|1ABO_B_1    --------------------------------------------------
 lcl|1ABO_A_1    --------------------------------------------------
 lcl|1PHT_A_1    --------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      -------------AWQGQIVGWYCTNLTPE--GYAVES----EAHPGSVQ
 lcl|1IHU_A      ----------------------------------M---------------
@@ -158,7 +158,7 @@ lcl|1YCS_B_3    VQFGVNVNAADSDGWTPLHCAASCNNVQVC--KFLVES----GAAVFAMT
 lcl|1ABO_B_1    --------------------------------------------------
 lcl|1ABO_A_1    --------------------------------------------------
 lcl|1PHT_A_1    --------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      -----I--------------------------------------------
 lcl|1IHU_A      -------------------------------------------LMGKGGV
@@ -178,7 +178,7 @@ lcl|1YCS_B_3    YSDMQTAADKCEEMEEGYTQCSQFLYGVQEKMGIMNKGV-IYALWDYEPQ
 lcl|1ABO_B_1    -------------------------------------------LYDFVAS
 lcl|1ABO_A_1    -------------------------------------------LYDFVAS
 lcl|1PHT_A_1    ------------------------------------EGYQYRALYDYKKE
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      GKTTMAAAIAVRLADMGFD------VHLTTSDP-------AAHLS-MTLN
@@ -198,7 +198,7 @@ lcl|1YCS_B_3    NDDELPM----KEGDCMTI--------IHREDED-----EIEWWW---AR
 lcl|1ABO_B_1    GDNTLS----ITKGEKLRV--------LGYNH-------NGEWCE---AQ
 lcl|1ABO_A_1    GDNTLS----ITKGEKLRV--------LGYNH-------NGEWCE---AQ
 lcl|1PHT_A_1    REEDIDL----HLGDILTVNKGSLVA-LGFSDGQEARPEEIGWLNGY-NE
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      GSLNNLQVSRIDPHEETERYRQHVLETKGKELDEAGKRLLEEDLRSPCTE
@@ -218,7 +218,7 @@ lcl|1YCS_B_3    -L-N----------------------------------------------
 lcl|1ABO_B_1    --TK----------------------------------------------
 lcl|1ABO_A_1    --TK----------------------------------------------
 lcl|1PHT_A_1    -T-T----------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      EIAVFQAFSRVIREAGKRFVVMDTAPTGHTLLLLDATGAYHREIAKKMGE
@@ -238,7 +238,7 @@ lcl|1YCS_B_3    --------------------------------------------------
 lcl|1ABO_B_1    --------------------------------------------------
 lcl|1ABO_A_1    --------------------------------------------------
 lcl|1PHT_A_1    --------------------------------------------------
-                                                                  
+
 
 lcl|1VIE_A      --------------------------------------------------
 lcl|1IHU_A      KGHFTTPMMLLQDPERTKVLLVTLPETTPVLEAANLQADLERAGIHPWGW
@@ -258,7 +258,7 @@ lcl|1YCS_B_3    ---------------------------------------------DKEGY
 lcl|1ABO_B_1    ---------------------------------------------NGQGW
 lcl|1ABO_A_1    ---------------------------------------------NGQGW
 lcl|1PHT_A_1    ---------------------------------------------GERGD
-                                                                  
+
 
 lcl|1VIE_A      Y-PVAA-LERI---------------------N-----------
 lcl|1IHU_A      I-INNS-LSIADTRSPLLRMRAQQELPQIESVKR----QHAS--
@@ -278,7 +278,7 @@ lcl|1YCS_B_3    V-PRNL-LGLY---------------------PRIKPRQRSL-A
 lcl|1ABO_B_1    V-PSNY-ITPV---------------------NS----------
 lcl|1ABO_A_1    V-PSNY-ITPV---------------------NS----------
 lcl|1PHT_A_1    F-PGTY-VEYI---------------------GR---------K
-                                                            
+
 
 
 

@@ -62,7 +62,7 @@ class PathTrie {
     void add( String path )  {
         assert path
         if( path=='/' ) return
-        
+
         def splitter = PathSplitter.parse(path)
         def head = splitter.head
         def tail = splitter.tail

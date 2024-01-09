@@ -22,7 +22,7 @@ import org.pf4j.Extension
 
 /**
  * Register the {@link XPathSerializer} as Kryo serializer
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Extension

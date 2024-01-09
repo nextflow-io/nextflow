@@ -100,7 +100,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         // create the process builder to run the task in the local computer
         final builder = createLaunchProcessBuilder()
         final logFile = builder.redirectOutput().file()
-        
+
         // run async via thread pool
         session.getExecService().submit( {
             try {

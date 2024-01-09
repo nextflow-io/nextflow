@@ -47,7 +47,7 @@ class TaskCmdXformVisitorTest extends Specification {
         def result = shell.evaluate('''
             return "$X, $Y, $Z"
             ''')
-        
+
         then:
         result == 'foo, f\\ o\\ o.txt, 1 2 3'
     }

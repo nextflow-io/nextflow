@@ -32,10 +32,10 @@ class EnvOutParamTest extends Dsl2Spec {
               output:
               env FOO
               env BAR
-              
-              /echo command/ 
+
+              /echo command/
             }
-            
+
             workflow { hola() }
             '''
 
@@ -64,7 +64,7 @@ class EnvOutParamTest extends Dsl2Spec {
 
               /echo command/
             }
-            
+
             workflow { hola() }
             '''
 

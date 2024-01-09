@@ -17,19 +17,19 @@
 #
 # add parameters to the command line as `param=value` for example:
 # make deps config=runtime
-# 
+#
 
 config ?= compileClasspath
 
-ifdef module 
+ifdef module
 mm = :${module}:
-else 
-mm = 
-endif 
+else
+mm =
+endif
 
 clean:
 	rm -rf .nextflow*
-	rm -rf work 
+	rm -rf work
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
 	rm -rf build
@@ -50,7 +50,7 @@ check:
 
 #
 # install compiled artifacts in Maven local dir
-# 
+#
 install:
 	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
 
@@ -67,7 +67,7 @@ deps-all:
 # Refresh SNAPSHOTs dependencies
 #
 refresh:
-	./gradlew --refresh-dependencies 
+	./gradlew --refresh-dependencies
 
 #
 # Run all tests or selected ones

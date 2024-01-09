@@ -23,7 +23,7 @@ import groovy.transform.ToString
 
 /**
  * Base CLI options parsed
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)

@@ -126,7 +126,7 @@ class BatchLoggingTest extends Specification {
         log.debug "Test job uid=$uid"
         then:
         uid
-        
+
         when:
         def state=null
         do {

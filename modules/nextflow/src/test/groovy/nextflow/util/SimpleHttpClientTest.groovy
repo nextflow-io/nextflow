@@ -62,7 +62,7 @@ class SimpleHttpClientTest extends Specification{
         httpClient.sendHttpMessage(dummyUrl, '{"test_id": 2}')
 
         then:
-        1 * httpClient.getHttpConnection(dummyUrl) >> con 
+        1 * httpClient.getHttpConnection(dummyUrl) >> con
         httpClient.getResponseCode() == 404
 
     }

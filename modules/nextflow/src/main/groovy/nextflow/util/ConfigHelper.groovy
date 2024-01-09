@@ -242,7 +242,7 @@ class ConfigHelper {
             return render0(val)
         if( val instanceof SecretHolder )
             return val.call()
-        
+
         InvokerHelper.inspect(val)
     }
 

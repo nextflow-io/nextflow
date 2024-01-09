@@ -20,7 +20,7 @@ import groovy.transform.InheritConstructors
 /**
  *  Exception thrown when one more than one channel is labeled
  *  with the same name
- *  
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors

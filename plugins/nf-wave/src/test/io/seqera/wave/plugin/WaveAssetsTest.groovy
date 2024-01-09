@@ -31,7 +31,7 @@ class WaveAssetsTest extends Specification {
         given:
         def IMAGE = 'foo:latest'
         def BUNDLE = Mock(ResourcesBundle) { fingerprint() >> '12345' }
-        
+
         expect:
         new WaveAssets(IMAGE).fingerprint() == CacheHelper.hasher([IMAGE]).hash().toString()
 

@@ -227,7 +227,7 @@ class NextflowDSLImpl implements ASTTransformation {
                     newArgs.addExpression( createX(IncludeDef, token, alias) )
                 }
                 else if( arg instanceof ClosureExpression ) {
-                    // multiple modules inclusion 
+                    // multiple modules inclusion
                     final block = (BlockStatement)arg.getCode()
                     final modulesList = new ListExpression()
                     for( Statement stm : block.statements ) {
@@ -299,7 +299,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def body = (ClosureExpression)args[0]
                 newArgs.addExpression( makeWorkflowDefWrapper(body,true) )
                 methodCall.setArguments( newArgs )
-                return 
+                return
             }
 
             // extract the first argument which has to be a method-call expression

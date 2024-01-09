@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.scheduler.Pool
 /**
  * Thread pool adapter for Java virtual threads
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

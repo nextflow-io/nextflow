@@ -924,7 +924,7 @@ class TaskProcessorTest extends Specification {
         then:
         1 * processor.bindOutputs0(emission3)
         and:
-        processor.@fairBuffers.size() == 2 
+        processor.@fairBuffers.size() == 2
         processor.@fairBuffers[0] == null
         processor.@fairBuffers[1] == emission5
 

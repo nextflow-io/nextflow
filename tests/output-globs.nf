@@ -29,4 +29,4 @@ workflow {
   foo.out.view { "foo: $it" }
   bar()
   bar.out.view { "bar: $it" }
-} 
+}

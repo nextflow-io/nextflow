@@ -221,20 +221,20 @@ class FunctionalTests extends Dsl2Spec {
             process {
                 executor = 'nope'
                 memory = 2.GB
-                
+
                 withLabel: small {
-                    cpus = 2 
+                    cpus = 2
                     queue = 'the-small-one'
                 }
-                
+
                 withLabel: big {
-                    cpus = 8 
+                    cpus = 8
                     memory = 4.GB
-                    queue = 'big-partition'                
+                    queue = 'big-partition'
                 }
-                
+
                 withName: legacy {
-                    cpus = 3 
+                    cpus = 3
                     queue = 'legacy-queue'
                 }
             }
@@ -244,13 +244,13 @@ class FunctionalTests extends Dsl2Spec {
             /*
              * no label is specified it should only use default directives
              */
-            String script = '''   
+            String script = '''
 
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -270,14 +270,14 @@ class FunctionalTests extends Dsl2Spec {
             /*
              * the `small` label is applied
              */
-            script = '''   
+            script = '''
 
                 process foo {
                     label 'small'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -304,7 +304,7 @@ class FunctionalTests extends Dsl2Spec {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
         and:
@@ -327,12 +327,12 @@ class FunctionalTests extends Dsl2Spec {
         */
         script = '''
                 process legacy {
-                    cpus 1 
+                    cpus 1
                     queue 'one'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { legacy() }
                 '''
 
@@ -358,17 +358,17 @@ class FunctionalTests extends Dsl2Spec {
          */
         String config = '''
             process {
-                executor = 'nope' 
-                
+                executor = 'nope'
+
                 withLabel: small {
-                    cpus = 2 
+                    cpus = 2
                     queue = 'the-small-one'
                 }
-                
+
                 withName: bar {
-                    cpus = 8 
+                    cpus = 8
                     memory = 4.GB
-                    queue = 'big-partition'                
+                    queue = 'big-partition'
                 }
             }
             '''
@@ -377,14 +377,14 @@ class FunctionalTests extends Dsl2Spec {
         /*
          * no label is specified it should only use default directives
          */
-        String script = '''   
+        String script = '''
 
                 process foo {
                     label 'small'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -404,14 +404,14 @@ class FunctionalTests extends Dsl2Spec {
         /*
          * no label is specified it should only use default directives
          */
-        script = '''   
+        script = '''
 
                 process bar {
                     label 'small'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { bar() }
                 '''
         and:
@@ -437,13 +437,13 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        String script = '''   
+        String script = '''
                 process foo {
                     module 'mod-a/1.1:mod-b/2.2'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -468,13 +468,13 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        script = '''   
+        script = '''
                 process foo {
                     label 'my_env'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -499,12 +499,12 @@ class FunctionalTests extends Dsl2Spec {
                 publishDir = '/some/dir'
             }
             '''
-        String script = '''   
+        String script = '''
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -526,12 +526,12 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        script = '''   
+        script = '''
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
         and:
@@ -552,14 +552,14 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        script = '''   
+        script = '''
                 process foo {
                     publishDir '/data1'
                     publishDir '/data2', mode: 'symlink'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -582,14 +582,14 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        script = '''   
+        script = '''
                 process foo {
                     publishDir '/dir/alpha'
-                    publishDir '/dir/bravo'  
+                    publishDir '/dir/bravo'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -614,14 +614,14 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        script = '''   
+        script = '''
                 process foo {
                     publishDir '/dir/alpha'
-                    publishDir '/dir/bravo'  
+                    publishDir '/dir/bravo'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -646,12 +646,12 @@ class FunctionalTests extends Dsl2Spec {
                 label = 'alpha'
             }
             '''
-        def script = '''   
+        def script = '''
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -673,14 +673,14 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        script = '''   
+        script = '''
                 process foo {
                     label 'bravo'
-                    label 'gamma'  
+                    label 'gamma'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
@@ -704,14 +704,14 @@ class FunctionalTests extends Dsl2Spec {
             }
             '''
         and:
-        def script = '''   
+        def script = '''
                 process foo {
                     input:
                     each x
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo([1,2,3]) }
                 '''
 
@@ -730,7 +730,7 @@ class FunctionalTests extends Dsl2Spec {
 /*2*/   def thisMethodExpectsOnlyOneString(String a){
 /*3*/      a
 /*4*/   }
-/*5*/                   
+/*5*/
 /*6*/   process foo {
 /*7*/       input:
 /*8*/           each x

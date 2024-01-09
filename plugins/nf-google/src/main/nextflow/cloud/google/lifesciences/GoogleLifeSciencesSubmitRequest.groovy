@@ -59,7 +59,7 @@ class GoogleLifeSciencesSubmitRequest {
     Path workDir
 
     Integer bootDiskSizeGb
-    
+
     String cpuPlatform
 
     String entryPoint
@@ -75,6 +75,6 @@ class GoogleLifeSciencesSubmitRequest {
     boolean keepAliveOnFailure
 
     Map<String, String> resourceLabels = [:]
-    
+
     String timeout
 }

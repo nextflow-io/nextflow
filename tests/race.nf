@@ -34,7 +34,7 @@ process proc1 {
   file fastq
 
   output:
-  tuple val(baseName), file(outName) 
+  tuple val(baseName), file(outName)
 
   script:
   baseName = fastq.baseName

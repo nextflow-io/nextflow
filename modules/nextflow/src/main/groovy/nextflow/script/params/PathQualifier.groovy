@@ -18,7 +18,7 @@ package nextflow.script.params
 
 /**
  * Path qualifier marker interface
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface PathQualifier {

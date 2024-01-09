@@ -26,7 +26,7 @@ import nextflow.file.FileHelper
 
 /**
  * Implements Kryo serializer for {@link XPath}
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

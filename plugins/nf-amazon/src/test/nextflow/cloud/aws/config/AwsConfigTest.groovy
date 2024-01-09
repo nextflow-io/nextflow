@@ -49,7 +49,7 @@ class AwsConfigTest extends Specification {
             aws_access_key_id = aaa
             aws_secret_access_key = bbbb
             region = reg-something
-            
+
             [foo]
             aws_access_key_id = xxx
             aws_secret_access_key = yyy

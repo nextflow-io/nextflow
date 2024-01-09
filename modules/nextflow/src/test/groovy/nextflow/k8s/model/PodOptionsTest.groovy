@@ -44,7 +44,7 @@ class PodOptionsTest extends Specification {
         def options = new PodOptions()
         then:
         options.getImagePullPolicy() == null
-        
+
         when:
         options = new PodOptions([ [pullPolicy:'Always'] ])
         then:
@@ -182,7 +182,7 @@ class PodOptionsTest extends Specification {
                 PodEnv.value('ALPHA', 'aaa'),
                 PodEnv.value('BETA',  'bbb'),
                 PodEnv.secret('PASSWORD', 'name/key'),
-        ] as Set 
+        ] as Set
 
     }
 
@@ -447,7 +447,7 @@ class PodOptionsTest extends Specification {
                 [label: 'DELTA', value: 'bbb'],
                 [label: 'DELTA', value: 'ddd']
         ]
-        
+
         when:
         def opts = new PodOptions(options)
         then:

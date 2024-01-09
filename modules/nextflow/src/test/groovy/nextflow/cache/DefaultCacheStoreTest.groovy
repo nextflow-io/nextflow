@@ -39,7 +39,7 @@ class DefaultCacheStoreTest extends Specification {
         def key1 = CacheHelper.hasher('ONE').hash()
         def key2 = CacheHelper.hasher('TWO').hash()
         def value = "Hello world"
-        
+
         when:
         store.putEntry(key1, value.bytes)
         then:

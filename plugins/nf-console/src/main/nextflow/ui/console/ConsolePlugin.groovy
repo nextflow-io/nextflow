@@ -30,7 +30,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
  * Nextflow plugin for Console extension
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

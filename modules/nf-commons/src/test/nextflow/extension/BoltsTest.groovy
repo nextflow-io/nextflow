@@ -381,7 +381,7 @@ class BoltsTest extends Specification {
         def merge = Bolts.deepMerge(origMap, newMap)
 
         then:
-        merge.foo == 1 
+        merge.foo == 1
         merge.bar.x == 4
         merge.bar.y == 3
         merge.bar.z == 5

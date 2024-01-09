@@ -4,8 +4,8 @@ use Math::CDF;
 use Math::Round;
 
 #
-# The default input parameters 
-# 
+# The default input parameters
+#
 my $debug = 0;
 my $noplot = 0;
 my $gnuplot = "";
@@ -18,29 +18,29 @@ my $data_file = "sliding.$$";
 my $_prompt = "";
 
 #
-# Find out gnuplot 
+# Find out gnuplot
 #
 
-if( exists $ENV{GNUPLOT_BIN}) { 
+if( exists $ENV{GNUPLOT_BIN}) {
         $gnuplot = $ENV{GNUPLOT_BIN};
 }
-if( $gnuplot eq "" ) { 
+if( $gnuplot eq "" ) {
         $gnuplot = `which gnuplot`;
         chomp($gnuplot);
 }
-if( $gnuplot eq "" ) { 
+if( $gnuplot eq "" ) {
         print "AMPA requires gnuplot to be installed on your system.";
         exit 2;
 }
 
 #
-# Parse the command 
-# 
+# Parse the command
+#
 
 my $cl=join( " ", @ARGV);
 
 if (($cl=~/-h/) ||($cl=~/-H/) ) {
-        # print usage 
+        # print usage
         print "Usage: AMPA.pl -in=<input fasta file> [other options]\n";
         print "\n";
         print "Available options:\n";
@@ -55,10 +55,10 @@ if (($cl=~/-h/) ||($cl=~/-H/) ) {
 }
 
 #
-# If not command line is provided switch to interactive mode 
+# If not command line is provided switch to interactive mode
 #
 
-if ($#ARGV==-1 ) { 
+if ($#ARGV==-1 ) {
         # the input file name
         print "Enter the name of the sequence file and then press Enter [$input_file]: ";
         $_prompt = <STDIN>;
@@ -70,7 +70,7 @@ if ($#ARGV==-1 ) {
         $_prompt = <STDIN>;
         chomp($_prompt);
         if( $_prompt ne "" ) { $window_size = $_prompt };
-        
+
         # the threshold
         print "Enter the desired threshold and then press Enter [$threshold]: ";
         $_prompt = <STDIN>;
@@ -80,46 +80,46 @@ if ($#ARGV==-1 ) {
 
 
 # option '-in': input file name
-if ( ($cl=~/-in=\s*(\S+)/)) { 
+if ( ($cl=~/-in=\s*(\S+)/)) {
         $input_file = $1;
 }
 
 # option '-w': window size
-if ( ($cl =~ /-w=\s*(\S+)/)) { 
+if ( ($cl =~ /-w=\s*(\S+)/)) {
         $window_size = $1;
 }
 
 # option '-t': threshold value
-if ( ($cl =~ /-t=\s*(\S+)/)) { 
+if ( ($cl =~ /-t=\s*(\S+)/)) {
         $threshold = $1;
 }
 
 # option '-gf': output graph file
-if ( ($cl =~ /-gf=\s*(\S+)/)) { 
+if ( ($cl =~ /-gf=\s*(\S+)/)) {
         $graph_file = $1;
 }
 
 # option '-rf': output result file
-if ( ($cl =~ /-rf=\s*(\S+)/)) { 
+if ( ($cl =~ /-rf=\s*(\S+)/)) {
         $result_file = $1;
 }
 
 # option '-df': output sliding file
-if ( ($cl =~ /-df=\s*(\S+)/)) { 
+if ( ($cl =~ /-df=\s*(\S+)/)) {
         $data_file = $1;
 }
 
 # option '-debug': enable debug mode
-if ( ($cl =~ /-debug/)) { 
+if ( ($cl =~ /-debug/)) {
         $debug = 1;
 }
 
 # option '-noplot': threshold value
-if ( ($cl =~ /-noplot/)) { 
+if ( ($cl =~ /-noplot/)) {
         $noplot = 1;
 }
 
-if( $debug != 0 ) { 
+if( $debug != 0 ) {
         print "Window size      : $window_size\n";
         print "Threshold value  : $threshold\n";
         print "Input file name  : $input_file\n";
@@ -130,12 +130,12 @@ if( $debug != 0 ) {
 }
 
 #
-#  Main script start here 
-# 
+#  Main script start here
+#
 
 my(@names,@lengths,@sequences,$sequence_number,$protein);
 
-open(PROTEIN, "$input_file") or die "Cannot open '$input_file': $!\n";  
+open(PROTEIN, "$input_file") or die "Cannot open '$input_file': $!\n";
 
 #The program should read the user input sequence
 
@@ -159,7 +159,7 @@ while (my $sequence_record = <PROTEIN>) {
 
     $sequence_record =~ s/[^\n]+//;
     push (@names, $sequence_name);
-    $sequence_record =~ s/[^ACDEFGHIKLMNPQRSTVWYacdefghiklmnpqrstvwy]//g;    
+    $sequence_record =~ s/[^ACDEFGHIKLMNPQRSTVWYacdefghiklmnpqrstvwy]//g;
     push (@sequences, $sequence_record);
     push (@lengths, length($sequence_record));
     my $sequence_length = length($sequence_record);
@@ -178,7 +178,7 @@ close(PROTEIN) or die "Cannot close the file: $!\n";
 &sliding($sequences);
 if(!$noplot) {
 	&gnuplot_sld();
-} 
+}
 
 ### Subroutines
 
@@ -193,27 +193,27 @@ sub sliding {
 # These are the antimicrobial propensity values for each amino acid
 
     my %sliding = (
-                          'A',    0.307,  
-                          'R',    0.106,  
-                          'N',    0.240,  
-                          'D',    0.479,  
-                          'C',    0.165,  
-                          'Q',    0.248,  
-                          'E',    0.449,  
-                          'G',    0.265,  
-                          'H',    0.202,  
-                          'I',    0.198,  
-                          'L',    0.246,  
-                          'K',    0.111,  
-                          'M',    0.265,  
-                          'F',    0.246,  
-                          'P',    0.327,  
-                          'S',    0.281,  
-                          'T',    0.242,  
-                          'W',    0.172,  
-                          'Y',    0.185,  
+                          'A',    0.307,
+                          'R',    0.106,
+                          'N',    0.240,
+                          'D',    0.479,
+                          'C',    0.165,
+                          'Q',    0.248,
+                          'E',    0.449,
+                          'G',    0.265,
+                          'H',    0.202,
+                          'I',    0.198,
+                          'L',    0.246,
+                          'K',    0.111,
+                          'M',    0.265,
+                          'F',    0.246,
+                          'P',    0.327,
+                          'S',    0.281,
+                          'T',    0.242,
+                          'W',    0.172,
+                          'Y',    0.185,
                           'V',    0.200,
-              'X',      $threshold  
+              'X',      $threshold
                           );
 
     $protein = shift;
@@ -223,7 +223,7 @@ sub sliding {
     print KD "# $names[0]\n";
     print KD "# Pos\ APV\n";
     print KD "# ---\t-------------------\n";
-        
+
         my $acc1=0;
         my $acc2=0;
         my $bacindex=0;
@@ -240,7 +240,7 @@ sub sliding {
             $PV = $sliding{$residue};
             $sum+=$PV;
         }
-    
+
         $center = $i + $half;
     my $position = $center - 3;
         my $APV=$sum/$window_size;
@@ -255,10 +255,10 @@ sub sliding {
                             my $bacvalue=(($bacvalue)/($last-$init+1));
                             $prob = &Math::CDF::pnorm(($bacvalue-0.2584)/0.02479);
                             $prob*=100;
-                            my $rbacvalue = nearest(.001, $bacvalue);                            
+                            my $rbacvalue = nearest(.001, $bacvalue);
                             my $rprob = nearest(1, $prob);
                                                         print RS "Antimicrobial stretch found in $init to $last. Propensity value $rbacvalue ($rprob %) \n";
-                            $bacindex++;                                                        
+                            $bacindex++;
                             $acc2=0;
                                                         $acc1=0;
                             $bacvalue=0;
@@ -274,7 +274,7 @@ sub sliding {
                         if($acc2==0) {
                             $acc1=0;
                             $bacvalue=0;
-                        }                                                
+                        }
                         if($APV<=$threshold) {
                                                 $acc2++;
                         $bacvalue+=$APV
@@ -291,9 +291,9 @@ sub sliding {
                         $bacindex++;
                         $prob = &Math::CDF::pnorm(($bacvalue-0.2584)/0.02479);
                         $prob*=100;
-                        my $rbacvalue = nearest(.001, $bacvalue);                            
-                        my $rprob = nearest(1, $prob);                                                
-                        print RS "Antimicrobial stretch found in $init to $last. Propensity value $rbacvalue ($rprob %) \n";    
+                        my $rbacvalue = nearest(.001, $bacvalue);
+                        my $rprob = nearest(1, $prob);
+                        print RS "Antimicrobial stretch found in $init to $last. Propensity value $rbacvalue ($rprob %) \n";
                         }
 
 
@@ -302,15 +302,15 @@ sub sliding {
 
 print RS "# This protein has $bacindex bactericidal stretches \n";
 my $manvalue = nearest(.001, $amvalue/(length($protein)-6));
-print RS "# This protein has a mean antimicrobial value of $manvalue \n";       
-   
+print RS "# This protein has a mean antimicrobial value of $manvalue \n";
+
 close(KD) or die("Could not close file: $!\n");
 }
 
 
 sub gnuplot_sld {
     my $cmdline = "|$gnuplot -persist";
-   
+
     open (GP, $cmdline) or die "no gnuplot";
     # force buffer to flush after each write
     use FileHandle;
@@ -322,12 +322,12 @@ sub gnuplot_sld {
     print GP "set grid\n";
     print GP "set data style lines\n";
 
-        # if an output has been specified output to it 
-    if( $graph_file ne "" ) { 
+        # if an output has been specified output to it
+    if( $graph_file ne "" ) {
         print GP "set terminal png large enhanced  size 800 600\n";
         print GP "set output '$graph_file' \n";
     }
-    
+
     print GP "plot \"$data_file\" u 1:2 t \"Antimicrobial profile \" w lines\n";
     close GP;
 }

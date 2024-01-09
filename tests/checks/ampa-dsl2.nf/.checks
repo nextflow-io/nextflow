@@ -1,5 +1,5 @@
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN $WITH_DOCKER --out result.txt | tee .stdout
 
@@ -8,7 +8,7 @@ cmp .expected <(sort .stdout) || false
 
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN $WITH_DOCKER --out result.txt -resume | tee .stdout
 

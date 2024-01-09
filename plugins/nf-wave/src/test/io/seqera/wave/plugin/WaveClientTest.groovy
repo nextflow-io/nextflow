@@ -621,19 +621,19 @@ class WaveClientTest extends Specification {
         assets.containerFile == '''\
                 # Runner image
                 FROM {{spack_runner_image}}
-                
+
                 COPY --from=builder /opt/spack-env /opt/spack-env
                 COPY --from=builder /opt/software /opt/software
                 COPY --from=builder /opt/._view /opt/._view
-                
+
                 # Entrypoint for Singularity
                 RUN mkdir -p /.singularity.d/env && \\
                     cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
                 # Entrypoint for Docker
                 RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
                     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-                
-                
+
+
                 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
                 CMD [ "/bin/bash" ]
                 '''.stripIndent()
@@ -703,19 +703,19 @@ class WaveClientTest extends Specification {
         assets.containerFile == '''\
                 # Runner image
                 FROM {{spack_runner_image}}
-                
+
                 COPY --from=builder /opt/spack-env /opt/spack-env
                 COPY --from=builder /opt/software /opt/software
                 COPY --from=builder /opt/._view /opt/._view
-                
+
                 # Entrypoint for Singularity
                 RUN mkdir -p /.singularity.d/env && \\
                     cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
                 # Entrypoint for Docker
                 RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
                     >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-                
-                
+
+
                 ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
                 CMD [ "/bin/bash" ]
                 '''.stripIndent()
@@ -832,7 +832,7 @@ class WaveClientTest extends Specification {
                     micromamba install -y -n base conda-forge::procps-ng
                     micromamba clean -a -y
                 %environment
-                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                 '''.stripIndent()
         and:
         assets.condaFile == condaFile
@@ -863,13 +863,13 @@ class WaveClientTest extends Specification {
                 Bootstrap: docker
                 From: {{spack_runner_image}}
                 stage: final
-                 
+
                 %files from build
                     /opt/spack-env /opt/spack-env
                     /opt/software /opt/software
                     /opt/._view /opt/._view
                     /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-                 
+
                 %post
                     cmd-foo
                     cmd-bar
@@ -911,13 +911,13 @@ class WaveClientTest extends Specification {
                     Bootstrap: docker
                     From: {{spack_runner_image}}
                     stage: final
-                     
+
                     %files from build
                         /opt/spack-env /opt/spack-env
                         /opt/software /opt/software
                         /opt/._view /opt/._view
                         /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-                     
+
                     %post
                     '''.stripIndent()
         and:
@@ -1219,7 +1219,7 @@ class WaveClientTest extends Specification {
 
         expect:
         wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
-        
+
         where:
         ARCH                | EXPECTED
         'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
@@ -1310,7 +1310,7 @@ class WaveClientTest extends Specification {
         response.body() == 'Hello world!'
         and:
         requestCount == 3
-        
+
         cleanup:
         server?.stop(0)
 

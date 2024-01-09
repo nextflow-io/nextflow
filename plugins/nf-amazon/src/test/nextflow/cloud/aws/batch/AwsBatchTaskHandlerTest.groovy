@@ -518,7 +518,7 @@ class AwsBatchTaskHandlerTest extends Specification {
                 vol2: '/here:/there:ro',
                 vol3: '/this:/that:rw',
         ]
-        
+
         when:
         handler.addVolumeMountsToContainer(mounts, container)
         then:
@@ -573,7 +573,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         !result.containerProperties.logConfiguration
         !result.containerProperties.mountPoints
         !result.containerProperties.privileged
-        
+
         when:
         result = handler.makeJobDefRequest(task)
         then:
@@ -903,7 +903,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.isCompleted() >> false
         1 * handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
-        
+
         and:
         trace.native_id == 'xyz-123'
         trace.executorName == 'awsbatch'

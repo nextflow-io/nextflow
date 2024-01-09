@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 
 /**
  * A {@link Map} that handles keys in a case insensitive manner
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

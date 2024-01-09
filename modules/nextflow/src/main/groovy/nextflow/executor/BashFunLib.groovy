@@ -23,7 +23,7 @@ import nextflow.util.Duration
 
 /**
  * Bash common functions library
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -82,7 +82,7 @@ class BashFunLib<V extends BashFunLib> {
               timeout=\$(( timeout * 2 ))
             done
         }
-        
+
         nxf_parallel() {
             IFS=\$'\\n'
             local cmd=("\$@")
@@ -100,7 +100,7 @@ class BashFunLib<V extends BashFunLib> {
                   [[ -e /proc/\$x ]] && copy+=(\$x) || wait \$x
                 done
                 pid=("\${copy[@]}")
-                
+
                 if ((\${#pid[@]}>=\$max)); then
                   nxf_sleep 0.2
                 else

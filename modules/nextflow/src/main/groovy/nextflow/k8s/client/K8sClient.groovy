@@ -230,7 +230,7 @@ class K8sClient {
         final podList = new K8sResponseJson(resp.text)
 
         // delete all pods in a job
-        if (podList.kind == "PodList") { 
+        if (podList.kind == "PodList") {
             for (item in podList.items) {
                 try {
                    podDelete(((item as Map).metadata as Map).name as String)
@@ -383,13 +383,13 @@ class K8sClient {
         if( podName ) {
             try {
                 return podState(podName)
-            } 
+            }
             /* pod might be deleted by control plane just after findPodNameForJob() call
              * so try fallback to jobState
-             */   
+             */
             catch (NodeTerminationException err) {
                 log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
-                return jobStateFallback0(jobName)           
+                return jobStateFallback0(jobName)
             }
         }
         else {

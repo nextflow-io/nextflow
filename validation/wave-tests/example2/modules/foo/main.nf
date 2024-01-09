@@ -1,7 +1,7 @@
 process hello {
   debug true
   """
-  cowsay Hello Summit! 
+  cowsay Hello Summit!
   """
 }
 

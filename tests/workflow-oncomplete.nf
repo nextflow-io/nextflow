@@ -28,7 +28,7 @@ process sayHello {
   debug true
   input:
   val x
-  
+
   """
   ${params.command} '$x world!'
   """

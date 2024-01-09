@@ -77,7 +77,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         this.s5cmdPath = value
         return this
     }
-    
+
     S3BashLib withAcl(CannedAccessControlList value) {
         if( value )
             this.acl = "--acl $value "
@@ -89,7 +89,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             return ''
         """
         # aws cli retry config
-        export AWS_RETRY_MODE=${retryMode} 
+        export AWS_RETRY_MODE=${retryMode}
         export AWS_MAX_ATTEMPTS=${maxTransferAttempts}
         """.stripIndent().rightTrim()
     }
@@ -113,7 +113,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
               $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
-        
+
         nxf_s3_download() {
             local source=\$1
             local target=\$2
@@ -121,7 +121,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local is_dir=\$($cli s3 ls \$source | grep -F "PRE \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
                 $cli s3 cp --only-show-errors --recursive "\$source" "\$target"
-            else 
+            else
                 $cli s3 cp --only-show-errors "\$source" "\$target"
             fi
         }
@@ -151,7 +151,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
               $cli cp ${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
-        
+
         nxf_s3_download() {
             local source=\$1
             local target=\$2
@@ -159,7 +159,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local is_dir=\$($cli ls \$source | grep -F "DIR \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
                 $cli cp "\$source/*" "\$target"
-            else 
+            else
                 $cli cp "\$source" "\$target"
             fi
         }

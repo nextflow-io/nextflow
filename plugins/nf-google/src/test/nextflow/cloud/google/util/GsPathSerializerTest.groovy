@@ -36,7 +36,7 @@ class GsPathSerializerTest extends Specification {
         Global.session = Mock(Session) {
             getConfig() >> [google:[project:'foo', region:'x']]
         }
-        
+
         when:
         def uri = URI.create("gs://my-seq/data/ggal/sample.fq")
         def path = Paths.get(uri)

@@ -135,7 +135,7 @@ class OpCall implements Callable {
         }
         else {
             result = (T)source
-        } 
+        }
         // Keep track of this relationship so we can retrieve the
         // DataflowBroadcast or DataflowQueue when rendering the DAG.
         if( !ignoreDagNode && source != result )

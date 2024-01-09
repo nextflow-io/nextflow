@@ -66,7 +66,7 @@ class LocalTaskHandlerTest extends Specification {
             getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
             toTaskBean() >> bean
         }
-        def executor = Mock(LocalExecutor) 
+        def executor = Mock(LocalExecutor)
         and:
         def handler = Spy(new LocalTaskHandler(task, executor))
 

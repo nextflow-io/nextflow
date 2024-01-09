@@ -99,7 +99,7 @@ class CH {
                     ch.add(empty())
                 // map write channels to read channels
                 final sources = ch.collect(it -> getReadChannel(it))
-                // mix all of them 
+                // mix all of them
                 new MixOp(sources).withTarget(topic.broadcaster).apply()
             }
             else {

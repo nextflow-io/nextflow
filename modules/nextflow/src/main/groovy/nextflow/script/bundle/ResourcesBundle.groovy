@@ -158,7 +158,7 @@ class ResourcesBundle {
             result.maxBundleSize = config.maxBundleSize as MemoryUnit
         if( config.baseDirectory )
             result.baseDirectory = config.baseDirectory as String
-        
+
         // load bundle files
         final files = new HashSet(10)
         final pattern = config.filePattern as String ?: '**'

@@ -111,7 +111,7 @@ class FluxExecutorTest extends Specification {
         task.name = 'my task'
         task.workDir = Paths.get('/work/path')
         task.config = new TaskConfig()
-        
+
         expect:
         executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '/bin/bash', 'job.sh']
 
@@ -160,8 +160,8 @@ class FluxExecutorTest extends Specification {
         result['ƒ6upwy2MY3'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['ƒ6upcbFjvf'] == AbstractGridExecutor.QueueStatus.HOLD
         result['ƒ6uon2RGVV'] == AbstractGridExecutor.QueueStatus.PENDING
-        result['ƒ6upwy2MY4'] == AbstractGridExecutor.QueueStatus.DONE 
-        result['ƒ6upcbFjvh'] == AbstractGridExecutor.QueueStatus.DONE 
+        result['ƒ6upwy2MY4'] == AbstractGridExecutor.QueueStatus.DONE
+        result['ƒ6upcbFjvh'] == AbstractGridExecutor.QueueStatus.DONE
     }
 
     def testQueueStatusCommand() {

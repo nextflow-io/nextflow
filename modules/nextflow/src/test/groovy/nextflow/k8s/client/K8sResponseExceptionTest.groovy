@@ -33,7 +33,7 @@ class K8sResponseExceptionTest extends Specification {
         then:
         resp.getMessage() == '''
                             Request /this/that failed
-                            
+
                               {
                                   "foo": "one",
                                   "bar": "two"

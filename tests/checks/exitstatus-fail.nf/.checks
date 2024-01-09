@@ -4,7 +4,7 @@ set +e
 # run normal mode
 #
 echo ''
-$NXF_RUN 
+$NXF_RUN
 [[ $? == 0 ]] && exit 1
 
 
@@ -12,7 +12,7 @@ $NXF_RUN
 # RESUME mode
 #
 echo ''
-$NXF_RUN -resume 
+$NXF_RUN -resume
 [[ $? == 0 ]] && exit 1
 
 exit 0

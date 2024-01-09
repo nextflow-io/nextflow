@@ -95,7 +95,7 @@ import static nextflow.cloud.aws.nio.util.S3UploadHelper.*;
 public class S3Client {
 
 	private static final Logger log = LoggerFactory.getLogger(S3Client.class);
-	
+
 	private AmazonS3 client;
 
 	private CannedAccessControlList cannedAcl;
@@ -629,7 +629,7 @@ public class S3Client {
 		// see https://github.com/aws/aws-sdk-java/issues/1321
 		//
 		// just traverse to source path a copy all files
-		// 
+		//
 		final Path target = targetFile.toPath();
 		final List<Download> allDownloads = new ArrayList<>();
 

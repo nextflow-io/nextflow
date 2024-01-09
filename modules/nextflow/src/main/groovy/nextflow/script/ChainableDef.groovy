@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 
 /**
  * An executable component i.e. a process or a workflow
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

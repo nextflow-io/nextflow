@@ -52,7 +52,7 @@ class ContainerHandler {
     }
 
     ContainerConfig getConfig() { config }
-    
+
     Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {

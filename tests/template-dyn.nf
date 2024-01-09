@@ -35,7 +35,7 @@ process foo {
 process bar {
   debug true
   input:
-  each x 
+  each x
 
   script:
   template(task.command)

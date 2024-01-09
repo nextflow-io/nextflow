@@ -770,14 +770,14 @@ class AzBatchService implements Closeable {
             // Get pool lifetime since creation.
             lifespan = time() - time("{{poolCreationTime}}");
             interval = TimeInterval_Minute * {{scaleInterval}};
-            
+
             // Compute the target nodes based on pending tasks.
             // \$PendingTasks == The sum of \$ActiveTasks and \$RunningTasks
             \$samples = \$PendingTasks.GetSamplePercent(interval);
             \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(interval)));
             \$targetVMs = \$tasks > 0 ? \$tasks : max(0, \$TargetDedicatedNodes/2);
             targetPoolSize = max(0, min(\$targetVMs, {{maxVmCount}}));
-            
+
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
             \$${target} = lifespan < interval ? {{vmCount}} : targetPoolSize;
             \$NodeDeallocationOption = taskcompletion;

@@ -58,7 +58,7 @@ class LsfExecutor extends AbstractGridExecutor {
     protected boolean getPerTaskReserve() { perTaskReserve }
     protected String getMemUnit() { memUnit }
     protected String getUsageUnit() { usageUnit }
-    
+
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *
@@ -279,7 +279,7 @@ class LsfExecutor extends AbstractGridExecutor {
             memUnit = usageUnit = conf.get('LSF_UNIT_FOR_LIMITS')
             log.debug "[LSF] Detected lsf.conf LSF_UNIT_FOR_LIMITS=$memUnit"
         }
-        
+
         // per job mem limit
         // https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
         if( conf.get('LSB_JOB_MEMLIMIT') ) {

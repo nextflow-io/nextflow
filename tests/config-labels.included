@@ -5,7 +5,7 @@ process {
     }
 
     withName: gamma {
-        memory = 60.MB 
+        memory = 60.MB
         queue = 'foo'
     }
 }

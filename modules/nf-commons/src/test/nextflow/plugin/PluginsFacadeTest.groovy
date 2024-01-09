@@ -303,7 +303,7 @@ class PluginsFacadeTest extends Specification {
         plugins.find { it.id == 'nf-amazon' && it.version=='0.1.0' }    // <-- version from default
         plugins.find { it.id == 'nf-tower' && it.version=='1.0.1' }     // <-- version from the env var
         plugins.find { it.id == 'nf-foo' && it.version=='2.2.0' }       // <-- version from the env var
-        plugins.find { it.id == 'nf-bar' && it.version==null }          // <-- no version 
+        plugins.find { it.id == 'nf-bar' && it.version==null }          // <-- no version
     }
 
     @Unroll

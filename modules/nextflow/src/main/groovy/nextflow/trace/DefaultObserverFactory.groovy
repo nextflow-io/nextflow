@@ -6,7 +6,7 @@ import nextflow.Session
 
 /**
  * Creates Nextflow observes object
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DefaultObserverFactory implements TraceObserverFactory {

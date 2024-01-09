@@ -20,7 +20,7 @@ $NXF_RUN -resume | tee stdout
 [[ `grep -c 'Hello world!' stdout` == 1 ]] || false
 
 #
-# checks reports 
+# checks reports
 #
 echo ''
 $NXF_RUN -with-report -with-timeline -with-trace -with-dag | tee stdout

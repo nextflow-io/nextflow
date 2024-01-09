@@ -14,14 +14,14 @@ class ValueObjectTest extends Specification {
         GroovyAssert.assertScript '''
             import nextflow.io.SerializableMarker
             import nextflow.io.SerializableObject
-            
+
             @SerializableObject
             class Foo {
                 String foo
             }
-            
+
             def x = new Foo(foo: 'hello')
-            assert x instanceof Serializable 
+            assert x instanceof Serializable
             '''
     }
 
@@ -31,16 +31,16 @@ class ValueObjectTest extends Specification {
         GroovyAssert.assertScript '''
             import nextflow.io.SerializableMarker
             import nextflow.io.ValueObject
-            
+
             @ValueObject
             class Foo {
                 String foo
             }
-            
+
             def x = new Foo(foo: 'hello')
             def y = new Foo(foo: 'hello')
-            assert x instanceof Serializable 
-            assert x == y 
+            assert x instanceof Serializable
+            assert x == y
             '''
     }
 
@@ -49,13 +49,13 @@ class ValueObjectTest extends Specification {
         GroovyAssert.assertScript '''
             import nextflow.io.SerializableMarker
             import nextflow.io.ValueObject
-            
+
             @ValueObject
             class Obj {
                 String foo
                 String bar
             }
-            
+
             def obj = new Obj(foo: 'hello', bar:'world')
             assert obj == obj.clone()
             '''
@@ -66,18 +66,18 @@ class ValueObjectTest extends Specification {
         GroovyAssert.assertScript '''
             import nextflow.io.SerializableMarker
             import nextflow.io.ValueObject
-            
+
             @ValueObject
             class Obj {
                 String foo
                 String bar
             }
-            
+
             def obj = new Obj(foo: 'hello', bar:'world')
             def that = obj.copyWith(foo:'hola')
-            
+
             assert that.foo == 'hola'
-            assert that.bar == 'world' 
+            assert that.bar == 'world'
             '''
     }
 

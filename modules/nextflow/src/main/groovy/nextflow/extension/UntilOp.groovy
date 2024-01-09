@@ -41,7 +41,7 @@ class UntilOp {
 
     DataflowWriteChannel apply() {
         final target = CH.createBy(source)
-        
+
         newOperator(source, target, {
             final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
             final proc = ((DataflowProcessor) getDelegate())

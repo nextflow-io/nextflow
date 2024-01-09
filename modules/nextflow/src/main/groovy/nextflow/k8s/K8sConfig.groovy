@@ -35,7 +35,7 @@ import nextflow.util.Duration
 /**
  * Model Kubernetes specific settings defined in the nextflow
  * configuration file
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

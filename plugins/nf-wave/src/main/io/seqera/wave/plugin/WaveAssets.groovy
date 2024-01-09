@@ -28,7 +28,7 @@ import nextflow.util.StringUtils
 
 /**
  * Hold assets required to fulfill wave container image build
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical

@@ -41,7 +41,7 @@ class CmdLogTest extends Specification {
     def cleanup() {
         Plugins.stop()
     }
-    
+
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */

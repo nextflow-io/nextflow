@@ -2,7 +2,7 @@ set -e
 export NXF_ASSETS=$PWD/assets
 
 #
-# First run test `success` is `true` 
+# First run test `success` is `true`
 #
 set +e
 echo ''

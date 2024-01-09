@@ -20,7 +20,7 @@ package nextflow.exception
 /**
  * Marker interface for exceptions that should not report any addintional context
  * other the exception message
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface PlainExceptionMessage {

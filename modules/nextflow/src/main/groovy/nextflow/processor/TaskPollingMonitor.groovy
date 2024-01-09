@@ -43,7 +43,7 @@ import nextflow.util.Throttle
 class TaskPollingMonitor implements TaskMonitor {
 
     private static String RATE_FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]*)/
-    
+
     /**
      * The current session object
      */
@@ -580,7 +580,7 @@ class TaskPollingMonitor implements TaskMonitor {
     final protected void handleException( TaskHandler handler, Throwable error ) {
         def fault = null
         try {
-            if (evict(handler)) { 
+            if (evict(handler)) {
                 handler.decProcessForks()
             }
             fault = handler.task.processor.resumeOrDie(handler?.task, error)

@@ -246,7 +246,7 @@ channel
     .sqlInsert(into: 'BAR', columns: 'id', db: 'test')
 ```
 
-The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory 
+The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory
 is included under the alias `fromTable`.
 
 ### Process directives
@@ -305,7 +305,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 
 class MyObserver implements TraceObserver {
-    
+
     @Override
     void onFlowBegin() {
         println "Okay, let's begin!"
@@ -325,7 +325,7 @@ class MyObserver implements TraceObserver {
     void onFilePublish(Path destination, Path source) {
         println "I published a file! It's located at ${path.toUriString()}"
     }
-    
+
     @Override
     void onFlowError(TaskHandler handler, TraceRecord trace) {
         println "Uh oh, something went wrong..."

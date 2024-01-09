@@ -592,7 +592,7 @@ class K8sTaskHandlerTest extends Specification {
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
-        
+
         when:
         def state = handler.getState()
         then:
@@ -831,7 +831,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
         and:
         1 * taskConfig.getPodOptions() >> new PodOptions([:])
-        and: 
+        and:
         opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
     }
 

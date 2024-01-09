@@ -31,7 +31,7 @@ class S3UploadHelperTest extends Specification {
     @Shared final long _1_MiB = _1_KiB **2
     @Shared final long _1_GiB = _1_KiB **3
     @Shared final long _1_TiB = _1_KiB **4
-    
+
     @Shared final long _10_MiB = _1_MiB * 10
     @Shared final long _100_MiB = _1_MiB * 100
 

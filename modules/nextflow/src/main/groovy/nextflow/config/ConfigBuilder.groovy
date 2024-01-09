@@ -190,7 +190,7 @@ class ConfigBuilder {
 
         def result = []
         if ( files ) {
-            for( String fileName : files ) { 
+            for( String fileName : files ) {
                 def thisFile = currentDir.resolve(fileName)
                 if(!thisFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
@@ -866,7 +866,7 @@ class ConfigBuilder {
             final value = entry.value
             final previous = getConfigVal0(config, key)
             keys << entry.key
-            
+
             if( previous==null ) {
                 config[key] = value
             }

@@ -96,7 +96,7 @@ class BufferOp {
         if( params?.skip )
             this.skip = params.skip as int
         if( params?.size )
-            this.size = params.size as int 
+            this.size = params.size as int
         if( params?.remainder == true )
             this.remainder = true
 

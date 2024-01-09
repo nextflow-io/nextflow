@@ -1,7 +1,7 @@
 set -e
 
 echo ''
-$NXF_RUN | tee stdout 
+$NXF_RUN | tee stdout
 
 [[ `< .nextflow.log grep -c 'Submitted process > foo'` == 1 ]] || false
 [[ `< .nextflow.log grep -c 'Re-submitted process > foo'` == 1 ]] || false

@@ -45,6 +45,6 @@ class MultipleOutputChannelExceptionTest extends Specification {
         MultipleOutputChannelException.message('channel1',node1,node1) == 'Channel `channel1` has been used as an output by more than a process or an operator'
 
     }
-    
-    
+
+
 }

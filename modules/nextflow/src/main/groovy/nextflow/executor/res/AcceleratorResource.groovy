@@ -22,7 +22,7 @@ import groovy.transform.ToString
 
 /**
  * Models accelerator resource request
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)

@@ -116,7 +116,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         '/some/path/to/file.txt'    | 'file.txt'           | 'copy'            | 'cp -fRL /some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'here/to/abc.txt'    | 'copy'            | 'cp -fRL /some/path/to/file.txt here/to/abc.txt'
 
-        // Check the various combinations of relative/absolute inputs to 
+        // Check the various combinations of relative/absolute inputs to
         // rellink when workDir is defined:
         '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -s ../../../some/path/to/file.txt abc.txt'
         '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -s ../../../../some/path/to/file.txt xyz/abc.txt'

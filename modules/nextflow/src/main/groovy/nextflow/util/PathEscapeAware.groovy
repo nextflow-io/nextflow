@@ -21,7 +21,7 @@ package nextflow.util
  * extra escaping when rendered in a task command
  *
  * {@link nextflow.ast.TaskCmdXformVisitor}
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface PathEscapeAware {

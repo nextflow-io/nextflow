@@ -41,7 +41,7 @@ import groovy.util.logging.Slf4j
  *
  * See also
  *   https://community.oracle.com/docs/DOC-983726
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -607,10 +607,10 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         if( !opts.autoThrottle )
             return false
         // increase execution rate only when some time is spent to enforce the current limit
-        // otherwise is useless because there no execution pressure 
+        // otherwise is useless because there no execution pressure
         if( !timeToAcquire )
             return false
-        
+
         synchronized (countLock) {
             def result = opts.rampUpInterval>0 && ++successCount >= opts.rampUpInterval
             if( result )

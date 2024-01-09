@@ -49,7 +49,7 @@ class ContainerConfigTest extends Specification {
         def cfg = new ContainerConfig(OPTS, ENV)
         then:
         cfg.entrypointOverride() == EXPECTED
-        
+
         where:
         OPTS                            | ENV          | EXPECTED
         [:]                             | [:]          | false
@@ -98,7 +98,7 @@ class ContainerConfigTest extends Specification {
 
         then:
         cfg.fusionOptions() == EXPECTED
-        
+
         where:
         OPTS                                            | EXPECTED
         [:]                                             | null

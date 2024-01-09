@@ -66,5 +66,5 @@ class K8sResponseJsonTest extends Specification {
         resp.toString() == 'Ooops .. this crashed'
     }
 
-    
+
 }

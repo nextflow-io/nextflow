@@ -23,7 +23,7 @@ import java.util.regex.Pattern
  *
  * Credits
  * https://github.com/jenkinsci/docker-plugin/blob/4733aee58fbcb11b050cfdd9f97fb0980e19bb28/src/main/java/com/nirima/jenkins/plugins/docker/builder/DockerBuilderPublisher.java
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ContainerNameValidator {

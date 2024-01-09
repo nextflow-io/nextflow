@@ -41,7 +41,7 @@ class CmdInfoTest extends Specification {
     def cleanup() {
         Plugins.stop()
     }
-    
+
     def setupSpec() {
         tempDir = Files.createTempDirectory('test')
         AssetManager.root = tempDir.toFile()

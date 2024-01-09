@@ -49,7 +49,7 @@ class RateUnit {
      * Create a rate unit using a string annotation as `10 sec` ie. 10 per second
      * or `100 / 5 min` 100 events each 5 minutes
      *
-     * @param str The rate string 
+     * @param str The rate string
      */
     RateUnit(String str) {
         this.rate = parse(str)

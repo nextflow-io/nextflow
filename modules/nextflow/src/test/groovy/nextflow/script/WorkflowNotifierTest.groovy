@@ -296,7 +296,7 @@ class WorkflowNotifierTest extends Specification {
         mail.from == 'bot@nextflow.com'
         mail.subject == 'Workflow completion [foo] - SUCCEED'
         mail.text == 'Hello world!'
-        !mail.body 
+        !mail.body
         !mail.attachments
 
         cleanup:

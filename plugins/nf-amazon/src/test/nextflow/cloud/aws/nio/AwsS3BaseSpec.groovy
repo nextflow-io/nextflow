@@ -69,7 +69,7 @@ trait AwsS3BaseSpec {
             ? [ items[0], null ]
             : [ items[0], items[1..-1].join('/') ]
     }
-    
+
     def createObject(Path path, String content) {
         log.debug "Creating s3 blob object '$path'"
         def (bucketName, blobName) = splitName(path)

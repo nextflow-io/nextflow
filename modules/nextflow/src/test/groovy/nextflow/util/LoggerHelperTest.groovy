@@ -48,7 +48,7 @@ class LoggerHelperTest extends Specification {
 
         expect:
         LoggerHelper.getErrorLine(LINE, names) == EXPECTED
-        
+
         where:
         EXPECTED                        | LINE
         null                            | 'at nextflow.script.ScriptRunner.run(ScriptRunner.groovy:289)'

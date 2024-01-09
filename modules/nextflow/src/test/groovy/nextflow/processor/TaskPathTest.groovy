@@ -37,7 +37,7 @@ class TaskPathTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def hello = folder.resolve('hello.txt')
         hello.text = 'Hello world'
-        
+
         when:
         def path = new TaskPath(hello, 'ciao.txt')
         then:
@@ -98,7 +98,7 @@ class TaskPathTest extends Specification {
         def t2 = new TaskPath(p1, 'foo.txt')
         def t3 = new TaskPath(p2)
 
-        expect: 
+        expect:
         t1.equals(t1)
         t1.equals(new TaskPath(p1))
         new TaskPath(p1).equals(t1)
@@ -123,7 +123,7 @@ class TaskPathTest extends Specification {
         def t2 = new TaskPath(p1, 'foo.txt')
         def t3 = new TaskPath(p2)
         def t4 = new TaskPath(p2)
-        
+
         expect:
         TaskPath.equals(p1, t1)
         TaskPath.equals(t1, p1)

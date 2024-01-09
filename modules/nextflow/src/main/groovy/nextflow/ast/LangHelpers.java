@@ -47,7 +47,7 @@ class LangHelpers {
      *
      * @param left Left equals operand
      * @param right Right equals operand
-     * @return 
+     * @return
      */
     @PackageScope
     static boolean compareEqual( Object left, Object right )  {
@@ -259,7 +259,7 @@ class LangHelpers {
             return Duration.compareTo((Duration)right, left)<=0;
         }
 
-        // -- fallback on default 
+        // -- fallback on default
         return ScriptBytecodeAdapter.compareTo(left, right) >= 0;
     }
 

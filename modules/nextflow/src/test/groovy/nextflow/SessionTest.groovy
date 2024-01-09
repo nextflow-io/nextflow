@@ -304,7 +304,7 @@ class SessionTest extends Specification {
         session.init(script)
 
         then:
-        session.binding != null 
+        session.binding != null
         session.baseDir == folder
         session.workDir.isAbsolute()
         !session.workDir.toString().contains('..')
@@ -312,7 +312,7 @@ class SessionTest extends Specification {
         session.classesDir.exists()
         session.observers != null
         session.workflowMetadata != null
-        
+
         cleanup:
         session.classesDir?.deleteDir()
 
@@ -395,7 +395,7 @@ class SessionTest extends Specification {
         def session =  Spy(new Session([conda: CONFIG]))
         expect:
         session.condaConfig.isEnabled() == EXPECTED
-        
+
         where:
         EXPECTED    | CONFIG            | ENV
         false       | [:]               | [:]
@@ -410,7 +410,7 @@ class SessionTest extends Specification {
         def session =  Spy(new Session([spack: CONFIG]))
         expect:
         session.spackConfig.isEnabled() == EXPECTED
-        
+
         where:
         EXPECTED    | CONFIG            | ENV
         false       | [:]               | [:]
@@ -493,7 +493,7 @@ class SessionTest extends Specification {
         session.checkValidProcessName(NAMES, SELECTOR, error)
         then:
         error[0] == MSG
-        
+
         where:
         SELECTOR    | NAMES         | MSG
         'foo'       | ['foo','bar'] | null
@@ -607,7 +607,7 @@ class SessionTest extends Specification {
 
         expect:
         session.enableModuleBinaries() == EXPECTED
-        
+
         where:
         CONFIG                                      | EXPECTED
         [:]                                         | false

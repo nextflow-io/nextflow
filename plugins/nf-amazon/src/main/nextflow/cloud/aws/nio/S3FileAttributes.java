@@ -23,7 +23,7 @@ import java.nio.file.attribute.FileTime;
 import static java.lang.String.format;
 
 public class S3FileAttributes implements BasicFileAttributes {
-	
+
 	private final FileTime lastModifiedTime;
 	private final long size;
 	private final boolean directory;

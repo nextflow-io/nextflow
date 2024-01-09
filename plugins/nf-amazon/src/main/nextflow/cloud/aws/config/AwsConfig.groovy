@@ -46,7 +46,7 @@ class AwsConfig {
     private String secretKey
 
     private String profile
-    
+
     private AwsS3Legacy s3Legacy
 
     AwsConfig(Map config) {

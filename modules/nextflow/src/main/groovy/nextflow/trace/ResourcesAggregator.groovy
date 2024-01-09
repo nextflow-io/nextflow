@@ -11,7 +11,7 @@ import nextflow.Session
 
 /**
  * Collect and aggregate execution metrics used by execution report
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

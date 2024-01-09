@@ -764,7 +764,7 @@ Available options:
 : When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `true` if {ref}`strict mode <config-feature-flags>` is enabled, `false` otherwise). This option cannot be used with `remainder`.
 
 `remainder`
-: When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`). 
+: When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`).
 
 See also: [combine](#combine), [cross](#cross)
 
@@ -1635,7 +1635,7 @@ Available options:
 : The zero-based index of the element to be transposed. Can also be a list of indices, e.g. `by: [0,2]`. By default, every list element is transposed.
 
 `remainder`
-: When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`). 
+: When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`).
 
 See also: [groupTuple](#grouptuple)
 

@@ -6,7 +6,7 @@ import nextflow.script.ScriptMeta
 
 /**
  * Exception thrown when trying to invoke a process or function not existing
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

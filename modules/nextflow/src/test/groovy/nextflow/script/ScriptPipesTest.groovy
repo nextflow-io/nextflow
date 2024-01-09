@@ -16,18 +16,18 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT =  '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = "$data mundo"
-        }     
-        
+        }
+
         process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
+            exec:
               result = data.toUpperCase()
-        } 
+        }
 
         workflow {
             main: Channel.of('Hello') | map { it.reverse() } | (foo & bar)
@@ -35,7 +35,7 @@ class ScriptPipesTest extends Dsl2Spec {
                 foo.out
                 bar.out
         }
-        
+
         '''
 
         when:
@@ -52,18 +52,18 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT =  '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = "$data world"
-        }     
-        
+        }
+
         process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
+            exec:
               result = data.toUpperCase()
-        } 
+        }
 
         workflow {
             emit: Channel.of('Hola') | foo | map { it.reverse() } | bar
@@ -82,30 +82,30 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT =  '''
         process foo {
-          input: val data 
-          output: 
+          input: val data
+          output:
             val X
             val Y
           exec:
             X = data.reverse()
             Y = data.toUpperCase()
-        }     
-        
-        process bar {
-          input: 
-            val X
-            val Y 
-          output: 
-            val Z
-          exec: 
-            Z = "$X + $Y"  
         }
-        
+
+        process bar {
+          input:
+            val X
+            val Y
+          output:
+            val Z
+          exec:
+            Z = "$X + $Y"
+        }
+
         // execute `foo` process and pipe
-        // the multiple output channels 
+        // the multiple output channels
         // to the `bar` process receiving multiple inputs
         workflow {
-            emit: Channel.of('hello') | foo | bar 
+            emit: Channel.of('hello') | foo | bar
         }
         '''
 
@@ -121,8 +121,8 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT =  '''
         process foo {
-          input: val data 
-          output: 
+          input: val data
+          output:
             val X
             val Y
             val Z
@@ -130,13 +130,13 @@ class ScriptPipesTest extends Dsl2Spec {
             X = data.reverse()
             Y = data.toUpperCase()
             Z = data
-        }     
-        
-        // execute `foo` process and 
-        // pipe the multiple output channels 
+        }
+
+        // execute `foo` process and
+        // pipe the multiple output channels
         // to the `concat` operator
         workflow {
-            emit: Channel.of('hola') | foo | concat 
+            emit: Channel.of('hola') | foo | concat
         }
         '''
 
@@ -155,12 +155,12 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT =  '''
         process foo {
-          output: 
+          output:
             val X
           exec:
             X = "hola"
-        }     
-        
+        }
+
         workflow {
             emit: foo | map { it.reverse() }
         }
@@ -182,15 +182,15 @@ class ScriptPipesTest extends Dsl2Spec {
           output: val X
           exec:
             X = "hola"
-        }     
-        
+        }
+
         process bar {
           input: val X
           output: val Z
           exec:
-            Z = X.toUpperCase()  
+            Z = X.toUpperCase()
         }
-        
+
         workflow {
             emit: foo | bar
         }
@@ -213,10 +213,10 @@ class ScriptPipesTest extends Dsl2Spec {
           output: val Z
           exec:
             Z = X*X
-        }     
-        
+        }
+
         workflow {
-            emit: Channel.of(1,2,3) | square | collect 
+            emit: Channel.of(1,2,3) | square | collect
         }
         '''
 
@@ -231,8 +231,8 @@ class ScriptPipesTest extends Dsl2Spec {
 
     def 'should pipe branch output to concat operator' () {
         given:
-        def SCRIPT ='''   
-        Channel.of(10,20,30) | branch { foo: it <=10; bar: true } | concat 
+        def SCRIPT ='''
+        Channel.of(10,20,30) | branch { foo: it <=10; bar: true } | concat
         '''
 
         when:
@@ -248,14 +248,14 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT ='''
         process foo {
-          input: val x 
+          input: val x
           input: val y
           output: val ret
           exec: ret=x*2+y
         }
 
         workflow {
-           emit: Channel.of(10,20) | branch { foo: it <=10; bar: true } | foo 
+           emit: Channel.of(10,20) | branch { foo: it <=10; bar: true } | foo
         }
         '''
 
@@ -272,13 +272,13 @@ class ScriptPipesTest extends Dsl2Spec {
           output: val ret
           exec: ret=10
         }
-        
+
         def bar(ch) {
           ch.map { it +1 }
         }
 
         workflow {
-            emit: foo | bar | map{ it*2 } 
+            emit: foo | bar | map{ it*2 }
         }
         """
 
@@ -293,10 +293,10 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT = """
         process foo {
-          output: 
+          output:
             val x
             val y
-          exec: 
+          exec:
             x=1; y=2
         }
 
@@ -322,16 +322,16 @@ class ScriptPipesTest extends Dsl2Spec {
         process foo {
           input:
             val str
-          output: 
+          output:
             val x
-          exec: 
+          exec:
             x=str.reverse()
         }
-        
+
         def init(str='hi'){
             Channel.of(str)
         }
-        
+
         workflow {
             emit: init | foo | view
         }
@@ -350,16 +350,16 @@ class ScriptPipesTest extends Dsl2Spec {
         process foo {
           input:
             val str
-          output: 
+          output:
             val x
-          exec: 
+          exec:
             x=str.reverse()
         }
-        
+
         def init(str='hi'){
             Channel.of(str)
         }
-        
+
         workflow {
             emit: init('hello') | foo | view
         }
@@ -378,17 +378,17 @@ class ScriptPipesTest extends Dsl2Spec {
         process foo {
           input:
             val str
-          output: 
+          output:
             val x
-          exec: 
+          exec:
             x=str.reverse()
         }
-        
+
         def init(str='hi'){
             Channel.of(str)
         }
 
-        def bar(ch1=null) {            
+        def bar(ch1=null) {
           ch1.map{ it.toUpperCase() }
         }
 

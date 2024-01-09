@@ -198,7 +198,7 @@ class Nextflow {
             log.debug "Ignoring exit because execution is already aborted -- message=$message"
             return
         }
-        
+
         if ( exitCode && message ) {
             log.error message
         }

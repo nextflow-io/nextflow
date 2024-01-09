@@ -24,7 +24,7 @@ process foo {
     val y
 
     output:
-    val y 
+    val y
 
     "echo $x - $y"
 }

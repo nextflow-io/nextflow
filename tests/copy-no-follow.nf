@@ -19,7 +19,7 @@ process test {
 	publishDir "outputDir", mode: 'copyNoFollow'
 
 	output:
-	file '*' 
+	file '*'
 
 	"""
 	echo "TEST" > testFile.txt

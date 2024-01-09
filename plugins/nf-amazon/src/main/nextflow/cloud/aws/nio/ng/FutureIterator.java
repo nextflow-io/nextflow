@@ -79,7 +79,7 @@ public class FutureIterator<REQ,RESP> implements Iterator<Future<RESP>> {
             return futures.poll();
         }
         catch (Throwable t) {
-            // in case of error cancel all pending tasks  
+            // in case of error cancel all pending tasks
             for( Future<RESP> it : futures ) {
                 it.cancel(true);
             }

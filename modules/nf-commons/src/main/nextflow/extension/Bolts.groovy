@@ -948,5 +948,5 @@ class Bolts {
         else
             return new HashMap<>(map)
     }
-    
+
 }

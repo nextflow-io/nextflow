@@ -1,7 +1,7 @@
 set -e
 
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN -process.scratch true | tee stdout
 
@@ -10,7 +10,7 @@ $NXF_RUN -process.scratch true | tee stdout
 
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -resume -process.scratch true | tee stdout
 

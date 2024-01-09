@@ -60,17 +60,17 @@ class K8sDriverLauncher {
      */
     private String headImage
 
-    /** 
+    /**
      * Request CPUs to be used for the Nextflow driver pod
      */
     private int headCpus
 
-    /** 
+    /**
      * Request memory to be used for the Nextflow driver pod
      */
     private String headMemory
 
-    /** 
+    /**
      * Pre-script to run before nextflow
      */
     private String headPreScript
@@ -196,7 +196,7 @@ class K8sDriverLauncher {
             }
         }
     }
-    
+
     protected boolean isWaitTimedOut(long time) {
         System.currentTimeMillis()-time > 90_000
     }
@@ -612,7 +612,7 @@ class K8sDriverLauncher {
         initScript += "mkdir -p '$launchDir'; if [ -d '$launchDir' ]; then cd '$launchDir'; else echo 'Cannot create directory: $launchDir'; exit 1; fi; "
         initScript += '[ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm $NXF_HOME/scm; '
         initScript += '[ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config $PWD/nextflow.config; '
-        if( headPreScript ) 
+        if( headPreScript )
             initScript += "[ -f '$headPreScript' ] && '$headPreScript'; "
         configMap['init.sh'] = initScript
 

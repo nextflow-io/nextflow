@@ -44,7 +44,7 @@ class PbsProExecutor extends PbsExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result ) {
         assert result !=null
-        
+
         // when multiple competing directives are provided, only the first one will take effect
         // therefore clusterOptions is added as first to give priority over other options as expected
         // by the clusterOptions semantics -- see https://github.com/nextflow-io/nextflow/pull/2036
@@ -89,7 +89,7 @@ class PbsProExecutor extends PbsExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        String cmd = 'qstat -f ' 
+        String cmd = 'qstat -f '
         if( queue ) {
             cmd += queue
         } else {
@@ -103,12 +103,12 @@ class PbsProExecutor extends PbsExecutor {
     static private Map<String,QueueStatus> DECODE_STATUS = [
             'F': QueueStatus.DONE,      // job is finished
             'E': QueueStatus.RUNNING,   // job is exiting (therefore still running)
-            'R': QueueStatus.RUNNING,   // job is running 
-            'Q': QueueStatus.PENDING,   // job is queued 
+            'R': QueueStatus.RUNNING,   // job is running
+            'Q': QueueStatus.PENDING,   // job is queued
             'H': QueueStatus.HOLD,      // job is held
-            'S': QueueStatus.HOLD,      // job is suspended 
+            'S': QueueStatus.HOLD,      // job is suspended
             'U': QueueStatus.HOLD,      // job is suspended due to workstation becoming busy
-            'W': QueueStatus.HOLD,      // job is waiting 
+            'W': QueueStatus.HOLD,      // job is waiting
             'T': QueueStatus.HOLD,      // job is in transition
             'M': QueueStatus.HOLD,      // job was moved to another server
     ]

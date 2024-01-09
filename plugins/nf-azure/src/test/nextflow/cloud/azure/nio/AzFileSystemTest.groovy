@@ -119,5 +119,5 @@ class AzFileSystemTest extends Specification {
         fs.getPath('/alpha','/gamma','/delta') == new AzPath(fs, Paths.get('/bucket/alpha/gamma/delta'), false)
         fs.getPath('/alpha','gamma//','delta//') == new AzPath(fs, Paths.get('/bucket/alpha/gamma/delta'), false)
     }
-    
+
 }

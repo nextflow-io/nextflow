@@ -2,12 +2,12 @@
 
 params.db = "$baseDir/blast-db/tiny"
 params.query = "$baseDir/data/sample.fa"
-params.chunk = 1 
+params.chunk = 1
 
 db = file(params.db)
 
-/* 
- * Extends a BLAST query for each entry in the 'chunks' channel 
+/*
+ * Extends a BLAST query for each entry in the 'chunks' channel
  */
 process blast {
     input:
@@ -24,7 +24,7 @@ process blast {
 
 /*
  * Find out the top 10 matches returned by the BLAST query
- */ 
+ */
 process extract {
     input:
     path top_hits
@@ -37,7 +37,7 @@ process extract {
 
 
 /*
- * Aligns a T-Coffee MSA and print it 
+ * Aligns a T-Coffee MSA and print it
  */
 process align {
     debug true

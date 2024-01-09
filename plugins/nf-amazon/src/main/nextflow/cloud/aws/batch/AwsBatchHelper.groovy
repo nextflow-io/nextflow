@@ -214,7 +214,7 @@ class AwsBatchHelper {
         for( OutputLogEvent it : resp.events ) {
             result.append(it.getMessage()).append('\n')
         }
-        
+
         return result.toString()
     }
 

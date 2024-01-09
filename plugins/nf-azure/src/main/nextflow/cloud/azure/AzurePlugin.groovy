@@ -23,7 +23,7 @@ import org.pf4j.PluginWrapper
 
 /**
  * Azure cloud plugin for Nextflow
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

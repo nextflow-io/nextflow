@@ -41,7 +41,7 @@ class GsBashLibTest extends Specification {
                 if [[ $project ]]; then
                   opts+=('-u' "$project")
                 fi
-            
+
                 ## download assuming it's a file download
                 mkdir -p $basedir
                 ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
@@ -54,7 +54,7 @@ class GsBashLibTest extends Specification {
                     }
                 }
             }
-            
+
             nxf_gs_upload() {
                 local name=$1
                 local target=$2
@@ -74,7 +74,7 @@ class GsBashLibTest extends Specification {
         result == '''
             # google storage helper
             gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=3' '-o' 'GSUtil:sliced_object_download_max_components=9')
-            
+
             nxf_gs_download() {
                 local source=$1
                 local target=$2
@@ -85,7 +85,7 @@ class GsBashLibTest extends Specification {
                 if [[ $project ]]; then
                   opts+=('-u' "$project")
                 fi
-            
+
                 ## download assuming it's a file download
                 mkdir -p $basedir
                 ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
@@ -98,7 +98,7 @@ class GsBashLibTest extends Specification {
                     }
                 }
             }
-            
+
             nxf_gs_upload() {
                 local name=$1
                 local target=$2
@@ -138,7 +138,7 @@ class GsBashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -156,7 +156,7 @@ class GsBashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -171,10 +171,10 @@ class GsBashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # google storage helper
             gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=1' '-o' 'GSUtil:sliced_object_download_max_components=8')
-            
+
             nxf_gs_download() {
                 local source=$1
                 local target=$2
@@ -185,7 +185,7 @@ class GsBashLibTest extends Specification {
                 if [[ $project ]]; then
                   opts+=('-u' "$project")
                 fi
-            
+
                 ## download assuming it's a file download
                 mkdir -p $basedir
                 ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
@@ -198,7 +198,7 @@ class GsBashLibTest extends Specification {
                     }
                 }
             }
-            
+
             nxf_gs_upload() {
                 local name=$1
                 local target=$2
@@ -245,7 +245,7 @@ class GsBashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -263,7 +263,7 @@ class GsBashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -278,10 +278,10 @@ class GsBashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # google storage helper
             gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=20' '-o' 'GSUtil:sliced_object_download_max_components=30')
-            
+
             nxf_gs_download() {
                 local source=$1
                 local target=$2
@@ -292,7 +292,7 @@ class GsBashLibTest extends Specification {
                 if [[ $project ]]; then
                   opts+=('-u' "$project")
                 fi
-            
+
                 ## download assuming it's a file download
                 mkdir -p $basedir
                 ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
@@ -305,7 +305,7 @@ class GsBashLibTest extends Specification {
                     }
                 }
             }
-            
+
             nxf_gs_upload() {
                 local name=$1
                 local target=$2

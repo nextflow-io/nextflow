@@ -187,7 +187,7 @@ class AzNioTest extends Specification implements AzBaseSpec {
         when:
         def bucketName = createBucket()
         def target = Paths.get(new URI("az://$bucketName/data/file.txt"))
-        
+
         and:
         def stream = new ByteArrayInputStream(new String(TEXT).bytes)
         Files.copy(stream, target)

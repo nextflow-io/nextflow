@@ -16,17 +16,17 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should define a process with output alias' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           output: val x, emit: 'ch1'
-          output: val y, emit: 'ch2' 
+          output: val y, emit: 'ch2'
           exec: x = 'Hello'; y = 'world'
         }
-       
+
         workflow {
-            main: 
+            main:
                 foo()
-            emit: 
+            emit:
                 foo.out.ch1
                 foo.out.ch2
         }
@@ -43,9 +43,9 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should execute basic workflow' () {
         when:
         def result = dsl_eval '''
-   
+
         workflow {
-            emit: result 
+            emit: result
             main:
             result = 'Hello world'
         }
@@ -58,7 +58,7 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should execute emit' () {
         when:
         def result = dsl_eval '''
-   
+
         workflow {
             emit:
             result = 'Hello world'
@@ -72,9 +72,9 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should emit expression' () {
         when:
         def result = dsl_eval '''
-         
-        def foo() { 'Hello world' } 
-       
+
+        def foo() { 'Hello world' }
+
         workflow {
             emit:
             foo().toUpperCase()
@@ -88,12 +88,12 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should emit process out' () {
         when:
         def result = dsl_eval '''
-         
+
         process foo {
-          output: val x 
+          output: val x
           exec: x = 'Hello'
         }
-       
+
         workflow {
             main: foo()
             emit: foo.out
@@ -109,35 +109,35 @@ class ScriptDslTest extends Dsl2Spec {
         when:
         def result = dsl_eval '''
         process foo {
-          input: val data 
+          input: val data
           output: val result
           exec:
             result = "$data mundo"
-        }     
-        
+        }
+
         process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
+            exec:
               result = data.toUpperCase()
-        }   
-        
+        }
+
         workflow alpha {
-            take: 
+            take:
                 data
-            
+
             main:
                 foo(data)
                 bar(foo.out)
-                
-            emit: 
-                x = bar.out 
-            
+
+            emit:
+                x = bar.out
+
         }
-   
+
         workflow {
-            main: alpha('Hello') 
-            emit: x = alpha.out 
+            main: alpha('Hello')
+            emit: x = alpha.out
         }
         '''
 
@@ -149,7 +149,7 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should access nextflow enabling property' () {
         when:
         def result = dsl_eval '''
-        return nextflow.enable.dsl 
+        return nextflow.enable.dsl
         '''
 
         then:
@@ -160,7 +160,7 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should not allow function with reserved identifier' () {
 
         when:
-        dsl_eval """ 
+        dsl_eval """
             def main() { println 'ciao' }
         """
 
@@ -172,7 +172,7 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should not allow process with reserved identifier' () {
 
         when:
-        dsl_eval """ 
+        dsl_eval """
             process main {
               /echo ciao/
             }
@@ -186,7 +186,7 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should not allow workflow with reserved identifier' () {
 
         when:
-        dsl_eval """ 
+        dsl_eval """
             workflow main {
               /echo ciao/
             }
@@ -199,11 +199,11 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should not allow duplicate workflow keyword' () {
         when:
         dsl_eval(
-                """ 
+                """
                 workflow {
                   /echo ciao/
                 }
-                
+
                 workflow {
                   /echo miao/
                 }
@@ -221,8 +221,8 @@ class ScriptDslTest extends Dsl2Spec {
               output: val result
               exec:
                 result = "Hello"
-            }     
-            
+            }
+
             workflow {
                main: hello()
                emit: hello.out.map { it.toUpperCase()  }
@@ -238,14 +238,14 @@ class ScriptDslTest extends Dsl2Spec {
         def result = dsl_eval(/
             Channel
                 .from(1,2,3,40,50)
-                .branch { 
-                    small: it < 10 
-                    large: it > 10  
+                .branch {
+                    small: it < 10
+                    large: it > 10
                 }
                 .set { result }
-                
+
              ch1 = result.small.map { it }
-             ch2 = result.large.map { it }  
+             ch2 = result.large.map { it }
 
              [ch1, ch2]
         /)
@@ -265,15 +265,15 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           output: val result
           exec: result = "hello"
-        }     
- 
+        }
+
         process bar {
           output: val result
           exec: result = "world"
-        } 
-        
+        }
+
         workflow {
-           emit: (foo & bar) | concat      
+           emit: (foo & bar) | concat
         }
         ''')
 
@@ -289,16 +289,16 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           output: val result
           exec: result = "hello"
-        }     
- 
+        }
+
         process bar {
           output: val result
           exec: result = "world"
-        } 
-        
+        }
+
         workflow {
            main: foo(); bar()
-           emit: foo.out.concat(bar.out)      
+           emit: foo.out.concat(bar.out)
         }
         ''')
 
@@ -315,28 +315,28 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           output: val result
           exec: result = "hello"
-        }     
- 
+        }
+
         process bar {
           output: val result
           exec: result = "world"
-        } 
-        
+        }
+
         workflow {
            main: foo()
-           emit: foo.out  
+           emit: foo.out
         }
-    
+
         workflow TEST_FLOW {
            main: bar()
-           emit: bar.out  
+           emit: bar.out
         }
         ''')
 
 
         then:
         result.val == 'world'
-        
+
     }
 
     def 'should not allow composition' () {
@@ -345,12 +345,12 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
+          input: val x
           /echo bar $x/
         }
-        
+
         workflow {
           bar(foo())
         }
@@ -368,12 +368,12 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
+          input: val x
           /echo bar $x/
         }
-        
+
         workflow {
           bar(foo.out)
         }
@@ -390,12 +390,12 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
+          input: val x
           /echo bar $x/
         }
-        
+
         workflow {
           bar(foo.out)
         }
@@ -412,11 +412,11 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           /echo foo/
         }
-        
+
         workflow flow1 {
             foo()
         }
-        
+
         workflow {
           flow1()
           flow1.out.view()
@@ -434,16 +434,16 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
+          input: val x
           /echo bar $x/
         }
-        
+
         workflow flow1 {
             foo()
         }
-        
+
         workflow {
           flow1 | bar
         }
@@ -460,11 +460,11 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           /echo foo/
         }
-        
+
         workflow flow1 {
             foo()
         }
-        
+
         workflow {
           flow1.out.view()
         }
@@ -481,9 +481,9 @@ class ScriptDslTest extends Dsl2Spec {
         process foo {
           /echo foo/
         }
-        
+
         workflow {
-          main: 
+          main:
           flow()
           emmit:
           flow.out
@@ -506,13 +506,13 @@ class ScriptDslTest extends Dsl2Spec {
             sleep 5
             """
         }
-        
+
         workflow {
             main:
                 sleeper()
-                hello()      
+                hello()
         }
-        
+
         ''')
 
         then:
@@ -530,13 +530,13 @@ class ScriptDslTest extends Dsl2Spec {
             sleep 5
             """
         }
-        
+
         workflow nested {
             main:
                 sleeper()
-                sleeper_2()      
+                sleeper_2()
         }
-        
+
         workflow{
             nested()
         }
@@ -553,18 +553,18 @@ class ScriptDslTest extends Dsl2Spec {
         process sleeper1 {
             /echo 1/
         }
-        
+
         process sleeper2 {
             /echo 3/
         }
 
-        
+
         workflow nested {
             main:
                 sleeper1()
-                sleeper3()      
+                sleeper3()
         }
-        
+
         workflow{
             nested()
         }
@@ -574,7 +574,7 @@ class ScriptDslTest extends Dsl2Spec {
         def err = thrown(MissingProcessException)
         err.message ==  '''\
                         Missing process or function sleeper3()
-                        
+
                         Did you mean any of these instead?
                           sleeper1
                           sleeper2
@@ -584,18 +584,18 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should not conflict with private meta attribute' () {
         when:
         def result = dsl_eval '''
-         
+
         process foo {
           input: val x
-          output: val y 
+          output: val y
           exec: y = x
         }
-       
+
         workflow {
-            main: 
+            main:
               meta = channel.of('Hello')
               foo(meta)
-            emit: 
+            emit:
               foo.out
         }
         '''

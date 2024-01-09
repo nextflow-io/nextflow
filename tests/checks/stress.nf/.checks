@@ -17,7 +17,7 @@ CPU=10
 TIME=9
 MEM=12
 RCHAR=15
-WCHAR=16 
+WCHAR=16
 
 check_range stress_1cpu $CPU 100
 check_range stress_2cpu $CPU 200

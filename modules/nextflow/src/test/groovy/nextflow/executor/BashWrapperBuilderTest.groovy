@@ -219,7 +219,7 @@ class BashWrapperBuilderTest extends Specification {
         builder.env == ['NXF_TASK_WORKDIR', 'FOO','BAR']
         builder.workDir == Paths.get('/my/work/dir')
         builder.mounts == [ Paths.get('/my/bin') ]
-        
+
     }
 
     def 'should add resolved inputs'() {
@@ -658,7 +658,7 @@ class BashWrapperBuilderTest extends Specification {
                   local mod=$1
                   local ver=${2:-}
                   local new_module="$mod"; [[ $ver ]] && new_module+="/$ver"
-                
+
                   if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
                     old_module=$(module list 2>&1 | grep -Eow "$mod\\/[^\\( \\n]+" || true)
                     if [[ $ver && $old_module ]]; then
@@ -668,7 +668,7 @@ class BashWrapperBuilderTest extends Specification {
                     fi
                   fi
                 }
-                
+
                 '''.stripIndent()
 
     }
@@ -1161,7 +1161,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
-        
+
     }
 
 

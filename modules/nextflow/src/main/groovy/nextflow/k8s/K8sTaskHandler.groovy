@@ -223,7 +223,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( SysEnv.containsKey('NXF_DEBUG') )
             builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
-        
+
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
@@ -341,7 +341,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 }
             }
             return state
-        } 
+        }
         catch (NodeTerminationException | PodUnschedulableException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
             // attribute to return the error to the caller method
@@ -468,7 +468,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     void kill() {
         if( cleanupDisabled() )
             return
-        
+
         if( podName ) {
             log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
             if ( useJobResource() )

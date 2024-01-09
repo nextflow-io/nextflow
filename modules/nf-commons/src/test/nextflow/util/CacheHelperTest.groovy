@@ -236,7 +236,7 @@ class CacheHelperTest extends Specification {
         'lenient'  | CacheHelper.HashMode.LENIENT
         'sha256'   | CacheHelper.HashMode.SHA256
     }
-    
+
     def 'should validate is asset file'() {
         when:
         def BASE = Paths.get("/some/pipeline/dir")

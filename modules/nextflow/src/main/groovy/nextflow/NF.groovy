@@ -22,7 +22,7 @@ import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.ExecutionStack
 import nextflow.script.WorkflowBinding
 /**
- * Helper class to shortcut common api 
+ * Helper class to shortcut common api
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

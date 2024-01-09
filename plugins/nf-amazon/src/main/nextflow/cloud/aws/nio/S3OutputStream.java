@@ -176,7 +176,7 @@ public final class S3OutputStream extends OutputStream {
     }
 
     private ByteBuffer expandBuffer(ByteBuffer byteBuffer) {
-        
+
         final float expandFactor = 2.5f;
         final int newCapacity = Math.min( (int)(byteBuffer.capacity() * expandFactor), bufferSize );
 
@@ -398,7 +398,7 @@ public final class S3OutputStream extends OutputStream {
             if( buf != null )
                 putObject(buf, md5.digest());
             else
-                // this is needed when trying to upload an empty 
+                // this is needed when trying to upload an empty
                 putObject(new ByteArrayInputStream(new byte[]{}), 0, createMd5().digest());
         }
         else {

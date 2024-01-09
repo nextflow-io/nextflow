@@ -22,7 +22,7 @@ process foo {
     file 'dir1/link_*.fasta'
 
     output:
-    file 'dir2/*' 
+    file 'dir2/*'
 
     '''
     ls dir1 | sort

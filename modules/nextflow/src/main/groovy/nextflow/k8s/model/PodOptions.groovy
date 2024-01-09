@@ -69,7 +69,7 @@ class PodOptions {
     private Boolean privileged
 
     private String schedulerName
-    
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -85,7 +85,7 @@ class PodOptions {
     }
 
     @PackageScope void init(List<Map> options) {
-        if( !options ) return 
+        if( !options ) return
         for( Map entry : options ) {
             create(entry)
         }
@@ -228,7 +228,7 @@ class PodOptions {
     List<Map> getTolerations() { tolerations }
 
     Boolean getPrivileged() { privileged }
-    
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 

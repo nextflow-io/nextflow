@@ -19,7 +19,7 @@ package nextflow.util
 
 /**
  * Some utils for debugging
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 final class DebugUtils {

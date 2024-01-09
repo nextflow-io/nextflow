@@ -31,7 +31,7 @@ class SecretsContextTest extends Specification {
         def resolver = new SecretsContext()
         and:
         def shell = new GroovyShell(new Binding([secrets:resolver]))
-        
+
         when:
         def secret = shell.evaluate('secrets.foo')
         then:
@@ -42,7 +42,7 @@ class SecretsContextTest extends Specification {
         then:
         holder.getSecretName() == 'foo'
         holder.call() == 'secrets.foo'
-        
+
         when:
         holder.getSecretValue()
         then:

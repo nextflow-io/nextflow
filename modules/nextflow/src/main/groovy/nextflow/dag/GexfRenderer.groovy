@@ -43,9 +43,9 @@ class GexfRenderer implements DagRenderer {
     @Override
     void renderDocument(DAG dag, Path file) {
         final Charset charset = Charset.defaultCharset()
-        Writer bw = Files.newBufferedWriter(file, charset) 
+        Writer bw = Files.newBufferedWriter(file, charset)
         final XMLOutputFactory xof = XMLOutputFactory.newFactory()
-        final XMLStreamWriter w = xof.createXMLStreamWriter(bw)    
+        final XMLStreamWriter w = xof.createXMLStreamWriter(bw)
         w.writeStartDocument(charset.displayName(),"1.0")
         w.writeStartElement("gexf")
         w.writeAttribute("xmlns",XMLNS)

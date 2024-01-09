@@ -1,13 +1,13 @@
 #
-# check the ability to load custom script/classes in the 
-# local `lib` directory 
+# check the ability to load custom script/classes in the
+# local `lib` directory
 #
 set -e
 
-# copy the test script in this directory 
+# copy the test script in this directory
 cp ${NXF_SCRIPT:-../../custom-lib.nf} test.nf
 
-# crate a library class 
+# crate a library class
 mkdir -p lib
 cat >lib/Foo.groovy <<EOL
 class Foo {

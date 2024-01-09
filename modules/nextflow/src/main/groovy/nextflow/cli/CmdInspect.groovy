@@ -28,7 +28,7 @@ import nextflow.container.inspect.ContainersInspector
 import nextflow.util.LoggerHelper
 /**
  * Implement `inspect` command
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

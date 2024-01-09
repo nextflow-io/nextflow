@@ -156,7 +156,7 @@ abstract class TaskHandler {
             return null
         }
     }
-    
+
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */

@@ -43,9 +43,9 @@ class SlurperExTest extends Specification {
             "region_id": "R1",
             "feature": "pass_stripy_flag",
             "pass_flag": "TRUE"
-          } ]    
+          } ]
         '''
-        
+
         when:
         def result = new JsonSlurper().parse(file)
         then:
@@ -78,7 +78,7 @@ class SlurperExTest extends Specification {
 '''
         when:
         def result = new Yaml().load(file)
-        
+
         then:
         result.size() == 2
         and:

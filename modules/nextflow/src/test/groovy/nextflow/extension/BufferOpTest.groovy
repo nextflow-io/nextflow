@@ -33,7 +33,7 @@ class BufferOpTest extends Specification {
     def setup() {
         new Session()
     }
-    
+
     def testBufferClose() {
 
         when:

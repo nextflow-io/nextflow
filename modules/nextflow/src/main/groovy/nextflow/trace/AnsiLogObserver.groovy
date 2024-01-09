@@ -121,7 +121,7 @@ class AnsiLogObserver implements TraceObserver {
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
-        
+
         if( !started || !statsObserver.hasProgressRecords() ) {
             println message
         }
@@ -179,7 +179,7 @@ class AnsiLogObserver implements TraceObserver {
                 wait(200)
             }
         }
-        // 
+        //
         final stats = statsObserver.getStats()
         renderProgress(stats)
         renderSummary(stats)
@@ -225,7 +225,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String getExecutorName(String key) {
         session.getExecutorFactory().getDisplayName(key)
     }
-    
+
     protected void renderExecutors(Ansi term) {
         int count=0
         def line = ''
@@ -320,7 +320,7 @@ class AnsiLogObserver implements TraceObserver {
             return
         if( enableSummary == null && delta <= 60*1_000 )
             return
-        
+
         if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
             report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
@@ -348,13 +348,13 @@ class AnsiLogObserver implements TraceObserver {
         if( color ) fmt = fmt.fg(Color.DEFAULT)
         AnsiConsole.out.println(fmt.eraseLine())
     }
-    
+
     protected void printAnsiLines(String lines) {
         final text = lines
                 .replace('\r','')
                 .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
         AnsiConsole.out.print(text)
-    } 
+    }
 
     protected String fmtWidth(String name, int width, int cols) {
         assert name.size() <= width

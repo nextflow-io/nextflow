@@ -386,12 +386,12 @@ class PublishDir {
         }
         catch( FileAlreadyExistsException e ) {
             if( checkIsSameRealPath(source, destination) )
-                return 
+                return
             // make sure destination and source does not overlap
             // see https://github.com/nextflow-io/nextflow/issues/2177
             if( checkSourcePathConflicts(destination))
                 return
-            
+
             if( overwrite ) {
                 FileHelper.deletePath(destination)
                 processFileImpl(source, destination)

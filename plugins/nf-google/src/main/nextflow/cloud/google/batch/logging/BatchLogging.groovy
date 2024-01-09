@@ -27,7 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchConfig
 /**
  * Batch logging client
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

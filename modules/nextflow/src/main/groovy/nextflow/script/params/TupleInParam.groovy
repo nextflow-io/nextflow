@@ -27,7 +27,7 @@ import nextflow.script.TokenVar
 
 /**
  * Models a tuple of input parameters
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors

@@ -109,7 +109,7 @@ class AbstractGridExecutorTest extends Specification {
         given:
         def LONG = 'abcd' * 100
         def exec = [:] as AbstractGridExecutor
-        
+
         expect:
         exec.sanitizeJobName('foo') == 'foo'
         exec.sanitizeJobName(LONG) == LONG.substring(0,256)
@@ -130,7 +130,7 @@ class AbstractGridExecutorTest extends Specification {
                 NXF_CHDIR=/some/dir
                 '''.stripIndent()
     }
-    
+
     def 'should fetch queue status'() {
         given:
         def STATUS = ['123': AbstractGridExecutor.QueueStatus.RUNNING]

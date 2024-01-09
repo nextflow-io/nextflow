@@ -241,7 +241,7 @@ class TaskHandlerTest extends Specification {
         handler.isSubmitted() == EXPECT_SUBMITTED
         handler.isActive() == EXPECTED_ACTIVE
         handler.isCompleted() == EXPECT_COMPLETE
-        
+
         where:
         STATUS              | EXPECT_NEW  | EXPECT_SUBMITTED | EXPECT_RUNNING | EXPECTED_ACTIVE | EXPECT_COMPLETE
         TaskStatus.NEW      | true        | false            | false          | false           | false

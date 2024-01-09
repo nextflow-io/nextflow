@@ -95,7 +95,7 @@ class GithubRepositoryProviderTest extends Specification {
         expect:
         provider.getUser() == '1234567890'
         provider.getPassword() == 'x-oauth-basic'
-        
+
         when:
         SysEnv.get().remove('GITHUB_TOKEN')
         then:
@@ -132,7 +132,7 @@ class GithubRepositoryProviderTest extends Specification {
         when:
         provider.auth(conn)
         then:
-        _ * provider.getUser() 
+        _ * provider.getUser()
         _ * provider.getPassword()
         1 * provider.hasCredentials()
         and:

@@ -168,7 +168,7 @@ class Packer {
         // remove tar file
         tarFilePath.delete()
 
-        // finally return the expected  
+        // finally return the expected
         return new ContainerLayer(
                 location: gzipFilePath.toUri().toString(),
                 tarDigest: tarDigest,

@@ -1,4 +1,4 @@
-#!/usr/bin/env nextflow 
+#!/usr/bin/env nextflow
 
 params.in = "$baseDir/data/sample.fa"
 

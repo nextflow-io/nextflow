@@ -20,13 +20,13 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should not allow unqualified input file' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
-          input: 
+          input:
           tuple 'x'
           /touch x/
         }
-       
+
         workflow {
             foo()
         }
@@ -42,13 +42,13 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should not allow unqualified input val' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
-          input: 
+          input:
           tuple X
           /echo $X/
         }
-       
+
         workflow {
             foo()
         }
@@ -65,13 +65,13 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should not allow unqualified output file' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
-          output: 
+          output:
           tuple 'x'
           /touch x/
         }
-       
+
         workflow {
             foo()
         }
@@ -87,13 +87,13 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should not allow unqualified output value' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
-          output: 
+          output:
           tuple X
           /echo hello/
         }
-       
+
         workflow {
             foo()
         }
@@ -117,17 +117,17 @@ class ParamsDsl2Test extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
          process alpha {
               input:
               stdin
               output:
-              stdout 
+              stdout
 
               /echo foo/
           }
 
-         workflow { true } 
+         workflow { true }
         '''
 
         when:
@@ -158,7 +158,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         def SCRIPT = '''
-                    
+
          process beta {
               input:
               tuple stdin, val(x)
@@ -167,8 +167,8 @@ class ParamsDsl2Test extends Dsl2Spec {
 
               /echo foo/
           }
-       
-         workflow { true } 
+
+         workflow { true }
         '''
 
         when:

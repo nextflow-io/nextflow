@@ -159,7 +159,7 @@ class CrgExecutorTest extends Specification {
         def config = task.config = new TaskConfig()
         config.container = 'busybox'
         and:
-        
+
         def result = executor.getDirectives(task, [])
         then:
         result == [
@@ -516,7 +516,7 @@ class CrgExecutorTest extends Specification {
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
             NXF_CHDIR=/some/dir
-            
+
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset-cpus $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''
@@ -554,7 +554,7 @@ class CrgExecutorTest extends Specification {
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
             NXF_CHDIR=/some/dir
-            
+
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''

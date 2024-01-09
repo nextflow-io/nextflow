@@ -34,7 +34,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 public class S3FileSystem extends FileSystem {
-	
+
 	private final S3FileSystemProvider provider;
 	private final S3Client client;
 	private final String endpoint;
@@ -130,7 +130,7 @@ public class S3FileSystem extends FileSystem {
 
 	/**
 	 * get the endpoint associated with this fileSystem.
-	 * 
+	 *
 	 * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html">http://docs.aws.amazon.com/general/latest/gr/rande.html</a>
 	 * @return string
 	 */

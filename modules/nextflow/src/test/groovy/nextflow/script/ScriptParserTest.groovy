@@ -141,5 +141,5 @@ class ScriptParserTest extends Specification {
         e.message.contains("- cause: Unexpected input: ')'")
         e.message.contains('foo.nf\n')
     }
-    
+
 }

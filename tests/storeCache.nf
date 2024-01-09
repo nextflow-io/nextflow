@@ -22,7 +22,7 @@ process storeCache  {
     val cheers
 
     output:
-    file "${cheers}.txt" 
+    file "${cheers}.txt"
 
     "printf $cheers > ${cheers}.txt"
 

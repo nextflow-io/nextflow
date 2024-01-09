@@ -53,7 +53,7 @@ class GroupKeyTest extends Specification {
         then:
         g1 == g2
         g1.equals(g2)
-        
+
         g1 != g3
         !g1.equals(g3)
 

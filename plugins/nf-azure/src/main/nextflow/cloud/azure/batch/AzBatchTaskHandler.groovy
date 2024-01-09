@@ -90,7 +90,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // submit the task execution
         this.taskKey = batchService.submitTask(task)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$taskKey"
-        // update the status 
+        // update the status
         this.status = TaskStatus.SUBMITTED
     }
 

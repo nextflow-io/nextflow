@@ -80,7 +80,7 @@ class CmdLineOptionMapTest extends Specification {
         def map3 = CmdLineOptionMap.fromMap([foo: 'world'])
 
         expect:
-        map1 == map2 
+        map1 == map2
         map1 != map3
         and:
         map1.hashCode() == map2.hashCode()

@@ -54,7 +54,7 @@ class LsfExecutorTest extends Specification {
         _ * task.config >> new TaskConfig(memory: '10MB')
         then:
         result == ['-o', '/work/dir/.command.log',
-                   '-M', '10240', 
+                   '-M', '10240',
                    '-R', 'select[mem>=10240] rusage[mem=10]',
                    '-J', 'foo']
 
@@ -89,7 +89,7 @@ class LsfExecutorTest extends Specification {
         then:
         result == ['-o', '/work/dir/.command.log',
                    '-n', '2',
-                   '-R', 'span[hosts=1]', 
+                   '-R', 'span[hosts=1]',
                    '-M', '10240',
                    '-R', 'select[mem>=10240] rusage[mem=10240]',
                    '-J', 'foo']
@@ -511,7 +511,7 @@ class LsfExecutorTest extends Specification {
         result['5157610'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5157674'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5157710'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result.size() == 6 
+        result.size() == 6
 
     }
 
@@ -555,7 +555,7 @@ class LsfExecutorTest extends Specification {
         1 * executor.parseLsfConfig() >> [:]
         executor.memUnit == 'KB'
         executor.usageUnit == 'MB'
-        
+
         when:
         executor.register()
         then:

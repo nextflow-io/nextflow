@@ -33,7 +33,7 @@ class CmdPullTest extends Specification {
     def cleanup() {
         Plugins.stop()
     }
-    
+
     @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
     def 'should pull the github repository in the local folder'() {
 

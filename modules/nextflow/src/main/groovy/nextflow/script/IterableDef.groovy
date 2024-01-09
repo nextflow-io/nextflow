@@ -51,7 +51,7 @@ trait IterableDef {
     /**
      * To support component recursion, the feedback channels must be used as the channel instances
      * for the outputs instead of creating new ones
-     * 
+     *
      * @return A list of output channels bringing the process feedback
      */
     List<DataflowWriteChannel> getFeedbackChannels() { outputChannels }
@@ -112,7 +112,7 @@ trait IterableDef {
         if( input !instanceof DataflowWriteChannel ) {
             // any non channel value is fine, because it will be wrapped into
             // a channel value
-            return 
+            return
         }
         if( !CH.isValue(input) )
             throw new IllegalArgumentException("Recurse operation only allows value inputs -- Check ${index+1}-th argument")

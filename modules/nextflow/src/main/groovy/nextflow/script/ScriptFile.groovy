@@ -60,7 +60,7 @@ class ScriptFile {
     /**
      * The name of the project
      */
-    String projectName 
+    String projectName
 
     /**
      * @return Directory where the main script file is stored

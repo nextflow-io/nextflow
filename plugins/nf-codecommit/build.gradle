@@ -39,7 +39,7 @@ dependencies {
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
     api ('com.amazonaws:aws-java-sdk-codecommit:1.12.429')
-        
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
     testImplementation "org.codehaus.groovy:groovy:3.0.19"

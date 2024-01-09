@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Skip test if AWS keys are missing
-if [ -z "$AWS_ACCESS_KEY_ID" ]; then 
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then
   echo "Missing AWS credentials -- Skipping test"
   exit 0
 fi

@@ -50,7 +50,7 @@ class TaskPollingMonitorTest extends Specification {
         given:
         def session = Mock(Session)
         def monitor = new TaskPollingMonitor(name:'local', session: session, pollInterval: '1s', capacity: 100)
-        
+
         when:
         def limit = monitor.createSubmitRateLimit()
         then:

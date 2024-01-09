@@ -1,8 +1,8 @@
-# GIT README 
+# GIT README
 
-Shortcuts to recurrent Git commands 
+Shortcuts to recurrent Git commands
 
-## Sync remote fork 
+## Sync remote fork
 
 ```bash
 git fetch public
@@ -12,9 +12,9 @@ git merge public/master
 
 List branch remote
 
-    git branch -vv 
+    git branch -vv
 
-Checkout from a remote branch 
+Checkout from a remote branch
 
     git co -b <local name> upstream/master
 
@@ -35,20 +35,20 @@ Read more [here](https://help.github.com/articles/syncing-a-fork/).
   git config pull.ff only       # fast-forward only
 
 
-## Subtree  
+## Subtree
 
-The `tests` directory is a Git subtree created with the 
-following commands: 
+The `tests` directory is a Git subtree created with the
+following commands:
 
     git remote add tests git@github.com:nextflow-io/tests.git
     git subtree add --squash --prefix=tests/ tests integration
 
 
-To pull changes from the [tests repo](https://github.com/nextflow-io/tests) use this command: 
+To pull changes from the [tests repo](https://github.com/nextflow-io/tests) use this command:
 
     git subtree pull --squash --prefix=tests/ tests integration
 
-To push changes to the [tests repo](https://github.com/nextflow-io/tests) use this command: 
+To push changes to the [tests repo](https://github.com/nextflow-io/tests) use this command:
 
     git subtree push --prefix=tests/ tests integration
 
@@ -67,32 +67,32 @@ Read more [here](https://andrey.nering.com.br/2016/git-submodules-vs-subtrees/).
     git diff stash
     git diff stash@{1} [other]
 
-## Misc 
+## Misc
 
 Find a commit in any branch introducing a change
 
     git log -S <whatever> --source --all
 
-Reset last merge pushed 
+Reset last merge pushed
 
     git reset --hard HEAD@{1}
 
     Read more https://stackoverflow.com/a/11722640/395921
-    
-## GPG keys 
 
-To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/), import your key, then: 
+## GPG keys
+
+To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/), import your key, then:
 
     git config --global gpg.program /usr/local/MacGPG2/bin/gpg2
-    git config --global user.signingkey <your key> 
-    git config --global commit.gpgsign true 
+    git config --global user.signingkey <your key>
+    git config --global commit.gpgsign true
     git config --global format.signoff true ## TO AVOID TO SPECIFY -S option each time
 
-Read more: 
+Read more:
 https://gist.github.com/danieleggert/b029d44d4a54b328c0bac65d46ba4c65
 
 
-## Change Git history root 
+## Change Git history root
 
 https://stackoverflow.com/questions/4515580/how-do-i-remove-the-old-history-from-a-git-repository
 
@@ -100,7 +100,7 @@ https://stackoverflow.com/questions/4515580/how-do-i-remove-the-old-history-from
 
     git fetch origin master:master
 
-# Alternative to `git pull` 
+# Alternative to `git pull`
 
 Use `git fetch && git rebase`
 

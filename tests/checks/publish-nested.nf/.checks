@@ -9,7 +9,7 @@ $NXF_RUN --x ciao | tee stdout
 
 
 #
-# second run, must overwrite the file 
+# second run, must overwrite the file
 #
 echo First run
 $NXF_RUN --x miao | tee stdout

@@ -1,6 +1,6 @@
 configurations {
     capsule
-    defaultCfg.extendsFrom api 
+    defaultCfg.extendsFrom api
     //provided
     console.extendsFrom defaultCfg
     ga4gh.extendsFrom defaultCfg
@@ -72,7 +72,7 @@ protected resolveDeps( String configName, String... x ) {
         conflicts.each { name, count -> err += "\n- $name: " + deps.findAll{ it.startsWith(name) }.collect{ it.tokenize(':')[2] } }
         throw new IllegalStateException(err)
     }
-    
+
     //println "** $configName\n${deps.sort().collect{"- $it"}.join('\n')}\n"
 
     //println ">> Config: $configName \n${deps.sort().join('\n')}\n\n"
@@ -139,7 +139,7 @@ task packAll(type: Jar) {
     from (configurations.amazon + configurations.google + configurations.tower + configurations.wave)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    
+
     manifest.attributes( 'Main-Class'        : 'NextflowLoader',
                           'Application-Name'  : 'nextflow-all',
                           'Application-Class' : mainClassName,
@@ -223,7 +223,7 @@ task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
 
     doFirst {
         checkVersionExits(version)
-        
+
         def path = new File(releaseDir)
         if( !path.exists() ) error("Releases path does not exist: $path")
         path.eachFile {
@@ -305,7 +305,7 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
     cp $source $target
     cp nextflow $buildDir/docker
     cp docker/entry.sh $buildDir/docker
-    cd $buildDir/docker  
+    cd $buildDir/docker
     mkdir -p dist
     curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz && tar --strip-components=1 -xvzf docker-17.03.1-ce.tgz -C dist
     NXF_HOME=\$PWD/.nextflow ./nextflow info
@@ -317,7 +317,7 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
 
 /*
  * Tag and upload the release
- * 
+ *
  * https://github.com/aktau/github-release/
  */
 task release(type: Exec, dependsOn: [pack, dockerImage]) {
@@ -336,9 +336,9 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     git push || exit \$?
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
     sleep 1
-    gh release create --repo nextflow-io/nextflow --prerelease --title "Version $version" v$version 
+    gh release create --repo nextflow-io/nextflow --prerelease --title "Version $version" v$version
     sleep 1
-    gh release upload --repo nextflow-io/nextflow v$version ${launcherFile} ${nextflowAllFile}        
+    gh release upload --repo nextflow-io/nextflow v$version ${launcherFile} ${nextflowAllFile}
     """.stripIndent()
 
     if( edge )
@@ -352,7 +352,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
         aws s3 cp $versionFile s3://www2.nextflow.io/releases/edge/version $s3CmdOpts
         """.stripIndent()
-        
+
     else if( isLatest )
         cmd += """
         # publish the script as the latest

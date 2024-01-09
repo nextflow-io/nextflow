@@ -64,7 +64,7 @@ class EscapeTest extends Specification {
 
     def 'should escape wildcards' () {
 
-        expect: 
+        expect:
         Escape.wildcards('file_*') == 'file_\\*'
         Escape.wildcards('file_??') == 'file_\\?\\?'
         Escape.wildcards('file_{a,b}') == 'file_\\{a,b\\}'
@@ -73,7 +73,7 @@ class EscapeTest extends Specification {
     }
 
     def 'should escape cli' () {
-        expect: 
+        expect:
         Escape.cli('nextflow','run','this') == 'nextflow run this'
         Escape.cli('nextflow','--foo','file.txt') == 'nextflow --foo file.txt'
         Escape.cli('nextflow','--foo','*.txt') == "nextflow --foo '*.txt'"

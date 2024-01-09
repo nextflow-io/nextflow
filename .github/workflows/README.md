@@ -1,4 +1,4 @@
-# Action 
+# Action
 
 ## Syntax
 
@@ -8,8 +8,8 @@ https://help.github.com/en/articles/virtual-environments-for-github-actions#envi
 https://help.github.com/en/articles/configuring-docker-for-use-with-github-package-registry
 https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables
 
-## Java 
+## Java
 
-Java VMs has to match the ones at this link https://static.azul.com/zulu/bin 
+Java VMs has to match the ones at this link https://static.azul.com/zulu/bin
 
 Check the name *-jdk(x.y.z)

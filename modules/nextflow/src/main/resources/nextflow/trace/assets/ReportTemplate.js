@@ -41,7 +41,7 @@ $(function() {
   for(let i in window.data.summary){
     let metrics = window.data.summary[i];
     let proc = metrics.process;
-    
+
     if(!window.data_byprocess.hasOwnProperty(proc)){
       window.data_byprocess[proc] = {};
     }

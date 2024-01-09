@@ -3,7 +3,7 @@ set -e
 mkdir \[work-dir\]
 
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN -w \[work-dir\] | tee stdout
 
@@ -13,7 +13,7 @@ $NXF_RUN -w \[work-dir\] | tee stdout
 [[ `< stdout grep -c -F 'match: file-?.txt'` == 1 ]] || false
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -w \[work-dir\] -resume | tee stdout
 

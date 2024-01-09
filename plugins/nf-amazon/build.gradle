@@ -53,7 +53,7 @@ dependencies {
     constraints {
         api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
     }
-        
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
     testImplementation "org.codehaus.groovy:groovy:3.0.19"

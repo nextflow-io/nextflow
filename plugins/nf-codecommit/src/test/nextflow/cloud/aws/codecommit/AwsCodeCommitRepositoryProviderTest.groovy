@@ -50,11 +50,11 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
         expect:
         provider.readText('main.nf') == '''\
                 nextflow.enable.dsl=2
-                
+
                 workflow {
                   sayHello()
                 }
-                
+
                 process sayHello {
                   /echo Hello world/
                 }

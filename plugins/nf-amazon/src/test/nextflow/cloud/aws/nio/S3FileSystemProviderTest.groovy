@@ -40,7 +40,7 @@ class S3FileSystemProviderTest extends Specification {
         'us-east-1' | [:]
         'us-east-1' | [region:'foo']
         'us-east-1' | [region:'foo', client:[endpoint: 'http://s3.us-east-2.amazonaws.com']]
-        'foo'       | [region:'foo', client:[endpoint: 'http://bar.com']]        
+        'foo'       | [region:'foo', client:[endpoint: 'http://bar.com']]
 
     }
 

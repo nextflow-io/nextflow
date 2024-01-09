@@ -44,7 +44,7 @@ class TaskContextTest extends Specification {
     def setupSpec() {
         NF.init()
     }
-    
+
     def 'should save and read TaskContext object' () {
 
         setup:

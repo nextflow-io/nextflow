@@ -191,7 +191,7 @@ class Channel  {
         NodeMarker.addSourceNode('Channel.fromList', result)
         return result
     }
-    
+
     /**
      * Creates a channel sending the items in the collection over it
      *
@@ -256,13 +256,13 @@ class Channel  {
         }
 
         if( NF.isDsl2() )
-            session.addIgniter { timer.schedule( task as TimerTask, 0, millis ) }  
-        else 
+            session.addIgniter { timer.schedule( task as TimerTask, 0, millis ) }
+        else
             timer.schedule( task as TimerTask, 0, millis )
-        
+
         return result
     }
-    
+
     /*
      * valid parameters for fromPath operator
      */
@@ -310,16 +310,16 @@ class Channel  {
         }
         return result
     }
-    
+
     private static void pumpFiles0(DataflowWriteChannel result, Map opts, List allPatterns) {
-        
+
         def future = CompletableFuture.completedFuture(null)
         for( int index=0; index<allPatterns.size(); index++ ) {
             def factory = new PathVisitor(target: result, opts: opts)
             factory.closeChannelOnComplete = index==allPatterns.size()-1
             future = factory.applyAsync(future, allPatterns[index])
         }
-        
+
         // abort the execution when an exception is raised
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
@@ -343,8 +343,8 @@ class Channel  {
 
         if( NF.isDsl2() )  {
             session.addIgniter {
-                watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }   
-            }   
+                watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }
+            }
         }
         else {
             watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }
@@ -426,7 +426,7 @@ class Channel  {
 
     /**
      * Implements the `fromFilePairs` channel factory method
-     * 
+     *
      * @param options
      *      A {@link Map} holding the optional parameters
      *      - type: either `file`, `dir` or `any`
@@ -496,7 +496,7 @@ class Channel  {
         final files = new DataflowQueue()
         if( NF.isDsl2() )
             session.addIgniter { pumpFilePairs0(files,fromOpts,allPatterns) }
-        else 
+        else
             pumpFilePairs0(files,fromOpts,allPatterns)
 
         // -- map the files to a tuple like ( ID, filePath )
@@ -512,8 +512,8 @@ class Channel  {
         for( int index=0; index<allPatterns.size(); index++ )  {
             anyPattern |= FilePatternSplitter.isMatchingPattern(allPatterns.get(index))
         }
-        
-        // -- result the files having the same ID        
+
+        // -- result the files having the same ID
         def DEF_SIZE = anyPattern ? 2 : 1
         def size = (options?.size ?: DEF_SIZE)
         def isFlat = options?.flat == true
@@ -553,7 +553,7 @@ class Channel  {
         // abort the execution when an exception is raised
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
-    
+
     static private Map fetchParams0(Map valid, Map actual ) {
         if( actual==null ) return null
         def result = [:]

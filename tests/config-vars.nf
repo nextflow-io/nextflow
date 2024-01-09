@@ -24,21 +24,21 @@
 
 process foo {
   debug true
- 
+
   script:
   t = task.ext.out.join(',')
   """
   echo foo ${t}
   """
- 
+
 }
 
 process bar {
   debug true
- 
+
   shell:
   t = task.ext.out.join(',')
-  
+
   '''
   echo bar !{t}
   '''

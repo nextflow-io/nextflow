@@ -33,7 +33,7 @@ import org.pf4j.PluginStateEvent
 import org.pf4j.PluginStateListener
 /**
  * Manage plugins installation and configuration
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -336,7 +336,7 @@ class PluginsFacade implements PluginStateListener {
     /**
      * @return {@code true} when running in self-contained mode ie. the nextflow distribution
      * include also plugin libraries. When running is this mode, plugins should not be started
-     * and cannot be updated. 
+     * and cannot be updated.
      */
     protected boolean isSelfContained() {
         return env.get('NXF_PACK')=='all' || embedded
@@ -403,7 +403,7 @@ class PluginsFacade implements PluginStateListener {
 
         if( Bolts.navigate(config, 'weblog.enabled'))
             plugins << new PluginSpec('nf-weblog')
-            
+
         return plugins
     }
 

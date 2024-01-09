@@ -465,7 +465,7 @@ This mix of technologies makes it possible to write self-contained and truly rep
 
 ### Bundling executables in the workflow
 
-In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)). 
+In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)).
 
 In cases where you do not wish to modify the execution environment(s), executable scripts can be included in the `bin/` directory in the workflow repository root. This can be useful to make changes that affect task execution across all environments with a single change.
 
@@ -476,7 +476,7 @@ To ensure your scripts can be made available to the task:
 3. Ensure the scripts are executable. For example: `chmod a+x bin/my_script.py`
 
 :::{tip}
-To maximize portability of your bundled script, it is recommended to avoid hard-coding the interpreter path in the shebang line. 
+To maximize portability of your bundled script, it is recommended to avoid hard-coding the interpreter path in the shebang line.
 
 For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` both hard-code specific paths to the python interpreter. To improve portability, rely on `env` to dynamically resolve the path to the interpreter. An example of the recommended approach is:
 
@@ -485,7 +485,7 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 ```
 :::
 
-### Using bundled executables in the workflow 
+### Using bundled executables in the workflow
 
 Nextflow will automatically add the `bin/` directory to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
 

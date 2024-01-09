@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 
 /**
  * Model Conda configuration
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

@@ -275,7 +275,7 @@ class PodSpecBuilder {
     PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
         this.emptyDirs.add(emptyDir)
         return this
-    } 
+    }
 
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
@@ -344,7 +344,7 @@ class PodSpecBuilder {
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
-        // -- volume claims 
+        // -- volume claims
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
         // -- labels
@@ -729,7 +729,7 @@ class PodSpecBuilder {
 
     protected String sanitizeKey(String value, MetaType kind) {
         final parts = value.tokenize('/')
-        
+
         if (parts.size() == 2) {
             return "${sanitizeValue(parts[0], kind, SegmentType.PREFIX)}/${sanitizeValue(parts[1], kind, SegmentType.NAME)}"
         }

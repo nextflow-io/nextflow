@@ -397,7 +397,7 @@ class K8sConfigTest extends Specification {
                     new PodVolumeClaim('nf-0001', '/workspace'),
                     new PodVolumeClaim('nf-0002', '/data', '/home')
         ] as Set
-        
+
     }
 
 
@@ -489,7 +489,7 @@ class K8sConfigTest extends Specification {
         then:
         !cfg.getDebug().getYaml()
     }
-  
+
     def 'should set fetchNodeName' () {
         when:
         def cfg = new K8sConfig( fetchNodeName: 'true' )

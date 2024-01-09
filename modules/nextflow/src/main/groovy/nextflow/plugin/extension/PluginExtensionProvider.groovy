@@ -40,7 +40,7 @@ import nextflow.util.TestOnly
 /**
  * Manage channel extensions and dispatch method invocations
  * to target class implementing the extension logic
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

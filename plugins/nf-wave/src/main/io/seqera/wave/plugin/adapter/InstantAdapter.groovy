@@ -30,7 +30,7 @@ import com.google.gson.JsonSerializer
 
 /**
  * Gson adapter for java Instant class
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class InstantAdapter implements JsonSerializer<Instant>, JsonDeserializer<Instant> {

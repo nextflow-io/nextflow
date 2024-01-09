@@ -94,7 +94,7 @@ class WaveConfigTest extends Specification {
         then:
         opts.condaOpts().mambaImage == 'mambaorg/foo:1'
         opts.condaOpts().commands == ['USER hola']
-        
+
     }
 
     def 'should get spack config' () {
@@ -109,7 +109,7 @@ class WaveConfigTest extends Specification {
         then:
         opts.spackOpts().basePackages == 'foo bar'
         opts.spackOpts().commands == ['USER hola']
-        
+
     }
 
     def 'should get build and cache repos' () {

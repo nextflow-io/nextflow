@@ -61,7 +61,7 @@ class TextSplitter extends AbstractTextSplitter {
     protected void parseHeader(Reader reader) {
         if( !keepHeader )
             return
-        
+
         def line = reader.readLine()
         if( line==null )
             return

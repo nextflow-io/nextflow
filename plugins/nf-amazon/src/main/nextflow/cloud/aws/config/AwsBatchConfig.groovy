@@ -29,7 +29,7 @@ import nextflow.util.Duration
 
 /**
  * Model AWS Batch config settings
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

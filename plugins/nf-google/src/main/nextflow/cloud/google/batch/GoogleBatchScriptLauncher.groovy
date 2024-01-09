@@ -34,7 +34,7 @@ import nextflow.util.PathTrie
 
 /**
  * Implement Nextflow task launcher script
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

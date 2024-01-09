@@ -53,7 +53,7 @@ class ParamsInTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               def z = channel.fromList([1,2])
               hola(x, y, 'ciao', z)
@@ -105,10 +105,10 @@ class ParamsInTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               def x = channel.of(1,2)
-              def y = channel.of('a', 'b') 
+              def y = channel.of('a', 'b')
               def z = channel.of(A, B)
               hola(x, y, z)
             }
@@ -153,7 +153,7 @@ class ParamsInTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               hola(x, x, x, x, x)
             }
@@ -205,13 +205,13 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              file "$x" 
+              file "$x"
               file "${y}.txt"
               file f2 name "${z}.fa"
 
               return ''
             }
-            
+
             workflow {
               hola(q, "str", q)
             }
@@ -248,14 +248,14 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              file "$x" 
-              file "${y}.txt" 
-              file f2 name "${z}.fa" 
-              file f3:"${z}.txt" 
+              file "$x"
+              file "${y}.txt"
+              file f2 name "${z}.fa"
+              file f3:"${z}.txt"
 
               return ''
             }
-            
+
             workflow {
               hola(q, "str", q, q)
             }
@@ -302,7 +302,7 @@ class ParamsInTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               hola(x, y)
             }
@@ -333,12 +333,12 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              env VAR_X 
+              env VAR_X
               env 'VAR_Y'
 
               return ''
             }
-            
+
             workflow {
               hola(x, y)
             }
@@ -372,15 +372,15 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              tuple val(p) 
-              tuple val(p), val(q) 
-              tuple val(v), file('file_name.fa') 
+              tuple val(p)
+              tuple val(p), val(q)
+              tuple val(v), file('file_name.fa')
               tuple val(p), file('file_name.txt'), stdin
               tuple val(t), path(file, name:'file.fa')
 
               return ''
             }
-            
+
             workflow {
               hola(x, x, 'str', 'ciao', 0)
             }
@@ -465,19 +465,19 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              tuple file('name_$x') 
+              tuple file('name_$x')
               tuple file("${x}_name.${str}" )
 
-              tuple file("hola_${x}") 
+              tuple file("hola_${x}")
               tuple file( handle: "${x}.txt")
 
               tuple file( { "${x}_name.txt" } )
-              tuple file( handle: { "name_${x}.txt" } ) 
+              tuple file( handle: { "name_${x}.txt" } )
 
               return ''
             }
-            
-            workflow { 
+
+            workflow {
               hola(q,q, q,q, q,q)
             }
             '''
@@ -524,13 +524,13 @@ class ParamsInTest extends Dsl2Spec {
         def text = '''
             process hola {
               input:
-              tuple( val(a), file(x), val(b) ) 
-              tuple( val(p), file('txt'), env('q') ) 
-              tuple( val(v), file(xx:'yy'), stdin, env(W) ) 
+              tuple( val(a), file(x), val(b) )
+              tuple( val(p), file('txt'), env('q') )
+              tuple( val(v), file(xx:'yy'), stdin, env(W) )
 
               return ''
             }
-            
+
             workflow {
               hola(1, 2, 3)
             }
@@ -604,7 +604,7 @@ class ParamsInTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               hola(x, y, q, foo_ch, bar_ch)
             }
@@ -716,7 +716,7 @@ class ParamsInTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               hola(x, x, x, x, x, x)
             }
@@ -779,12 +779,12 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              path "$x" 
-              path "${y}.txt" 
+              path "$x"
+              path "${y}.txt"
 
               return ''
             }
-            
+
             workflow {
               hola(q, 'str')
             }
@@ -822,7 +822,7 @@ class ParamsInTest extends Dsl2Spec {
 
               return ''
             }
-            
+
             workflow {
               hola(q, q)
             }
@@ -853,13 +853,13 @@ class ParamsInTest extends Dsl2Spec {
         def text = '''
             process hola {
               input:
-              tuple( val(a), path(x) ) 
+              tuple( val(a), path(x) )
               tuple( val(p), path('txt') )
               tuple( val(v), path(xx, stageAs: 'yy') )
 
               return ''
             }
-            
+
             workflow {
                 hola(1,2,3)
             }
@@ -915,11 +915,11 @@ class ParamsInTest extends Dsl2Spec {
             process hola {
               input:
               each path(foo)
-              each path('bar') 
+              each path('bar')
 
               return ''
             }
-            
+
             workflow {
               hola('file-a.txt', 'file-x.fa')
             }
@@ -962,15 +962,15 @@ class ParamsInTest extends Dsl2Spec {
         setup:
         def text = '''
             ch = 'something'
-            
+
             process hola {
               input:
-              val x 
+              val x
               tuple val(x), file(x)
 
               /command/
             }
-            
+
             workflow {
               hola(ch, ch)
             }
@@ -998,7 +998,7 @@ class ParamsInTest extends Dsl2Spec {
 
               /command/
             }
-            
+
             workflow {
               hola(['x', 'y'])
             }

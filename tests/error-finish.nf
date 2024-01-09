@@ -24,7 +24,7 @@ process foo {
   script:
   if( x != 3 )
   """
-    echo run_$x  
+    echo run_$x
     sleep 5
   """
   else

@@ -36,7 +36,7 @@ import nextflow.Session
 class ThreadPoolManager {
 
     private static final AtomicInteger poolCount = new AtomicInteger()
-    
+
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
     final static public int DEFAULT_QUEUE_SIZE = 10_000

@@ -129,7 +129,7 @@ class WorkflowMetadataTest extends Specification {
 
         def session = Spy(Session)
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
-        
+
         def metadata = new WorkflowMetadata(session, script)
 
         session.binding.setVariable('value_a', 1)
@@ -176,7 +176,7 @@ class WorkflowMetadataTest extends Specification {
         given:
         def session = Spy(Session)
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
-        
+
         def metadata = new WorkflowMetadata(session, null)
 
         when:
@@ -197,12 +197,12 @@ class WorkflowMetadataTest extends Specification {
 
         def session = Spy(Session)
         def metadata = new WorkflowMetadata(session, script)
-        
+
         session.binding.setVariable('value_a', 1)
         session.binding.setVariable('value_b', 2)
         session.binding.setVariable('workflow', metadata)
         session.binding.setParams(foo: 'Hello', bar: 'world')
-        
+
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
 
         def result1
@@ -247,7 +247,7 @@ class WorkflowMetadataTest extends Specification {
         def script = Mock(ScriptFile)
         script.getScriptId() >> '123'
         script.getCommitId() >> 'abcd'
-        
+
         def session = Spy(Session)
         def metadata = new WorkflowMetadata(session, script)
         and:

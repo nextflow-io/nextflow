@@ -6,7 +6,7 @@ import nextflow.script.ScriptMeta
 
 /**
  * Exception thrown when a module component cannot be found
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

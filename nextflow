@@ -159,8 +159,8 @@ function launch_nextflow() {
     for x in "${launcher[@]}"; do
         x="${x%\"}"
         x="${x#\"}"
-        cmdline+=("$x") 
-    done 
+        cmdline+=("$x")
+    done
 
     if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
@@ -260,7 +260,7 @@ if [[ $NXF_PACK = all ]]; then
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
 fi
 
-# use nextflow custom java home path 
+# use nextflow custom java home path
 if [[ "$NXF_JAVA_HOME" ]]; then
   JAVA_HOME="$NXF_JAVA_HOME"
   unset JAVA_CMD

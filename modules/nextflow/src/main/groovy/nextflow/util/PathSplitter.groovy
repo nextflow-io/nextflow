@@ -25,7 +25,7 @@ import nextflow.file.FileHelper
 /**
  * Split a path into two paths, the first component which may include the host name if it's a remote
  * url, and the remaining sub-components
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical

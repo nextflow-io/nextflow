@@ -86,7 +86,7 @@ class Global {
     static void onCleanup(Consumer<ISession> callback) {
         if( callback==null ) {
             log.warn "Cleanup consumer cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
-            return 
+            return
         }
         hooks.add(callback)
     }

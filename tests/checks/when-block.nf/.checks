@@ -1,5 +1,5 @@
 #
-# run normal mode 
+# run normal mode
 #
 $NXF_RUN | tee stdout
 
@@ -12,7 +12,7 @@ $NXF_RUN | tee stdout
 
 
 #
-# run resume mode 
+# run resume mode
 #
 $NXF_RUN -resume | tee stdout
 

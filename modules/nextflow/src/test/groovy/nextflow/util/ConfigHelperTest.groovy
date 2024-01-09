@@ -139,7 +139,7 @@ class ConfigHelperTest extends Specification {
                        executor = 'slurm'
                        queue = 'long'
                     }
-                    
+
                     docker {
                        enabled = true
                     }
@@ -163,7 +163,7 @@ class ConfigHelperTest extends Specification {
                     docker {
                        enabled = true
                     }
-                    
+
                     mail {
                        from = 'yo@mail.com'
                        smtp {

@@ -32,15 +32,15 @@ class TupleInParamTest extends Dsl2Spec {
 
             process hola {
               input:
-              tuple val(p) 
-              tuple val(p), val(q) 
-              tuple val(v), path('file_name.fa') 
-              tuple val(p), path('file_name.txt'), '-' 
+              tuple val(p)
+              tuple val(p), val(q)
+              tuple val(v), path('file_name.fa')
+              tuple val(p), path('file_name.txt'), '-'
               tuple val(p), path(z, stageAs: 'file*')
-              
+
               /foo/
             }
-            
+
             workflow {
               hola(x, x, 'str', 'ciao', x)
             }
@@ -121,14 +121,14 @@ class TupleInParamTest extends Dsl2Spec {
 
             process hola {
               input:
-              tuple( file('name_$x') ) 
+              tuple( file('name_$x') )
               tuple( file("${x}_name.${str}") )
-              tuple( file("hola_${x}") ) 
-              tuple file( { "${x}_name.txt" } ) 
+              tuple( file("hola_${x}") )
+              tuple file( { "${x}_name.txt" } )
 
               /foo/
             }
-            
+
             workflow {
               hola(q, q, q, q)
             }

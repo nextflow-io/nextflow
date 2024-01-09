@@ -25,7 +25,7 @@ import spock.lang.Specification
 class GlobsTest extends Specification {
 
     def 'should get regex pattern' () {
-        
+
         expect:
         Globs.toUnixRegexPattern('*.txt') == '^[^/]*\\.txt$'
 

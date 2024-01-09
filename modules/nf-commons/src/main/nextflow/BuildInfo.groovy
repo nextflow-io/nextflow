@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
  * Model app build information
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

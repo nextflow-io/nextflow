@@ -126,7 +126,7 @@ class AwsBatchConfigTest extends Specification {
         opts.cliPath == S3_CLI_PATH
         opts.s5cmdPath == S5_CLI_PATH
         opts.isFargateMode() == FARGATE
-        
+
         where:
         OPTS                                                        | S3_CLI_PATH       | S5_CLI_PATH       | FARGATE
         [:]                                                         | null              | null              | false

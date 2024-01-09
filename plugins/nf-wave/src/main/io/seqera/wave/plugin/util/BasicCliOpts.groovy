@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 
 /**
  * Model a CLI option defined a key-value pairs
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical

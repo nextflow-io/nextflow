@@ -46,7 +46,7 @@ class ConfigMapTest extends Specification {
         cfg.put('delta', new ConfigMap(gamma: holder2))
         then:
         cfg.alpha == holder1
-        cfg.delta.gamma == holder2 
+        cfg.delta.gamma == holder2
 
         when:
         cfg.withSecretProvider(provider)

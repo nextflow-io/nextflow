@@ -51,7 +51,7 @@ class ScriptRunnerTest extends Dsl2Spec {
               script:
                 "echo Hello world"
             }
-            
+
             workflow {
               main: sayHello()
               emit: sayHello.out
@@ -83,9 +83,9 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
             process simpleTask  {
                 input:
-                val x 
+                val x
                 output:
-                stdout 
+                stdout
 
                 """echo $x"""
             }
@@ -142,13 +142,13 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
             process simpleTask  {
                 input:
-                val x 
+                val x
                 output:
                 stdout
 
                 "echo $x"
             }
-            
+
             workflow {
               main: simpleTask(1)
               emit: simpleTask.out
@@ -263,7 +263,7 @@ class ScriptRunnerTest extends Dsl2Spec {
                 x = "$HELLO"
             }
 
-            workflow { 
+            workflow {
               main: simpleTask()
               emit: simpleTask.out
             }
@@ -291,9 +291,9 @@ class ScriptRunnerTest extends Dsl2Spec {
                 "cat $X"
             }
 
-            workflow { 
+            workflow {
                 main: simpleTask(X)
-                emit: simpleTask.out 
+                emit: simpleTask.out
             }
             '''
         and:
@@ -325,7 +325,7 @@ class ScriptRunnerTest extends Dsl2Spec {
 
               'echo hola'
             }
-            
+
             workflow { hola() }
             '''
 
@@ -373,7 +373,7 @@ class ScriptRunnerTest extends Dsl2Spec {
 
               'echo hola'
             }
-            
+
             workflow { hola() }
             '''
 
@@ -409,8 +409,8 @@ class ScriptRunnerTest extends Dsl2Spec {
 
               'echo 1'
             }
-            
-            workflow { hola() }               
+
+            workflow { hola() }
             '''
         and:
         def session = new MockSession(new ConfigParser().parse(config))
@@ -446,7 +446,7 @@ class ScriptRunnerTest extends Dsl2Spec {
 
               'echo 1'
             }
-            
+
             workflow { hola() }
             '''
 
@@ -478,7 +478,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             process hola {
               'echo 1'
             }
-            
+
             workflow { hola() }
             '''
         and:
@@ -523,9 +523,9 @@ class ScriptRunnerTest extends Dsl2Spec {
               memory: ${task.memory}
               """
             }
-            
-            workflow { 
-              main: hola() 
+
+            workflow {
+              main: hola()
               emit: hola.out
             }
             '''
@@ -572,10 +572,10 @@ class ScriptRunnerTest extends Dsl2Spec {
               cpus: ${task.cpus}
               """
             }
-            
-            workflow { 
+
+            workflow {
               main: hola()
-              emit: hola.out 
+              emit: hola.out
             }
             '''
 
@@ -605,15 +605,15 @@ class ScriptRunnerTest extends Dsl2Spec {
 
     def 'should parse mem and duration units' () {
         given:
-        def script = '''  
-            def result = [:] 
+        def script = '''
+            def result = [:]
             result.mem1 = 1.GB
             result.mem2 = 1_000_000.toMemory()
             result.mem3 = MemoryUnit.of(2_000)
             result.time1 = 2.hours
             result.time2 = 60_000.toDuration()
             result.time3 = Duration.of(120_000)
-            result.flag = 10000 < 1.GB 
+            result.flag = 10000 < 1.GB
             result // return result object
            '''
 
@@ -641,7 +641,7 @@ class ScriptRunnerTest extends Dsl2Spec {
                 maxErrors -X
                 'echo hello'
             }
-            
+
             workflow { taskHello() }
             '''
 
@@ -676,10 +676,10 @@ class ScriptRunnerTest extends Dsl2Spec {
                 script:
                   /echo bar/
             }
-            
-            workflow { 
-              main: hola() 
-              emit: hola.out 
+
+            workflow {
+              main: hola()
+              emit: hola.out
             }
             '''
 
@@ -716,7 +716,7 @@ class ScriptRunnerTest extends Dsl2Spec {
                 stub:
                  /echo foo/
             }
-            
+
             workflow { main: hola(); emit: hola.out }
             '''
 
@@ -751,10 +751,10 @@ class ScriptRunnerTest extends Dsl2Spec {
                 stub:
                  /echo foo/
             }
-            
-            workflow { 
-              main: hola() 
-              emit: hola.out 
+
+            workflow {
+              main: hola()
+              emit: hola.out
             }
             '''
 

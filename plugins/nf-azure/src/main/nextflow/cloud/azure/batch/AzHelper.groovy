@@ -131,7 +131,7 @@ class AzHelper {
     }
 
         static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
-       
+
         final startTime = OffsetDateTime.now()
         final indicatedExpiryTime = startTime.plusHours(duration.toHours())
 

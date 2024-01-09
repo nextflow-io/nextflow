@@ -36,7 +36,7 @@ class BranchOpTest extends Dsl2Spec  {
     def 'should branch input values' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(0,1,2)
                 .branch {
@@ -60,7 +60,7 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should branch and capture default' () {
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(10,20,30)
                 .branch {
@@ -82,7 +82,7 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should branch and return empty channel' () {
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(1,2,3)
                 .branch {
@@ -105,7 +105,7 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should branch and set' () {
         when:
-        dsl_eval('''   
+        dsl_eval('''
             Channel
                 .from(1,2,3,40,50)
                 .branch {
@@ -113,7 +113,7 @@ class BranchOpTest extends Dsl2Spec  {
                     large: it > 10
                 }
                 .set { result }
-                
+
              result.small.view { "small:$it" }
              result.large.view { "large:$it" }
         ''')
@@ -134,7 +134,7 @@ class BranchOpTest extends Dsl2Spec  {
                 .from(1,2,3,40,50) \
                 | branch { small: it < 10; large: it > 10 } \
                 | set { result }
-                
+
              result.small.view { "small:$it" }
              result.large.view { "large:$it" }
         ''')
@@ -152,7 +152,7 @@ class BranchOpTest extends Dsl2Spec  {
     def 'should branch and return custom values' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(0,1,2)
                 .branch {
@@ -176,12 +176,12 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should handle complex nested return statement' () {
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(-1,0,1)
                 .branch {
                         foo: true
-                        if( it == 0 ) { return 'zero' } 
+                        if( it == 0 ) { return 'zero' }
                         else if( it<0 ) return 'less than zero'
                         else { return 'great than zero' }
                     }
@@ -193,15 +193,15 @@ class BranchOpTest extends Dsl2Spec  {
         result.val == Channel.STOP
     }
 
-    @Ignore // this is not supported and require explicit use of `return` 
+    @Ignore // this is not supported and require explicit use of `return`
     def 'should handle complex expression statement' () {
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(-1,0,1)
                 .branch {
                         foo: true
-                        if( it == 0 ) { 'zero' } 
+                        if( it == 0 ) { 'zero' }
                         else if( it<0 ) 'less than zero'
                         else { 'great than zero' }
                     }
@@ -218,13 +218,13 @@ class BranchOpTest extends Dsl2Spec  {
     def 'should branch and return last expression' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(0,1,2)
                 .branch {
                         foo: it <1
                         bar: it == 1; it * 2 + it
-                        baz: it >1; it * 2 + it 
+                        baz: it >1; it * 2 + it
                     }
         ''')
         then:
@@ -243,10 +243,10 @@ class BranchOpTest extends Dsl2Spec  {
     def 'should branch on pair argument' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(['a', 1], ['b', 2])
-                .branch { key, value -> 
+                .branch { key, value ->
                         foo: key=='a'; return value
                         bar: true
                     }
@@ -263,19 +263,19 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should pass criteria as argument' () {
         when:
-        dsl_eval('''   
-            criteria = branchCriteria { 
+        dsl_eval('''
+            criteria = branchCriteria {
                 foo: it<5
                 bar: it>=5
             }
 
-            bra1 = Channel.of(1,2,3).branch(criteria)  
-            bra2 = Channel.of(6,7,8).branch(criteria)  
-            
+            bra1 = Channel.of(1,2,3).branch(criteria)
+            bra2 = Channel.of(6,7,8).branch(criteria)
+
             bra1.foo.view { "foo:$it" }
             bra2.bar.view { "bar:$it" }
         ''')
-        
+
         def stdout = capture.toString()
         then:
         stdout.contains('foo:1')
@@ -283,10 +283,10 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should error since param is missing' () {
         when:
-        dsl_eval('''   
+        dsl_eval('''
             Channel
                 .from(1)
-                .branch { -> 
+                .branch { ->
                         foo: false
                         bar: true
                     }
@@ -298,7 +298,7 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should error due to dup label' () {
         when:
-        dsl_eval('''   
+        dsl_eval('''
             Channel.empty() .branch { foo: true; foo: true }
         ''')
         then:
@@ -308,7 +308,7 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should error due to invalid bool expr' () {
         when:
-        dsl_eval('''   
+        dsl_eval('''
             Channel.empty() .branch { foo: if(it) {}; bar: true }
         ''')
         then:
@@ -318,7 +318,7 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should error due to missing branch expression' () {
         when:
-        dsl_eval('''   
+        dsl_eval('''
             Channel.empty() .branch { def x=1 }
         ''')
         then:
@@ -326,7 +326,7 @@ class BranchOpTest extends Dsl2Spec  {
         e.message.contains 'Branch evaluation closure should contain at least one branch expression'
 
         when:
-        dsl_eval('''   
+        dsl_eval('''
             Channel.empty() .branch {  }
         ''')
         then:
@@ -337,7 +337,7 @@ class BranchOpTest extends Dsl2Spec  {
 
     def 'should error due to missing expression stmt' () {
         when:
-        dsl_eval('''   
+        dsl_eval('''
             Channel.empty() .branch { foo: true; if(x) {}  }
         ''')
         then:
@@ -350,7 +350,7 @@ class BranchOpTest extends Dsl2Spec  {
     def 'should branch value ch' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .value(10)
                 .branch {

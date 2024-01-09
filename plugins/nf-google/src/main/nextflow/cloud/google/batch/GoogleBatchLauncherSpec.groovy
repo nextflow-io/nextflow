@@ -20,7 +20,7 @@ import com.google.cloud.batch.v1.Volume
 
 /**
  * Defines the operation supported by Google Batch tasks launcher
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface GoogleBatchLauncherSpec {

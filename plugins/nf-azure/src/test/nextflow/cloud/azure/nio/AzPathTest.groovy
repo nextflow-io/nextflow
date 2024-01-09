@@ -314,5 +314,5 @@ class AzPathTest extends Specification {
         !itr.hasNext()
 
     }
-    
+
 }

@@ -19,7 +19,7 @@ process recurseDir {
 
     output:
     file 'folder/**.fa'
-    file 'folder/**/*.txt' 
+    file 'folder/**/*.txt'
 
     """
     mkdir -p folder/x

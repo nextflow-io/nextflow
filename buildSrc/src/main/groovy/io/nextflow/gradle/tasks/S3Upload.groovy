@@ -12,7 +12,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 /**
  * Upload files to an S3 bucket
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

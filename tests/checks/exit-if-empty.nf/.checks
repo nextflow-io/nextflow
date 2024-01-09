@@ -5,6 +5,6 @@ echo ''
 echo \$ $NXF_RUN
 $NXF_RUN | tee stdout
 
-# must return a non-zero exit status 
+# must return a non-zero exit status
 [[ $? == 0 ]] && exit 1
 [[ `<stdout grep -c 'Channel empty terminating'` == 1 ]] || false

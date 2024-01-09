@@ -23,7 +23,7 @@ import nextflow.util.MemoryUnit
 
 /**
  * Models disk resource request
- * 
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)

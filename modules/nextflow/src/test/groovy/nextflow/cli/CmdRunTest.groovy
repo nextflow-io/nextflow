@@ -145,7 +145,7 @@ class CmdRunTest extends Specification {
         params.xyz == 2
         and:
         cmd.hasParams()
-        
+
         when:
         file = folder.resolve('params.yaml')
         file.text = YAML
@@ -211,7 +211,7 @@ class CmdRunTest extends Specification {
         def json = folder.resolve('params.yaml')
         json.text = '''\
             alpha: "This is alpha"
-            delta: 
+            delta:
                 beta: "${launchDir}/more"
                 gamma: "$should_not_replace"
                 omega: "${baseDir}/end"
@@ -255,7 +255,7 @@ class CmdRunTest extends Specification {
             gamma: "${012345}"
             omega: "${unknown}"
             '''.stripIndent()
-        
+
         new CmdRun().replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK' ] ) == '''\
             alpha: "/HOME/hello"
             delta: "/WORK/world"
@@ -285,7 +285,7 @@ class CmdRunTest extends Specification {
     def 'should guss is repo' () {
         expect:
         CmdRun.guessIsRepo(PATH) == EXPECTED
-        
+
         where:
         EXPECTED    | PATH
         true        | 'http://github.com/foo'
@@ -300,17 +300,17 @@ class CmdRunTest extends Specification {
         given:
         def DSL1_SCRIPT = '''
         process foo {
-          input: 
+          input:
           file x from ch
         }
         '''
 
         def DSL2_SCRIPT = '''
         process foo {
-          input: 
+          input:
           file x
         }
-        
+
         workflow { foo() }
         '''
 

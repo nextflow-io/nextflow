@@ -12,7 +12,7 @@ import nextflow.script.params.OutputsList
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ChannelOutTest extends Specification {
-    
+
 
     def 'should get out by name' () {
         given:

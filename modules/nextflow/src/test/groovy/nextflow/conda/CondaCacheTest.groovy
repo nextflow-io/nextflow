@@ -96,7 +96,7 @@ class CondaCacheTest extends Specification {
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
             .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
 
@@ -118,7 +118,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = Files.createTempFile('test','.yml')
-        ENV.text = '''  
+        ENV.text = '''
             name: my-env-1.1
             channels:
               - bioconda
@@ -126,7 +126,7 @@ class CondaCacheTest extends Specification {
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
                 .stripIndent(true)
 
@@ -148,7 +148,7 @@ class CondaCacheTest extends Specification {
         def ENV = folder.resolve('bar.txt')
         ENV.text = '''
                 star=2.5.4a
-                bwa=0.7.15   
+                bwa=0.7.15
                 multiqc=1.2.3
                 '''
                 .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423

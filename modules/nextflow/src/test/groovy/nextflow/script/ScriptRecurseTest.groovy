@@ -36,13 +36,13 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a process execution' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x +1
         }
-       
+
         workflow {
             main: foo.recurse(1).times(3)
             emit: foo.out
@@ -62,13 +62,13 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a process until a condition is verified' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x+1
         }
-       
+
         workflow {
             main: foo.recurse(1).until { it >= 4 }
             emit: foo.out
@@ -89,31 +89,31 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a workflow execution' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x+1
         }
-  
+
         process bar {
           input: val x
           output: val y
           exec: y = x*x
         }
-       
+
         workflow group {
-            take: x 
-            main: 
+            take: x
+            main:
               foo(x)
               bar(foo.out)
             emit:
               bar.out
         }
-        
+
         workflow {
             main: group.recurse(1).times(3)
-            emit: group.out  
+            emit: group.out
         }
         '''
 
@@ -138,10 +138,10 @@ class ScriptRecurseTest extends Dsl2Spec {
            exec:
               z = x.sum()+1
          }
-         
+
          workflow {
            main:
-             data = channel.of(10,20,30) 
+             data = channel.of(10,20,30)
              foo.scan(data)
            emit:
              foo.out

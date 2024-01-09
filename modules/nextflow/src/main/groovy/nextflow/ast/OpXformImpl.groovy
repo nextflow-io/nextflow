@@ -304,7 +304,7 @@ class OpXformImpl implements ASTTransformation {
                 replaceStmt(last, last, previous, impl)
             }
 
-            if( allLabels.size()==0 ) 
+            if( allLabels.size()==0 )
                 syntaxError("The forking criteria should define at least two target channels", code, unit)
 
             // at the end add a statement returning a result collection all previous block

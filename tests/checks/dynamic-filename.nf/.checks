@@ -23,7 +23,7 @@ diff my_delta.txt .expected
 diff my_gamma.txt .expected
 diff my_omega.txt .expected
 
-rm my_* 
+rm my_*
 
 
 #

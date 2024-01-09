@@ -70,7 +70,7 @@ class NextflowMetaTest extends Specification {
         NextflowMeta.probeDsl1('''
             process foo {
                 input:
-                file transcriptome 
+                file transcriptome
                     from transcriptome_file
             }
             ''')
@@ -93,7 +93,7 @@ class NextflowMetaTest extends Specification {
         NextflowMeta.probeDsl1('''
             process foo {
                 output:
-                file transcriptome 
+                file transcriptome
                     into transcriptome_file
             }
             ''')
@@ -107,7 +107,7 @@ class NextflowMetaTest extends Specification {
         and:
         NextflowMeta.probeDsl1('''
             process foo {
-                input: 
+                input:
                 file transcriptome from transcriptome_file
                 output:
                 file transcriptome into transcriptome_file
@@ -117,22 +117,22 @@ class NextflowMetaTest extends Specification {
         and:
         !NextflowMeta.probeDsl1('''
             process foo {
-                input: 
-                file transcriptome 
+                input:
+                file transcriptome
                 output:
-                file transcriptome 
+                file transcriptome
             }
             ''')
 
         and:
         !NextflowMeta.probeDsl1('''
             process foo {
-                input: 
+                input:
                 file transcriptome from transcriptome_file
                 output:
                 file transcriptome into transcriptome_file
             }
-            
+
             workflow {
                 foo()
             }
@@ -141,26 +141,26 @@ class NextflowMetaTest extends Specification {
         and:
         !NextflowMeta.probeDsl1('''
             process foo {
-                input: 
+                input:
                 file transcriptome from transcriptome_file
                 output:
                 file transcriptome into transcriptome_file
             }
-            
+
             workflow{ foo() }
             ''')
 
         and:
         !NextflowMeta.probeDsl1('''
             process foo {
-                input: 
+                input:
                 file transcriptome from transcriptome_file
                 output:
                 file transcriptome into transcriptome_file
             }
-            
-            workflow bar { 
-                foo() 
+
+            workflow bar {
+                foo()
             }
             ''')
     }

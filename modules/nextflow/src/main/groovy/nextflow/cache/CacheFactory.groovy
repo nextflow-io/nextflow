@@ -26,7 +26,7 @@ import org.pf4j.ExtensionPoint
 
 /**
  * Factory class that create an instance of the {@link CacheDB}
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

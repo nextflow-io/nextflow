@@ -49,7 +49,7 @@ class SetOpTest extends Dsl2Spec {
     def 'should invoke set with dot notation' () {
         when:
         def result = dsl_eval(/
-            Channel.of(1,2,3).set { foo } 
+            Channel.of(1,2,3).set { foo }
             foo.map { it *2 }
         /)
         then:
@@ -59,7 +59,7 @@ class SetOpTest extends Dsl2Spec {
 
         when:
         result = dsl_eval(/
-            Channel.value('hello').set { foo } 
+            Channel.value('hello').set { foo }
             foo.map { it.toUpperCase() }
         /)
         then:
@@ -73,7 +73,7 @@ class SetOpTest extends Dsl2Spec {
         def ch1 = Channel.value('X')
         def ch2 = Channel.value('Y')
 
-        new nextflow.script.ChannelOut([ch1]) .set { foo }   
+        new nextflow.script.ChannelOut([ch1]) .set { foo }
         return foo
         /)
         then:

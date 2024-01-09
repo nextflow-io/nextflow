@@ -21,14 +21,14 @@ process baz {
 workflow flow1 {
     main:
     foo | bar | collectFile | set { result }
-    emit: 
+    emit:
     result
 }
 
 workflow flow2 {
     main:
     foo | baz | collectFile | set { result }
-    emit: 
+    emit:
     result
 }
 

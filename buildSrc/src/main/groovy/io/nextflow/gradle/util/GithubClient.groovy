@@ -203,7 +203,7 @@ class GithubClient {
         final action = "https://api.github.com/repos/${owner}/${repo}/releases/${rel.id.toLong()}"
         sendHttpMessage(action, null, 'DELETE')
     }
-    
+
     /*
      * https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#get-a-release-asset
      */
@@ -240,7 +240,7 @@ class GithubClient {
 
         def asset = (Map) rel.assets.find{ it.name == name }
         if( !asset )
-            return 
+            return
 
         deleteAsset(asset.id.toLong().toString())
     }

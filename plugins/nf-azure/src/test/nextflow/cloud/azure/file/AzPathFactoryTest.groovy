@@ -38,7 +38,7 @@ class AzPathFactoryTest extends Specification {
 
         cleanup:
         Global.session = null
-        
+
         where:
         AZ_URI                          | CONTAINER     | BLOB
         'az://my-data/foo/bar'          | 'my-data'     | 'foo/bar'

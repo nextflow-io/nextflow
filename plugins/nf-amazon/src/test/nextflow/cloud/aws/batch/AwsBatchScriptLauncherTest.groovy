@@ -84,7 +84,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                       timeout=\$(( timeout * 2 ))
                     done
                 }
-                
+
                 nxf_parallel() {
                     IFS=$'\\n\'
                     local cmd=("$@")
@@ -102,7 +102,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
-                
+
                         if ((${#pid[@]}>=$max)); then
                           nxf_sleep 0.2
                         else
@@ -117,7 +117,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     )
                     unset IFS
                 }
-                
+
                 # aws helper
                 nxf_s3_upload() {
                     local name=$1
@@ -130,7 +130,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                       /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                     fi
                 }
-                
+
                 nxf_s3_download() {
                     local source=$1
                     local target=$2
@@ -138,11 +138,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
                     if [[ $is_dir == 1 ]]; then
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
+                    else
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$source" "$target"
                     fi
                 }
-                
+
                 '''.stripIndent(true)
     }
 
@@ -236,7 +236,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     '''.stripIndent().leftTrim()
 
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
-        
+
         binding.task_env == ''
 
         binding.helpers_script == '''\
@@ -263,7 +263,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           timeout=\$(( timeout * 2 ))
                         done
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -281,7 +281,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -296,7 +296,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws helper
                     nxf_s3_upload() {
                         local name=$1
@@ -309,7 +309,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -317,11 +317,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
-                    
+
                     '''.stripIndent(true)
 
     }
@@ -435,7 +435,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           timeout=\$(( timeout * 2 ))
                         done
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -453,7 +453,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -468,7 +468,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws helper
                     nxf_s3_upload() {
                         local name=$1
@@ -481,7 +481,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -489,11 +489,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
-                    
+
                     '''.stripIndent(true)
 
     }
@@ -548,7 +548,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           timeout=\$(( timeout * 2 ))
                         done
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -566,7 +566,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -581,9 +581,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws cli retry config
-                    export AWS_RETRY_MODE=adaptive 
+                    export AWS_RETRY_MODE=adaptive
                     export AWS_MAX_ATTEMPTS=3
                     # aws helper
                     nxf_s3_upload() {
@@ -597,7 +597,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -605,11 +605,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
-                    
+
                     '''.stripIndent(true)
 
     }

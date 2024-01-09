@@ -80,7 +80,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
         """)
 
         result = channel.val
-        
+
         then:
         result[0] == 'sample_id'
         result[1] == '''

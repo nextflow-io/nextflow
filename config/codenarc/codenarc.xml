@@ -20,5 +20,5 @@
          xsi:noNamespaceSchemaLocation="http://codenarc.org/ruleset-schema.xsd">
 
 <ruleset-ref path='file:./config/codenarc/codenarc.groovy'/>
- 
+
 </ruleset>

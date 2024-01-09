@@ -185,7 +185,7 @@ class ThrottlingExecutorTest extends Specification {
         exec.backOff0(limiter)
         then:
         limiter.rate == 0.5
-        change == 1 
+        change == 1
     }
 
     def 'should not decrease submit rate' () {
@@ -275,7 +275,7 @@ class ThrottlingExecutorTest extends Specification {
         q.offer( 20 as byte )
         q.offer( 0 as byte )
 
-        expect: 
+        expect:
         q.take() == -10
         q.take() == 0
         q.take() == 10

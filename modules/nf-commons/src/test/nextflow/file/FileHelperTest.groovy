@@ -947,7 +947,7 @@ class FileHelperTest extends Specification {
         FS.provider() >> PROVIDER
         PROVIDER.getScheme() >> SCHEME
         result == EXPECTED
-        
+
         where:
         SCHEME      | EXPECTED
          'file'     |  true

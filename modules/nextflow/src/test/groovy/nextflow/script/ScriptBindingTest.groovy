@@ -70,7 +70,7 @@ class ScriptBindingTest extends Specification {
 
         // note: BUT it fallback on the local environment
         bindings.getVariable('HOME') == '/this/path'
-        
+
         bindings.getVariables().keySet() == ['args','params','variable_x'] as Set
 
     }

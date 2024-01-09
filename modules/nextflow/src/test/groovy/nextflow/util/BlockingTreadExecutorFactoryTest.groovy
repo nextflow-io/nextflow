@@ -97,7 +97,7 @@ class BlockingTreadExecutorFactoryTest extends Specification {
         executor.execute( { log.info 'hello 2'; sleep 1_000 } )
         executor.execute( { log.info 'hello 3'; sleep 1_000 } )
         def delta1 = System.currentTimeMillis() - start
-        
+
         executor.shutdown()
         executor.awaitTermination(30, TimeUnit.SECONDS)
         def delta2 = System.currentTimeMillis() - start

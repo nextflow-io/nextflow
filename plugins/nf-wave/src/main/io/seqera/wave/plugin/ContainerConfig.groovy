@@ -101,7 +101,7 @@ class ContainerConfig {
         allMeta.add( env ?: 'no-env' )
         allMeta.add( workingDir ?: 'no-workdir')
         final layers0 = layers ?: Collections.<ContainerLayer>emptyList()
-        
+
         for( ContainerLayer it : layers0 ) {
             if( !it.skipHashing )
                 allMeta.add(it.fingerprint())

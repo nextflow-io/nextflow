@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Implements a thread pool executing tasks based on a priority index
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Deprecated

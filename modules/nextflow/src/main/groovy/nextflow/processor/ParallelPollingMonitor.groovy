@@ -34,7 +34,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     private ThrottlingExecutor submitter
     private Semaphore semaphore
-    
+
     /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
@@ -84,7 +84,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
             @Override
             protected void onFailure(Throwable e) {
                 if( !session.success )
-                    return // ignore error when the session has been interrupted 
+                    return // ignore error when the session has been interrupted
                 handleException(handler, e)
                 session.notifyTaskComplete(handler)
             }

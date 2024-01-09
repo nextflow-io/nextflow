@@ -22,7 +22,7 @@ import java.util.regex.Pattern
 
 /**
  * Implement command line parsing helpers
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

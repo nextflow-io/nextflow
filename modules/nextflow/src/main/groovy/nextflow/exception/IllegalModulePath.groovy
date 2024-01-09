@@ -20,7 +20,7 @@ import groovy.transform.InheritConstructors
 
 /**
  * Exception thrown when an illegal module path is specified
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors

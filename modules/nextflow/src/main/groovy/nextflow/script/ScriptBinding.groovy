@@ -76,7 +76,7 @@ class ScriptBinding extends WorkflowBinding {
             args.addAll((List)vars.args)
         }
         vars.put('args', args)
-        
+
         // create and populate args
         params = new ParamsMap()
         if( vars.params ) {
@@ -281,7 +281,7 @@ class ScriptBinding extends WorkflowBinding {
                 log.warn "`params.$name` cannot be assigned to a secret value -- Assignment is ignored"
                 return null
             }
-            
+
             // keep track of the real name
             realNames << name
 

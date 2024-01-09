@@ -30,7 +30,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Escape
 /**
  * Command script launcher implementing the support for Fusion files
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

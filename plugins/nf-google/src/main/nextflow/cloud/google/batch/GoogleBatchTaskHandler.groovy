@@ -49,7 +49,7 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 /**
  * Implements a task handler for Google Batch executor
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

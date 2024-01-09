@@ -35,7 +35,7 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(0,1,2)
                 .multiMap {
@@ -67,7 +67,7 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel with custom param' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .from(0,1,2)
                 .multiMap { p ->
@@ -98,14 +98,14 @@ class MultiMapOpTest extends Dsl2Spec {
 
     def 'should pass criteria as argument' () {
         when:
-        dsl_eval('''   
-            criteria = multiMapCriteria { 
+        dsl_eval('''
+            criteria = multiMapCriteria {
                 foo: it
                 bar: it*it
             }
 
-            ch1 = Channel.of(1,2,3).multiMap(criteria)  
-            
+            ch1 = Channel.of(1,2,3).multiMap(criteria)
+
             ch1.foo.view { "foo:$it" }
             ch1.bar.view { "bar:$it" }
         ''')
@@ -124,7 +124,7 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel value ch' () {
 
         when:
-        def result = dsl_eval('''   
+        def result = dsl_eval('''
             Channel
                 .value('hello')
                 .multiMap { p ->

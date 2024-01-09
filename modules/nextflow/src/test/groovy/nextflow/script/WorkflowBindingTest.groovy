@@ -51,7 +51,7 @@ class WorkflowBindingTest extends Specification {
         def ARGS = ['alpha','beta'] as Object[]
         def binding = Spy(WorkflowBinding)
         binding.@meta = Mock(ScriptMeta)
-        
+
         // should invoke an extension component
         when:
         def result = binding.invokeMethod('foo', ARGS)
@@ -69,7 +69,7 @@ class WorkflowBindingTest extends Specification {
         (result as OpCall).methodName == 'map'
         (result as OpCall).args == ARGS
 
-        // should throw missing method exception 
+        // should throw missing method exception
         when:
         binding.invokeMethod('foo', ARGS)
         then:

@@ -159,7 +159,7 @@ class GithubRepositoryPublisher extends DefaultTask {
     @TaskAction
     def apply() {
 
-        // parse indexUrl 
+        // parse indexUrl
         final gitUrl = new URL(indexUrl)
         final tokns = gitUrl.path.tokenize('/')
         final githubOrg = tokns[0]

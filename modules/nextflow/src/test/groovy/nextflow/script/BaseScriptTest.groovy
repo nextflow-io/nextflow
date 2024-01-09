@@ -52,10 +52,10 @@ class BaseScriptTest extends Dsl2Spec {
                 result = [:]
                 result.baseDir = baseDir
                 result.projectDir = projectDir
-                result.workDir = workDir 
+                result.workDir = workDir
                 result.nextflow = nextflow
                 result.workflow = workflow
-                result.launchDir = launchDir 
+                result.launchDir = launchDir
                 result.moduleDir = moduleDir
                 '''
 

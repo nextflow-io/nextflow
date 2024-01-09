@@ -68,7 +68,7 @@ class ArrayBagTest extends Specification {
     def 'should stringify the bag' () {
         given:
         def bag = new ArrayBag([1,2,3])
-        
+
         expect:
         bag.toString() == '[1, 2, 3]'
         String.valueOf(bag) == '[1, 2, 3]'
