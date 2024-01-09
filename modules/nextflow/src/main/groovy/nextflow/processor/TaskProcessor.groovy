@@ -868,7 +868,7 @@ class TaskProcessor {
             task.config.exitStatus = TaskConfig.EXIT_ZERO
             // -- check if all output resources are available
             collectOutputs(task)
-            log.info "[skipping] Stored process > ${safeTaskName(task)}"
+            log.trace "[skipping] Stored process > ${safeTaskName(task)}"
             // set the exit code in to the task object
             task.exitStatus = TaskConfig.EXIT_ZERO
             task.cached = true
@@ -954,7 +954,7 @@ class TaskProcessor {
                 task.exitStatus = exitCode
             }
 
-            log.info "[${task.hashLog}] Cached process > ${task.name}"
+            log.trace "[${task.hashLog}] Cached process > ${task.name}"
             // -- notify cached event
             if( entry )
                 session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
