@@ -1,5 +1,6 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +16,11 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
-import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
  * HTCondor executor
@@ -27,12 +29,9 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
 class CondorExecutor extends AbstractGridExecutor {
 
     static final public String CMD_CONDOR = '.command.condor'
-
-    private String username = System.getenv('USER')
 
     final protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
         // creates the wrapper script
@@ -55,33 +54,26 @@ class CondorExecutor extends AbstractGridExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        if( task.isContainerEnabled() ) {
-            result << "universe = docker"
-            result << "docker_image = ${task.getContainer()}".toString()
-        }
-        else {
-            result << "universe = vanilla"
-        }
-
-        result << "executable = ${TaskRun.CMD_RUN}".toString()
-        result << "log = ${TaskRun.CMD_LOG}".toString()
+        result << "universe = vanilla"
+        result << "executable = ${TaskRun.CMD_RUN}"
+        result << "log = ${TaskRun.CMD_LOG}"
         result << "getenv = true"
 
         if( task.config.getCpus()>1 ) {
-            result << "request_cpus = ${task.config.getCpus()}".toString()
+            result << "request_cpus = ${task.config.getCpus()}"
             result << "machine_count = 1"
         }
 
         if( task.config.getMemory() ) {
-            result << "request_memory = ${task.config.getMemory()}".toString()
+            result << "request_memory = ${task.config.getMemory()}"
         }
 
         if( task.config.getDisk() ) {
-            result << "request_disk = ${task.config.getDisk()}".toString()
+            result << "request_disk = ${task.config.getDisk()}"
         }
 
         if( task.config.getTime() ) {
-            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}".toString()
+            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}"
         }
 
         if( task.config.clusterOptions ) {
@@ -94,13 +86,15 @@ class CondorExecutor extends AbstractGridExecutor {
             }
         }
 
-        result << "queue"
+        result<< "queue"
 
     }
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return ['condor_submit', '--terse', CMD_CONDOR]
+        return pipeLauncherScript()
+                ? List.of('condor_submit', '-terse')
+                : List.of('condor_submit', '-terse', CMD_CONDOR)
     }
 
     @Override
@@ -115,29 +109,34 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        ['condor_history', username, '-af', 'ClusterId', 'JobStatus']
+        ["condor_q", "-nobatch"]
     }
 
 
-    static protected Map<String,QueueStatus> DECODE_STATUS = [
-            '1': QueueStatus.PENDING, // Idle
-            '2': QueueStatus.RUNNING, // Running
-            '3': QueueStatus.ERROR,   // Removing
-            '4': QueueStatus.DONE,    // Completed
-            '5': QueueStatus.HOLD,    // Held
-            '6': QueueStatus.RUNNING, // Transferring Output
-            '7': QueueStatus.RUNNING  // Suspended
+    static protected Map DECODE_STATUS = [
+            'U': QueueStatus.PENDING,   // Unexpanded
+            'I': QueueStatus.PENDING,   // Idle
+            'R': QueueStatus.RUNNING,   // Running
+            'X': QueueStatus.ERROR,     // Removed
+            'C': QueueStatus.DONE,      // Completed
+            'H': QueueStatus.HOLD,      // Held
+            'E': QueueStatus.ERROR      // Error
     ]
 
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-        final result = new LinkedHashMap<String, QueueStatus>()
+        def result = [:]
         if( !text ) return result
 
+        boolean started = false
         def itr = text.readLines().iterator()
         while( itr.hasNext() ) {
             String line = itr.next()
+            if( !started ) {
+                started = line.startsWith(' ID ')
+                continue
+            }
 
             if( !line.trim() ) {
                 break
@@ -145,13 +144,22 @@ class CondorExecutor extends AbstractGridExecutor {
 
             def cols = line.tokenize(' ')
             def id = cols[0]
-            def st = cols[1]
+            def st = cols[5]
             result[id] = DECODE_STATUS[st]
         }
 
         return result
     }
 
+    @Override
+    protected boolean pipeLauncherScript() {
+        return isFusionEnabled()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 
     @InheritConstructors
     static class CondorWrapperBuilder extends BashWrapperBuilder {

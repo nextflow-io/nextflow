@@ -1,5 +1,6 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +16,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Files
 
 import nextflow.Session
@@ -24,6 +26,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -34,9 +38,7 @@ class CondorExecutorTest extends Specification {
     def 'should return valid directives' () {
         given:
         def executor = [:] as CondorExecutor
-        def task = Spy(TaskRun) {
-            isContainerEnabled() >> false
-        }
+        def task = new TaskRun()
 
         when:
         task.config = new TaskConfig()
@@ -130,34 +132,25 @@ class CondorExecutorTest extends Specification {
                                 '''
                 .stripIndent().trim()
 
-        when:
-        task = Spy(TaskRun) {
-            isContainerEnabled() >> true
-            getContainer() >> 'ubuntu'
-        }
-        task.config = new TaskConfig()
-        then:
-        executor.getDirectives(task)
-                .join('\n') ==  '''
-                                universe = docker
-                                docker_image = ubuntu
-                                executable = .command.run
-                                log = .command.log
-                                getenv = true
-                                queue
-                                '''
-                                .stripIndent().trim()
-
     }
 
-
+    @Unroll
     def 'should return launch command line' () {
 
         given:
-        def executor = [:] as CondorExecutor
+        def session = Mock(Session) { getConfig() >> [:] }
+        def exec = Spy(CondorExecutor) { getSession() >> session }
 
-        expect:
-        executor.getSubmitCommandLine( Mock(TaskRun), null) == ['condor_submit', '--terse', '.command.condor']
+        when:
+        def result = exec.getSubmitCommandLine(Mock(TaskRun), null)
+        then:
+        exec.pipeLauncherScript() >> PIPE
+        result == EXPECTED
+
+        where:
+        PIPE      | EXPECTED
+        false     | ['condor_submit', '-terse', '.command.condor']
+        true      | ['condor_submit', '-terse']
 
     }
 
