@@ -20,6 +20,7 @@ import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
@@ -912,8 +913,22 @@ class AzBatchService implements Closeable {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof BatchErrorException && e.body().code() in RETRY_CODES)  as Predicate<? extends Throwable>
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if( t instanceof BatchErrorException && t.body().code() in RETRY_CODES )
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
         final policy = retryPolicy(cond)
+        // apply the action with
         return Failsafe.with(policy).get(action)
     }
 }
