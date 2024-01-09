@@ -64,7 +64,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
         launcher.options.ansiLog = value
     }
 
-    @Option(names = ['--bg'], arity = '0', description = 'Run as a background process')
+    @Option(names = ['--bg','--background'], arity = '0', description = 'Run as a background process')
     void setBackground(boolean value) {
         launcher.options.background = value
     }

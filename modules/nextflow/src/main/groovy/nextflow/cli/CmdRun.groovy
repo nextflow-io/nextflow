@@ -272,7 +272,7 @@ class CmdRun {
         @Parameter(names=['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
         String withCloudCache
 
-        @Parameter(names = ['-bg'], arity = 0, hidden = true)
+        @Parameter(names = ['-bg','-background'], arity = 0, hidden = true)
         void setBackground(boolean value) {
             launcher.options.background = value
         }
