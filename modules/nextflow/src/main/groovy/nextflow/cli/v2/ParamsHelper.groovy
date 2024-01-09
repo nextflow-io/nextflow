@@ -28,9 +28,6 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class ParamsHelper {
 
-    static final String ANSI_RESET = '\u001B[0m'
-    static final String ANSI_YELLOW = '\u001B[33m'
-
     /**
      * Parse the pipeline args and params from the positional
      * args parsed by picocli. This method assumes that the first
@@ -47,7 +44,7 @@ class ParamsHelper {
 
         for( String arg : resuit )
             if( arg.startsWith('-') )
-                println "${ANSI_YELLOW}Possible legacy command line argument: $arg -- did you mean -$arg ?${ANSI_RESET}"
+                log.warn "Possible legacy command line argument: $arg -- did you mean -$arg ?"
 
         log.trace "Parsing pipeline args from CLI: $resuit"
         return resuit
