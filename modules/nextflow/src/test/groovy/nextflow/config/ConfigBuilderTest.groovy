@@ -2078,19 +2078,25 @@ class ConfigBuilderTest extends Specification {
 
     // issue 2422 - https://github.com/nextflow-io/nextflow/issues/2422
     // ideally this should behave as the previous test
-    @Ignore
     def 'should resolve ext config with properties' () {
 
         given:
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('test.conf')
         file1.text = '''
+            params{
+                REPLACE_WITH = 'Hola'
+            }
             process {
                 ext.args = "Hello World!" 
                 cpus = 1 
                 withName:BAR {
                     ext.args = "Ciao mondo!"
                     cpus = 2
+                    withName:FOO {
+                        ext.args = "${params.REPLACE_WITH} mundo!"
+                        cpus = 3
+                    }
                 }
             }
             '''
@@ -2102,6 +2108,8 @@ class ConfigBuilderTest extends Specification {
         cfg1.process.ext.args == 'Hello World!'
         cfg1.process.'withName:BAR'.cpus == 2
         cfg1.process.'withName:BAR'.ext.args == "Ciao mondo!"
+        cfg1.process.'withName:BAR'.'withName:FOO'.cpus == 3
+        cfg1.process.'withName:BAR'.'withName:FOO'.ext.args == "Hola mundo!"
 
         cleanup:
         folder?.deleteDir()
