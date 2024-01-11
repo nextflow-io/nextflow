@@ -21,7 +21,7 @@ import spock.lang.Specification
 import groovy.util.logging.Slf4j
 
 /**
- * Base specification class - It wraps each test into begin-close "test name" strigs
+ * Base specification class - It wraps each test into begin-close "test name" strings
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

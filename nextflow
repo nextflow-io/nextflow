@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'23.06.0-edge'}
+NXF_VER=${NXF_VER:-'23.12.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -24,6 +24,7 @@ NXF_TEMP=${NXF_TEMP:-$TMPDIR}
 NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
+NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 
 export NXF_CLI
 export NXF_ORG
@@ -85,6 +86,17 @@ function get() {
     fi
 }
 
+function get_ver() {
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$1"
+    elif command -v wget &>/dev/null; then
+        wget "$1" >/dev/null 2>&1
+    else
+        echo_red "ERROR: Cannot find 'curl' nor 'wget' utility -- please install one of them"
+        exit 1
+    fi
+}
+
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXXX" || exit $?
@@ -111,7 +123,7 @@ function resolve_link() {
 }
 
 function current_ver() {
-  [[ $NXF_EDGE == 1 ]] && printf 'edge' || printf 'latest'
+  [[ $NXF_EDGE == 1 || $NXF_VER == *"-edge" ]] && printf 'edge' || printf 'latest'
 }
 
 function install() {
@@ -131,10 +143,19 @@ function install() {
     echo ''
 }
 
+function check_latest() {
+    [[ $cmd != run ]] && return 0
+    [[ $NXF_OFFLINE == true || $NXF_DISABLE_CHECK_LATEST == true ]] && return 0
+    local latest=$(get_ver "$NXF_BASE/$(current_ver)/version?current=$NXF_VER")
+    if [[ -n "$latest" && "$latest" != $NXF_VER ]]; then
+      echo_yellow "Nextflow $latest is available - Please consider updating your version to it"
+    fi
+}
+
 function launch_nextflow() {
     # the launch command line
     local cmdline=()
-    # remove leading and trailing double-quotes 
+    # remove leading and trailing double-quotes
     for x in "${launcher[@]}"; do
         x="${x%\"}"
         x="${x#\"}"
@@ -174,7 +195,6 @@ unset JAVA_TOOL_OPTIONS
 
 # parse the command line
 bg=''
-dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
 declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
@@ -190,15 +210,12 @@ while [[ $# != 0 ]]; do
       jvmopts+=("$1")
       fi
       ;;
-    -d|-dockerize)
-      if [[ ! "$cmd" && ! -f /.nextflow/dockerized ]]; then
-      dockerize=1
-      fi
-      ;;
     -bg)
-      if [[ ! -f /.nextflow/dockerized ]]; then
       bg=1
-      fi
+      ;;
+    -remote-debug)
+      echo_yellow "Enabling script debugging - continue the execution launching the remote VM debugger in your favourite IDE using port $NXF_REMOTE_DEBUG_PORT"
+      remote_debug=1
       ;;
     -download)
       if [[ ! "$cmd" ]]; then
@@ -221,20 +238,6 @@ while [[ $# != 0 ]]; do
     esac
     shift
 done
-
-NXF_DOCKER_OPTS=${NXF_DOCKER_OPTS:=''}
-if [[ "$dockerize" ]]; then
-  if [[ "$bg" ]]; then detach='--detach '; else detach=''; fi
-  NXF_ASSETS=${NXF_ASSETS:-${NXF_HOME:-$HOME/.nextflow}/assets}
-  mkdir -p "$NXF_ASSETS"
-  exec docker run $detach --rm --net host \
-   -e NXF_ANSI_LOG=false \
-   -e USER -e HOME -e NXF_ASSETS=$NXF_ASSETS -e NXF_USRMAP=$(id -u) -e NXF_DOCKER_OPTS='-u $(id -u)' \
-   -v /var/run/docker.sock:/var/run/docker.sock \
-   -v $HOME:$HOME:ro,Z -v $NXF_ASSETS:$NXF_ASSETS:Z -v $PWD:$PWD:Z -w $PWD $NXF_DOCKER_OPTS \
-   nextflow/nextflow:$NXF_VER nextflow "${args[@]}"
-  exit 1
-fi
 
 CAPSULE_LOG=${CAPSULE_LOG:=''}
 CAPSULE_RESET=${CAPSULE_RESET:=''}
@@ -302,8 +305,8 @@ else
     version_check="^(1.7|1.8)"
     version_message="Java 7 or 8"
   else
-    version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19|20)"
-    version_message="Java 8 or later (up to 20)"
+    version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19|20|21)"
+    version_message="Java 8 or later (up to 21)"
   fi
   if [[ ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
@@ -314,10 +317,10 @@ else
       fi
       exit 1
   fi
-  if [[ ! $JAVA_VER =~ ^(11|12|13|14|15|16|17|18|19|20) ]]; then
-      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 11 up to 20\n"
+  if [[ ! $JAVA_VER =~ ^(11|12|13|14|15|16|17|18|19|20|21) ]]; then
+      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 11 up to 21\n"
   fi
-  mkdir -p $(dirname "$JAVA_KEY")
+  mkdir -p "$(dirname "$JAVA_KEY")"
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
 fi
 
@@ -337,6 +340,7 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
+[[ "$JAVA_VER" =~ ^(21) ]] && [[ ! "$NXF_ENABLE_VIRTUAL_THREADS" ]] && NXF_ENABLE_VIRTUAL_THREADS=true
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
 [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
@@ -353,6 +357,7 @@ export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
 export NXF_PACK
+export NXF_ENABLE_VIRTUAL_THREADS
 
 # lookup the a `md5` command
 if hash md5sum 2>/dev/null; then MD5=md5sum;
@@ -385,12 +390,9 @@ EOF
 }
 
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
-if [[ -f /.nextflow/dockerized ]]; then
-  LAUNCH_FILE=/.nextflow/launch-classpath
-else
-  LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
-fi
-if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
+LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
+
+if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ] && [[ "$remote_debug" -ne 1 ]]; then
     declare -a launcher="($(cat "$LAUNCH_FILE"))"
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
@@ -402,11 +404,14 @@ else
     # we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
     cmd_pattern='"([^"]*)"(.*)'
     [[ "${cli[@]}" =~ $cmd_pattern ]]
-    cmd_base=(${BASH_REMATCH[1]})
-    cmd_tail=(${BASH_REMATCH[2]})
+    declare -a cmd_base="(${BASH_REMATCH[1]})"
+    declare -a cmd_tail="(${BASH_REMATCH[2]})"
 
-    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19|20) ]]; then
-      launcher="${cmd_base[@]}"
+    launcher="${cmd_base[@]}"
+    [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+    [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
+
+    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19|20|21) ]]; then
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
@@ -424,14 +429,13 @@ else
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
-      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
-        [[ "$JAVA_VER" =~ ^(19|20) ]] && launcher+=(--enable-preview) || die "Virtual threads requires Java 19 or later - current version $JAVA_VER"
+        if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
+        elif [[ ! "$JAVA_VER" =~ ^(21) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
+        fi
       fi
       launcher+=("${cmd_tail[@]}")
     else
-      launcher="${cmd_base[@]}"
-      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cmd_tail[@]}")
     fi
 
@@ -439,7 +443,7 @@ else
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
         STR=''
         for x in "${launcher[@]}"; do
-        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && STR+="$x "
+        [[ "$x" != "\"-Duser.dir=$PWD\"" ]] && [[ ! "$x" == *"-agentlib:jdwp"* ]] && STR+=$(printf '%q ' "$x")
         done
         printf "$STR">"$LAUNCH_FILE"
     else
@@ -448,5 +452,7 @@ else
 
 fi
 
+# check for latest version
+check_latest
 # finally run it
 launch_nextflow

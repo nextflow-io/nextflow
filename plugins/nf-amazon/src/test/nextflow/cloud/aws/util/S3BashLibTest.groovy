@@ -63,7 +63,9 @@ class S3BashLibTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -160,7 +162,9 @@ class S3BashLibTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -405,7 +409,9 @@ class S3BashLibTest extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x)
+                      # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                      # see https://github.com/nextflow-io/nextflow/pull/4050
+                      [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
             
@@ -494,7 +500,9 @@ class S3BashLibTest extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x)
+                      # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                      # see https://github.com/nextflow-io/nextflow/pull/4050
+                      [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
             
@@ -586,7 +594,9 @@ class S3BashLibTest extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x)
+                      # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                      # see https://github.com/nextflow-io/nextflow/pull/4050
+                      [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
             
@@ -682,7 +692,9 @@ class S3BashLibTest extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x)
+                      # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                      # see https://github.com/nextflow-io/nextflow/pull/4050
+                      [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
             
@@ -730,4 +742,80 @@ class S3BashLibTest extends Specification {
             }
             '''.stripIndent(true)
     }
+
+    def 'should create s5cmd script' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [aws:[batch:[platformType: 'fargate', cliPath: 's5cmd']]]
+        }
+
+        expect:
+        S3BashLib.script()  == '''
+            # aws helper for s5cmd
+            nxf_s3_upload() {
+                local name=$1
+                local s3path=$2
+                if [[ "$name" == - ]]; then
+                  local tmp=$(nxf_mktemp)
+                  cp /dev/stdin $tmp/$name
+                  s5cmd cp --storage-class STANDARD $tmp/$name "$s3path"
+                elif [[ -d "$name" ]]; then
+                  s5cmd cp --storage-class STANDARD "$name/" "$s3path/$name/"
+                else
+                  s5cmd cp --storage-class STANDARD "$name" "$s3path/$name"
+                fi
+            }
+            
+            nxf_s3_download() {
+                local source=$1
+                local target=$2
+                local file_name=$(basename $1)
+                local is_dir=$(s5cmd ls $source | grep -F "DIR ${file_name}/" -c)
+                if [[ $is_dir == 1 ]]; then
+                    s5cmd cp "$source/*" "$target"
+                else 
+                    s5cmd cp "$source" "$target"
+                fi
+            }
+            '''.stripIndent(true)
+    }
+
+    def 'should create s5cmd script with acl' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [aws:[batch:[platformType: 'fargate', cliPath: 's5cmd'], client:[ s3Acl: 'PublicRead']]]
+        }
+
+        expect:
+        S3BashLib.script()  == '''
+            # aws helper for s5cmd
+            nxf_s3_upload() {
+                local name=$1
+                local s3path=$2
+                if [[ "$name" == - ]]; then
+                  local tmp=$(nxf_mktemp)
+                  cp /dev/stdin $tmp/$name
+                  s5cmd cp --acl public-read --storage-class STANDARD $tmp/$name "$s3path"
+                elif [[ -d "$name" ]]; then
+                  s5cmd cp --acl public-read --storage-class STANDARD "$name/" "$s3path/$name/"
+                else
+                  s5cmd cp --acl public-read --storage-class STANDARD "$name" "$s3path/$name"
+                fi
+            }
+            
+            nxf_s3_download() {
+                local source=$1
+                local target=$2
+                local file_name=$(basename $1)
+                local is_dir=$(s5cmd ls $source | grep -F "DIR ${file_name}/" -c)
+                if [[ $is_dir == 1 ]]; then
+                    s5cmd cp "$source/*" "$target"
+                else 
+                    s5cmd cp "$source" "$target"
+                fi
+            }
+            '''.stripIndent(true)
+    }
+    
+
 }

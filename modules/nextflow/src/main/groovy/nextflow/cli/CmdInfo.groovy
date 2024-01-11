@@ -25,7 +25,7 @@ import com.sun.management.OperatingSystemMXBean
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
@@ -208,8 +208,8 @@ class CmdInfo extends CmdBase {
 
         def props = System.getProperties()
         def result = new StringBuilder()
-        result << BLANK << "Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}" << NEWLINE
-        result << BLANK << "Created: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}" << NEWLINE
+        result << BLANK << "Version: ${BuildInfo.version} build ${BuildInfo.buildNum}" << NEWLINE
+        result << BLANK << "Created: ${BuildInfo.timestampUTC} ${BuildInfo.timestampDelta}" << NEWLINE
         result << BLANK << "System: ${props['os.name']} ${props['os.version']}" << NEWLINE
         result << BLANK << "Runtime: Groovy ${GroovySystem.getVersion()} on ${System.getProperty('java.vm.name')} ${props['java.runtime.version']}" << NEWLINE
         result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE

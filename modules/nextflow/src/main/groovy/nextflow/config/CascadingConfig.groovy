@@ -122,7 +122,7 @@ abstract class CascadingConfig<K,V> {
     /**
      * Convert this object to an equivalent {@link ConfigObject}
      *
-     * @return A {@link ConfigObject} holding teh same data
+     * @return A {@link ConfigObject} holding the same data
      */
     ConfigObject toConfigObject() {
         toConfigObject0(this.config)

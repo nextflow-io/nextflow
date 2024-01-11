@@ -19,8 +19,10 @@ package io.seqera.wave.plugin
 
 import static java.nio.file.StandardOpenOption.*
 
+import java.net.http.HttpRequest
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 
 import com.sun.net.httpserver.HttpExchange
@@ -31,6 +33,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -93,7 +96,7 @@ class WaveClientTest extends Specification {
     def 'should tar file' () {
         given:
         def LAST_MODIFIED = FileTime.fromMillis(1_000_000_000_000)
-        def sess = Mock(Session) { getConfig() >> [wave:[:]]}
+        def sess = Mock(Session) { getConfig() >> [wave:[preserveFileTimestamp:true]]}
         def folder = Files.createTempDirectory('test')
         and:
         def bundlePath = folder.resolve('bundle'); bundlePath.mkdir()
@@ -128,7 +131,8 @@ class WaveClientTest extends Specification {
         result.resolve('this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
         result.resolve('this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
         result.resolve('this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
-
+        and:
+        Files.readAttributes(result.resolve('main.nf'), BasicFileAttributes).lastModifiedTime() == LAST_MODIFIED
         /*
          * create a bundle using different base directory
          */
@@ -145,6 +149,28 @@ class WaveClientTest extends Specification {
         result2.resolve('usr/local/this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
         result2.resolve('usr/local/this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
         result2.resolve('usr/local/this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
+
+        /*
+         * should create a bundle without preserving the file timestamps
+         */
+
+        when:
+        def wave3 = new WaveClient(Mock(Session) { getConfig()>>[wave:[:]] })
+        def bundle3 = ResourcesBundle.scan(bundlePath)
+        def layer3 = wave3.makeLayer(bundle3)
+        then:
+        layer3.tarDigest == 'sha256:f556b94e9b6f5f72b86e44833614b465df9f65cb4210e3f4416292dca1618360'
+        layer3.gzipDigest == 'sha256:e58685a82452a11faa926843e7861c94bdb93e2c8f098b5c5354ec9b6fee2b68'
+        layer3.gzipSize == 251
+        and:
+        def gzip3 = layer3.location.replace('data:','').decodeBase64()
+        def tar3 = uncompress(gzip3)
+        def result3 = folder.resolve('result3')
+        untar( new ByteArrayInputStream(tar3), result3)
+        and:
+        result3.resolve('main.nf').text == bundlePath.resolve('main.nf').text
+        and:
+        Files.readAttributes(result3.resolve('main.nf'), BasicFileAttributes).lastModifiedTime() == FileTime.fromMillis(0)
 
         cleanup:
         folder?.deleteDir()
@@ -165,9 +191,59 @@ class WaveClientTest extends Specification {
         !req.condaFile
         !req.spackFile
         !req.containerConfig.layers
+        !req.freeze
+        !req.dryRun
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
+    }
+
+    def 'should create request object with freeze mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[freeze:true]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.freeze
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with dry-run mode' () {
+        given:
+        ContainerInspectMode.activate(true)
+        def session = Mock(Session) { getConfig() >> [:]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.dryRun
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+
+        cleanup:
+        ContainerInspectMode.activate(false)
     }
 
     def 'should create request object and platform' () {
@@ -206,6 +282,33 @@ class WaveClientTest extends Specification {
         !req.condaFile
         !req.spackFile
         !req.containerConfig.layers
+    }
+
+    def 'should create request object with singularityfile' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def SINGULARITY_FILE =  'From foo:latest'
+        def wave = new WaveClient(session)
+        and:
+        def assets = new WaveAssets(null,
+                'linux/amd64',
+                null,
+                null,
+                SINGULARITY_FILE,
+                null,
+                null,
+                null,
+                true)
+        when:
+        def req = wave.makeRequest(assets)
+        then:
+        !req.containerImage
+        new String(req.containerFile.decodeBase64()) == SINGULARITY_FILE
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.format == 'sif'
     }
 
     def 'should create request object with build and cache repos' () {
@@ -324,11 +427,11 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         !assets.moduleResources
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -346,12 +449,12 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         assets.containerPlatform == 'linux/arm64'
         !assets.moduleResources
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -369,11 +472,11 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
         assets.moduleResources == BUNDLE
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
@@ -393,7 +496,7 @@ class WaveClientTest extends Specification {
         WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
         when:
-        def assets = client.resolveAssets(task, IMAGE)
+        def assets = client.resolveAssets(task, IMAGE, false)
         then:
         client.resolveContainerConfig(ARCH) >> CONTAINER_CONFIG
         and:
@@ -401,7 +504,7 @@ class WaveClientTest extends Specification {
         assets.moduleResources == BUNDLE
         assets.containerConfig == CONTAINER_CONFIG
         and:
-        !assets.dockerFileContent
+        !assets.containerFile
         !assets.condaFile
         !assets.spackFile
         !assets.projectResources
@@ -422,9 +525,9 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == 'FROM foo\nRUN this/that'
+        assets.containerFile == 'FROM foo\nRUN this/that'
         assets.moduleResources == BUNDLE
         !assets.containerImage
         !assets.containerConfig
@@ -440,19 +543,60 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3'] }
+        def task = Mock(TaskRun) {getConfig() >> [conda:"bioconda::rseqc=3.0.1 'conda-forge::r-base>=3.5'"] }
         and:
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
-                FROM mambaorg/micromamba:1.4.2
-                RUN \\
-                    micromamba install -y -n base -c conda-forge -c defaults \\
-                    salmon=1.2.3 \\
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.5.5
+                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
+                RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
+                USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - seqera
+                - conda-forge
+                - bioconda
+                - defaults
+                dependencies:
+                - bioconda::rseqc=3.0.1
+                - conda-forge::r-base>=3.5
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with conda lock file' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'https://host.com/conda-lock.yml'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, false)
+        then:
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.5.5
+                RUN \\
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/conda-lock.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
+                    && micromamba clean -a -y
+                USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -467,14 +611,14 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3', arch:'amd64'] }
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
         and:
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
+        assets.containerFile == '''\
                 # Runner image
                 FROM {{spack_runner_image}}
                 
@@ -499,8 +643,13 @@ class WaveClientTest extends Specification {
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
-        assets.spackFile
         !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
     }
 
     def 'should create asset with conda file' () {
@@ -514,13 +663,16 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
-                FROM mambaorg/micromamba:1.4.2
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.5.5
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
+                USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
                     '''.stripIndent()
         and:
         assets.condaFile == condaFile
@@ -546,9 +698,9 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
 
         when:
-        def assets = client.resolveAssets(task, null)
+        def assets = client.resolveAssets(task, null, false)
         then:
-        assets.dockerFileContent == '''\
+        assets.containerFile == '''\
                 # Runner image
                 FROM {{spack_runner_image}}
                 
@@ -580,6 +732,211 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
+    // ==== singularity native build + conda ====
+
+    def 'should create asset with conda recipe and singularity native build' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.5.5
+                %files
+                    {{wave_context_dir}}/conda.yml /scratch/conda.yml
+                %post
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - seqera
+                - conda-forge
+                - bioconda
+                - defaults
+                dependencies:
+                - salmon=1.2.3
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with conda remote lock file and singularity native build' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'https://host.com/lock-file.yaml'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.5.5
+                %post
+                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/lock-file.yaml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.spackFile
+        !assets.projectResources
+    }
+
+    def 'should create asset with conda file and singularity native build' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def condaFile = folder.resolve('conda.yml'); condaFile.text = 'the-conda-recipe-here'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def task = Mock(TaskRun) {getConfig() >> [conda:condaFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.5.5
+                %files
+                    {{wave_context_dir}}/conda.yml /scratch/conda.yml
+                %post
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
+                '''.stripIndent()
+        and:
+        assets.condaFile == condaFile
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create assets with spack recipe for singularity' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[commands: ['cmd-foo','cmd-bar']]]]]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                Bootstrap: docker
+                From: {{spack_runner_image}}
+                stage: final
+                 
+                %files from build
+                    /opt/spack-env /opt/spack-env
+                    /opt/software /opt/software
+                    /opt/._view /opt/._view
+                    /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                 
+                %post
+                    cmd-foo
+                    cmd-bar
+                '''.stripIndent()
+
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.projectResources
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+    }
+
+    def 'should create asset with spack file for singularity' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def spackFile = folder.resolve('spack.yml');
+        spackFile.text = '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+        and:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[basePackages: 'nano@1.2.3']]]]}
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                    Bootstrap: docker
+                    From: {{spack_runner_image}}
+                    stage: final
+                     
+                    %files from build
+                        /opt/spack-env /opt/spack-env
+                        /opt/software /opt/software
+                        /opt/._view /opt/._view
+                        /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
+                     
+                    %post
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.projectResources
+        !assets.condaFile
+        and:
+        assets.spackFile.text == '''\
+                spack:
+                  specs: [rseqc@3.0.1, rbase@3.5, nano@1.2.3]
+                  concretizer: {unify: true, reuse: false}
+                '''.stripIndent(true)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should create assets with project resources' () {
         given:
         def MODULE_RES = Mock(ResourcesBundle)
@@ -598,7 +955,7 @@ class WaveClientTest extends Specification {
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = wave.resolveAssets(task, 'image:latest')
+        def assets = wave.resolveAssets(task, 'image:latest', false)
         then:
         1 * wave.projectResources(BIN_DIR) >> PROJECT_RES
         and:
@@ -639,6 +996,23 @@ class WaveClientTest extends Specification {
         result = client.resolveConflicts([spack:'x',container:'z'], ['conda','spack'])
         then:
         result == [spack:'x']
+    }
+
+    def 'should patch strategy for singularity' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        expect:
+        client.patchStrategy(Collections.unmodifiableList(STRATEGY), SING) == EXPECTED
+
+        where:
+        STRATEGY                                            | SING      | EXPECTED
+        ['conda','dockerfile', 'spack']                     | false     | ['conda','dockerfile', 'spack']
+        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
+        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
+        ['conda','singularityfile','dockerfile', 'spack']   | true      | ['conda','singularityfile','dockerfile', 'spack']
     }
 
     def 'should check conflicts' () {
@@ -687,6 +1061,25 @@ class WaveClientTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Process 'foo' declares both 'spack' and 'conda' directives that conflict each other"
+
+        // singularity file checks
+        when:
+        client.checkConflicts([conda:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle singularityfile that conflict each other"
+
+        when:
+        client.checkConflicts([container:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'container' directive and a module bundle singularityfile that conflict each other"
+
+        when:
+        client.checkConflicts([spack:'this', singularityfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle singularityfile that conflict each other"
 
     }
 
@@ -737,7 +1130,6 @@ class WaveClientTest extends Specification {
             assert (it[0] as SubmitContainerTokenRequest).towerWorkspaceId == 123
             assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
         }
-
     }
 
     def 'should send request with tower access token and refresh token' () {
@@ -837,6 +1229,25 @@ class WaveClientTest extends Specification {
         'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
     }
 
+    @Unroll
+    def 'should get s5cmd default url' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultS5cmdUrl(ARCH).toURI().toString() == EXPECTED
+
+        where:
+        ARCH                | EXPECTED
+        'linux/amd64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'linux/x86_64'      | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'arm64'             | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+    }
+
     def 'should check is local conda file' () {
         expect:
         WaveClient.isCondaLocalFile(CONTENT) == EXPECTED
@@ -846,154 +1257,64 @@ class WaveClientTest extends Specification {
         'foo'               | false
         'foo.yml'           | true
         'foo.txt'           | true
+        '/foo/bar'          | true
         'foo\nbar.yml'      | false
         'http://foo.com'    | false
     }
 
-    @Unroll
-    def 'should find wave token' () {
-        given:
-        def sess = Mock(Session) {getConfig() >> [wave:[endpoint: 'http://foo.com']] }
-        and:
-        def wave = Spy(new WaveClient(sess))
-
+    def 'should check is remote conda file' () {
         expect:
-        wave.getWaveToken(CONTAINER) == EXPECTED
+        WaveClient.isCondaRemoteFile(CONTENT) == EXPECTED
 
         where:
-        EXPECTED            | CONTAINER
-        null                | null
-        null                | 'ubunutu:latest'
-        null                | 'xyz.com/wt/3aec54700cff/wave-build-repo:rnaseq-nf_v1.0'
-        and:
-        '3aec54700cff'      | 'foo.com/wt/3aec54700cff/wave-build-repo:rnaseq-nf_v1.0'
+        CONTENT             | EXPECTED
+        'foo'               | false
+        'foo.yml'           | false
+        'foo.txt'           | false
+        'foo\nbar.yml'      | false
+        'http://foo.com'    | true
+        'https://foo.com'   | true
     }
 
-    def 'should convert json to describe container response'() {
+    def 'should retry http request' () {
+
         given:
-        def JSON = '''
-            {
-              "token": "3aec54700cff",
-              "expiration": "2023-03-02T18:07:50.488226285Z",
-              "request": {
-                "user": {
-                  "id": 8083,
-                  "userName": "pditommaso",
-                  "email": "pditommaso@me.com"
-                },
-                "workspaceId": 88265370860066,
-                "containerImage": "1234567890.dkr.ecr.us-west-2.amazonaws.com/wave-build-repo:rnaseq-nf_v1.0",
-                "containerConfig": {
-                  "entrypoint": [
-                    "/opt/fusion/entrypoint.sh"
-                  ],
-                  "layers": [
-                    {
-                      "location": "data:DATA+OMITTED",
-                      "gzipDigest": "sha256:dc8dd4ebf839869abb81d35fe3f265de9f3ac7b9b285e274c6b92072b02a84ec",
-                      "gzipSize": 202,
-                      "tarDigest": "sha256:dc4d652cd223da5bca40d08890686c4198769fb7bfc09de2ed3c3c77dead4bf9"
-                    },
-                    {
-                      "location": "https://fusionfs.seqera.io/releases/pkg/0/6/4/fusionfs-amd64.tar.gz",
-                      "gzipDigest": "sha256:c55640ae3284715e5c7a1c1f6c6ec2de77a881a08f5a9c46f077ecd0379e8477",
-                      "gzipSize": 6191418,
-                      "tarDigest": "sha256:e24642d65d5b21987666cf1ce4ba007ecadedbcefae9601669ab43a566682aa6"
-                    }
-                  ]
-                },
-                "towerEndpoint": "https://api.tower.nf",
-                "fingerprint": "779855a0ffc582ef3170f7dab8829465",
-                "timestamp": "2023-03-01T20:07:49.933811174Z",
-                "zoneId": "Z",
-                "ipAddress": "54.190.237.226"
-              },
-              "build": {
-                "buildRepository": "1234567890.dkr.ecr.us-west-2.amazonaws.com/wave-build-repo",
-                "cacheRepository": "1234567890.dkr.ecr.us-west-2.amazonaws.com/wave-cache-repo"
-              },
-              "source": {
-                "image": "1234567890.dkr.ecr.us-west-2.amazonaws.com/wave-build-repo:rnaseq-nf_v1.0",
-                "digest": "sha256:d6f56ed0eae171fabd324bf582dd5c49c6462662c80a7e69632c57043b6af143"
-              },
-              "wave": {
-                "image": "wave.seqera.io/wt/3aec54700cff/wave-build-repo:rnaseq-nf_v1.0",
-                "digest": "sha256:d8f4f9aa77b4d1941b50a050ed71473a0e04720f38a12d497557c39a25398830"
-              }
+        int requestCount=0
+        HttpHandler handler = { HttpExchange exchange ->
+            if( ++requestCount<3 ) {
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(503, 0)
+                exchange.getResponseBody().close()
             }
-            '''
-        and:
-        def sess = Mock(Session) {getConfig() >> [:] }
-        def wave = Spy(new WaveClient(sess))
+            else {
+                def body = 'Hello world!'
+                exchange.getResponseHeaders().add("Content-Type", "text/plain")
+                exchange.sendResponseHeaders(200, body.size())
+                exchange.getResponseBody().write(body.bytes)
+                exchange.getResponseBody().close()
+            }
+        }
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(9901), 0);
+        server.createContext("/", handler);
+        server.start()
+
+        def session = Mock(Session) {getConfig() >> [:] }
+        def client = new WaveClient(session)
 
         when:
-        def resp = wave.jsonToDescribeContainerResponse(JSON)
+        def request = HttpRequest.newBuilder().uri(new URI('http://localhost:9901/foo.txt')).build()
+        def response = client.httpSend(request)
         then:
-        resp.token == '3aec54700cff'
+        response.statusCode() == 200
+        response.body() == 'Hello world!'
         and:
-        resp.wave.image == 'wave.seqera.io/wt/3aec54700cff/wave-build-repo:rnaseq-nf_v1.0'
-        resp.wave.digest == 'sha256:d8f4f9aa77b4d1941b50a050ed71473a0e04720f38a12d497557c39a25398830'
-        and:
-        resp.request.user.id == 8083
-        resp.request.user.userName == 'pditommaso'
-
-    }
-
-    def 'should resolve wave container' () {
-        given:
-        def RESP1 = '''
-            {
-              "token": "3aec54700cff",
-              "source": {
-                "image": "docker.io/library/ubuntu:latest",
-                "digest": "sha256:d6f56ed0eae171fabd324bf582dd5c49c6462662c80a7e69632c57043b6af143"
-              },
-              "wave": {
-                "image": "wave.seqera.io/wt/3aec54700cff/library/ubuntu:latest",
-                "digest": "sha256:d8f4f9aa77b4d1941b50a050ed71473a0e04720f38a12d497557c39a25398830"
-              }
-            }
-        '''
-        and:
-        def sess = Mock(Session) {getConfig() >> [:] }
-        def wave = Spy(new WaveClient(sess))
+        requestCount == 3
         
-        when:
-        def result = wave.resolveSourceContainer('ubuntu')
-        then:
-        0 * wave.fetchContainerInfo(_) >> null
-        result == 'ubuntu'
+        cleanup:
+        server?.stop(0)
 
-        when:
-        result = wave.resolveSourceContainer('wave.seqera.io/wt/3aec54700cff/library/ubuntu:latest')
-        then:
-        1 * wave.fetchContainerInfo('3aec54700cff') >> RESP1
-        result == 'wave.seqera.io/wt/3aec54700cff/library/ubuntu@sha256:d8f4f9aa77b4d1941b50a050ed71473a0e04720f38a12d497557c39a25398830'
     }
 
-    def 'should return source container' () {
-        given:
-        def RESP = '''
-            {
-              "token": "3aec54700cff",
-              "source": {
-                "image": "docker.io/library/ubuntu:latest",
-                "digest": "sha256:d6f56ed0eae171fabd324bf582dd5c49c6462662c80a7e69632c57043b6af143"
-              },
-              "wave": {
-                "image": "wave.seqera.io/wt/3aec54700cff/library/ubuntu:latest",
-                "digest": "sha256:d6f56ed0eae171fabd324bf582dd5c49c6462662c80a7e69632c57043b6af143"
-              }
-            }
-        '''
-        and:
-        def sess = Mock(Session) {getConfig() >> [:] }
-        def wave = Spy(new WaveClient(sess))
 
-        when:
-        def result = wave.resolveSourceContainer('wave.seqera.io/wt/3aec54700cff/library/ubuntu:latest')
-        then:
-        1 * wave.fetchContainerInfo('3aec54700cff') >> RESP
-        result == 'docker.io/library/ubuntu@sha256:d6f56ed0eae171fabd324bf582dd5c49c6462662c80a7e69632c57043b6af143'
-    }
 }

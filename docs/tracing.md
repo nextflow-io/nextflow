@@ -100,7 +100,7 @@ Nextflow can create an HTML execution report: a single document which includes m
 To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-report [file name]
+nextflow run <pipeline> -with-report [file name]
 ```
 
 The report file name can be specified as an optional parameter following the report option.
@@ -109,7 +109,7 @@ The report file name can be specified as an optional parameter following the rep
 
 The `Summary` section reports the execution status, the launch command, overall execution time and some other workflow metadata. You can see an example below:
 
-```{image} images/report-summary-min.png
+```{image} _static/report-summary-min.png
 ```
 
 ### Resource Usage
@@ -118,7 +118,7 @@ The `Resources` section plots the distribution of resource usage for each workfl
 
 Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are very helpful to check that task resources are used efficiently.
 
-```{image} images/report-resource-cpu.png
+```{image} _static/report-resource-cpu.png
 ```
 
 Learn more about how resource usage is computed in the {ref}`Metrics documentation <metrics-page>`.
@@ -129,7 +129,7 @@ Learn more about how resource usage is computed in the {ref}`Metrics documentati
 
 The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script, and many other metrics. You can see an example below:
 
-```{image} images/report-tasks-min.png
+```{image} _static/report-tasks-min.png
 ```
 
 :::{note}
@@ -151,7 +151,7 @@ Nextflow creates an execution tracing file that contains some useful information
 In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-trace
+nextflow run <pipeline> -with-trace
 ```
 
 It will create a file named `trace.txt` in the current directory. The content looks like the above example:
@@ -282,10 +282,10 @@ The following table shows the fields that can be included in the execution repor
 : Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
 
 `vol_ctxt`
-: Number of voluntary context switches.
+: Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
 
 `inv_ctxt`
-: Number of involuntary context switches.
+: Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
 
 `env`
 : The variables defined in task execution environment.
@@ -307,6 +307,11 @@ The following table shows the fields that can be included in the execution repor
   :::
 : The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
 
+`cpu_model`
+: :::{versionadded} 22.07.0-edge
+  :::
+: The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
+
 :::{note}
 These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
 :::
@@ -321,7 +326,7 @@ Please read {ref}`Trace scope <config-trace>` section to learn more about it.
 
 Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline report is shown below:
 
-```{image} images/timeline-min.png
+```{image} _static/timeline-min.png
 ```
 
 Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
@@ -333,7 +338,7 @@ As each process can spawn many tasks, colors are used to identify those tasks be
 To enable the creation of the timeline report add the `-with-timeline` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline name> -with-timeline [file name]
+nextflow run <pipeline> -with-timeline [file name]
 ```
 
 The report file name can be specified as an optional parameter following the timeline option.
@@ -342,284 +347,60 @@ The report file name can be specified as an optional parameter following the tim
 
 ## DAG visualisation
 
-A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data connections (i.e. channels) between them.
+A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e. channels) between them.
 
-The pipeline execution DAG can be outputted by adding the `-with-dag` option to the run command line. It creates a file named `dag.dot` containing a textual representation of the pipeline execution graph in the [DOT format](http://www.graphviz.org/content/dot-language).
+To render the workflow DAG, run your pipeline with the `-with-dag` option. By default, it creates a file named `dag-<timestamp>.html` with the workflow DAG rendered as a [Mermaid](https://mermaid.js.org/) diagram.
 
-The execution DAG can be rendered in a different format by specifying an output file name which has an extension corresponding to the required format. For example:
-
-```bash
-nextflow run <script-name> -with-dag flowchart.png
-```
-
-List of supported file formats:
-
-| Extension | File format                     |
-| --------- | ------------------------------- |
-| dot       | Graphviz DOT file               |
-| html      | HTML file                       |
-| mmd       | Mermaid diagram                 |
-| pdf       | PDF file (\*)                   |
-| png       | PNG file (\*)                   |
-| svg       | SVG file (\*)                   |
-| gexf      | Graph Exchange XML file (Gephi) |
-
-:::{note}
-File formats marked with "\*" require the [Graphviz](http://www.graphviz.org) tool to be installed.
-:::
-
-The DAG produced by Nextflow for the [Unistrap](https://github.com/cbcrg/unistrap/) pipeline:
-
-```{image} images/dag.png
-```
-
-### Mermaid diagram
-
-:::{versionadded} 22.04.0
-:::
-
-Nextflow can render the DAG as a [Mermaid](https://mermaid-js.github.io/) diagram. Mermaid diagrams are particularly useful because they can be embedded in [GitHub Flavored Markdown](https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/) without having to render them yourself. You can customize the diagram with CSS, and you can even add links! Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes) for details.
-
-Here is the Mermaid diagram produced by Nextflow for the above example:
-
-```mermaid
-flowchart TD
-    p0((Channel.fromPath))
-    p1([ifEmpty])
-    p2[get_shuffle_replicates]
-    p3[get_msa_replicates]
-    p4[get_msa_trees]
-    p5([collectFile])
-    p6([first])
-    p7[get_stable_msa_trees]
-    p8(( ))
-    p9[get_seqboot_replicates]
-    p10[get_replicate_trees]
-    p11([collectFile])
-    p12([max])
-    p13[get_shootstrap_tree]
-    p14(( ))
-    p0 --> p1
-    p1 -->|file_names| p2
-    p2 -->|shuffle_replicates| p3
-    p3 -->|msa_replicates| p4
-    p3 -->|msa_replicates2| p9
-    p4 -->|msa_trees| p7
-    p4 -->|msa_trees2| p5
-    p5 --> p6
-    p6 --> p7
-    p7 -->|stable_trees| p8
-    p7 -->|most_stable_tree| p12
-    p9 -->|replicates| p10
-    p10 -->|trees| p11
-    p11 --> p13
-    p12 --> p13
-    p13 -->|shootstrap_tree| p14
-```
-
-And the final image produced with the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) (using the `default` theme):
-
-```{image} images/dag-mermaid.png
-```
-
-(weblog-service)=
-
-## Weblog via HTTP
-
-Nextflow can send detailed workflow execution metadata and runtime statistics to a HTTP endpoint. To enable this feature, use the `-with-weblog` as shown below:
+The workflow DAG can be rendered in a different format by specifying an output file name with a different extension based on the desired format. For example:
 
 ```bash
-nextflow run <pipeline name> -with-weblog [url]
+nextflow run <pipeline> -with-dag flowchart.png
 ```
 
-Workflow events are sent as HTTP POST requests to the given URL. The message consists of the following JSON structure:
+:::{versionadded} 22.06.0-edge
+You can use the `-preview` option with `-with-dag` to render the workflow DAG without executing any tasks.
+:::
 
-```json
-{
-  "runName": "<run name>",
-  "runId": "<uuid>",
-  "event": "<started|process_submitted|process_started|process_completed|error|completed>",
-  "utcTime": "<UTC timestamp>",
-  "trace": {  },
-  "metadata": {  }
-}
+:::{versionchanged} 23.10.0
+The default output format was changed from DOT to HTML.
+:::
+
+The following file formats are supported:
+
+`dot`
+: Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
+
+`gexf`
+: Graph Exchange XML file (Gephi)
+
+`html`
+: HTML file with Mermaid diagram
+: :::{versionchanged} 23.10.0
+  The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
+  :::
+
+`mmd`
+: :::{versionadded} 22.04.0
+  :::
+: Mermaid diagram
+
+`pdf`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz PDF file
+
+`png`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz PNG file
+
+`svg`
+: *Requires [Graphviz](http://www.graphviz.org) to be installed*
+: Graphviz SVG file
+
+Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline (using the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) with the `default` theme):
+
+```bash
+nextflow run rnaseq-nf -preview -with-dag
 ```
 
-The JSON object contains the following attributes:
-
-`runName`
-: The workflow execution run name.
-
-`runId`
-: The workflow execution unique ID.
-
-`event`
-: The workflow execution event. One of `started`, `process_submitted`, `process_started`, `process_completed`, `error`, `completed`.
-
-`utcTime`
-: The UTC timestamp in ISO 8601 format.
-
-`trace`
-: *Included only for the following events: `process_submitted`, `process_started`, `process_completed`, `error`*
-: The task runtime information as described in the {ref}`trace fields<trace-fields>` section.
-: The set of included fields is determined by the `trace.fields` setting in the Nextflow configuration file. See the {ref}`Trace configuration<config-trace>` and [Trace report](#trace-report) sections to learn more.
-
-`metadata`
-: *Included only for the following events: `started`, `completed`*
-: The workflow metadata including the {ref}`config manifest<config-manifest>`. For a list of all fields, have a look at the bottom message examples.
-
-### Example `started` event
-
-When a workflow execution is started, a message like the following is posted to the specified end-point. Be aware that the properties in the parameter scope will look different for your workflow. Here is an example output from the `nf-core/hlatyping` pipeline with the weblog feature enabled:
-
-```json
-{
-  "runName": "friendly_pesquet",
-  "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
-  "event": "started",
-  "utcTime": "2018-10-07T11:42:08Z",
-  "metadata": {
-    "params": {
-      "container": "nfcore/hlatyping:1.1.4",
-      "help": false,
-      "outdir": "results",
-      "bam": true,
-      "singleEnd": false,
-      "single-end": false,
-      "reads": "data/test*{1,2}.fq.gz",
-      "seqtype": "dna",
-      "solver": "glpk",
-      "igenomes_base": "./iGenomes",
-      "multiqc_config": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/conf/multiqc_config.yaml",
-      "clusterOptions": false,
-      "cluster-options": false,
-      "enumerations": 1,
-      "beta": 0.009,
-      "prefix": "hla_run",
-      "base_index": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_",
-      "index": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_dna",
-      "custom_config_version": "master",
-      "custom_config_base": "https://raw.githubusercontent.com/nf-core/configs/master"
-    },
-    "workflow": {
-      "start": "2019-03-25T12:09:52Z",
-      "projectDir": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping",
-      "manifest": {
-        "nextflowVersion": ">=18.10.1",
-        "defaultBranch": "master",
-        "version": "1.1.4",
-        "homePage": "https://github.com/nf-core/hlatyping",
-        "gitmodules": null,
-        "description": "Precision HLA typing from next-generation sequencing data.",
-        "name": "nf-core/hlatyping",
-        "mainScript": "main.nf",
-        "author": null
-      },
-      "complete": null,
-      "profile": "docker,test",
-      "homeDir": "/Users/sven1103",
-      "workDir": "/Users/sven1103/git/nextflow/work",
-      "container": "nfcore/hlatyping:1.1.4",
-      "commitId": "4bcced898ee23600bd8c249ff085f8f88db90e7c",
-      "errorMessage": null,
-      "repository": "https://github.com/nf-core/hlatyping.git",
-      "containerEngine": "docker",
-      "scriptFile": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/main.nf",
-      "userName": "sven1103",
-      "launchDir": "/Users/sven1103/git/nextflow",
-      "runName": "shrivelled_cantor",
-      "configFiles": [
-        "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/nextflow.config"
-      ],
-      "sessionId": "7f344978-999c-480d-8439-741bc7520f6a",
-      "errorReport": null,
-      "scriptId": "2902f5aa7f297f2dccd6baebac7730a2",
-      "revision": "master",
-      "exitStatus": null,
-      "commandLine": "./launch.sh run nf-core/hlatyping -profile docker,test -with-weblog 'http://localhost:4567'",
-      "nextflow": {
-        "version": "19.03.0-edge",
-        "build": 5137,
-        "timestamp": "2019-03-28T14:46:55Z"
-      },
-    },
-    "stats": {
-      "computeTimeFmt": "(a few seconds)",
-      "cachedCount": 0,
-      "cachedDuration": 0,
-      "failedDuration": 0,
-      "succeedDuration": 0,
-      "failedCount": 0,
-      "cachedPct": 0.0,
-      "cachedCountFmt": "0",
-      "succeedCountFmt": "0",
-      "failedPct": 0.0,
-      "failedCountFmt": "0",
-      "ignoredCountFmt": "0",
-      "ignoredCount": 0,
-      "succeedPct": 0.0,
-      "succeedCount": 0,
-      "ignoredPct": 0.0
-    },
-    "resume": false,
-    "success": false,
-    "scriptName": "main.nf",
-    "duration": null
-  }
-}
-```
-
-### Example `completed` event
-
-When a task is completed, a message like the following is posted to the specified end-point:
-
-```json
-{
-  "runName": "friendly_pesquet",
-  "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
-  "event": "process_completed",
-  "utcTime": "2018-10-07T11:45:30Z",
-  "trace": {
-    "task_id": 2,
-    "status": "COMPLETED",
-    "hash": "a1/0024fd",
-    "name": "make_ot_config",
-    "exit": 0,
-    "submit": 1538912529498,
-    "start": 1538912529629,
-    "process": "make_ot_config",
-    "tag": null,
-    "module": [
-
-    ],
-    "container": "nfcore/hlatyping:1.1.1",
-    "attempt": 1,
-    "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
-    "scratch": null,
-    "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
-    "queue": null,
-    "cpus": 1,
-    "memory": 7516192768,
-    "disk": null,
-    "time": 7200000,
-    "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
-    "error_action": null,
-    "complete": 1538912730599,
-    "duration": 201101,
-    "realtime": 69,
-    "%cpu": 0.0,
-    "%mem": 0.1,
-    "vmem": 54259712,
-    "rss": 10469376,
-    "peak_vmem": 20185088,
-    "peak_rss": 574972928,
-    "rchar": 7597,
-    "wchar": 162,
-    "syscr": 16,
-    "syscw": 4083712,
-    "read_bytes": 4096,
-    "write_bytes": 0,
-    "native_id": 27185
-  }
-}
+```{mermaid} _static/dag.mmd
 ```

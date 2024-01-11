@@ -246,7 +246,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             result << '-e "' << env << '"'
         }
         else if( env instanceof String ) {
-            result << "\${$env:+-e \"$env=\$$env\"}"
+            result << "-e \"$env\""
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
@@ -295,7 +295,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
         // -- append by default the current path -- this is needed when `scratch` is set to true
         if( mountWorkDir ) {
-            result << composeVolumePath('$PWD')
+            result << composeVolumePath('$NXF_TASK_WORKDIR')
             result << ' '
         }
 
