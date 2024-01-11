@@ -31,7 +31,13 @@ import nextflow.util.CheckHelper
 @Slf4j
 class GroupTupleOp {
 
-    static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
+    static private Map GROUP_TUPLE_PARAMS = [
+            by: [Integer, List],
+            remainder: Boolean,
+            size: Integer,
+            sort: [Boolean, 'true', 'natural', 'deep', 'hash', Closure, Comparator],
+            unwrap: Boolean
+    ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
 
@@ -55,6 +61,8 @@ class GroupTupleOp {
 
     private sort
 
+    private boolean unwrap
+
     GroupTupleOp(Map params, DataflowReadChannel source) {
 
         CheckHelper.checkParams('groupTuple', params, GROUP_TUPLE_PARAMS)
@@ -64,6 +72,7 @@ class GroupTupleOp {
         size = params?.size ?: 0
         remainder = params?.remainder ?: false
         sort = params?.sort
+        unwrap = params?.unwrap ?: false
 
         defineComparator()
     }
@@ -150,6 +159,10 @@ class GroupTupleOp {
             sortInnerLists(tuple, comparator)
         }
 
+        if( unwrap ) {
+            unwrapGroupKeys(tuple)
+        }
+
         target.bind( tuple )
     }
 
@@ -234,14 +247,20 @@ class GroupTupleOp {
         return target
     }
 
-    private static sortInnerLists( List tuple, Comparator c ) {
-
+    static private void sortInnerLists( List tuple, Comparator c ) {
         for( int i=0; i<tuple.size(); i++ ) {
-            def entry = tuple[i]
-            if( !(entry instanceof List) ) continue
+            final entry = tuple[i]
+            if( entry !instanceof List ) continue
             Collections.sort(entry as List, c)
         }
+    }
 
+    static private void unwrapGroupKeys(List tuple) {
+        for( int i=0; i<tuple.size(); i++ ) {
+            final entry = tuple[i]
+            if( entry !instanceof GroupKey ) continue
+            tuple[i] = entry.target
+        }
     }
 
     static protected int sizeBy(List target)  {
