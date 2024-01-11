@@ -22,6 +22,7 @@ import static java.nio.file.StandardOpenOption.*
 import java.net.http.HttpRequest
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 
 import com.sun.net.httpserver.HttpExchange
@@ -33,7 +34,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
-import nextflow.container.inspect.ContainersInspector
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -96,7 +96,7 @@ class WaveClientTest extends Specification {
     def 'should tar file' () {
         given:
         def LAST_MODIFIED = FileTime.fromMillis(1_000_000_000_000)
-        def sess = Mock(Session) { getConfig() >> [wave:[:]]}
+        def sess = Mock(Session) { getConfig() >> [wave:[preserveFileTimestamp:true]]}
         def folder = Files.createTempDirectory('test')
         and:
         def bundlePath = folder.resolve('bundle'); bundlePath.mkdir()
@@ -131,7 +131,8 @@ class WaveClientTest extends Specification {
         result.resolve('this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
         result.resolve('this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
         result.resolve('this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
-
+        and:
+        Files.readAttributes(result.resolve('main.nf'), BasicFileAttributes).lastModifiedTime() == LAST_MODIFIED
         /*
          * create a bundle using different base directory
          */
@@ -148,6 +149,28 @@ class WaveClientTest extends Specification {
         result2.resolve('usr/local/this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
         result2.resolve('usr/local/this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
         result2.resolve('usr/local/this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
+
+        /*
+         * should create a bundle without preserving the file timestamps
+         */
+
+        when:
+        def wave3 = new WaveClient(Mock(Session) { getConfig()>>[wave:[:]] })
+        def bundle3 = ResourcesBundle.scan(bundlePath)
+        def layer3 = wave3.makeLayer(bundle3)
+        then:
+        layer3.tarDigest == 'sha256:f556b94e9b6f5f72b86e44833614b465df9f65cb4210e3f4416292dca1618360'
+        layer3.gzipDigest == 'sha256:e58685a82452a11faa926843e7861c94bdb93e2c8f098b5c5354ec9b6fee2b68'
+        layer3.gzipSize == 251
+        and:
+        def gzip3 = layer3.location.replace('data:','').decodeBase64()
+        def tar3 = uncompress(gzip3)
+        def result3 = folder.resolve('result3')
+        untar( new ByteArrayInputStream(tar3), result3)
+        and:
+        result3.resolve('main.nf').text == bundlePath.resolve('main.nf').text
+        and:
+        Files.readAttributes(result3.resolve('main.nf'), BasicFileAttributes).lastModifiedTime() == FileTime.fromMillis(0)
 
         cleanup:
         folder?.deleteDir()
@@ -528,7 +551,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.1
+                FROM mambaorg/micromamba:1.5.5
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
                     && micromamba install -y -n base conda-forge::procps-ng \\
@@ -567,7 +590,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.1
+                FROM mambaorg/micromamba:1.5.5
                 RUN \\
                     micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/conda-lock.yml \\
                     && micromamba install -y -n base conda-forge::procps-ng \\
@@ -643,7 +666,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null, false)
         then:
         assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.1
+                FROM mambaorg/micromamba:1.5.5
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml \\
                     && micromamba install -y -n base conda-forge::procps-ng \\
@@ -724,7 +747,7 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.5.1
+                From: mambaorg/micromamba:1.5.5
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
@@ -767,7 +790,7 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.5.1
+                From: mambaorg/micromamba:1.5.5
                 %post
                     micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/lock-file.yaml
                     micromamba install -y -n base conda-forge::procps-ng
@@ -801,7 +824,7 @@ class WaveClientTest extends Specification {
         then:
         assets.containerFile == '''\
                 BootStrap: docker
-                From: mambaorg/micromamba:1.5.1
+                From: mambaorg/micromamba:1.5.5
                 %files
                     {{wave_context_dir}}/conda.yml /scratch/conda.yml
                 %post
@@ -1206,6 +1229,25 @@ class WaveClientTest extends Specification {
         'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
     }
 
+    @Unroll
+    def 'should get s5cmd default url' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultS5cmdUrl(ARCH).toURI().toString() == EXPECTED
+
+        where:
+        ARCH                | EXPECTED
+        'linux/amd64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'linux/x86_64'      | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+        'arm64'             | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+    }
+
     def 'should check is local conda file' () {
         expect:
         WaveClient.isCondaLocalFile(CONTENT) == EXPECTED
@@ -1215,6 +1257,7 @@ class WaveClientTest extends Specification {
         'foo'               | false
         'foo.yml'           | true
         'foo.txt'           | true
+        '/foo/bar'          | true
         'foo\nbar.yml'      | false
         'http://foo.com'    | false
     }

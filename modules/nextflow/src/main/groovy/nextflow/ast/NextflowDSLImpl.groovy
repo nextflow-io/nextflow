@@ -915,15 +915,16 @@ class NextflowDSLImpl implements ASTTransformation {
 
         /**
          * Transform a map entry `emit: something` into `emit: 'something'
+         * and `topic: something` into `topic: 'something'
          * (ie. as a constant) in a map expression passed as argument to
          * a method call. This allow the syntax
          *
          *   output:
-         *   path 'foo', emit: bar
+         *   path 'foo', emit: bar, topic: baz
          *
          * @param call
          */
-        protected void fixOutEmitOption(MethodCallExpression call) {
+        protected void fixOutEmitAndTopicOptions(MethodCallExpression call) {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
             if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
@@ -934,6 +935,9 @@ class NextflowDSLImpl implements ASTTransformation {
                 final key = isConstX(entry.keyExpression)
                 final val = isVariableX(entry.valueExpression)
                 if( key?.text == 'emit' && val ) {
+                    map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
+                }
+                else if( key?.text == 'topic' && val ) {
                     map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
                 }
             }
@@ -955,7 +959,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
-                fixOutEmitOption(methodCall)
+                fixOutEmitAndTopicOptions(methodCall)
             }
 
             else if( methodName in ['into','mode'] ) {

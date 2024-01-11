@@ -489,10 +489,6 @@ class Session implements ISession {
         checkConfig()
         notifyFlowBegin()
 
-        if( !NextflowMeta.instance.isDsl2() ) {
-            return
-        }
-
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
@@ -858,7 +854,7 @@ class Session implements ISession {
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
-        new VersionNumber(APP_VER)
+        new VersionNumber(BuildInfo.version)
     }
 
     @PackageScope void checkVersion() {
@@ -880,11 +876,11 @@ class Session implements ISession {
     }
 
     @PackageScope void showVersionError(String ver) {
-        throw new AbortOperationException("Nextflow version $Const.APP_VER does not match workflow required version: $ver")
+        throw new AbortOperationException("Nextflow version $BuildInfo.version does not match workflow required version: $ver")
     }
 
     @PackageScope void showVersionWarning(String ver) {
-        log.warn "Nextflow version $Const.APP_VER does not match workflow required version: $ver -- Execution will continue, but things may break!"
+        log.warn "Nextflow version $BuildInfo.version does not match workflow required version: $ver -- Execution will continue, but things may break!"
     }
 
     /**
@@ -1080,11 +1076,15 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        observers.each { trace -> trace.onFlowBegin() }
+        for( TraceObserver trace : observers ) {
+            trace.onFlowBegin()
+        }
     }
 
     void notifyFlowCreate() {
-        observers.each { trace -> trace.onFlowCreate(this) }
+        for( TraceObserver trace : observers ) {
+            trace.onFlowCreate(this)
+        }
     }
 
     void notifyFilePublish(Path destination, Path source=null) {

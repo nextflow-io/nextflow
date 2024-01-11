@@ -31,6 +31,7 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
@@ -121,7 +122,7 @@ class PluginUpdater extends UpdateManager {
                 uri = 'file://' + temp.absolutePath
             }
             catch (FileNotFoundException e) {
-                throw new IllegalArgumentException("Provided repository URL does not exists or cannot be accessed: $uri")
+                throw new IllegalArgumentException("Provided repository URL does not exist or cannot be accessed: $uri")
             }
         }
         // create the update repository instance
@@ -450,7 +451,7 @@ class PluginUpdater extends UpdateManager {
             if( !versionManager.checkVersionConstraint(rel.version, verConstraint) || !rel.url )
                 continue
 
-            if( versionManager.checkVersionConstraint(Const.APP_VER, rel.requires) )
+            if( versionManager.checkVersionConstraint(BuildInfo.version, rel.requires) )
                 return rel
         }
 

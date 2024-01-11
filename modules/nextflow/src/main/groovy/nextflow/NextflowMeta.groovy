@@ -1,5 +1,7 @@
 package nextflow
 
+import static nextflow.extension.Bolts.*
+
 import java.text.SimpleDateFormat
 import java.util.regex.Pattern
 
@@ -9,8 +11,6 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.util.VersionNumber
-import static nextflow.extension.Bolts.DATETIME_FORMAT
-
 /**
  * Models nextflow script properties and metadata
  * 
@@ -43,6 +43,7 @@ class NextflowMeta {
         volatile float dsl
         boolean strict
         boolean recursion
+        boolean topic
 
         void setDsl( float num ) {
             if( num == 1 )
@@ -58,6 +59,12 @@ class NextflowMeta {
             if( recurse )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recurse
+        }
+
+        void setTopic(Boolean value) {
+            if( topic )
+                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.topic = value
         }
     }
 
@@ -80,9 +87,9 @@ class NextflowMeta {
     final Features enable = new Features()
 
     private NextflowMeta() {
-        version = new VersionNumber(Const.APP_VER)
-        build = Const.APP_BUILDNUM
-        timestamp = Const.APP_TIMESTAMP_UTC
+        version = new VersionNumber(BuildInfo.version)
+        build = BuildInfo.buildNum as int
+        timestamp = BuildInfo.timestampUTC
     }
 
     protected NextflowMeta(String ver, int build, String timestamp ) {

@@ -857,7 +857,7 @@ class TaskProcessor {
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] Store dir does not exists > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] Store dir does not exist > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
