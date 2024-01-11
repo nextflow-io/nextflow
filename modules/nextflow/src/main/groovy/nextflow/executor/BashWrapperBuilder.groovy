@@ -246,6 +246,7 @@ class BashWrapperBuilder {
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
+        binding.process_directives = getProcessDirectives()
         binding.task_name = name
         binding.helpers_script = getHelpersScript()
 
@@ -398,6 +399,21 @@ class BashWrapperBuilder {
                 Thread.sleep(delay)
             }
         }
+    }
+
+    protected String getProcessDirectives() {
+        final lines = []
+
+        if( containerConfig?.isEnabled() )
+            lines << "container: '${containerImage}'"
+
+        if( outputFiles.size() > 0 ) {
+            lines << 'outputs:'
+            for( final output : outputFiles )
+                lines << "- '${output}'"
+        }
+
+        return lines.collect( line -> '## ' + line ).join('\n')
     }
 
     protected String getHelpersScript() {

@@ -597,7 +597,6 @@ class AzBatchServiceTest extends Specification {
             toTaskBean() >> Mock(TaskBean) {
                 getWorkDir() >> WORKDIR
                 getInputFiles() >> [:]
-                getOutputFiles() >> []
             }
         }
         and:
@@ -617,6 +616,6 @@ class AzBatchServiceTest extends Specification {
         result.commandLine() == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
         and:
         result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[](nextflow.io/output=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
+        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
     }
 }

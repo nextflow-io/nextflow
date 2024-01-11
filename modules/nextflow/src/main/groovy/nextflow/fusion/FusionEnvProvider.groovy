@@ -19,7 +19,6 @@ package nextflow.fusion
 
 
 import nextflow.plugin.Plugins
-import nextflow.processor.TaskBean
 /**
  * Provider strategy for {@link FusionEnv}
  *
@@ -36,11 +35,8 @@ class FusionEnvProvider {
             if( env ) result.putAll(env)
         }
         // tags setting
-        if( config.tagsEnabled() ) {
-            result.FUSION_TAGS = config
-                    .tagsPattern()
-                    .replaceAll('__OUTPUTS__', bean.outputFiles.join('|'))
-        }
+        if( config.tagsEnabled() )
+            result.FUSION_TAGS = config.tagsPattern()
         // logs setting
         if( config.logOutput() )
             result.FUSION_LOG_OUTPUT = config.logOutput()

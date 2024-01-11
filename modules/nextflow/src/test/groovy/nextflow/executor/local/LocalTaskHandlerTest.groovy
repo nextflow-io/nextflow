@@ -57,7 +57,7 @@ class LocalTaskHandlerTest extends Specification {
         Global.config = [:]
         def WORK_DIR = XPath.get('http://some/work/dir')
         and:
-        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:], outputFiles: [])
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
         and:
         def task = Mock(TaskRun) {
             getContainer() >> 'ubuntu:latest'
@@ -75,7 +75,7 @@ class LocalTaskHandlerTest extends Specification {
         then:
         handler.fusionEnabled() >> true
         and:
-        builder.command() == ['sh','-c','docker run -i -e "FUSION_WORK=/fusion/http/some/work/dir" -e "FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[](nextflow.io/output=true),[*](nextflow.io/temporary=true)" --rm --privileged ubuntu:latest /usr/bin/fusion bash \'/fusion/http/some/work/dir/.command.run\'']
+        builder.command() == ['sh','-c','docker run -i -e "FUSION_WORK=/fusion/http/some/work/dir" -e "FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)" --rm --privileged ubuntu:latest /usr/bin/fusion bash \'/fusion/http/some/work/dir/.command.run\'']
         builder.directory() == null
         builder.redirectErrorStream()
         builder.redirectOutput().file()

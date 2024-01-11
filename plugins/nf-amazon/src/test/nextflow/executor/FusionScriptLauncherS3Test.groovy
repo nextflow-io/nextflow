@@ -13,7 +13,6 @@ import nextflow.Global
 import nextflow.SysEnv
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.fusion.FusionScriptLauncher
-import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
  *
@@ -52,14 +51,13 @@ class FusionScriptLauncherS3Test extends Specification {
         SysEnv.push([AWS_S3_ENDPOINT: 'http://foo.com'])
         and:
         def fusion = new FusionScriptLauncher(
-                new TaskBean(),
-                's3',
-                S3PathFactory.parse('s3://foo/work'))
+                scheme: 's3',
+                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_S3_ENDPOINT: 'http://foo.com',
                                FUSION_WORK: '/fusion/s3/foo/work',
-                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[](nextflow.io/output=true),[*](nextflow.io/temporary=true)"
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
                                 ]
 
         cleanup:
@@ -73,15 +71,14 @@ class FusionScriptLauncherS3Test extends Specification {
         Global.config = [fusion: [exportAwsAccessKeys: true]]
         and:
         def fusion = new FusionScriptLauncher(
-                new TaskBean(),
-                's3',
-                S3PathFactory.parse('s3://foo/work'))
+                scheme: 's3',
+                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'xxx',
                                AWS_SECRET_ACCESS_KEY: 'zzz',
                                FUSION_WORK: '/fusion/s3/foo/work',
-                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[](nextflow.io/output=true),[*](nextflow.io/temporary=true)"
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
         ]
 
         cleanup:
@@ -97,16 +94,15 @@ class FusionScriptLauncherS3Test extends Specification {
         Global.config = CONFIG
         and:
         def fusion = new FusionScriptLauncher(
-                new TaskBean(),
-                's3',
-                S3PathFactory.parse('s3://foo/work'))
+                scheme: 's3',
+                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'k1',
                                AWS_SECRET_ACCESS_KEY: 's1',
                                AWS_S3_ENDPOINT: 'http://minio.com',
                                FUSION_WORK: '/fusion/s3/foo/work',
-                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[](nextflow.io/output=true),[*](nextflow.io/temporary=true)"
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
         ]
 
         cleanup:

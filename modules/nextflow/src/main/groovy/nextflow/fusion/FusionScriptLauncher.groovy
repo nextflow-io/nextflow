@@ -89,7 +89,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             result.FUSION_WORK = work
             // foreign env
             final provider = new FusionEnvProvider()
-            result.putAll(provider.getEnvironment(bean, scheme))
+            result.putAll(provider.getEnvironment(scheme))
             env = result
         }
         return env

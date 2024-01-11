@@ -58,18 +58,14 @@ class FusionScriptLauncherTest extends Specification {
         given:
         Global.config = [:]
         and:
-        def bean = Mock(TaskBean) {
-            outputFiles >> [ 'foo.txt', '*.bar', '**/baz' ]
-        }
         def fusion = new FusionScriptLauncher(
-                bean,
-                'http',
-                XPath.get('http://foo/work'))
+                scheme: 'http',
+                remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [
                 FUSION_WORK: '/fusion/http/foo/work',
-                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[foo.txt|*.bar|**/baz](nextflow.io/output=true),[*](nextflow.io/temporary=true)"
+                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
         ]
     }
 
@@ -78,9 +74,8 @@ class FusionScriptLauncherTest extends Specification {
         Global.config = [fusion: [logLevel:'debug', logOutput:'stdout', tags: false]]
         and:
         def fusion = new FusionScriptLauncher(
-                new TaskBean(),
-                'http',
-                XPath.get('http://foo/work'))
+                scheme: 'http',
+                remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [
@@ -95,9 +90,8 @@ class FusionScriptLauncherTest extends Specification {
         Global.config = [fusion: [tags: 'custom-tags-pattern-here']]
         and:
         def fusion = new FusionScriptLauncher(
-                new TaskBean(),
-                'http',
-                XPath.get('http://foo/work'))
+                scheme: 'http',
+                remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [

@@ -51,6 +51,8 @@ class BashWrapperBuilderTest extends Specification {
             bean.script = 'echo Hello world!'
         if( !bean.containsKey('inputFiles') )
             bean.inputFiles = [:]
+        if( !bean.containsKey('outputFiles') )
+            bean.outputFiles = []
         new BashWrapperBuilder(bean as TaskBean) {
             @Override
             protected String getSecretsEnv() {
@@ -332,7 +334,25 @@ class BashWrapperBuilderTest extends Specification {
         bash = newBashWrapperBuilder(headerScript: '#BSUB -x 1\n#BSUB -y 2')
         then:
         bash.makeBinding().header_script == '#BSUB -x 1\n#BSUB -y 2'
+    }
 
+    def 'should add process directives' () {
+        when:
+        def bash = newBashWrapperBuilder()
+        then:
+        bash.makeBinding().containsKey('process_directives')
+        bash.makeBinding().process_directives == ''
+
+        when:
+        bash = newBashWrapperBuilder(containerConfig: [enabled: true], containerImage: 'quay.io/nextflow:bash', outputFiles: ['foo.txt', '*.bar', '**/baz'])
+        then:
+        bash.makeBinding().process_directives == '''\
+            ## container: 'quay.io/nextflow:bash'
+            ## outputs:
+            ## - 'foo.txt'
+            ## - '*.bar'
+            ## - '**/baz'
+            '''.stripIndent().rightTrim()
     }
 
     def 'should copy control files' () {
@@ -1083,6 +1103,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
