@@ -4,15 +4,16 @@
 
 ## Configuration file
 
-When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are resolved as follows (from highest to lowest priority):
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. Parameters specified on the command line (`--something value`)
-2. Parameters provided using the `-params-file` option
-3. Config file specified using the `-c <config-file>` option
-4. The config file `nextflow.config` in the launch directory
-5. The config file `nextflow.config` in the project directory
-6. The config file `$HOME/.nextflow/config`
-7. Values defined in the pipeline script (e.g. `main.nf`)
+1. Parameters defined in pipeline scripts (e.g. `main.nf`)
+2. Module config files defined alongside module scripts (see {ref}`module-condig` for details)
+3. The config file `$HOME/.nextflow/config`
+4. The config file `nextflow.config` in the project directory
+5. The config file `nextflow.config` in the launch directory
+6. Config file specified using the `-c <config-file>` option
+7. Parameters specified in a params file (`-params-file` option)
+8. Parameters specified on the command line (`--something value`)
 
 When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
 
@@ -1302,9 +1303,9 @@ process {
 }
 ```
 
-:::{note}
-The `withName` selector applies to a process even when it is included from a module under an alias. For example, `withName: hello` will apply to any process originally defined as `hello`, regardless of whether it is included under an alias. Similarly, it will not apply to any process not originally defined as `hello`, even if it is included under the alias `hello`.
-:::
+The `withName` selector applies both to processes defined with the same name and processes included with the same alias. For example, `withName: hello` will apply to any process originally defined as `hello`, as well as any process included with the alias `hello`.
+
+Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `foo` and included as `bar`, the selectors `withName: foo` and `withName: bar` will both be applied to the process, with the second selector taking priority over the first.
 
 :::{tip}
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
@@ -1343,12 +1344,14 @@ The above configuration snippet sets 2 cpus for the processes annotated with the
 
 #### Selector priority
 
-Process configuration settings are resolved as follows (from lowest to highest priority):
+Process configuration settings are applied to a process in the following order (from lowest to highest priority):
 
 1. Process configuration settings (without a selector)
 2. Process directives in the process definition
-3. Process `withLabel` selectors
-4. Process `withName` selectors
+3. `withLabel` selectors matching any of the process labels
+4. `withName` selectors matching the process name
+5. `withName` selectors matching the process included alias
+5. `withName` selectors matching the process fully qualified name
 
 For example:
 
@@ -1356,11 +1359,16 @@ For example:
 process {
     cpus = 4
     withLabel: foo { cpus = 8 }
-    withName: bar { cpus = 32 }
+    withName: bar { cpus = 16 }
+    withName: 'baz:bar' { cpus = 32 }
 }
 ```
 
-With the above configuration, all processes will use 4 cpus if not otherwise specified in their process definition. Processes annotated with the `foo` label will use 8 cpus. Any process named `bar` (or imported as `bar`) will use 32 cpus.
+With the above configuration:
+- All processes will use 4 cpus (unless otherwise specified in their process definition).
+- Processes annotated with the `foo` label will use 8 cpus.
+- Any process named `bar` (or imported as `bar`) will use 16 cpus.
+- Any process named `bar` (or imported as `bar`) invoked by a workflow named `baz` with use 32 cpus.
 
 (config-report)=
 
