@@ -34,7 +34,7 @@ import nextflow.exception.AbortOperationException
 @Slf4j
 class HistoryFile extends File {
 
-    public static final String FILE_NAME = '.nextflow/history'
+    public static final String FILE_NAME = "${System.getenv('NXF_CACHE_DIR') ?: '.nextflow'}/history"
 
     @Lazy
     public static final HistoryFile DEFAULT = { def f=new HistoryFile(); f.parentFile?.mkdirs(); return f } ()

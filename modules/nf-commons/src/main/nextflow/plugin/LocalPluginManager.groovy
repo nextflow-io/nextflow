@@ -42,7 +42,8 @@ import org.pf4j.PluginWrapper
 @CompileStatic
 class LocalPluginManager extends CustomPluginManager {
 
-    static private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
+    static private Path PLUGINS_LOCAL_ROOT = Paths.get("${System.getenv('NXF_CACHE_DIR') ?: '.nextflow'}/plr")
+
     private Path repository
 
     LocalPluginManager(Path repository) {

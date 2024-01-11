@@ -155,7 +155,8 @@ class SingularityCache {
         def workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
             // when the work dir is a remote path use the local launch directory to cache image files
-            workDir = Path.of('.nextflow').toAbsolutePath()
+            final localCacheDir = System.getenv('NXF_CACHE_DIR') ?: '.nextflow'
+            workDir = Path.of(localCacheDir).toAbsolutePath()
         }
 
         missingCacheDir = true

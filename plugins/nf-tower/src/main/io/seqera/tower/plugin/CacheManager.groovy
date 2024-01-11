@@ -65,7 +65,8 @@ class CacheManager {
         if( !sessionUuid )
             throw new AbortOperationException("Missing target uuid - cache sync cannot be performed")
 
-        this.localCachePath = Paths.get(".nextflow/cache/${sessionUuid}")
+        final localCacheDir = System.getenv('NXF_CACHE_DIR') ?: '.nextflow'
+        this.localCachePath = Paths.get("${localCacheDir}/cache/${sessionUuid}")
 
         if( env.NXF_OUT_FILE )
             localOutFile = Paths.get(env.NXF_OUT_FILE)

@@ -36,6 +36,8 @@ import org.iq80.leveldb.impl.Iq80DBFactory
 @CompileStatic
 class DefaultCacheStore implements CacheStore {
 
+    private static final String DEFAULT_BASE_DIR = System.getenv('NXF_CACHE_DIR') ?: '.nextflow'
+
     /** The underlying Level DB instance */
     private DB db
 
@@ -64,7 +66,7 @@ class DefaultCacheStore implements CacheStore {
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
-        this.baseDir = home ?: Paths.get('.nextflow').toAbsolutePath()
+        this.baseDir = home ?: Paths.get(DEFAULT_BASE_DIR).toAbsolutePath()
         this.dataDir = baseDir.resolve("cache/$uniqueId")
         this.indexFile = dataDir.resolve("index.$runName")
     }
