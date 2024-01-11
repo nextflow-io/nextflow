@@ -347,11 +347,13 @@ class BashWrapperBuilderTest extends Specification {
         bash = newBashWrapperBuilder(containerConfig: [enabled: true], containerImage: 'quay.io/nextflow:bash', outputFiles: ['foo.txt', '*.bar', '**/baz'])
         then:
         bash.makeBinding().process_directives == '''\
-            ## container: 'quay.io/nextflow:bash'
-            ## outputs:
-            ## - 'foo.txt'
-            ## - '*.bar'
-            ## - '**/baz'
+            ### ---
+            ### container: 'quay.io/nextflow:bash'
+            ### outputs:
+            ### - 'foo.txt'
+            ### - '*.bar'
+            ### - '**/baz'
+            ### ...
             '''.stripIndent().rightTrim()
     }
 

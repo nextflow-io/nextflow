@@ -403,6 +403,7 @@ class BashWrapperBuilder {
 
     protected String getProcessDirectives() {
         final lines = []
+        lines << '---'
 
         if( containerConfig?.isEnabled() )
             lines << "container: '${containerImage}'"
@@ -413,7 +414,11 @@ class BashWrapperBuilder {
                 lines << "- '${output}'"
         }
 
-        return lines.collect( line -> '## ' + line ).join('\n')
+        if( lines.size() == 1 )
+            return ''
+
+        lines << '...'
+        return lines.collect( line -> '### ' + line ).join('\n')
     }
 
     protected String getHelpersScript() {
