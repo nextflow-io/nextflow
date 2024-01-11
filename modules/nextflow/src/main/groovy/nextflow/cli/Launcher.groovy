@@ -29,6 +29,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -101,7 +102,6 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins(),
                 new CmdPlugin(),
                 new CmdInspect()
         ]
@@ -441,7 +441,8 @@ class Launcher {
 
         }
         catch ( AbortOperationException e ) {
-            System.err.println (e.message ?: "Unknown abort reason")
+            final msg = e.message ?: "Unknown abort reason"
+            System.err.println(LoggerHelper.formatErrMessage(msg, e))
             System.exit(1)
         }
         catch( Throwable e ) {
@@ -509,7 +510,8 @@ class Launcher {
 
         catch ( AbortOperationException e ) {
             def message = e.getMessage()
-            if( message ) System.err.println(message)
+            if( message )
+                System.err.println(LoggerHelper.formatErrMessage(message,e))
             log.debug ("Operation aborted", e.cause ?: e)
             return(1)
         }
@@ -684,10 +686,25 @@ class Launcher {
             SPLASH
         }
         else {
-            "${APP_NAME} version ${APP_VER}.${APP_BUILDNUM}"
+            "${APP_NAME} version ${BuildInfo.version}.${BuildInfo.buildNum}"
         }
 
     }
 
+    /*
+     * The application 'logo'
+     */
+    /*
+     * The application 'logo'
+     */
+    static public final String SPLASH =
+
+"""
+      N E X T F L O W
+      version ${BuildInfo.version} build ${BuildInfo.buildNum}
+      created ${BuildInfo.timestampUTC} ${BuildInfo.timestampDelta}
+      cite doi:10.1038/nbt.3820
+      http://nextflow.io
+"""
 
 }

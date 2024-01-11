@@ -811,7 +811,7 @@ class ParamsOutTest extends Dsl2Spec {
 
             process hola {
               output:
-              path "${x}_name", emit: aaa
+              path "${x}_name", emit: aaa, topic: 'foo'
               path "${x}_${y}.fa", emit: bbb 
               path "simple.txt", emit: ccc 
               path "data/sub/dir/file:${x}.fa", emit: ddd 
@@ -840,6 +840,7 @@ class ParamsOutTest extends Dsl2Spec {
         out0.isDynamic()
         out0.isPathQualifier()
         out0.channelEmitName == 'aaa'
+        out0.channelTopicName == 'foo'
 
         out1.name == null
         out1.getFilePatterns(ctx,null) == ['hola_99.fa']
@@ -1190,6 +1191,86 @@ class ParamsOutTest extends Dsl2Spec {
         and:
         outs[2].name == 'tupleoutparam<2>'
         outs[2].channelEmitName == 'ch3'
+        outs[2].inner[0] instanceof StdOutParam
+        outs[2].inner[0].name == '-'
+        outs[2].inner[1] instanceof EnvOutParam
+        outs[2].inner[1].name == 'bar'
+
+    }
+
+
+    def 'should define out with topic' () {
+        setup:
+        def text = '''
+            process hola {
+              output:
+              val x,     topic: ch0
+              env FOO,   topic: ch1
+              path '-',  topic: ch2
+              stdout     topic: ch3    
+              /return/
+            }
+            
+            workflow { hola() }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        def outs = process.config.getOutputs() as List<OutParam>
+        then:
+        outs[0].name == 'x'
+        outs[0].channelTopicName == 'ch0'
+        and:
+        outs[1].name == 'FOO'
+        outs[1].channelTopicName == 'ch1'
+        and:
+        outs[2] instanceof StdOutParam  // <-- note: declared as `path`, turned into a `stdout`
+        outs[2].name == '-'
+        outs[2].channelTopicName == 'ch2'
+        and:
+        outs[3] instanceof StdOutParam
+        outs[3].name == '-'
+        outs[3].channelTopicName == 'ch3'
+    }
+
+    def 'should define out tuple with topic'() {
+
+        setup:
+        def text = '''
+            process hola {
+              output:
+                tuple val(x), val(y),   topic: ch1
+                tuple path('foo'),      topic: ch2
+                tuple stdout,env(bar),  topic: ch3
+
+              /return/
+            }
+            
+            workflow { hola() }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        def outs = process.config.getOutputs() as List<TupleOutParam>
+
+        then:
+        outs[0].name == 'tupleoutparam<0>'
+        outs[0].channelTopicName == 'ch1'
+        outs[0].inner[0] instanceof ValueOutParam
+        outs[0].inner[0].name == 'x'
+        outs[0].inner[1] instanceof ValueOutParam
+        outs[0].inner[1].name == 'y'
+        and:
+        outs[1].name == 'tupleoutparam<1>'
+        outs[1].channelTopicName == 'ch2'
+        outs[1].inner[0] instanceof FileOutParam
+        and:
+        outs[2].name == 'tupleoutparam<2>'
+        outs[2].channelTopicName == 'ch3'
         outs[2].inner[0] instanceof StdOutParam
         outs[2].inner[0].name == '-'
         outs[2].inner[1] instanceof EnvOutParam

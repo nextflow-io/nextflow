@@ -51,6 +51,7 @@ import io.seqera.wave.plugin.exception.UnauthorizedException
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
@@ -67,6 +68,9 @@ import org.slf4j.LoggerFactory
  */
 @CompileStatic
 class WaveClient {
+
+    final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
+    final static public String DEFAULT_S5CMD_ARM64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
@@ -111,15 +115,21 @@ class WaveClient {
 
     final private String waveRegistry
 
+    final private boolean awsFargate
+
+    final private URL s5cmdConfigUrl
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
+        this.awsFargate = WaveFactory.isAwsBatchFargateMode(session.config)
+        this.s5cmdConfigUrl = session.config.navigate('wave.s5cmdConfigUrl') as URL
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave config: $config"
-        this.packer = new Packer()
+        this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
         cache = CacheBuilder<String, SubmitContainerTokenResponse>
@@ -184,7 +194,7 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: config.dryRun()
+                dryRun: ContainerInspectMode.active()
         )
     }
 
@@ -208,7 +218,7 @@ class WaveClient {
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
-                dryRun: config.dryRun(),
+                dryRun: ContainerInspectMode.active(),
         )
         return sendRequest(request)
     }
@@ -279,11 +289,22 @@ class WaveClient {
                 : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
     }
 
+    protected URL defaultS5cmdUrl(String platform) {
+        final isArm = platform.tokenize('/')?.contains('arm64')
+        return isArm
+            ? new URL(DEFAULT_S5CMD_ARM64_URL)
+            : new URL(DEFAULT_S5CMD_AMD64_URL)
+    }
+
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
         if( fusion.enabled() ) {
             final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl(platform)
             urls.add(fusionUrl)
+        }
+        if( awsFargate ) {
+            final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
+            urls.add(s5cmdUrl)
         }
         if( !urls )
             return null
@@ -489,7 +510,7 @@ class WaveClient {
         final platform = dockerArch
 
         // check is a valid container image
-        WaveAssets.validateContainerRepo(containerImage)
+        WaveAssets.validateContainerName(containerImage)
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig(platform)
         return new WaveAssets(
@@ -521,7 +542,7 @@ class WaveClient {
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             if( config.freezeMode() )  {
-                if( response.buildId && !config.dryRun() ) {
+                if( response.buildId && !ContainerInspectMode.active() ) {
                     // await the image to be available when a new image is being built
                     awaitImage(response.targetImage)
                 }
@@ -566,6 +587,8 @@ class WaveClient {
             return false
         if( value.startsWith('http://') || value.startsWith('https://') )
             return false
+        if( value.startsWith('/') && !value.contains('\n') )
+            return true
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
     }
 
