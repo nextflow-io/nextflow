@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.3.3 - 12 Jan 2023
+- Use AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e1cb413]
+- Fix azure retry policy (#4638) [2bc3cf0e]
+
 1.3.2 - 28 Sep 2023
 - Retry TimeoutException in azure file system (#4295) [79248355]
 
