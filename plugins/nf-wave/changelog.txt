@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.0.1 - 12 Jan 2024
+- Fix Inspect command fails with Singularity [25883df3]
+
 1.0.0 - 15 Oct 2023
 - Fix conda channels order [ci fast] [6672c6d7]
 - Bump nf-wave@1.0.0 [795849d7]
