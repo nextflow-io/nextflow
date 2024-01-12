@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.04.5 - 12 Jan 2023
+- Fix container environment with special chars (#4594) [663b2936]
+
 23.04.4 - 25 Sep 2023
 - Fix use of GITHUB_TOKEN variable to access GitHub repo [108c6b55]
 - Fix allow_other vulnerability preventing google-batch submissions (#4332) [4895d547]
