@@ -1,5 +1,20 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.10.1 - 12 Jan 2023 
+- Fix bug with Fusion symlink resolution (#4593) [f28c9e48]
+- Fix Fusion symlinks when publishing files (#4348) [1fa5878a]
+- Fix Inspect command fails with Singularity [25883df3]
+- Fix Allow the use of error build-in function in onComplete handler (#4458) [ci fast] [4be10cd3]
+- Fix Harden regular expression to used to strip secrets in logs (#4563) [ci fast] [0102d4d6]
+- Fix custom notification template [40980bcb]
+- Fix container environment with special chars (#4594) [f4e00601]
+- Fix AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e1cb413]
+- Fix azure retry policy (#4638) [2bc3cf0e]
+- Fix BitBucket get source API with custom branch [5ef75e32]
+- Improve error details for AbortOperationException [9e795a62]
+- Bump nf-wave@1.0.1 [206f2614]
+- Bump nf-azure@1.3.3 [50bcad59]
+
 23.04.5 - 12 Jan 2023
 - Fix container environment with special chars (#4594) [663b2936]
 
