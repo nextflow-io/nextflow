@@ -12,6 +12,7 @@ on:
       - 'master'
       - 'test*'
       - 'dev*'
+      - 'STABLE-*'
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
