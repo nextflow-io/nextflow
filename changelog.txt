@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.04.5 - 12 Jan 2023
+- Fix container environment with special chars (#4594) [663b2936]
+
 23.12.0-edge - 20 Dec 2023 
 - Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
 - Add ability to disable Cloudinfo service (#4606) [f7251895]
@@ -165,6 +168,14 @@ NEXTFLOW CHANGE-LOG
 - Bump nf-tower@1.6.2 [91a935f9]
 - Bump nf-wave@0.13.0 [0cf2476c]
 - Bump wave-utils@0.7.8 [d0c47d49]
+
+23.04.4 - 25 Sep 2023
+- Fix use of GITHUB_TOKEN variable to access GitHub repo [108c6b55]
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [4895d547]
+- Fix Prevent false positive resumable task [aae87715]
+- Fix Always emit publish event for cached task outputs (#4227) [c4cd53c2]
+- Fix Too long Http connection pool timeout [ce5e9930]
+- Bump nf-google@1.7.3-patch1 [d881728c]
 
 23.09.1-edge - 11 Sep 2023
 - Revert "Allow setting shell directive when using the trace file (#4210)" [9f9edcdc]
