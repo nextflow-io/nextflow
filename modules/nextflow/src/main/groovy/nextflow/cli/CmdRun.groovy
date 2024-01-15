@@ -518,22 +518,21 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, this)
+        def manager = new AssetManager(pipelineName, revision, this)
         def repo = manager.getProject()
 
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
             if( offline )
                 throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
-            log.info "Pulling $repo ..."
-            def result = manager.download(revision,deep)
+            log.info "Pulling $repo${revision ? ':'+revision : ''} ..."
+            def result = manager.download(revision, deep)
             if( result )
                 log.info " $result"
             checkForUpdate = false
         }
-        // checkout requested revision
+        // post download operations
         try {
-            manager.checkout(revision)
             manager.updateModules()
             final scriptFile = manager.getScriptFile(mainScript)
             if( checkForUpdate && !offline )

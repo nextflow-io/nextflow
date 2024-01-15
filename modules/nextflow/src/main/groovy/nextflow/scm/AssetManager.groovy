@@ -70,6 +70,12 @@ class AssetManager {
     private String project
 
     /**
+     * The name of the commit/branch/tag as requested via command line
+     * This is now a first class attribute of a pipeline
+     */
+    private String revision
+
+    /**
      * Directory where the pipeline is cloned (i.e. downloaded)
      */
     private File localPath
@@ -96,18 +102,18 @@ class AssetManager {
      *
      * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      */
-    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, String revisionName = null, HubOptions cliOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts)
+        build(pipelineName, revisionName, config, cliOpts)
     }
 
-    AssetManager( String pipelineName, Map config ) {
+    AssetManager( String pipelineName, String revisionName = null, Map config) {
         assert pipelineName
         // build the object
-        build(pipelineName, config)
+        build(pipelineName, revisionName, config)
     }
 
     /**
@@ -119,12 +125,13 @@ class AssetManager {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, String revisionName = null, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
-        this.localPath = checkProjectDir(project)
+        this.revision = revisionName
+        this.localPath = checkProjectDir(project, revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
@@ -176,13 +183,13 @@ class AssetManager {
      * @return The project dir {@link File}
      */
     @PackageScope
-    File checkProjectDir(String projectName) {
+    File checkProjectDir(String projectName, String revision) {
 
         if( !isValidProjectName(projectName)) {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
-        new File(root, project)
+        new File(root, project + (revision ? ':'+revision : ''))
     }
 
     /**
