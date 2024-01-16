@@ -106,6 +106,8 @@ class LocalSecretsProviderTest extends Specification {
         and:
         Files.write(secretFile, json.getBytes('utf-8'), StandardOpenOption.CREATE_NEW)
         and:
+        secretFile.setPermissions('rw-r-----')
+        and:
         def provider = new LocalSecretsProvider(storeFile: secretFile)
 
         when:
