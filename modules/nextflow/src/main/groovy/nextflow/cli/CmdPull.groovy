@@ -76,7 +76,7 @@ class CmdPull extends CmdBase implements HubOptions {
             log.info "Checking $it${revision ? ':'+revision : ''} ..."
             def manager = new AssetManager(it, revision, this)
 
-            def result = manager.download(revision, deep)
+            def result = manager.download(deep)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

@@ -70,7 +70,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revisionSuffix} ..."
-        manager.clone(target, revision, deep)
+        manager.clone(target, deep)
         print "\r"
         println "${manager.project}${revisionSuffix} cloned to: $target"
     }

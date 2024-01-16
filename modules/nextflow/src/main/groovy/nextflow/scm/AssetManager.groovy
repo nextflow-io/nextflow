@@ -100,7 +100,8 @@ class AssetManager {
     /**
      * Create a new asset manager with the specified pipeline name
      *
-     * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
+     * @param pipelineName The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      */
     AssetManager( String pipelineName, String revisionName = null, HubOptions cliOpts = null) {
         assert pipelineName
@@ -120,6 +121,7 @@ class AssetManager {
      * Build the asset manager internal data structure
      *
      * @param pipelineName A project name or a project repository Git URL
+     * @param revisionName Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
      * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
@@ -180,6 +182,7 @@ class AssetManager {
      * and return the directory where the project is stored locally
      *
      * @param projectName A project name matching the pattern {@code owner/project}
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @return The project dir {@link File}
      */
     @PackageScope
@@ -374,7 +377,8 @@ class AssetManager {
         return this
     }
 
-    AssetManager checkValidRemoteRepo(String revision=null) {
+    // TODO MARCO: refactor init of revision in provider
+    AssetManager checkValidRemoteRepo() {
         // Configure the git provider to use the required revision as source for all needed remote resources:
         // - config if present in repo (nextflow.config by default)
         // - main script (main.nf by default)
@@ -576,19 +580,18 @@ class AssetManager {
     /**
      * Download a pipeline from a remote Github repository
      *
-     * @param revision The revision to download
      * @result A message representing the operation result
      */
-    String download(String revision=null, Integer deep=null) {
+    String download(Integer deep=null) {
         assert project
 
         /*
-         * if the pipeline already exists locally pull it from the remote repo
+         * if the pipeline does not exists locally pull it from the remote repo
          */
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
-            checkValidRemoteRepo(revision)
+            checkValidRemoteRepo()
 
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
@@ -610,14 +613,14 @@ class AssetManager {
                 // use an explicit checkout command *after* the clone instead of cloning a specific branch
                 // because the clone command does not allow the use of SHA commit id (only branch and tag names)
                 try { git.checkout() .setName(revision) .call() }
-                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
+                catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
             }
 
             // return status message
             return "downloaded from ${cloneURL}"
         }
 
-        log.debug "Pull pipeline $project  -- Using local path: $localPath"
+        log.debug "Pulling $project  -- Using local path: $localPath"
 
         // verify that is clean
         if( !isClean() )
@@ -635,7 +638,7 @@ class AssetManager {
              * Try to checkout it from a remote branch and return
              */
             catch ( RefNotFoundException e ) {
-                final ref = checkoutRemoteBranch(revision)
+                final ref = checkoutRemoteBranch()
                 final commitId = ref?.getObjectId()
                 return commitId
                     ? "checked out at ${commitId.name()}"
@@ -673,13 +676,12 @@ class AssetManager {
      * Clone a pipeline from a remote pipeline repository to the specified folder
      *
      * @param directory The folder when the pipeline will be cloned
-     * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null, Integer deep=null) {
+    void clone(File directory, Integer deep=null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Cloning `$project` -- Using remote URI: ${uri} into: $directory"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -936,13 +938,13 @@ class AssetManager {
             git.checkout().setName(revision) .call()
         }
         catch( RefNotFoundException e ) {
-            checkoutRemoteBranch(revision)
+            checkoutRemoteBranch()
         }
 
     }
 
 
-    protected Ref checkoutRemoteBranch( String revision ) {
+    protected Ref checkoutRemoteBranch() {
 
         try {
             def fetch = git.fetch()
@@ -1008,7 +1010,7 @@ class AssetManager {
         if( provider.hasCredentials() )
             update.setCredentialsProvider( provider.getGitCredentials() )
         def updatedList = update.call()
-        log.debug "Update submodules $updatedList"
+        log.debug "Updating submodules $updatedList"
     }
 
     protected String getRemoteCommitId(RevisionInfo rev) {
