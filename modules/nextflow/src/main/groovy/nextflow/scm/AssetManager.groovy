@@ -909,37 +909,6 @@ class AssetManager {
         return result
     }
 
-    /**
-     * Checkout a specific revision
-     * @param revision The revision to be checked out
-     */
-    void checkout( String revision = null ) {
-        assert localPath
-
-        def current = getCurrentRevision()
-        if( current != defaultBranch ) {
-            if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stickied on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
-            }
-        }
-        if( !revision || revision == current ) {
-            // nothing to do
-            return
-        }
-
-        // verify that is clean
-        if( !isClean() )
-            throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
-
-        try {
-            git.checkout().setName(revision) .call()
-        }
-        catch( RefNotFoundException e ) {
-            checkoutRemoteBranch()
-        }
-
-    }
-
 
     protected Ref checkoutRemoteBranch() {
 
