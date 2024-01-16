@@ -184,15 +184,15 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', "v1.2", [providers: [github: [auth: token]]])
 
         when:
-        manager.download("v1.2")
+        manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello:v1.2/.git').isDirectory()
 
         when:
-        manager.download("v1.2")
+        manager.download()
         then:
         noExceptionThrown()
     }
@@ -204,15 +204,15 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', "6b9515aba6c7efc6a9b3f273ce116fc0c224bf68", [providers: [github: [auth: token]]])
 
         when:
-        manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
+        manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello:6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
 
         when:
-        def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
+        def result = manager.download()
         then:
         noExceptionThrown()
         result == "Already-up-to-date"
@@ -227,35 +227,12 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', "mybranch", [providers: [github: [auth: token]]])
 
         when:
-        manager.download("mybranch")
+        manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
-
-        when:
-        manager.download("mybranch")
-        then:
-        noExceptionThrown()
-    }
-
-    // First clone a repo with a tag, then forget to include the -r argument
-    // when you execute nextflow.
-    // Note that while the download will work, execution will fail subsequently
-    // at a separate check - this just tests that we don't fail because of a detached head.
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testPullTagThenBranch() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-
-        when:
-        manager.download("v1.2")
-        then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello:mybranch/.git').isDirectory()
 
         when:
         manager.download()
@@ -551,19 +528,14 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-
-        when:
-        manager.download("dev")
-        then:
-        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
-        and:
-        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', "dev", [providers: [github: [auth: token]]])
 
         when:
         manager.download()
         then:
-        noExceptionThrown()
+        folder.resolve('nextflow-io/nf-test-branch:dev/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch:dev/workflow.nf').text == "println 'Hello'\n"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -571,13 +543,12 @@ class AssetManagerTest extends Specification {
 
         given:
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', 'dev', [providers: [github: [auth: token]]])
 
         expect:
-        manager.checkValidRemoteRepo('dev')
+        manager.checkValidRemoteRepo()
         and:
         manager.getMainScriptName() == 'workflow.nf'
-
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -586,19 +557,14 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-
-        when:
-        manager.download("v0.1")
-        then:
-        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
-        and:
-        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', "v0.1", [providers: [github: [auth: token]]])
 
         when:
         manager.download()
         then:
-        noExceptionThrown()
+        folder.resolve('nextflow-io/nf-test-branch:v0.1/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch:v0.1/workflow.nf').text == "println 'Hello'\n"
     }
 
 }
