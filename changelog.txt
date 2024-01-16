@@ -4,7 +4,7 @@ NEXTFLOW CHANGE-LOG
 - Fix bug with Fusion symlink resolution (#4593) [f28c9e48]
 - Fix Fusion symlinks when publishing files (#4348) [1fa5878a]
 - Fix Inspect command fails with Singularity [25883df3]
-- Fix Allow the use of error build-in function in onComplete handler (#4458) [ci fast] [4be10cd3]
+- Fix Allow the use of error built-in function in onComplete handler (#4458) [ci fast] [4be10cd3]
 - Fix Harden regular expression to used to strip secrets in logs (#4563) [ci fast] [0102d4d6]
 - Fix custom notification template [40980bcb]
 - Fix container environment with special chars (#4594) [f4e00601]
