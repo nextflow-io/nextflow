@@ -124,9 +124,11 @@ class ContainerConfig extends LinkedHashMap {
         final eng = getEngine()
         if( !eng )
             return null
-        if( eng=='docker' || eng=='podman' )
-            return '--rm --privileged'
-        if( isSingularityOciMode() )
+        if( eng=='docker' )
+            return '--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'
+        if( eng=='podman' )
+            return '--rm --device /dev/fuse'
+        if( singularityOciMode() )
             return '-B /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
             return null
