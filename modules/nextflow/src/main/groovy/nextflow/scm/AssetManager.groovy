@@ -136,6 +136,7 @@ class AssetManager {
         this.localPath = checkProjectDir(project, revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
+        this.provider.setRevision(revision)
         setupCredentials(cliOpts)
         validateProjectDir()
 
@@ -377,12 +378,8 @@ class AssetManager {
         return this
     }
 
-    // TODO MARCO: refactor init of revision in provider
     AssetManager checkValidRemoteRepo() {
-        // Configure the git provider to use the required revision as source for all needed remote resources:
-        // - config if present in repo (nextflow.config by default)
-        // - main script (main.nf by default)
-        provider.revision = revision
+        // Check that the remote git provider contains the main script file (main.nf by default)
         final scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
