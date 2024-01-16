@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
 import org.iq80.leveldb.DB
@@ -36,7 +37,7 @@ import org.iq80.leveldb.impl.Iq80DBFactory
 @CompileStatic
 class DefaultCacheStore implements CacheStore {
 
-    private static final String DEFAULT_BASE_DIR = System.getenv('NXF_CACHE_DIR') ?: '.nextflow'
+    private static final String DEFAULT_BASE_DIR = SysEnv.get('NXF_CACHE_DIR', '.nextflow')
 
     /** The underlying Level DB instance */
     private DB db

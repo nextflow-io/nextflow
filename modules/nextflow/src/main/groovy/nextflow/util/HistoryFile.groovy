@@ -22,9 +22,9 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 /**
  * Manages the history file containing the last 1000 executed commands
@@ -34,13 +34,12 @@ import nextflow.exception.AbortOperationException
 @Slf4j
 class HistoryFile extends File {
 
-    public static final String FILE_NAME = "${System.getenv('NXF_CACHE_DIR') ?: '.nextflow'}/history"
+    static String defaultFileName() { "${SysEnv.get('NXF_CACHE_DIR', '.nextflow')}/history" }
 
     @Lazy
     public static final HistoryFile DEFAULT = { def f=new HistoryFile(); f.parentFile?.mkdirs(); return f } ()
 
-    @Memoized
-    static final disabled() { System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true' }
+    static final disabled() { SysEnv.get('NXF_IGNORE_RESUME_HISTORY')=='true' }
 
     private static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
 
@@ -50,7 +49,7 @@ class HistoryFile extends File {
     private static final VAL_9 = (int)('9' as char)
 
     private HistoryFile() {
-        super(FILE_NAME)
+        super(defaultFileName())
     }
 
     HistoryFile(File file) {
