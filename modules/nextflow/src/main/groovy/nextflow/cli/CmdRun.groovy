@@ -524,7 +524,7 @@ class CmdRun extends CmdBase implements HubOptions {
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
             if( offline )
-                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
+                throw new AbortOperationException("Unknown project `$repo${revision ? ':'+revision : ''}` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo${revision ? ':'+revision : ''} ..."
             def result = manager.download(deep)
             if( result )
@@ -544,7 +544,7 @@ class CmdRun extends CmdBase implements HubOptions {
             throw e
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
+            throw new AbortOperationException("Unknown error accessing project `$repo${revision ? ':'+revision : ''}` -- Repository may be corrupted: ${manager.localPath}", e)
         }
 
     }
