@@ -127,7 +127,7 @@ class AssetManager {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, String revisionName, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, String revisionName = null, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
