@@ -50,6 +50,9 @@ class CmdInfo extends CmdBase {
     @Parameter(description = 'project name')
     List<String> args
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project (either a git branch, tag or commit SHA number)')
+    String revision
+
     @Parameter(names='-d',description = 'Show detailed information', arity = 0)
     boolean detailed
 
@@ -75,9 +78,9 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
+        final manager = new AssetManager(args[0], revision)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}`")
+            throw new AbortOperationException("Unknown project `${args[0]}${revision ? ':'+revision : ''}`")
 
         if( !format || format == 'text' ) {
             printText(manager,level)

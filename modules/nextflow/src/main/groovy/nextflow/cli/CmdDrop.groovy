@@ -39,6 +39,9 @@ class CmdDrop extends CmdBase {
     @Parameter(required=true, description = 'name of the project to drop')
     List<String> args
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to drop (either a git branch, tag or commit SHA number)')
+    String revision
+
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
     boolean force
 
@@ -48,15 +51,15 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(args[0], revision)
         if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${args[0]}")
+            throw new AbortOperationException("No match found for: ${args[0]}${revision ? ':'+revision : ''}")
         }
 
         if( this.force || manager.isClean() ) {
             manager.close()
             if( !manager.localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${manager.project}` -- Check access permissions for path: ${manager.localPath}")
+                throw new AbortOperationException("Unable to delete project `${manager.project}${revision ? ':'+revision : ''}` -- Check access permissions for path: ${manager.localPath}")
             return
         }
 
