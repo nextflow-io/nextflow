@@ -162,8 +162,9 @@ class AssetManagerTest extends Specification {
 
         given:
         def folder = tempDir.getRoot()
+        String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
 
         when:
         manager.download()
@@ -246,8 +247,9 @@ class AssetManagerTest extends Specification {
 
         given:
         def dir = tempDir.getRoot()
+        String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers:[github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers:[github: [auth: token]]])
 
         when:
         manager.clone(dir.toFile())

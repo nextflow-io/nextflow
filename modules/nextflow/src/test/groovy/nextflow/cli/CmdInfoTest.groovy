@@ -45,8 +45,9 @@ class CmdInfoTest extends Specification {
     def setupSpec() {
         tempDir = Files.createTempDirectory('test')
         AssetManager.root = tempDir.toFile()
+        String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
         // download the project
         manager.download()
     }
