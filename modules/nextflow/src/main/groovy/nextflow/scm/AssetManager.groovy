@@ -131,7 +131,7 @@ class AssetManager {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
-        this.project = resolveName(pipelineName)
+        this.project = resolveName(pipelineName, revisionName)
         this.revision = revisionName
         this.localPath = checkProjectDir(project, revision)
         this.hub = checkHubProvider(cliOpts)
@@ -253,7 +253,7 @@ class AssetManager {
      * @param name A project name or URL e.g. {@code cbcrg/foo} or {@code https://github.com/cbcrg/foo.git}
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
-    String resolveName( String name ) {
+    String resolveName( String name, String revision = null ) {
         assert name
 
         //
@@ -295,7 +295,7 @@ class AssetManager {
             name = parts[0]
         }
 
-        def qualifiedName = find(name)
+        def qualifiedName = find(name, revision)
         if( !qualifiedName ) {
             return "$DEFAULT_ORGANIZATION/$name".toString()
         }
@@ -550,16 +550,19 @@ class AssetManager {
         return result
     }
 
-    static protected def find( String name ) {
+    static protected def find( String name, String revision = null ) {
         def exact = []
         def partial = []
 
         list().each {
             def items = it.split('/')
-            if( items[1] == name )
-                exact << it
-            else if( items[1].startsWith(name ) )
-                partial << it
+            def itemsRev = items[1].tokenize(':')
+            if( (!revision && !itemsRev[1]) || (revision && itemsRev[1] == revision) ) {
+                if( itemsRev[0] == name )
+                    exact << it.tokenize(':')[0]
+                else if( itemsRev[0].startsWith(name ) )
+                    partial << it.tokenize(':')[0]
+            }
         }
 
         def list = exact ?: partial
