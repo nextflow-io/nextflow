@@ -19,6 +19,7 @@ package nextflow.executor
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
@@ -35,7 +36,7 @@ class CondorExecutor extends AbstractGridExecutor {
 
     final protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
         // creates the wrapper script
-        final builder = new CondorWrapperBuilder(task)
+        final builder = new BashWrapperBuilder(task)
         builder.manifest = getDirectivesText(task)
         return builder
     }
@@ -46,20 +47,60 @@ class CondorExecutor extends AbstractGridExecutor {
         lines.join('\n')
     }
 
-    @Override
-    protected String getHeaderToken() {
-        throw new UnsupportedOperationException()
+
+    // Condor does not require a special token or header
+    protected String getHeaderToken() { return '' }
+
+    /**
+     * Defines the jobs directive headers
+     *
+     * @param task
+     * @return A multi-line string containing the job directives
+     */
+    String getHeaders( TaskRun task ) {
+        return getDirectivesText(task)
     }
+
+
+	// We currently assume that the system has been configured so that
+	// anyone (user) who can run an HTCondor job can also run docker.  It's
+	// also apparently a security worry to run Docker as root, so let's not.
+    // https://github.com/htcondor/htcondor/blob/02c6bc70543951cf9d352e3fbf3343a925a47e3a/src/condor_utils/docker-api.cpp#L99C1-L102C1
 
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result) {
+        // better handled as cluster options.
+        // That being said, I'll preserve here the sorts of things I was thinking of for UWisc systems.
+        // def requirements = []
+        // def rank = []
+        //     rank << "(TARGET.HasRotationalScratch == false)"
+        // requirements << "(OpSys != WINDOWS)"
 
-        result << "universe = vanilla"
-        result << "executable = ${TaskRun.CMD_RUN}"
         result << "log = ${TaskRun.CMD_LOG}"
-        result << "getenv = true"
 
-        if( task.config.getCpus()>1 ) {
+        if ( ! isFusionEnabled() ) {
+            result << "out = ${TaskRun.CMD_OUTFILE}"
+            result << "error = ${TaskRun.CMD_ERRFILE}"
+            result << "stream_out = true"
+            result << "stream_error = true"
+            result << "executable = ${TaskRun.CMD_RUN}"
+            // result << "transfer_files = NO" // note: this will result in jobs only being run in shared file systems, as God and Nextflow intended. HT Condor will only work with Nextflow and a shared filesystem, either a physical one (this case) or one provided by Fusion (in which case, Fusion's s3 filesystem will prov)
+        } else {
+            result << "getenv = true"
+            // executable will be added by CondorTaskHandler in Fusion setups
+        }
+        result << "transfer_executable = False" // handled by nextflow
+        result << "transfer_output_files=\"\""  // ditto
+
+        if( task.isContainerEnabled() ) {
+            result << "universe = container"
+            result << "container_image = ${task.getContainer()}"
+        } else {
+            result << "universe = vanilla"
+            result << "initialdir = ${TaskRun.workDir}"
+        }
+
+        if( task.config.getCpus() > 1 ) {
             result << "request_cpus = ${task.config.getCpus()}"
             result << "machine_count = 1"
         }
@@ -70,11 +111,15 @@ class CondorExecutor extends AbstractGridExecutor {
 
         if( task.config.getDisk() ) {
             result << "request_disk = ${task.config.getDisk()}"
+        } else {
+            result << "request_disk = 1 GB" // need minimum 1GB to run on CHTC servers
         }
 
         if( task.config.getTime() ) {
             result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}"
         }
+
+        // todo: add accelerator option
 
         if( task.config.clusterOptions ) {
             def opts = task.config.clusterOptions
@@ -86,14 +131,21 @@ class CondorExecutor extends AbstractGridExecutor {
             }
         }
 
-        result<< "queue"
+        // if (requirements.size() > 0){
+        //     result << "requirements = \"" + requirements.join(' && ') + "\""
+        // }
+        // if (rank.size() > 0){
+        //     result << "rank = \"" + rank.join(' && ') + "\""
+        // }
 
+        result << "queue"
+        result << ''
     }
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
         return pipeLauncherScript()
-                ? List.of('condor_submit', '-terse')
+                ? List.of('condor_submit', '-', '-terse',)
                 : List.of('condor_submit', '-terse', CMD_CONDOR)
     }
 
@@ -161,19 +213,112 @@ class CondorExecutor extends AbstractGridExecutor {
         return FusionHelper.isFusionEnabled(session)
     }
 
+    /*
+     * Prepare and launch the task in the underlying execution platform
+     */
+    @Override
+    GridTaskHandler createTaskHandler(TaskRun task) {
+        assert task
+        assert task.workDir
+
+        new CondorTaskHandler(task, this)
+    }
+
+
+
+
     @InheritConstructors
-    static class CondorWrapperBuilder extends BashWrapperBuilder {
+    @CompileStatic
+    class CondorTaskHandler extends GridTaskHandler {
+        // Prior code, and context this will be launched in:
+        // protected BashWrapperBuilder createTaskWrapper(TaskRun task) {
+        //     return fusionEnabled()
+        //         ? fusionLauncher()
+        //         : executor.createBashWrapperBuilder(task)
+        // }
 
-        String manifest
+        // protected String stdinLauncherScript() {
+        //     return fusionEnabled() ? fusionStdinWrapper() : wrapperFile.text
+        // }
 
-        Path build() {
-            final wrapper = super.build()
-            // give execute permission to wrapper file
-            wrapper.setExecutable(true)
-            // save the condor manifest
-            this.workDir.resolve(CMD_CONDOR).text = manifest
-            return wrapper
+        // protected String fusionStdinWrapper() {
+        //     final submit = fusionSubmitCli()
+        //     final launcher = fusionLauncher()
+        //     final config = task.getContainerConfig()
+        //     final containerOpts = task.config.getContainerOptions()
+        //     final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+        //     // create an inline script to launch the job execution
+        //     return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+        // }
+
+        protected String stdinLauncherScript() {
+            FusionHelper.runWithContainer(fusionLauncher(), task.getContainerConfig(), task.getContainer(), task.config.getContainerOptions(), fusionSubmitCli())
+            final submit = fusionSubmitCli()
+            final launcher = fusionLauncher()
+            final config = task.getContainerConfig()
+            final containerConfig = task.getContainerConfig()
+            final containerOpts = task.config.getContainerOptions()
+            final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+            println ('launcher:\n')
+            println (fusionLauncher())
+            println ('task.getContainerConfig():\n')
+            println (task.getContainerConfig())
+            println ('task.getContainer():\n')
+            println (task.getContainer())
+            println ('task.config.getContainerOptions():\n')
+            println (containerOpts)
+            println ('fusionSubmitCli():\n')
+            println (submit)
+            println ('FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit):')
+            println (cmd)
+            println ("containerConfig.getEnvWhitelist():")
+            println (containerConfig.getEnvWhitelist())
+            println ("task.getContainerConfig().getEnvWhitelist():")
+            println (task.getContainerConfig().getEnvWhitelist())
+            println (task.getContainerConfig().getEnvWhitelist().getClass())
+            println ("launcher.fusionEnv()")
+            println (launcher.fusionEnv())
+            println (launcher.fusionEnv()[1])
+            println (launcher.fusionEnv().getClass())
+            println ("containerConfig.runOptions as String")
+            println (containerConfig.runOptions as String)
+            println ("containerConfig.fusionOptions()")
+            println (containerConfig.fusionOptions())
+
+
+            // create an inline script to launch the job execution
+            // println('#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+            // return List.of('condor_submit', '.condor.submit', '-terse', '-queue', '1')
+            println( '#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+            // return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+
+            def result = []
+
+            result << "container_image = ${task.getContainer()}"
+            //  containerConfig.getEnvWhitelist() +
+            def environment = [:]
+            environment += launcher.fusionEnv()
+            environment = environment.each { key, val -> "${key}=${val}" }.collect().join(' ').toString()
+            environment += task.getContainerConfig().getEnvWhitelist().join(' ')
+            result << "env = \"" + environment + "\""
+
+            def submit_list = fusionSubmitCli()
+            def executable = submit_list[0]
+            def arguments = submit_list.drop(1).join(' ')
+
+            result << "executable = ${executable}"
+            result << "arguments = ${arguments}"
+            // result << "container_target_dir = "
+            // result << "container_options = ${options}" // simply do not get to specify these in htcondor
+            result = result.join('\n')
+            println(result + '\n' + submitDirective(task))
+            return result + '\n' + submitDirective(task)
+
+            // create an inline script to launch the job execution
+            // println('#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+            // return List.of('condor_submit', '.condor.submit', '-terse', '-queue', '1')
+            // println( '#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+            // return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
         }
-
     }
 }
