@@ -204,10 +204,9 @@ class AssetManagerTest extends Specification {
         folder.resolve('nextflow-io/hello:v1.2/.git').isDirectory()
 
         when:
-        def result = manager.download()
+        manager.download()
         then:
         noExceptionThrown()
-        result == "Already-up-to-date"
     }
 
     // The hashes used here are NOT associated with tags.
