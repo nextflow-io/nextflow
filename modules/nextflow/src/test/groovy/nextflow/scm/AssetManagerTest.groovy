@@ -110,12 +110,18 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
+        folder.resolve('cbcrg/pipe2:v2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
         def manager = new AssetManager()
 
         when:
         def result = manager.resolveName('x/y')
+        then:
+        result == 'x/y'
+
+        when:
+        result = manager.resolveName('x/y', 'v2')
         then:
         result == 'x/y'
 
@@ -145,6 +151,11 @@ class AssetManagerTest extends Specification {
         thrown(AbortOperationException)
 
         when:
+        result = manager.resolveName('pipe2', 'v2')
+        then:
+        result == 'cbcrg/pipe2'
+
+        when:
         result = manager.resolveName('../blast/script.nf')
         then:
         thrown(AbortOperationException)
@@ -172,10 +183,10 @@ class AssetManagerTest extends Specification {
         folder.resolve('nextflow-io/hello/.git').isDirectory()
 
         when:
-        manager.download()
+        def result = manager.download()
         then:
         noExceptionThrown()
-
+        result == "Already-up-to-date"
     }
 
 
@@ -193,9 +204,10 @@ class AssetManagerTest extends Specification {
         folder.resolve('nextflow-io/hello:v1.2/.git').isDirectory()
 
         when:
-        manager.download()
+        def result = manager.download()
         then:
         noExceptionThrown()
+        result == "Already-up-to-date"
     }
 
     // The hashes used here are NOT associated with tags.
@@ -236,9 +248,10 @@ class AssetManagerTest extends Specification {
         folder.resolve('nextflow-io/hello:mybranch/.git').isDirectory()
 
         when:
-        manager.download()
+        def result = manager.download()
         then:
         noExceptionThrown()
+        result == "Already-up-to-date"
     }
 
 
