@@ -77,6 +77,7 @@ class AssetManager {
 
     /**
      * Directory where the pipeline is cloned (i.e. downloaded)
+     * New schema: root/<git-org>/<git-repo>:<revision-(if-provided)>
      */
     private File localPath
 
@@ -550,6 +551,7 @@ class AssetManager {
         return result
     }
 
+    // updated for new localPath schema (see localPath declaration at top of this class file)
     static protected def find( String name, String revision = null ) {
         def exact = []
         def partial = []
