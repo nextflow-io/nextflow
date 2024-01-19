@@ -627,8 +627,8 @@ class WaveClientTest extends Specification {
                 COPY --from=builder /opt/._view /opt/._view
                 
                 # General utility OS packages
-                RUN apt update -y && \
-                    apt install -y procps libgomp1 && \
+                RUN apt update -y && \\
+                    apt install -y procps libgomp1 && \\
                     rm -rf /var/lib/apt/lists/*
                 
                 # Entrypoint for Singularity
@@ -714,8 +714,8 @@ class WaveClientTest extends Specification {
                 COPY --from=builder /opt/._view /opt/._view
                 
                 # General utility OS packages
-                RUN apt update -y && \
-                    apt install -y procps libgomp1 && \
+                RUN apt update -y && \\
+                    apt install -y procps libgomp1 && \\
                     rm -rf /var/lib/apt/lists/*
                 
                 # Entrypoint for Singularity
