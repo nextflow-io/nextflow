@@ -76,6 +76,20 @@ dependencies:
   - bwa=0.7.15
 ```
 
+This other example shows how to leverage a Conda environment file to install Python packages from the [PyPI repository](https://pypi.org/)), through the `pip` package manager (which must also be explicitly listed as a required package):
+
+```yaml
+name: my-env-2
+channels:
+  - defaults
+dependencies:
+  - pip
+  - pip:
+    - numpy
+    - pandas
+    - matplotlib
+```
+
 Read the Conda documentation for more details about how to create [environment files](https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually).
 
 The path of an environment file can be specified using the `conda` directive:
