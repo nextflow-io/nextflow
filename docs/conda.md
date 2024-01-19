@@ -76,7 +76,7 @@ dependencies:
   - bwa=0.7.15
 ```
 
-This other example shows how to leverage a Conda environment file to install Python packages from the [PyPI repository](https://pypi.org/)), through the `pip` package manager (which must also be explcitly listed as a required package):
+This other example shows how to leverage a Conda environment file to install Python packages from the [PyPI repository](https://pypi.org/)), through the `pip` package manager (which must also be explicitly listed as a required package):
 
 ```yaml
 name: my-env-2
