@@ -252,7 +252,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             if( fusionConfig().privileged() )
                 builder.withPrivileged(true)
             else {
-                final device = Map.of(k8sConfig.fuseDevicePlugin(), 1)
+                final device= k8sConfig.fuseDevicePlugin()
                 builder.withResourcesLimits(device)
             }
 

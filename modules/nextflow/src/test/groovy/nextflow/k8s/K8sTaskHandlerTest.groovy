@@ -987,7 +987,7 @@ class K8sTaskHandlerTest extends Specification {
         launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
         launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
         and:
-        k8sConfig.fuseDevicePlugin() >> 'custom/device/fuse'
+        k8sConfig.fuseDevicePlugin() >> ['custom/device/fuse': 1]
         and:
         handler.getTask() >> task
         handler.fusionEnabled() >> true
