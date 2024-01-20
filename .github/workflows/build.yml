@@ -12,6 +12,7 @@ on:
       - 'master'
       - 'test*'
       - 'dev*'
+      - 'STABLE-*'
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
@@ -38,7 +39,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v41
         with:
           files_ignore: docs
 

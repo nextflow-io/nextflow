@@ -121,7 +121,9 @@ class AnsiLogObserver implements TraceObserver {
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
-        
+        if( message.startsWith('[skipping]') )
+            return
+
         if( !started || !statsObserver.hasProgressRecords() ) {
             println message
         }
