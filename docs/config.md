@@ -1006,6 +1006,11 @@ The following settings are available:
   :::
 : If you trace the hostname, activate this option (default: `false`).
 
+`k8s.fuseDevicePlugin`
+: :::{versionadded} 24.01.0-edge
+  :::
+: The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default: `['nextflow.io/fuse': 1]`).
+
 `k8s.httpConnectTimeout`
 : :::{versionadded} 22.10.0
   :::
