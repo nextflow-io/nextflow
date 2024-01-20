@@ -199,7 +199,7 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.5; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null)'
+        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.5; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null)'
     }
 
     def 'should not allow invalid settinga' () {
@@ -226,6 +226,18 @@ class WaveConfigTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: 'http://foo.com'"
+    }
+
+    def 'should set preserve timestamp' () {
+        when:
+        def config = new WaveConfig([:])
+        then:
+        !config.preserveFileTimestamp()
+
+        when:
+        config = new WaveConfig(preserveFileTimestamp: true)
+        then:
+        config.preserveFileTimestamp()
     }
 
 }
