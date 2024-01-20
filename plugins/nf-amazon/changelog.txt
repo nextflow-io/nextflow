@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+2.3.0 - 20 Dec 2023
+- Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
+- Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
+
 2.2.0 - 24 Nov 2023
 - Add support for FUSION_AWS_REGION (#4481) [8f8b09fa]
 - Fix security vulnerabilities (#4513) [a310c777]

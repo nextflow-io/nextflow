@@ -104,6 +104,11 @@ The following settings are available:
 `apptainer.noHttps`
 : Pull the Apptainer image with http protocol (default: `false`).
 
+`apptainer.ociAutoPull`
+: :::{versionadded} 23.12.0-edge
+  :::
+: When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
+
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
@@ -875,6 +880,37 @@ The following settings are available for Cloud Life Sciences:
 `google.zone`
 : The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
 
+`google.batch.allowedLocations`
+: :::{versionadded} 22.12.0-edge
+  :::
+: Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
+
+`google.batch.bootDiskSize`
+: Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).
+
+`google.batch.cpuPlatform`
+: Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
+
+`google.batch.installGpuDrivers`
+: :::{versionadded} 23.08.0-edge
+  :::
+: When `true` automatically installs the appropriate GPU drivers to the VM when a GPU is requested (default: `false`). Only needed when using an instance template.
+
+`google.batch.network`
+: Set network name to attach the VM's network interface to. The value will be prefixed with `global/networks/` unless it contains a `/`, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
+
+`google.batch.serviceAccountEmail`
+: Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+
+`google.batch.spot`
+: When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
+
+`google.batch.subnetwork`
+: Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
+
+`google.batch.usePrivateAddress`
+: When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
+
 `google.lifeSciences.bootDiskSize`
 : Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
 
@@ -969,6 +1005,11 @@ The following settings are available:
 : :::{versionadded} 22.05.0-edge
   :::
 : If you trace the hostname, activate this option (default: `false`).
+
+`k8s.fuseDevicePlugin`
+: :::{versionadded} 24.01.0-edge
+  :::
+: The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default: `['nextflow.io/fuse': 1]`).
 
 `k8s.httpConnectTimeout`
 : :::{versionadded} 22.10.0
@@ -1149,8 +1190,8 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
-`notification.binding`
-: A map modelling the variables in the template file.
+`notification.attributes`
+: A map object modelling the variables that can be used in the template file.
 
 `notification.enabled`
 : Enables the sending of a notification message when the workflow execution completes.
@@ -1407,11 +1448,15 @@ The following settings are available:
 `singularity.noHttps`
 : Pull the Singularity image with http protocol (default: `false`).
 
-`singularity.oci`
-: :::{versionadded} 23.11.0-edge
+`singularity.ociAutoPull`
+: :::{versionadded} 23.12.0-edge
   :::
-: Enable OCI-mode, that allows running native OCI-compatible containers with Singularity using `crun` or `runc` as low-level runtime. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+: When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
+`singularity.ociMode`
+: :::{versionadded} 23.12.0-edge
+  :::
+: Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
