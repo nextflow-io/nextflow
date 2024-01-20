@@ -129,6 +129,18 @@ class K8sConfigTest extends Specification {
 
     }
 
+    def 'should set device plugin' () {
+        when:
+        def cfg = new K8sConfig([:])
+        then:
+        cfg.fuseDevicePlugin() == ['nextflow.io/fuse':1]
+
+        when:
+        cfg = new K8sConfig([fuseDevicePlugin:['foo/fuse':10]])
+        then:
+        cfg.fuseDevicePlugin() == ['foo/fuse':10]
+    }
+
     def 'should create client config' () {
 
         given:

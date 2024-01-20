@@ -42,6 +42,8 @@ import nextflow.util.Duration
 @CompileStatic
 class K8sConfig implements Map<String,Object> {
 
+    static final private Map<String,?> DEFAULT_FUSE_PLUGIN = Map.of('nextflow.io/fuse', 1)
+
     @Delegate
     private Map<String,Object> target
 
@@ -114,6 +116,15 @@ class K8sConfig implements Map<String,Object> {
 
     String getStorageSubPath() {
         target.storageSubPath
+    }
+
+    Map<String,?> fuseDevicePlugin() {
+        final result = target.fuseDevicePlugin
+        if( result instanceof Map && result.size()==1 )
+            return result as Map<String,?>
+        if( result )
+            log.warn1 "Setting 'fuseDevicePlugin' should be a map object providing exactly one entry - offending value: $result"
+        return DEFAULT_FUSE_PLUGIN
     }
 
     /**

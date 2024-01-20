@@ -120,6 +120,23 @@ Then the pipeline execution can be launched using the usual run command and spec
 nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR-BUCKET>/scratch
 ```
 
+:::{note}
+When using Fusion, pods will run as *privileged* by default.
+:::
+
+To use Fusion with without the need for escalating privileges, it is required to install in the Kubernetes cluster the
+Nextflow [FUSE device plugin](https://github.com/nextflow-io/k8s-fuse-plugin) and add in your Nextflow configuration the following
+setting:
+
+```
+fusion {
+  privileged = false
+}
+```
+
+To use a custom FUSE device plugin, specify it via the setting `k8s.fuseDevicePlugin`. See
+the {ref}`Kubernetes configuration section<config-k8s>` for details.
+
 ### Running in a pod
 
 Nextflow can be executed directly from a pod running in a Kubernetes cluster. In these cases you will need to use the plain Nextflow `run` command and specify the `k8s` executor and the required persistent volume claim in the `nextflow.config` file as shown below:
