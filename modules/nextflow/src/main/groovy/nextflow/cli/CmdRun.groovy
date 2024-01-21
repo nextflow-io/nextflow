@@ -320,11 +320,11 @@ class CmdRun extends CmdBase implements HubOptions {
             def fmt = ansi()
             fmt.a("\n")
             fmt.bgRgb(13, 192, 157).fgRgb(0, 0, 0).bold().a(" N E X T F L O W ").reset()
-            fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + Const.APP_VER).reset()
+            fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
         } else {
-            log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+            log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
         }
         Plugins.init()
 
