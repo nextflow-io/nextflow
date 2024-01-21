@@ -280,9 +280,10 @@ class AnsiLogObserver implements TraceObserver {
                 skippedLines += 1
             }
         }
-        if( skippedLines > 0 )
+        if( skippedLines > 0 ){
             term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a("Plus ").bold().a(skippedLines).reset()
             term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a(" more processes waiting for tasks…").reset().newline()
+        }
         rendered = true
     }
 
