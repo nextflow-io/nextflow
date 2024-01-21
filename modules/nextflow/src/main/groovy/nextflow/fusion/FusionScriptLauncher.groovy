@@ -62,7 +62,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
         if( bean.scratch==null )
-            bean.scratch = true
+            bean.scratch = false
 
         return new FusionScriptLauncher(bean, scheme, remoteWorkDir)
     }

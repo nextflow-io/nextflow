@@ -46,7 +46,7 @@ class CmdPlugin extends CmdBase {
         if( !args )
             throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
         // setup plugins system
-        Plugins.setup()
+        Plugins.init()
         // check for the plugins install
         if( args[0] == 'install' ) {
             if( args.size()!=2 )

@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
@@ -315,7 +315,7 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         if( launcher.options.ansiLog ){
-            log.debug "N E X T F L O W  ~  version ${Const.APP_VER}"
+            log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
 
             def fmt = ansi()
             fmt.a("\n")
