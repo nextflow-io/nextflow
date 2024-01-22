@@ -398,6 +398,8 @@ class AnsiLogObserver implements TraceObserver {
         final labelTag = tagMatch ? tagMatch.group(1) : ''
         final labelSpaces = tagMatch ? tagMatch.group(2) : ''
         final labelNoTag = label.replaceFirst(/ \(.+\) *$/, "")
+        final labelFinalProcess = labelNoTag.tokenize(':')[-1]
+        final labelNoFinalProcess = labelFinalProcess.length() > 0 ? labelNoTag - ~/$labelFinalProcess$/ : labelNoTag
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
@@ -412,7 +414,8 @@ class AnsiLogObserver implements TraceObserver {
         // Label: process > sayHello
         if( cols > 180 )
             term.a(Attribute.INTENSITY_FAINT).a('process > ').reset()
-        term.a(labelNoTag)
+        term.a(Attribute.INTENSITY_FAINT).a(labelNoFinalProcess).reset()
+        term.a(labelFinalProcess)
         if( labelTag ){
             term.fg(Color.YELLOW).a(Attribute.INTENSITY_FAINT).a(' (').reset()
             term.fg(Color.YELLOW).a(labelTag)
