@@ -32,7 +32,7 @@ import nextflow.secret.SecretsProvider
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Manage pipeline secrets (preview)")
+@Parameters(commandDescription = "Manage pipeline secrets")
 class CmdSecret extends CmdBase implements UsageAware {
 
     interface SubCmd {
@@ -107,7 +107,7 @@ class CmdSecret extends CmdBase implements UsageAware {
         }
 
         // setup the plugins system and load the secrets provider
-        Plugins.setup()
+        Plugins.init()
         provider = SecretsLoader.instance.load()
 
         // run the command

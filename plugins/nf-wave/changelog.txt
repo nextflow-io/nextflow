@@ -1,5 +1,11 @@
 nf-wave changelog
 ==================
+1.2.0 - 20 Dec 2023
+- Add support for Singularity/Apptainer auto pull mode for OCI containers [b7f1a192]
+- Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
+- Remove deprecated Wave observer [ci fast] [0e009ef7]
+- Bump wave-utils@0.8.1 and micromamba@1.5.5 [9cb50035]
+
 1.1.0 - 24 Nov 2023
 - Add Retry policy to Google Storage (#4524) [c271bb18]
 - Add support for Singularity OCI mode (#4440) [f5362a7b]
