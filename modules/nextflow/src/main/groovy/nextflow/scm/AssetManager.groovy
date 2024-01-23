@@ -77,7 +77,8 @@ class AssetManager {
 
     /**
      * Directory where the pipeline is cloned (i.e. downloaded)
-     * New schema: root/<git-org>/<git-repo>:<revision-(if-provided)>
+     *
+     * Schema: $NXF_ASSETS/<org>/<repo>[:<revision>]
      */
     private File localPath
 
@@ -104,36 +105,36 @@ class AssetManager {
      * @param pipelineName The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      */
-    AssetManager( String pipelineName, String revisionName = null, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, String revision = null, HubOptions cliOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, revisionName, config, cliOpts)
+        build(pipelineName, revision, config, cliOpts)
     }
 
-    AssetManager( String pipelineName, String revisionName, Map config) {
+    AssetManager( String pipelineName, String revision, Map config) {
         assert pipelineName
         // build the object
-        build(pipelineName, revisionName, config)
+        build(pipelineName, revision, config)
     }
 
     /**
      * Build the asset manager internal data structure
      *
      * @param pipelineName A project name or a project repository Git URL
-     * @param revisionName Revision ID for the selected pipeline (git branch, tag or commit SHA number)
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
      * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, String revisionName = null, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
-        this.project = resolveName(pipelineName, revisionName)
-        this.revision = revisionName
+        this.project = resolveName(pipelineName, revision)
+        this.revision = revision
         this.localPath = checkProjectDir(project, revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
@@ -683,7 +684,7 @@ class AssetManager {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Cloning `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Cloning `${project}` from ${uri} into ${directory}"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -913,7 +914,6 @@ class AssetManager {
         result.addAll(tags)
         return result
     }
-
 
     protected Ref checkoutRemoteBranch() {
 

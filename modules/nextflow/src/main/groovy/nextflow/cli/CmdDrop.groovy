@@ -53,7 +53,7 @@ class CmdDrop extends CmdBase {
         Plugins.init()
         def manager = new AssetManager(args[0], revision)
         if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${args[0]}${revision ? ':'+revision : ''}")
+            throw new AbortOperationException("No match found for: ${manager.project}${revision ? ':'+revision : ''}")
         }
 
         if( this.force || manager.isClean() ) {
