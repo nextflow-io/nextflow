@@ -1219,8 +1219,16 @@ class TaskProcessor {
         else {
             if( task?.source )  {
                 message << "Source block:"
-                task.source.stripIndent(true).eachLine {
-                    message << "  $it"
+                def ws_check = task.source =~ /\n(\s+)['"]{3}\n/
+                if( ws_check.find() ){
+                    def whitespace = ws_check[0][1]
+                    task.source.eachLine {
+                        message << "  ${it.startsWith(whitespace) ? it.substring(whitespace.size()) : it}"
+                    }
+                } else {
+                    task.source.eachLine {
+                        message << "  $it"
+                    }
                 }
             }
 
@@ -1290,9 +1298,10 @@ class TaskProcessor {
         else
             message = err0(error.cause)
 
+        message.eachLine {
+            result << '  ' << it << '\n'
+        }
         result
-            .append('  ')
-            .append(message)
             .append('\n')
             .toString()
     }
