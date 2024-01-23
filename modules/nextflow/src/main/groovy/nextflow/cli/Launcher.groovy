@@ -209,7 +209,7 @@ class Launcher {
 
             // when the first argument is a file, it's supposed to be a script to be executed
             if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
-                normalized.add(0,CmdRun.NAME.toString())
+                normalized.add(0,CmdRun.NAME)
             }
 
             else if( current == '-resume' ) {
