@@ -1265,16 +1265,14 @@ class TaskProcessor {
         else {
             if( task?.source )  {
                 message << "Source block:"
-                def ws_check = task.source =~ /\n(\s+)['"]{3}\n/
-                if( ws_check.find() ){
-                    def whitespace = ws_check[0][1]
-                    task.source.eachLine {
-                        message << "  ${it.startsWith(whitespace) ? it.substring(whitespace.size()) : it}"
-                    }
-                } else {
-                    task.source.eachLine {
-                        message << "  $it"
-                    }
+                // Trim indentation
+                def ws_size = []
+                task.source.eachLine {
+                    ws_size << it.indexOf(it.trim())
+                }
+                def min_ws_size = ws_size.findAll{ it > 0 }.min()
+                task.source.eachLine {
+                    message << "  ${min_ws_size && it.startsWith(" ") ? it.substring(min_ws_size) : it}"
                 }
             }
 
