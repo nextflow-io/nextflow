@@ -86,7 +86,7 @@ Learn more about lists:
 Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
 ```groovy
-scores = [ "Brett":100, "Pete":"Did not finish", "Andrew":86.87934 ]
+scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
 ```
 
 Note that each of the values stored in the map can be of a different type. `Brett` is an integer, `Pete` is a string, and `Andrew` is a floating-point number.
@@ -114,7 +114,7 @@ new_scores = scores + ["Pete": 3, "Cedric": 120]
 When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys are overwritten by the second map.
 
 :::{tip}
-Appending an "update" map is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, any references to the original map elsewhere in the pipeline won't be modified.
+Copying a map with the `+` operator is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, a new instance of the map will be created, and any references to the original map won't be affected.
 :::
 
 Learn more about maps:
@@ -223,6 +223,14 @@ result = myLongCmdline.execute().text
 
 In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` switches and their arguments are effectively a single line.
 
+:::{warning}
+When using backslashes to continue a multi-line command, make sure to not put any spaces after the backslash, otherwise it will be interpreted by the Groovy lexer as an escaped space instead of a backslash, which will make your script incorrect. It will also print this warning:
+
+```
+unknown recognition error type: groovyjarjarantlr4.v4.runtime.LexerNoViableAltException
+```
+:::
+
 (script-regexp)=
 
 ### Regular expressions
@@ -330,6 +338,41 @@ Remove the first number with its trailing whitespace from a string:
 assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 ```
 
+### Functions
+
+Functions can be defined using the following syntax:
+
+```groovy
+def <function name> ( arg1, arg, .. ) {
+    <function body>
+}
+```
+
+For example:
+
+```groovy
+def foo() {
+    'Hello world'
+}
+
+def bar(alpha, omega) {
+    alpha + omega
+}
+```
+
+The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()`, which returns `'Hello world'`, and `bar(10, 20)`, which returns the sum of two parameters (`30` in this case).
+
+Functions implicitly return the result of the last statement. Additionally, the `return` keyword can be used to explicitly exit from a function and return the specified value. For example:
+
+```groovy
+def fib( x ) {
+    if( x <= 1 )
+        return x
+
+    fib(x-1) + fib(x-2)
+}
+```
+
 (script-closure)=
 
 ### Closures
@@ -384,22 +427,76 @@ Mark = Williams
 Sudha = Kumari
 ```
 
-A closure has two other important features. First, it can access variables in the scope where it is defined, so that it can interact with them.
-
-Second, a closure can be defined in an anonymous manner, meaning that it is not given a name, and is defined in the place where it needs to be used.
-
-As an example showing both these features, see the following code fragment:
+Closures can also access variables outside of their scope, and they can be used anonymously, that is without assigning them to a variable. Here is an example that demonstrates both of these things:
 
 ```groovy
-myMap = ["China": 1 , "India" : 2, "USA" : 3]
+myMap = ["China": 1, "India": 2, "USA": 3]
 
 result = 0
-myMap.keySet().each( { result+= myMap[it] } )
+myMap.keySet().each { result += myMap[it] }
 
 println result
 ```
 
+A closure can also declare local variables that exist only for the lifetime of the closure:
+
+```groovy
+result = 0
+myMap.keySet().each {
+  def count = myMap[it]
+  result += count
+}
+```
+
+:::{warning}
+Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
+:::
+
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
+
+### Syntax sugar
+
+Groovy provides several forms of "syntax sugar", or shorthands that can make your code easier to read.
+
+Some programming languages require every statement to be terminated by a semi-colon. In Groovy, semi-colons are optional, but they can still be used to write multiple statements on the same line:
+
+```groovy
+println 'Hello!' ; println 'Hello again!'
+```
+
+When calling a function, the parentheses around the function arguments are optional:
+
+```groovy
+// full syntax
+printf('Hello %s!\n', 'World')
+
+// shorthand
+printf 'Hello %s!\n', 'World'
+```
+
+It is especially useful when calling a function with a closure parameter:
+
+```groovy
+// full syntax
+[1, 2, 3].each({ println it })
+
+// shorthand
+[1, 2, 3].each { println it }
+```
+
+If the last argument is a closure, the closure can be written outside of the parentheses:
+
+```groovy
+// full syntax
+[1, 2, 3].inject('result:', { accum, v -> accum + ' ' + v })
+
+// shorthand
+[1, 2, 3].inject('result:') { accum, v -> accum + ' ' + v }
+```
+
+:::{note}
+In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
+:::
 
 (implicit-variables)=
 
@@ -1134,7 +1231,7 @@ for( def file : file('any/path').list() ) {
 }
 ```
 
-Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFiles()` takes a closure as a parameter:
+Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFile()` takes a closure as a parameter:
 
 ```groovy
 myDir.eachFile { item ->

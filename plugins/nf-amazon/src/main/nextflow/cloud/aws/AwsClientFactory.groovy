@@ -21,6 +21,7 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
@@ -54,6 +55,7 @@ import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.ConfigParser
 import nextflow.cloud.aws.util.S3CredentialsProvider
+import nextflow.cloud.aws.util.SsoCredentialsProviderV1
 import nextflow.exception.AbortOperationException
 /**
  * Implement a factory class for AWS client objects
@@ -255,9 +257,10 @@ class AwsClientFactory {
         else
             builder.withRegion(region)
 
-        final credentials = new S3CredentialsProvider(getCredentialsProvider0())
-        if( credentials )
-            builder.withCredentials(credentials)
+        final credentials = config.s3Config.anonymous
+                ? new AWSStaticCredentialsProvider(new AnonymousAWSCredentials())
+                : new S3CredentialsProvider(getCredentialsProvider0())
+        builder.withCredentials(credentials)
 
         if( clientConfig )
             builder.withClientConfiguration(clientConfig)
@@ -272,7 +275,9 @@ class AwsClientFactory {
         }
 
         if( profile ) {
-            return new ProfileCredentialsProvider(configFile(), profile)
+            return new AWSCredentialsProviderChain(List.of(
+                    new ProfileCredentialsProvider(configFile(), profile),
+                    new SsoCredentialsProviderV1(profile)))
         }
 
         return new AWSCredentialsProviderChain(List.of(
@@ -280,6 +285,7 @@ class AwsClientFactory {
                 new SystemPropertiesCredentialsProvider(),
                 WebIdentityTokenCredentialsProvider.create(),
                 new ProfileCredentialsProvider(configFile(), null),
+                new SsoCredentialsProviderV1(),
                 new EC2ContainerCredentialsProviderWrapper()))
     }
 

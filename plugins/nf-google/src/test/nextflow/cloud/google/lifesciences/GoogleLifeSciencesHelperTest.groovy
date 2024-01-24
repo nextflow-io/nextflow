@@ -440,10 +440,8 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
     def 'should create pipeline actions with keepalive' () {
         given:
-        def helper = Spy(GoogleLifeSciencesHelper)
-        helper.config = Mock(GoogleLifeSciencesConfig) {
-            getKeepAliveOnFailure() >> true
-        }
+        def config = new GoogleLifeSciencesConfig(keepAliveOnFailure: true)
+        def helper = Spy(new GoogleLifeSciencesHelper(config: config))
         and:
         def req = Mock(GoogleLifeSciencesSubmitRequest)
 

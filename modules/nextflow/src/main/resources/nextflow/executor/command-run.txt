@@ -100,7 +100,7 @@ nxf_fs_fcp() {
 
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
-    printf $exit_status {{exit_file}}
+    printf -- $exit_status {{exit_file}}
     set +u
     {{cleanup_cmd}}
     {{sync_cmd}}
@@ -147,6 +147,7 @@ nxf_main() {
     {{task_env}}
     {{secrets_env}}
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
     {{stage_cmd}}
 
     set +e

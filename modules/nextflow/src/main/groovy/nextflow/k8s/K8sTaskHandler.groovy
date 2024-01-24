@@ -249,7 +249,12 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         if ( fusionEnabled() ) {
-            builder.withPrivileged(true)
+            if( fusionConfig().privileged() )
+                builder.withPrivileged(true)
+            else {
+                final device= k8sConfig.fuseDevicePlugin()
+                builder.withResourcesLimits(device)
+            }
 
             final env = fusionLauncher().fusionEnv()
             for( Map.Entry<String,String> it : env )
@@ -278,7 +283,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         final resLabels = task.config.getResourceLabels()
         if( resLabels )
-            resLabels.putAll(resLabels)
+            result.putAll(resLabels)
         result.'nextflow.io/app' = 'nextflow'
         result.'nextflow.io/runName' = getRunName()
         result.'nextflow.io/taskName' = task.getName()
@@ -473,7 +478,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 client.podDelete(podName)
         }
         else {
-            log.debug "[K8s] Oops.. invalid delete action"
+            log.debug "[K8s] Invalid delete action"
         }
     }
 

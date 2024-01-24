@@ -62,7 +62,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
         if( bean.scratch==null )
-            bean.scratch = true
+            bean.scratch = false
 
         return new FusionScriptLauncher(bean, scheme, remoteWorkDir)
     }
@@ -108,6 +108,11 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     @Override
     protected Path targetInputFile() {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
+    }
+
+    @Override
+    protected Path targetStageFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_STAGE)
     }
 
     List<String> fusionSubmitCli(TaskRun task) {

@@ -1,12 +1,12 @@
 (getstarted-page)=
 
-# Get started
+# Getting started
 
 (getstarted-requirement)=
 
 ## Requirements
 
-Nextflow can be used on any POSIX compatible system (Linux, OS X, etc). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 20)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed.
+Nextflow can be used on any POSIX compatible system (Linux, macOS, etc). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 21)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed.
 
 For the execution in a cluster of computers, the use of a shared file system is required to allow the sharing of tasks input/output files.
 
@@ -96,32 +96,8 @@ nextflow self-update
 
 Copy the following example into your favorite text editor and save it to a file named `tutorial.nf`:
 
-```groovy
-params.str = 'Hello world!'
-
-process splitLetters {
-  output:
-    path 'chunk_*'
-
-  """
-  printf '${params.str}' | split -b 6 - chunk_
-  """
-}
-
-process convertToUpper {
-  input:
-    path x
-  output:
-    stdout
-
-  """
-  cat $x | tr '[a-z]' '[A-Z]'
-  """
-}
-
-workflow {
-  splitLetters | flatten | convertToUpper | view { it.trim() }
-}
+```{literalinclude} snippets/your-first-script.nf
+:language: groovy
 ```
 
 :::{note}
@@ -203,6 +179,8 @@ You will see that the execution of the process `splitLetters` is actually skippe
 :::{tip}
 The pipeline results are cached by default in the directory `$PWD/work`. Depending on your script, this folder can take up a lot of disk space. It's a good idea to clean this folder periodically, as long as you know you won't need to resume any pipeline runs.
 :::
+
+For more information, see the {ref}`cache-resume-page` page.
 
 (getstarted-params)=
 

@@ -16,11 +16,14 @@
 
 package nextflow.cloud.aws.batch
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.processor.TaskBean
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -94,7 +97,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -271,7 +276,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -441,7 +448,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -552,7 +561,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -619,8 +630,48 @@ class AwsBatchScriptLauncherTest extends Specification {
         def binding = builder.makeBinding()
         then:
         builder.fixOwnership() >> true
-        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && chown -fR --from root $NXF_OWNER /work/dir/{*,.*} || true'
+        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && (shopt -s extglob; GLOBIGNORE=\'..\'; chown -fR --from root $NXF_OWNER /work/dir/{*,.*}) || true'
 
+    }
+
+    def 'should not create separate stage script' () {
+        given:
+        SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'])
+        and:
+        def workDir = S3PathFactory.parse('s3://my-bucket/work')
+        and:
+        def inputFiles = [
+                'sample_1.fq': Paths.get('/my-bucket/data/sample_1.fq'),
+                'sample_2.fq': Paths.get('/my-bucket/data/sample_2.fq'),
+        ]
+        def stageScript = '''\
+                # stage input files
+                downloads=(true)
+                rm -f sample_1.fq
+                rm -f sample_2.fq
+                rm -f .command.sh
+                downloads+=("nxf_s3_download s3://my-bucket/data/sample_1.fq sample_1.fq")
+                downloads+=("nxf_s3_download s3://my-bucket/data/sample_2.fq sample_2.fq")
+                downloads+=("nxf_s3_download s3://my-bucket/work/.command.sh .command.sh")
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
+        and:
+        def bean = [
+                workDir: workDir,
+                targetDir: workDir,
+                inputFiles: inputFiles,
+                script: 'echo Hello world!'
+        ] as TaskBean
+        def opts = new AwsOptions()
+        def builder = new AwsBatchScriptLauncher(bean, opts)
+
+        when:
+        def binding = builder.makeBinding()
+        then:
+        binding.stage_inputs == stageScript
+
+        cleanup:
+        SysEnv.pop()
     }
 
 }
