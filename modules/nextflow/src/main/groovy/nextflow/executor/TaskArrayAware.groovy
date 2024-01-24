@@ -22,7 +22,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 
 /**
- * Interface for executors that support array jobs.
+ * Interface for executors that support job arrays.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -42,11 +42,11 @@ interface TaskArrayAware {
      * Get the environment variable name that provides the array index of a task.
      */
     default String getArrayIndexName() {
-        throw new UnsupportedOperationException("Executor '${getName()}' does not support array jobs")
+        throw new UnsupportedOperationException("Executor '${getName()}' does not support job arrays")
     }
 
     /**
-     * Get the start of the array job index range.
+     * Get the start of the job array index range.
      */
     default int getArrayIndexStart() {
         return 0

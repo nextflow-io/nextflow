@@ -124,7 +124,7 @@ class TaskPollingMonitorTest extends Specification {
         0 * session.notifyTaskComplete(handler) >> null
     }
 
-    def 'should submit an array job' () {
+    def 'should submit a job array' () {
         given:
         def session = Mock(Session)
         def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min')))

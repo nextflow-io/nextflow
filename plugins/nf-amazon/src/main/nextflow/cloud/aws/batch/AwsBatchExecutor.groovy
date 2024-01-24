@@ -268,7 +268,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
     ThrottlingExecutor getReaper() { reaper }
 
     void killTask(String jobId) {
-        // extract array job id
+        // extract job array id
         if( jobId.contains(':') )
             jobId = jobId.split(':')[0]
 

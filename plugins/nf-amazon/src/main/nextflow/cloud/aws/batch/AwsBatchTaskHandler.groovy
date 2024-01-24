@@ -793,7 +793,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             final arraySize = task.getArraySize()
 
             if( arraySize > 10_000 )
-                throw new IllegalArgumentException("Array jobs on AWS Batch may not have more than 10,000 tasks")
+                throw new IllegalArgumentException("Job arrays on AWS Batch may not have more than 10,000 tasks")
 
             result.setArrayProperties(new ArrayProperties().withSize(arraySize))
         }

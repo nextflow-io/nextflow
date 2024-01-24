@@ -37,7 +37,7 @@ class TaskArrayCollectorTest extends Specification {
         TaskHandler createTaskHandler(TaskRun task) { null }
     }
 
-    def 'should submit tasks as array jobs' () {
+    def 'should submit tasks as job arrays' () {
         given:
         def executor = Mock(DummyExecutor)
         def handler = Mock(TaskHandler)
@@ -52,7 +52,7 @@ class TaskArrayCollectorTest extends Specification {
             }
         }
 
-        // collect tasks into array job
+        // collect tasks into job array
         when:
         collector.collect(task)
         collector.collect(task)
@@ -62,7 +62,7 @@ class TaskArrayCollectorTest extends Specification {
         4 * executor.createTaskHandler(task) >> handler
         0 * executor.submit(_)
 
-        // submit array job when it is ready
+        // submit job array when it is ready
         when:
         collector.collect(task)
         then:
@@ -70,7 +70,7 @@ class TaskArrayCollectorTest extends Specification {
         5 * handler.prepareLauncher()
         1 * executor.submit(taskArray)
 
-        // submit partial array job when closed
+        // submit partial job array when closed
         when:
         collector.collect(task)
         collector.close()

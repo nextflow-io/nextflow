@@ -29,7 +29,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.Escape
 
 /**
- * Task monitor that batches tasks and submits them as array jobs
+ * Task monitor that batches tasks and submits them as job arrays
  * to an underlying task monitor.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -50,7 +50,7 @@ class TaskArrayCollector {
 
     TaskArrayCollector(Executor executor, int arraySize) {
         if( executor !instanceof TaskArrayAware )
-            throw new IllegalArgumentException("Executor '${executor.name}' does not support array jobs")
+            throw new IllegalArgumentException("Executor '${executor.name}' does not support job arrays")
 
         this.executor = (TaskArrayAware)executor
         this.arraySize = arraySize
@@ -78,7 +78,7 @@ class TaskArrayCollector {
             // add task to the array
             array << handler
 
-            // submit array job when it is ready
+            // submit job array when it is ready
             if( array.size() == arraySize ) {
                 submit0(array)
                 array = new ArrayList<>(arraySize)
@@ -87,7 +87,7 @@ class TaskArrayCollector {
     }
 
     /**
-     * Close the collector, submitting any remaining tasks as a partial array job.
+     * Close the collector, submitting any remaining tasks as a partial job array.
      */
     void close() {
         sync.withLock {
@@ -103,12 +103,12 @@ class TaskArrayCollector {
         for( TaskHandler handler : array )
             handler.prepareLauncher()
 
-        // submit array job
+        // submit job array
         executor.submit(createTaskArray(array))
     }
 
     /**
-     * Create the task run for an array job.
+     * Create the task run for a job array.
      *
      * @param array
      */
@@ -141,7 +141,7 @@ class TaskArrayCollector {
     }
 
     /**
-     * Create the wrapper script for an array job.
+     * Create the wrapper script for a job array.
      *
      * @param array
      */

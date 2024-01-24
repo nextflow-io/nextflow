@@ -1353,17 +1353,17 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 ## array
 
-:::{versionadded} 23.07.0-edge
+:::{versionadded} 24.02.0-edge
 :::
 
 :::{warning} *Experimental: may change in a future release.*
 :::
 
-The `array` directive allows you to submit tasks as *array jobs* for executors that support it.
+The `array` directive allows you to submit tasks as *job arrays* for executors that support it.
 
-An array job is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Array jobs incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
+A job array is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Job arrays incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
 
-The directive should be specified with a given array size, along with an executor that supports array jobs. For example:
+The directive should be specified with a given array size, along with an executor that supports job arrays. For example:
 
 ```groovy
 process cpu_task {
@@ -1376,7 +1376,7 @@ process cpu_task {
 }
 ```
 
-Nextflow currently supports array jobs for the following executors:
+Nextflow currently supports job arrays for the following executors:
 
 - {ref}`awsbatch-executor`
 - {ref}`google-batch-executor`
@@ -1386,11 +1386,11 @@ Nextflow currently supports array jobs for the following executors:
 - {ref}`sge-executor`
 - {ref}`slurm-executor`
 
-A process using array jobs will collect tasks and submit each batch as an array job when it is ready. Any "leftover" tasks will be submitted as a partial array job.
+A process using job arrays will collect tasks and submit each batch as a job array when it is ready. Any "leftover" tasks will be submitted as a partial job array.
 
-Once an array job is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried without interfering with the tasks that succeeded. Retried tasks are executed directly rather than through an array job, in order to allow for the use of [dynamic resources](#dynamic-computing-resources).
+Once a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, in order to allow for the use of [dynamic resources](#dynamic-computing-resources).
 
-The following directives must be uniform across all tasks in a process that uses array jobs, because these directives are specified once for the entire array job:
+The following directives must be uniform across all tasks in a process that uses job arrays, because these directives are specified once for the entire job array:
 
 - {ref}`process-accelerator`
 - {ref}`process-clusterOptions`

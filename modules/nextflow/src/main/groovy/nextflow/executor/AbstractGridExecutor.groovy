@@ -409,7 +409,7 @@ abstract class AbstractGridExecutor extends Executor implements TaskArrayAware {
     }
 
     String getArrayTaskId(String jobId, int index) {
-        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+        throw new UnsupportedOperationException("Executor '${name}' does not support job arrays")
     }
 
 }
