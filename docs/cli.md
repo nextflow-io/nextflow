@@ -31,6 +31,8 @@ Available options:
 : Add the specified file to configuration set.
 
 `-d, -dockerize`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Launch nextflow via Docker (experimental).
 
 `-h`
@@ -227,6 +229,8 @@ The `-v` option prints out information about Nextflow, such as the version and b
 (cli-commands)=
 
 ## Commands
+
+(cli-clean)=
 
 ### clean
 
@@ -548,6 +552,66 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 $ nextflow drop nextflow-io/hello -f
 ```
 
+### fs
+
+Perform basic filesystem operations.
+
+**Usage**
+
+```console
+$ nextflow fs [subcommands]
+```
+
+**Description**
+
+The `fs` command is used to perform filesystem operations like copy, move, delete, list directory, etc. Like the `file()` method, it can work with local files, remote URLs, and remote object storage. Storage credentials can be provided through the same manner as launching a pipeline (Nextflow config, environment vars, etc).
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Examples**
+
+List a directory.
+
+```console
+$ nextflow fs list <directory>
+```
+
+Print the contents of a file to standard output.
+
+```console
+$ nextflow fs cat <file>
+```
+
+Copy a file or directory.
+
+```console
+$ nextflow fs cp <source> <target>
+```
+
+Move a file or directory.
+
+```console
+$ nextflow fs mv <source> <target>
+```
+
+Delete a file or directory.
+
+```console
+$ nextflow fs rm <path>
+```
+
+:::{versionadded} 23.10.0
+:::
+
+Print file or directory attributes.
+
+```console
+$ nextflow fs stat <path>
+```
+
 ### help
 
 Print the top-level help or specific help for a command.
@@ -825,6 +889,8 @@ nextflow-io/hello
 nextflow-hub/fastqc
 ```
 
+(cli-log)=
+
 ### log
 
 Print the execution history and log information.
@@ -1075,16 +1141,23 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL2 syntax.
 
 `-dump-channels`
 : Dump channels for debugging purpose.
 
 `-dump-hashes`
-: Dump task hash keys for debugging purpose.
+: Dump task hash keys for debugging purposes.
+: :::{versionadded} 23.10.0
+  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`caching and resuming tips <cache-compare-hashes>` for more details.
+  :::
 
 `-e.<key>=<value>`
 : Add the specified variable to execution environment.
@@ -1157,11 +1230,17 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-charliecloud`
 : Enable process execution in a Charliecloud container.
 
+`-with-cloudcache`
+: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
+
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
-`-with-dag` (`dag-<timestamp>.dot`)
+`-with-dag` (`dag-<timestamp>.html`)
 : Create pipeline DAG file.
+: :::{versionchanged} 23.10.0
+  The default format was changed from `dot` to `html`.
+  :::
 
 `-with-docker`
 : Enable process execution in a Docker container.
@@ -1243,13 +1322,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run nextflow-io/hello -qs 4
   ```
 
-- Execute the pipeline with DSL-2 syntax.
-
-  ```console
-  $ nextflow run nextflow-io/hello -dsl2
-  ```
-
-- Execute a pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
+- Invoke the pipeline with a specific workflow as the entry-point.
 
   ```console
   $ nextflow run main.nf -entry workflow_A

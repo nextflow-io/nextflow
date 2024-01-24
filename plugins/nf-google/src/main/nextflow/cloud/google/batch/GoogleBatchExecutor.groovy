@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.logging.BatchLogging
@@ -128,6 +129,10 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayA
         return FusionHelper.isFusionEnabled(session)
     }
 
+    boolean isCloudinfoEnabled() {
+        return Boolean.parseBoolean(SysEnv.get('NXF_CLOUDINFO_ENABLED', 'true') )
+    }
+
     void killTask(String jobId) {
         // prevent duplicate delete requests on the same job
         if( jobId in deletedJobs )
@@ -141,5 +146,4 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayA
 
     @Override
     String getArrayIndexName() { 'BATCH_TASK_INDEX' }
-
 }

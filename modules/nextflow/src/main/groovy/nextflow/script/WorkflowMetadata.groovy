@@ -29,6 +29,7 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.config.Manifest
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.InvokerHelper
@@ -234,12 +235,12 @@ class WorkflowMetadata {
         this.nextflow = NextflowMeta.instance
         this.workDir = session.workDir
         this.launchDir = Paths.get('.').complete()
-        this.profile = session.profile ?:  ConfigBuilder.DEFAULT_PROFILE
+        this.profile = session.profile ?: ConfigBuilder.DEFAULT_PROFILE
         this.sessionId = session.uniqueId
         this.resume = session.resumeMode
         this.stubRun = session.stubRun
         this.runName = session.runName
-        this.containerEngine = session.containerConfig.with { isEnabled() ? getEngine() : null }
+        this.containerEngine = containerEngine0(session)
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }
         this.stats = new WorkflowStats()
         this.userName = System.getProperty('user.name')
@@ -250,6 +251,11 @@ class WorkflowMetadata {
         registerConfigAction(session.config.workflow as Map)
         session.onShutdown { invokeOnComplete() }
         session.onError( this.&invokeOnError )
+    }
+
+    private String containerEngine0(Session session) {
+       final config = session.getContainerConfig()
+       return config.isEnabled() ? config.getEngine() : null
     }
 
     /**
@@ -387,6 +393,10 @@ class WorkflowMetadata {
             try {
                 action.call()
             }
+            catch (WorkflowScriptErrorException e) {
+                // re-throw it to allow `error` function to be invoked by completion handler
+                throw e
+            }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onComplete` event handler", e)
             }
@@ -453,10 +463,10 @@ class WorkflowMetadata {
      */
     protected void safeMailNotification() {
         try {
-            def notifier = new WorkflowNotifier()
-            notifier.workflow = this
-            notifier.config = session.config
-            notifier.variables = NF.binding.variables
+            final notifier = new WorkflowNotifier(
+                workflow: this,
+                config: session.config,
+                variables: NF.binding.variables )
             notifier.sendNotification()
         }
         catch (Exception e) {

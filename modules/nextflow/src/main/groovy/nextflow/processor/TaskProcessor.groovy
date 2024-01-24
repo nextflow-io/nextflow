@@ -32,6 +32,7 @@ import java.util.regex.Pattern
 
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -130,12 +131,6 @@ class TaskProcessor {
     final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
-
-    @Memoized
-    static boolean getInvalidateCacheOnTaskDirectiveChange() {
-        final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
-        return value==null || value =='true'
-    }
 
     @TestOnly private static volatile TaskProcessor currentProcessor0
 
@@ -378,7 +373,7 @@ class TaskProcessor {
      * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
      * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.
      *
-     * Note this returns an "eventually" task configuration object. Also Inputs ane output parameters are NOT
+     * Note this returns an "eventually" task configuration object. Also Inputs and output parameters are NOT
      * resolved by this method.
      *
      * @return A {@link TaskRun} object holding a reference to the associated {@link TaskConfig}
@@ -428,15 +423,15 @@ class TaskProcessor {
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
 
-        // -- check that input set defines at least two elements
-        def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
-        if( invalidInputSet )
-            checkWarn "Input `set` must define at least two component -- Check process `$name`"
+        // -- check that input tuple defines at least two elements
+        def invalidInputTuple = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
+        if( invalidInputTuple )
+            checkWarn "Input `tuple` must define at least two elements -- Check process `$name`"
 
-        // -- check that output set defines at least two elements
-        def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
-        if( invalidOutputSet )
-            checkWarn "Output `set` must define at least two component -- Check process `$name`"
+        // -- check that output tuple defines at least two elements
+        def invalidOutputTuple = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
+        if( invalidOutputTuple )
+            checkWarn "Output `tuple` must define at least two elements -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
@@ -620,7 +615,7 @@ class TaskProcessor {
         currentTask.set(task)
 
         // -- validate input lengths
-        validateInputSets(values)
+        validateInputTuples(values)
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
@@ -650,13 +645,13 @@ class TaskProcessor {
     }
 
     @Memoized
-    private List<TupleInParam> getDeclaredInputSet() {
+    private List<TupleInParam> getDeclaredInputTuple() {
         getConfig().getInputs().ofType(TupleInParam)
     }
 
-    protected void validateInputSets( List values ) {
+    protected void validateInputTuples( List values ) {
 
-        def declaredSets = getDeclaredInputSet()
+        def declaredSets = getDeclaredInputTuple()
         for( int i=0; i<declaredSets.size(); i++ ) {
             final param = declaredSets[i]
             final entry = values[param.index]
@@ -664,7 +659,7 @@ class TaskProcessor {
             final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
 
             if( actual != expected ) {
-                final msg = "Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry"
+                final msg = "Input tuple does not match tuple declaration in process `$name` -- offending value: $entry"
                 checkWarn(msg, [firstOnly: true, cacheKey: this])
             }
         }
@@ -673,7 +668,7 @@ class TaskProcessor {
 
     /**
      * @return A string 'she-bang' formatted to the added on top script to be executed.
-     * The interpreter to be used define bu the *taskConfig* property {@code shell}
+     * The interpreter to be used define by the *taskConfig* property {@code shell}
      */
     static String shebangLine(shell) {
         assert shell, "Missing 'shell' property in process configuration"
@@ -798,13 +793,13 @@ class TaskProcessor {
             Path resumeDir = null
             boolean exists = false
             try {
-                def entry = session.cache.getTaskEntry(hash, this)
+                final entry = session.cache.getTaskEntry(hash, this)
                 resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
                 if( resumeDir )
                     exists = resumeDir.exists()
 
                 log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
+                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
             }
@@ -867,7 +862,7 @@ class TaskProcessor {
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] Store dir does not exists > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] Store dir does not exist > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -1601,7 +1596,7 @@ class TaskProcessor {
                 def file = workDir.resolve(path)
                 def exists = checkFileExists(file, param.followLinks)
                 if( exists )
-                    result = [file]
+                    result = List.of(file)
                 else
                     log.debug "Process `${safeTaskName(task)}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
             }
@@ -2166,7 +2161,9 @@ class TaskProcessor {
         final mode = config.getHashMode()
         final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
-            traceInputsHashes(task, keys, mode, hash)
+            session.dumpHashes=='json'
+                ? traceInputsHashesJson(task, keys, mode, hash)
+                : traceInputsHashes(task, keys, mode, hash)
         }
         return hash
     }
@@ -2176,7 +2173,7 @@ class TaskProcessor {
             return CacheHelper.hasher(keys, mode).hash()
         }
         catch (Throwable e) {
-            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            final msg = "Something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
             throw new UnexpectedException(msg,e)
         }
     }
@@ -2202,6 +2199,16 @@ class TaskProcessor {
         return result
     }
 
+    private void traceInputsHashesJson( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
+        final collector = (item) -> [
+            hash: CacheHelper.hasher(item, mode).hash().toString(),
+            type: item?.getClass()?.getName(),
+            value: item?.toString()
+        ]
+        final json = JsonOutput.toJson(entries.collect(collector))
+        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${JsonOutput.prettyPrint(json)}"
+    }
+
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
 
         def buffer = new StringBuilder()
@@ -2215,19 +2222,17 @@ class TaskProcessor {
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         final result = task.getGlobalVars(ownerScript.binding)
-        if( invalidateCacheOnTaskDirectiveChange ) {
-            final directives = getTaskDirectiveVars(task)
-            result.putAll(directives)
-        }
+        final directives = getTaskExtensionDirectiveVars(task)
+        result.putAll(directives)
         return result
     }
 
-    protected Map<String,Object> getTaskDirectiveVars(TaskRun task) {
+    protected Map<String,Object> getTaskExtensionDirectiveVars(TaskRun task) {
         final variableNames = task.getVariableNames()
         final result = new HashMap(variableNames.size())
         final taskConfig = task.config
         for( String key : variableNames ) {
-            if( !key.startsWith('task.') ) continue
+            if( !key.startsWith('task.ext.') ) continue
             final value = taskConfig.eval(key.substring(5))
             result.put(key, value)
         }
@@ -2438,7 +2443,7 @@ class TaskProcessor {
 
         @Override
         List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
@@ -2455,7 +2460,7 @@ class TaskProcessor {
 
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After run"
             currentTask.remove()
@@ -2463,7 +2468,7 @@ class TaskProcessor {
 
         @Override
         Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2475,7 +2480,7 @@ class TaskProcessor {
 
         @Override
         Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2485,7 +2490,7 @@ class TaskProcessor {
             super.controlMessageArrived(processor, channel, index, message)
 
             if( message == PoisonPill.instance ) {
-                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+                // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
                 if( log.isTraceEnabled() )
                     log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
@@ -2497,7 +2502,7 @@ class TaskProcessor {
 
         @Override
         void afterStop(final DataflowProcessor processor) {
-            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explictly
+            // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After stop"
             closeProcess()

@@ -179,7 +179,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         config._in_file([infile:'filename.fa'])
-        config._in_val('x') .from(1)
+        config._in_val('x').setFrom(1)
         config._in_stdin()
 
         then:
@@ -208,9 +208,9 @@ class ProcessConfigTest extends Specification {
 
         when:
         config._out_stdout()
-        config._out_file(new TokenVar('file1')).into('ch1')
-        config._out_file(new TokenVar('file2')).into('ch2')
-        config._out_file(new TokenVar('file3')).into('ch3')
+        config._out_file(new TokenVar('file1')).setInto('ch1')
+        config._out_file(new TokenVar('file2')).setInto('ch2')
+        config._out_file(new TokenVar('file3')).setInto('ch3')
 
         then:
         config.outputs.size() == 4

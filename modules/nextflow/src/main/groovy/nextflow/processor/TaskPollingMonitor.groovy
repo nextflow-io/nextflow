@@ -465,7 +465,7 @@ class TaskPollingMonitor implements TaskMonitor {
             log.debug msg.join('\n')
         }
         catch (Throwable e) {
-            log.debug "Oops.. expected exception", e
+            log.debug "Unexpected exception dumping run queue", e
         }
     }
 
@@ -486,7 +486,7 @@ class TaskPollingMonitor implements TaskMonitor {
             log.debug msg.join('\n')
         }
         catch (Throwable e) {
-            log.debug "Oops.. unexpected exception", e
+            log.debug "Unexpected exception dumping submit queue", e
         }
     }
 
