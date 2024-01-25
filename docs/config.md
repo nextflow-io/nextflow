@@ -231,6 +231,7 @@ The following settings are available:
 `aws.client.endpoint`
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 : The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. Note: the endpoint must include the protocol prefix e.g. `https://`.
 =======
 : The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`.
@@ -238,6 +239,9 @@ The following settings are available:
 =======
 : The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. Note: the endpoint must include the protocol prefix e.g. `https://`.
 >>>>>>> 7e1ba0e08... improve AWS client endpoint https docs (#4690) [ci skip]
+=======
+: The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`.
+>>>>>>> 74c66ba6a... [docs] Fix AWS custom endpoint [ci skip]
 
 `aws.client.glacierAutoRetrieval`
 : :::{deprecated} 24.02.0-edge
