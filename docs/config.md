@@ -229,7 +229,11 @@ The following settings are available:
 : The amount of time to wait (in milliseconds) when initially establishing a connection before timing out.
 
 `aws.client.endpoint`
+<<<<<<< HEAD
 : The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. Note: the endpoint must include the protocol prefix e.g. `https://`.
+=======
+: The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`.
+>>>>>>> 74c66ba6a... [docs] Fix AWS custom endpoint [ci skip]
 
 `aws.client.glacierAutoRetrieval`
 : :::{deprecated} 24.02.0-edge
