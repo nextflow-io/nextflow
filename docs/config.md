@@ -229,7 +229,7 @@ The following settings are available:
 : The amount of time to wait (in milliseconds) when initially establishing a connection before timing out.
 
 `aws.client.endpoint`
-: The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
+: The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`.
 
 `aws.client.glacierAutoRetrieval`
 : :::{versionadded} 22.12.0-edge
