@@ -49,8 +49,8 @@ class AzPathFactory extends FileSystemPathFactory {
             throw new IllegalArgumentException("Invalid Azure path URI - make sure the schema prefix does not container more than two slash characters - offending value: $uri")
 
         final storageAccountName = AzConfig.getConfig().storage().accountName
-        if (uri.contains(storageAccountName)){
-            uri = uri.replace("${storageAccountName}.","")
+        if (uri.startsWith("az://${storageAccountName}.") ) {
+            uri = uri.replace("az://${storageAccountName}.","az://")
         }
 
         final storageConfigEnv = AzConfig.getConfig().storage().getEnv()
