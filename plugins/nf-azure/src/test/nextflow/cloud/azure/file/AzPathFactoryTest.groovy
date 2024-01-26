@@ -38,7 +38,7 @@ class AzPathFactoryTest extends Specification {
 
         cleanup:
         Global.session = null
-        
+
         where:
         AZ_URI                          | CONTAINER     | BLOB
         'az://my-data/foo/bar'          | 'my-data'     | 'foo/bar'
@@ -46,6 +46,32 @@ class AzPathFactoryTest extends Specification {
     }
 
 
+    def 'should create az azure path and remove storage account name if present' () {
+        given:
+        def CONFIG = [azure: [
+            storage: [
+                accountKey: System.getenv('AZURE_STORAGE_ACCOUNT_KEY'),
+                accountName: System.getenv('AZURE_STORAGE_ACCOUNT_NAME'),
+            ]
+        ]]
+        Global.session = Mock(Session) { getConfig() >> CONFIG }
+        and:
+
+        when:
+        def path = AzPathFactory.parse(AZ_URI)
+        then:
+        path instanceof AzPath
+        (path as AzPath).containerName == CONTAINER
+        (path as AzPath).blobName() == BLOB
+
+        cleanup:
+        Global.session = null
+
+        where:
+        storageAccount                              |  AZ_URI                                           | CONTAINER | BLOB
+        System.getenv('AZURE_STORAGE_ACCOUNT_NAME') | "az://${storageAccount}.my-data/foo/bar"          | 'my-data' | 'foo/bar'
+        System.getenv('AZURE_STORAGE_ACCOUNT_NAME') | "az://${storageAccount}.my-data/data/*{1,2}.fq.gz"| 'my-data' | 'data/*{1,2}.fq.gz'
+    }
 
     def 'should throw illegal path' () {
         given:
