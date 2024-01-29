@@ -451,6 +451,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         final result = get('conda')
         if( result instanceof CondaResource )
             return (result as CondaResource).packages 
+        if( result instanceof Map )
+            return (result as Map).packages as String
         // this may be needed for backward compatibility with serialised objects
         if( result instanceof CharSequence )
             return result
@@ -463,6 +465,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         final result = get('conda')
         if( result instanceof CondaResource )
             return result as CondaResource
+        if( result instanceof Map )
+            return CondaResource.of(result)
         // this may be needed for backward compatibility with serialised objects
         if( result instanceof CharSequence )
             return CondaResource.ofCondaPackages(result)

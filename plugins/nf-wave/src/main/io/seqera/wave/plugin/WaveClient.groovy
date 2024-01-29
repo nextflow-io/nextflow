@@ -407,7 +407,7 @@ class WaveClient {
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
-        attrs.conda = task.config.conda as String
+        attrs.conda = task.config.getCondaResource()?.extendedPackages
         attrs.spack = task.config.spack as String
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text

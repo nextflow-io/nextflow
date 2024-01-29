@@ -619,6 +619,21 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def 'should get conda resources with map' () {
+        when:
+        def process = new ProcessConfig([conda: CONFIG])
+        then:
+        process.createTaskConfig().getConda() == CONDA
+        process.createTaskConfig().getCondaResource() == RESOURCES
+
+        where:
+        CONFIG                              | CONDA                 | RESOURCES
+        'foo bar'                           | 'foo bar'             | CondaResource.ofCondaPackages('foo bar')
+        [packages:'foo bar', pip: 'pandas'] | 'foo bar'             | CondaResource.of([packages:'foo bar', pip: 'pandas'])
+        [pip: 'pandas']                     | null                  | CondaResource.ofPipPackages('pandas')
+
+    }
+
     def 'should configure secrets'()  {
 
         given:

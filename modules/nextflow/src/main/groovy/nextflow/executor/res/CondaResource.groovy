@@ -30,12 +30,32 @@ import groovy.transform.ToString
 @ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 class CondaResource {
+
+    private static final List<String> ALLOWED_KEYS = List.<String>of('packages','pip')
+
     final String packages
     final String pip
 
     private CondaResource(String conda, String pip) {
+        if( pip && conda && isFilePath(conda) )
+            throw new IllegalArgumentException("Conda environment file and Pip packages conflict each other - offending enviroment: '$conda'")
         this.packages = conda
         this.pip = pip
+    }
+
+    String getExtendedPackages() {
+        if( !pip )
+            return packages
+        if( !packages )
+            return prefix(pip)
+        else
+            return packages + ' ' + prefix(pip)
+    }
+
+    protected String prefix(String value) {
+        if( !value )
+            return null
+        value.tokenize(' ').collect(it-> "pip:"+it).join(' ')
     }
 
     static CondaResource ofCondaPackages(CharSequence packages) {
@@ -50,9 +70,27 @@ class CondaResource {
         if( !values )
             throw new IllegalArgumentException("Conda directive cannot be empty")
         for( String k in values.keySet()) {
-            if( k != 'packages' && k != 'pip' )
+            if( k !in ALLOWED_KEYS )
                 throw new IllegalArgumentException("Not a valid Conda directive attribute: '$k'")
         }
-        new CondaResource(values.packages?.toString(), values.pip?.toString())
+        return new CondaResource(values.packages?.toString(), values.pip?.toString())
+    }
+
+    static boolean isFilePath(String value) {
+        if( !value )
+            return false
+        if( value.contains('/') )
+            return true
+        if( value.endsWith('.txt') )
+            return true
+        if( value.endsWith('.yml') )
+            return true
+        if( value.endsWith('.yaml') )
+            return true
+        if( value.startsWith('http://'))
+            return true
+        if( value.startsWith('https://'))
+            return true
+        return false
     }
 }
