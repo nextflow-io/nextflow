@@ -18,6 +18,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
+import nextflow.executor.res.CondaResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
@@ -589,6 +590,33 @@ class TaskConfigTest extends Specification {
         res.request == 5
         res.limit == 10
         res.type == 'nvidia'
+    }
+
+    def 'should get conda resources' () {
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        process.conda 'foo bar'
+        then:
+        process.createTaskConfig().getConda() == 'foo bar'
+        process.createTaskConfig().getCondaResource() == CondaResource.ofCondaPackages('foo bar')
+
+        when:
+        process = new ProcessConfig(script)
+        process.conda 'foo bar', pip: 'pandas'
+        then:
+        process.createTaskConfig().getConda() == 'foo bar'
+        process.createTaskConfig().getCondaResource() == CondaResource.of([packages:'foo bar', pip: 'pandas'])
+
+        when:
+        process = new ProcessConfig(script)
+        process.conda pip: 'pandas'
+        then:   
+        process.createTaskConfig().getConda() == null
+        process.createTaskConfig().getCondaResource() == CondaResource.ofPipPackages('pandas')
+
     }
 
     def 'should configure secrets'()  {

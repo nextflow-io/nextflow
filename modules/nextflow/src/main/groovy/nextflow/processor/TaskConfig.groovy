@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import nextflow.executor.res.CondaResource
 import nextflow.util.CmdLineOptionMap
 
 import static nextflow.processor.TaskProcessor.*
@@ -444,6 +445,26 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( value != null )
             throw new IllegalArgumentException("Invalid `accelerator` directive value: $value [${value.getClass().getName()}]")
         return null
+    }
+
+    String getConda() {
+        final result = get('conda')
+        if( result instanceof CondaResource )
+            return (result as CondaResource).packages 
+        // this may be needed for backward compatibility with serialised objects
+        if( result instanceof CharSequence )
+            return result
+        throw new IllegalArgumentException("Invalid `conda` directive value: $result [${result.getClass().getName()}]")
+    }
+
+    CondaResource getCondaResource() {
+        final result = get('conda')
+        if( result instanceof CondaResource )
+            return result as CondaResource
+        // this may be needed for backward compatibility with serialised objects
+        if( result instanceof CharSequence )
+            return CondaResource.ofCondaPackages(result)
+        throw new IllegalArgumentException("Invalid `conda` directive value: $result [${result.getClass().getName()}]")
     }
 
     String getMachineType() {

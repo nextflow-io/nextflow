@@ -16,22 +16,39 @@
 
 package nextflow.script
 
+import static nextflow.util.CacheHelper.*
+
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.NF
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.ConfigParseException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.res.CondaResource
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
-import static nextflow.util.CacheHelper.HashMode
-import nextflow.script.params.*
+import nextflow.script.params.DefaultInParam
+import nextflow.script.params.DefaultOutParam
+import nextflow.script.params.EachInParam
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.FileOutParam
+import nextflow.script.params.InParam
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutParam
+import nextflow.script.params.OutputsList
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.TupleOutParam
+import nextflow.script.params.ValueInParam
+import nextflow.script.params.ValueOutParam
 
 /**
  * Holds the process configuration properties
@@ -918,6 +935,27 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
         return this
+    }
+
+    ProcessConfig conda( value ) {
+        if( value instanceof CharSequence ) {
+            configProperties.put('conda', CondaResource.ofCondaPackages(value))
+        }
+        else if( value instanceof Map ) {
+            configProperties.put('conda', CondaResource.of(value))
+        }
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `conda` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    ProcessConfig conda( Map params, value ) {
+        if( value instanceof CharSequence ) {
+            params.packages = value
+        }
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `conda` directive value: $value [${value.getClass().getName()}]")
+        return conda(params)
     }
 
     /**

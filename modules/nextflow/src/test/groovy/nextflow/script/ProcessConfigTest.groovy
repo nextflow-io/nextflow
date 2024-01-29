@@ -18,6 +18,7 @@ package nextflow.script
 
 import java.nio.file.Files
 
+import nextflow.executor.res.CondaResource
 import nextflow.scm.ProviderConfig
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -676,6 +677,26 @@ class ProcessConfigTest extends Specification {
         process.accelerator 5, request: 1
         then:
         process.accelerator == [request: 1, limit:5]
+    }
+
+    def 'should apply conda config' () {
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.conda 'foo bar'
+        then:
+        process.conda == CondaResource.of([packages: 'foo bar'])
+
+        when:
+        process.conda 'foo bar', pip: 'pandas'
+        then:
+        process.conda == CondaResource.of([packages: 'foo bar', pip: 'pandas'])
+
+        when:
+        process.conda packages: 'foo bar', pip: 'pandas'
+        then:
+        process.conda == CondaResource.of([packages: 'foo bar', pip: 'pandas'])
     }
 
     def 'should apply disk config' () {
