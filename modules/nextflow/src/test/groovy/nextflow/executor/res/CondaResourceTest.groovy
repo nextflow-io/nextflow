@@ -96,6 +96,6 @@ class CondaResourceTest extends Specification {
         CondaResource.of([packages:'/file.txt', pip:'x y'])
         then:
         e = thrown(IllegalArgumentException)
-        e.message == "Conda environment file and Pip packages conflict each other - offending enviroment: '/file.txt'"
+        e.message == "Conda environment file and Pip packages conflict each other - offending environment: '/file.txt'"
     }
 }

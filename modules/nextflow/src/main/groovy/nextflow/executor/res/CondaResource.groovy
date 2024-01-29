@@ -38,7 +38,7 @@ class CondaResource {
 
     private CondaResource(String conda, String pip) {
         if( pip && conda && isFilePath(conda) )
-            throw new IllegalArgumentException("Conda environment file and Pip packages conflict each other - offending enviroment: '$conda'")
+            throw new IllegalArgumentException("Conda environment file and Pip packages conflict each other - offending environment: '$conda'")
         this.packages = conda
         this.pip = pip
     }
