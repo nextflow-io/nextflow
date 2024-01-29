@@ -454,7 +454,9 @@ class TaskConfig extends LazyMap implements Cloneable {
         // this may be needed for backward compatibility with serialised objects
         if( result instanceof CharSequence )
             return result
-        throw new IllegalArgumentException("Invalid `conda` directive value: $result [${result.getClass().getName()}]")
+        if( result != null )
+            throw new IllegalArgumentException("Invalid `conda` directive value: $result [${result.getClass().getName()}]")
+        return null
     }
 
     CondaResource getCondaResource() {
@@ -464,7 +466,9 @@ class TaskConfig extends LazyMap implements Cloneable {
         // this may be needed for backward compatibility with serialised objects
         if( result instanceof CharSequence )
             return CondaResource.ofCondaPackages(result)
-        throw new IllegalArgumentException("Invalid `conda` directive value: $result [${result.getClass().getName()}]")
+        if( result != null )
+            throw new IllegalArgumentException("Invalid `conda` directive value: $result [${result.getClass().getName()}]")
+        return null
     }
 
     String getMachineType() {
