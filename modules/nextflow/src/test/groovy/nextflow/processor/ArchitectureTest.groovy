@@ -45,6 +45,7 @@ class ArchitectureTest extends Specification {
         'aarch64'                              | null     | 'aarch64'   | null   | 'linux/arm64'    | 'aarch64'
         'arm64'                                | null     | 'arm64'     | null   | 'linux/arm64'    | 'aarch64'
         'linux/arm64/v8'                       | 'linux'  | 'arm64/v8'  | null   | 'linux/arm64'    | 'aarch64'
+        'arm64/v8'                             | null     | 'arm64/v8'  | null   | 'linux/arm64'    | 'aarch64'
         'linux/arm64/v7'                       | 'linux'  | 'arm64/v7'  | null   | 'linux/arm64/v7' | null
     }
 
@@ -59,9 +60,11 @@ class ArchitectureTest extends Specification {
         arch.spackArch == SPACK
 
         where:
-        VALUE                                  | PLAT     | ARCH        | TAR    | DOCK             | SPACK
-        [name: 'amd64', target: 'zen3']        | null     | 'amd64'     | 'zen3' | 'linux/amd64'    | 'zen3'
-        [name: 'arm64', target: 'zen3']        | null     | 'arm64'     | 'zen3' | 'linux/arm64'    | 'zen3'
-        [name: 'linux/x86_64', target: 'zen3'] | 'linux'  | 'x86_64'    | 'zen3' | 'linux/amd64'    | 'zen3'
+        VALUE                                  | PLAT     | ARCH        | TAR           | DOCK             | SPACK
+        [name: 'amd64', target: 'zen3']        | null     | 'amd64'     | 'zen3'        | 'linux/amd64'    | 'zen3'
+        [name: 'linux/x86_64', target: 'zen3'] | 'linux'  | 'x86_64'    | 'zen3'        | 'linux/amd64'    | 'zen3'
+        [name: 'amd64', target: 'x86_64_v3']   | null     | 'amd64'     | 'x86_64_v3'   | 'linux/amd64'    | 'x86_64_v3'
+        [name: 'x86_64', target: 'x86_64_v3']  | null     | 'x86_64'    | 'x86_64_v3'   | 'linux/amd64'    | 'x86_64_v3'
+        [name: 'arm64', target: 'neoverse_v2'] | null     | 'arm64'     | 'neoverse_v2' | 'linux/arm64'    | 'neoverse_v2'
     }
 }

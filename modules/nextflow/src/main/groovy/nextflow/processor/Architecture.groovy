@@ -56,7 +56,7 @@ class Architecture {
     static protected String getPlatform( String value ) {
         // return value.minus(~'/.*') // keeping for reference
         final chunks = value.tokenize('/')
-        if( chunks.size() > 1 )
+        if( chunks.size() == 3 || (chunks.size() == 2 && chunks[0] != 'arm64') )
             return chunks[0]
         else
             return null
@@ -67,10 +67,10 @@ class Architecture {
         def chunks = value.tokenize('/')
         if( chunks.size() == 3 )
             return chunks[1] + '/' + chunks[2]
-        else if( chunks.size() == 2 )
+        else if( chunks.size() == 2 && chunks[0] != 'arm64')
             return chunks[1]
         else
-            return chunks[0]
+            return value
     }
 
     static private String validateArchToDockerArch( Map res ) {
