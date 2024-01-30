@@ -16,20 +16,18 @@
 
 package nextflow.extension
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Path
 
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import nextflow.Global
 import nextflow.Session
-
+import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FilesExTest2 extends Specification {
+class FilesExTest2 extends AppSpec {
 
     @Unroll
     def 'should return uri string for #PATH' () {

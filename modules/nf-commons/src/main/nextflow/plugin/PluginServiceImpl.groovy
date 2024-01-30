@@ -38,7 +38,7 @@ import org.pf4j.PluginStateListener
  */
 @Slf4j
 @CompileStatic
-class PluginsFacade implements PluginStateListener {
+class PluginServiceImpl implements PluginStateListener, PluginService {
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
@@ -49,10 +49,10 @@ class PluginsFacade implements PluginStateListener {
     private PluginUpdater updater
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
-    private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
+    private String indexUrl = DEFAULT_PLUGINS_REPO
     private boolean embedded
 
-    PluginsFacade() {
+    PluginServiceImpl() {
         mode = getPluginsMode()
         root = getPluginsDir()
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
@@ -60,7 +60,7 @@ class PluginsFacade implements PluginStateListener {
         System.setProperty('pf4j.mode', mode)
     }
 
-    PluginsFacade(Path root, String mode=PROD_MODE) {
+    PluginServiceImpl(Path root, String mode=PROD_MODE) {
         this.mode = mode
         this.root = root
         System.setProperty('pf4j.mode', mode)
@@ -183,6 +183,7 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    @Override
     PluginManager getManager() { manager }
 
     void init(boolean embedded=false) {
@@ -203,7 +204,8 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    void init(Path root, String mode, CustomPluginManager pluginManager) {
+    @Override
+    synchronized void init(Path root, String mode, CustomPluginManager pluginManager) {
         if( manager )
             throw new IllegalArgumentException("Plugin system already setup")
         this.root = root
@@ -227,6 +229,7 @@ class PluginsFacade implements PluginStateListener {
         start(pluginsRequirement(config))
     }
 
+    @Override
     synchronized void stop() {
         if( manager ) {
             manager.stopPlugins()
@@ -242,7 +245,8 @@ class PluginsFacade implements PluginStateListener {
      * @return
      *      The list of extensions matching the requested interface.
      */
-    def <T> List<T> getExtensions(Class<T> type) {
+    @Override
+    <T> List<T> getExtensions(Class<T> type) {
         if( manager ) {
             return manager.getExtensions(type)
         }
@@ -263,7 +267,8 @@ class PluginsFacade implements PluginStateListener {
      * @return
      *      The list of extensions matching the requested interface.
      */
-    def <T> List<T> getExtensions(Class<T> type, String pluginId) {
+    @Override
+    <T> List<T> getExtensions(Class<T> type, String pluginId) {
         if( manager ) {
             return manager.getExtensions(type, pluginId)
         }
@@ -283,7 +288,8 @@ class PluginsFacade implements PluginStateListener {
      *      The list of extensions matching the requested interface.
      *      The extension with higher priority appears first (lower index)
      */
-    def <T> List<T> getPriorityExtensions(Class<T> type,String group=null) {
+    @Override
+    <T> List<T> getPriorityExtensions(Class<T> type,String group=null) {
         def result = getExtensions(type)
         if( group )
             result = result.findAll(it -> group0(it)==group )
@@ -329,6 +335,7 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    @Override
     boolean isStarted(String pluginId) {
         manager.getPlugin(pluginId)?.pluginState == PluginState.STARTED
     }
@@ -422,10 +429,12 @@ class PluginsFacade implements PluginStateListener {
         return result
     }
 
+    @Override
     synchronized void pullPlugins(List<String> ids) {
         updater.pullPlugins(ids)
     }
 
+    @Override
     boolean startIfMissing(String pluginId) {
         if( env.NXF_PLUGINS_DEFAULT == 'false' )
             return false

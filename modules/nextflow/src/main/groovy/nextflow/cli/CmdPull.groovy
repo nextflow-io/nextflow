@@ -15,12 +15,12 @@
  */
 
 package nextflow.cli
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 /**
  * CLI sub-command PULL
@@ -69,9 +69,6 @@ class CmdPull extends CmdBase implements HubOptions {
             AssetManager.root = root
         }
 
-        // init plugin system
-        Plugins.init()
-        
         list.each {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)

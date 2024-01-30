@@ -15,20 +15,21 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Files
 
 import nextflow.Session
 import nextflow.container.ContainerConfig
-import nextflow.script.ProcessConfig
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import spock.lang.Specification
+import nextflow.script.ProcessConfig
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondorExecutorTest extends Specification {
+class CondorExecutorTest extends AppSpec {
 
 
     def 'should return valid directives' () {

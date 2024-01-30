@@ -19,18 +19,13 @@ package nextflow.cli
 import java.nio.file.Files
 
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdConfigTest extends Specification {
-
-    def cleanup() {
-        Plugins.stop()
-    }
+class CmdConfigTest extends AppSpec {
 
     def 'should default notation' () {
 

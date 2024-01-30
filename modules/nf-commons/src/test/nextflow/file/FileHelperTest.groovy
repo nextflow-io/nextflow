@@ -31,13 +31,13 @@ import java.nio.file.spi.FileSystemProvider
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import nextflow.SysEnv
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileHelperTest extends Specification {
+class FileHelperTest extends AppSpec {
 
     static private fs = Jimfs.newFileSystem(Configuration.unix());
 

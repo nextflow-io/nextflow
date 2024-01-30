@@ -19,9 +19,8 @@ package nextflow.cli
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.plugin.Plugins
+import nextflow.App
 import nextflow.ui.console.ConsoleExtension
-
 /**
  * Launch the Nextflow Console plugin
  *
@@ -37,9 +36,11 @@ class CmdConsole extends CmdBase {
     String getName() { 'console' }
 
     void run() {
-        Plugins.init()
-        Plugins.start('nf-console')
-        final console = Plugins.getExtension(ConsoleExtension)
+        App
+            .instance
+            .pluginService
+            .start('nf-console')
+        final console = App.instance.pluginService.getExtension(ConsoleExtension)
         if( !console )
             throw new IllegalStateException("Failed to find Nextflow Console extension")
         // normalise the console args prepending the `console` command itself

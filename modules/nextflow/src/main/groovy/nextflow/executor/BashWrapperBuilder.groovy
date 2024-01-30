@@ -24,6 +24,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
@@ -329,8 +330,9 @@ class BashWrapperBuilder {
     }
 
     protected String getSecretsEnv() {
-        return SecretsLoader.isEnabled()
-                ? SecretsLoader.instance.load() .getSecretsEnv(secretNames)
+        final secretsLoader = App.instance.getBean(SecretsLoader)
+        return secretsLoader.isEnabled()
+                ? secretsLoader.load() .getSecretsEnv(secretNames)
                 : null
     }
 

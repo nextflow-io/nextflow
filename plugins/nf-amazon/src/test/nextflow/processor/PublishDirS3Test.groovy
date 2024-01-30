@@ -23,13 +23,12 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.nio.S3Path
 import nextflow.file.FileHelper
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class PublishDirS3Test extends Specification {
+class PublishDirS3Test extends AppSpec {
 
     def 'should change mode to `copy`' () {
 

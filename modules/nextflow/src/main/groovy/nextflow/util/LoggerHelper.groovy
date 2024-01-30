@@ -218,6 +218,11 @@ class LoggerHelper {
         if( !debugConf.contains(JGIT) && !traceConf.contains(JGIT)) {
             createLogger(JGIT, Level.ERROR)
         }
+        // -- patch micronaut to warn
+        final MN = 'io.micronaut'
+        if( !debugConf.contains(MN) && !traceConf.contains(MN)) {
+            createLogger(MN, Level.WARN)
+        }
 
         // -- debug packages specified by the user
         for( String clazz : debugConf ) {

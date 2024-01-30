@@ -41,15 +41,15 @@ import nextflow.script.params.ValueOutParam
 import nextflow.util.BlankSeparatedList
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 import test.TestHelper
 /**
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-class TaskRunTest extends Specification {
+class TaskRunTest extends AppSpec {
 
     def setupSpec() {
         new Session()

@@ -24,12 +24,12 @@ import nextflow.Session
 import nextflow.file.http.XPath
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskBean
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FusionScriptLauncherTest extends Specification {
+class FusionScriptLauncherTest extends AppSpec {
 
     def 'should get container mount' () {
         given:

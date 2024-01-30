@@ -23,13 +23,12 @@ import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import nextflow.Global
 import nextflow.Session
 import nextflow.util.KryoHelper
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GsPathSerializerTest extends Specification {
+class GsPathSerializerTest extends AppSpec {
 
     def 'should serialize a google cloud path'() {
         given:

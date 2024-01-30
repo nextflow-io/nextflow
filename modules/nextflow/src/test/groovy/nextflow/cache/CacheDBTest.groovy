@@ -20,8 +20,6 @@ package nextflow.cache
 import java.nio.file.Files
 
 import com.google.common.hash.HashCode
-import nextflow.cache.CacheDB
-import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
@@ -32,12 +30,12 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CacheDBTest extends Specification {
+class CacheDBTest extends AppSpec {
 
 
     def 'should save and read a task entry in the cache db' () {

@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.file.FileHelper.toCanonicalPath
+import static nextflow.file.FileHelper.*
 
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -34,7 +34,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
-import nextflow.plugin.Plugins
 /**
  * Implements `fs` command
  *
@@ -166,7 +165,7 @@ class CmdFs extends CmdBase implements UsageAware {
                     """.stripIndent()
             }
             catch (IOException e) {
-                log.warn "Unable to read attributes for file: ${source.toUriString()} - cause: $e.message", e
+                CmdFs.log.warn "Unable to read attributes for file: ${source.toUriString()} - cause: $e.message", e
             }
         }
     }
@@ -215,7 +214,6 @@ class CmdFs extends CmdBase implements UsageAware {
             return
         }
 
-        Plugins.init()
         final session = createSession()
         try {
             run0()
@@ -224,9 +222,8 @@ class CmdFs extends CmdBase implements UsageAware {
             try {
                 session.destroy()
                 Global.cleanUp()
-                Plugins.stop()
             } catch (Throwable t) {
-                log.warn "Unexpected error while destroying the session object - cause: ${t.message}"
+                CmdFs.log.warn "Unexpected error while destroying the session object - cause: ${t.message}"
             }
         }
     }

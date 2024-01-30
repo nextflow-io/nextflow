@@ -4,14 +4,13 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.nio.AzPath
 import spock.lang.Requires
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Requires({System.getenv('AZURE_STORAGE_ACCOUNT_NAME') && System.getenv('AZURE_STORAGE_ACCOUNT_KEY')})
-class AzPathFactoryTest extends Specification {
+class AzPathFactoryTest extends AppSpec {
 
     def 'should create az azure path' () {
         given:

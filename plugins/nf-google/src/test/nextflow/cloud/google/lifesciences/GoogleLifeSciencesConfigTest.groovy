@@ -15,14 +15,13 @@
  */
 package nextflow.cloud.google.lifesciences
 
-import nextflow.util.Duration
-import spock.lang.Unroll
-
 import nextflow.exception.AbortOperationException
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import spock.lang.Specification
+import spock.lang.Unroll
+import test.AppSpec
 
-class GoogleLifeSciencesConfigTest extends Specification {
+class GoogleLifeSciencesConfigTest extends AppSpec {
 
     def 'should construct correctly'() {
         given:

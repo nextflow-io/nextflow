@@ -19,10 +19,11 @@ package nextflow.secret
 
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
-
+import nextflow.plugin.PluginService
 /**
  * Implements dynamic secret providing loading strategy
  *
@@ -32,14 +33,17 @@ import nextflow.plugin.Plugins
 @Singleton
 class SecretsLoader {
 
-    static boolean isEnabled() {
+    @Inject
+    private PluginService plugins
+
+    boolean isEnabled() {
         SysEnv.get('NXF_ENABLE_SECRETS', 'true') == 'true'
     }
 
     @Memoized
     SecretsProvider load() {
         // discover all available secrets provider
-        final all = Plugins.getPriorityExtensions(SecretsProvider)
+        final all = plugins.getPriorityExtensions(SecretsProvider)
         // find first activable in the current environment
         final provider = all.find { it.activable() }
         log.debug "Discovered secrets providers: $all - activable => $provider"

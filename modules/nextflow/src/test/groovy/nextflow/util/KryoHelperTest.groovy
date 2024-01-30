@@ -17,6 +17,7 @@
 package nextflow.util
 
 import groovy.transform.EqualsAndHashCode
+import nextflow.App
 import nextflow.container.ContainerConfig
 import nextflow.file.FileHelper
 import nextflow.io.SerializableMarker
@@ -25,7 +26,16 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class KryoHelperTest extends  Specification {
+
+class KryoHelperTest extends Specification {
+
+    def setupSpec() {
+        App.start()
+    }
+
+    def cleanupSpec() {
+        App.shutdown()
+    }
 
     def testUUIDSerialization() {
 

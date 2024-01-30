@@ -24,12 +24,12 @@ import nextflow.executor.Executor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class K8sWrapperBuilderTest extends Specification {
+class K8sWrapperBuilderTest extends AppSpec {
 
     def 'should render launcher script' () {
         given:

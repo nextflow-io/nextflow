@@ -30,7 +30,7 @@ import nextflow.script.ScriptMeta
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class Dsl2Spec extends BaseSpec {
+class Dsl2Spec extends AppSpec {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }

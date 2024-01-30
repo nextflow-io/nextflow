@@ -15,17 +15,17 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.Files
 
-import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 import spock.lang.Requires
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdCloneTest extends Specification {
+class CmdCloneTest extends AppSpec {
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -45,7 +45,6 @@ class CmdCloneTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
-        Plugins.stop()
     }
 
 }

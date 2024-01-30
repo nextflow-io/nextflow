@@ -15,6 +15,7 @@
  */
 
 package nextflow.trace
+
 import java.nio.file.Files
 
 import nextflow.Session
@@ -27,13 +28,13 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
-import spock.lang.Specification
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TraceFileObserverTest extends Specification {
+class TraceFileObserverTest extends AppSpec {
 
     final static long MB = 1024 * 1024
 

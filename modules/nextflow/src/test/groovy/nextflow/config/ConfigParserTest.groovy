@@ -16,8 +16,6 @@
 
 package nextflow.config
 
-import spock.lang.Ignore
-
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -27,16 +25,14 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import nextflow.exception.ConfigParseException
-import spock.lang.Specification
-
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConfigParserTest extends Specification {
+class ConfigParserTest extends AppSpec {
 
     def 'should parse plugins id' () {
         given:

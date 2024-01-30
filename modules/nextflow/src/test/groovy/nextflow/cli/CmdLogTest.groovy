@@ -15,33 +15,29 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.Files
 
 import nextflow.cache.CacheDB
 import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
-import nextflow.plugin.Plugins
-import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BodyDef
+import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.HistoryFile
 import org.junit.Rule
-import spock.lang.Specification
+import test.AppSpec
 import test.OutputCapture
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdLogTest extends Specification {
+class CmdLogTest extends AppSpec {
 
-    def cleanup() {
-        Plugins.stop()
-    }
-    
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */

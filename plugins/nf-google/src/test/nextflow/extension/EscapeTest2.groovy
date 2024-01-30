@@ -20,13 +20,12 @@ import java.nio.file.Path
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.util.Escape
-import spock.lang.Specification
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class EscapeTest2 extends Specification {
+class EscapeTest2 extends AppSpec {
 
 
     Path asPath(String bucket, String path) {

@@ -1,17 +1,16 @@
 package nextflow.script
 
-import spock.lang.Specification
-
 import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.exception.ScriptCompilationException
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptParserTest extends Specification {
+class ScriptParserTest extends AppSpec {
 
     def 'should run a file script' () {
 

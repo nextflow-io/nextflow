@@ -17,12 +17,12 @@
 package nextflow.util
 
 import nextflow.cloud.aws.util.S3PathFactory
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class S3PathSerializerTest extends Specification {
+class S3PathSerializerTest extends AppSpec {
 
     def 'should serialise s3 path' () {
         when:

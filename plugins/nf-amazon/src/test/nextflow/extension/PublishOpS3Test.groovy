@@ -22,13 +22,12 @@ import java.nio.file.Paths
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Global
 import nextflow.Session
-import test.BaseSpec
-
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class PublishOpS3Test extends BaseSpec {
+class PublishOpS3Test extends AppSpec {
 
     def 'should infer task dir' () {
         given:

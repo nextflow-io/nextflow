@@ -16,26 +16,26 @@
 
 package nextflow.script
 
-import java.nio.file.Files
+import static nextflow.util.CacheHelper.*
 
-import nextflow.scm.ProviderConfig
-import spock.lang.Specification
-import spock.lang.Unroll
+import java.nio.file.Files
 
 import nextflow.exception.IllegalDirectiveException
 import nextflow.processor.ErrorStrategy
+import nextflow.scm.ProviderConfig
 import nextflow.script.params.FileInParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import static nextflow.util.CacheHelper.HashMode
+import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ProcessConfigTest extends Specification {
+class ProcessConfigTest extends AppSpec {
 
 
     def 'should return defaults' () {

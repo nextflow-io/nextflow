@@ -21,12 +21,12 @@ import java.nio.file.Path
 
 import org.eclipse.jgit.api.Git
 import spock.lang.Shared
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class UpdateModuleTest extends Specification {
+class UpdateModuleTest extends AppSpec {
 
 //    def setup() {
 //        Plugins.init()

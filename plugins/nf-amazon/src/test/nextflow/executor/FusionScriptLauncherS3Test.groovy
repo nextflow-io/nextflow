@@ -13,12 +13,12 @@ import nextflow.Global
 import nextflow.SysEnv
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.fusion.FusionScriptLauncher
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FusionScriptLauncherS3Test extends Specification {
+class FusionScriptLauncherS3Test extends AppSpec {
 
     def 'should get container mount' () {
         given:

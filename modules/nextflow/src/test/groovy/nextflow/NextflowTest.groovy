@@ -22,12 +22,12 @@ import java.nio.file.Paths
 
 import nextflow.util.ArrayTuple
 import spock.lang.Requires
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowTest extends Specification {
+class NextflowTest extends AppSpec {
 
     @Requires({ System.getenv('CI_GROOVY_VERSION') })
     def 'should match CI groovy version'() {

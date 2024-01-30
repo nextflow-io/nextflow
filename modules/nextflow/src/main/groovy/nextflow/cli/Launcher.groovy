@@ -29,13 +29,13 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
@@ -103,11 +103,9 @@ class Launcher {
                 new CmdHelp(),
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
+                new CmdSecret(),
                 new CmdInspect()
         ]
-
-        if(SecretsLoader.isEnabled())
-            allCommands.add(new CmdSecret())
 
         // legacy command
         final cmdCloud = SpuriousDeps.cmdCloud()
@@ -475,6 +473,10 @@ class Launcher {
      * Launch the pipeline execution
      */
     int run() {
+        /*
+         * bootstrap the application content
+         */
+        App.start()
 
         /*
          * setup environment
@@ -551,6 +553,9 @@ class Launcher {
             return(1)
         }
 
+        finally {
+            App.shutdown(true)
+        }
     }
 
     /**
@@ -673,7 +678,6 @@ class Launcher {
         if( status )
             System.exit(status)
     }
-
 
     /**
      * Print the application version number

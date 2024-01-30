@@ -44,9 +44,9 @@ import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
-import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -55,7 +55,7 @@ import spock.lang.Unroll
 @Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
-class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
+class AwsS3NioTest extends AppSpec implements AwsS3BaseSpec {
 
     @Shared
     static AmazonS3 s3Client0

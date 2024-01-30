@@ -43,12 +43,12 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.MemoryUnit
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class K8sTaskHandlerTest extends Specification {
+class K8sTaskHandlerTest extends AppSpec {
 
     def setup() {
         PodSpecBuilder.VOLUMES.set(0)

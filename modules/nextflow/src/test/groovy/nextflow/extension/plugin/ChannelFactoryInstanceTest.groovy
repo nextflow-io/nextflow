@@ -27,13 +27,13 @@ import nextflow.Session
 import nextflow.extension.CH
 import nextflow.plugin.extension.PluginExtensionPoint
 import nextflow.plugin.extension.PluginExtensionProvider
-import spock.lang.Specification
+import test.AppSpec
 import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelFactoryInstanceTest extends Specification {
+class ChannelFactoryInstanceTest extends AppSpec {
 
     class Ext1 extends PluginExtensionPoint {
 

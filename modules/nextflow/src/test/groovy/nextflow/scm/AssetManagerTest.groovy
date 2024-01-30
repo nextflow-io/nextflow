@@ -16,23 +16,22 @@
 
 package nextflow.scm
 
-import spock.lang.IgnoreIf
+import java.nio.file.Paths
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Config
 import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Requires
-import spock.lang.Specification
+import test.AppSpec
 import test.TemporaryPath
-import java.nio.file.Path
-import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-class AssetManagerTest extends Specification {
+class AssetManagerTest extends AppSpec {
 
     static String GIT_CONFIG_TEXT = '''
             [remote "origin"]

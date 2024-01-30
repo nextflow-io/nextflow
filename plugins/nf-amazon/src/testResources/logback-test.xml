@@ -23,7 +23,8 @@
 
     <logger name="org.apache.http" level="INFO" />
     <logger name="com.amazonaws" level="INFO" />
-    <logger name="com.upplication" level="DEBUG" />
+    <logger name="org.pf4j" level="INFO" />
+    <logger name="io.micronaut" level="INFO" />
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

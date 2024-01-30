@@ -26,17 +26,16 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.App
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.extension.OpCall
 import nextflow.extension.OperatorImpl
-import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 import nextflow.script.FunctionDef
 import nextflow.script.ScriptMeta
 import nextflow.util.TestOnly
-
 /**
  * Manage channel extensions and dispatch method invocations
  * to target class implementing the extension logic
@@ -111,7 +110,7 @@ class PluginExtensionProvider implements ExtensionProvider {
      *      The class itself to allow method chaining
      */
     PluginExtensionProvider loadPluginExtensionMethods(String pluginId, Map<String, String> includedNames){
-        final extensions= Plugins.getExtensionsInPluginId(PluginExtensionPoint, pluginId)
+        final extensions= App.instance.pluginService.getExtensionsInPluginId(PluginExtensionPoint, pluginId)
         if( !extensions )
             throw new AbortOperationException("Plugin '$pluginId' does not implement any extension point")
         if( extensions.size()>1 )

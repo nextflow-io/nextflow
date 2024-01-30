@@ -1,23 +1,22 @@
 package nextflow.script
 
-import nextflow.exception.ScriptCompilationException
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import nextflow.ast.NextflowDSL
 import nextflow.exception.IllegalModulePath
+import nextflow.exception.ScriptCompilationException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+import spock.lang.Unroll
+import test.AppSpec
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class IncludeDefTest extends Specification {
+class IncludeDefTest extends AppSpec {
 
     @Unroll
     def 'should resolve module path #MODULE' () {

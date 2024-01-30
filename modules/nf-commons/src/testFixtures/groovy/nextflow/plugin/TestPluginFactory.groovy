@@ -1,0 +1,47 @@
+/*
+ * Copyright 2013-2023, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package nextflow.plugin
+
+import java.nio.file.Path
+
+import io.micronaut.context.annotation.Context
+import io.micronaut.context.annotation.Primary
+import io.micronaut.context.annotation.Replaces
+import io.micronaut.context.annotation.Requires
+
+/**
+ * A plugin factory for unit testing
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@io.micronaut.context.annotation.Factory
+@Replaces(PluginFactory)
+class TestPluginFactory {
+
+    @Primary
+    @Context
+    @Requires(property = 'nextflow.plugin.factory', value = 'TestPluginFactory')
+    PluginService create() {
+        final root = Path.of('.').toAbsolutePath().normalize()
+        final manager = new TestPluginManager(root)
+        final result = new PluginServiceImpl()
+        result.init(root, 'dev', manager)
+        return result
+    }
+
+}

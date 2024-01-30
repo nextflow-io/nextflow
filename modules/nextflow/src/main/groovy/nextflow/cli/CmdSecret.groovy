@@ -21,8 +21,8 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
 import nextflow.secret.SecretsLoader
 import nextflow.secret.SecretsProvider
 /**
@@ -107,8 +107,7 @@ class CmdSecret extends CmdBase implements UsageAware {
         }
 
         // setup the plugins system and load the secrets provider
-        Plugins.init()
-        provider = SecretsLoader.instance.load()
+        provider = App.instance.getBean(SecretsLoader).load()
 
         // run the command
         try {

@@ -42,11 +42,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
-import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
 /**
@@ -325,7 +325,7 @@ class FileHelper {
         // find out the default plugin for the given scheme and try to load it
         final pluginId = PLUGINS_MAP.get(scheme)
         if( pluginId ) try {
-            if( Plugins.startIfMissing(pluginId) ) {
+            if(App.instance.pluginService.startIfMissing(pluginId) ) {
                 log.debug "Started plugin '$pluginId' required to handle file: $str"
                 // return true to signal a new plugin was loaded
                 return true

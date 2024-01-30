@@ -20,14 +20,22 @@ package nextflow.file
 import java.nio.file.Path
 
 import nextflow.SysEnv
-import spock.lang.Specification
 import spock.lang.Unroll
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileHelperS3Test extends Specification {
+class FileHelperS3Test extends AppSpec {
 
+    private Path asPath(String str) {
+        if( str==null )
+            return null
+        if( str.startsWith('s3://'))
+            return FileSystemPathFactory.parse(str)
+        else
+            return Path.of(str)
+    }
 
     @Unroll
     def 'should convert to canonical path with base' () {
@@ -35,7 +43,7 @@ class FileHelperS3Test extends Specification {
         SysEnv.push(NXF_FILE_ROOT: 's3://host.com/work')
 
         expect:
-        FileHelper.toCanonicalPath(VALUE) == EXPECTED
+        FileHelper.toCanonicalPath(VALUE) == asPath(EXPECTED)
 
         cleanup:
         SysEnv.pop()
@@ -43,16 +51,16 @@ class FileHelperS3Test extends Specification {
         where:
         VALUE                       | EXPECTED
         null                        | null
-        'file.txt'                  | FileSystemPathFactory.parse('s3://host.com/work/file.txt')
-        Path.of('file.txt')         | FileSystemPathFactory.parse('s3://host.com/work/file.txt')
+        'file.txt'                  | 's3://host.com/work/file.txt'
+        Path.of('file.txt')         | 's3://host.com/work/file.txt'
         and:
-        './file.txt'                | FileSystemPathFactory.parse('s3://host.com/work/file.txt')
-        '.'                         | FileSystemPathFactory.parse('s3://host.com/work')
-        './'                        | FileSystemPathFactory.parse('s3://host.com/work')
-        '../file.txt'               | FileSystemPathFactory.parse('s3://host.com/file.txt')
+        './file.txt'                | 's3://host.com/work/file.txt'
+        '.'                         | 's3://host.com/work'
+        './'                        | 's3://host.com/work'
+        '../file.txt'               | 's3://host.com/file.txt'
         and:
-        '/file.txt'                 | Path.of('/file.txt')
-        Path.of('/file.txt')        | Path.of('/file.txt')
+        '/file.txt'                 | '/file.txt'
+        Path.of('/file.txt')        | '/file.txt'
 
     }
 

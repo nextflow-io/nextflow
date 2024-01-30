@@ -1,12 +1,12 @@
 package nextflow.cloud.aws.util
 
 import nextflow.cloud.aws.nio.S3Path
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class S3PathFactoryTest extends Specification {
+class S3PathFactoryTest extends AppSpec {
 
     def 'should parse s3 paths' () {
 

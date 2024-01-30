@@ -21,17 +21,15 @@ import java.nio.file.Path
 
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
-import nextflow.secret.SecretsLoader
 import org.junit.Rule
 import spock.lang.Shared
-import spock.lang.Specification
+import test.AppSpec
 import test.OutputCapture
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class CmdSecretTest extends Specification {
+class CmdSecretTest extends AppSpec {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -42,17 +40,13 @@ class CmdSecretTest extends Specification {
     @Shared
     File secretFile
 
-    def cleanup(){
-        Plugins.stop()
-    }
-
     def setupSpec(){
         tempDir = Files.createTempDirectory('test').toAbsolutePath()
         secretFile = new File("$tempDir/store.json")
         SysEnv.push([NXF_SECRETS_FILE: secretFile.toString()])
         //required to run all test due collisions with others
-        def memoized = SecretsLoader.instance.memoizedMethodClosure$load
-        memoized.@cache.clear()
+//        def memoized = SecretsLoader.instance.memoizedMethodClosure$load
+//        memoized.@cache.clear()
     }
 
     def cleanupSpec() {

@@ -21,12 +21,12 @@ import java.nio.file.Paths
 
 import spock.lang.IgnoreIf
 import spock.lang.Requires
-import spock.lang.Specification
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class S3NextflowTest extends Specification {
+class S3NextflowTest extends AppSpec {
 
 
     def 'should return s3 uris'() {

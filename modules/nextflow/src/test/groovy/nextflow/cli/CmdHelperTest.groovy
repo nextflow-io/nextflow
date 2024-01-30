@@ -16,13 +16,13 @@
 
 package nextflow.cli
 
-import spock.lang.Specification
 
+import test.AppSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdHelperTest extends Specification {
+class CmdHelperTest extends AppSpec {
 
     def 'should normalise filter string' () {
 
