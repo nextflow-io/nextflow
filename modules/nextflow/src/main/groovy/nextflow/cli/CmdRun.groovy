@@ -42,6 +42,7 @@ import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.SecretsLoader
+import nextflow.util.AliasMap
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
@@ -568,7 +569,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Memoized  // <-- avoid parse multiple times the same file and params
     Map parsedParams(Map configVars) {
 
-        final result = [:]
+        final result = new AliasMap()
         final file = getParamsFile()
         if( file ) {
             def path = validateParamsFile(file)
@@ -583,7 +584,7 @@ class CmdRun extends CmdBase implements HubOptions {
         if( !params )
             return result
 
-        for( Map.Entry<String,String> entry : params ) {
+        for( def entry : params ) {
             addParam( result, entry.key, entry.value )
         }
         return result
