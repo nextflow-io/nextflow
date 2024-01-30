@@ -35,7 +35,7 @@ class Architecture {
  * example of notation in process: arch 'linux/x86_64', target: 'haswell'
  * example of notation in config:  arch = [name: 'linux/x86_64', target: 'haswell']
  * 
- * where dockerArch = 'linux/x86_64'
+ * where dockerPlat = 'linux/x86_64'
  *       spackArch = target ?: arch  // plus some validation for Spack syntax
  * 
  *       platform = 'linux'
@@ -45,7 +45,7 @@ class Architecture {
  * [alternate example: 'arch linux/arm/v8', where platform = 'linux' and arch = 'arm/v8']
  */
     // used in Nextflow
-    final String dockerArch
+    final String dockerPlat
     final String spackArch
 
     // defined, but currently not used
@@ -73,7 +73,7 @@ class Architecture {
             return chunks[0]
     }
 
-    static private String validateArchToDockerArch( Map res ) {
+    static private String validateArchTomodules/nextflow/src/main/groovy/nextflow/processor/Architecture.groovy( Map res ) {
         def value = getArch(res.name as String)
         def name = res.name as String
         if( value == 'x86_64' || value == 'amd64' )
@@ -115,7 +115,6 @@ class Architecture {
         this.dockerArch = validateArchToDockerArch(res)
         this.platform = getPlatform(res.name as String)
         this.arch = getArch(res.name as String)
-
         if( res.target != null )
             this.target = res.target as String
         if( res.name!=null || res.target!=null )

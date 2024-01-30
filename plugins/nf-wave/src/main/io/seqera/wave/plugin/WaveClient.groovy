@@ -403,7 +403,7 @@ class WaveClient {
         // get the Spack architecture
         final arch = task.config.getArchitecture()
         final spackArch = arch ? arch.spackArch : DEFAULT_SPACK_ARCH
-        final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
+        final dockerPlat = arch? arch.dockerPlat : DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
@@ -424,10 +424,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerPlat, spackArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerPlat, String spackArch) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -507,7 +507,7 @@ class WaveClient {
         /*
          * the container platform to be used
          */
-        final platform = dockerArch
+        final platform = dockerPlat
 
         // check is a valid container image
         WaveAssets.validateContainerName(containerImage)
