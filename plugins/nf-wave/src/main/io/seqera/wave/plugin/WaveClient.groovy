@@ -188,6 +188,7 @@ class WaveClient {
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
                 spackFile: assets.spackFileEncoded(),
+                spackArch: assets.spackArch,
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
@@ -521,6 +522,7 @@ class WaveClient {
                     containerScript,
                     condaFile,
                     spackFile,
+                    spackFile ? spackArch : null,
                     projectRes,
                     singularity)
     }

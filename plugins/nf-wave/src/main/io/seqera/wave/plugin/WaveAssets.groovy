@@ -41,6 +41,7 @@ class WaveAssets {
     final String containerFile
     final Path condaFile
     final Path spackFile
+    final String spackArch
     final ResourcesBundle projectResources
     final boolean singularity
 
@@ -81,6 +82,7 @@ class WaveAssets {
         allMeta.add( this.spackFile?.text )
         allMeta.add( this.projectResources?.fingerprint() )
         allMeta.add( this.containerPlatform )
+        allMeta.add( this.spackFile ? this.spackArch : null )
         return CacheHelper.hasher(allMeta).hash().toString()
     }
 
