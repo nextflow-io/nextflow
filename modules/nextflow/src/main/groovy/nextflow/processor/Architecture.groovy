@@ -98,10 +98,8 @@ class Architecture {
     static protected String getSpackArch( Map res ) {
         if( res.target != null )
             return res.target as String
-        else if( res.name != null )
-            return validateArchToSpackArch(getArch(res.name as String), res.name as String)
         else
-            return null
+            return validateArchToSpackArch(getArch(res.name as String), res.name as String)
     }
 
     Architecture( String value ) {
@@ -112,14 +110,12 @@ class Architecture {
         if( !res.name )
             throw new IllegalArgumentException("Missing architecture `name` attribute")
 
-        this.dockerArch = validateArchToDockerArch(res)
         this.platform = getPlatform(res.name as String)
         this.arch = getArch(res.name as String)
-
+        this.dockerArch = validateArchToDockerArch(res)
+        this.spackArch = getSpackArch(res)
         if( res.target != null )
             this.target = res.target as String
-        if( res.name!=null || res.target!=null )
-            this.spackArch = getSpackArch(res)
     }
 
 }
