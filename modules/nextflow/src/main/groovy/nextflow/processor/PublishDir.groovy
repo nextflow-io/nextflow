@@ -134,7 +134,7 @@ class PublishDir {
     }
 
     protected Map<String,Path> getTaskInputs() {
-        return task?.getInputFilesMap()
+        return task ? task.getInputFilesMap() : Map.<String,Path>of()
     }
 
     void setPath( def value ) {
@@ -294,6 +294,7 @@ class PublishDir {
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
+        this.task = task
 
         apply0(files)
     }

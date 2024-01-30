@@ -134,7 +134,7 @@ class WaveClient {
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         this.spackVersion = session.getSpackConfig()?.getVersion() ?: DEFAULT_SPACK_VERSION
         log.debug "Wave config: $config"
-        this.packer = new Packer()
+        this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
         cache = CacheBuilder<String, SubmitContainerTokenResponse>

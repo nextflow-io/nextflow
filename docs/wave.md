@@ -94,6 +94,16 @@ wave.strategy = ['conda']
 
 The above setting instructs Wave to use the `conda` directive to provision the pipeline containers and ignore the `container` directive and any Dockerfile(s).
 
+:::{tip}
+Some configuration options in the `conda` scope are used when Wave is used to build Conda-based containers.
+For example, the Conda channels and their priority can be set with `conda.channels`:
+
+```groovy
+wave.strategy = ['conda']
+conda.channels = 'seqera,conda-forge,bioconda,defaults'
+```
+:::
+
 ### Build Spack based containers
 
 :::{warning}
@@ -195,7 +205,7 @@ The following configuration options are available:
 : When enabling the container freeze mode, Wave will provision an non-ephemeral container image
 that will be pushed to a container repository your choice. It requires the use of the `wave.build.repository` setting.
 It is also suggested to specify a custom cache repository via the setting `wave.build.cacheRepository`. Note: when using
-container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.    
+container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.
 
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
@@ -230,20 +240,10 @@ container freeze mode, the container repository authentication needs to be manag
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
-`wave.report.enabled` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`).
-
-`wave.report.file` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: The name of the containers report file (default: `'containers-<timestamp>.config'`).
-
 `wave.retryPolicy.delay`
 : :::{versionadded} 22.06.0-edge
   :::
-: The initial delay when a failing HTTP request is retried (default: `150ms`). 
+: The initial delay when a failing HTTP request is retried (default: `150ms`).
 
 `wave.retryPolicy.maxDelay`
 : :::{versionadded} 22.06.0-edge
