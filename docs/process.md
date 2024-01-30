@@ -1339,7 +1339,7 @@ The example above declares that the CPU generic architecture is `linux/x86_64` (
 This directive is currently used by the following Nextflow functionalities:
 
 - by the [spack](#spack) directive, to build microarchitecture-optimised applications;
-- by the {ref}`wave-page` service, to build containers for one of the generic families of CPU architectures (see below);
+- by the {ref}`wave-page` service, to build containers for one of the three generic families of CPU architectures (see below);
 - by the `spack` strategy within {ref}`wave-page`, to optimise the container builds for specific CPU microarchitectures.
 
 Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
@@ -1347,7 +1347,7 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent fa
 - ARM 64 bit: `linux/aarch64`, `aarch64`, `linux/arm64`, `arm64`, `linux/arm64/v8`
 - ARM 64 bit, older generation: `linux/arm64/v7`
 
-Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
+Examples of values for the architecture `target` option are `x86_64_v3`, `icelake` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
 (process-beforescript)=
 
