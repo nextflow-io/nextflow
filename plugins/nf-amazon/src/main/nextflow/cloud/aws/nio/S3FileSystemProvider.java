@@ -846,7 +846,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
 
-		if( props.getProperty("glacier_auto_retrieval") )
+		if( props.getProperty("glacier_auto_retrieval") != null )
 			log.warn("Glacier auto-retrieval is no longer supported, config option `aws.client.glacierAutoRetrieval` will be ignored");
 
 		return new S3FileSystem(this, client, uri, props);
