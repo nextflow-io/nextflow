@@ -504,7 +504,14 @@ class PublishDir {
     }
 
     protected void createPublishDir() {
-        makeDirs(this.path)
+        try {
+            makeDirs(path)
+        }
+        catch( Throwable e ) {
+            log.warn "Failed to create publish directory: ${path.toUriString()} -- See log file for details", e
+            if( NF.strictMode || failOnError )
+                session?.abort(e)
+        }
     }
 
     protected void makeDirs(Path dir) {
