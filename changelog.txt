@@ -1,5 +1,197 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.10.1 - 12 Jan 2023 
+- Fix bug with Fusion symlink resolution (#4593) [f28c9e48]
+- Fix Fusion symlinks when publishing files (#4348) [1fa5878a]
+- Fix Inspect command fails with Singularity [25883df3]
+- Fix Allow the use of error built-in function in onComplete handler (#4458) [ci fast] [4be10cd3]
+- Fix Harden regular expression to used to strip secrets in logs (#4563) [ci fast] [0102d4d6]
+- Fix custom notification template [40980bcb]
+- Fix container environment with special chars (#4594) [f4e00601]
+- Fix AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e1cb413]
+- Fix azure retry policy (#4638) [2bc3cf0e]
+- Fix BitBucket get source API with custom branch [5ef75e32]
+- Improve error details for AbortOperationException [9e795a62]
+- Bump nf-wave@1.0.1 [206f2614]
+- Bump nf-azure@1.3.3 [50bcad59]
+
+23.04.5 - 12 Jan 2023
+- Fix container environment with special chars (#4594) [663b2936]
+
+23.12.0-edge - 20 Dec 2023 
+- Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
+- Add ability to disable Cloudinfo service (#4606) [f7251895]
+- Add experimental support for Fargate compute type for AWS Batch  (#3474) [47cf335b]
+- Add support for Instance template to Google Batch [df7ed294]
+- Add support for Singularity/Apptainer auto pull mode for OCI containers [b7f1a192]
+- Fix BitBucket get source API with custom branch [58937831]
+- Fix Fusion tags documentation (#4551) [687e2e96]
+- Fix Harden regular expression to used to strip secrets in logs (#4563) [832bff24]
+- Fix bug with Fusion symlink resolution (#4593) [09e85582]
+- Fix container environment with special chars (#4594) [e0fe952f]
+- Fix custom notification template [ccf4f59e]
+- Fix fusion symlink test (#4604) [681ace86]
+- Fix smoke tests [d3c2f330]
+- Improve GLS tests [58590b1c]
+- Load nf-amazon when AWS SES is enabled [887f06f4]
+- Move build num & timestamp to BuildInfo class [ec8083d4]
+- Move app version to BuildInfo class [c7d749e8]
+- Remove deprecated Wave observer [0e009ef7]
+- Remove undocumented userEmulation mode (#4596) [f6c79788]
+- Remove unused DSL2 check [e9ee3b2c]
+- Replace each iterator with class for [f7662e68]
+- Bump nf-amazon@2.3.0 [0b40b7b9]
+- Bump nf-google@1.10.0 [bcb20fcf]
+- Bump nf-wave@1.2.0 [aa981814]
+- Bump wave-utils@0.8.1 and micromamba@1.5.5 [9cb50035]
+- Build optimizations (#4579) [5ad41e44]
+
+23.11.0-edge - 24 Nov 2023
+- Add `fusion.cacheSize` config option (#4518) [2faadc22]
+- Add Topic channel type (experimental) (#4459) [921313d1]
+- Add Google Batch native retry on spot termination (#4500) [ea1c1b70]
+- Add Retry policy to Google Storage (#4524) [c271bb18]
+- Add ability detect Google Batch spot interruption (#4462) [d49f02ae]
+- Add doc tests, move some snippets to separate files (#3959) [0ff3b305]
+- Add docs section on container requirements (#4501) [3fb29f78]
+- Add labels field in Job request for Google Batch (#4538) [627c595e]
+- Add note about limitations of glacier auto retrieval (#4514) [82e56799]
+- Add note about local executor and enforcing resource limits (#4468) [6a0626f7]
+- Add section about sharing modules (#4482) [3e66fba4]
+- Add section on process directives to plugin docs (#4477) [d9ee9870]
+- Add support for Azure low-priority pool (#4527) [8320ea10]
+- Add support for FUSION_AWS_REGION (#4481) [8f8b09fa]
+- Add support for Fusion when using Singularity OCI mode (#4508) [4f3aa631]
+- Add support for K8s schedulerName pod spec (#4485) [dfc7b7c8]
+- Add support for Singularity OCI mode (#4440) [f5362a7b]
+- Allow the use of error built-in function in onComplete handler (#4458) [35a4424b]
+- Fix Bug in JsonSplitter ordering [8ec14dd2]
+- Fix Bypass Google Batch Price query if task cpus and memory are defined (#4521) [7f8f20d3]
+- Fix Checkout remote tag if checkout remote branch fails (#4247) [b8907ccb]
+- Fix Fusion symlinks when publishing files (#4348) [89f09fe0]
+- Fix Inspect command fails with Singularity [f5bb829f]
+- Fix ParamsMap copyWith param aliases (#4188) [b480ee0e]
+- Fix Singularity docs [e952299f]
+- Fix container hashing for Singularity + Wave containers [4c6f2e85]
+- Fix detection of Conda local path made by Wave client (#4532) [4d5bc216]
+- Fix doc tests to fail on test failure (#4505) [4d326551]
+- Fix errors when NXF_HOME contains spaces (#4456) [fe5bea99]
+- Fix Google Batch network/subnetwork docs (#4475) [27d132f3]
+- Fix rounding error with long durations (#4496) [0356178b]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix Use consistently NXF_TASK_WORKDIR (#4484) [48ee3c64]
+- Improve error details for AbortOperationException [35609cb0]
+- Improve operator docs (#4502) [38210e11]
+- Makefile clean to also remove buildSrc/build (#4517) [2ccb05d0]
+- Minor test improvements [171831ea]
+- Minor types improvement for mix operator [91c1ab15]
+- Normalise channel docs [b641d677]
+- Remove deprecated TowerArchiver feature [ff8e06a3]
+- Remove dsl1 deprecated code (part 2) [159effb1]
+- Remove dsl1 deprecated code [2b433a52]
+- Remove incorrect note about workflow inputs (#4509) [54bc0b7d]
+- Return error if plugin version is not specified in offline mode (#4487) [f5d7246e]
+- Update README.md with new branding color for Nextflow (#4412) [7a13b18b]
+- Update background color of docs status badges (#4411) [3cb1c53c]
+- Update logging filter for Google Batch provider. (#4488) [66a3ed19]
+- Bump Gradle 8.4 and test vs Java 21 (#4450) [8cb2702c]
+- Bump nf-amazon@2.2.0 [8e2d7879]
+- Bump nf-azure@1.4.0 [7c47d090]
+- Bump nf-cloudcache@0.3.1 [65240b75]
+- Bump nf-codecommit@0.1.6 [725f0510]
+- Bump nf-console@1.0.7 [a307686c]
+- Bump nf-ga4gh@1.1.1 [e54ea007]
+- Bump nf-google@1.9.0 [033ec92c]
+- Bump nf-tower@1.7.0 [836a44a5]
+- Bump nf-wave@1.1.0 [620523ef]
+
+23.10.0 - 15 Oct 2023
+- Add support for K8s hostPath [10c32325]
+- Add AWS SES docs [b83e7148]
+- Add -with-cloudcache instead of -cloudcache [ef530263]
+- Add inspect command validation tests [882f369e]
+- Improve warning complaining about tuple but mentioning set (#4400) [0ef48735]
+- Improve `-dump-hashes` output adding json format (#4369) [5bdaac94]
+- Improve error message on invalid file url prefix [82a3f405]
+- Fix conda channels order [6672c6d7]
+- Docs: Incorporate DSL2 features (#3793) [efd041cb]
+- Docs: aws.batch.retrymode = 'built-in' (#4229) [d5a8098f]
+- Docs: Update logos, fonts, and colors (#4407) [7814822c]
+- Changelog minor changes [dfb5bf09]
+- Bump nf-wave@1.0.0 [795849d7]
+
+23.09.3-edge - 10 Oct 2023
+- Add -cloudcache CLI option (#4385) [73fda582]
+- Add bioconda and seqera Conda default channels (#4359) [ff012dcd]
+- Add codespell: config, workflow and have typos fixed (#4324) [e044b7a5]
+- Add docs page on caching and resuming (#4371) [21190a3c]
+- Add example of using the transpose operator with multiple items in element (#4364) [0bce2be0]
+- Add setting to enable the use of sync command [f0d5cc5c]
+- Improve S3 endpoint validation [2b9ae6aa]
+- Improve Wave config validation [7d5a21b0]
+- Improve Wave error handling [d47e8b07]
+- Fix Google Batch do not stop running jobs (#4381) [3d6b7358]
+- Incorporate README content into Nextflow docs (#4263) [74a0f998]
+- Never say (nearly) Oops again (#4356) [4a39542b]
+- Remove unsupported K8s device capability [be0cf0c2]
+- Remove unused -dsl2 option [3cb91a15]
+- Rename Microsoft AAD to Microsoft Entra (#4362) [5e3f2c0a]
+- Return -1 when exitcode file is empty (#4354) [d26c42be]
+- Support for Fusion unprivileged execution (#4387) [035e6e7b]
+- Use HistoryFile.Record instead of Record type conflic [11c3aac5]
+- Bump nf-amazon@2.1.4 [a84208a8]
+- Bump nf-cloudcache@0.3.0 [b37b4014]
+- Bump nf-google@1.8.3 [b4eb8b96]
+- Bump nf-tower@1.6.3 [5681ab13]
+- Bump nf-wave@0.14.0 [de1de6c7]
+
+23.09.2-edge - 28 Sep 2023
+- Add conda.enabled to conda config scope docs (#4320) [0b74c4e2]
+- Add developer docs (#4065) [06843d87]
+- Add fs stat command [a79056b7]
+- Add more tests to container name [da7a1942]
+- Add procps by default to Conda-based Wave builds [66b2d2d2]
+- Add support for Java 21 (#4338) [ac1fc9ee]
+- Add Mermaid diagram in HTML DAG (#4337) [0f3e263f]
+- Default Conda basePackages to "conda-forge::procps-ng" [367af52f]
+- Disable Tower container field for multiple images [b53936b0]
+- Document `NXF_DISABLE_CHECK_LATEST` environment var (#4327) [4e3e9aca]
+- Document `fs` CLI command (#4328) [1a680495]
+- Document source of `vol_ctxt` and `inv_ctxt` trace metrics (#4333) [6525b0a1]
+- Document when process directives are evaluated (#4217) [731a29a2]
+- Fix List of S3 bucket for custom endpoint [4327fa58]
+- Fix Prevent false positive resumable task [144e0a8a]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [9b3741e3]
+- Fix fs list command [29ab2f24]
+- Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
+- Fix support for S3 custom endpoint with anonymous access [03752815]
+- Fix use of GITHUB_TOKEN variable to access GitHub repo [afe3dc4f]
+- Fix Wave does not support 'null' container engine [f3eba3d7]
+- Fix Retry TimeoutException in azure file system (#4295) [79248355]
+- Improve K8s unit tests (#4196) [5a43a32b]
+- Improve Mermaid DAG rendering (#4070) [19587f40]
+- Improve error report when exception is thrown in operator ctx [16f54a9c]
+- Improve wave container name validation [73eb5a02]
+- Minor improvements [fff3d7bd]
+- Prevent cache invalidation for task directives (#4339) [aabb6c19]
+- Remove line endings from container box id (#4334) [df41e54a]
+- Bump Apache 2.0 license to tower client [e4a878b6]
+- Bump nf-amazon@2.1.3 [3311172f]
+- Bump nf-azure@1.3.2 [a9b735ce]
+- Bump nf-google@1.8.2 [7219d7f2]
+- Bump nf-tower@1.6.2 [91a935f9]
+- Bump nf-wave@0.13.0 [0cf2476c]
+- Bump wave-utils@0.7.8 [d0c47d49]
+
+23.04.4 - 25 Sep 2023
+- Fix use of GITHUB_TOKEN variable to access GitHub repo [108c6b55]
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [4895d547]
+- Fix Prevent false positive resumable task [aae87715]
+- Fix Always emit publish event for cached task outputs (#4227) [c4cd53c2]
+- Fix Too long Http connection pool timeout [ce5e9930]
+- Bump nf-google@1.7.3-patch1 [d881728c]
+
 23.09.1-edge - 11 Sep 2023
 - Revert "Allow setting shell directive when using the trace file (#4210)" [9f9edcdc]
 
@@ -164,7 +356,7 @@ NEXTFLOW CHANGE-LOG
 - Add Wave containers reports (preview) [9d9e2758]
 - Add disk resource with type option for google batch (#3861) [166b3638]
 - Add httpConnectTimeout and httpReadTimeout to Google options (#3974) [49fa15f7]
-- Add plugin cmd help descrption [d3788f9f]
+- Add plugin cmd help description [d3788f9f]
 - Add retry policy on Az blob operations [295bc1ff]
 - Add retry policy to Wave http client [1daebeef]
 - Add support for AWS SES as mail sending provider [df85d443]
@@ -188,7 +380,7 @@ NEXTFLOW CHANGE-LOG
 - Improve description of channels and channel types (#4120) [8975734d]
 - Improve "Unexpected input: '{'" error message (#4122) [ef9d3cf0]
 - Minor change in Wave config [4da0442a]
-- Prevent null exit code when Google batch is unable to acces exit status [f68a39ec]
+- Prevent null exit code when Google batch is unable to access exit status [f68a39ec]
 - Refactor Conda and Spack support for Wave to Java [36b9e226]
 - Remove `--no-home` default option from charliecloud builder (#3956) [915074a4]
 - Update workflow.revision max length to match the one in Tower (#4010) [1433a903]
@@ -225,7 +417,7 @@ NEXTFLOW CHANGE-LOG
 - Enable static compilation to missing classes (#3906) [c3c4b2f0]
 - Fix -with-conda option in the docs (#3867) [9b350ba8]
 - Fix AWS SSE env propagation to Fusion [e24608c3]
-- Fix Apptainer rendering by removing superflous space [36607ed1]
+- Fix Apptainer rendering by removing superfluous space [36607ed1]
 - Fix Azure jobs correctly deleted after completion (#3927) [b173a983]
 - Fix Azure pool creation when using scaling formula (#3868) [79984a87]
 - Fix DSL2 support in nextflow console (#3864) [0253f8d7]
@@ -406,7 +598,7 @@ NEXTFLOW CHANGE-LOG
 - Fix serialization of S3 paths with spaces (#3565) [ce487624]
 - Fix string literal method names with parens (#3604) [8278078a]
 - Fix submit command in error message for grid executors that pipe wrapper script (#3548) [40ebd308]
-- Fix typos in the documentation [skip ci] (#3640) [eccc1130]
+- Fix typos in the documentation (#3640) [eccc1130]
 - Fix unique fingerprint for Wave bundle resources [b59fa728]
 - Log exception when an unexpected  occurs (#3603) [9aeca99f]
 - Minor change on container resolution [23d47ded]
@@ -787,7 +979,7 @@ NEXTFLOW CHANGE-LOG
 - Fix unit test setting explicit permissions for test files [1c821139] <Jorge Aguilera>
 - Fix Default plugins are overridden by config plugins [46cf3bfa] <Paolo Di Tommaso>
 - Fix S3 transfer download directory [b7bf9fe5]
-- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix NPE while setting S3 ObjectMetadata #3031 [d6163431] <Jorge Aguilera>
 - Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b]
 - Fix AWS Batch job definition conflict (#3048) [e5084418]
 - Fix JAVA_TOOL_OPTIONS breaking launch #1716 [0e7b416d]
@@ -847,7 +1039,7 @@ NEXTFLOW CHANGE-LOG
 - Add DirWatcher v2 [209c82cd]
 - Add Moriondo in the list of random names [e0abca58]
 - Add preview CLI option (#2914) [aa8f1aa4]
-- Fix Git config resultion error [64436697]
+- Fix Git config resolution error [64436697]
 - Fix StackOverflowError when dump all profiles (#2922) [28cd11a2] <Jorge Aguilera>
 - Fix gradle warning message in nf-sqldb (#2921) [b09ceabe] <Jorge Aguilera>
 - Fix log for LsfExecutror perTaskReserve attribute [7c3ec874] <Prete>
@@ -862,14 +1054,14 @@ NEXTFLOW CHANGE-LOG
 - Add Hyperqueue executor (#2896) [ffa5712e] <Henrik Nortamo>
 - Add support for K8s Job resource [c70eb12d] <xhejtman>
 - Add support for time process directive in GLS executor (#2880) [1402e183] <Florian De Temmerman>
-- Add support for priviledge option for K8s containers [7ffe3a02]
+- Add support for privilege option for K8s containers [7ffe3a02]
 - Add DSL1 option to docs (#2836) [d30841a5] <Jose Espinosa-Carrasco>
 - Add support for container options to Azure Batch [3f4f00f9] 
 - Add support for move operation to AWS S3 [8c0ddfd5] 
 - Add K8s execution hostname in the trace file (#2828) [ebaef92a] <Fabian Lehmann>
-- Add support for AWS S3 encyption using a custom KMS key [c1e45aa9] <Paolo Di Tommaso>
+- Add support for AWS S3 encryption using a custom KMS key [c1e45aa9] <Paolo Di Tommaso>
 - Add support for Micromamba [383e023f]
-- Add jaxb-api dependecy to nf-amazon [c1a09f87]
+- Add jaxb-api dependency to nf-amazon [c1a09f87]
 - Add strict mode config setting [696e70b5]
 - Add -head-prescript option to kuberun (#2830) [9e387055] 
 - Fix missing err message on submit failure [233e67f0] (#2899)
@@ -974,7 +1166,7 @@ NEXTFLOW CHANGE-LOG
 - Prevent invalid use of large maxForks values [5de0c200]
 - Prevent race condition on thread pool creation [3e707a1d]
 - Refactor AWS batch job unique token generation [d64f5a21]
-- Decrese log verbosity [9237d587] [d1a5e5a8]
+- Decrease log verbosity [9237d587] [d1a5e5a8]
 - Throw an error if a required secret is missing [8e5129d6]
 - Wait for pod to stop running before shutdown (#2667) [505c5ad6]) <kfrancisdev>
 - Restore AZ tests [858a4568]
@@ -985,7 +1177,7 @@ NEXTFLOW CHANGE-LOG
 22.02.0-edge - 25 Feb 2022
 - Fix Prevent S3 tagging with empty list [ae7db466]
 - Fix Azure repos tests [856aacf0]
-- Fix isse on includeConfig resolution #2675 [6591a9e1]
+- Fix issue on includeConfig resolution #2675 [6591a9e1]
 - Fix NPE when accessing not existing Git file [6c79f8fd]
 - Fix Batch Job name exceed max allowed size [e8b70ca3]
 - Fix detect and skip bom mark in files (#2645) [02b06ba3] <Jorge Aguilera>
@@ -1145,7 +1337,7 @@ NEXTFLOW CHANGE-LOG
 - Fix verbose logging [92b113134]
 - Fix docker image url [ed24a475d]
 - Fix Temporary directories not deleted in on_exit #2406 [181bdf528] <Lukas Jelonek>
-- Fix implict authentication for resources served by Tower [e30310b4f]
+- Fix implicit authentication for resources served by Tower [e30310b4f]
 - Fix No more of 255 channels can be defined into a workflow context #2417 [7f91ecb39]
 - Add tip about escaping variables in env scope #2366 <Ben Shealy>
 - Add K8s env fieldPath option to pod directive #2363 <Ben Shealy>
@@ -1233,7 +1425,7 @@ NEXTFLOW CHANGE-LOG
 21.06.0-edge - 3 Jul 2021
 - Add Keep alive option to Google LS executor [994222074]
 - Add support for FTP proxy and proxy servers authentication [8ec33b04d]
-- Add support for plugins groupping [aa5bc7d34]
+- Add support for plugins grouping [aa5bc7d34]
 - Add More details about the reason why a AWS Batch job has failed #2146 [27a4e88b2]
 - Add support for extensions priority [ae083f1aa]
 - Add stubRun attribute to workflow metadata #2164 [86cfc66fd]
@@ -1298,7 +1490,7 @@ NEXTFLOW CHANGE-LOG
 - Add readOnly flag to k8s volume mounts (#2013) [33bd24ac]
 - Add Start default plugins on-demand #1964 [cf2a9d73]
 - Add support for tower workspaceId [e2977688]
-- Improve suppor for BitBucket server repos [eb946e27]
+- Improve support for BitBucket server repos [eb946e27]
 - Fix toInt/Long/Float/Double operator hangs with value channel [7c35d985]
 - Fix regression caused by nested params handling #1923 [b25af49b]
 - Fix Cache invalidation when repo is cloned between runs #1989 [ac526f38]
@@ -1307,7 +1499,7 @@ NEXTFLOW CHANGE-LOG
 - Fix az path handling curly brackets globs #1969 [c78a1bbf]
 - Fix Missing git credentials when checking last commit id [f101308e]
 - Fix plugins version check against local installation [535c2bb5]
-- Fix local dependant formatting #1962 [2a5cbac1]
+- Fix local dependent formatting #1962 [2a5cbac1]
 - Fix Encode path parameter at GitLab getContentUrl [6f80f651]
 - Fix Only use sudo rm with docker #1956 [f9490423]
 - Prevent AZ NPE when missing vmtype + better logging #1992 [711362ca]
@@ -1375,7 +1567,7 @@ NEXTFLOW CHANGE-LOG
 - Add support for basic auth for http/s file provider [6027fcba]
 - Add User-Agent info to httpfs requests [222637de]
 - Update CPU and RAM for containers (#1833) [ccf5c8ba]
-- Move test containes to quay.io [7db053eb] [773be707] [c10a7f53]
+- Move test contains to quay.io [7db053eb] [773be707] [c10a7f53]
 
 20.12.0-edge - 12 Dec 2020 
 - Add support for charliecloud container engine #1809
@@ -1444,7 +1636,7 @@ NEXTFLOW CHANGE-LOG
 - Remove unneeded parentheses from stdout declaration [dc029c04]
 - Merge execution logs command docs [577ec744]
 - Passing exact memory to TES executor in GiB #1696 [c8a15545]
-- Improve docs replacing suscribe{println it} with view() [f84ccb6f] [cb2d607d]
+- Improve docs replacing subscribe{println it} with view() [f84ccb6f] [cb2d607d]
 - Use current environment Bash #1598 #1614 [e70ef87a]
 - Include GA4GH support into the standalone binary (make pack) #1666 [e2175d45]
 - Update Bitbucket docs [b9b57f83]
@@ -1749,7 +1941,7 @@ NEXTFLOW CHANGE-LOG
 - Add Pbs Pro execution documentation [1d39ab31]
 - Add code of conduct document
 - Fix missing LFS executor register invocation #1234 [b1b7ab1]
-- Fix "invalid pod status" when running scrips with the kubernetes executor #1242 [11caac68]
+- Fix "invalid pod status" when running scripts with the kubernetes executor #1242 [11caac68]
 - Revert Fix Environment activation fails with recent versions of Conda #1195 [98c0d1f8]
 - (includes changes from `19.07.0-edge`, `19.05.0-edge` and `19.05.0-edge`)
 
@@ -1884,7 +2076,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed remote bin directory when using bucketDir option [6d796783]
 - Fixed foreign file system detection [1489cc72]
 - Fixed Ansi logger division by zero [ae2b1380]
-- Fixed Unparseable Data format on http file #962
+- Fixed Unparsable Data format on http file #962
 - Fixed Log command history #405
 - Fixed Too long process tag name can cause SLURM failure #941
 - Fixed LSF can return an inconsistent jobs status #927
@@ -1936,7 +2128,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed remote bin directory when using buckerDir option [6d796783]
 - Fixed foreign file system detection [1489cc72]
 - Fixed Ansi logger division by zero [ae2b1380]
-- Fixed Unparseable Data format on http file #962
+- Fixed Unparsable Data format on http file #962
 - Fixed Log command history #405
 - Fixed Too long process tag name can cause SLURM failure #941
 - Fixed LSF can return an inconsistent jobs status #927
@@ -2438,7 +2630,7 @@ NEXTFLOW CHANGE-LOG
 0.23.3 - 9 Feb 2017
 - Fixed Job termination is not recognised if the starter file is not created #268
 - Fixed Allow NF console to resume process executions (second take) #280
-- Fixed PublishDir may throw a FileAlredyExistsException #283
+- Fixed PublishDir may throw a FileAlreadyExistsException #283
 - Increased logger file appender buffer size to 64kb
 - Updated Logback to version 1.1.10
 - Updated copyright info

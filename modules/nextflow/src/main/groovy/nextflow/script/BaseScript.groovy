@@ -20,7 +20,6 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
-import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
@@ -90,13 +89,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected process( String name, Closure<BodyDef> body ) {
-        if( NF.isDsl2() ) {
-            def process = new ProcessDef(this,body,name)
-            meta.addDefinition(process)
-        }
-        else {
-            throw new UnsupportedOperationException("DSL1 is not supported anymore")
-        }
+        final process = new ProcessDef(this,body,name)
+        meta.addDefinition(process)
     }
 
     /**

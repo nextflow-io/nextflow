@@ -62,7 +62,7 @@ tower {
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <dsl2-module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
+To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
 
 :::{tip}
 Make sure the process does not declare a `container` directive, otherwise it will take precedence over the Dockerfile definition.
@@ -94,6 +94,16 @@ wave.strategy = ['conda']
 
 The above setting instructs Wave to use the `conda` directive to provision the pipeline containers and ignore the `container` directive and any Dockerfile(s).
 
+:::{tip}
+Some configuration options in the `conda` scope are used when Wave is used to build Conda-based containers.
+For example, the Conda channels and their priority can be set with `conda.channels`:
+
+```groovy
+wave.strategy = ['conda']
+conda.channels = 'seqera,conda-forge,bioconda,defaults'
+```
+:::
+
 ### Build Spack based containers
 
 :::{warning}
@@ -124,7 +134,10 @@ If using a Spack YAML file to provide the required packages, you should avoid ed
 
 ### Build Singularity native images
 
-As of version `23.09.0-edge`, Nextflow can build Singularity native images on-demand either using `Singularityfile`,
+:::{versionadded} 23.09.0-edge
+:::
+
+Nextflow can build Singularity native images on-demand either using `Singularityfile`,
 Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
 of your choice and stored as a [ORAS artefact](https://oras.land/).
 
@@ -134,7 +147,7 @@ This feature requires of Singularity (or Apptainer) version supporting the pull 
 
 For example to enable the provisioning of Singularity images in your pipeline use the following configuration snippet:
 
-```
+```groovy
 singularity.enabled = true
 wave.enabled = true
 wave.freeze = true
@@ -187,12 +200,12 @@ The following configuration options are available:
 : The Wave service endpoint (default: `https://wave.seqera.io`).
 
 `wave.freeze`
-: :::{versionadded} 22.09.0-edge
+: :::{versionadded} 23.07.0-edge
   :::
 : When enabling the container freeze mode, Wave will provision an non-ephemeral container image
 that will be pushed to a container repository your choice. It requires the use of the `wave.build.repository` setting.
 It is also suggested to specify a custom cache repository via the setting `wave.build.cacheRepository`. Note: when using
-container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.    
+container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.
 
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
@@ -201,7 +214,7 @@ container freeze mode, the container repository authentication needs to be manag
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 
 `wave.build.conda.basePackages`
-: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
+: One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
 `wave.build.conda.commands`
 : One or more commands to be added to the Dockerfile used to build a Conda based image.
@@ -227,20 +240,10 @@ container freeze mode, the container repository authentication needs to be manag
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
-`wave.report.enabled` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`).
-
-`wave.report.file` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: The name of the containers report file (default: `'containers-<timestamp>.config'`).
-
 `wave.retryPolicy.delay`
 : :::{versionadded} 22.06.0-edge
   :::
-: The initial delay when a failing HTTP request is retried (default: `150ms`). 
+: The initial delay when a failing HTTP request is retried (default: `150ms`).
 
 `wave.retryPolicy.maxDelay`
 : :::{versionadded} 22.06.0-edge

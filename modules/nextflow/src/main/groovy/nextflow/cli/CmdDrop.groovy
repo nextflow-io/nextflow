@@ -60,6 +60,6 @@ class CmdDrop extends CmdBase {
             return
         }
 
-        throw new AbortOperationException("Local project repository contains uncommitted changes -- wont drop it")
+        throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
     }
 }

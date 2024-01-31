@@ -86,7 +86,7 @@ Learn more about lists:
 Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
 ```groovy
-scores = [ "Brett":100, "Pete":"Did not finish", "Andrew":86.87934 ]
+scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
 ```
 
 Note that each of the values stored in the map can be of a different type. `Brett` is an integer, `Pete` is a string, and `Andrew` is a floating-point number.
@@ -338,6 +338,41 @@ Remove the first number with its trailing whitespace from a string:
 assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 ```
 
+### Functions
+
+Functions can be defined using the following syntax:
+
+```groovy
+def <function name> ( arg1, arg, .. ) {
+    <function body>
+}
+```
+
+For example:
+
+```groovy
+def foo() {
+    'Hello world'
+}
+
+def bar(alpha, omega) {
+    alpha + omega
+}
+```
+
+The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()`, which returns `'Hello world'`, and `bar(10, 20)`, which returns the sum of two parameters (`30` in this case).
+
+Functions implicitly return the result of the last statement. Additionally, the `return` keyword can be used to explicitly exit from a function and return the specified value. For example:
+
+```groovy
+def fib( x ) {
+    if( x <= 1 )
+        return x
+
+    fib(x-1) + fib(x-2)
+}
+```
+
 (script-closure)=
 
 ### Closures
@@ -414,10 +449,54 @@ myMap.keySet().each {
 ```
 
 :::{warning}
-Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a race condition.
+Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
 :::
 
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
+
+### Syntax sugar
+
+Groovy provides several forms of "syntax sugar", or shorthands that can make your code easier to read.
+
+Some programming languages require every statement to be terminated by a semi-colon. In Groovy, semi-colons are optional, but they can still be used to write multiple statements on the same line:
+
+```groovy
+println 'Hello!' ; println 'Hello again!'
+```
+
+When calling a function, the parentheses around the function arguments are optional:
+
+```groovy
+// full syntax
+printf('Hello %s!\n', 'World')
+
+// shorthand
+printf 'Hello %s!\n', 'World'
+```
+
+It is especially useful when calling a function with a closure parameter:
+
+```groovy
+// full syntax
+[1, 2, 3].each({ println it })
+
+// shorthand
+[1, 2, 3].each { println it }
+```
+
+If the last argument is a closure, the closure can be written outside of the parentheses:
+
+```groovy
+// full syntax
+[1, 2, 3].inject('result:', { accum, v -> accum + ' ' + v })
+
+// shorthand
+[1, 2, 3].inject('result:') { accum, v -> accum + ' ' + v }
+```
+
+:::{note}
+In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
+:::
 
 (implicit-variables)=
 

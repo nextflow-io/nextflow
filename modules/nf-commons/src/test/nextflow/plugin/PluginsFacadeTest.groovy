@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import com.sun.net.httpserver.HttpServer
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -24,7 +25,8 @@ class PluginsFacadeTest extends Specification {
         plugins.indexUrl = 'http://localhost:9900/plugins.json'
 
         when:
-        plugins.setup([plugins: [ 'nf-console@1.0.0' ]])
+        plugins.init()
+        plugins.load([plugins: [ 'nf-console@1.0.0' ]])
         then:
         folder.resolve('nf-console-1.0.0').exists()
 
@@ -140,8 +142,8 @@ class PluginsFacadeTest extends Specification {
         result == [ new PluginSpec('nf-google','2.0.0') ]
 
         when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_CLOUDCACHE_PATH:'xyz'])
-        result = handler.pluginsRequirement([:])
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([cloudcache:[enabled:true]])
         then:
         result == [ new PluginSpec('nf-cloudcache', '0.1.0') ]
 
@@ -149,6 +151,8 @@ class PluginsFacadeTest extends Specification {
 
     def 'should return default plugins given config' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
@@ -187,10 +191,14 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return default plugins given workdir' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
@@ -228,10 +236,14 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return default plugins given bucket dir' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
@@ -269,6 +281,8 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should get plugins list from env' () {
