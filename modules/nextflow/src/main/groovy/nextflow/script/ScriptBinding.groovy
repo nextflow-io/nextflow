@@ -26,7 +26,6 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.secret.SecretHolder
-import nextflow.util.AliasMap
 /**
  * Defines the script execution context. By default provided the following variables
  * <li>{@code __$session}: the current execution session
@@ -211,10 +210,10 @@ class ScriptBinding extends WorkflowBinding {
         private List<String> scriptAssignment = []
 
         @Delegate
-        private AliasMap target
+        private Map<String,Object> target
 
         ParamsMap() {
-            target = new AliasMap()
+            target = new LinkedHashMap<>()
         }
 
         ParamsMap(Map<String,Object> values) {

@@ -22,15 +22,13 @@ import groovy.transform.PackageScope
 import org.apache.commons.lang.StringUtils
 
 /**
- * A {@link Map} that automatically aliases every key to
- * both kebab-case and camelCase.
+ * A {@link Map} that automatically converts kebab-case
+ * keys to camelCase.
  * 
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
 class AliasMap implements Map<String,Object> {
-
-    private Set<String> originalKeys = []
 
     @Delegate
     private Map<String,Object> target
@@ -46,19 +44,10 @@ class AliasMap implements Map<String,Object> {
 
     @Override
     Object put(String key, Object value) {
-        // compute alias
-        final alias = key.contains('-') ? kebabToCamelCase(key) : camelToKebabCase(key)
+        if( key.contains('-') )
+            key = kebabToCamelCase(key)
 
-        // save the original key (overwrite alias if needed)
-        originalKeys << key
-        if( alias in originalKeys )
-            originalKeys.remove(alias)
-
-        // insert value under original key and alias
-        final result = target.put(key, value)
-        target.put(alias, value)
-
-        return result
+        return target.put(key, value)
     }
 
     @PackageScope

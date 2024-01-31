@@ -23,7 +23,27 @@ import spock.lang.Specification
  */
 class AliasMapTest extends Specification {
 
-    def 'should convert hyphen separated string to camel case' () {
+    def 'should convert keys from kebab case to camel case' () {
+
+        when:
+        def map = new AliasMap()
+        map['alphaBeta'] = 1
+        map['alpha-beta'] = 10
+        then:
+        map['alphaBeta'] == 10
+        !map.containsKey('alpha-beta')
+
+        when:
+        map = new AliasMap()
+        map['aaa-bbb-ccc'] = 1
+        map['aaaBbbCcc'] = 10
+        then:
+        map['aaaBbbCcc'] == 10
+        !map.containsKey('aaa-bbb-ccc')
+
+    }
+
+    def 'should convert kebab case to camel case' () {
 
         expect:
         AliasMap.kebabToCamelCase('a') == 'a'
@@ -34,7 +54,7 @@ class AliasMapTest extends Specification {
         AliasMap.kebabToCamelCase('Alpha-Beta-delta') == 'AlphaBetaDelta'
     }
 
-    def 'should convert camel case string to hyphen separated' () {
+    def 'should convert camel case to kebab case' () {
 
         expect:
         AliasMap.camelToKebabCase('alphaBetaDelta') == 'alpha-beta-delta'

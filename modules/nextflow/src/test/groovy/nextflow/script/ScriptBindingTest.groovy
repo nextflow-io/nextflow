@@ -81,33 +81,24 @@ class ScriptBindingTest extends Specification {
         def map = new ScriptBinding.ParamsMap()
         map['alphaBeta'] = 1
         map['alphaBeta'] = 2
-        map['alpha-beta'] = 3
-
         then:
         map['alphaBeta'] == 1
-        map['alpha-beta'] == 1
-
 
         when:
         map = new ScriptBinding.ParamsMap()
-        map['aaa-bbb-ccc'] = 1
         map['aaaBbbCcc'] = 10
         map['AaaBbbCcc'] = 20
-
         then:
-        map['aaaBbbCcc'] == 1
-        map['aaa-bbb-ccc'] == 1
-
+        map['aaaBbbCcc'] == 10
+        map['AaaBbbCcc'] == 20
 
         when:
         map = new ScriptBinding.ParamsMap()
         map['field1'] = 1
         map['field2'] = 2
         map['Field2'] = 3
-
         then:
         map['field1'] == 1
-        map['field-1'] == null
         map['field2']  == 2
         map['Field2']  == 3
 
@@ -125,7 +116,6 @@ class ScriptBindingTest extends Specification {
         then:
         map.alpha == 0
         map.alphaBeta == 0
-        map.'alpha-beta' == 0
         map.delta == 2
         map.gamma == 3
 
@@ -134,7 +124,6 @@ class ScriptBindingTest extends Specification {
         then:
         copy.foo == 1
         copy.alphaBeta == 4
-        copy.'alpha-beta' == 4
         copy.delta == 2
         copy.gamma == 3
         copy.omega == 9
@@ -142,7 +131,6 @@ class ScriptBindingTest extends Specification {
         // source does not change
         map.alpha == 0
         map.alphaBeta == 0
-        map.'alpha-beta' == 0
         map.delta == 2
         map.gamma == 3
         !map.containsKey('omega')
