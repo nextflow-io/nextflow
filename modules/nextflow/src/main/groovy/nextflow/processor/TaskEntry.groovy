@@ -16,11 +16,9 @@
 
 package nextflow.processor
 
-import com.google.common.hash.HashCode
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
-import nextflow.processor.TaskProcessor
 import nextflow.trace.TraceRecord
 /**
  * Model a task entry persisted in the {@link nextflow.cache.CacheDB}
@@ -32,12 +30,8 @@ import nextflow.trace.TraceRecord
 @TupleConstructor
 class TaskEntry {
 
-    TaskProcessor processor
-
     TraceRecord trace
 
     TaskContext context
-
-    List<HashCode> consumers
 
 }

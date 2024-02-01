@@ -83,7 +83,7 @@ class CacheDBTest extends Specification {
         1 * task.getContext() >> ctx
 
         when:
-        def entry = cache.getTaskEntry(hash, ['foo': proc])
+        def entry = cache.getTaskEntry(hash, proc)
         then:
         entry instanceof TaskEntry
         entry.trace instanceof TraceRecord

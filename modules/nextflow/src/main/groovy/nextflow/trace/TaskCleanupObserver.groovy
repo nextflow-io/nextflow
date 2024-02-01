@@ -24,7 +24,6 @@ import java.util.concurrent.locks.ReentrantLock
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.cache.CacheDB
 import nextflow.dag.DAG
 import nextflow.file.FileHelper
 import nextflow.processor.PublishDir.Mode
@@ -243,8 +242,7 @@ class TaskCleanupObserver implements TraceObserver {
 
     /**
      * When a task fails, mark it as completed without tracking its
-     * output files. Failed tasks are not included as consumers of
-     * upstream tasks in the cache.
+     * output files or triggering a cleanup.
      *
      * @param task
      */
@@ -385,12 +383,6 @@ class TaskCleanupObserver implements TraceObserver {
         // mark task as deleted
         final taskState = tasks[task]
         taskState.deleted = true
-
-        // finalize task in the cache db
-        final consumers = taskState.consumers
-            .findAll( t -> t.isSuccess() )
-            .collect( t -> t.hash )
-        session.cache.finalizeTaskAsync(task.hash, consumers)
     }
 
     /**
