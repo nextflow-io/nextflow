@@ -73,7 +73,7 @@ class Architecture {
             return chunks[0]
     }
 
-    static private String validateArchTomodules/nextflow/src/main/groovy/nextflow/processor/Architecture.groovy( Map res ) {
+    static private String validateArchToDockerArch( Map res ) {
         def value = getArch(res.name as String)
         def name = res.name as String
         if( value == 'x86_64' || value == 'amd64' )
