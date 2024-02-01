@@ -57,6 +57,7 @@ import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.CondaHelper
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
@@ -453,6 +454,11 @@ class WaveClient {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
                     condaFile = condaFileFromPath(attrs.conda, null)
+                }
+                else( CondaHelper.containsPip(attrs.conda) ) {
+                    // 'conda' attribute is a a list of conda packages including pip packages
+                    // need to create a dedicated conda environment from packages
+                    condaFile = condaFileFromPath(CondaHelper.condaPipPackagesToCondaFile(attrs.conda, condaChannels), null)
                 }
                 else {
                     // 'conda' attributes is resolved as the conda packages to be used

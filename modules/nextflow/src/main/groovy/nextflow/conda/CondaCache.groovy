@@ -30,6 +30,7 @@ import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
+import nextflow.util.CondaHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
 import org.yaml.snakeyaml.Yaml
@@ -288,6 +289,9 @@ class CondaCache {
         }
         else if( isTextFilePath(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+        }
+        else if( CondaHelper.containsPip(condaEnv) ) {
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(CondaHelper.condaPipPackagesToCondaFile(condaEnv, channels)))}"
         }
 
         else {
