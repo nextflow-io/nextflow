@@ -222,7 +222,7 @@ class PublishDir {
             this.sourceDir = task.targetDir
             this.sourceFileSystem = sourceDir.fileSystem
             this.stageInMode = task.config.stageInMode
-            this.taskName = task.name
+            this.task = task
             validatePublishMode()
         }
 

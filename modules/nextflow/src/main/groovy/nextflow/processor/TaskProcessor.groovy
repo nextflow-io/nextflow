@@ -728,7 +728,7 @@ class TaskProcessor {
         return null
     }
 
-    protected TaskStartParams createTaskStartParams() {
+    synchronized protected TaskStartParams createTaskStartParams() {
         return new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
     }
 
@@ -909,14 +909,14 @@ class TaskProcessor {
     final boolean checkCachedOutput(TaskRun seedTask, HashCode seedHash) {
 
         // -- recursively check for cached outputs
-        final queue = [ seedHash ]
-        final handlersMap = [:] as Map<HashCode,TaskHandler>
+        List<HashCode> queue = [ seedHash ]
+        Map<HashCode,TaskHandler> handlers = [:]
 
         while( !queue.isEmpty() ) {
             final hash = queue.pop()
 
             // -- skip tasks that have already been restored
-            if( hash in handlersMap )
+            if( hash in handlers )
                 continue
 
             // -- get cache entry
@@ -984,11 +984,11 @@ class TaskProcessor {
             }
 
             // -- create task handler
-            handlersMap[hash] = new CachedTaskHandler(task, entry.trace)
+            handlers[hash] = new CachedTaskHandler(task, entry.trace)
         }
 
         // -- finalize all cached tasks
-        handlersMap.each { hash, handler ->
+        handlers.each { hash, handler ->
             if( hash in restoredTasks )
                 return
 
