@@ -443,6 +443,12 @@ class Bolts {
         else if( type == RateUnit ) {
             return new RateUnit(self)
         }
+        else if ( type == URL ) {
+            return new URL(self)
+        }
+        else if ( type == URI ) {
+            return URI.create(self)
+        }
 
         StringGroovyMethods.asType(self, type);
     }
@@ -463,6 +469,12 @@ class Bolts {
         }
         else if( type == MemoryUnit ) {
             return new MemoryUnit(self.toString())
+        }
+        else if ( type == URL ) {
+            return new URL(self.toString())
+        }
+        else if ( type == URI ) {
+            return URI.create(self.toString())
         }
 
         StringGroovyMethods.asType(self, type);

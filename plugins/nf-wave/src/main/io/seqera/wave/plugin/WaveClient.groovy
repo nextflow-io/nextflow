@@ -125,7 +125,7 @@ class WaveClient {
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.awsFargate = WaveFactory.isAwsBatchFargateMode(session.config)
-        this.s5cmdConfigUrl = parseUrl(session.config.navigate('wave.s5cmdConfigUrl') as String)
+        this.s5cmdConfigUrl = session.config.navigate('wave.s5cmdConfigUrl') as URL
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave config: $config"
