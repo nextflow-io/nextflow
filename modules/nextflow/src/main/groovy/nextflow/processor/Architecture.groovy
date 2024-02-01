@@ -35,7 +35,7 @@ class Architecture {
  * example of notation in process: arch 'linux/x86_64', target: 'haswell'
  * example of notation in config:  arch = [name: 'linux/x86_64', target: 'haswell']
  * 
- * where dockerPlat = 'linux/x86_64'
+ * where dockerArch = 'linux/x86_64'
  *       spackArch = target ?: arch  // plus some validation for Spack syntax
  * 
  *       platform = 'linux'
@@ -45,7 +45,7 @@ class Architecture {
  * [alternate example: 'arch linux/arm/v8', where platform = 'linux' and arch = 'arm/v8']
  */
     // used in Nextflow
-    final String dockerPlat
+    final String dockerArch
     final String spackArch
 
     // defined, but currently not used
@@ -73,7 +73,7 @@ class Architecture {
             return value
     }
 
-    static private String validateArchToDockerPlat( Map res ) {
+    static private String validateArchToDockerArch( Map res ) {
         def value = getArch(res.name as String)
         def name = res.name as String
         if( value == 'x86_64' || value == 'amd64' )
@@ -112,7 +112,7 @@ class Architecture {
 
         this.platform = getPlatform(res.name as String)
         this.arch = getArch(res.name as String)
-        this.dockerPlat = validateArchToDockerPlat(res)
+        this.dockerArch = validateArchToDockerArch(res)
         this.spackArch = getSpackArch(res)
         if( res.target != null )
             this.target = res.target as String
