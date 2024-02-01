@@ -142,10 +142,6 @@ class WaveClient {
         this.httpClient = newHttpClient()
     }
 
-    private URL parseUrl(String value) {
-        return value ? new URL(value) : null
-    }
-
     protected HttpClient newHttpClient() {
         final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
