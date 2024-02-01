@@ -73,7 +73,7 @@ class Architecture {
             return chunks[0]
     }
 
-    static private String validateArchToDockerArch( Map res ) {
+    static private String validateArchToDockerPlat( Map res ) {
         def value = getArch(res.name as String)
         def name = res.name as String
         if( value == 'x86_64' || value == 'amd64' )
@@ -112,7 +112,7 @@ class Architecture {
         if( !res.name )
             throw new IllegalArgumentException("Missing architecture `name` attribute")
 
-        this.dockerArch = validateArchToDockerArch(res)
+        this.dockerPlat = validateArchToDockerPlat(res)
         this.platform = getPlatform(res.name as String)
         this.arch = getArch(res.name as String)
         if( res.target != null )
