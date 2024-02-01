@@ -32,7 +32,7 @@ jobs:
         run: env | sort
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
@@ -103,7 +103,7 @@ jobs:
         test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
