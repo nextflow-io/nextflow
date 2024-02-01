@@ -35,7 +35,7 @@ class ArchitectureTest extends Specification {
         arch.arch == ARCH
         arch.target == TAR
         arch.dockerArch == DOCK
-        arch.spackArch == SPACK
+        arch.spackTarget == SPACK
 
         where:
         VALUE                                  | PLAT     | ARCH        | TAR    | DOCK             | SPACK
@@ -57,7 +57,7 @@ class ArchitectureTest extends Specification {
         arch.arch == ARCH
         arch.target == TAR
         arch.dockerArch == DOCK
-        arch.spackArch == SPACK
+        arch.spackTarget == SPACK
 
         where:
         VALUE                                  | PLAT     | ARCH        | TAR           | DOCK             | SPACK

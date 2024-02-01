@@ -370,7 +370,7 @@ class WaveClientTest extends Specification {
         then:
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         new String(req.spackFile.decodeBase64()) == SPACKFILE.text
-        req.spackArch == 'Skylake'
+        req.spackTarget == 'Skylake'
         and:
         !req.containerImage
         !req.containerConfig.layers
@@ -610,7 +610,7 @@ class WaveClientTest extends Specification {
         !assets.containerConfig
         !assets.condaFile
         !assets.spackFile
-        !assets.spackArch
+        !assets.spackTarget
         !assets.projectResources
     }
 
@@ -652,7 +652,7 @@ class WaveClientTest extends Specification {
         !assets.condaFile
         !assets.projectResources
         and:
-        assets.spackArch == 'x86_64_v3'
+        assets.spackTarget == 'x86_64_v3'
         assets.spackFile.text == '''\
                 spack:
                   specs: [rseqc@3.0.1, rbase@3.5]

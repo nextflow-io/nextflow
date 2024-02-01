@@ -36,7 +36,7 @@ class Architecture {
  * example of notation in config:  arch = [name: 'linux/x86_64', target: 'haswell']
  * 
  * where dockerArch = 'linux/x86_64'
- *       spackArch = target ?: arch  // plus some validation for Spack syntax
+ *       spackTarget = target ?: arch  // plus some validation for Spack syntax
  * 
  *       platform = 'linux'
  *       arch = 'x86_64'
@@ -46,7 +46,7 @@ class Architecture {
  */
     // used in Nextflow
     final String dockerArch
-    final String spackArch
+    final String spackTarget
 
     // defined, but currently not used
     final String platform
@@ -85,7 +85,7 @@ class Architecture {
         throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
     }
 
-    static private String validateArchToSpackArch( String value, String inputArch ) {
+    static private String validateArchToSpackTarget( String value, String inputArch ) {
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
         if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
@@ -95,11 +95,11 @@ class Architecture {
         throw new IllegalArgumentException("Not a valid `arch` value: ${inputArch}")
     }
 
-    static protected String getSpackArch( Map res ) {
+    static protected String getSpackTarget( Map res ) {
         if( res.target != null )
             return res.target as String
         else
-            return validateArchToSpackArch(getArch(res.name as String), res.name as String)
+            return validateArchToSpackTarget(getArch(res.name as String), res.name as String)
     }
 
     Architecture( String value ) {
@@ -113,7 +113,7 @@ class Architecture {
         this.platform = getPlatform(res.name as String)
         this.arch = getArch(res.name as String)
         this.dockerArch = validateArchToDockerArch(res)
-        this.spackArch = getSpackArch(res)
+        this.spackTarget = getSpackTarget(res)
         if( res.target != null )
             this.target = res.target as String
     }

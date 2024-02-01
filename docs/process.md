@@ -1334,13 +1334,13 @@ process cpu_task {
 }
 ```
 
-The example above declares that the CPU generic architecture is `linux/x86_64` (X86 64 bit), and more specifically that the microarchitecture is `cascadelake` (a specific generation of Intel CPUs).
+The example above declares that the CPU generic architecture, or platform, is `linux/x86_64` (X86 64 bit), and more specifically that the microarchitecture is `cascadelake` (a specific generation of Intel CPUs).
 
 This directive is currently used by the following Nextflow functionalities:
 
 - by the [spack](#spack) directive, to build microarchitecture-optimised applications;
-- by the {ref}`wave-page` service, to build containers for one of the three generic families of CPU architectures (see below);
-- by the `spack` strategy within {ref}`wave-page`, to optimise the container builds for specific CPU microarchitectures.
+- by the {ref}`wave-page` service, to build containers for one of the three generic families of CPU architectures, or platforms (see below);
+- by the `spack` strategy within {ref}`wave-page`, to optimise the container builds for specific target CPU microarchitectures.
 
 Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
 - X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`

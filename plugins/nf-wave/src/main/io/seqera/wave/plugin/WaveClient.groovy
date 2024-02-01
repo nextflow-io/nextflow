@@ -188,7 +188,7 @@ class WaveClient {
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
                 spackFile: assets.spackFileEncoded(),
-                spackArch: assets.spackArch,
+                spackTarget: assets.spackTarget,
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
@@ -401,9 +401,9 @@ class WaveClient {
     WaveAssets resolveAssets(TaskRun task, String containerImage, boolean singularity) {
         // get the bundle
         final bundle = task.getModuleBundle()
-        // get the Spack architecture
+        // get platform and target architecture
         final arch = task.config.getArchitecture()
-        final spackArch = arch ? arch.spackArch : DEFAULT_SPACK_ARCH
+        final spackTarget = arch ? arch.spackTarget : DEFAULT_SPACK_ARCH
         final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
         def attrs = new HashMap<String,String>()
@@ -425,10 +425,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackTarget)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackTarget) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -522,7 +522,7 @@ class WaveClient {
                     containerScript,
                     condaFile,
                     spackFile,
-                    spackFile ? spackArch : null,
+                    spackFile ? spackTarget : null,
                     projectRes,
                     singularity)
     }
