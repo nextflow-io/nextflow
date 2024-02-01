@@ -145,6 +145,18 @@ class BoltsTest extends Specification {
         "$x MB" as MemoryUnit == MemoryUnit.of('5 MB')
     }
 
+    def testAsURL() {
+        expect: 
+        'http://foo.com' as URL == new URL('http://foo.com')
+        'http://foo.com/some/file.txt' as URL == new URL('http://foo.com/some/file.txt')
+    }
+
+    def testAsURI() {
+        expect:
+        'http://foo.com' as URI == URI.create('http://foo.com')
+        'http://foo.com/some/file.txt' as URI == URI.create('http://foo.com/some/file.txt')
+    }
+
     def testConfigToMap  () {
 
         setup:
