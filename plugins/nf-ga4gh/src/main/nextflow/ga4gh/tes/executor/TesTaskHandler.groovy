@@ -23,6 +23,7 @@ import static nextflow.processor.TaskStatus.COMPLETED
 import static nextflow.processor.TaskStatus.RUNNING
 
 import java.nio.file.Path
+import java.nio.file.Files
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -190,6 +191,9 @@ class TesTaskHandler extends TaskHandler {
         body.addInputsItem(inItem(scriptFile))
         body.addInputsItem(inItem(wrapperFile))
 
+        Path remoteBinDir = executor.getRemoteBinDir()
+        body.addInputsItem(inItem(remoteBinDir, remoteBinDir.toString(), true))
+
         // add task input files
         if(inputFile.exists()) body.addInputsItem(inItem(inputFile))
 
@@ -234,11 +238,12 @@ class TesTaskHandler extends TaskHandler {
         return size != null ? ((double)size.bytes)/1073741824 : null
     }
 
-    private TesInput inItem( Path realPath, String fileName = null) {
+    private TesInput inItem( Path realPath, String fileName = null, Boolean isBin = false) {
         def result = new TesInput()
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
         log.trace "[TES] Adding INPUT file: $result"
+        result.path = isBin ? realPath : result.path
         return result
     }
 
