@@ -85,7 +85,7 @@ class WaveClient {
 
     private static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
 
-    private static final String DEFAULT_SPACK_ARCH = 'x86_64_v3'
+    private static final String DEFAULT_SPACK_TARGET = 'x86_64_v3'
 
     private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
@@ -403,7 +403,7 @@ class WaveClient {
         final bundle = task.getModuleBundle()
         // get platform and target architecture
         final arch = task.config.getArchitecture()
-        final spackTarget = arch ? arch.spackTarget : DEFAULT_SPACK_ARCH
+        final spackTarget = arch ? arch.spackTarget : DEFAULT_SPACK_TARGET
         final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
         def attrs = new HashMap<String,String>()
