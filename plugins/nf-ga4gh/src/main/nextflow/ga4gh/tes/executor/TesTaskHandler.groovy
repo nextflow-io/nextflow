@@ -192,7 +192,9 @@ class TesTaskHandler extends TaskHandler {
         body.addInputsItem(inItem(wrapperFile))
 
         Path remoteBinDir = executor.getRemoteBinDir()
-        body.addInputsItem(inItem(remoteBinDir, remoteBinDir.toString(), true))
+        if (remoteBinDir) {
+            body.addInputsItem(inItem(remoteBinDir, null, true))
+        }
 
         // add task input files
         if(inputFile.exists()) body.addInputsItem(inItem(inputFile))
@@ -238,7 +240,7 @@ class TesTaskHandler extends TaskHandler {
         return size != null ? ((double)size.bytes)/1073741824 : null
     }
 
-    private TesInput inItem( Path realPath, String fileName = null, Boolean isBin = false) {
+    private TesInput inItem( Path realPath, String fileName = null, boolean isBin = false) {
         def result = new TesInput()
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
