@@ -60,8 +60,17 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     @Override
     CharliecloudBuilder build(StringBuilder result) {
         assert image
+        assert workDir
 
+        result << 'ch-convert -i ch-image -q '
+        result << image.split('/')[-1]
+        result << ' '
+        result << workDir
+        result << '/container_'
+        result << image.split('/')[-1]
+        result << ' && '
         result << 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env '
+
         if (!readOnlyInputs)
             result << '-w '
 
@@ -74,9 +83,12 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         if( runOptions )
             result << runOptions.join(' ') << ' '
-
-        result << image
-        result << ' --'
+        
+        result << ' '
+        result << workDir
+        result << '/container_'
+        result << image.split('/')[-1]
+        result << ' -- '
 
         runCommand = result.toString()
 
