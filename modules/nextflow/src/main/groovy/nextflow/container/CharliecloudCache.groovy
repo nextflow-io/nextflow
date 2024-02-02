@@ -77,8 +77,13 @@ class CharliecloudCache {
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
+
+        // add registry
+        if( registry )
+            name = registry + name
+        
         name = name.replace(':','+').replace('/','%')
-        return name
+        return name 
     }
 
     /**
