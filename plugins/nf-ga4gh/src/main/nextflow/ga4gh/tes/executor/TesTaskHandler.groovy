@@ -23,7 +23,6 @@ import static nextflow.processor.TaskStatus.COMPLETED
 import static nextflow.processor.TaskStatus.RUNNING
 
 import java.nio.file.Path
-import java.nio.file.Files
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
