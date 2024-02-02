@@ -62,7 +62,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         assert image
         assert workDir
 
-        result << 'ch-convert -i ch-image -q '
+        result << 'ch-convert -i ch-image '
         result << image.split('/')[-1]
         result << ' '
         result << workDir
