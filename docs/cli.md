@@ -50,6 +50,9 @@ Available options:
 `-syslog`
 : Send logs to syslog server (e.g. localhost:514).
 
+`-trace`
+: Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
+
 `-v, -version`
 : Print the program version.
 
@@ -121,7 +124,7 @@ The `-c` option is used to append a new configuration to the default configurati
 
 ### Docker driven execution
 
-:::{warning} *Experimental: not recommended for production environments.*
+:::{deprecated} 23.09.0-edge
 :::
 
 Launch Nextflow via Docker.
@@ -1129,7 +1132,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Enable/disable ANSI console logging.
 
 `-bucket-dir`
-: Remote bucket where intermediate result files are stored.
+: Remote bucket where intermediate result files are stored. When running a hybrid workflow, `-bucket-dir` and `-work-dir` should define separate work directories for remote tasks and local tasks, respectively.
 
 `-cache`
 : Enable/disable processes caching.
