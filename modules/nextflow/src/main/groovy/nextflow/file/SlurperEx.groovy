@@ -27,7 +27,7 @@ import org.yaml.snakeyaml.Yaml
 /**
  * Add helper methods to {@link groovy.json.JsonSlurper} class
  *
- * Check resource file: `META-INF/services/org.codehaus.groovy.runtime.ExtensionModule
+ * Check resource file: `META-INF/services/org.apache.groovy.runtime.ExtensionModule
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

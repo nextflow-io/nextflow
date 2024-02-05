@@ -205,7 +205,7 @@ class ResourcesBundle {
     final private static List<String> BIN_PATHS = ['bin','usr/bin','usr/local/bin']
 
     List<Path> getBinDirs() {
-        final result = new ArrayList(10)
+        final result = new ArrayList<Path>(10)
         for( Map.Entry<String,Path> it : content ) {
             if( it.key in BIN_PATHS && Files.isDirectory(it.value) && !result.contains(it.value) )
                 result.add(it.value)

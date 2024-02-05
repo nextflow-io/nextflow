@@ -283,7 +283,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         1 * handler.isSubmitted() >> false
         0 * handler.executor.helper.checkOperationStatus(_)
         handler.status == TaskStatus.NEW
-        result == false
+        !result
 
         when:
         result = handler.checkIfRunning()

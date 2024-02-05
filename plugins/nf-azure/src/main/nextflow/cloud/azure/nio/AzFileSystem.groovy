@@ -530,9 +530,9 @@ class AzFileSystem extends FileSystem {
     @Memoized
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
         final cfg = AzConfig.getConfig().retryConfig()
-        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
-            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
                 log.debug("Azure I/O exception - attempt: ${event.attemptCount}; cause: ${event.lastFailure?.message}")
             }
         }

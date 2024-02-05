@@ -980,11 +980,11 @@ class AssetManager {
             return
 
         List<String> filter = []
-        if( modules instanceof List ) {
-            filter.addAll(modules as List)
+        if( modules instanceof List<String> ) {
+            filter.addAll(modules)
         }
         else if( modules instanceof String ) {
-            filter.addAll( (modules as String).tokenize(', ') )
+            filter.addAll( modules.tokenize(', ') )
         }
 
         final init = git.submoduleInit()

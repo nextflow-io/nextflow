@@ -382,6 +382,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    String getClusterOptions() {
+        return get('clusterOptions')
+    }
+    
     def getContainer() {
         return get('container')
     }

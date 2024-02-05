@@ -32,7 +32,7 @@ if (groovyVer) {
 
         configurations.all {
             resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.codehaus.groovy') {
+                if (details.requested.group == 'org.apache.groovy') {
                     if( groovyVer.contains(':') )
                         details.useTarget(groovyVer)
                     else
@@ -95,8 +95,8 @@ allprojects {
 
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-cli-picocli'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-cli-picocli'
         // groovydoc libs
         groovyDoc.extendsFrom runtime
     }
@@ -109,8 +109,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.19"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.19"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.18"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.18"
     }
 
     test {

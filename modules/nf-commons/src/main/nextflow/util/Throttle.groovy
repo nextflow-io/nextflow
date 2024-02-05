@@ -186,7 +186,7 @@ class Throttle {
         assert closure != null
 
         def key = 17
-        key  = 31 * key + closure.class.hashCode()
+        key  = 31 * key + closure.class.name.hashCode()
         key  = 31 * key + closure.owner.hashCode()
         key  = 31 * key + closure.delegate?.hashCode() ?: 0
 

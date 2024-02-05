@@ -16,7 +16,10 @@
 
 package nextflow.conda
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
+import nextflow.util.Duration
 
 /**
  * Model Conda configuration
@@ -56,5 +59,25 @@ class CondaConfig extends LinkedHashMap {
         }
 
         throw new IllegalArgumentException("Unexpected conda.channels value: $value")
+    }
+
+    Duration createTimeout() {
+        get('createTimeout') as Duration
+    }
+
+    String createOptions() {
+        get('createOptions') as String
+    }
+
+    Path cacheDir() {
+        get('cacheDir') as Path
+    }
+
+    boolean useMamba() {
+        get('useMamba') as boolean
+    }
+
+    boolean useMicromamba() {
+        get('useMicromamba') as boolean
     }
 }
