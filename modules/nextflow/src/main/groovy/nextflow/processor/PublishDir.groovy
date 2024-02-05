@@ -508,7 +508,7 @@ class PublishDir {
             makeDirs(path)
         }
         catch( Throwable e ) {
-            session?.abort(new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e))
+            throw new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e)
         }
     }
 
