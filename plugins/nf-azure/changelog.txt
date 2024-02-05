@@ -1,5 +1,10 @@
 nf-azure changelog
 ===================
+1.5.0 - 5 Feb 2024
+- Fix azure retry policy (#4638) [85bab699]
+- Use AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e02afbf]
+- Bump Groovy 4 (#4443) [9d32503b]
+
 1.4.0 - 24 Nov 2023
 - Fix security vulnerabilities (#4513) [a310c777]
 - Add support for Azure low-priority pool (#4527) [8320ea10]
