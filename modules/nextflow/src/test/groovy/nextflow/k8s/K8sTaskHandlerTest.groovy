@@ -801,7 +801,7 @@ class K8sTaskHandlerTest extends Specification {
         def k8sConfig = Mock(K8sConfig)
         def handler = Spy(K8sTaskHandler)
         handler.getK8sConfig() >> k8sConfig
-        handler.setProperty('task', task)
+        handler.task = task
 
         when:
         opts = handler.getPodOptions()
