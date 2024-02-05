@@ -504,7 +504,12 @@ class PublishDir {
     }
 
     protected void createPublishDir() {
-        makeDirs(this.path)
+        try {
+            makeDirs(path)
+        }
+        catch( Throwable e ) {
+            throw new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e)
+        }
     }
 
     protected void makeDirs(Path dir) {
