@@ -49,6 +49,8 @@ class CharliecloudCache {
 
     private Duration pullTimeout = Duration.of('20min')
 
+    private String registry
+
     /** Only for debugging purpose - do not use */
     @PackageScope
     CharliecloudCache() {}
