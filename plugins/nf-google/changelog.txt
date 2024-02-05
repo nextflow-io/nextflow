@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.11.0 - 5 Feb 2024
+- Bump Groovy 4 (#4443) [9d32503b]
+
 1.10.0 - 20 Dec 2023
 - Add ability to disable Cloudinfo service (#4606) [f7251895]
 - Add support for Instance template to Google Batch [df7ed294]
