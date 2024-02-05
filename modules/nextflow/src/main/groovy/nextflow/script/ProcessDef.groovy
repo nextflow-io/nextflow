@@ -18,16 +18,15 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Const
 import nextflow.Global
+import nextflow.NF
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.script.params.BaseInParam
-import nextflow.script.params.BaseOutParam
-import nextflow.script.params.EachInParam
-import nextflow.script.params.InputsList
-import nextflow.script.params.OutputsList
+import nextflow.extension.CombineManyOp
+import nextflow.script.dsl.ProcessConfigBuilder
 
 /**
  * Models a nextflow process definition
@@ -63,31 +62,27 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     private String baseName
 
     /**
-     * The closure holding the process definition body
-     */
-    private Closure<BodyDef> rawBody
-
-    /**
      * The resolved process configuration
      */
-    private transient ProcessConfig processConfig
+    private ProcessConfig config
 
     /**
      * The actual process implementation
      */
-    private transient BodyDef taskBody
+    private BodyDef taskBody
 
     /**
      * The result of the process execution
      */
     private transient ChannelOut output
 
-    ProcessDef(BaseScript owner, Closure<BodyDef> body, String name ) {
+    ProcessDef(BaseScript owner, String name, BodyDef body, ProcessConfig config) {
         this.owner = owner
-        this.rawBody = body
         this.simpleName = name
         this.processName = name
         this.baseName = name
+        this.taskBody = body
+        this.config = config
     }
 
     static String stripScope(String str) {
@@ -95,32 +90,15 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     protected void initialize() {
-        log.trace "Process config > $processName"
-        assert processConfig==null
-
-        // the config object
-        processConfig = new ProcessConfig(owner,processName)
-
-        // Invoke the code block which will return the script closure to the executed.
-        // As side effect will set all the property declarations in the 'taskConfig' object.
-        processConfig.throwExceptionOnMissingProperty(true)
-        final copy = (Closure)rawBody.clone()
-        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
-        copy.setDelegate(processConfig)
-        taskBody = copy.call() as BodyDef
-        processConfig.throwExceptionOnMissingProperty(false)
-        if ( !taskBody )
-            throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
-
         // apply config settings to the process
-        processConfig.applyConfig((Map)session.config.process, baseName, simpleName, processName)
+        new ProcessConfigBuilder(config).applyConfig((Map)session.config.process, baseName, simpleName, processName)
     }
 
     @Override
     ProcessDef clone() {
         def result = (ProcessDef)super.clone()
-        result.@taskBody = taskBody?.clone()
-        result.@rawBody = (Closure)rawBody?.clone()
+        result.@taskBody = taskBody.clone()
+        result.@config = config.clone()
         return result
     }
 
@@ -130,12 +108,13 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)
+        result.@config.processName = name
         return result
     }
 
-    private InputsList getDeclaredInputs() { processConfig.getInputs() }
+    private ProcessInputs getDeclaredInputs() { config.getInputs() }
 
-    private OutputsList getDeclaredOutputs() { processConfig.getOutputs() }
+    private ProcessOutputs getDeclaredOutputs() { config.getOutputs() }
 
     BaseScript getOwner() { owner }
 
@@ -145,7 +124,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     String getBaseName() { baseName }
 
-    ProcessConfig getProcessConfig() { processConfig }
+    ProcessConfig getProcessConfig() { config }
 
     ChannelOut getOut() {
         if( output==null )
@@ -162,66 +141,86 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         return "Process `$name` declares ${expected} input ${ch} but ${actual} were specified"
     }
 
+    private DataflowReadChannel collectInputs(Object[] args0) {
+        final args = ChannelOut.spread(args0)
+        if( args.size() != declaredInputs.size() )
+            throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
+
+        // emit value channel if process has no inputs
+        if( args.size() == 0 ) {
+            final source = CH.value()
+            source.bind([])
+            return source
+        }
+
+        // create input channels
+        for( int i = 0; i < declaredInputs.size(); i++ )
+            declaredInputs[i].bind(args[i])
+
+        // combine input channels
+        final count = declaredInputs.count( param -> CH.isChannelQueue(param) && !param.isIterator() )
+        if( count > 1 ) {
+            final msg = "Process `$processName` received multiple queue channel inputs which will be implicitly mergeed -- consider combining them explicitly with `combine` or `join`, or converting single-item chennels into value channels with `collect` or `first`"
+            if( NF.isStrictMode() )
+                throw new ScriptRuntimeException(msg)
+            log.warn(msg)
+        }
+
+        final iterators = (0..<declaredInputs.size()).findAll( i -> declaredInputs[i].isIterator() )
+        return CH.getReadChannel(new CombineManyOp(declaredInputs.getChannels(), iterators).apply())
+    }
+
+    private void collectOutputs(boolean singleton) {
+        // emit stdout if no outputs are defined
+        if( declaredOutputs.size() == 0 ) {
+            declaredOutputs.setDefault()
+            return
+        }
+
+        // check for feedback channels
+        final feedbackChannels = getFeedbackChannels()
+        if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
+            throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
+
+        for( int i=0; i<declaredOutputs.size(); i++ ) {
+            final param = declaredOutputs[i]
+            final topicName = param.getTopic()
+            if( topicName && feedbackChannels )
+                throw new IllegalArgumentException("Output topic conflicts with recursion feature - process `$processName` should not declare any output topic" )
+            final ch = feedbackChannels
+                    ? feedbackChannels[i]
+                    : topicName ? CH.createTopicSource(topicName) : CH.create(singleton)
+            param.setChannel(ch)
+        }
+    }
+
     @Override
     Object run(Object[] args) {
         // initialise process config
         initialize()
 
-        // get params 
-        final params = ChannelOut.spread(args)
-        // sanity check
-        if( params.size() != declaredInputs.size() )
-            throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
-
-        // set input channels
-        for( int i=0; i<params.size(); i++ ) {
-            final inParam = (declaredInputs[i] as BaseInParam)
-            inParam.setFrom(params[i])
-            inParam.init()
-        }
+        // create input channel
+        final source = collectInputs(args)
 
         // set output channels
         // note: the result object must be an array instead of a List to allow process
         // composition ie. to use the process output as the input in another process invocation
-        if( declaredOutputs.size() ) {
-            final allScalarValues = declaredInputs.allScalarInputs()
-            final hasEachParams = declaredInputs.any { it instanceof EachInParam }
-            final singleton = allScalarValues && !hasEachParams
-
-            // check for feedback channels
-            final feedbackChannels = getFeedbackChannels()
-            if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
-                throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
-
-            for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final param = (declaredOutputs[i] as BaseOutParam)
-                final topicName = param.channelTopicName
-                if( topicName && feedbackChannels )
-                    throw new IllegalArgumentException("Output topic conflicts with recursion feature - process `$processName` should not declare any output topic" )
-                final ch = feedbackChannels
-                        ? feedbackChannels[i]
-                        : ( topicName ? CH.createTopicSource(topicName) : CH.create(singleton) )
-                param.setInto(ch)
-            }
-        }
-
-        // make a copy of the output list because execution can change it
-        final copyOuts = declaredOutputs.clone()
+        final singleton = !CH.isChannelQueue(source)
+        collectOutputs(singleton)
 
         // create the executor
         final executor = session
                 .executorFactory
-                .getExecutor(processName, processConfig, taskBody, session)
+                .getExecutor(processName, config, taskBody, session)
 
         // create processor class
         session
                 .newProcessFactory(owner)
-                .newTaskProcessor(processName, executor, processConfig, taskBody)
-                .run()
+                .newTaskProcessor(processName, executor, config, taskBody)
+                .run(source)
 
         // the result channels
-        assert declaredOutputs.size()>0, "Process output should contains at least one channel"
-        return output = new ChannelOut(copyOuts)
+        return output = new ChannelOut(declaredOutputs)
     }
 
 }

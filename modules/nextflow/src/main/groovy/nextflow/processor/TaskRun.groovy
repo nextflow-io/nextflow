@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 import com.google.common.hash.HashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -38,15 +39,8 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.EnvInParam
-import nextflow.script.params.EnvOutParam
-import nextflow.script.params.FileInParam
-import nextflow.script.params.FileOutParam
-import nextflow.script.params.InParam
-import nextflow.script.params.OutParam
-import nextflow.script.params.StdInParam
-import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import nextflow.util.ArrayBag
 /**
  * Models a task instance
  *
@@ -84,38 +78,39 @@ class TaskRun implements Cloneable {
     TaskProcessor processor
 
     /**
-     * Holds the input value(s) for each task input parameter
+     * The map of input environment vars
+     *
+     * @see TaskProcessor#resolveTaskInputs(TaskRun, List)
      */
-    Map<InParam,Object> inputs = [:]
+    Map<String,String> env = [:]
 
     /**
-     * Holds the output value(s) for each task output parameter
+     * The list of input files
+     *
+     * @see TaskProcessor#resolveTaskInputs(TaskRun, List)
      */
-    Map<OutParam,Object> outputs = [:]
-
-
-    void setInput( InParam param, Object value = null ) {
-        assert param
-
-        inputs[param] = value
-
-        // copy the value to the task 'input' attribute
-        // it will be used to pipe it to the process stdin
-        if( param instanceof StdInParam) {
-            stdin = value
-        }
-    }
-
-    void setOutput( OutParam param, Object value = null ) {
-        assert param
-        outputs[param] = value
-    }
-
+    List<FileHolder> inputFiles = new ArrayBag()
 
     /**
      * The value to be piped to the process stdin
+     *
+     * @see TaskProcessor#resolveTaskInputs(TaskRun, List)
      */
     def stdin
+
+    /**
+     * The list of resolved task outputs
+     *
+     * @see TaskProcessor#collectOutputs(TaskRun)
+     */
+    List<Object> outputs = []
+
+    /**
+     * The list of resolved output files
+     *
+     * @see ProcessOutput.ResolverContext#path(String)
+     */
+    Set<Path> outputFiles = []
 
     /**
      * The exit code returned by executing the task script
@@ -402,107 +397,29 @@ class TaskRun implements Cloneable {
      * Check whenever there are values to be cached
      */
     boolean hasCacheableValues() {
-
-        if( config?.isDynamic() )
-            return true
-
-        for( OutParam it : outputs.keySet() ) {
-            if( it.class == ValueOutParam ) return true
-            if( it.class == FileOutParam && ((FileOutParam)it).isDynamic() ) return true
-        }
-
-        return false
-    }
-
-    Map<InParam,List<FileHolder>> getInputFiles() {
-        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
-    }
-
-    /**
-     * Return the list of all input files staged as inputs by this task execution
-     */
-    List<String> getStagedInputs()  {
-        getInputFiles()
-                .values()
-                .flatten()
-                .collect { it.stageName }
+        return body.type != ScriptType.SCRIPTLET
     }
 
     /**
      * @return A map object containing all the task input files as <stage name, store path> pairs
      */
     Map<String,Path> getInputFilesMap() {
-
-        final allFiles = getInputFiles().values()
-        final result = new HashMap<String,Path>(allFiles.size())
-        for( List<FileHolder> entry : allFiles ) {
-            if( entry ) for( FileHolder it : entry ) {
-                result[ it.stageName ] = it.storePath
-            }
-        }
-
+        final result = [:]
+        for( FileHolder it : inputFiles )
+            result.put(it.stageName, it.storePath)
         return result
     }
 
     /**
-     * Look at the {@code nextflow.script.FileOutParam} which name is the expected
-     *  output name
-     *
+     * Get the list of expected output file patterns.
      */
+    @Memoized
     List<String> getOutputFilesNames() {
-        cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
-    }
-
-    private List<String> getOutputFilesNames0() {
-        def result = []
-
-        for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
+        final declaredOutputs = processor.config.getOutputs()
+        final result = []
+        for( def param : declaredOutputs.files.values() )
             result.addAll( param.getFilePatterns(context, workDir) )
-        }
-
         return result.unique()
-    }
-
-    /**
-     * Get the map of *input* objects by the given {@code InParam} type
-     *
-     * @param types One or more subclass of {@code InParam}
-     * @return An associative array containing all the objects for the specified type
-     */
-    def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
-
-        def result = [:]
-        for( def it : inputs ) {
-            if( types.contains(it.key.class) )
-                result << it
-        }
-        return result
-    }
-
-    /**
-     * Get the map of *output* objects by the given {@code InParam} type
-     *
-     * @param types One or more subclass of {@code InParam}
-     * @return An associative array containing all the objects for the specified type
-     */
-    def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
-        def result = [:]
-        for( def it : outputs ) {
-            if( types.contains(it.key.class) )
-                result << it
-        }
-        return result
-    }
-
-    /**
-     * @return A map containing the task environment defined as input declaration by this task
-     */
-    protected Map<String,String> getInputEnvironment() {
-        final Map<String,String> environment = [:]
-        getInputsByType( EnvInParam ).each { param, value ->
-            environment.put( param.name, value?.toString() )
-        }
-        return environment
     }
 
     /**
@@ -514,7 +431,7 @@ class TaskRun implements Cloneable {
         // IMPORTANT: when copying the environment map a LinkedHashMap must be used to preserve
         // the insertion order of the env entries (ie. export FOO=1; export BAR=$FOO)
         final result = new LinkedHashMap( getProcessor().getProcessEnvironment() )
-        result.putAll( getInputEnvironment() )
+        result.putAll( env )
         return result
     }
 
@@ -586,8 +503,8 @@ class TaskRun implements Cloneable {
     }
 
     List<String> getOutputEnvNames() {
-        final items = getOutputsByType(EnvOutParam)
-        return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
+        final declaredOutputs = processor.config.getOutputs()
+        return new ArrayList(declaredOutputs.env.values())
     }
 
     Path getCondaEnv() {
@@ -843,10 +760,7 @@ class TaskRun implements Cloneable {
         final result = new HashMap(variableNames.size())
         final processName = name
 
-        def itr = variableNames.iterator()
-        while( itr.hasNext() ) {
-            final varName = itr.next()
-
+        for( def varName : variableNames ) {
             final p = varName.indexOf('.')
             final baseName = p !=- 1 ? varName.substring(0,p) : varName
 

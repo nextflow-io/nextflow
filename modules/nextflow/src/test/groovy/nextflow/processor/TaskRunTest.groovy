@@ -29,7 +29,7 @@ import nextflow.file.FileHolder
 import nextflow.script.BodyDef
 import nextflow.script.ScriptBinding
 import nextflow.script.TaskClosure
-import nextflow.script.TokenVar
+import nextflow.util.LazyVar
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -63,8 +63,8 @@ class TaskRunTest extends Specification {
         def list = []
 
         task.setInput( new StdInParam(binding,list) )
-        task.setInput( new FileInParam(binding, list).bind(new TokenVar('x')), 'file1' )
-        task.setInput( new FileInParam(binding, list).bind(new TokenVar('y')), 'file2' )
+        task.setInput( new FileInParam(binding, list).bind(new LazyVar('x')), 'file1' )
+        task.setInput( new FileInParam(binding, list).bind(new LazyVar('y')), 'file2' )
         task.setInput( new EnvInParam(binding, list).bind('z'), 'env' )
 
 
@@ -119,7 +119,7 @@ class TaskRunTest extends Specification {
         def task = new TaskRun()
         def list = []
 
-        def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
+        def x = new ValueInParam(binding, list).bind( new LazyVar('x') )
         def y = new FileInParam(binding, list).bind('y')
 
         task.setInput(x, 1)
@@ -137,7 +137,7 @@ class TaskRunTest extends Specification {
         def task = new TaskRun()
         def list = []
 
-        def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
+        def x = new ValueInParam(binding, list).bind( new LazyVar('x') )
         def y = new FileInParam(binding, list).bind('y')
         def z = new FileInParam(binding, list).bind('z')
 
@@ -159,7 +159,7 @@ class TaskRunTest extends Specification {
         def list = []
 
         when:
-        def i1 = new ValueInParam(binding, list).bind( new TokenVar('x') )
+        def i1 = new ValueInParam(binding, list).bind( new LazyVar('x') )
         def o1 = new FileOutParam(binding,list).bind('file_out.alpha')
         def o2 = new ValueOutParam(binding,list).bind( 'x' )
         def o3 = new FileOutParam(binding,list).bind('file_out.beta')
@@ -203,7 +203,7 @@ class TaskRunTest extends Specification {
          * file with parametric name => true
          */
         when:
-        def s3 = new FileOutParam(binding, list).bind( new TokenVar('y') )
+        def s3 = new FileOutParam(binding, list).bind( new LazyVar('y') )
         def task3 = new TaskRun()
         task3.setOutput(s3)
         then:
@@ -687,8 +687,8 @@ class TaskRunTest extends Specification {
 
     def 'should return output env names' () {
         given:
-        def env1 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('FOO'))
-        def env2 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('BAR'))
+        def env1 = new EnvOutParam(new Binding(),[]).bind(new LazyVar('FOO'))
+        def env2 = new EnvOutParam(new Binding(),[]).bind(new LazyVar('BAR'))
         def task = new TaskRun()
         task.outputs.put(env1, null)
         task.outputs.put(env2, null)

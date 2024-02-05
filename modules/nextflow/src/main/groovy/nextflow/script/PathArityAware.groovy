@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script.params
+package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -26,15 +26,20 @@ import nextflow.exception.IllegalArityException
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-trait ArityParam {
+trait PathArityAware {
 
     Range arity
 
     Range getArity() { arity }
 
-    def setArity(String value) {
+    def setArity(Object value) {
+        if( value !instanceof String )
+            throw new IllegalArityException("Path arity should be a string number (e.g. '1') or range (e.g. '1..*')")
+        
+        value = (String)value
+
         if( value.isInteger() ) {
-            def n = value.toInteger()
+            final n = value.toInteger()
             this.arity = new Range(n, n)
             return this
         }
@@ -52,7 +57,7 @@ trait ArityParam {
             }
         }
 
-        throw new IllegalArityException("Path arity should be a number (e.g. '1') or a range (e.g. '1..*')")
+        throw new IllegalArityException("Path arity should be a string number (e.g. '1') or range (e.g. '1..*')")
     }
 
     /**

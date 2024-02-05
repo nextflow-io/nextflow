@@ -16,13 +16,12 @@
 
 package nextflow.processor
 
-import nextflow.util.CmdLineOptionMap
-
 import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import nextflow.Const
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.AbortOperationException
@@ -33,7 +32,9 @@ import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
+import nextflow.util.CmdLineOptionMap
 import nextflow.util.Duration
+import nextflow.util.LazyMap
 import nextflow.util.MemoryUnit
 /**
  * Task local configuration properties
@@ -515,198 +516,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( code instanceof TaskClosure )
             return code
         throw new IllegalStateException()
-    }
-
-}
-
-/**
- * A map that resolve closure and gstring in a lazy manner
- */
-@CompileStatic
-class LazyMap implements Map<String,Object> {
-
-    /** The target map holding the values */
-    @Delegate
-    private Map<String,Object> target
-
-    /** The context map against which dynamic properties are resolved */
-    private Map binding
-
-    private boolean dynamic
-
-    protected boolean isDynamic() { dynamic }
-
-    protected void setDynamic(boolean val) { dynamic = val }
-
-    protected Map getBinding() { binding }
-
-    protected void setBinding(Map map) { this.binding = map }
-
-    protected Map<String,Object> getTarget() { target }
-
-    protected void setTarget(Map<String,Object> obj) { this.target = obj }
-
-    LazyMap() {
-        target = new HashMap<>()
-    }
-
-    LazyMap( Map<String,Object> entries ) {
-        assert entries != null
-        target = new HashMap<>()
-        putAll(entries)
-    }
-
-    /**
-     * Resolve a directive *dynamic* value i.e. defined with a closure or lazy string
-     *
-     * @param name The directive name
-     * @param value The value to be resolved
-     * @return The resolved value
-     */
-    protected resolve( String name, value ) {
-
-        /*
-         * directive with one value and optional named parameter are converted
-         * to a list object in which the first element is a map holding the named parameters
-         * and the second is the directive value
-         */
-        if( value instanceof ConfigList ) {
-            def copy = new ArrayList(value.size())
-            for( Object item : value ) {
-                if( item instanceof Map )
-                    copy.add( resolveParams(name, item as Map) )
-                else
-                    copy.add( resolveImpl(name, item) )
-            }
-            return copy
-        }
-
-        /*
-         * resolve the values in a map object
-         * note: 'ext' property is meant for extension attributes
-         * as it should be preserved as LazyMap
-         */
-        else if( value instanceof Map && name!='ext' ) {
-            return resolveParams(name, value)
-        }
-
-        /*
-         * simple value
-         */
-        else {
-            return resolveImpl(name, value)
-        }
-
-    }
-
-    /**
-     * Resolve directive *dynamic* named params
-     *
-     * @param name The directive name
-     * @param value The map holding the named params
-     * @return A map in which dynamic params are resolved to the actual value
-     */
-    private resolveParams( String name, Map value ) {
-
-        final copy = new LinkedHashMap()
-        final attr = (value as Map)
-        for( Entry entry : attr.entrySet() ) {
-            copy[entry.key] = resolveImpl(name, entry.value, true)
-        }
-        return copy
-    }
-
-    /**
-     * Resolve a directive dynamic value
-     *
-     * @param name The directive name
-     * @param value The value to be resolved
-     * @param param When {@code true} points that it is a named parameter value, thus closure are only cloned
-     * @return The resolved directive value
-     */
-    private resolveImpl( String name, value, boolean param=false ) {
-
-        if( value instanceof Closure ) {
-            def copy = value.cloneWith(getBinding())
-            if( param ) {
-                return copy
-            }
-
-            try {
-                return copy.call()
-            }
-            catch( MissingPropertyException e ) {
-                if( getBinding() == null ) throw new IllegalStateException("Directive `$name` doesn't support dynamic value (or context not yet initialized)")
-                else throw e
-            }
-        }
-
-        else if( value instanceof GString ) {
-            return value.cloneAsLazy(getBinding()).toString()
-        }
-
-        return value
-    }
-
-    /**
-     * Override the get method in such a way that {@link Closure} values are resolved against
-     * the {@link #binding} map
-     *
-     * @param key The map entry key
-     * @return The associated value
-     */
-    Object get( key ) {
-        return getValue(key)
-    }
-
-    Object getValue(Object key) {
-        final value = target.get(key)
-        return resolve(key as String, value)
-    }
-
-    Object put( String key, Object value ) {
-        if( value instanceof Closure ) {
-            dynamic |= true
-        }
-        else if( value instanceof GString ) {
-            for( int i=0; i<value.valueCount; i++ )
-                if (value.values[i] instanceof Closure)
-                    dynamic |= true
-        }
-        return target.put(key, value)
-    }
-
-    @Override
-    void putAll( Map entries ) {
-        entries.each { k, v -> put(k as String, v) }
-    }
-
-    @Override
-    String toString() {
-        final allKeys = keySet()
-        final result = new ArrayList<String>(allKeys.size())
-        for( String key : allKeys ) { result << "$key: ${getProperty(key)}".toString() }
-        result.join('; ')
-    }
-
-}
-
-@CompileStatic
-class ConfigList implements List {
-
-    @Delegate
-    private List target
-
-    ConfigList() {
-        target = []
-    }
-
-    ConfigList(int size) {
-        target = new ArrayList(size)
-    }
-
-    ConfigList(Collection items) {
-        target = new ArrayList(items)
     }
 
 }
