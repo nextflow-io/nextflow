@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.8.0 - 5 Feb 2024
+- Truncate max size exceeded error message (#4644) [36090b70]
+- Bump Groovy 4 (#4443) [9d32503b]
+
 1.7.0 - 24 Nov 2023
 - Fix security vulnerabilities (#4513) [a310c777]
 - Remove deprecated TowerArchiver feature [ff8e06a3]
