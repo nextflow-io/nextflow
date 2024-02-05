@@ -119,10 +119,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     private BatchContext<String,JobDetail> context
 
     /** only for testing purpose -- do not use */
-    protected AwsBatchTaskHandler(AWSBatch client=null, TaskRun task=null) {
-        this.client = client
-        this.task = task
-    }
+    protected AwsBatchTaskHandler() {}
 
     /**
      * Create a new Batch task handler
