@@ -186,7 +186,7 @@ The following configuration options are available:
 
 `fusion.cacheSize`
 : :::{versionadded} 23.11.0-edge
-:::
+  :::
 : The maximum size of the local cache used by the Fusion client.
 
 `fusion.containerConfigUrl`

@@ -662,14 +662,6 @@ ciao
 hello
 ```
 
-(process-input-set)=
-
-### Input type `set`
-
-:::{deprecated} 19.08.1-edge
-Use `tuple` instead.
-:::
-
 (process-input-tuple)=
 
 ### Input type `tuple`
@@ -679,20 +671,20 @@ The `tuple` qualifier allows you to group multiple values into a single input de
 ```groovy
 process tupleExample {
     input:
-    tuple val(x), path('latin.txt')
+    tuple val(x), path('input.txt')
 
     """
     echo "Processing $x"
-    cat - latin.txt > copy
+    cat input.txt > copy
     """
 }
 
 workflow {
-  Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] ) | tupleExample
+  Channel.of( [1, 'alpha.txt'], [2, 'beta.txt'], [3, 'delta.txt'] ) | tupleExample
 }
 ```
 
-In the above example, the `tuple` input consists of the value `x` and the file `latin.txt`.
+In the above example, the `tuple` input consists of the value `x` and the file `input.txt`.
 
 A `tuple` definition may contain any of the following qualifiers, as previously described: `val`, `env`, `path` and `stdin`. Files specified with the `path` qualifier are treated exactly the same as standalone `path` inputs.
 
@@ -958,19 +950,19 @@ Available options:
   even if only one file is produced.
 
 `followLinks`
-: When `true` target files are return in place of any matching symlink (default: `true`)
+: When `true`, target files are returned in place of any matching symlink (default: `true`)
 
 `glob`
-: When `true` the specified name is interpreted as a glob pattern (default: `true`)
+: When `true`, the specified name is interpreted as a glob pattern (default: `true`)
 
 `hidden`
-: When `true` hidden files are included in the matching output files (default: `false`)
+: When `true`, hidden files are included in the matching output files (default: `false`)
 
 `includeInputs`
-: When `true` any input files matching an output file glob pattern are included.
+: When `true` and the output path is a glob pattern, any input files matching the pattern are also included in the output (default: `false`)
 
 `maxDepth`
-: Maximum number of directory levels to visit (default: no limit)
+: Maximum number of directory levels to visit (default: no limit).
 
 `type`
 : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`))
@@ -1093,14 +1085,6 @@ workflow {
     sayHello | view { "I say... $it" }
 }
 ```
-
-(process-set)=
-
-### Output type `set`
-
-:::{deprecated} 19.08.1-edge
-Use `tuple` instead.
-:::
 
 (process-out-tuple)=
 

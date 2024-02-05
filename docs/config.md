@@ -538,7 +538,7 @@ The following settings are available:
 
 `dag.direction`
 : :::{versionadded} 23.10.0
-:::
+  :::
 : *Only supported by the HTML and Mermaid renderers.*
 : Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
 
@@ -986,7 +986,7 @@ The `k8s` scope controls the deployment and execution of workflow applications i
 The following settings are available:
 
 `k8s.autoMountHostPaths`
-: Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: `false`).
+: Automatically mounts host paths into the task pods (default: `false`). Only intended for development purposes when using a single node.
 
 `k8s.computeResourceType`
 : :::{versionadded} 22.05.0-edge
@@ -995,6 +995,9 @@ The following settings are available:
 
 `k8s.context`
 : Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
+
+`k8s.debug.yaml`
+: When `true`, saves the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
 
 `k8s.fetchNodeName`
 : :::{versionadded} 22.05.0-edge
@@ -1029,6 +1032,7 @@ The following settings are available:
 
 `k8s.pod`
 : Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the {ref}`process-pod` process directive.
+: When using the `kuberun` command, this setting also applies to the submitter pod.
 
 `k8s.projectDir`
 : Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/projects`).
@@ -1581,7 +1585,13 @@ There are additional variables that can be defined within a configuration file t
   :::
 
 `dumpHashes`
-: If `true`, dump task hash keys in the log file, for debugging purposes.
+: If `true`, dump task hash keys in the log file, for debugging purposes. Equivalent to the `-dump-hashes` option of the `run` command.
+
+`resume`
+: If `true`, enable the use of previously cached task executions. Equivalent to the `-resume` option of the `run` command.
+
+`workDir`
+: Defines the pipeline work directory. Equivalent to the `-work-dir` option of the `run` command.
 
 (config-profiles)=
 
@@ -1711,7 +1721,6 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default: `false`)
 
-
 `NXF_ENABLE_FS_SYNC`
 : :::{versionadded} 23.10.0
   :::
@@ -1727,8 +1736,16 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable Nextflow *strict* execution mode (default: `false`)
 
+`NXF_ENABLE_VIRTUAL_THREADS`
+: :::{versionadded} 23.05.0-edge
+  :::
+: :::{versionchanged} 23.10.0
+  Enabled by default when using Java 21 or later.
+  :::
+: Enable the use of virtual threads in the Nextflow runtime (default: `false`)
+
 `NXF_EXECUTOR`
-: Defines the default process executor e.g. `sge`
+: Defines the default process executor, e.g. `sge`
 
 `NXF_FILE_ROOT`
 : :::{versionadded} 23.05.0-edge
@@ -1746,6 +1763,9 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 21.12.1-edge
   :::
 : Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's only applied the JVM running Nextflow and not to any java pre-launching commands.
+
+`NXF_LOG_FILE`
+: The filename of the Nextflow log (default: `.nextflow.log`)
 
 `NXF_OFFLINE`
 : When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default: `false`).
@@ -1804,6 +1824,9 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_TEMP`
 : Directory where temporary files are stored
+
+`NXF_TRACE`
+: Enable trace level logging for the specified packages. Equivalent to the `-trace` command-line option.
 
 `NXF_VER`
 : Defines which version of Nextflow to use.
