@@ -16,6 +16,10 @@
 
 package nextflow.util
 
+import ch.qos.logback.core.encoder.Encoder
+import ch.qos.logback.core.spi.FilterAttachable
+import ch.qos.logback.core.spi.LifeCycle
+
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -261,8 +265,8 @@ class LoggerHelper {
             result.setContext(loggerContext)
             if( result instanceof ConsoleAppender )
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-            result.addFilter(filter)
-            result.start()
+            (result as FilterAttachable).addFilter(filter)
+            (result as LifeCycle).start()
         }
 
         return result
@@ -304,9 +308,9 @@ class LoggerHelper {
             rollingPolicy.start()
 
             result.rollingPolicy = rollingPolicy
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
-            result.setTriggeringPolicy(new RollOnStartupPolicy())
+            result.setTriggeringPolicy(new RollOnStartupPolicy<ILoggingEvent>())
             result.triggeringPolicy.start()
             result.start()
         }
@@ -319,7 +323,7 @@ class LoggerHelper {
         FileAppender<ILoggingEvent> result = logFileName ? new FileAppender<ILoggingEvent>() : null
         if( result ) {
             result.file = logFileName
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
             result.bufferSize = FileSize.valueOf('64KB')
             result.start()
@@ -697,10 +701,10 @@ class LoggerHelper {
     static private char OPEN_CH = '[' as char
     static private char CLOSE_CH = ']' as char
     static private char SLASH_CH = '/' as char
-    static private int ZERO_CH = '0' as char
-    static private int NINE_CH = '9' as char
-    static private int ALPHA_CH = 'a' as char
-    static private int EFFE_CH = 'f' as char
+    static private char ZERO_CH = '0' as char
+    static private char NINE_CH = '9' as char
+    static private char ALPHA_CH = 'a' as char
+    static private char EFFE_CH = 'f' as char
 
     static boolean isHashLogPrefix(String str) {
         if( str?.length()<10 )

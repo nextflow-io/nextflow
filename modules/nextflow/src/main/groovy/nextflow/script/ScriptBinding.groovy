@@ -72,8 +72,8 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
-            args.addAll((List)vars.args)
+            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
         

@@ -49,7 +49,7 @@ class ConsolePlugin extends BasePlugin {
         // using the plugin system classloader.
         // see
         // - org.apache.groovy.swing.extensions.SwingExtensions
-        // - META-INF/groovy/org.codehuas.groovy.runtime.ExtensionModule in the 'groovy-swing' JAR
+        // - META-INF/groovy/org.apache.groovy.runtime.ExtensionModule in the 'groovy-swing' JAR
         loadExtensions()
     }
 
