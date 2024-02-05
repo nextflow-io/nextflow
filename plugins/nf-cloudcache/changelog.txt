@@ -1,5 +1,8 @@
 nf-cloudcache changelog
 =======================
+0.4.0 - 5 Feb 20204
+- Bump Groovy 4 (#4443) [9d32503b]
+
 0.3.1 - 24 Nov 2023
 - Fix security vulnerabilities (#4513) [a310c777]
 
