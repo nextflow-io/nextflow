@@ -508,9 +508,7 @@ class PublishDir {
             makeDirs(path)
         }
         catch( Throwable e ) {
-            log.warn "Failed to create publish directory: ${path.toUriString()} -- See log file for details", e
-            if( NF.strictMode || failOnError )
-                session?.abort(e)
+            session?.abort(new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e))
         }
     }
 
