@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+2.4.0 - 5 Feb 2024
+- Remove Glacier auto-retrieval (#4705) [5f0ec50d]
+- Bump nextflow 23.12.0-edge as min version [63e83702]
+- Bump Groovy 4 (#4443) [9d32503b]
+
 2.3.0 - 20 Dec 2023
 - Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
 - Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
