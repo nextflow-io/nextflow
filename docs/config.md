@@ -229,27 +229,22 @@ The following settings are available:
 : The amount of time to wait (in milliseconds) when initially establishing a connection before timing out.
 
 `aws.client.endpoint`
-: The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
+: The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`.
 
 `aws.client.glacierAutoRetrieval`
-: :::{versionadded} 22.12.0-edge
+: :::{deprecated} 24.02.0-edge
+  Glacier auto-retrieval is no longer supported. Instead, consider using the AWS CLI to restore any Glacier objects before or at the beginning of your pipeline (i.e. in a Nextflow process).
   :::
-: *Experimental: may change in a future release.*
 : Enable auto retrieval of S3 objects with a Glacier storage class (default: `false`).
-: :::{note}
-  This feature only works for S3 objects that are downloaded by Nextflow directly. It is not supported for tasks (e.g. when using the AWS Batch executor), since that would lead to many tasks sitting idle for several hours and wasting resources. If you need to restore many objects from Glacier, consider restoring them in a script prior to launching the pipeline.
-  :::
 
 `aws.client.glacierExpirationDays`
-: :::{versionadded} 22.12.0-edge
+: :::{deprecated} 24.02.0-edge
   :::
-: *Experimental: may change in a future release.*
 : The time, in days, between when an object is restored to the bucket and when it expires (default: `7`).
 
 `aws.client.glacierRetrievalTier`
-: :::{versionadded} 23.03.0-edge
+: :::{deprecated} 24.02.0-edge
   :::
-: *Experimental: may change in a future release.*
 : The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
 `aws.client.maxConnections`
@@ -1005,6 +1000,11 @@ The following settings are available:
 : :::{versionadded} 22.05.0-edge
   :::
 : If you trace the hostname, activate this option (default: `false`).
+
+`k8s.fuseDevicePlugin`
+: :::{versionadded} 24.01.0-edge
+  :::
+: The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default: `['nextflow.io/fuse': 1]`).
 
 `k8s.httpConnectTimeout`
 : :::{versionadded} 22.10.0
