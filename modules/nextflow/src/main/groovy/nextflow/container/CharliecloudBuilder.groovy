@@ -60,9 +60,13 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     @Override
     CharliecloudBuilder build(StringBuilder result) {
         assert image
+        def image_storage_path = File(image).parent
 
-        result << 'ch-convert -i ch-image '
-        result << image.split('/')[-1]
+        result << 'ch-convert -i ch-image -o dir '
+        // handle storage to deal with cases where CH_IMAGE_STORAGE is not set
+        result << '--storage '
+        result << '  '
+        result << image_storage_path
         result << ' '
         result << '"$NXF_TASK_WORKDIR"'
         result << '/container_'
