@@ -366,19 +366,19 @@ class PublishDir {
         }
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
-            if( NF.strictMode || failOnError){
+            if( NF.strictMode || failOnError ) {
                 session?.abort(e)
             }
         }
     }
 
-    protected void processPath( Path source, Path target ) {
+    protected void processPath(Path source, Path target) {
 
         // publish each file in the directory tree
         if( Files.isDirectory(source) )
             Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
                 FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
-                    final targetFile = target.resolve(source.relativize(sourceFile))
+                    final targetFile = target.resolve(source.relativize(sourceFile).toString())
                     processFile(sourceFile, targetFile)
                     FileVisitResult.CONTINUE
                 }
