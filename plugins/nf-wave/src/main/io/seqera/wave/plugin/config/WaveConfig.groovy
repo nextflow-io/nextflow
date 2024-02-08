@@ -18,7 +18,11 @@
 package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import io.seqera.wave.config.CondaOpts
+import io.seqera.wave.config.SpackOpts
+import nextflow.file.FileHelper
 import nextflow.util.Duration
 /**
  * Model Wave client configuration
@@ -26,6 +30,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@ToString(includeNames = true, includePackage = false, includeFields = true, excludes = 'reportOpts')
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
@@ -40,10 +45,17 @@ class WaveConfig {
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
+    final private ReportOpts reportOpts
+    final private RetryOpts retryOpts
+    final private HttpOpts httpClientOpts
+    final private Boolean freezeMode
+    final private Boolean preserveFileTimestamp
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
+        this.freezeMode = opts.freeze as Boolean
+        this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
@@ -52,8 +64,11 @@ class WaveConfig {
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
-            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
+        this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
+        this.retryOpts = retryOpts0(opts)
+        this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
+        // some validation
+        validateConfig()
     }
 
     Boolean enabled() { this.enabled }
@@ -64,7 +79,15 @@ class WaveConfig {
 
     SpackOpts spackOpts() { this.spackOpts }
 
+    RetryOpts retryOpts() { this.retryOpts }
+
+    HttpOpts httpOpts() { this.httpClientOpts }
+
     List<String> strategy() { this.strategy }
+
+    boolean freezeMode() { return this.freezeMode }
+
+    boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
     boolean bundleProjectResources() { bundleProjectResources }
 
@@ -72,6 +95,25 @@ class WaveConfig {
 
     String cacheRepository() { cacheRepository }
 
+    private void validateConfig() {
+        def scheme= FileHelper.getUrlProtocol(endpoint)
+        if( scheme !in ['http','https'] )
+            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: '$endpoint'")
+        if( FileHelper.getUrlProtocol(buildRepository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$buildRepository'")
+        if( FileHelper.getUrlProtocol(cacheRepository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: '$cacheRepository'")
+    }
+
+    private RetryOpts retryOpts0(Map opts) {
+        if( opts.retryPolicy )
+            return new RetryOpts(opts.retryPolicy as Map)
+        if( opts.retry ) {
+            log.warn "Configuration options 'wave.retry' has been deprecated - replace it with 'wave.retryPolicy'"
+            return new RetryOpts(opts.retry as Map)
+        }
+        return new RetryOpts(Map.of())
+    }
     protected List<String> parseStrategy(value) {
         if( !value ) {
             log.debug "Wave strategy not specified - using default: $DEF_STRATEGIES"
@@ -121,4 +163,7 @@ class WaveConfig {
     Duration tokensCacheMaxDuration() { 
         return tokensCacheMaxDuration 
     }
+
+    @Deprecated
+    ReportOpts reportOpts() { reportOpts }
 }

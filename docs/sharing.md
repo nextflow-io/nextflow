@@ -110,7 +110,7 @@ The `pull` command allows you to download a project from a GitHub repository or 
 nextflow pull nextflow-io/examples
 ```
 
-Altenatively, you can use the repository URL as the name of the project to pull:
+Alternatively, you can use the repository URL as the name of the project to pull:
 
 ```bash
 nextflow pull https://github.com/nextflow-io/examples
@@ -152,7 +152,7 @@ nextflow drop nextflow-io/hello
 
 ## SCM configuration file
 
-The file `$HOME/.nextflow/scm` allows you to centralise the security credentials required to access private project repositories on Bitbucket, GitHub and GitLab source code management (`SCM`) platforms or to manage the configuration properties of private server installations (of the same platforms).
+The file `$HOME/.nextflow/scm` allows you to centralise the security credentials required to access private project repositories on Bitbucket, GitHub and GitLab source code management (SCM) platforms or to manage the configuration properties of private server installations (of the same platforms).
 
 The configuration properties for each SCM platform are defined inside the `providers` section, properties for the same provider are grouped together with a common name and delimited with curly brackets as in this example:
 
@@ -166,6 +166,10 @@ providers {
 ```
 
 In the above template replace `<provider-name>` with one of the "default" servers (i.e. `bitbucket`, `github` or `gitlab`) or a custom identifier representing a private SCM server installation.
+
+:::{versionadded} 20.10.0
+A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable.
+:::
 
 The following configuration properties are supported for each provider configuration:
 
@@ -191,9 +195,7 @@ The following configuration properties are supported for each provider configura
 : *Required only for private SCM servers*
 : SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
-:::{tip}
-A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable (requires version `20.10.0` or later).
-:::
+## SCM providers
 
 ### BitBucket credentials
 
@@ -247,12 +249,10 @@ providers {
 }
 ```
 
-:::{note}
 GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs. Learn more about PAT and how to create it at [this link](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token).
-:::
 
-:::{tip}
-As of version `23.01.0-edge`, Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+:::{versionadded} 23.01.0-edge
+Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
 :::
 
 ### GitLab credentials
@@ -309,9 +309,14 @@ providers {
 The Personal access token can be generated in the repository `Clone Repository` dialog.
 :::
 
+(aws-codecommit)=
+
 ### AWS CodeCommit credentials
 
-As of version `22.06.0-edge`, Nextflow supports [AWS CodeCommit](https://aws.amazon.com/codecommit/) as a Git provider to access and to share pipelines code.
+:::{versionadded} 22.06.0-edge
+:::
+
+Nextflow supports [AWS CodeCommit](https://aws.amazon.com/codecommit/) as a Git provider to access and to share pipelines code.
 
 To access your project hosted on AWS CodeCommit with Nextflow provide the repository credentials using the configuration snippet shown below:
 
@@ -435,11 +440,58 @@ The use of a code management system is important to keep together all the depend
 
 Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should have ideally no dependencies on the hosting environment. By using Nextflow you can achieve this goal following these methods:
 
-### Third party scripts
+### Binary applications
 
-Any third party script that does not need to be compiled (Bash, Python, Perl, etc) can be included in the pipeline project repository, so that they are distributed with it.
+Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.
 
-Grant the execute permission to these files and copy them into a folder named `bin/` in the root directory of your project repository. Nextflow will automatically add this folder to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
+In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available in the [Docker Hub](https://hub.docker.com).
+
+Then declare in the `nextflow.config` file, that you will include in your project, the name of the Docker image you have created. For example:
+
+```groovy
+process.container = 'my-docker-image'
+docker.enabled = true
+```
+
+In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run your tasks.
+
+Read the {ref}`container-page` page to learn more on how to use containers with Nextflow.
+
+This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
+
+[^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.
+
+(bundling-executables)=
+
+### Bundling executables in the workflow
+
+In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)). 
+
+In cases where you do not wish to modify the execution environment(s), executable scripts can be included in the `bin/` directory in the workflow repository root. This can be useful to make changes that affect task execution across all environments with a single change.
+
+To ensure your scripts can be made available to the task:
+
+1. Write scripts in the `bin/` directory (relative to the project repository root)
+2. Specify a portable shebang (see note below for details).
+3. Ensure the scripts are executable. For example: `chmod a+x bin/my_script.py`
+
+:::{tip}
+To maximize portability of your bundled script, it is recommended to avoid hard-coding the interpreter path in the shebang line. 
+
+For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` both hard-code specific paths to the python interpreter. To improve portability, rely on `env` to dynamically resolve the path to the interpreter. An example of the recommended approach is:
+
+```bash
+#!/usr/bin/env python
+```
+:::
+
+### Using bundled executables in the workflow 
+
+Nextflow will automatically add the `bin/` directory to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
+
+### Utility code
+
+Any Groovy scripts or JAR files in the `lib` directory will be automatically loaded and made available to your pipeline scripts. The `lib` directory is a useful way to provide utility code or external libraries without cluttering the pipeline scripts.
 
 ### System environment
 
@@ -490,23 +542,3 @@ The actual parameter values can be provided when launching the script execution 
 nextflow run <your pipeline> --my_input /path/to/input/file --my_output /other/path --my_flag true
 ```
 
-### Binary applications
-
-Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.
-
-In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available in the [Docker registry](https://registry.hub.docker.com).
-
-Then declare in the `nextflow.config` file, that you will include in your project, the name of the Docker image you have created. For example:
-
-```groovy
-process.container = 'my-docker-image'
-docker.enabled = true
-```
-
-In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run your tasks.
-
-Read the {ref}`container-page` page to learn more on how to use containers with Nextflow.
-
-This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
-
-[^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.

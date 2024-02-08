@@ -98,9 +98,10 @@ class TraceRecord implements Serializable {
             time:       'time',
             env:        'str',
             error_action:'str',
-            vol_ctxt: 'num',
-            inv_ctxt: 'num',
-            hostname: 'str'
+            vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
+            inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
+            hostname: 'str',
+            cpu_model:  'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -175,7 +176,7 @@ class TraceRecord implements Serializable {
     }
 
     /**
-     * Coverts the value to a duration string.
+     * Converts the value to a duration string.
      *
      * See {@link Duration}
      * @param value
@@ -236,9 +237,10 @@ class TraceRecord implements Serializable {
         }
     }
 
-
     @PackageScope
     Map<String,Object> store
+
+    Map<String,Object> getStore() { store }
 
     @Memoized
     Set<String> keySet() {
@@ -400,7 +402,7 @@ class TraceRecord implements Serializable {
     }
 
     String toString() {
-        "${this.class.simpleName} ${store}"
+        "${this.class.simpleName} ${this.store}"
     }
 
 
@@ -446,6 +448,10 @@ class TraceRecord implements Serializable {
                     // these fields are provided in KB, so they are normalized to bytes
                     def val = parseLong(value, file, name) * 1024
                     this.put(name, val)
+                    break
+
+                case 'cpu_model':
+                    this.put(name, value)
                     break
 
                 default:
@@ -581,6 +587,10 @@ class TraceRecord implements Serializable {
 
     boolean isCached() {
         store.status == 'CACHED'
+    }
+
+    boolean isCompleted() {
+        store.status == 'COMPLETED'
     }
 
     String getExecutorName() {

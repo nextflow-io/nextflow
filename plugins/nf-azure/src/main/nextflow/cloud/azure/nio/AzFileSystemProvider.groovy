@@ -86,7 +86,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         return this.accountKey
     }
 
-    static private AzPath asAzPath(Path path ) {
+    static private AzPath asAzPath(Path path) {
         if( path !instanceof AzPath )
             throw new IllegalArgumentException("Not a valid Azure blob storage path object: `$path` [${path?.class?.name?:'-'}]" )
         return (AzPath)path
@@ -440,7 +440,7 @@ class AzFileSystemProvider extends FileSystemProvider {
             // 409 (CONFLICT) is returned when the path already
             // exists, ignore it
             if( e.statusCode!=409 )
-                throw e
+                throw new IOException("Unable to create Azure blob directory: ${dir.toUriString()} - cause: ${e.message}", e)
         }
     }
 

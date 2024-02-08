@@ -49,7 +49,9 @@ class ContainerNameValidatorTest extends Specification {
         true        | 'image-name:version'
         true        | 'image-name:VERSION'
         true        | 'image-name@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a'
+        true        | 'wave.seqera.io/wt/b3f144027b00/biocontainers/control-freec:11.6b--hdbdd923_0'
         and:
+        false       | 'image-name:version '
         false       | 'IMAGE-NAME:123'
         false       | '/some/image'
         false       | 'http://registry/image-name:version'

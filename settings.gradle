@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+plugins {
+    // required to download the toolchain (jdk) from a remote repository
+    // https://github.com/gradle/foojay-toolchains
+    // https://docs.gradle.org/current/userguide/toolchains.html#sub:download_repositories
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.7.0"
+}
+
 rootProject.name = 'nextflow-prj'
 
 include 'nextflow'
@@ -33,3 +40,4 @@ include 'plugins:nf-console'
 include 'plugins:nf-azure'
 include 'plugins:nf-codecommit'
 include 'plugins:nf-wave'
+include 'plugins:nf-cloudcache'

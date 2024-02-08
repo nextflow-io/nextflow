@@ -43,6 +43,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
@@ -57,7 +58,11 @@ import nextflow.util.Escape
 @CompileStatic
 class FileHelper {
 
-    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*)\:\\/\\/.+/
+    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
+
+    static final public Pattern INVALID_URL_PREFIX = ~/^(?!file)([a-zA-Z][a-zA-Z0-9]*):\\/[^\\/].+/
+
+    static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
     static final private Path localTempBasePath
 
@@ -233,6 +238,34 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
+    static Path toCanonicalPath(value) {
+        if( value==null )
+            return null
+
+        Path result = null
+        if( value instanceof String || value instanceof GString ) {
+            result = asPath(value.toString())
+        }
+        else if( value instanceof Path ) {
+            result = (Path)value
+        }
+        else {
+            throw new IllegalArgumentException("Unexpected path value: '$value' [${value.getClass().getName()}]")
+        }
+
+        if( result.fileSystem != FileSystems.default ) {
+            // remote file paths are expected to be absolute by definition
+            return result
+        }
+
+        Path base
+        if( !result.isAbsolute() && (base=fileRootDir()) ) {
+            result = base.resolve(result.toString())
+        }
+
+        return result.toAbsolutePath().normalize()
+    }
+
     /**
      * Given an hierarchical file URI path returns a {@link Path} object
      * eventually creating the associated file system if required.
@@ -257,6 +290,14 @@ class FileHelper {
             return Paths.get(str)
         }
 
+        // check for valid the url scheme
+        if( INVALID_URL_PREFIX.matcher(str).matches() )
+            throw new IllegalArgumentException("File path is prefixed with an invalid URL scheme - Offending path: '${Escape.blanks(str)}'")
+
+        return asPath0(str)
+    }
+
+    static private Path asPath0(String str) {
         def result = FileSystemPathFactory.parse(str)
         if( result )
             return result
@@ -273,7 +314,7 @@ class FileHelper {
         return asPath(toPathURI(str))
     }
 
-    static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
 
     static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
 
@@ -330,7 +371,7 @@ class FileHelper {
                 throw new IllegalArgumentException("Malformed file URI: $uri -- It must start either with a `file:/` or `file:///` prefix")
 
             if( !uri.path )
-                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolue path prefix i.e. `file:/`")
+                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolute path prefix i.e. `file:/`")
         }
         else if( !uri.path ) {
             throw new IllegalArgumentException("URI path cannot be empty")
@@ -498,7 +539,7 @@ class FileHelper {
             return true
         }
         catch( IOException e ) {
-            log.trace "Cant read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
+            log.trace "Can't read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
             return false
         }
 
@@ -760,14 +801,15 @@ class FileHelper {
         assert filePattern
         assert action
 
-        final type = options?.type ?: 'any'
-        final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
-        final int maxDepth = getMaxDepth(options?.maxDepth, filePattern)
-        final includeHidden = options?.hidden as Boolean ?: filePattern.startsWith('.')
+        if( options==null ) options = Map.of()
+        final type = options.type ?: 'any'
+        final walkOptions = options.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final int maxDepth = getMaxDepth(options.maxDepth, filePattern)
+        final includeHidden = options.hidden as Boolean ?: filePattern.startsWith('.')
         final includeDir = type in ['dir','any']
         final includeFile = type in ['file','any']
-        final syntax = options?.syntax ?: 'glob'
-        final relative = options?.relative == true
+        final syntax = options.syntax ?: 'glob'
+        final relative = options.relative == true
 
         final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
@@ -793,7 +835,7 @@ class FileHelper {
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
-                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
+                if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
                     def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
@@ -1008,7 +1050,7 @@ class FileHelper {
 
     static Path checkIfExists(Path path, Map opts) throws NoSuchFileException {
 
-        final result = FilesEx.complete(path)
+        final result = toCanonicalPath(path)
         final checkIfExists = opts?.checkIfExists as boolean
         final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
         if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
@@ -1042,8 +1084,44 @@ class FileHelper {
     }
 
     static String getUrlProtocol(String str) {
+        if( !str )
+            return null
+        // note: `file:/foo` is a valid file pseudo-protocol, and represents absolute
+        // `/foo` path with no remote hostname specified
+        if( str.startsWith('file:/'))
+            return 'file'
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
+    }
+
+    static Path fileRootDir() {
+        if( !SysEnv.get('NXF_FILE_ROOT') )
+            return null
+        final base = SysEnv.get('NXF_FILE_ROOT')
+        if( base.startsWith('/') )
+            return Paths.get(base)
+        final scheme = getUrlProtocol(base)
+        if( !scheme )
+            throw new IllegalArgumentException("Invalid NXF_FILE_ROOT environment value - It must be an absolute path or a valid path URI - Offending value: '$base'")
+        return asPath0(base)
+    }
+
+    static String baseUrl(String url) {
+        if( !url )
+            return null
+        final m = BASE_URL.matcher(url)
+        if( m.matches() )
+            return m.group(1).toLowerCase()
+        if( url.startsWith('file:///')) {
+            return 'file:///'
+        }
+        if( url.startsWith('file://')) {
+            return url.length()>7 ? url.substring(7).tokenize('/')[0] : null
+        }
+        if( url.startsWith('file:/')) {
+            return 'file:/'
+        }
+        return null
     }
 
 }

@@ -18,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Paths
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -32,6 +33,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class NopeExecutor extends Executor {
 
     @Override

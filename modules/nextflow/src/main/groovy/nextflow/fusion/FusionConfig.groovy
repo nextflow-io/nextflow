@@ -18,6 +18,11 @@
 package nextflow.fusion
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import nextflow.Global
+import nextflow.SysEnv
+import nextflow.util.MemoryUnit
+
 /**
  * Model Fusion config options
  *
@@ -26,23 +31,32 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class FusionConfig {
 
-    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
-    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
 
     final private Boolean enabled
     final private String containerConfigUrl
-    final private Boolean exportAwsAccessKeys
+    @Deprecated final private Boolean exportAwsAccessKeys
+    final private Boolean exportStorageCredentials
     final private String logOutput
     final private String logLevel
     final private boolean tagsEnabled
     final private String tagsPattern
+    final private boolean privileged
+    final private MemoryUnit cacheSize
 
     boolean enabled() { enabled }
 
-    boolean exportAwsAccessKeys() { exportAwsAccessKeys }
+    @Deprecated boolean exportAwsAccessKeys() { exportAwsAccessKeys }
+
+    boolean exportStorageCredentials() {
+        return exportStorageCredentials!=null
+            ? exportStorageCredentials
+            : exportAwsAccessKeys
+    }
 
     String logLevel() { logLevel }
 
@@ -52,18 +66,27 @@ class FusionConfig {
 
     String tagsPattern() { tagsPattern }
 
+    MemoryUnit cacheSize() { cacheSize }
+
     URL containerConfigUrl() {
         this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
+    }
+
+    boolean privileged() {
+        return privileged
     }
 
     FusionConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.exportAwsAccessKeys = opts.exportAwsAccessKeys
+        this.exportStorageCredentials = opts.exportStorageCredentials
         this.containerConfigUrl = opts.containerConfigUrl?.toString() ?: env.get('FUSION_CONTAINER_CONFIG_URL')
         this.logLevel = opts.logLevel
         this.logOutput = opts.logOutput
         this.tagsEnabled = opts.tags==null || opts.tags.toString()!='false'
         this.tagsPattern = (opts.tags==null || (opts.tags instanceof Boolean && opts.tags)) ? DEFAULT_TAGS : ( opts.tags !instanceof Boolean ? opts.tags as String : null )
+        this.privileged = opts.privileged==null || opts.privileged.toString()=='true'
+        this.cacheSize = opts.cacheSize as MemoryUnit
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
     }
@@ -72,4 +95,12 @@ class FusionConfig {
         url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file:/')
     }
 
+    static FusionConfig getConfig() {
+        return createConfig0(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+    }
+
+    @Memoized
+    static private FusionConfig createConfig0(Map config, Map env) {
+        new FusionConfig(config, env)
+    }
 }

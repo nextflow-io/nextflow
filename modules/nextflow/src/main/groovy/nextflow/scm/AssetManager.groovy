@@ -628,8 +628,11 @@ class AssetManager {
              * Try to checkout it from a remote branch and return
              */
             catch ( RefNotFoundException e ) {
-                def ref = checkoutRemoteBranch(revision)
-                return "checkout-out at ${ref.getObjectId().name()}"
+                final ref = checkoutRemoteBranch(revision)
+                final commitId = ref?.getObjectId()
+                return commitId
+                    ? "checked out at ${commitId.name()}"
+                    : "checked out revision ${revision}"
             }
         }
 
@@ -943,12 +946,18 @@ class AssetManager {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
             }
             fetch.call()
-            git.checkout()
-                    .setCreateBranch(true)
-                    .setName(revision)
-                    .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
-                    .setStartPoint("origin/" + revision)
-                    .call()
+
+            try {
+                return git.checkout()
+                        .setCreateBranch(true)
+                        .setName(revision)
+                        .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
+                        .setStartPoint("origin/" + revision)
+                        .call()
+            }
+            catch (RefNotFoundException e) {
+                return git.checkout() .setName(revision) .call()
+            }
         }
         catch (RefNotFoundException e) {
             throw new AbortOperationException("Cannot find revision `$revision` -- Make sure that it exists in the remote repository `$repositoryUrl`", e)
@@ -971,11 +980,11 @@ class AssetManager {
             return
 
         List<String> filter = []
-        if( modules instanceof List ) {
-            filter.addAll(modules as List)
+        if( modules instanceof List<String> ) {
+            filter.addAll(modules)
         }
         else if( modules instanceof String ) {
-            filter.addAll( (modules as String).tokenize(', ') )
+            filter.addAll( modules.tokenize(', ') )
         }
 
         final init = git.submoduleInit()

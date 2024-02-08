@@ -16,11 +16,17 @@
  */
 
 package io.seqera.wave.plugin.config
+
+import groovy.transform.CompileStatic
+import groovy.transform.ToString
+
 /**
  * Model Tower config accessed by Wave
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ToString(includeNames = true, includePackage = false)
+@CompileStatic
 class TowerConfig {
 
     final String accessToken

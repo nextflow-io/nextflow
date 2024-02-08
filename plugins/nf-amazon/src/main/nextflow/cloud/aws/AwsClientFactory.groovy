@@ -21,6 +21,7 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
@@ -53,6 +54,8 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.ConfigParser
+import nextflow.cloud.aws.util.S3CredentialsProvider
+import nextflow.cloud.aws.util.SsoCredentialsProviderV1
 import nextflow.exception.AbortOperationException
 /**
  * Implement a factory class for AWS client objects
@@ -254,9 +257,10 @@ class AwsClientFactory {
         else
             builder.withRegion(region)
 
-        final credentials = getCredentialsProvider0()
-        if( credentials )
-            builder.withCredentials(credentials)
+        final credentials = config.s3Config.anonymous
+                ? new AWSStaticCredentialsProvider(new AnonymousAWSCredentials())
+                : new S3CredentialsProvider(getCredentialsProvider0())
+        builder.withCredentials(credentials)
 
         if( clientConfig )
             builder.withClientConfiguration(clientConfig)
@@ -271,13 +275,17 @@ class AwsClientFactory {
         }
 
         if( profile ) {
-            return new ProfileCredentialsProvider(configFile(), profile)
+            return new AWSCredentialsProviderChain(List.of(
+                    new ProfileCredentialsProvider(configFile(), profile),
+                    new SsoCredentialsProviderV1(profile)))
         }
 
-        return new AWSCredentialsProviderChain(List.of(new EnvironmentVariableCredentialsProvider(),
+        return new AWSCredentialsProviderChain(List.of(
+                new EnvironmentVariableCredentialsProvider(),
                 new SystemPropertiesCredentialsProvider(),
                 WebIdentityTokenCredentialsProvider.create(),
                 new ProfileCredentialsProvider(configFile(), null),
+                new SsoCredentialsProviderV1(),
                 new EC2ContainerCredentialsProviderWrapper()))
     }
 
@@ -285,7 +293,7 @@ class AwsClientFactory {
         final creds = AwsProfileFileLocationProvider.DEFAULT_CREDENTIALS_LOCATION_PROVIDER.getLocation()
         final config = AwsProfileFileLocationProvider.DEFAULT_CONFIG_LOCATION_PROVIDER.getLocation()
         if( creds && config && SysEnv.get('NXF_DISABLE_AWS_CONFIG_MERGE')!='true' ) {
-            log.debug "Merging AWS crendentials file '$creds' and config file '$config'"
+            log.debug "Merging AWS credentials file '$creds' and config file '$config'"
             final parser = new ConfigParser()
             // add the credentials first because it has higher priority
             parser.parseConfig(creds.text)
@@ -298,7 +306,7 @@ class AwsClientFactory {
             return new ProfilesConfigFile(temp.absolutePath)
         }
         if( creds ) {
-            log.debug "Using AWS crendentials file '$creds'"
+            log.debug "Using AWS credentials file '$creds'"
             return new ProfilesConfigFile(creds)
         }
         if( config ) {

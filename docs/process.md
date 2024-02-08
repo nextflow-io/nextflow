@@ -4,7 +4,7 @@
 
 In Nextflow, a **process** is the basic processing primitive to execute a user script.
 
-The process definition starts with the keyword `process`, followed by process name and finally the process body delimited by curly brackets. The process body must contain a string which represents the command or, more generally, a script that is executed by it. A basic process looks like the following example:
+The process definition starts with the keyword `process`, followed by process name and finally the process body delimited by curly braces. The process body must contain a string which represents the command or, more generally, a script that is executed by it. A basic process looks like the following example:
 
 ```groovy
 process sayHello {
@@ -280,11 +280,10 @@ Hello Mr. c
 
 ## Stub
 
-:::{warning}
-This feature is experimental. It may change in future versions.
+:::{versionadded} 20.11.0-edge
 :::
 
-As of version 20.11.0-edge, you can define a command **stub**, which replaces the actual process command when the `-stub-run` or `-stub` command line option:
+You can define a command *stub*, which replaces the actual process command when the `-stub-run` or `-stub` command-line option is enabled:
 
 ```groovy
 process INDEX {
@@ -309,11 +308,9 @@ process INDEX {
 }
 ```
 
-This feature makes it easier to quickly prototype the workflow logic without using the real commands. The developer can use it to provide a dummy script that mimics the execution of the real one in a quicker manner. In other words, it is a way to perform a dry-run.
-
-:::{tip}
 The `stub` block can be defined before or after the `script` block. When the pipeline is executed with the `-stub-run` option and a process's `stub` is not defined, the `script` block is executed.
-:::
+
+This feature makes it easier to quickly prototype the workflow logic without using the real commands. The developer can use it to provide a dummy script that mimics the execution of the real one in a quicker manner. In other words, it is a way to perform a dry-run.
 
 (process-input)=
 
@@ -474,22 +471,51 @@ workflow {
 }
 ```
 
-The `stageAs` option allows you to control how the file should be named in the task work directory. You can provide a specific name or a pattern as described in the [Multiple input files](#multiple-input-files) section:
+Available options:
+
+`arity`
+: :::{versionadded} 23.09.0-edge
+  :::
+: Specify the number of expected files. Can be a number or a range:
+
+  ```groovy
+  input:
+      path('one.txt', arity: '1')         // exactly one file is expected
+      path('pair_*.txt', arity: '2')      // exactly two files are expected
+      path('many_*.txt', arity: '1..*')   // one or more files are expected
+  ```
+
+  When a task is created, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
+
+`stageAs`
+: Specify how the file should be named in the task work directory:
+
+  ```groovy
+  process foo {
+    input:
+    path x, stageAs: 'data.txt'
+
+    """
+    your_command --in data.txt
+    """
+  }
+
+  workflow {
+    foo('/some/data/file.txt')
+  }
+  ```
+
+  Can be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
+
+:::{note}
+Process `path` inputs have nearly the same interface as described in {ref}`script-file-io`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
 ```groovy
-process foo {
-  input:
-  path x, stageAs: 'data.txt'
-
-  """
-  your_command --in data.txt
-  """
-}
-
-workflow {
-  foo('/some/data/file.txt')
-}
+path x, stageAs: 'my-dir/*'
 ```
+
+In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
+:::
 
 ### Multiple input files
 
@@ -636,14 +662,6 @@ ciao
 hello
 ```
 
-(process-input-set)=
-
-### Input type `set`
-
-:::{warning}
-The `set` input type has been deprecated. Use `tuple` instead.
-:::
-
 (process-input-tuple)=
 
 ### Input type `tuple`
@@ -653,20 +671,20 @@ The `tuple` qualifier allows you to group multiple values into a single input de
 ```groovy
 process tupleExample {
     input:
-    tuple val(x), path('latin.txt')
+    tuple val(x), path('input.txt')
 
     """
     echo "Processing $x"
-    cat - latin.txt > copy
+    cat input.txt > copy
     """
 }
 
 workflow {
-  Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] ) | tupleExample
+  Channel.of( [1, 'alpha.txt'], [2, 'beta.txt'], [3, 'delta.txt'] ) | tupleExample
 }
 ```
 
-In the above example, the `tuple` input consists of the value `x` and the file `latin.txt`.
+In the above example, the `tuple` input consists of the value `x` and the file `input.txt`.
 
 A `tuple` definition may contain any of the following qualifiers, as previously described: `val`, `env`, `path` and `stdin`. Files specified with the `path` qualifier are treated exactly the same as standalone `path` inputs.
 
@@ -798,7 +816,7 @@ The above example executes the `bar` process three times because `x` is a value 
 ```
 
 :::{note}
-In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the `merge` operator, which is not recommended as it may lead to inputs being combined in a non-deterministic way.
+In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the {ref}`operator-merge` operator, which is not recommended as it may lead to {ref}`non-deterministic process inputs <cache-nondeterministic-inputs>`.
 :::
 
 See also: {ref}`channel-types`.
@@ -915,20 +933,36 @@ In the above example, the `randomNum` process creates a file named `result.txt` 
 
 Available options:
 
+`arity`
+: :::{versionadded} 23.09.0-edge
+  :::
+: Specify the number of expected files. Can be a number or a range:
+
+  ```groovy
+  output:
+      path('one.txt', arity: '1')         // exactly one file is expected
+      path('pair_*.txt', arity: '2')      // exactly two files are expected
+      path('many_*.txt', arity: '1..*')   // one or more files are expected
+  ```
+
+  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity,
+  and fail if they do not. If the arity is `1`, a sole file object will be emitted. Otherwise, a list will always be emitted,
+  even if only one file is produced.
+
 `followLinks`
-: When `true` target files are return in place of any matching symlink (default: `true`)
+: When `true`, target files are returned in place of any matching symlink (default: `true`)
 
 `glob`
-: When `true` the specified name is interpreted as a glob pattern (default: `true`)
+: When `true`, the specified name is interpreted as a glob pattern (default: `true`)
 
 `hidden`
-: When `true` hidden files are included in the matching output files (default: `false`)
+: When `true`, hidden files are included in the matching output files (default: `false`)
 
 `includeInputs`
-: When `true` any input files matching an output file glob pattern are included.
+: When `true` and the output path is a glob pattern, any input files matching the pattern are also included in the output (default: `false`)
 
 `maxDepth`
-: Maximum number of directory levels to visit (default: no limit)
+: Maximum number of directory levels to visit (default: no limit).
 
 `type`
 : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`))
@@ -1052,14 +1086,6 @@ workflow {
 }
 ```
 
-(process-set)=
-
-### Output type `set`
-
-:::{warning}
-The `set` output type has been deprecated. Use `tuple` instead.
-:::
-
 (process-out-tuple)=
 
 ### Output type `tuple`
@@ -1124,16 +1150,59 @@ process foo {
 ```
 :::
 
-### Optional outputs
+(process-additional-options)=
 
-In most cases, a process is expected to produce an output for each output definition. However, there are situations where it is valid for a process to not generate output. In these cases, `optional: true` may be added to the output definition, which tells Nextflow not to fail the process if the declared output is not produced:
+### Additional options
 
-```groovy
-output:
-    path("output.txt"), optional: true
-```
+The following options are available for all process outputs:
 
-In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is legitimately missing, the process does not fail. The output channel will only contain values for those processes that produce `output.txt`.
+`emit: <name>`
+
+: Defines the name of the output channel, which can be used to access the channel by name from the process output:
+
+  ```groovy
+  process FOO {
+      output:
+      path 'hello.txt', emit: hello
+      path 'bye.txt', emit: bye
+
+      """
+      echo "hello" > hello.txt
+      echo "bye" > bye.txt
+      """
+  }
+
+  workflow {
+      FOO()
+      FOO.out.hello.view()
+  }
+  ```
+
+  See {ref}`workflow-process-invocation` for more details.
+
+`optional: true | false`
+
+: Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the given output channel.
+
+  ```groovy
+  output:
+  path("output.txt"), optional: true
+  ```
+
+  In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is missing, the task will not fail. The output channel will only contain values for those tasks that produced `output.txt`.
+
+: :::{note}
+  While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-type-tuple) output. The entire tuple must be optional or not optional.
+  :::
+
+`topic: <name>`
+
+: :::{versionadded} 23.11.0-edge
+  :::
+
+: *Experimental: may change in a future release.*
+
+: Defines the {ref}`channel topic <channel-topic>` to which the output will be sent.
 
 ## When
 
@@ -1169,15 +1238,30 @@ Directives are optional settings that affect the execution of the current proces
 
 They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
 
+```groovy
+// directive with simple value
+name value
+
+// directive with list value
+name arg1, arg2, arg3
+
+// directive with map value
+name key1: val1, key2: val2
+
+// directive with value and options
+name arg, opt1: val1, opt2: val2
 ```
-name value [, value2 [,..]]
-```
+
+By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 
 Some directives are generally available to all processes, while others depend on the `executor` currently defined.
 
 (process-accelerator)=
 
 ### accelerator
+
+:::{versionadded} 19.09.0-edge
+:::
 
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
@@ -1201,9 +1285,10 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::{note}
 The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
 
-- [AWS](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_)
 - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
 - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+
+The accelerator `type` option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 :::
 
 (process-afterscript)=
@@ -1274,11 +1359,9 @@ When combined with the {ref}`container directive <process-container>`, the `befo
 
 ### cache
 
-The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any following attempt to execute the process, along with the same inputs, will cause the process execution to be skipped, producing the stored data as the actual results.
+The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any task executions that are already cached will be re-used. See the {ref}`cache-resume-page` page for more information about how the cache works.
 
-The caching feature generates a unique key by indexing the process script and inputs. This key is used to identify univocally the outputs produced by the process execution.
-
-The cache is enabled by default, you can disable it for a specific process by setting the `cache` directive to `false`. For example:
+The cache is enabled by default, but you can disable it for a specific process by setting the `cache` directive to `false`. For example:
 
 ```groovy
 process noCacheThis {
@@ -1289,19 +1372,20 @@ process noCacheThis {
 }
 ```
 
-The following values are available:
+The following options are available:
 
 `false`
 : Disable caching.
 
 `true` (default)
-: Enable caching. Cache keys are created indexing input files meta-data information (name, size and last update timestamp attributes).
+: Enable caching. Input file metadata (name, size, last updated timestamp) are included in the cache keys.
 
 `'deep'`
-: Enable caching. Cache keys are created indexing input files content.
+: Enable caching. Input file content is included in the cache keys.
 
 `'lenient'`
-: Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps).
+: Enable caching. Minimal input file metadata (name and size only) are included in the cache keys.
+: This strategy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent file timestamps.
 
 (process-clusteroptions)=
 
@@ -1311,6 +1395,10 @@ The `clusterOptions` directive allows the usage of any native configuration opti
 
 :::{note}
 This directive is only used by grid executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
+:::
+
+:::{warning}
+While you can use the `clusterOptions` directive to specify options that are supported as process directives (`queue`, `memory`, `time`, etc), you should not use both at the same time, as it will cause undefined behavior. Most HPC schedulers will either fail or simply ignore one or the other.
 :::
 
 (process-conda)=
@@ -1333,7 +1421,7 @@ process foo {
 
 Multiple packages can be specified separating them with a blank space e.g. `bwa=0.7.15 fastqc=0.11.5`. The name of the channel from where a specific package needs to be downloaded can be specified using the usual Conda notation i.e. prefixing the package with the channel name as shown here `bioconda::bwa=0.7.15`.
 
-The `conda` directory also allows the specification of a Conda environment file path or the path of an existing environment directory. See the {ref}`conda-page` page for further details.
+The `conda` directive also allows the specification of a Conda environment file path or the path of an existing environment directory. See the {ref}`conda-page` page for further details.
 
 (process-container)=
 
@@ -1460,6 +1548,8 @@ The following memory unit suffix can be used when specifying the disk value:
 | GB   | Gigabytes   |
 | TB   | Terabytes   |
 
+See {ref}`implicit-classes-memoryunit` for more information.
+
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
 :::
@@ -1470,7 +1560,9 @@ See also: [cpus](#cpus), [memory](#memory) [time](#time), [queue](#queue) and [D
 
 ### echo
 
-As of version 22.04.0, `echo` has been deprecated and replaced by `debug`.
+:::{deprecated} 22.04.0
+Use `debug` instead
+:::
 
 (process-error-strategy)=
 
@@ -1588,20 +1680,34 @@ process mapping {
   tuple val(sampleId), path(reads)
 
   """
-  STAR --genomeDir $genome --readFilesIn $reads
+  STAR --genomeDir $genome --readFilesIn $reads ${task.ext.args ?: ''}
   """
 }
 ```
 
-In the above example, the process uses a container whose version is controlled by the `ext.version` property. This can be defined in the `nextflow.config` file as shown below:
+In the above example, the process container version is controlled by `ext.version`, and the script supports additional command line arguments through `ext.args`.
+
+The `ext` directive can be set in the process definition:
+
+```groovy
+process mapping {
+  ext version: '2.5.3', args: '--foo --bar'
+}
+```
+
+Or in the Nextflow configuration:
 
 ```groovy
 process.ext.version = '2.5.3'
+process.ext.args = '--foo --bar'
 ```
 
 (process-fair)=
 
 ### fair
+
+:::{versionadded} 22.12.0-edge
+:::
 
 The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received. For example:
 
@@ -1664,8 +1770,7 @@ See also: [resourceLabels](#resourcelabels)
 
 ### machineType
 
-:::{note}
-This feature requires Nextflow 19.07.0 or later.
+:::{versionadded} 19.07.0
 :::
 
 The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the {ref}`Google Life Sciences <google-lifesciences-executor>` executor.
@@ -1683,6 +1788,33 @@ process foo {
 ```
 
 See also: [cpus](#cpus) and [memory](#memory).
+
+(process-maxsubmitawait)=
+
+### maxSubmitAwait (experimental)
+
+The `maxSubmitAwait` directives allows you to specify how long a task can remain in submission queue without being executed.
+Elapsed this time the task execution will fail.
+
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
+resource requirement. For example:
+
+```groovy
+process foo {
+  errorStrategy 'retry'
+  maxSubmitAwait '10 mins'
+  maxRetries 3
+  queue "${task.submitAttempt==1 : 'spot-compute' : 'on-demand-compute'}"
+  script:
+  '''
+  your_job --here
+  '''
+}
+```
+
+In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
+task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
+queue named `on-demand-compute`. 
 
 (process-maxerrors)=
 
@@ -1775,6 +1907,8 @@ The following memory unit suffix can be used when specifying the memory value:
 | GB   | Gigabytes   |
 | TB   | Terabytes   |
 
+See {ref}`implicit-classes-memoryunit` for more information.
+
 See also: [cpus](#cpus), [time](#time), [queue](#queue) and [Dynamic computing resources](#dynamic-computing-resources).
 
 (process-module)=
@@ -1836,7 +1970,7 @@ See also: [cpus](#cpus), [memory](#memory), [time](#time)
 
 ### pod
 
-The `pod` directive allows the definition of pods specific settings, such as environment variables, secrets and config maps when using the {ref}`k8s-executor` executor.
+The `pod` directive allows the definition of pod specific settings, such as environment variables, secrets, and config maps, when using the {ref}`k8s-executor` executor.
 
 For example:
 
@@ -1850,9 +1984,9 @@ process your_task {
 }
 ```
 
-The above snippet defines an environment variable named `FOO` which value is `bar`.
+The above snippet defines an environment variable named `FOO` whose value is `bar`.
 
-When defined in the Nextflow configuration file, a pod setting can be defined using the canonical associative array syntax. For example:
+When defined in the Nextflow configuration file, a pod setting can be defined as a map:
 
 ```groovy
 process {
@@ -1860,92 +1994,168 @@ process {
 }
 ```
 
-When more than one setting needs to be provides they must be enclosed in a list definition as shown below:
+Or as a list of maps:
 
 ```groovy
 process {
-  pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
+  pod = [
+    [env: 'FOO', value: 'bar'],
+    [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
+  ]
 }
 ```
 
-The `pod` directive supports the following options:
+The following options are available:
 
-`affinity: <V>`
-: Specifies affinity for which nodes the process should run on. See [Kubernetes affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for details.
+`affinity: <config>`
+: :::{versionadded} 22.01.0-edge
+  :::
+: Specifies the pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) with the given configuration.
 
-`annotation: <K>, value: <V>`
+`annotation: '<name>', value: '<value>'`
 : *Can be specified multiple times*
-: Defines a pod annotation with key `K` and value `V`.
+: Defines a pod [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) with the given name and value.
 
-`automountServiceAccountToken: <V>`
-: Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) into process pods. If `V` is true, service account token is automounted into task pods (default).
+`automountServiceAccountToken: true | false`
+: :::{versionadded} 22.01.0-edge
+  :::
+: Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting) into the pod (default: `true`).
 
-`config: <C/K>, mountPath: </absolute/path>`
+`config: '<configMap>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
-: Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.
+: Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name and optional key to the given path. If the key is omitted, the path is interpreted as a directory and all entries in the `ConfigMap` are exposed in that path.
 
-`csi: <V>, mountPath: </absolute/path>`
-: *Requires `22.11.0-edge` or later*
+`csi: '<name>', mountPath: '</absolute/path>'`
+: :::{versionadded} 22.11.0-edge
+  :::
 : *Can be specified multiple times*
-: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with config `V`to the path `/absolute/path`.
+: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) by name to the given path.
 
-`emptyDir: <V>, mountPath: </absolute/path>`
-: *Requires `22.11.0-edge` or later*
+`emptyDir: <config>, mountPath: '</absolute/path>'`
+: :::{versionadded} 22.11.0-edge
+  :::
 : *Can be specified multiple times*
-: Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with configuration `V` to the path `/absolute/path`.
+: Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with the given configuration to the given path.
 
-`env: <E>, config: <C/K>`
+`env: '<name>', config: '<configMap>/<key>'`
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C`.
+: Defines an environment variable whose value is defined by the given [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) and key.
 
-`env: <E>, fieldPath: <V>`
+`env: '<name>', fieldPath: '<fieldPath>'`
+: :::{versionadded} 21.09.1-edge
+  :::
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the `V` [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/).
+: Defines an environment variable whose value is defined by the given [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-pod-fields-as-values-for-environment-variables) value.
 
-`env: <E>, secret: <S/K>`
+: For example, the following pod option:
+
+  ```groovy
+  pod = [env: 'MY_NODE_NAME', fieldPath: 'spec.nodeName']
+  ```
+
+  Maps to the following pod spec:
+
+  ```yaml
+  env:
+    - name: MY_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+  ```
+
+`env: '<name>', secret: '<secret>/<key>'`
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S`.
+: Defines an environment variable whose value is defined by the given [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) and key.
 
-`env: <E>, value: <V>`
+`env: '<name>', value: '<value>'`
 : *Can be specified multiple times*
-: Defines an environment variable with name `E` and whose value is given by the `V` string.
+: Defines an environment variable with the given name and value.
 
-`imagePullPolicy: <V>`
-: Specifies the strategy to be used to pull the container image e.g. `imagePullPolicy: 'Always'`.
-
-`imagePullSecret: <V>`
-: Specifies the secret name to access a private container image registry. See [Kubernetes documentation](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) for details.
-
-`label: <K>, value: <V>`
+`hostPath: '/host/absolute/path', mountPath: '</pod/absolute/path>'`
+: :::{versionadded} 23.10.0
+  :::
 : *Can be specified multiple times*
-: Defines a pod label with key `K` and value `V`.
+: Allows creating [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath) volume and access it with the specified `mountPath` in the pod.
 
-`nodeSelector: <V>`
-: Specifies which node the process will run on. See [Kubernetes nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) for details.
+`imagePullPolicy: 'IfNotPresent' | 'Always' | 'Never'`
+: Specifies the [image pull policy](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) used by the pod to pull the container image.
 
-`priorityClassName: <V>`
+`imagePullSecret: '<name>'`
+: Specifies the [image pull secret](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) used to access a private container image registry.
+
+`label: '<name>', value: '<value>'`
+: *Can be specified multiple times*
+: Defines a pod [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) with the given name and value.
+
+`nodeSelector: <config>`
+: Specifies the [node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) with the given configuration.
+
+: The configuration can be a map or a string:
+
+  ```groovy
+  // map
+  pod = [nodeSelector: [disktype: 'ssd', cpu: 'intel']]
+
+  // string
+  pod = [nodeSelector: 'disktype=ssd,cpu=intel']
+  ```
+
+`priorityClassName: '<name>'`
+: :::{versionadded} 22.01.0-edge
+  :::
 : Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.
 
-`privileged: <B>`
-: Whether the process task should run as a *privileged* container (default: `false`)
+`privileged: true | false`
+: :::{versionadded} 22.05.0-edge
+  :::
+: Specifies whether the pod should run as a *privileged* container (default: `false`).
 
-`runAsUser: <UID>`
-: Specifies the user ID to be used to run the container. Shortcut for the `securityContext` option.
+`runAsUser: '<uid>'`
+: Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
-`secret: <S/K>, mountPath: </absolute/path>`
+`schedulerName: '<name>'`
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
+
+`secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
-: Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.
+: Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name and optional key to the given path. If the key is omitted, the path is interpreted as a directory and all entries in the `Secret` are exposed in that path.
 
-`securityContext: <V>`
-: Specifies the pod security context. See [Kubernetes security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.
+`securityContext: <config>`
+: Specifies the pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) with the given configuration.
 
-`toleration: <V>`
+`toleration: <config>`
+: :::{versionadded} 22.04.0
+  :::
 : *Can be specified multiple times*
-: Specifies a toleration for a node taint. See [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for details.
+: Specifies the pod [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) with the given configuration.
 
-`volumeClaim: <V>, mountPath: </absolute/path>`
+: The configuration should be a map corresponding to a single toleration rule. For example, the following pod options:
+
+  ```groovy
+  pod = [
+      [toleration: [key: 'key1', operator: 'Equal', value: 'value1', effect: 'NoSchedule']],
+      [toleration: [key: 'key1', operator: 'Exists', effect: 'NoSchedule']],
+  ]
+  ```
+
+  Maps to the following pod spec:
+
+  ```yaml
+  tolerations:
+    - key: "key1"
+      operator: "Equal"
+      value: "value1"
+      effect: "NoSchedule"
+    - key: "key1"
+      operator: "Exists"
+      effect: "NoSchedule"
+  ```
+
+`volumeClaim: '<name>', mountPath: '</absolute/path>' [, subPath: '<path>', readOnly: true | false]`
 : *Can be specified multiple times*
-: Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with name `V` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
+: Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with the given name to the given path.
+: The `subPath` option can be used to mount a sub-directory of the volume instead of its root.
+: The `readOnly` option can be used to mount the volume as read-only (default: `false`)
 
 (process-publishdir)=
 
@@ -1998,8 +2208,9 @@ Files are copied into the specified directory in an *asynchronous* manner, so th
 Available options:
 
 `contentType`
-: *Requires version `22.10.0` or later*
-: *EXPERIMENTAL. Currently only supported for S3*
+: :::{versionadded} 22.10.0
+  :::
+: *Experimental: currently only supported for S3.*
 : Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (default: `false`).
 
 `enabled`
@@ -2031,20 +2242,22 @@ Available options:
 : A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them.
 
 `storageClass`
-: *Requires version `22.12.0-edge` or later*
-: *EXPERIMENTAL. Currently only supported for S3*
+: :::{versionadded} 22.12.0-edge
+  :::
+: *Experimental: currently only supported for S3.*
 : Allow specifying the storage class to be used for the published file.
 
 `tags`
-: *Requires version `21.12.0-edge` or later*
-: *EXPERIMENTAL. Currently only supported for S3*
+: :::{versionadded} 21.12.0-edge
+  :::
+: *Experimental: currently only supported for S3.*
 : Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
 
 (process-queue)=
 
 ### queue
 
-The `queue` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor in your pipeline. For example:
+The `queue` directive allows you to set the `queue` where jobs are scheduled when using a grid based executor in your pipeline. For example:
 
 ```groovy
 process grid_job {
@@ -2078,6 +2291,9 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 
 ### resourceLabels
 
+:::{versionadded} 22.09.1-edge
+:::
+
 The `resourceLabels` directive allows you to specify custom name-value pairs that Nextflow applies to the computing resource used to carry out the process execution. Resource labels can be specified using the syntax shown below:
 
 ```groovy
@@ -2092,8 +2308,18 @@ process my_task {
 
 The limits and the syntax of the corresponding cloud provider should be taken into consideration when using resource labels.
 
-:::{note}
-Resource labels are currently only supported by the {ref}`awsbatch-executor`, {ref}`google-lifesciences-executor`, Google Cloud Batch and {ref}`k8s-executor` executors.
+Resource labels are currently supported by the following executors:
+
+- {ref}`awsbatch-executor`
+- {ref}`azurebatch-executor`
+- {ref}`google-batch-executor`
+- {ref}`google-lifesciences-executor`
+- {ref}`k8s-executor`
+
+:::{versionadded} 23.09.0-edge
+Resource labels are supported for Azure Batch when using automatic pool creation.
+
+Resource labels in Azure are added to pools, rather than jobs, in order to facilitate cost analysis. A new pool will be created for each new set of resource labels, therefore it is recommended to also set `azure.batch.deletePoolsOnCompletion = true` when using process-specific resource labels.
 :::
 
 See also: [label](#label)
@@ -2142,7 +2368,6 @@ The following values are supported:
 : Create a scratch directory in the specified directory.
 
 `'ram-disk'`
-: *EXPERIMENTAL*
 : Create a scratch directory in the RAM disk `/dev/shm/`.
 
 (process-directive-shell)=
@@ -2217,14 +2442,16 @@ The `stageOutMode` directive defines how output files are staged out from the sc
 : Output files are copied from the scratch directory to the work directory.
 
 `'fcp'`
-: *Requires version `23.02.0-edge` or later*
+: :::{versionadded} 23.02.0-edge
+  :::
 : Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
 
 `'move'`
 : Output files are moved from the scratch directory to the work directory.
 
 `'rclone'`
-: *Requires version `23.01.0-edge` or later*
+: :::{versionadded} 23.01.0-edge
+  :::
 : Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
 
 `'rsync'`
@@ -2331,6 +2558,8 @@ The following time unit suffixes can be used when specifying the duration value:
 | `d`, `day`, `days`              | Days         |
 
 Multiple units can be used in a single declaration, for example: `'1day 6hours 3minutes 30seconds'`
+
+See {ref}`implicit-classes-duration` for more information.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.

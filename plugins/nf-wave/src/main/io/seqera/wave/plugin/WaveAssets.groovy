@@ -24,6 +24,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
+import nextflow.util.StringUtils
+
 /**
  * Hold assets required to fulfill wave container image build
  * 
@@ -36,10 +38,11 @@ class WaveAssets {
     final String containerPlatform
     final ResourcesBundle moduleResources
     final ContainerConfig containerConfig
-    final String dockerFileContent
+    final String containerFile
     final Path condaFile
     final Path spackFile
     final ResourcesBundle projectResources
+    final boolean singularity
 
     static fromImage(String containerImage,String containerPlatform=null) {
         new WaveAssets(containerImage, containerPlatform)
@@ -50,8 +53,8 @@ class WaveAssets {
     }
 
     String dockerFileEncoded() {
-        return dockerFileContent
-                ? dockerFileContent.bytes.encodeBase64()
+        return containerFile
+                ? containerFile.bytes.encodeBase64()
                 : null
     }
 
@@ -73,11 +76,20 @@ class WaveAssets {
         allMeta.add( this.containerImage )
         allMeta.add( this.moduleResources?.fingerprint() )
         allMeta.add( this.containerConfig?.fingerprint() )
-        allMeta.add( this.dockerFileContent )
-        allMeta.add( this.condaFile )
-        allMeta.add( this.spackFile )
+        allMeta.add( this.containerFile )
+        allMeta.add( this.condaFile?.text )
+        allMeta.add( this.spackFile?.text )
         allMeta.add( this.projectResources?.fingerprint() )
         allMeta.add( this.containerPlatform )
         return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+
+    static void validateContainerName(String name) {
+        if( !name )
+            return
+        final scheme = StringUtils.getUrlProtocol(name)
+        if( scheme )
+            throw new IllegalArgumentException("Wave container request image cannot start with URL like prefix - offending value: $name")
     }
 }

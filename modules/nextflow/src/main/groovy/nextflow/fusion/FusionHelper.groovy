@@ -44,12 +44,14 @@ class FusionHelper {
         return result!=null ? result.toString()=='true' : false
     }
 
-    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
+    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, String containerOpts, List<String> runCmd) {
         if( !containerName )
             throw new IllegalArgumentException("Missing task container -- Fusion requires the task to be executed by a container process")
         final engine = containerConfig.getEngine()
         final containerBuilder = ContainerBuilder.create(engine, containerName)
                 .addMountWorkDir(false)
+                .addRunOptions(containerConfig.runOptions as String)
+                .addRunOptions(containerOpts)
                 .addRunOptions(containerConfig.fusionOptions())
                 .params(containerConfig)
 
@@ -70,7 +72,7 @@ class FusionHelper {
         final containerCmd = containerBuilder
                 .build()
                 .getRunCommand(patchCmd.join(' '))
-                .replaceAll('-w "\\$PWD" ','') // <-- hack to remove the PWD work dir
+                .replaceAll('-w "\\$NXF_TASK_WORKDIR" ','') // <-- hack to remove the PWD work dir
 
         return containerCmd
     }

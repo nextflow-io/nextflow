@@ -173,5 +173,9 @@ class SysHelper {
         System.getenv('HOSTNAME') ?: InetAddress.getLocalHost().getHostName()
     }
 
+    static String getArch() {
+        final os = (java.lang.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
+        return os.getArch()
+    }
 
 }

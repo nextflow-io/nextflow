@@ -30,7 +30,10 @@ The Conda environment feature is not supported by executors that use remote obje
 
 ### Enabling Conda environment
 
-As of version `22.08.0-edge`, the use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
+:::{versionadded} 22.08.0-edge
+:::
+
+The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
 
 ```groovy
 conda.enabled = true
@@ -71,6 +74,20 @@ channels:
 dependencies:
   - star=2.5.4a
   - bwa=0.7.15
+```
+
+This other example shows how to leverage a Conda environment file to install Python packages from the [PyPI repository](https://pypi.org/)), through the `pip` package manager (which must also be explicitly listed as a required package):
+
+```yaml
+name: my-env-2
+channels:
+  - defaults
+dependencies:
+  - pip
+  - pip:
+    - numpy
+    - pandas
+    - matplotlib
 ```
 
 Read the Conda documentation for more details about how to create [environment files](https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually).
@@ -119,11 +136,10 @@ process foo {
 
 ### Use Mamba to resolve packages
 
-It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
-
-:::{warning}
-This feature is experimental and may change in a future release.
+:::{warning} *Experimental: may change in a future release.*
 :::
+
+It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
 
 ## Best practices
 

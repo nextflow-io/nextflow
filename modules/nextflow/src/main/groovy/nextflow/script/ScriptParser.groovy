@@ -125,7 +125,10 @@ class ScriptParser {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
-        if( session && session.classesDir )
+        if( session?.debug )
+            config.debug = true
+
+        if( session?.classesDir )
             config.setTargetDirectory(session.classesDir.toFile())
 
         return config
@@ -144,7 +147,7 @@ class ScriptParser {
 
         if( script instanceof CharSequence ) {
             final hash = Hashing
-                    .murmur3_32()
+                    .sipHash24()
                     .newHasher()
                     .putUnencodedChars(script.toString())
                     .hash()
@@ -154,7 +157,7 @@ class ScriptParser {
         throw new IllegalArgumentException("Unknown script type: ${script?.getClass()?.getName()}")
     }
 
-    GroovyShell getInterpreter() {
+    private GroovyShell getInterpreter() {
         if( !binding && session )
             binding = session.binding
         if( !binding )
@@ -163,10 +166,13 @@ class ScriptParser {
         return new GroovyShell(classLoader, binding, getConfig())
     }
 
-    ScriptParser parse(String scriptText, GroovyShell interpreter) {
-        final String clazzName = computeClassName(scriptText)
+    private ScriptParser parse0(String scriptText, Path scriptPath, GroovyShell interpreter) {
+        this.scriptPath = scriptPath
+        final String className = computeClassName(scriptText)
         try {
-            final parsed = interpreter.parse(scriptText, clazzName)
+            final parsed = scriptPath && session.debug
+                    ? interpreter.parse(scriptPath.toFile())
+                    : interpreter.parse(scriptText, className)
             if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
@@ -183,21 +189,21 @@ class ScriptParser {
             String msg = e.message ?: header
             msg = msg != 'startup failed' ? msg : header
             msg = msg.replaceAll(/startup failed:\n/,'')
-            msg = msg.replaceAll(~/$clazzName(: \d+:\b*)?/, header+'\n- cause:')
+            msg = msg.replaceAll(~/$className(: \d+:\b*)?/, header+'\n- cause:')
+            if( msg.contains "Unexpected input: '{'" ) {
+                msg += "\nNOTE: If this is the beginning of a process or workflow, there may be a syntax error in the body, such as a missing or extra comma, for which a more specific error message could not be produced."
+            }
             throw new ScriptCompilationException(msg, e)
         }
     }
 
-
     ScriptParser parse(String scriptText) {
-        def interpreter = getInterpreter()
-        return parse(scriptText, interpreter)
+        return parse0(scriptText, null, getInterpreter())
     }
 
     ScriptParser parse(Path scriptPath) {
-        this.scriptPath = scriptPath
         try {
-            parse(scriptPath.text)
+            parse0(scriptPath.text, scriptPath, getInterpreter())
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)

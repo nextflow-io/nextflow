@@ -20,6 +20,7 @@ package nextflow.util
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import nextflow.file.FileHelper
 
 /**
  * Split a path into two paths, the first component which may include the host name if it's a remote
@@ -35,7 +36,7 @@ class PathSplitter {
     List<String> tail
 
     static PathSplitter parse(String path) {
-        final baseUrl = StringUtils.baseUrl(path)
+        final baseUrl = FileHelper.baseUrl(path)
         if( !baseUrl )
             return split0(path, 0)
 
