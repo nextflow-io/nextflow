@@ -1359,7 +1359,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 :::{warning} *Experimental: may change in a future release.*
 :::
 
-The `batch` directive allows you to execute tasks in batches. A *task batch* is a collection of tasks (with the same resource requirements) that runs each task sequentially on the same node. For processes that generate many short-running tasks, task grouping can greatly reduce the overhead of setting up and tearing down VMs (in the cloud) or waiting in a scheduler queue (for grid executors).
+The `batch` directive allows you to execute tasks in batches. A *task batch* is a collection of tasks (with the same resource requirements) that runs each task on the same node. For processes that generate many short-running tasks, task batching can greatly reduce the overhead of setting up and tearing down VMs (in the cloud) or waiting in a scheduler queue (for grid executors).
 
 It should be specified with a given batch size. For example:
 
@@ -1373,7 +1373,13 @@ process short_task {
 }
 ```
 
-A process using task grouping will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task batch. Once a task batch is submitted, each child task is executed sequentially in its own work directory. Any tasks that fail (and can be retried) will be retried in another task batch without interfering with the tasks that succeeded.
+A process using task batching will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task batch. Once a task batch is submitted, each child task is executed in its own work directory. Any tasks that fail (and can be retried) will be retried in another task batch without interfering with the tasks that succeeded.
+
+Tasks are executed sequentially by default. If you specify the `parallel` option, they will be executed in parallel:
+
+```groovy
+    batch 100, parallel: true
+```
 
 The following directives must be uniform across all tasks in a process that uses task batches, because these directives are specified once for the entire batch:
 
@@ -1391,6 +1397,12 @@ For cloud-based executors like AWS Batch, the following additional directives mu
 
 - {ref}`process-container`
 - {ref}`process-containerOptions`
+
+It is your responsibility to adjust the task resource requirements (CPUs, memory, walltime) based on the batch size:
+
+- If the tasks are executed sequentially, you should increase the walltime accordingly.
+
+- If the tasks are executed in parallel (`parallel: true`), you should increase the CPUs and memory accordingly.
 
 (process-beforescript)=
 
@@ -2651,6 +2663,7 @@ In the above example, the [queue](#queue) directive is evaluated dynamically, de
 
 All directives can be assigned a dynamic value except the following:
 
+- [batch](#batch)
 - [executor](#executor)
 - [label](#label)
 - [maxForks](#maxforks)

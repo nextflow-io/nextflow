@@ -978,23 +978,37 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
-    int getBatch() {
-        final value = configProperties.get('batch')
-        if( value == null )
+    ProcessConfig batch( Map params, size ) {
+        params.size = size
+        batch(params)
+        return this
+    }
+
+    ProcessConfig batch( value ) {
+        if( value instanceof Integer )
+            configProperties.put('batch', [size: value])
+        else if( value instanceof Map )
+            configProperties.put('batch', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `batch` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    int getBatchSize() {
+        final params = configProperties.get('batch')
+        if( params == null )
             return 0
-        if( value instanceof Closure )
-            throw new IllegalArgumentException("Process directive `batch` cannot be declared in a dynamic manner with a closure")
-        try {
-            final result = value as Integer
-            if( result < 0 )
-                throw new IllegalArgumentException("Process directive `batch` cannot be a negative number")
-            if( result == 1 )
-                throw new IllegalArgumentException("Process directive `batch` should be greater than 1")
-            return result
-        }
-        catch( NumberFormatException e ) {
-            throw new IllegalArgumentException("Process directive `batch` should be an integer greater than 1 -- offending value: '$value'", e)
-        }
+        if( params.size !instanceof Integer )
+            throw new IllegalArgumentException("Process directive `batch` should be an integer greater than 1 -- offending value: '$params.size'", e)
+        final size = params.size as Integer
+        if( size < 1 )
+            throw new IllegalArgumentException("Process directive `batch` should be an integer greater than 1 -- offending value: '$size'", e)
+        return size
+    }
+
+    boolean isBatchParallel() {
+        final params = configProperties.get('batch')
+        return params?.parallel as boolean
     }
 
 }

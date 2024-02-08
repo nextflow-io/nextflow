@@ -307,8 +307,9 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
 
-        final batchSize = config.getBatch()
-        this.batchCollector = batchSize > 0 ? new TaskBatchCollector(executor, batchSize) : null
+        final batchSize = config.getBatchSize()
+        final batchParallel = config.isBatchParallel()
+        this.batchCollector = batchSize > 0 ? new TaskBatchCollector(executor, batchSize, batchParallel) : null
     }
 
     /**

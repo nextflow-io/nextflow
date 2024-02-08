@@ -42,15 +42,18 @@ class TaskBatchCollector {
 
     private int batchSize
 
+    private boolean parallel
+
     private Lock sync = new ReentrantLock()
 
     private List<TaskHandler> batch
 
     private boolean closed = false
 
-    TaskBatchCollector(Executor executor, int batchSize) {
+    TaskBatchCollector(Executor executor, int batchSize, boolean parallel) {
         this.executor = executor
         this.batchSize = batchSize
+        this.parallel = parallel
         this.batch = new ArrayList<>(batchSize)
     }
 
@@ -163,8 +166,10 @@ class TaskBatchCollector {
         array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
         for task_dir in \${array[@]}; do
             export task_dir
-            ${cmd} || true
+            ${cmd} || true${parallel ? ' &' : ''}
         done
+
+        ${parallel ? 'wait' : ''}
         """.stripIndent().leftTrim()
     }
 

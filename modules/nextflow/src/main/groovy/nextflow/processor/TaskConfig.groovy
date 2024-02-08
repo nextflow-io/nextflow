@@ -186,10 +186,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
-    int getBatch() {
-        get('batch') as Integer ?: 0
-    }
-
     String getBeforeScript() {
         return get('beforeScript')
     }
