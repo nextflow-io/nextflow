@@ -29,33 +29,33 @@ import nextflow.util.CacheHelper
 import nextflow.util.Escape
 
 /**
- * Collect tasks and submit them as task groups to the underlying
+ * Collect tasks and submit them as task batches to the underlying
  * executor.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class TaskGroupCollector {
+class TaskBatchCollector {
 
     private Executor executor
 
-    private int groupSize
+    private int batchSize
 
     private Lock sync = new ReentrantLock()
 
-    private List<TaskHandler> group
+    private List<TaskHandler> batch
 
     private boolean closed = false
 
-    TaskGroupCollector(Executor executor, int groupSize) {
+    TaskBatchCollector(Executor executor, int batchSize) {
         this.executor = executor
-        this.groupSize = groupSize
-        this.group = new ArrayList<>(groupSize)
+        this.batchSize = batchSize
+        this.batch = new ArrayList<>(batchSize)
     }
 
     /**
-     * Add a task to the current group, and submit the group when it
+     * Add a task to the current batch, and submit the batch when it
      * reaches the desired size.
      *
      * @param task
@@ -74,13 +74,13 @@ class TaskGroupCollector {
             // create task handler
             final handler = executor.createTaskHandler(task)
 
-            // add task to the group
-            group << handler
+            // add task to the batch
+            batch << handler
 
-            // submit task group when it is ready
-            if( group.size() == groupSize ) {
-                submit0(group)
-                group = new ArrayList<>(groupSize)
+            // submit task batch when it is ready
+            if( batch.size() == batchSize ) {
+                submit0(batch)
+                batch = new ArrayList<>(batchSize)
             }
         }
         finally {
@@ -89,14 +89,14 @@ class TaskGroupCollector {
     }
 
     /**
-     * Close the collector, submitting any remaining tasks as a partial task group.
+     * Close the collector, submitting any remaining tasks as a partial task batch.
      */
     void close() {
         sync.lock()
 
         try {
-            if( group.size() > 0 )
-                submit0(group)
+            if( batch.size() > 0 )
+                submit0(batch)
 
             closed = true
         }
@@ -105,22 +105,22 @@ class TaskGroupCollector {
         }
     }
 
-    protected void submit0(List<TaskHandler> group) {
+    protected void submit0(List<TaskHandler> batch) {
         // prepare child job launcher scripts
-        for( TaskHandler handler : group )
+        for( TaskHandler handler : batch )
             handler.prepareLauncher()
 
-        // submit task group to the underlying executor
-        executor.submit(createTaskGroup(group))
+        // submit task batch to the underlying executor
+        executor.submit(createTaskBatch(batch))
     }
 
     /**
-     * Create the task run for a task group.
+     * Create the task run for a task batch.
      *
-     * @param group
+     * @param batch
      */
-    protected TaskRun createTaskGroup(List<TaskHandler> group) {
-        final tasks = group.collect( h -> h.task )
+    protected TaskRun createTaskBatch(List<TaskHandler> batch) {
+        final tasks = batch.collect( h -> h.task )
         final first = tasks.first()
 
         // compute hash and work directory
@@ -130,10 +130,10 @@ class TaskGroupCollector {
         Files.createDirectories(workDir)
 
         // create wrapper script
-        final script = createTaskGroupScript(group)
+        final script = createTaskBatchScript(batch)
 
-        // create task group
-        return new TaskGroup(
+        // create task batch
+        return new TaskBatch(
             id: first.id,
             index: first.index,
             processor: first.processor,
@@ -143,19 +143,19 @@ class TaskGroupCollector {
             hash: hash,
             workDir: workDir,
             script: script,
-            children: group
+            children: batch
         )
     }
 
     /**
-     * Create the wrapper script for a task group.
+     * Create the wrapper script for a task batch.
      *
-     * @param group
+     * @param batch
      */
-    protected String createTaskGroupScript(List<TaskHandler> group) {
+    protected String createTaskBatchScript(List<TaskHandler> batch) {
         // get work directory and launch command for each task
-        final workDirs = group.collect( h -> h.getWorkDir() )
-        final args = group.first().getLaunchCommand().toArray() as String[]
+        final workDirs = batch.collect( h -> h.getWorkDir() )
+        final args = batch.first().getLaunchCommand().toArray() as String[]
         final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${task_dir}')
 
         // create wrapper script

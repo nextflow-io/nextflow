@@ -1349,6 +1349,49 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent fa
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
+(process-batch)=
+
+## batch
+
+:::{versionadded} 24.10.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `batch` directive allows you to execute tasks in batches. A *task batch* is a collection of tasks (with the same resource requirements) that runs each task sequentially on the same node. For processes that generate many short-running tasks, task grouping can greatly reduce the overhead of setting up and tearing down VMs (in the cloud) or waiting in a scheduler queue (for grid executors).
+
+It should be specified with a given batch size. For example:
+
+```groovy
+process short_task {
+    batch 100
+
+    '''
+    your_command --here
+    '''
+}
+```
+
+A process using task grouping will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task batch. Once a task batch is submitted, each child task is executed sequentially in its own work directory. Any tasks that fail (and can be retried) will be retried in another task batch without interfering with the tasks that succeeded.
+
+The following directives must be uniform across all tasks in a process that uses task batches, because these directives are specified once for the entire batch:
+
+- {ref}`process-accelerator`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-queue`
+- {ref}`process-resourcelabels`
+- {ref}`process-time`
+
+For cloud-based executors like AWS Batch, the following additional directives must be uniform:
+
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+
 (process-beforescript)=
 
 ### beforeScript
@@ -1755,49 +1798,6 @@ The above example produces:
 [3, C]
 [4, D]
 ```
-
-(process-group)=
-
-## group
-
-:::{versionadded} 23.07.0-edge
-:::
-
-:::{warning} *Experimental: may change in a future release.*
-:::
-
-The `group` directive allows you to execute tasks in groups. A *task group* is a collection of tasks (with the same resource requirements) that runs each task sequentially on the same node. For processes that generate many short-running tasks, task grouping can greatly reduce the overhead of setting up and tearing down VMs (in the cloud) or waiting in a scheduler queue (for grid executors).
-
-It should be specified with a given group size. For example:
-
-```groovy
-process short_task {
-    group 100
-
-    '''
-    your_command --here
-    '''
-}
-```
-
-A process using task grouping will collect tasks and submit each batch as a single task as soon as the batch is ready. Any "leftover" tasks will be submitted as a partial task group. Once a task group is submitted, each child task is executed sequentially in its own work directory. Any tasks that fail (and can be retried) will be retried in another task group without interfering with the tasks that succeeded.
-
-The following directives must be uniform across all tasks in a process that uses task groups, because these directives are specified once for the entire task group:
-
-- {ref}`process-accelerator`
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-machineType`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
-
-For cloud-based executors like AWS Batch, the following additional directives must be uniform:
-
-- {ref}`process-container`
-- {ref}`process-containerOptions`
 
 (process-label)=
 

@@ -250,7 +250,7 @@ class TaskProcessor {
 
     private Boolean isFair0
 
-    private TaskGroupCollector groupCollector
+    private TaskBatchCollector batchCollector
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -307,8 +307,8 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
 
-        final groupSize = config.getGroup()
-        this.groupCollector = groupSize > 0 ? new TaskGroupCollector(executor, groupSize) : null
+        final batchSize = config.getBatch()
+        this.batchCollector = batchSize > 0 ? new TaskBatchCollector(executor, batchSize) : null
     }
 
     /**
@@ -2252,8 +2252,8 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        if( groupCollector )
-            groupCollector.collect(task)
+        if( batchCollector )
+            batchCollector.collect(task)
         else
             executor.submit(task)
 
@@ -2286,7 +2286,7 @@ class TaskProcessor {
     @PackageScope
     final finalizeTask( TaskRun task ) {
         // finalize each child if task is a group
-        if( task instanceof TaskGroup ) {
+        if( task instanceof TaskBatch ) {
             task.finalize()
             for( TaskHandler handler : task.children )
                 finalizeTask(handler.task)
@@ -2358,7 +2358,7 @@ class TaskProcessor {
     }
 
     protected void closeProcess() {
-        groupCollector?.close()
+        batchCollector?.close()
     }
 
     protected void terminateProcess() {

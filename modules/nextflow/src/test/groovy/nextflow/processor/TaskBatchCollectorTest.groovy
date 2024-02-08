@@ -29,15 +29,15 @@ import test.TestHelper
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class TaskGroupCollectorTest extends Specification {
+class TaskBatchCollectorTest extends Specification {
 
-    def 'should submit tasks as task groups' () {
+    def 'should submit tasks as task batches' () {
         given:
         def executor = Mock(Executor)
         def handler = Mock(TaskHandler)
-        def taskGroup = [:] as TaskGroup
-        def collector = Spy(new TaskGroupCollector(executor, 5)) {
-            createTaskGroup(_) >> taskGroup
+        def taskBatch = [:] as TaskBatch
+        def collector = Spy(new TaskBatchCollector(executor, 5)) {
+            createTaskBatch(_) >> taskBatch
         }
         and:
         def task = Mock(TaskRun) {
@@ -46,7 +46,7 @@ class TaskGroupCollectorTest extends Specification {
             }
         }
 
-        // collect tasks into task group
+        // collect tasks into task batch
         when:
         collector.collect(task)
         collector.collect(task)
@@ -56,22 +56,22 @@ class TaskGroupCollectorTest extends Specification {
         4 * executor.createTaskHandler(task) >> handler
         0 * executor.submit(_)
 
-        // submit task group when it is ready
+        // submit task batch when it is ready
         when:
         collector.collect(task)
         then:
         1 * executor.createTaskHandler(task) >> handler
         5 * handler.prepareLauncher()
-        1 * executor.submit(taskGroup)
+        1 * executor.submit(taskBatch)
 
-        // submit partial task group when closed
+        // submit partial task batch when closed
         when:
         collector.collect(task)
         collector.close()
         then:
         1 * executor.createTaskHandler(task) >> handler
         1 * handler.prepareLauncher()
-        1 * executor.submit(taskGroup)
+        1 * executor.submit(taskBatch)
 
         // submit tasks directly once closed
         when:
@@ -83,7 +83,7 @@ class TaskGroupCollectorTest extends Specification {
     def 'should submit retried tasks directly' () {
         given:
         def executor = Mock(Executor)
-        def collector = Spy(new TaskGroupCollector(executor, 5))
+        def collector = Spy(new TaskBatchCollector(executor, 5))
         and:
         def task = Mock(TaskRun) {
             getConfig() >> Mock(TaskConfig) {
@@ -97,12 +97,12 @@ class TaskGroupCollectorTest extends Specification {
         1 * executor.submit(task)
     }
 
-    def 'should create task group' () {
+    def 'should create task batch' () {
         given:
         def executor = Mock(Executor) {
             getWorkDir() >> TestHelper.createInMemTempDir()
         }
-        def collector = Spy(new TaskGroupCollector(executor, 5))
+        def collector = Spy(new TaskBatchCollector(executor, 5))
         and:
         def task = Mock(TaskRun) {
             processor >> Mock(TaskProcessor) {
@@ -120,11 +120,11 @@ class TaskGroupCollectorTest extends Specification {
         }
 
         when:
-        def taskGroup = collector.createTaskGroup([handler, handler, handler])
+        def taskBatch = collector.createTaskBatch([handler, handler, handler])
         then:
-        taskGroup.config == task.config
-        taskGroup.processor == task.processor
-        taskGroup.script == '''
+        taskBatch.config == task.config
+        taskBatch.processor == task.processor
+        taskBatch.script == '''
             array=( /work/foo /work/foo /work/foo )
             for task_dir in ${array[@]}; do
                 export task_dir
@@ -132,7 +132,7 @@ class TaskGroupCollectorTest extends Specification {
             done
             '''.stripIndent().leftTrim()
         and:
-        taskGroup.isContainerEnabled() == false
+        taskBatch.isContainerEnabled() == false
     }
 
 }

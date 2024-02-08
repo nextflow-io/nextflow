@@ -186,6 +186,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
+    int getBatch() {
+        get('batch') as Integer ?: 0
+    }
+
     String getBeforeScript() {
         return get('beforeScript')
     }
@@ -196,10 +200,6 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     def getCleanup() {
         return get('cleanup')
-    }
-
-    int getGroup() {
-        get('group') as Integer ?: 0
     }
 
     String getStageInMode() {

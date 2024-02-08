@@ -47,6 +47,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'accelerator',
             'afterScript',
             'arch',
+            'batch',
             'beforeScript',
             'cache',
             'conda',
@@ -62,7 +63,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'executor',
             'ext',
             'fair',
-            'group',
             'machineType',
             'queue',
             'label',
@@ -978,22 +978,22 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
-    int getGroup() {
-        final value = configProperties.get('group')
+    int getBatch() {
+        final value = configProperties.get('batch')
         if( value == null )
             return 0
         if( value instanceof Closure )
-            throw new IllegalArgumentException("Process directive `group` cannot be declared in a dynamic manner with a closure")
+            throw new IllegalArgumentException("Process directive `batch` cannot be declared in a dynamic manner with a closure")
         try {
             final result = value as Integer
             if( result < 0 )
-                throw new IllegalArgumentException("Process directive `group` cannot be a negative number")
+                throw new IllegalArgumentException("Process directive `batch` cannot be a negative number")
             if( result == 1 )
-                throw new IllegalArgumentException("Process directive `group` should be greater than 1")
+                throw new IllegalArgumentException("Process directive `batch` should be greater than 1")
             return result
         }
         catch( NumberFormatException e ) {
-            throw new IllegalArgumentException("Process directive `group` should be an integer greater than 1 -- offending value: '$value'", e)
+            throw new IllegalArgumentException("Process directive `batch` should be an integer greater than 1 -- offending value: '$value'", e)
         }
     }
 

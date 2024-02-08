@@ -20,14 +20,14 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 /**
- * Models a task group, which executes a set of tasks sequentially
+ * Models a task batch, which executes a set of tasks sequentially
  * on the same node.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class TaskGroup extends TaskRun {
+class TaskBatch extends TaskRun {
 
     List<TaskHandler> children
 

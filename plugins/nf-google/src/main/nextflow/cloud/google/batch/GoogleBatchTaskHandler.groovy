@@ -43,6 +43,7 @@ import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskBatch
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -210,7 +211,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             container.setOptions( containerOptions )
 
         // add child container mounts if task is a group
-        if( task instanceof nextflow.processor.TaskGroup )
+        if( task instanceof TaskBatch )
             for( TaskHandler handler : task.children )
                 container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
