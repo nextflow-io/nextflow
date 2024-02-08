@@ -373,9 +373,10 @@ class PublishDir {
 
         // resolve Fusion symlink if applicable
         if( FusionHelper.isFusionEnabled(session) ) {
+            final sourceName = sourceDir.relativize(source).toString()
             final inputs = getTaskInputs()
-            if( source.name in inputs )
-                source = resolveFusionLink(inputs[source.name])
+            if( sourceName in inputs )
+                source = resolveFusionLink(inputs[sourceName])
         }
 
         // create target dirs if required

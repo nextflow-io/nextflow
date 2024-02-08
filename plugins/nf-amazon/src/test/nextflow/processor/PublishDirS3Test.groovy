@@ -80,12 +80,13 @@ class PublishDirS3Test extends Specification {
         }
         and:
         def prev = FileHelper.asPath('s3://bucket/work/0/foo.txt')
-        def file = FileHelper.asPath('s3://bucket/work/1/foo.txt')
-        def taskInputs = ['foo.txt': file]
+        def sourceDir = FileHelper.asPath('s3://bucket/work/1/')
+        def file = sourceDir.resolve('bar/foo.txt')
+        def taskInputs = ['bar/foo.txt': file]
         and:
         def targetDir = FileHelper.asPath('s3://bucket/results')
-        def target = targetDir.resolve('foo.txt')
-        def publisher = Spy(new PublishDir(path: targetDir)) { getTaskInputs()>>taskInputs }
+        def target = targetDir.resolve('bar/foo.txt')
+        def publisher = Spy(new PublishDir(sourceDir: sourceDir, path: targetDir)) { getTaskInputs()>>taskInputs }
 
         when:
         publisher.processFile(file, target)
