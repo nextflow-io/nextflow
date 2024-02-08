@@ -236,7 +236,7 @@ process.scratch = false
 tower.accessToken = '<YOUR ACCESS TOKEN>'
 ```
 
-The [Tower](https://cloud.tower.nf) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
+The [Seqera Platform](https://cloud.tower.nf) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
 
 By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
 
