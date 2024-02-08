@@ -169,28 +169,41 @@ class CharliecloudCache {
     @PackageScope
     Path downloadCharliecloudImage(String imageUrl) {
         final localPath = localImagePath(imageUrl)
-
-        def cache = getCacheDir()
+        def cacheDir = getCacheDir()
 
         if( localPath.exists() ) {
             log.debug "Charliecloud found local store for image=$imageUrl; path=$localPath"
             return localPath
         }
 
-        // final file = new File("${localPath.parent.parent.parent}/.${localPath.name}.lock")
-        final file = new File("${cache.parent}/.ch-pulling.lock")
-        final wait = "Another Nextflow instance is pulling the image $imageUrl with Charliecloud -- please wait until the download completes"
-        final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
-
-        final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
-        try {
+        int count = 0;
+        int maxTries = 5;
+        boolean imagePulled = false
+        while(!imagePulled) {
+            try {
+                downloadCharliecloudImage0(imageUrl, localPath)
+                imagePulled = true
+            } catch (e) {
+                if (++count == maxTries) throw e;
+                log.info "Another image is currently pulled. Attempting again in 30 seconds [$count/$maxTries]"
+                Thread.sleep(30000)
+            }
+        }   
+        /*
+        Broken mutex approach below
+            final file = new File("${cacheDir.parent}/.ch-pulling.lock")
+            final wait = "Another Nextflow instance is pulling the image $imageUrl with Charliecloud -- please wait until the download completes"
+            final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
+            final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
+            try {
             mutex .lock { downloadCharliecloudImage0(imageUrl, localPath) }
-        }
-        finally {
+            }
+            finally {
             file.delete()
-        }
-
+            }
+            */
         return localPath
+
     }
 
 
