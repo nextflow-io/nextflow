@@ -490,13 +490,13 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination)
+            FileHelper.movePath(source, destination, StandardCopyOption.COPY_ATTRIBUTES)
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination,StandardCopyOption.COPY_ATTRIBUTES)
+            FileHelper.copyPath(source, destination, StandardCopyOption.COPY_ATTRIBUTES)
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
-            FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
+            FileHelper.copyPath(source, destination, StandardCopyOption.COPY_ATTRIBUTES, LinkOption.NOFOLLOW_LINKS)
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
