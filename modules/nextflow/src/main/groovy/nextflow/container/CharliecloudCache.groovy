@@ -169,7 +169,6 @@ class CharliecloudCache {
     @PackageScope
     Path downloadCharliecloudImage(String imageUrl) {
         final localPath = localImagePath(imageUrl)
-        def cacheDir = getCacheDir()
 
         if( localPath.exists() ) {
             log.debug "Charliecloud found local store for image=$imageUrl; path=$localPath"
@@ -184,13 +183,14 @@ class CharliecloudCache {
                 downloadCharliecloudImage0(imageUrl, localPath)
                 imagePulled = true
             } catch (e) {
-                if (++count == maxTries) throw e;
+                if (++count == maxTries) throw e
                 log.info "Another image is currently pulled. Attempting again in 30 seconds [$count/$maxTries]"
                 Thread.sleep(30000)
             }
         }   
         /*
         Broken mutex approach below
+            def cacheDir = getCacheDir()
             final file = new File("${cacheDir.parent}/.ch-pulling.lock")
             final wait = "Another Nextflow instance is pulling the image $imageUrl with Charliecloud -- please wait until the download completes"
             final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
