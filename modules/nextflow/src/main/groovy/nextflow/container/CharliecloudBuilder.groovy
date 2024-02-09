@@ -15,6 +15,8 @@
  */
 
 package nextflow.container
+import java.nio.file.Path
+import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
@@ -46,6 +48,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
+        if ( params.containsKey('useSquash') )
+            this.useSquash = params.useSquash?.toString() == 'true'
+
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
@@ -60,10 +65,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     @Override
     CharliecloudBuilder build(StringBuilder result) {
         assert image
-        def imageStoragePath = new File(image).parent
-        def imageStorage = new File(imageStoragePath).parent
+        def imageStorage = Paths.get(image).parent.parent
 
-        result << 'ch-convert -i ch-image -o dir --storage '
+        result << 'ch-convert -i ch-image --storage '
         // handle storage to deal with cases where CH_IMAGE_STORAGE is not set
         result << imageStorage
         result << ' '
@@ -72,6 +76,10 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         result << '"$NXF_TASK_WORKDIR"'
         result << '/container_'
         result << image.split('/')[-1]
+
+        if (useSquash) 
+            result << '.squashfs'
+        
         result << ' && '
         result << 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env '
 
