@@ -1513,7 +1513,7 @@ The following settings are available:
 
 ### Scope `tower`
 
-The `tower` scope controls the settings for the [Seqera Platform](https://tower.nf).
+The `tower` scope controls the settings for the [Seqera Platform](https://tower.nf) (formerly Tower Cloud).
 
 The following settings are available:
 
