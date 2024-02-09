@@ -224,6 +224,48 @@ class PublishDirTest extends Specification {
 
     }
 
+    def 'should overwrite published files only if they are stale' () {
+
+        given:
+        def session = new Session()
+        def folder = Files.createTempDirectory('nxf')
+        def sourceDir = folder.resolve('work-dir')
+        def targetDir = folder.resolve('pub-dir')
+        sourceDir.mkdir()
+        sourceDir.resolve('file1.txt').text = 'aaa'
+        sourceDir.resolve('file2.bam').text = 'bbb'
+        targetDir.mkdir()
+        targetDir.resolve('file1.txt').text = 'aaa'
+        targetDir.resolve('file2.bam').text = 'bbb (old)'
+
+        def task = new TaskRun(workDir: sourceDir, config: new TaskConfig(), name: 'foo')
+
+        when:
+        def outputs = [
+                sourceDir.resolve('file1.txt'),
+                sourceDir.resolve('file2.bam')
+        ] as Set
+        def publisher = new PublishDir(path: targetDir, mode: 'copy')
+        and:
+        def timestamp1 = targetDir.resolve('file1.txt').lastModified()
+        def timestamp2 = targetDir.resolve('file2.bam').lastModified()
+        and:
+        publisher.apply( outputs, task )
+        and:
+        session.@publishPoolManager.shutdown(false)
+
+        then:
+        timestamp1 == targetDir.resolve('file1.txt').lastModified()
+        timestamp2 != targetDir.resolve('file2.bam').lastModified()
+
+        targetDir.resolve('file1.txt').text == 'aaa'
+        targetDir.resolve('file2.bam').text == 'bbb'
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
     def 'should apply saveAs closure' () {
 
         given:

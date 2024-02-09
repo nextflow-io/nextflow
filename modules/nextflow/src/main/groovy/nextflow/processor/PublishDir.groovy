@@ -71,7 +71,7 @@ class PublishDir {
     Path path
 
     /**
-     * Whenever overwrite existing files
+     * Whether to overwrite existing files
      */
     Boolean overwrite
 
@@ -411,8 +411,9 @@ class PublishDir {
             // see https://github.com/nextflow-io/nextflow/issues/2177
             if( checkSourcePathConflicts(destination))
                 return
-            
-            if( overwrite ) {
+
+            // overwrite only if explicitly enabled or destination is stale
+            if( overwrite || (overwrite == null && source.getChecksum() != destination.getChecksum()) ) {
                 FileHelper.deletePath(destination)
                 processFileImpl(source, destination)
             }

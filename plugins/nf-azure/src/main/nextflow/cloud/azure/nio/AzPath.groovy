@@ -29,6 +29,7 @@ import com.azure.storage.blob.models.BlobItem
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
+import nextflow.file.ETagAwareFile
 
 /**
  * Implements Azure path object
@@ -37,7 +38,7 @@ import groovy.transform.PackageScope
  */
 @CompileStatic
 @EqualsAndHashCode(includes = 'fs,path,directory', includeFields = true)
-class AzPath implements Path {
+class AzPath implements Path, ETagAwareFile {
 
     private AzFileSystem fs
 
@@ -331,6 +332,11 @@ class AzPath implements Path {
         def result = attributes
         attributes = null
         return result
+    }
+
+    @Override
+    String getETag() {
+        return attributes.getETag()
     }
 
 }

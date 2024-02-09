@@ -2230,7 +2230,10 @@ Available options:
   - `'symlink'`: Creates an absolute symbolic link in the publish directory for each output file (default).
 
 `overwrite`
-: When `true` any existing file in the specified folder will be overridden (default: `true` during normal pipeline execution and `false` when pipeline execution is `resumed`).
+: :::{versionchanged} 24.02.0-edge
+  Prior to this version, the default behavior was `false` on a resumed run and `true` otherwise.
+  :::
+: Determines whether to overwrite a published file if it already exists. By default, existing files are overwritten only if they are stale, i.e. checksum does not match the new file.
 
 `path`
 : Specifies the directory where files need to be published. **Note**: the syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.
