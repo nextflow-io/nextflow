@@ -2231,7 +2231,7 @@ Available options:
 
 `overwrite`
 : :::{versionchanged} 24.02.0-edge
-  Prior to this version, the default behavior was `false` on a resumed run and `true` otherwise.
+  Prior to this version, the default behavior was `false` if the task was cached on a resumed run and `true` otherwise.
   :::
 : Determines whether to overwrite a published file if it already exists. By default, existing files are overwritten only if they are stale, i.e. checksum does not match the new file.
 
