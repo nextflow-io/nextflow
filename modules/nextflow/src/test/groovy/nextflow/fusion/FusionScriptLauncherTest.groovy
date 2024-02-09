@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.executor.fusion
+package nextflow.fusion
 
 import java.nio.file.Path
 

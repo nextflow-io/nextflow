@@ -94,7 +94,7 @@ class BashWrapperBuilder {
     ScriptFileCopyStrategy copyStrategy
 
     @Delegate
-    private TaskBean bean
+    protected TaskBean bean
 
     private boolean runWithContainer
 
@@ -246,6 +246,7 @@ class BashWrapperBuilder {
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
+        binding.process_directives = getProcessDirectives()
         binding.task_name = name
         binding.helpers_script = getHelpersScript()
 
@@ -398,6 +399,26 @@ class BashWrapperBuilder {
                 Thread.sleep(delay)
             }
         }
+    }
+
+    protected String getProcessDirectives() {
+        final lines = []
+        lines << '---'
+
+        if( containerConfig?.isEnabled() )
+            lines << "container: '${containerImage}'"
+
+        if( outputFiles.size() > 0 ) {
+            lines << 'outputs:'
+            for( final output : outputFiles )
+                lines << "- '${output}'"
+        }
+
+        if( lines.size() == 1 )
+            return ''
+
+        lines << '...'
+        return lines.collect( line -> '### ' + line ).join('\n')
     }
 
     protected String getHelpersScript() {
