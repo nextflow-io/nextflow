@@ -38,7 +38,7 @@ tower {
 ```
 
 :::{note}
-The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/overview) in Tower.
+The Seqera Platform access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://docs.seqera.io/platform/latest/credentials/overview) in Seqera Platform.
 :::
 
 ## Use cases
@@ -47,9 +47,9 @@ The Tower access token is not mandatory, but it is recommended in order to acces
 
 ### Authenticate private repositories
 
-Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Tower credentials](https://help.tower.nf/latest/credentials/overview/).
+Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Seqera Platform credentials](https://docs.seqera.io/platform/latest/credentials/overview/).
 
-Once the credentials have been created, simply specify your [Tower account access token](https://help.tower.nf/22.2/api/overview/#authentication) in your pipeline configuration file. If the credentials were created in a Tower organization workspace, specify the workspace ID as well in the config file as shown below:
+Once the credentials have been created, simply specify your [personal access token](https://docs.seqera.io/platform/23.3.0/api/overview#authentication) in your pipeline configuration file. If the credentials were created in a Seqera Platform organization workspace, specify the workspace ID as well in the config file as shown below:
 
 ```groovy
 tower {
@@ -159,7 +159,7 @@ In the above configuration replace `docker.io/user/repo` with a repository of yo
 should be uploaded.
 
 :::{note}
-When using a private repository, the repository access keys must be provider via Tower credentials manager (see {ref}`above <wave-authenticate-private-repos>`).
+When using a private repository, the repository access keys must be provided via the Seqera Platform credentials manager (see {ref}`above <wave-authenticate-private-repos>`).
 
 Moreover the access to the repository must be granted in the compute nodes by using the command `singularity remote login <registry>`.
 Please see Singularity documentation for further details.
@@ -178,7 +178,7 @@ wave.build.cacheRepository = 'example.com/your/cache-repo'
 
 The first repository is used to store the built container images. The second one is used to store the individual image layers for caching purposes.
 
-The repository access keys must be provided as Tower credentials (see
+The repository access keys must be provided as Seqera Platform credentials (see
 [Authenticate private repositories](#authenticate-private-repositories) above).
 
 ### Run pipelines using Fusion file system
@@ -208,10 +208,10 @@ It is also suggested to specify a custom cache repository via the setting `wave.
 container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.
 
 `wave.build.repository`
-: The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
+: The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Seqera Platform account).
 
 `wave.build.cacheRepository`
-: The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
+: The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Seqera Platform account).
 
 `wave.build.conda.basePackages`
 : One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).

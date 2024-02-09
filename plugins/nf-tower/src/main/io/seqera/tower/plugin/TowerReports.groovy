@@ -212,7 +212,7 @@ class TowerReports {
             it.flush()
         }
         catch (Throwable e) {
-            log.error ("Unexpected error writing Tower report entry '${destination.toUriString()}'", e)
+            log.error ("Unexpected error writing report entry '${destination.toUriString()}'", e)
         }
     }
 

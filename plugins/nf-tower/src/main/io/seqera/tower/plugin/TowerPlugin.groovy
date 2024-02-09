@@ -23,7 +23,7 @@ import nextflow.plugin.BasePlugin
 import nextflow.cli.PluginExecAware
 import org.pf4j.PluginWrapper
 /**
- * Nextflow Tower plugin
+ * Seqera Platform plugin
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -92,7 +92,7 @@ class TowerFactory implements TraceObserverFactory {
 
     protected XAuthProvider provider(String endpoint, String accessToken) {
         if (endpoint.endsWith('/'))
-            throw new IllegalArgumentException("Tower endpoint URL should not end with a `/` character -- offending value: $endpoint")
+            throw new IllegalArgumentException("Seqera Platform endpoint URL should not end with a `/` character -- offending value: $endpoint")
         final refreshToken = env.get('TOWER_REFRESH_TOKEN')
         return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
