@@ -273,15 +273,19 @@ class AnsiLogObserver implements TraceObserver {
         def renderedLines = 0
         def skippedLines = 0
         for( ProgressRecord entry : processes ) {
+            // Only show line if we have space in the visible terminal area
+            // or if the process has some submitted tasks
             if( renderedLines <= rows - 5 || entry.getTotalCount() > 0 ) {
                 term.a(line(entry))
                 term.newline()
                 renderedLines += 1
             }
+            // Process with no active tasks and we're out of screen space, skip
             else {
                 skippedLines += 1
             }
         }
+        // Tell the user how many processes without active tasks were hidden
         if( skippedLines > 0 ){
             term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a("Plus ").bold().a(skippedLines).reset()
             term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a(" more processes waiting for tasks…").reset().newline()
@@ -386,8 +390,12 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     protected String fmtChop(String str, int cols) {
+        // Truncate the process name to fit the terminal width
         if( str.size() <= cols )
             return str
+        // Take the first 3 characters and the final chunk of text
+        //   eg. for: NFCORE_RNASEQ:RNASEQ:FASTQ_SUBSAMPLE_FQ_SALMON:FQ_SUBSAMPLE
+        //   trunacte to: NFC…_SALMON:FQ_SUBSAMPLE
         return cols>5 ? str.take(3) + '…' + str.takeRight(cols-1-3) : str[0..cols-1]
     }
 
@@ -398,7 +406,14 @@ class AnsiLogObserver implements TraceObserver {
         final term = ansi()
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
+        // Truncate or pad the label to the correct width
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
+        // Break up the process label into components for styling. eg:
+        //   NFCORE_RNASEQ:RNASEQ:PREPARE_GENOME:GUNZIP_GTF (genes.gtf.gz)
+        //     labelTag = genes.gtf.gz
+        //     labelSpaces = whitespace padding after process name
+        //     labelFinalProcess = GUNZIP_GTF
+        //     labelNoFinalProcess = NFCORE_RNASEQ:RNASEQ:PREPARE_GENOME:
         final tagMatch = TAG_REGEX.matcher(label)
         final labelTag = tagMatch ? tagMatch.group(1) : ''
         final labelSpaces = tagMatch ? tagMatch.group(2) : ''
@@ -408,20 +423,26 @@ class AnsiLogObserver implements TraceObserver {
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
+        // eg. 100% (whitespace padded for alignment)
         final pct = "${String.valueOf(x).padLeft(3)}%".toString()
+        // eg. 1 of 1
         final numbs = " ${(int)com} of ${(int)tot}".toString()
 
-        // Hash: []
+        // Task hash, eg: [fa/71091a]
         term.a(Attribute.INTENSITY_FAINT).a('[').reset()
         term.fg(Color.BLUE).a(hh).reset()
         term.a(Attribute.INTENSITY_FAINT).a('] ').reset()
 
-        // Label: process > sayHello
+        // Only show 'process > ' if the terminal has lots of width
         if( cols > 180 )
             term.a(Attribute.INTENSITY_FAINT).a('process > ').reset()
+        // Stem of process name, dim text
         term.a(Attribute.INTENSITY_FAINT).a(labelNoFinalProcess).reset()
+        // Final process name, regular text
         term.a(labelFinalProcess)
+        // Active process with a tag, eg: (genes.gtf.gz)
         if( labelTag ){
+            // Tag in yellow, () dim but tag text regular
             term.fg(Color.YELLOW).a(Attribute.INTENSITY_FAINT).a(' (').reset()
             term.fg(Color.YELLOW).a(labelTag)
             term.a(Attribute.INTENSITY_FAINT).a(')').reset().a(labelSpaces)
@@ -433,18 +454,23 @@ class AnsiLogObserver implements TraceObserver {
             return term
         }
 
-        // Progress: [  0%] 0 of 10
+        // Progress percentage, eg: [ 80%]
         if( cols > 120 ) {
+            // Only show the percentage if we have lots of width
+            // Percentage text in green if 100%, otherwise blue
             term.a(Attribute.INTENSITY_FAINT).a(' [').reset()
                 .fg(pct == '100%' ? Color.GREEN : Color.BLUE).a(pct).reset()
                 .a(Attribute.INTENSITY_FAINT).a(']').reset()
         }
         else {
+            // If narrow terminal, show single pipe char instead of percentage to save space
             term.a(Attribute.INTENSITY_FAINT).a(' |').reset()
         }
+        // Progress active task count, eg: 8 of 10
         term.a(numbs)
 
-        // Number of tasks:
+        // Completed task counts and status
+        // Dim text for cached, otherwise regular
         if( stats.cached )
             term.a(Attribute.INTENSITY_FAINT).a(", cached: $stats.cached").reset()
         if( stats.stored )
@@ -453,6 +479,7 @@ class AnsiLogObserver implements TraceObserver {
             term.a(", failed: $stats.failed")
         if( stats.retries )
             term.a(", retries: $stats.retries")
+        // Show red cross ('✘') or green tick ('✔') according to status
         if( stats.terminated && tot ) {
             if( stats.errored )
                 term.fg(Color.RED).a(' \u2718').reset()

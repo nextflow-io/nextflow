@@ -378,8 +378,10 @@ class CmdRun extends CmdBase implements HubOptions {
 
     protected void printBanner() {
         if( launcher.options.ansiLog ){
+            // Plain header for verbose log
             log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
 
+            // Fancy coloured header for the ANSI console output
             def fmt = ansi()
             fmt.a("\n")
             fmt.bg(Color.CYAN).fg(Color.BLACK).bold().a(" N E X T F L O W ").reset()
@@ -387,6 +389,7 @@ class CmdRun extends CmdBase implements HubOptions {
             fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
         } else {
+            // Plain header to the console if ANSI is disabled
             log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
         }
 
