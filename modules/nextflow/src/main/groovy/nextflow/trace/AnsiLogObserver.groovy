@@ -16,6 +16,8 @@
 
 package nextflow.trace
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
@@ -389,15 +391,18 @@ class AnsiLogObserver implements TraceObserver {
         return cols>5 ? str.take(3) + '…' + str.takeRight(cols-1-3) : str[0..cols-1]
     }
 
+    private final static Pattern TAG_REGEX = ~/ \((.+)\)( *)$/
+    private final static Pattern LBL_REPLACE = ~/ \(.+\) *$/
+
     protected Ansi line(ProgressRecord stats) {
         final term = ansi()
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
-        final tagMatch = label =~ / \((.+)\)( *)$/
+        final tagMatch = TAG_REGEX.matcher(label)
         final labelTag = tagMatch ? tagMatch.group(1) : ''
         final labelSpaces = tagMatch ? tagMatch.group(2) : ''
-        final labelNoTag = label.replaceFirst(/ \(.+\) *$/, "")
+        final labelNoTag = LBL_REPLACE.matcher(label).replaceFirst("")
         final labelFinalProcess = labelNoTag.tokenize(':')[-1]
         final labelNoFinalProcess = labelFinalProcess.length() > 0 ? labelNoTag - ~/$labelFinalProcess$/ : labelNoTag
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
