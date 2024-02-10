@@ -17,12 +17,12 @@ compileGroovy {
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
-    api "org.codehaus.groovy:groovy:3.0.19"
-    api "org.codehaus.groovy:groovy-nio:3.0.19"
-    api "org.codehaus.groovy:groovy-xml:3.0.19"
-    api "org.codehaus.groovy:groovy-json:3.0.19"
-    api "org.codehaus.groovy:groovy-templates:3.0.19"
-    api "org.codehaus.groovy:groovy-yaml:3.0.19"
+    api "org.apache.groovy:groovy:4.0.18"
+    api "org.apache.groovy:groovy-nio:4.0.18"
+    api "org.apache.groovy:groovy-xml:4.0.18"
+    api "org.apache.groovy:groovy-json:4.0.18"
+    api "org.apache.groovy:groovy-templates:4.0.18"
+    api "org.apache.groovy:groovy-yaml:4.0.18"
     api "org.slf4j:jcl-over-slf4j:2.0.7"
     api "org.slf4j:jul-to-slf4j:2.0.7"
     api "org.slf4j:log4j-over-slf4j:2.0.7"
@@ -48,11 +48,11 @@ dependencies {
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 
     // test configuration
-    testFixturesApi ("org.codehaus.groovy:groovy-test:3.0.19") { exclude group: 'org.codehaus.groovy' }
+    testFixturesApi ("org.apache.groovy:groovy-test:4.0.18") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("cglib:cglib-nodep:3.3.0")
     testFixturesApi ("org.objenesis:objenesis:3.2")
-    testFixturesApi ("org.spockframework:spock-core:2.3-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-    testFixturesApi ('org.spockframework:spock-junit4:2.3-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
+    testFixturesApi ("org.spockframework:spock-core:2.3-groovy-4.0") { exclude group: 'org.apache.groovy'; exclude group: 'net.bytebuddy' }
+    testFixturesApi ('org.spockframework:spock-junit4:2.3-groovy-4.0') { exclude group: 'org.apache.groovy'; exclude group: 'net.bytebuddy' }
     testFixturesApi 'com.google.jimfs:jimfs:1.2'
 
 }
@@ -60,7 +60,7 @@ dependencies {
 
 test {
     minHeapSize = "512m"
-    maxHeapSize = "2048m"
+    maxHeapSize = "4096m"
 }
 
 application {
