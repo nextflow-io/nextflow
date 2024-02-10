@@ -64,8 +64,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
     static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
 
-    static final public DSL2 = '2'
-    static final public DSL1 = '1'
+    static final public String DSL2 = '2'
+    static final public String DSL1 = '1'
 
     static {
         // install the custom pool factory for GPars threads
@@ -388,7 +388,7 @@ class CmdRun extends CmdBase implements HubOptions {
             // Fancy coloured header for the ANSI console output
             final fmt = ansi()
             fmt.a("\n")
-            fmt.a("$GREEN N E X T F L O W ").reset()
+            fmt.a("${GREEN} N E X T F L O W ").reset()
             // Show Nextflow version
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
@@ -424,12 +424,15 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
-        final repo = scriptFile.repository ?: scriptFile.source
+        final repo = scriptFile.repository ?: scriptFile.source.toString()
         final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         final revision = scriptFile.repository
-            ? scriptFile.revisionInfo
+            ? scriptFile.revisionInfo.toString()
             : scriptFile.getScriptId()?.substring(0,10)
+        printLaunchInfo(ver, repo, head, revision)
+    }
 
+    protected void printLaunchInfo(String ver, String repo, String head, String revision) {
         if( launcher.options.ansiLog ){
             log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
 
@@ -443,7 +446,8 @@ class CmdRun extends CmdBase implements HubOptions {
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
-        } else {
+        }
+        else {
             log.info "${head} [$runName] DSL${ver} - revision: ${revision}"
         }
     }
