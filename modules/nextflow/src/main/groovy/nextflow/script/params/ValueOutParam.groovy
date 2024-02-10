@@ -18,6 +18,7 @@ package nextflow.script.params
 
 import groovy.transform.InheritConstructors
 import nextflow.script.TokenVar
+import org.codehaus.groovy.runtime.InvokerHelper
 
 
 /**
@@ -57,7 +58,7 @@ class ValueOutParam extends BaseOutParam {
 
         switch( target ) {
             case TokenVar:
-                return context.get(target.name)
+                return InvokerHelper.getProperty(context,target.name)
 
             case Closure:
                 return target.cloneWith(context).call()
