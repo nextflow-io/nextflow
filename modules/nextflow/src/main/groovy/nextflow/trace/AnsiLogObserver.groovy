@@ -303,7 +303,7 @@ class AnsiLogObserver implements TraceObserver {
 
     synchronized protected void renderProgress(WorkflowStats stats) {
         if( printedLines )
-            AnsiConsole.out().println ansi().cursorUp(printedLines+gapLines+1)
+            AnsiConsole.out.println ansi().cursorUp(printedLines+gapLines+1)
 
         // -- print processes
         final term = ansi()
@@ -316,14 +316,14 @@ class AnsiLogObserver implements TraceObserver {
 
         final str = term.toString()
         final count = printAndCountLines(str)
-        AnsiConsole.out().flush()
+        AnsiConsole.out.flush()
 
         // usually the gap should be negative because `count` should be greater or equal
         // than the previous `printedLines` value (the output should become longer)
         // otherwise cleanup the remaining lines
         gapLines = printedLines > count ? printedLines-count : 0
         if( gapLines>0 ) for(int i=0; i<gapLines; i++ )
-            AnsiConsole.out().print(ansi().eraseLine().newline())
+            AnsiConsole.out.print(ansi().eraseLine().newline())
         // at the end update the value of printed lines
         printedLines = count
     }
@@ -358,7 +358,7 @@ class AnsiLogObserver implements TraceObserver {
                 report += "Failed      : ${stats.failedCountFmt}\n"
 
             printAnsi(report, Color.GREEN, true)
-            AnsiConsole.out().flush()
+            AnsiConsole.out.flush()
         }
     }
 
@@ -369,14 +369,14 @@ class AnsiLogObserver implements TraceObserver {
         fmt = fmt.a(message)
         if( bold ) fmt = fmt.boldOff()
         if( color ) fmt = fmt.fg(Color.DEFAULT)
-        AnsiConsole.out().println(fmt.eraseLine())
+        AnsiConsole.out.println(fmt.eraseLine())
     }
 
     protected void printAnsiLines(String lines) {
         final text = lines
                 .replace('\r','')
                 .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
-        AnsiConsole.out().print(text)
+        AnsiConsole.out.print(text)
     }
 
     protected String fmtWidth(String name, int width, int cols) {

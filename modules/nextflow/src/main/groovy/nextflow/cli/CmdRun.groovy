@@ -381,23 +381,25 @@ class CmdRun extends CmdBase implements HubOptions {
             // Plain header for verbose log
             log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
 
-            // Fancy coloured header for the ANSI console output
-            def fmt = ansi()
-            fmt.a("\n")
             // Use exact Nextflow green RGB (13, 192, 157) and exact black text (0,0,0)
             // Should render the same on every terminal, irrespective of colour scheme
             // Jansi library can't do RGBs, so just do the ANSI codes manually
-            fmt.a("\033[1;38;2;0;0;0;48;2;13;192;157m N E X T F L O W ").reset()
+            final GREEN = "\033[1;38;2;0;0;0;48;2;13;192;157m"
+            // Fancy coloured header for the ANSI console output
+            final fmt = ansi()
+            fmt.a("\n")
+            fmt.a("$GREEN N E X T F L O W ").reset()
             // Show Nextflow version
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
-            AnsiConsole.out().println(fmt.eraseLine())
-        } else {
+            AnsiConsole.out.println(fmt.eraseLine())
+        }
+        else {
             // Plain header to the console if ANSI is disabled
             log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
         }
-
     }
+
     protected checkConfigEnv(ConfigMap config) {
         // Warn about setting NXF_ environment variables within env config scope
         final env = config.env as Map<String, String>
