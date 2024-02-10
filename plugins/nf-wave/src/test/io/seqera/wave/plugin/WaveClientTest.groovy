@@ -1248,6 +1248,15 @@ class WaveClientTest extends Specification {
         'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
     }
 
+    def 'should configure custom s5cmd' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave:[s5cmdConfigUrl: 'http://host.com/s5cmd.zip']] }
+        when:
+        def wave = Spy(new WaveClient(sess))
+        then:
+        wave.@s5cmdConfigUrl == new URL('http://host.com/s5cmd.zip')
+    }
+
     def 'should check is local conda file' () {
         expect:
         WaveClient.isCondaLocalFile(CONTENT) == EXPECTED
