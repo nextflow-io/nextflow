@@ -319,7 +319,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
             def fmt = ansi()
             fmt.a("\n")
-            fmt.bgRgb(13, 192, 157).fgRgb(0, 0, 0).bold().a(" N E X T F L O W ").reset()
+            fmt.bg(Color.CYAN).fg(Color.BLACK).bold().a(" N E X T F L O W ").reset()
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
