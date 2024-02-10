@@ -17,7 +17,7 @@
 package nextflow.script.params
 
 import groovy.transform.InheritConstructors
-import nextflow.script.TokenCmdCall
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -59,8 +59,8 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
             else if( item instanceof TokenEnvCall ) {
                 create(EnvOutParam).bind(item.val)
             }
-            else if( item instanceof TokenCmdCall ) {
-                create(CmdOutParam).bind(item.val)
+            else if( item instanceof TokenEvalCall ) {
+                create(CmdEvalParam).bind(item.val)
             }
             else if( item instanceof GString ) {
                 throw new IllegalArgumentException("Unqualified output path declaration is not allowed - replace `tuple \"$item\",..` with `tuple path(\"$item\"),..`")

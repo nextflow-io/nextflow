@@ -1,6 +1,6 @@
 process sayHello {
     output:
-    cmd('bash --version')
+    eval('bash --version')
 
     """
     echo Hello world!

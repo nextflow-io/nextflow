@@ -1067,16 +1067,16 @@ The `stdout` qualifier allows you to output the `stdout` of the executed process
 :language: groovy
 ```
 
-(process-out-cmd)=
+(process-out-eval)=
 
-### Output type `cmd`
+### Output type `eval`
 
-:::{versionadded} 23.12.0-edge
+:::{versionadded} 24.02.0-edge
 :::
 
-The `cmd` qualifier allows you to capture the standard output of an arbitrary shell command:
+The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
 
-```{literalinclude} snippets/process-out-cmd.nf
+```{literalinclude} snippets/process-out-eval.nf
 :language: groovy
 ```
 

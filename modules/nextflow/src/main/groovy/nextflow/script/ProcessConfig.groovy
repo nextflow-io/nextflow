@@ -31,7 +31,7 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
-import nextflow.script.params.CmdOutParam
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultInParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
@@ -589,12 +589,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                 .bind(obj)
     }
 
-    OutParam _out_cmd( Object obj ) {
-        new CmdOutParam(this).bind(obj)
+    OutParam _out_eval(Object obj ) {
+        new CmdEvalParam(this).bind(obj)
     }
 
-    OutParam _out_cmd( Map opts, Object obj ) {
-        new CmdOutParam(this)
+    OutParam _out_eval(Map opts, Object obj ) {
+        new CmdEvalParam(this)
             .setOptions(opts)
             .bind(obj)
     }

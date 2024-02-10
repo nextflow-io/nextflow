@@ -23,12 +23,12 @@ import groovy.transform.InheritConstructors
 import groovy.transform.Memoized
 
 /**
- * Model process `output: cmd PARAM` definition
+ * Model process `output: eval PARAM` definition
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class CmdOutParam extends BaseOutParam implements OptionalParam {
+class CmdEvalParam extends BaseOutParam implements OptionalParam {
 
     private static AtomicInteger counter = new AtomicInteger()
 
@@ -41,7 +41,7 @@ class CmdOutParam extends BaseOutParam implements OptionalParam {
     }
 
     String getName() {
-        return "nxf_out_cmd_${count}"
+        return "nxf_out_eval_${count}"
     }
 
     BaseOutParam bind( def obj ) {

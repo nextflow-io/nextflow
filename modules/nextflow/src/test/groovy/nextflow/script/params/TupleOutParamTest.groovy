@@ -207,13 +207,13 @@ class TupleOutParamTest extends Dsl2Spec {
         and:
         outs[0].inner.size() == 2
         and:
-        outs[0].inner[0] instanceof CmdOutParam
+        outs[0].inner[0] instanceof CmdEvalParam
         outs[0].inner[0].getName() =~ /nxf_out_cmd_\d+/
-        (outs[0].inner[0] as CmdOutParam).getTarget(binding) == 'this --one'
+        (outs[0].inner[0] as CmdEvalParam).getTarget(binding) == 'this --one'
         and:
-        outs[0].inner[1] instanceof CmdOutParam
+        outs[0].inner[1] instanceof CmdEvalParam
         outs[0].inner[1].getName() =~ /nxf_out_cmd_\d+/
-        (outs[0].inner[1] as CmdOutParam).getTarget(binding) == 'tool --two'
+        (outs[0].inner[1] as CmdEvalParam).getTarget(binding) == 'tool --two'
 
     }
 }

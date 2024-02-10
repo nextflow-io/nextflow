@@ -1,4 +1,3 @@
-#!/usr/bin/env nextflow
 /*
  * Copyright 2013-2023, Seqera Labs
  *
@@ -13,20 +12,29 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-process foo {
-    input:
-    val shell
-    output:
-    cmd "$shell --version", emit: shell_version
-    '''
-    echo Hello
-    '''
-}
+package nextflow.exception
 
+import groovy.transform.CompileStatic
 
-workflow {
-  foo('bash')
-  foo.out.shell_version.view{ it.readLines()[0] }
+/**
+ * Exception thrown when a command output returns a non-zero exit status
+ * 
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class ProcessEvalException extends RuntimeException implements ShowOnlyExceptionMessage {
+
+    String command
+    String output
+    int status
+
+    ProcessEvalException(String message, String command, String output, int status) {
+        super(message)
+        this.command = command
+        this.output = output
+        this.status = status
+    }
 }

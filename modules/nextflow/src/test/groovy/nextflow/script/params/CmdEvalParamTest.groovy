@@ -23,16 +23,16 @@ import test.Dsl2Spec
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdOutParamTest extends Dsl2Spec {
+class CmdEvalParamTest extends Dsl2Spec {
 
-    def 'should define env outputs' () {
+    def 'should define eval outputs' () {
         setup:
         def text = '''
             process hola {
               output:
-              cmd 'foo --version' 
-              cmd "$params.cmd --help"
-              cmd "$tool --test"  
+              eval 'foo --version' 
+              eval "$params.cmd --help"
+              eval "$tool --test"  
               
               /echo command/ 
             }
@@ -44,18 +44,18 @@ class CmdOutParamTest extends Dsl2Spec {
         def process = parseAndReturnProcess(text, binding)
 
         when:
-        def outs = process.config.getOutputs() as List<CmdOutParam>
+        def outs = process.config.getOutputs() as List<CmdEvalParam>
 
         then:
         outs.size() == 3
         and:
-        outs[0].getName() =~ /nxf_out_cmd_\d+/
+        outs[0].getName() =~ /nxf_out_eval_\d+/
         outs[0].getTarget(binding) == 'foo --version'
         and:
-        outs[1].getName() =~ /nxf_out_cmd_\d+/
+        outs[1].getName() =~ /nxf_out_eval_\d+/
         outs[1].getTarget(binding) == 'bar --help'
         and:
-        outs[2].getName() =~ /nxf_out_cmd_\d+/
+        outs[2].getName() =~ /nxf_out_eval_\d+/
         outs[2].getTarget(binding) == 'other --test'
     }
 

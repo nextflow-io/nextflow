@@ -27,7 +27,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
-import nextflow.script.TokenCmdCall
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -956,7 +956,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','cmd','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','eval','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
@@ -1124,9 +1124,9 @@ class NextflowDSLImpl implements ASTTransformation {
                     return createX( TokenEnvCall, args )
                 }
 
-                if( methodCall.methodAsString == 'cmd' && withinTupleMethod ) {
+                if( methodCall.methodAsString == 'eval' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
-                    return createX( TokenCmdCall, args )
+                    return createX( TokenEvalCall, args )
                 }
 
                 /*

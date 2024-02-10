@@ -73,7 +73,7 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> outputEnvNames
 
-    Map<String,String> outputCommands
+    Map<String,String> outputEvals
 
     String beforeScript
 
@@ -146,7 +146,7 @@ class TaskBean implements Serializable, Cloneable {
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()
-        this.outputCommands = task.getOutputCommands()
+        this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
 
         this.inputFiles = task.getInputFilesMap()

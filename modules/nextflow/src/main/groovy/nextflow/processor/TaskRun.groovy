@@ -38,7 +38,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.CmdOutParam
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -603,11 +603,11 @@ class TaskRun implements Cloneable {
      * where the key represents a environment variable name holding the command
      * output and the value the command the executed.
      */
-    Map<String,String> getOutputCommands() {
-        final items = getOutputsByType(CmdOutParam)
+    Map<String,String> getOutputEvals() {
+        final items = getOutputsByType(CmdEvalParam)
         final result = new LinkedHashMap(items.size())
-        for( CmdOutParam it : items.keySet() ) {
-            if( !it.name ) throw new IllegalStateException("Missing output command name - offending parameter: $it")
+        for( CmdEvalParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output eval name - offending parameter: $it")
             result.put(it.name, it.getTarget(context))
         }
         return result

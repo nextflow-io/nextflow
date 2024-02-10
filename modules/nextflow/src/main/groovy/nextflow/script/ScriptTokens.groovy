@@ -113,13 +113,13 @@ class TokenEnvCall {
  * Token used by the DSL to identify a command output declaration, like this
  *     <pre>
  *     input:
- *     tuple( cmd(X), ... )
+ *     tuple( eval(X), ... )
  *     <pre>
  */
 @ToString
 @EqualsAndHashCode
 @TupleConstructor
-class TokenCmdCall {
+class TokenEvalCall {
     Object val
 }
 

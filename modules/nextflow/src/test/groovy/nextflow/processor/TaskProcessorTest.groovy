@@ -28,7 +28,7 @@ import nextflow.ISession
 import nextflow.Session
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
-import nextflow.exception.ProcessCommandException
+import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -983,7 +983,7 @@ class TaskProcessorTest extends Specification {
         when:
         processor.collectOutEnvMap(workDir, [cmd_out_1: 'foo --this', cmd_out_2: 'bar --that'])
         then:
-        def e = thrown(ProcessCommandException)
+        def e = thrown(ProcessEvalException)
         e.message == 'Unable to evaluate command output'
         e.command == 'bar --that'
         e.output == 'This is an error message\nfor unknown reason'

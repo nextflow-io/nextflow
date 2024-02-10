@@ -15,7 +15,6 @@
  */
 package nextflow.processor
 
-
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -62,7 +61,7 @@ import nextflow.exception.FailedGuardException
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.ProcessCommandException
+import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
@@ -87,7 +86,7 @@ import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.BaseOutParam
-import nextflow.script.params.CmdOutParam
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -1083,7 +1082,7 @@ class TaskProcessor {
                     formatTaskError( message, error, task )
                     break
 
-                case ProcessCommandException:
+                case ProcessEvalException:
                     formatCommandError( message, error, task )
                     break
 
@@ -1158,7 +1157,7 @@ class TaskProcessor {
         return action
     }
 
-    final protected List<String> formatCommandError( List<String> message, ProcessCommandException error, TaskRun task) {
+    final protected List<String> formatCommandError(List<String> message, ProcessEvalException error, TaskRun task) {
         // compose a readable error message
         message << formatErrorCause(error)
 
@@ -1537,8 +1536,8 @@ class TaskProcessor {
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
                     break
 
-                case CmdOutParam:
-                    collectOutEnvParam(task, (CmdOutParam)param, workDir)
+                case CmdEvalParam:
+                    collectOutEnvParam(task, (CmdEvalParam)param, workDir)
                     break
 
                 case DefaultOutParam:
@@ -1558,7 +1557,7 @@ class TaskProcessor {
     protected void collectOutEnvParam(TaskRun task, BaseOutParam param, Path workDir) {
 
         // fetch the output value
-        final outCmds =  param instanceof CmdOutParam ? task.getOutputCommands() : null
+        final outCmds =  param instanceof CmdEvalParam ? task.getOutputEvals() : null
         final val = collectOutEnvMap(workDir,outCmds).get(param.name)
         if( val == null && !param.optional )
             throw new MissingValueException("Missing environment variable: $param.name")
@@ -1575,13 +1574,13 @@ class TaskProcessor {
      *
      * @param workDir
      *      The task work directory that contains the `.command.env` file
-     * @param outCommands
+     * @param outEvals
      *      A {@link Map} instance containing key-value pairs
      * @return
      */
     @CompileStatic
     @Memoized(maxCacheSize = 10_000)
-    protected Map collectOutEnvMap(Path workDir, Map<String,String> outCommands) {
+    protected Map collectOutEnvMap(Path workDir, Map<String,String> outEvals) {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
         final result = new HashMap<String,String>(50)
         Matcher matcher
@@ -1604,10 +1603,10 @@ class TaskProcessor {
                 // when exit status is defined and it is a non-zero, it should be interpreted
                 // as a failure of the execution of the output command; in this case the variable
                 // holds the std error message
-                if( outCommands!=null && status ) {
-                    final cmd = outCommands.get(current)
+                if( outEvals!=null && status ) {
+                    final cmd = outEvals.get(current)
                     final out = result[current]
-                    throw new ProcessCommandException("Unable to evaluate command output", cmd, out, status)
+                    throw new ProcessEvalException("Unable to evaluate output", cmd, out, status)
                 }
                 // reset current key
                 current = null

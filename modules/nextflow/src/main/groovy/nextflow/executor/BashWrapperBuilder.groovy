@@ -175,38 +175,76 @@ class BashWrapperBuilder {
         }
     }
 
-    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, Map<String,String> outCmds) {
+    /**
+     * Generate a Bash script to be appended to the task command script
+     * that takes care of capturing the process output environment variables
+     * and evaluation commands
+     *
+     * @param outEnvs
+     *      The list of environment variables names whose value need to be captured
+     * @param outEvals
+     *      The set of commands to be evaluated to determine the output value to be captured
+     * @return
+     *      The Bash script to capture the output environment and eval commands
+     */
+    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, Map<String,String> outEvals) {
         // load the env template
-        def template = BashWrapperBuilder.class
+        final template = BashWrapperBuilder.class
             .getResourceAsStream('command-env.txt')
             .newReader()
-        def binding = Map.of('env_file', TaskRun.CMD_ENV)
-        def result = engine.render(template, binding)
-        // avoid nulls
+        final binding = Map.of('env_file', TaskRun.CMD_ENV)
+        final result = new StringBuilder()
+        result.append( engine.render(template, binding) )
+        appendOutEnv(result, outEnvs)
+        appendOutEval(result, outEvals)
+        return result.toString()
+    }
+
+    /**
+     * Render a Bash script to capture the one or more env variables
+     *
+     * @param result A {@link StringBuilder} instance to which append the result Bash script
+     * @param outEnvs The environment variables to be captured
+     */
+    protected void appendOutEnv(StringBuilder result, List<String> outEnvs) {
         if( outEnvs==null )
             outEnvs = List.<String>of()
-        if( outCmds==null )
-            outCmds = Map.<String,String>of()
         // out env
         for( String key : outEnvs ) {
-            result += "#\n"
-            result += "echo $key=\"\${$key[@]}\" >> ${TaskRun.CMD_ENV}\n"
-            result += "echo /$key/ >> ${TaskRun.CMD_ENV}\n"
+            result << "#\n"
+            result << "echo $key=\"\${$key[@]}\" >> ${TaskRun.CMD_ENV}\n"
+            result << "echo /$key/ >> ${TaskRun.CMD_ENV}\n"
         }
-        // out cmd
-        for( Map.Entry<String,String> cmd : outCmds ) {
-            result += "#\n"
-            result += "nxf_catch STDOUT STDERR ${cmd.value}\n"
-            result += 'status=$?\n'
-            result += 'if [ $status -eq 0 ]; then\n'
-            result += "  echo $cmd.key=\"\$STDOUT\" >> ${TaskRun.CMD_ENV}\n"
-            result += "  echo /$cmd.key/=exit:0 >> ${TaskRun.CMD_ENV}\n"
-            result += 'else\n'
-            result += "  echo $cmd.key=\"\$STDERR\" >> ${TaskRun.CMD_ENV}\n"
-            result += "  echo /$cmd.key/=exit:\$status >> ${TaskRun.CMD_ENV}\n"
-            result += 'fi\n'
+    }
+
+    /**
+     * Render a Bash script to capture the result of one or more commands
+     * evaluated in the task script context
+     *
+     * @param result
+     *      A {@link StringBuilder} instance to which append the result Bash script
+     * @param outEvals
+     *      A {@link Map} of key-value pairs modeling the commands to be evaluated;
+     *      where the key represents the environment variable (name) holding the
+     *      resulting output, and the pair value represent the Bash command to be
+     *      evaluated.
+     */
+    protected void appendOutEval(StringBuilder result, Map<String,String> outEvals) {
+        if( outEvals==null )
+            outEvals = Map.<String,String>of()
+        // out eval
+        for( Map.Entry<String,String> eval : outEvals ) {
+            result << "#\n"
+            result <<"nxf_eval_cmd STDOUT STDERR ${eval.value}\n"
+            result << 'status=$?\n'
+            result << 'if [ $status -eq 0 ]; then\n'
+            result << "  echo $eval.key=\"\$STDOUT\" >> ${TaskRun.CMD_ENV}\n"
+            result << "  echo /$eval.key/=exit:0 >> ${TaskRun.CMD_ENV}\n"
+            result << 'else\n'
+            result << "  echo $eval.key=\"\$STDERR\" >> ${TaskRun.CMD_ENV}\n"
+            result << "  echo /$eval.key/=exit:\$status >> ${TaskRun.CMD_ENV}\n"
+            result << 'fi\n'
         }
-        result.toString()
     }
 
     protected String stageCommand(String stagingScript) {
@@ -255,12 +293,16 @@ class BashWrapperBuilder {
          */
         final interpreter = TaskProcessor.fetchInterpreter(script)
 
-        if( outputEnvNames || outputCommands ) {
+        /*
+         * append to the command script a prolog to capture the declared
+         * output environment (variable) and evaluation commands
+         */
+        if( outputEnvNames || outputEvals ) {
             if( !isBash(interpreter) && outputEnvNames )
-                throw new IllegalArgumentException("Process output of type env is only allowed with Bash process scripts -- Current interpreter: $interpreter")
-            if( !isBash(interpreter) && outputCommands )
-                throw new IllegalArgumentException("Process output of type cmd is only allowed with Bash process scripts -- Current interpreter: $interpreter")
-            script += getOutputEnvCaptureSnippet(outputEnvNames, outputCommands)
+                throw new IllegalArgumentException("Process output of type 'env' is only allowed with Bash process scripts -- Current interpreter: $interpreter")
+            if( !isBash(interpreter) && outputEvals )
+                throw new IllegalArgumentException("Process output of type 'eval' is only allowed with Bash process scripts -- Current interpreter: $interpreter")
+            script += getOutputEnvCaptureSnippet(outputEnvNames, outputEvals)
         }
 
         final binding = new HashMap<String,String>(20)
