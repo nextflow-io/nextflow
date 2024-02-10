@@ -314,18 +314,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
-        if( launcher.options.ansiLog ){
-            log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
-
-            def fmt = ansi()
-            fmt.a("\n")
-            fmt.bg(Color.CYAN).fg(Color.BLACK).bold().a(" N E X T F L O W ").reset()
-            fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
-            fmt.a("\n")
-            AnsiConsole.out().println(fmt.eraseLine())
-        } else {
-            log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
-        }
+        printBanner()
         Plugins.init()
 
         // -- specify the arguments
@@ -387,6 +376,21 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs, this.entryName)
     }
 
+    protected void printBanner() {
+        if( launcher.options.ansiLog ){
+            log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
+
+            def fmt = ansi()
+            fmt.a("\n")
+            fmt.bg(Color.CYAN).fg(Color.BLACK).bold().a(" N E X T F L O W ").reset()
+            fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
+            fmt.a("\n")
+            AnsiConsole.out().println(fmt.eraseLine())
+        } else {
+            log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
+        }
+
+    }
     protected checkConfigEnv(ConfigMap config) {
         // Warn about setting NXF_ environment variables within env config scope
         final env = config.env as Map<String, String>
