@@ -1267,7 +1267,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Create workflow execution timeline.
 
 `-with-tower` (`https://api.tower.nf`)
-: Monitor workflow execution with [Tower](https://cloud.tower.nf/).
+: Monitor workflow execution with [Seqera Platform](https://cloud.tower.nf/) (formerly Tower Cloud).
 
 `-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
@@ -1331,7 +1331,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -entry workflow_A
   ```
 
-- Execute a pipeline with integrated monitoring in [Tower](https://cloud.tower.nf).
+- Execute a pipeline with integrated monitoring in [Seqera Platform](https://cloud.tower.nf).
 
   ```console
   $ nextflow run nextflow-io/hello -with-tower

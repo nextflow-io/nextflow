@@ -199,7 +199,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.getEnvironment() >> [:]
         bash.getBinDirs() >> [Paths.get('/my/bin') ]
         bash.getWorkDir() >> Paths.get('/my/work/dir')
-        bash.getStatsEnabled() >> false
+        bash.isStatsEnabled() >> false
         bash.getStageInMode() >> 'symlink'
         bash.getInputFiles() >> [:]
         bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
