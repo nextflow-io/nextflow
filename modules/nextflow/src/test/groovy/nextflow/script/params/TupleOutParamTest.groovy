@@ -179,12 +179,12 @@ class TupleOutParamTest extends Dsl2Spec {
         outs[0].inner[1].getName() == 'BAR'
     }
 
-    def 'should create tuple of cmd' () {
+    def 'should create tuple of eval' () {
         setup:
         def text = '''
             process hola {
               output:
-                tuple cmd('this --one'), cmd("$other --two")
+                tuple eval('this --one'), eval("$other --two")
               
               /echo command/ 
             }
@@ -208,11 +208,11 @@ class TupleOutParamTest extends Dsl2Spec {
         outs[0].inner.size() == 2
         and:
         outs[0].inner[0] instanceof CmdEvalParam
-        outs[0].inner[0].getName() =~ /nxf_out_cmd_\d+/
+        outs[0].inner[0].getName() =~ /nxf_out_eval_\d+/
         (outs[0].inner[0] as CmdEvalParam).getTarget(binding) == 'this --one'
         and:
         outs[0].inner[1] instanceof CmdEvalParam
-        outs[0].inner[1].getName() =~ /nxf_out_cmd_\d+/
+        outs[0].inner[1].getName() =~ /nxf_out_eval_\d+/
         (outs[0].inner[1] as CmdEvalParam).getTarget(binding) == 'tool --two'
 
     }

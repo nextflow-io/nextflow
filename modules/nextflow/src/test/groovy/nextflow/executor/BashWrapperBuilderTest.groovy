@@ -1131,7 +1131,7 @@ class BashWrapperBuilderTest extends Specification {
             set +e
             cd "$NXF_TASK_WORKDIR"
             
-            nxf_catch() {
+            nxf_eval_cmd() {
                 {
                     IFS=$'\\n' read -r -d '' "${1}";
                     IFS=$'\\n' read -r -d '' "${2}";
@@ -1163,7 +1163,7 @@ class BashWrapperBuilderTest extends Specification {
             set +e
             cd "$NXF_TASK_WORKDIR"
             
-            nxf_catch() {
+            nxf_eval_cmd() {
                 {
                     IFS=$'\\n' read -r -d '' "${1}";
                     IFS=$'\\n' read -r -d '' "${2}";
@@ -1176,7 +1176,7 @@ class BashWrapperBuilderTest extends Specification {
             echo FOO="${FOO[@]}" >> .command.env
             echo /FOO/ >> .command.env
             #
-            nxf_catch STDOUT STDERR this --cmd
+            nxf_eval_cmd STDOUT STDERR this --cmd
             status=$?
             if [ $status -eq 0 ]; then
               echo THIS="$STDOUT" >> .command.env
@@ -1186,7 +1186,7 @@ class BashWrapperBuilderTest extends Specification {
               echo /THIS/=exit:$status >> .command.env
             fi
             #
-            nxf_catch STDOUT STDERR other --cmd
+            nxf_eval_cmd STDOUT STDERR other --cmd
             status=$?
             if [ $status -eq 0 ]; then
               echo THAT="$STDOUT" >> .command.env

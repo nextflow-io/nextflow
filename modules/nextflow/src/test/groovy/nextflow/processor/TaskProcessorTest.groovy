@@ -984,7 +984,7 @@ class TaskProcessorTest extends Specification {
         processor.collectOutEnvMap(workDir, [cmd_out_1: 'foo --this', cmd_out_2: 'bar --that'])
         then:
         def e = thrown(ProcessEvalException)
-        e.message == 'Unable to evaluate command output'
+        e.message == 'Unable to evaluate output'
         e.command == 'bar --that'
         e.output == 'This is an error message\nfor unknown reason'
         e.status == 100
