@@ -395,7 +395,7 @@ class AnsiLogObserver implements TraceObserver {
             return str
         // Take the first 3 characters and the final chunk of text
         //   eg. for: NFCORE_RNASEQ:RNASEQ:FASTQ_SUBSAMPLE_FQ_SALMON:FQ_SUBSAMPLE
-        //   trunacte to: NFC…_SALMON:FQ_SUBSAMPLE
+        //   truncate to: NFC…_SALMON:FQ_SUBSAMPLE
         return cols>5 ? str.take(3) + '…' + str.takeRight(cols-1-3) : str[0..cols-1]
     }
 
