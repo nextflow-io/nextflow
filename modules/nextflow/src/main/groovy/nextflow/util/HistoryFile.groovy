@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 /**
@@ -34,7 +35,7 @@ import nextflow.exception.AbortOperationException
 @Slf4j
 class HistoryFile extends File {
 
-    static String defaultFileName() { "${SysEnv.get('NXF_CACHE_DIR', '.nextflow')}/history" }
+    static String defaultFileName() { Const.appCacheDir.resolve('history').toString() }
 
     @Lazy
     public static final HistoryFile DEFAULT = { def f=new HistoryFile(); f.parentFile?.mkdirs(); return f } ()

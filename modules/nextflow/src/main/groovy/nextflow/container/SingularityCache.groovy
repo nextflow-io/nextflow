@@ -27,6 +27,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
+import nextflow.Const
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.file.FileMutex
@@ -156,8 +157,7 @@ class SingularityCache {
         def workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
             // when the work dir is a remote path use the local launch directory to cache image files
-            final localCacheDir = SysEnv.get('NXF_CACHE_DIR', '.nextflow')
-            workDir = Path.of(localCacheDir).toAbsolutePath()
+            workDir = Const.appCacheDir.toAbsolutePath()
         }
 
         missingCacheDir = true

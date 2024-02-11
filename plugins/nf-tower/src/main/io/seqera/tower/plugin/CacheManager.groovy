@@ -27,7 +27,7 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.SysEnv
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -66,8 +66,7 @@ class CacheManager {
         if( !sessionUuid )
             throw new AbortOperationException("Missing target uuid - cache sync cannot be performed")
 
-        final localCacheDir = SysEnv.get('NXF_CACHE_DIR', '.nextflow')
-        this.localCachePath = Paths.get("${localCacheDir}/cache/${sessionUuid}")
+        this.localCachePath = Const.appCacheDir.resolve("cache/${sessionUuid}")
 
         if( env.NXF_OUT_FILE )
             localOutFile = Paths.get(env.NXF_OUT_FILE)
