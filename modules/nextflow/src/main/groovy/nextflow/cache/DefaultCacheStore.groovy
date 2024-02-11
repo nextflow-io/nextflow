@@ -18,10 +18,10 @@
 package nextflow.cache
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
 import org.iq80.leveldb.DB
@@ -64,7 +64,7 @@ class DefaultCacheStore implements CacheStore {
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
-        this.baseDir = home ?: Paths.get('.nextflow').toAbsolutePath()
+        this.baseDir = home ?: Const.appCacheDir.toAbsolutePath()
         this.dataDir = baseDir.resolve("cache/$uniqueId")
         this.indexFile = dataDir.resolve("index.$runName")
     }

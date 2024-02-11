@@ -1669,16 +1669,21 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_ASSETS`
 : Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
 
-`NXF_CLOUDCACHE_PATH`
-: :::{versionadded} 23.07.0-edge
+`NXF_CACHE_DIR`
+: :::{versionadded} 24.02.0-edge
   :::
-: Defines the base cache path when using the cloud cache store.
+: Defines the base cache directory when using the default cache store (default: `"$launchDir/.nextflow"`).
 
 `NXF_CHARLIECLOUD_CACHEDIR`
 : Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
 `NXF_CLASSPATH`
 : Allows the extension of the Java runtime classpath with extra JAR files or class folders.
+
+`NXF_CLOUDCACHE_PATH`
+: :::{versionadded} 23.07.0-edge
+  :::
+: Defines the base cache path when using the cloud cache store.
 
 `NXF_CLOUD_DRIVER`
 : Defines the default cloud driver to be used if not specified in the config file or as command line option, either `aws` or `google`.

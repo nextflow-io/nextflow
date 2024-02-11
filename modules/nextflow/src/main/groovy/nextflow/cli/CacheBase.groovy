@@ -49,7 +49,7 @@ trait CacheBase {
     void init() {
 
         if( !history ) {
-            history = !basePath ? HistoryFile.DEFAULT : new HistoryFile(basePath.resolve(HistoryFile.FILE_NAME))
+            history = !basePath ? HistoryFile.DEFAULT : new HistoryFile(basePath.resolve(HistoryFile.defaultFileName()))
         }
 
         if( !history.exists() || history.empty() )
