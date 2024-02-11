@@ -38,6 +38,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -587,7 +588,29 @@ class TaskRun implements Cloneable {
 
     List<String> getOutputEnvNames() {
         final items = getOutputsByType(EnvOutParam)
-        return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
+        if( !items )
+            return List.<String>of()
+        final result = new ArrayList<String>(items.size())
+        for( EnvOutParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output environment name - offending parameter: $it")
+            result.add(it.name)
+        }
+        return result
+    }
+
+    /**
+     * @return A {@link Map} instance holding a collection of key-pairs
+     * where the key represents a environment variable name holding the command
+     * output and the value the command the executed.
+     */
+    Map<String,String> getOutputEvals() {
+        final items = getOutputsByType(CmdEvalParam)
+        final result = new LinkedHashMap(items.size())
+        for( CmdEvalParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output eval name - offending parameter: $it")
+            result.put(it.name, it.getTarget(context))
+        }
+        return result
     }
 
     Path getCondaEnv() {
