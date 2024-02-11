@@ -70,8 +70,6 @@ class Const {
         return Path.of(SysEnv.get('NXF_CACHE_DIR', '.nextflow'))
     }
 
-    static public final String S3_UPLOADER_CLASS = 'nextflow.cloud.aws.nio'
-
     static public final String ROLE_WORKER = 'worker'
 
     static public final String ROLE_MASTER = 'master'
