@@ -19,6 +19,7 @@ import static nextflow.util.HistoryFile.Record
 
 import java.nio.file.Files
 
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 /**
@@ -36,6 +37,15 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
 2016-07-24 16:43:34\t-\tsmall_cirum\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
 2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
+
+    def 'should support custom base dir' () {
+        given:
+        SysEnv.push([NXF_CACHE_DIR: '/.nextflow'])
+        expect:
+        HistoryFile.defaultFileName() == '/.nextflow/history'
+        cleanup:
+        SysEnv.pop()
+    }
 
     def 'test add and get and find' () {
 
