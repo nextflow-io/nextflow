@@ -69,5 +69,5 @@ The secrets are made available in the process context running the command script
 :::
 
 :::{note}
-This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Nextflow Tower](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
+This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
 :::

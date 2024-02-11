@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1246,6 +1246,15 @@ class WaveClientTest extends Specification {
         'arm64'             | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
         'linux/arm64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
         'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+    }
+
+    def 'should configure custom s5cmd' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave:[s5cmdConfigUrl: 'http://host.com/s5cmd.zip']] }
+        when:
+        def wave = Spy(new WaveClient(sess))
+        then:
+        wave.@s5cmdConfigUrl == new URL('http://host.com/s5cmd.zip')
     }
 
     def 'should check is local conda file' () {

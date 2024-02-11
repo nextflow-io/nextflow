@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ class CmdRun extends CmdBase implements HubOptions {
         launcher.options.ansiLog = value
     }
 
-    @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
+    @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Platform (formerly Tower Cloud)')
     String withTower
 
     @Parameter(names = ['-with-wave'], hidden = true)

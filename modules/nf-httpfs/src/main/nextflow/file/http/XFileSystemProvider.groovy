@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -482,7 +482,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {
         final header0 = InsensitiveMap.<String,List<String>>of(header)
         def lastMod = header0.get("Last-Modified")?.get(0)
-        long contentLen = header0.get("Content-Length")?.get(0)?.toLong() ?: -1
+        long contentLen = header0.get("Content-Length")?.get(0)?.toLong() ?: -1L
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z', Locale.ENGLISH) // <-- make sure date parse is not language dependent (for the week day)
         def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).time, TimeUnit.MILLISECONDS) : (FileTime)null
         new XFileAttributes(modTime, contentLen)
