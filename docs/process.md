@@ -1084,14 +1084,6 @@ Only one-line Bash commands are supported. You can use a semi-colon `;` to speci
 
 If the command fails, the task will also fail. In Bash, you can append `|| true` to a command to suppress any command failure.
 
-(process-set)=
-
-### Output type `set`
-
-:::{deprecated} 19.08.1-edge
-Use `tuple` instead.
-:::
-
 (process-out-tuple)=
 
 ### Output type `tuple`
