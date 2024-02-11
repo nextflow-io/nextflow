@@ -109,6 +109,19 @@ class TokenEnvCall {
     Object val
 }
 
+/**
+ * Token used by the DSL to identify a command output declaration, like this
+ *     <pre>
+ *     input:
+ *     tuple( eval(X), ... )
+ *     <pre>
+ */
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
+class TokenEvalCall {
+    Object val
+}
 
 /**
  * This class is used to identify a 'val' when used like in this example:

@@ -1,0 +1,8 @@
+.
+..
+.command.begin
+.command.err
+.command.log
+.command.out
+.command.run
+.command.sh

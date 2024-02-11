@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,43 +12,50 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package nextflow.script.params
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import groovy.transform.InheritConstructors
-import nextflow.script.TokenVar
+import groovy.transform.Memoized
 
 /**
- * Model process `output: env PARAM` definition
+ * Model process `output: eval PARAM` definition
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class EnvOutParam extends BaseOutParam implements OptionalParam {
+class CmdEvalParam extends BaseOutParam implements OptionalParam {
 
-    protected target
+    private static AtomicInteger counter = new AtomicInteger()
+
+    private Object target
+
+    private int count
+
+    {
+        count = counter.incrementAndGet()
+    }
 
     String getName() {
-        return nameObj ? super.getName() : null
+        return "nxf_out_eval_${count}"
     }
 
     BaseOutParam bind( def obj ) {
+        if( obj !instanceof CharSequence )
+            throw new IllegalArgumentException("Invalid argument for command output: $this")
         // the target value object
         target = obj
-
-        // retrieve the variable name to be used to fetch the value
-        if( obj instanceof TokenVar ) {
-            this.nameObj = obj.name
-        }
-        else if( obj instanceof CharSequence ) {
-            this.nameObj = obj.toString()
-        }
-        else {
-            throw new IllegalArgumentException("Unexpected environment output definition - it should be either a string or a variable identifier - offending value: ${obj?.getClass()?.getName()}")
-        }
-
         return this
     }
 
+    @Memoized
+    String getTarget(Map<String,Object> context) {
+        return target instanceof GString
+            ? target.cloneAsLazy(context).toString()
+            : target.toString()
+    }
 }
