@@ -120,6 +120,8 @@ class PodSpecBuilder {
 
     String schedulerName
 
+    Integer ttlSecondsAfterFinished
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -378,6 +380,9 @@ class PodSpecBuilder {
         privileged = opts.privileged
         // -- scheduler name
         schedulerName = opts.schedulerName
+        // -- ttl seconds after finished (job)
+        if( opts.ttlSecondsAfterFinished != null )
+            ttlSecondsAfterFinished = opts.ttlSecondsAfterFinished
 
         return this
     }
@@ -576,18 +581,22 @@ class PodSpecBuilder {
 
     Map buildAsJob() {
         final pod = build()
+        final spec = [
+            backoffLimit: 0,
+            template: [
+                metadata: pod.metadata,
+                spec: pod.spec
+            ]
+        ]
+
+        if( ttlSecondsAfterFinished != null )
+            spec.ttlSecondsAfterFinished = ttlSecondsAfterFinished
 
         return [
             apiVersion: 'batch/v1',
             kind: 'Job',
             metadata: pod.metadata,
-            spec: [
-                backoffLimit: 0,
-                template: [
-                    metadata: pod.metadata,
-                    spec: pod.spec
-                ]
-            ]
+            spec: spec
         ]
     }
 

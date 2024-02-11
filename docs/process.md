@@ -2157,6 +2157,11 @@ The following options are available:
       effect: "NoSchedule"
   ```
 
+`ttlSecondsAfterFinished`
+: :::{versionadded} 24.02.0-edge
+  :::
+: Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs) for finished jobs in seconds. Applies to both successful and failed jobs.
+
 `volumeClaim: '<name>', mountPath: '</absolute/path>' [, subPath: '<path>', readOnly: true | false]`
 : *Can be specified multiple times*
 : Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with the given name to the given path.
