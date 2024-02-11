@@ -179,7 +179,7 @@ class LoggerHelper {
 
         // -- add the S3 uploader by default
         if( !containsClassName(debugConf,traceConf, 'nextflow.cloud.aws.nio') )
-            debugConf << S3_UPLOADER_CLASS
+            debugConf << 'nextflow.cloud.aws.nio'
         if( !containsClassName(debugConf,traceConf, 'io.seqera') )
             debugConf << 'io.seqera'
 
