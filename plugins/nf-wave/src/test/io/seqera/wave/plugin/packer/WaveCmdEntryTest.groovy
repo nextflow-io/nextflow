@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package io.seqera.wave.plugin.packer
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.FileTime
 
 import groovy.json.JsonSlurper
 import io.seqera.wave.plugin.cli.WaveCmdEntry
@@ -46,8 +45,6 @@ class WaveCmdEntryTest extends Specification implements TarHelper {
 
     def 'should create create pack' () {
         given:
-        def LAST_MODIFIED = FileTime.fromMillis(1_000_000_000_000)
-        and:
         def rootPath = folder.resolve('bundle'); rootPath.mkdir()
         def untarPath = folder.resolve('untar'); untarPath.mkdir()
         rootPath.resolve('main.nf').text = "I'm the main file"
@@ -57,7 +54,6 @@ class WaveCmdEntryTest extends Specification implements TarHelper {
         Files.write(rootPath.resolve('this/that/ciao.txt'), "Ciao".bytes)
         and:
         FileHelper.visitFiles([type:'any'], rootPath, '**', {
-            Files.setLastModifiedTime(it, LAST_MODIFIED)
             final mode = it.isDirectory() ? 0700 : 0600
             FilesEx.setPermissionsMode(it, mode)
         })
@@ -74,8 +70,8 @@ class WaveCmdEntryTest extends Specification implements TarHelper {
         and:
         json.layers[0].gzipSize == Files.size(gzipFile)
         json.layers[0].location == gzipFile.toUri().toString()
-        json.layers[0].tarDigest == 'sha256:81200f6ad32793567d8070375dc51312a1711fedf6a1c6f5e4a97fa3014f3491'
-        json.layers[0].gzipDigest == 'sha256:09a2deca4293245909223db505cf69affa1a8ff8acb745fe3cad38bc0b719110'
+        json.layers[0].tarDigest == 'sha256:f556b94e9b6f5f72b86e44833614b465df9f65cb4210e3f4416292dca1618360'
+        json.layers[0].gzipDigest == 'sha256:e58685a82452a11faa926843e7861c94bdb93e2c8f098b5c5354ec9b6fee2b68'
         
         when:
         def tar = uncompress(Files.readAllBytes(gzipFile))

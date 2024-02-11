@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ class SingularityCache {
     }
 
     /**
-     * Create the specified directory if not exists
+     * Create the specified directory if it does not exist
      *
      * @param
      *      str A path string representing a folder where store the singularity images once downloaded

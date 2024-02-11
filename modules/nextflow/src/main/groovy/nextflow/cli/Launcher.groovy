@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -685,10 +686,25 @@ class Launcher {
             SPLASH
         }
         else {
-            "${APP_NAME} version ${APP_VER}.${APP_BUILDNUM}"
+            "${APP_NAME} version ${BuildInfo.version}.${BuildInfo.buildNum}"
         }
 
     }
 
+    /*
+     * The application 'logo'
+     */
+    /*
+     * The application 'logo'
+     */
+    static public final String SPLASH =
+
+"""
+      N E X T F L O W
+      version ${BuildInfo.version} build ${BuildInfo.buildNum}
+      created ${BuildInfo.timestampUTC} ${BuildInfo.timestampDelta}
+      cite doi:10.1038/nbt.3820
+      http://nextflow.io
+"""
 
 }

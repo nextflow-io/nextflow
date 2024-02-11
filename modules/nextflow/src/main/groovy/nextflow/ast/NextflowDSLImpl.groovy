@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -915,15 +916,16 @@ class NextflowDSLImpl implements ASTTransformation {
 
         /**
          * Transform a map entry `emit: something` into `emit: 'something'
+         * and `topic: something` into `topic: 'something'
          * (ie. as a constant) in a map expression passed as argument to
          * a method call. This allow the syntax
          *
          *   output:
-         *   path 'foo', emit: bar
+         *   path 'foo', emit: bar, topic: baz
          *
          * @param call
          */
-        protected void fixOutEmitOption(MethodCallExpression call) {
+        protected void fixOutEmitAndTopicOptions(MethodCallExpression call) {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
             if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
@@ -934,6 +936,9 @@ class NextflowDSLImpl implements ASTTransformation {
                 final key = isConstX(entry.keyExpression)
                 final val = isVariableX(entry.valueExpression)
                 if( key?.text == 'emit' && val ) {
+                    map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
+                }
+                else if( key?.text == 'topic' && val ) {
                     map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
                 }
             }
@@ -951,11 +956,11 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','eval','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
-                fixOutEmitOption(methodCall)
+                fixOutEmitAndTopicOptions(methodCall)
             }
 
             else if( methodName in ['into','mode'] ) {
@@ -1117,6 +1122,11 @@ class NextflowDSLImpl implements ASTTransformation {
                 if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
                     return createX( TokenEnvCall, args )
+                }
+
+                if( methodCall.methodAsString == 'eval' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenEvalCall, args )
                 }
 
                 /*

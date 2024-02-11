@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -433,8 +434,8 @@ class TaskRun implements Cloneable {
      */
     Map<String,Path> getInputFilesMap() {
 
-        def result = [:]
-        def allFiles = getInputFiles().values()
+        final allFiles = getInputFiles().values()
+        final result = new HashMap<String,Path>(allFiles.size())
         for( List<FileHolder> entry : allFiles ) {
             if( entry ) for( FileHolder it : entry ) {
                 result[ it.stageName ] = it.storePath
@@ -587,7 +588,29 @@ class TaskRun implements Cloneable {
 
     List<String> getOutputEnvNames() {
         final items = getOutputsByType(EnvOutParam)
-        return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
+        if( !items )
+            return List.<String>of()
+        final result = new ArrayList<String>(items.size())
+        for( EnvOutParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output environment name - offending parameter: $it")
+            result.add(it.name)
+        }
+        return result
+    }
+
+    /**
+     * @return A {@link Map} instance holding a collection of key-pairs
+     * where the key represents a environment variable name holding the command
+     * output and the value the command the executed.
+     */
+    Map<String,String> getOutputEvals() {
+        final items = getOutputsByType(CmdEvalParam)
+        final result = new LinkedHashMap(items.size())
+        for( CmdEvalParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output eval name - offending parameter: $it")
+            result.put(it.name, it.getTarget(context))
+        }
+        return result
     }
 
     Path getCondaEnv() {

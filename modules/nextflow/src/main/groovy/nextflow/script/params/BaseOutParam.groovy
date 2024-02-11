@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,8 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     boolean singleton
 
     String channelEmitName
+
+    String channelTopicName
 
     BaseOutParam( Binding binding, List list, short ownerIndex = -1) {
         super(binding,list,ownerIndex)
@@ -180,6 +182,20 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
             log.warn(msg)
         }
         this.channelEmitName = value
+        return this
+    }
+
+    BaseOutParam setTopic( String name ) {
+        if( isNestedParam() )
+            throw new IllegalArgumentException("Output `topic` option it not allowed in tuple components")
+        if( !name )
+            throw new IllegalArgumentException("Missing output `topic` name")
+        if( !ConfigHelper.isValidIdentifier(name) ) {
+            final msg = "Output topic '$name' is not a valid name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            throw new IllegalArgumentException(msg)
+        }
+
+        this.channelTopicName = name
         return this
     }
 }

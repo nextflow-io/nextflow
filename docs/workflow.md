@@ -104,7 +104,7 @@ workflow {
 }
 ```
 
-When a process defines multiple output channels, each output can be accessed using the array element operator (`out[0]`, `out[1]`, etc.) or using *named outputs* (see below).
+When a process defines multiple output channels, each output can be accessed by index (`out[0]`, `out[1]`, etc.) or by name (see below).
 
 The process output(s) can also be accessed like the return value of a function:
 
@@ -144,7 +144,7 @@ workflow {
 }
 ```
 
-See {ref}`process-multiple-outputs` for more details.
+See {ref}`process outputs <process-additional-options>` for more details.
 
 ### Process named stdout
 
@@ -246,10 +246,6 @@ workflow {
     my_pipeline( channel.from('/some/data') )
 }
 ```
-
-:::{note}
-Workflow inputs are always channels by definition. If a basic data type, such as a number, string, list, etc, is provided, it is implicitly converted to a {ref}`value channel <channel-type-value>`.
-:::
 
 ### Workflow outputs
 

@@ -12,6 +12,7 @@ on:
       - 'master'
       - 'test*'
       - 'dev*'
+      - 'STABLE-*'
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
@@ -31,14 +32,14 @@ jobs:
         run: env | sort
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v41
         with:
           files_ignore: docs
 
@@ -99,10 +100,10 @@ jobs:
       fail-fast: false
       matrix:
         java_version: [11, 21]
-        test_mode: ["test_integration", "test_aws", "test_azure", "test_google", "test_wave"]
+        test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true

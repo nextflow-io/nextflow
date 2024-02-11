@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,8 +72,8 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
-            args.addAll((List)vars.args)
+            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
         
@@ -239,7 +239,11 @@ class ScriptBinding extends WorkflowBinding {
         }
 
         private ParamsMap allowNames(Set names) {
-            readOnlyNames.removeAll(names)
+            for( String name : names ) {
+                final name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
+                readOnlyNames.remove(name)
+                readOnlyNames.remove(name2)
+            }
             return this
         }
 

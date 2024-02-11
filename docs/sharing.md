@@ -489,6 +489,10 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 
 Nextflow will automatically add the `bin/` directory to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
 
+### Utility code
+
+Any Groovy scripts or JAR files in the `lib` directory will be automatically loaded and made available to your pipeline scripts. The `lib` directory is a useful way to provide utility code or external libraries without cluttering the pipeline scripts.
+
 ### System environment
 
 Any environment variable that may be required by the tools in your pipeline can be defined in the `nextflow.config` file by using the `env` scope and including it in the root directory of your project. For example:
