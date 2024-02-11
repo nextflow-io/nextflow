@@ -61,6 +61,7 @@ import nextflow.exception.FailedGuardException
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
+import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
@@ -84,6 +85,8 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.BaseOutParam
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -1079,6 +1082,10 @@ class TaskProcessor {
                     formatTaskError( message, error, task )
                     break
 
+                case ProcessEvalException:
+                    formatCommandError( message, error, task )
+                    break
+
                 case FailedGuardException:
                     formatGuardError( message, error as FailedGuardException, task )
                     break;
@@ -1148,6 +1155,35 @@ class TaskProcessor {
         }
 
         return action
+    }
+
+    final protected List<String> formatCommandError(List<String> message, ProcessEvalException error, TaskRun task) {
+        // compose a readable error message
+        message << formatErrorCause(error)
+
+        // - print the executed command
+        message << "Command executed:\n"
+        error.command.stripIndent(true)?.trim()?.eachLine {
+            message << "  ${it}"
+        }
+
+        // - the exit status
+        message << "\nCommand exit status:\n  ${error.status}"
+
+        // - the tail of the process stdout
+        message << "\nCommand output:"
+        def lines = error.output.readLines()
+        if( lines.size() == 0 ) {
+            message << "  (empty)"
+        }
+        for( String it : lines ) {
+            message << "  ${stripWorkDir(it, task.workDir)}"
+        }
+
+        if( task?.workDir )
+            message << "\nWork dir:\n  ${task.workDirStr}"
+
+        return message
     }
 
     final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
@@ -1500,6 +1536,10 @@ class TaskProcessor {
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
                     break
 
+                case CmdEvalParam:
+                    collectOutEnvParam(task, (CmdEvalParam)param, workDir)
+                    break
+
                 case DefaultOutParam:
                     task.setOutput(param, DefaultOutParam.Completion.DONE)
                     break
@@ -1514,10 +1554,11 @@ class TaskProcessor {
         task.canBind = true
     }
 
-    protected void collectOutEnvParam(TaskRun task, EnvOutParam param, Path workDir) {
+    protected void collectOutEnvParam(TaskRun task, BaseOutParam param, Path workDir) {
 
         // fetch the output value
-        final val = collectOutEnvMap(workDir).get(param.name)
+        final outCmds =  param instanceof CmdEvalParam ? task.getOutputEvals() : null
+        final val = collectOutEnvMap(workDir,outCmds).get(param.name)
         if( val == null && !param.optional )
             throw new MissingValueException("Missing environment variable: $param.name")
         // set into the output set
@@ -1527,25 +1568,56 @@ class TaskProcessor {
 
     }
 
+    /**
+     * Parse the `.command.env` file which holds the value for `env` and `cmd`
+     * output types
+     *
+     * @param workDir
+     *      The task work directory that contains the `.command.env` file
+     * @param outEvals
+     *      A {@link Map} instance containing key-value pairs
+     * @return
+     */
+    @CompileStatic
     @Memoized(maxCacheSize = 10_000)
-    protected Map collectOutEnvMap(Path workDir) {
+    protected Map collectOutEnvMap(Path workDir, Map<String,String> outEvals) {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
-        final result = new HashMap(50)
+        final result = new HashMap<String,String>(50)
+        Matcher matcher
+        // `current` represent the current capturing env variable name
+        String current=null
         for(String line : env.readLines() ) {
-            def (k,v) = tokenize0(line)
-            if (!k) continue
-            result.put(k,v)
+            // Opening condition:
+            // line should match a KEY=VALUE syntax
+            if( !current && (matcher = (line=~/([a-zA-Z_][a-zA-Z0-9_]*)=(.*)/)) ) {
+                final k = matcher.group(1)
+                final v = matcher.group(2)
+                if (!k) continue
+                result.put(k,v)
+                current = k
+            }
+            // Closing condition:
+            // line should match /KEY/  or  /KEY/=exit_status
+            else if( current && (matcher = (line=~/\/${current}\/(?:=exit:(\d+))?/)) ) {
+                final status = matcher.group(1) as Integer ?: 0
+                // when exit status is defined and it is a non-zero, it should be interpreted
+                // as a failure of the execution of the output command; in this case the variable
+                // holds the std error message
+                if( outEvals!=null && status ) {
+                    final cmd = outEvals.get(current)
+                    final out = result[current]
+                    throw new ProcessEvalException("Unable to evaluate output", cmd, out, status)
+                }
+                // reset current key
+                current = null
+            }
+            else if( current && line!=null) {
+                result[current] += '\n' + line
+            }
         }
         return result
     }
 
-    private List<String> tokenize0(String line) {
-        int p=line.indexOf('=')
-        return p==-1
-                ? List.of(line,'')
-                : List.of(line.substring(0,p), line.substring(p+1))
-    }
-    
     /**
      * Collects the process 'std output'
      *

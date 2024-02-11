@@ -1049,21 +1049,13 @@ To sum up, the use of output files with static names over dynamic ones is prefer
 
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
-```groovy
-process myTask {
-    output:
-    env FOO
-
-    script:
-    '''
-    FOO=$(ls -la)
-    '''
-}
-
-workflow {
-    myTask | view { "directory contents: $it" }
-}
+```{literalinclude} snippets/process-out-env.nf
+:language: groovy
 ```
+
+:::{versionchanged} 23.12.0-edge
+Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
+:::
 
 (process-stdout)=
 
@@ -1071,20 +1063,34 @@ workflow {
 
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
-```groovy
-process sayHello {
-    output:
-    stdout
-
-    """
-    echo Hello world!
-    """
-}
-
-workflow {
-    sayHello | view { "I say... $it" }
-}
+```{literalinclude} snippets/process-stdout.nf
+:language: groovy
 ```
+
+(process-out-eval)=
+
+### Output type `eval`
+
+:::{versionadded} 24.02.0-edge
+:::
+
+The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
+
+```{literalinclude} snippets/process-out-eval.nf
+:language: groovy
+```
+
+Only one-line Bash commands are supported. You can use a semi-colon `;` to specify multiple Bash commands on a single line, and many interpreters can execute arbitrary code on the command line, e.g. `python -c 'print("Hello world!")'`.
+
+If the command fails, the task will also fail. In Bash, you can append `|| true` to a command to suppress any command failure.
+
+(process-set)=
+
+### Output type `set`
+
+:::{deprecated} 19.08.1-edge
+Use `tuple` instead.
+:::
 
 (process-out-tuple)=
 
