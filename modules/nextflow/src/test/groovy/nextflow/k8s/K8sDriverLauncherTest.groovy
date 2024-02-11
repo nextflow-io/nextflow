@@ -226,7 +226,6 @@ class K8sDriverLauncherTest extends Specification {
             metadata: metadata,
             spec: [
                 backoffLimit: 0,
-                ttlSecondsAfterFinished: 3600,
                 template: [
                     metadata: metadata,
                     spec: [

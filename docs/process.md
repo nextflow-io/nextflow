@@ -2158,9 +2158,9 @@ The following options are available:
   ```
 
 `ttlSecondsAfterFinished`
-: :::{versionadded} 23.11.0-edge
+: :::{versionadded} 24.02.0-edge
   :::
-: Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs) for finished jobs in seconds (default: 1 hour). Applies to both successful and failed jobs.
+: Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs) for finished jobs in seconds. Applies to both successful and failed jobs.
 
 `volumeClaim: '<name>', mountPath: '</absolute/path>' [, subPath: '<path>', readOnly: true | false]`
 : *Can be specified multiple times*

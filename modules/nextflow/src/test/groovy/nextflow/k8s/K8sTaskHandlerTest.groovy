@@ -410,7 +410,6 @@ class K8sTaskHandlerTest extends Specification {
             metadata: [name: 'nf-123', namespace: 'default'],
             spec: [
                 backoffLimit: 0,
-                ttlSecondsAfterFinished: 3600,
                 template: [
                     metadata: [name: 'nf-123', namespace: 'default'],
                     spec: [

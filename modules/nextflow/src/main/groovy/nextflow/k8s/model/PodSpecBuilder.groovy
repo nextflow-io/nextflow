@@ -120,7 +120,7 @@ class PodSpecBuilder {
 
     String schedulerName
 
-    Integer ttlSecondsAfterFinished = 3600
+    Integer ttlSecondsAfterFinished
 
     /**
      * @return A sequential volume unique identifier

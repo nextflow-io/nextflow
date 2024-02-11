@@ -820,7 +820,6 @@ class PodSpecBuilderTest extends Specification {
             metadata: [name: 'foo', namespace: 'default'],
             spec: [
                 backoffLimit: 0,
-                ttlSecondsAfterFinished: 3600,
                 template: [
                     metadata: [name: 'foo', namespace: 'default'],
                     spec: [
@@ -878,7 +877,7 @@ class PodSpecBuilderTest extends Specification {
                 .withCommand(['echo', 'hello'])
                 .buildAsJob()
         then:
-        job.spec.ttlSecondsAfterFinished == 3600
+        !job.spec.ttlSecondsAfterFinished
 
         when:
         job = new PodSpecBuilder()
