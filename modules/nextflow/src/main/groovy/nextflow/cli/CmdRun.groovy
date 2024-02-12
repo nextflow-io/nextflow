@@ -384,10 +384,17 @@ class CmdRun extends CmdBase implements HubOptions {
             // Fancy coloured header for the ANSI console output
             def fmt = ansi()
             fmt.a("\n")
-            // Use exact Nextflow green RGB (13, 192, 157) and exact black text (0,0,0)
-            // Should render the same on every terminal, irrespective of colour scheme
-            // Jansi library can't do RGBs, so just do the ANSI codes manually
-            fmt.a("\033[1;38;2;0;0;0;48;2;13;192;157m N E X T F L O W ").reset()
+            // Use exact colour codes so that they render the same on every terminal,
+            //   irrespective of terminal colour scheme.
+            // Nextflow green RGB (13, 192, 157) and exact black text (0,0,0),
+            //   Apple Terminal only supports 256 colours, so use the closest match:
+            //   light sea green | #20B2AA | 38;5;0
+            //   Don't use black for text as terminals mess with this in their colour schemes.
+            //   Use very dark grey, which is more reliable.
+            // Jansi library bundled in Jline can't do exact RGBs,
+            //   so just do the ANSI codes manually
+            fmt.a("\033[1m\033[38;5;232m\033[48;5;43m N E X T F L O W ").reset()
+
             // Show Nextflow version
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
