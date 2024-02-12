@@ -16,6 +16,9 @@
 
 package nextflow.cli
 
+
+import static org.fusesource.jansi.Ansi.*
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.regex.Pattern
@@ -45,6 +48,7 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
 /**
  * CLI sub-command RUN
@@ -60,8 +64,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
     static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
 
-    static final public DSL2 = '2'
-    static final public DSL1 = '1'
+    static final public String DSL2 = '2'
+    static final public String DSL1 = '1'
 
     static {
         // install the custom pool factory for GPars threads
@@ -310,7 +314,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
-        log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
+        printBanner()
         Plugins.init()
 
         // -- specify the arguments
@@ -372,6 +376,37 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs, this.entryName)
     }
 
+    protected void printBanner() {
+        if( launcher.options.ansiLog ){
+            // Plain header for verbose log
+            log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
+
+            // Fancy coloured header for the ANSI console output
+            def fmt = ansi()
+            fmt.a("\n")
+            // Use exact colour codes so that they render the same on every terminal,
+            //   irrespective of terminal colour scheme.
+            // Nextflow green RGB (13, 192, 157) and exact black text (0,0,0),
+            //   Apple Terminal only supports 256 colours, so use the closest match:
+            //   light sea green | #20B2AA | 38;5;0
+            //   Don't use black for text as terminals mess with this in their colour schemes.
+            //   Use very dark grey, which is more reliable.
+            // Jansi library bundled in Jline can't do exact RGBs,
+            //   so just do the ANSI codes manually
+            final BACKGROUND = "\033[1m\033[38;5;232m\033[48;5;43m"
+            fmt.a("$BACKGROUND N E X T F L O W ").reset()
+
+            // Show Nextflow version
+            fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
+            fmt.a("\n")
+            AnsiConsole.out.println(fmt.eraseLine())
+        }
+        else {
+            // Plain header to the console if ANSI is disabled
+            log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
+        }
+    }
+
     protected checkConfigEnv(ConfigMap config) {
         // Warn about setting NXF_ environment variables within env config scope
         final env = config.env as Map<String, String>
@@ -396,12 +431,32 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
-        final repo = scriptFile.repository ?: scriptFile.source
+        final repo = scriptFile.repository ?: scriptFile.source.toString()
         final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
-        if( scriptFile.repository )
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
-        else
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
+        final revision = scriptFile.repository
+            ? scriptFile.revisionInfo.toString()
+            : scriptFile.getScriptId()?.substring(0,10)
+        printLaunchInfo(ver, repo, head, revision)
+    }
+
+    protected void printLaunchInfo(String ver, String repo, String head, String revision) {
+        if( launcher.options.ansiLog ){
+            log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
+
+            def fmt = ansi()
+            fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
+            fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
+            fmt.bold().fg(Color.CYAN).a(runName).reset()
+            fmt.a(Attribute.INTENSITY_FAINT).a("]")
+            fmt.a(" DSL${ver} - ")
+            fmt.fg(Color.CYAN).a("revision: ").reset()
+            fmt.fg(Color.CYAN).a(revision).reset()
+            fmt.a("\n")
+            AnsiConsole.out().println(fmt.eraseLine())
+        }
+        else {
+            log.info "${head} [$runName] DSL${ver} - revision: ${revision}"
+        }
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
