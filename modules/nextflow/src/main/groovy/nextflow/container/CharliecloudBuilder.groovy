@@ -69,9 +69,10 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     CharliecloudBuilder build(StringBuilder result) {
         assert image
         def imageStorage = Paths.get(image).parent.parent
+        def imageToRun = ''
 
         if (!writeFake) {
-            // define image to run, if write fake is not used this is a copy of the image in the current workDir
+            // define image to run, if --write-fake is not used this is a copy of the image in the current workDir
             imageToRun << '"$NXF_TASK_WORKDIR"/container_'
             imageToRun << image.split('/')[-1]
 
