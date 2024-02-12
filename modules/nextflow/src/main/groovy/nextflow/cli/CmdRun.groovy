@@ -393,7 +393,8 @@ class CmdRun extends CmdBase implements HubOptions {
             //   Use very dark grey, which is more reliable.
             // Jansi library bundled in Jline can't do exact RGBs,
             //   so just do the ANSI codes manually
-            fmt.a("\033[1m\033[38;5;232m\033[48;5;43m N E X T F L O W ").reset()
+            final BACKGROUND = "\033[1m\033[38;5;232m\033[48;5;43m"
+            fmt.a("$BACKGROUND N E X T F L O W ").reset()
 
             // Show Nextflow version
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
