@@ -63,7 +63,6 @@ class CmdSecret {
 
         V1() {
             commands.add( new GetCmd() )
-            commands.add( new PutCmd() )
             commands.add( new SetCmd() )
             commands.add( new ListCmd() )
             commands.add( new DeleteCmd() )
@@ -138,18 +137,6 @@ class CmdSecret {
             }
             else {
                 log.debug "Unknown help field: $fieldName"
-            }
-        }
-
-        @Deprecated
-        class PutCmd extends SetCmd {
-            @Override
-            String getName() { 'put' }
-
-            @Override
-            void apply(List<String> result) {
-                log.warn "Put command is deprecated - use 'set' instead'"
-                super.apply(result)
             }
         }
 

@@ -228,7 +228,7 @@ class CmdRun {
             launcher.options.ansiLog = value
         }
 
-        @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
+        @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Platform (formerly Tower Cloud)')
         String withTower
 
         @Parameter(names = ['-with-wave'], hidden = true)
