@@ -69,16 +69,15 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     CharliecloudBuilder build(StringBuilder result) {
         assert image
         def imageStorage = Paths.get(image).parent.parent
-        def imageToRun = ''
+        def imageToRun = String
 
         if (!writeFake) {
             // define image to run, if --write-fake is not used this is a copy of the image in the current workDir
-            imageToRun << '"$NXF_TASK_WORKDIR"/container_'
-            imageToRun << image.split('/')[-1]
+            imageToRun = '"$NXF_TASK_WORKDIR"/container_' + image.split('/')[-1]
 
             // optional squash
             if (useSquash) {
-                imageToRun << '.squashfs'
+                imageToRun = imageToRun + '.squashfs'
             }
 
             result << 'ch-convert -i ch-image --storage '
@@ -97,7 +96,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
             result << '--write-fake ' 
             // if we are using writeFake we do not need to create a temporary imagae
             // image is run by name from the storage directory
-            imageToRun << image.split('/')[-1]
+            imageToRun = image.split('/')[-1]
         }
 
         if (!readOnlyInputs)
@@ -113,9 +112,8 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( runOptions )
             result << runOptions.join(' ') << ' '
         
-        result << ' '
         result << imageToRun
-        result << ' -- '
+        result << ' --'
 
         runCommand = result.toString()
 
