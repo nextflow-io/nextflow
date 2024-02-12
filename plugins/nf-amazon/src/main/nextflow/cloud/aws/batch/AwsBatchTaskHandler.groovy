@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.Const
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
@@ -623,7 +624,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected String createJobDef(RegisterJobDefinitionRequest req) {
         // add nextflow tags
         req.addTagsEntry('nextflow.io/createdAt', Instant.now().toString())
-        req.addTagsEntry('nextflow.io/version', Const.APP_VER)
+        req.addTagsEntry('nextflow.io/version', BuildInfo.version)
         // create the job def
         final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName}:$res.revision"

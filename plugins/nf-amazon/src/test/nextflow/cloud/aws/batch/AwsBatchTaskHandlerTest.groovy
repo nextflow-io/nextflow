@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.Session
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
@@ -503,7 +503,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         result == "$JOB_NAME:10"
         and:
-        req.getTags().get('nextflow.io/version') == Const.APP_VER
+        req.getTags().get('nextflow.io/version') == BuildInfo.version
         Instant.parse(req.getTags().get('nextflow.io/createdAt'))
 
     }

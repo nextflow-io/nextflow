@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
-            if( normalizedImageName.startsWith('docker://') && config.singularityOciMode() )
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
             if( ContainerInspectMode.active() && requiresCaching )
@@ -78,6 +78,8 @@ class ContainerHandler {
         if( engine == 'apptainer' ) {
             final normalizedImageName = normalizeApptainerImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
+                return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
             if( ContainerInspectMode.active() && requiresCaching )

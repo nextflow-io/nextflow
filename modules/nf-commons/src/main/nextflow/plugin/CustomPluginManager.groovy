@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,12 @@ package nextflow.plugin
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.Const
+import nextflow.BuildInfo
 import org.pf4j.DefaultPluginManager
 import org.pf4j.ExtensionFactory
 import org.pf4j.PluginWrapper
 import org.pf4j.SingletonExtensionFactory
 import org.pf4j.VersionManager
-
 /**
  * Custom plugin manager to that allow accessing to {@code loadPluginFromPath} and
  * {@code resolvePlugins} method
@@ -59,7 +58,7 @@ class CustomPluginManager extends DefaultPluginManager {
 
     @Override
     String getSystemVersion() {
-        return Const.APP_VER
+        return BuildInfo.version
     }
 
     @Override
