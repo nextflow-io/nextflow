@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package nextflow.cloud.google.util
+package nextflow.cloud.google.file
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.google.nio.GsPath
+import nextflow.file.FileHelper
 import nextflow.util.KryoHelper
 import spock.lang.Specification
 
@@ -36,15 +36,14 @@ class GsPathSerializerTest extends Specification {
         Global.session = Mock(Session) {
             getConfig() >> [google:[project:'foo', region:'x']]
         }
-        
+
         when:
-        def uri = URI.create("gs://my-seq/data/ggal/sample.fq")
-        def path = Paths.get(uri)
+        def path = FileHelper.asPath("gs://my-seq/data/ggal/sample.fq")
         def buffer = KryoHelper.serialize(path)
         def copy = (Path)KryoHelper.deserialize(buffer)
         then:
-        copy instanceof CloudStoragePath
-        copy.toUri() == uri
+        copy instanceof GsPath
+        copy.toUri() == URI.create("gs://my-seq/data/ggal/sample.fq")
         copy.toUriString() == "gs://my-seq/data/ggal/sample.fq"
     }
 }

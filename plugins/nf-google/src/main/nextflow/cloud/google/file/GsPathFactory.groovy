@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package nextflow.cloud.google.util
+package nextflow.cloud.google.file
 
 import java.nio.file.Path
 
 import com.google.api.gax.retrying.RetrySettings
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
+import nextflow.cloud.google.nio.GsFileSystem
+import nextflow.cloud.google.nio.GsPath
 import nextflow.cloud.google.lifesciences.GoogleLifeSciencesFileCopyStrategy
 import nextflow.file.FileSystemPathFactory
 /**
@@ -98,13 +98,13 @@ class GsPathFactory extends FileSystemPathFactory {
         final str = uri.substring(5)
         final p = str.indexOf('/')
         return p == -1
-            ? CloudStorageFileSystem.forBucket(str, storageConfig, storageOptions).getPath('')
-            : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig, storageOptions).getPath(str.substring(p))
+            ? GsFileSystem.forBucket(str, storageConfig, storageOptions).getPath('')
+            : GsFileSystem.forBucket(str.substring(0,p), storageConfig, storageOptions).getPath(str.substring(p))
     }
 
     @Override
     protected String toUriString(Path path) {
-        if( path instanceof CloudStoragePath ) {
+        if( path instanceof GsPath ) {
             return "gs://${path.bucket()}$path".toString()
         }
         return null
@@ -112,7 +112,7 @@ class GsPathFactory extends FileSystemPathFactory {
 
     @Override
     protected String getBashLib(Path path) {
-        if( path instanceof CloudStoragePath ) {
+        if( path instanceof GsPath ) {
             return GsBashLib.fromSession( Global.session as Session )
         }
         return null
@@ -120,7 +120,7 @@ class GsPathFactory extends FileSystemPathFactory {
 
     @Override
     protected String getUploadCmd(String source, Path target) {
-        if( target instanceof CloudStoragePath ) {
+        if( target instanceof GsPath ) {
             GoogleLifeSciencesFileCopyStrategy.uploadCmd(source,target)
         }
         return null

@@ -90,7 +90,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         this.client = executor.getClient()
         this.jobId = "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         this.executor = executor
-        // those files are access via NF runtime, keep based on CloudStoragePath
+        // those files are access via NF runtime, keep based on GsPath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)

@@ -16,6 +16,8 @@
 package nextflow.cloud.google
 
 import groovy.transform.CompileStatic
+import nextflow.cloud.google.nio.GsFileSystemProvider
+import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
 /**
@@ -28,6 +30,12 @@ class GoogleCloudPlugin extends BasePlugin {
 
     GoogleCloudPlugin(PluginWrapper wrapper) {
         super(wrapper)
+    }
+
+    @Override
+    void start() {
+        super.start()
+        FileHelper.getOrInstallProvider(GsFileSystemProvider)
     }
 
 }

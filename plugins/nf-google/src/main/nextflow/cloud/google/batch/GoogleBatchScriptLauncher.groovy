@@ -22,9 +22,9 @@ import java.nio.file.Paths
 
 import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.Volume
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.google.nio.GsPath
 import nextflow.executor.BashWrapperBuilder
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
@@ -43,7 +43,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     private static final String MOUNT_ROOT = '/mnt/disks'
 
-    private CloudStoragePath remoteWorkDir
+    private GsPath remoteWorkDir
     private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
     private PathTrie pathTrie = new PathTrie()
@@ -54,7 +54,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
         super(bean)
         // keep track the google storage work dir
-        this.remoteWorkDir = (CloudStoragePath) bean.workDir
+        this.remoteWorkDir = (GsPath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
 
         // map bean work and target dirs to container mount
@@ -97,7 +97,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     }
 
     protected Path toContainerMount(Path path, boolean parent=false) {
-        if( path instanceof CloudStoragePath ) {
+        if( path instanceof GsPath ) {
             buckets.add(path.bucket())
             pathTrie.add( (parent ? "/${path.bucket()}${path.parent}" : "/${path.bucket()}${path}").toString() )
             final containerMount = "$MOUNT_ROOT/${path.bucket()}${path}"

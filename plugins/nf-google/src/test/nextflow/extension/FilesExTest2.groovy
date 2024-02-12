@@ -16,14 +16,13 @@
 
 package nextflow.extension
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Path
 
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.google.nio.GsPath
+import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -41,7 +40,7 @@ class FilesExTest2 extends Specification {
         when:
         def path = PATH as Path
         then:
-        path instanceof CloudStoragePath
+        path instanceof GsPath
         println FilesEx.toUriString(path)
         FilesEx.toUriString(path) == PATH
 

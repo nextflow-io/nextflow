@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cloud.google.util
+package nextflow.cloud.google.file
 
 import com.google.cloud.storage.StorageOptions
 import nextflow.Global
