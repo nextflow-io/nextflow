@@ -51,6 +51,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if ( params.containsKey('useSquash') )
             this.useSquash = params.useSquash?.toString() == 'true'
 
+        if ( params.containsKey('writeFake') )
+            this.writeFake = params.writeFake?.toString() == 'true'
+
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
@@ -67,21 +70,34 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         assert image
         def imageStorage = Paths.get(image).parent.parent
 
-        result << 'ch-convert -i ch-image --storage '
-        // handle storage to deal with cases where CH_IMAGE_STORAGE is not set
-        result << imageStorage
-        result << ' '
-        result << image.split('/')[-1]
-        result << ' '
-        result << '"$NXF_TASK_WORKDIR"'
-        result << '/container_'
-        result << image.split('/')[-1]
+        if (!writeFake) {
+            // define image to run, if write fake is not used this is a copy of the image in the current workDir
+            imageToRun << '"$NXF_TASK_WORKDIR"/container_'
+            imageToRun << image.split('/')[-1]
 
-        if (useSquash) 
-            result << '.squashfs'
-        
-        result << ' && '
+            // optional squash
+            if (useSquash) {
+                imageToRun << '.squashfs'
+            }
+
+            result << 'ch-convert -i ch-image --storage '
+            // handle storage to deal with cases where CH_IMAGE_STORAGE is not set
+            result << imageStorage
+            result << ' '
+            result << image.split('/')[-1]
+            result << ' '
+            result << imageToRun
+            result << ' && '
+        }
+
         result << 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env '
+        
+        if (writeFake) {
+            result << '--write-fake ' 
+            // if we are using writeFake we do not need to create a temporary imagae
+            // image is run by name from the storage directory
+            imageToRun << image.split('/')[-1]
+        }
 
         if (!readOnlyInputs)
             result << '-w '
@@ -97,9 +113,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
             result << runOptions.join(' ') << ' '
         
         result << ' '
-        result << '"$NXF_TASK_WORKDIR"'
-        result << '/container_'
-        result << image.split('/')[-1]
+        result << imageToRun
         result << ' -- '
 
         runCommand = result.toString()

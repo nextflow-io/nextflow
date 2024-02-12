@@ -77,6 +77,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     
     protected boolean useSquash
 
+    protected boolean writeFake
+
     @Deprecated
     protected String entryPoint
 
