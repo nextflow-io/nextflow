@@ -17,15 +17,16 @@
 
 package nextflow.cloud.google.batch
 
+import java.nio.file.Path
+
 import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.StatusEvent
-import com.google.cloud.batch.v1.TaskExecution
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
-import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
@@ -83,6 +84,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicyOrTemplate = allocationPolicy.getInstances(0)
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         and:
         taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
@@ -92,13 +94,15 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
-        runnable.getContainer().getOptions() == ''
+        !runnable.getContainer().getOptions()
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        and:
+        !instancePolicyOrTemplate.getInstanceTemplate()
         and:
         instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getDisksCount() == 0
-        instancePolicy.getMachineType() == ''
-        instancePolicy.getMinCpuPlatform() == ''
+        !instancePolicy.getMachineType()
+        !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
         and:
         allocationPolicy.getLocation().getAllowedLocationsCount() == 0
@@ -221,6 +225,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         req.getLabelsMap() == [foo: 'bar']
 
 
+        // with custom disk type
         when:
         req = handler.newSubmitRequest(task, launcher)
         then:
@@ -229,6 +234,67 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.findBestMachineType(_, false) >> null
         and:
         req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
+    }
+
+    def 'should use instance template' () {
+        given:
+        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def INSTANCE_TEMPLATE = 'instance-template'
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> Mock(BatchConfig) {
+                getInstallGpuDrivers() >> true
+            }
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getMachineType() >> "template://${INSTANCE_TEMPLATE}"
+                getResourceLabels() >> [:]
+            }
+        }
+        and:
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def volumes = [GCS_VOL]
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
+
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> null
+
+        and:
+        def taskGroup = req.getTaskGroups(0)
+        def runnable = taskGroup.getTaskSpec().getRunnables(0)
+        def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicyOrTemplate = allocationPolicy.getInstances(0)
+        and:
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
+        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
+        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
+        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
+        and:
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
+        runnable.getContainer().getImageUri() == CONTAINER_IMAGE
+        !runnable.getContainer().getOptions()
+        runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        and:
+        instancePolicyOrTemplate.getInstallGpuDrivers() == true
+        instancePolicyOrTemplate.getInstanceTemplate() == INSTANCE_TEMPLATE
+        and:
+        taskGroup.getTaskSpec().getVolumesCount() == 1
+        taskGroup.getTaskSpec().getVolumes(0) == GCS_VOL
     }
 
     def 'should create the trace record' () {
@@ -305,8 +371,17 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         runnable.getEnvironment().getVariablesMap() == env
         and:
+        instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getDisks(0).getNewDisk().getSizeGb() == 375
         instancePolicy.getDisks(0).getNewDisk().getType() == 'local-ssd'
+        !instancePolicy.getMachineType()
+        !instancePolicy.getMinCpuPlatform()
+        instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
+        and:
+        allocationPolicy.getLocation().getAllowedLocationsCount() == 0
+        allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
+        and:
+        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
 
     def 'should not set wildcard expressions as machine type'() {
@@ -368,5 +443,61 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.getJobExitCode() == 50001
         handler.getJobExitCode() == null
+    }
+
+    def 'should find best instance type' () {
+        given:
+        def workDir = Path.of('/work/dir')
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+             hashLog >> '1234567890'
+             getWorkDir() >> workDir
+        }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> client
+            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            isCloudinfoEnabled() >> true
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        and:
+        def config = Mock(TaskConfig)
+        def machineType = GroovyMock(GoogleBatchMachineTypeSelector.MachineType)
+
+        when:
+        def result = handler.findBestMachineType(config, false)
+        then:
+        1 * handler.bestMachineType0(_,_,_,_,_,_) >> machineType
+        and:
+        result == machineType
+    }
+
+    def 'should disable cloudinfo' () {
+        given:
+        SysEnv.push(NXF_CLOUDINFO_ENABLED: 'false')
+
+        def workDir = Path.of('/work/dir')
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            hashLog >> '1234567890'
+            getWorkDir() >> workDir
+        }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> client
+            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            isCloudinfoEnabled() >> false
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        and:
+        def config = Mock(TaskConfig)
+
+        when:
+        def result = handler.findBestMachineType(config, false)
+        then:
+        0 * handler.bestMachineType0(_,_,_,_,_,_) >> null
+        and:
+        result == null
+
+        cleanup:
+        SysEnv.pop()
     }
 }

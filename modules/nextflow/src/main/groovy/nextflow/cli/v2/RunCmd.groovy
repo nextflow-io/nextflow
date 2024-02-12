@@ -166,7 +166,7 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     String withCharliecloud
 
     @Option(names = ['-with-cloudcache'], paramLabel = '<path>', description = 'Enable the use of object storage bucket as storage for cache meta-data')
-    String withCloudCache
+    String cloudCachePath
 
     @Option(names = ['--with-conda'], arity = '0..1', fallbackValue = '-', paramLabel = '<name>|<file>', description = 'Use the specified Conda environment, package, or file (must end with .yml|.yaml suffix)')
     String withConda

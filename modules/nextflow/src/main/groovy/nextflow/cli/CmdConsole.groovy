@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class CmdConsole {
     }
 
     void run() {
-        Plugins.setup()
+        Plugins.init()
         Plugins.start('nf-console')
         final console = Plugins.getExtension(ConsoleExtension)
         if( !console )

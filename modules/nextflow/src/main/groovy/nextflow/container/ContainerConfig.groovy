@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package nextflow.container
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 
 /**
@@ -55,8 +56,40 @@ class ContainerConfig extends LinkedHashMap {
         get('engine')
     }
 
-    boolean singularityOciMode() {
-        getEngine()=='singularity' && get('oci')?.toString() == 'true'
+    /**
+     * Whenever Singularity or Apptainer container engine can a OCI (Docker)
+     * image without requiring a separate OCI to SIF conversion execution (managed by Nextflow via {@link SingularityCache).
+     *
+     * @return
+     *  {@code true} when the OCI container can be run without an explicit OCI to SIF conversion or {@code false}
+     *  otherwise
+     *
+     */
+    boolean canRunOciImage() {
+        if( isSingularityOciMode() )
+            return true
+        if( (getEngine()!='singularity' && getEngine()!='apptainer') )
+            return false
+        return get('ociAutoPull')?.toString()=='true'
+    }
+
+    /**
+     * Whenever the Singularity OCI-mode is enabled
+     *
+     * @return {@code true} when Singularity OCI-mode is enabled or {@code false} otherwise
+     */
+    @Memoized
+    boolean isSingularityOciMode() {
+        if( getEngine()!='singularity' ) {
+            return false
+        }
+        if( get('oci')?.toString()=='true' ) {
+            log.warn "The setting `singularity.oci` is deprecated - use `singularity.ociMode` instead"
+            return true
+        }
+        if( get('ociMode')?.toString()=='true' )
+            return true
+        return false
     }
 
     List<String> getEnvWhitelist() {
@@ -93,7 +126,7 @@ class ContainerConfig extends LinkedHashMap {
             return null
         if( eng=='docker' || eng=='podman' )
             return '--rm --privileged'
-        if( singularityOciMode() )
+        if( isSingularityOciMode() )
             return '-B /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
             return null

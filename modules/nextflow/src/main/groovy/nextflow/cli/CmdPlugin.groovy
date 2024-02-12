@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,18 +66,17 @@ class CmdPlugin {
     }
 
     static void install(List<String> ids) {
-        Plugins.setup()
+        Plugins.init()
         Plugins.pull(ids)
     }
 
     static void exec(String head, List<String> args, CliOptions launcherOptions) {
-        Plugins.setup()
-
         final items = head.tokenize(CMD_SEP)
         final target = items[0]
         final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
 
         // push back the command as the first item
+        Plugins.init()
         Plugins.start(target)
         final wrapper = Plugins.manager.getPlugin(target)
         if( !wrapper )
