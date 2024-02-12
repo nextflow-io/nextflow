@@ -96,7 +96,7 @@ set in the configuration if a share is mounted.
 
 Nextflow provides built-in support for Azure Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`Azore Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
+Read the {ref}`Azure Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
 
 ### Get started
 
