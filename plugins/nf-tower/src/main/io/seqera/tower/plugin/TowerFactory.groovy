@@ -64,6 +64,7 @@ class TowerFactory implements TraceObserverFactory {
         Duration requestInterval = config.navigate('tower.requestInterval') as Duration
         Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
 
+        session.aborted
         if ( !endpoint || endpoint=='-' )
             endpoint = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
 

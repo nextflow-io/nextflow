@@ -16,6 +16,9 @@
 
 package nextflow.script
 
+import groovy.transform.PackageScope
+import nextflow.processor.TaskProcessor
+
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
@@ -31,6 +34,8 @@ import nextflow.exception.AbortOperationException
  */
 @Slf4j
 abstract class BaseScript extends Script implements ExecutionContext {
+
+    private TaskProcessor taskProcessor
 
     private Session session
 
@@ -55,6 +60,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
     ScriptBinding getBinding() {
         (ScriptBinding)super.getBinding()
     }
+
+    /**
+     * Access to the last *process* object -- only for testing purpose
+     */
+    @PackageScope
+    TaskProcessor getTaskProcessor() { taskProcessor }
 
     /**
      * Holds the configuration object which will used to execution the user tasks
@@ -95,7 +106,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
             meta.addDefinition(process)
         }
         else {
-            throw new UnsupportedOperationException("DSL1 is not supported anymore")
+            // legacy process definition an execution
+            taskProcessor = processFactory.createProcessor(name, body)
+            taskProcessor.run()
         }
     }
 
@@ -106,6 +119,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @return The result of workflow execution
      */
     protected workflow(Closure<BodyDef> workflowBody) {
+        if(!NF.isDsl2())
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
         // capture the main (unnamed) workflow definition
@@ -120,6 +135,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected IncludeDef include( IncludeDef include ) {
+        if(!NF.isDsl2())
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
         if(ExecutionStack.withinWorkflow())
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
         include .setSession(session)
@@ -137,10 +154,20 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     @Override
     Object invokeMethod(String name, Object args) {
-        binding.invokeMethod(name, args)
+        if(NF.isDsl2())
+            binding.invokeMethod(name, args)
+        else
+            super.invokeMethod(name, args)
     }
 
-    private run0() {
+    private runDsl1() {
+        session.notifyBeforeWorkflowExecution()
+        final ret = runScript()
+        session.notifyAfterWorkflowExecution()
+        return ret
+    }
+
+    private runDsl2() {
         final result = runScript()
         if( meta.isModule() ) {
             return result
@@ -189,7 +216,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
         setup()
         ExecutionStack.push(this)
         try {
-            run0()
+//            run0()
+            NF.dsl2 ? runDsl2() : runDsl1()
         }
         catch( InvocationTargetException e ) {
             // provide the exception cause which is more informative than InvocationTargetException
