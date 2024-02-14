@@ -30,11 +30,4 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 @GroovyASTTransformationClass(classes = [ConfigTransformImpl])
-@interface ConfigTransform {
-    /**
-     * hack to pass a parameter in the {@link ConfigTransformImpl} class -- do not remove
-     *
-     * See {@link ConfigTransformImpl#renderClosureAsString}
-     */
-    boolean renderClosureAsString()
-}
+@interface ConfigTransform {}

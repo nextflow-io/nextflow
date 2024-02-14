@@ -448,7 +448,7 @@ class AssetManager {
         }
 
         if( text ) try {
-            def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
+            def config = new ConfigParser().setIgnoreIncludes(true).setStrict(false).parse(text)
             result = (ConfigObject)config.manifest
         }
         catch( Exception e ) {
