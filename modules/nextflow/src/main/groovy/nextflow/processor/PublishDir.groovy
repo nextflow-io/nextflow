@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -504,7 +504,12 @@ class PublishDir {
     }
 
     protected void createPublishDir() {
-        makeDirs(this.path)
+        try {
+            makeDirs(path)
+        }
+        catch( Throwable e ) {
+            throw new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e)
+        }
     }
 
     protected void makeDirs(Path dir) {

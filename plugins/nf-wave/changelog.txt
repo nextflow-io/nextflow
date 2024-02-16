@@ -1,5 +1,10 @@
 nf-wave changelog
 ==================
+1.3.0 - 5 Feb 2024
+- Fix handling of  wave.s5cmdConfigUrl setting [ci fast] (#4707) [3a19386d]
+- Fix Wave container replicable checksum [da382ddf]
+- Bump Groovy 4 (#4443) [9d32503b]
+
 1.2.0 - 20 Dec 2023
 - Add support for Singularity/Apptainer auto pull mode for OCI containers [b7f1a192]
 - Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
