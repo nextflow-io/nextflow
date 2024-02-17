@@ -4,6 +4,8 @@
 
 Nextflow has a plugin system that allows the use of extensible components that are downloaded and installed at runtime.
 
+(plugins-core)=
+
 ## Core plugins
 
 The following functionalities are provided via plugin components, and they make part of the Nextflow *core* plugins:
