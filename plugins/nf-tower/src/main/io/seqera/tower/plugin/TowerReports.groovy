@@ -32,6 +32,10 @@ import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.file.FileHelper
+import nextflow.trace.GraphObserver
+import nextflow.trace.ReportObserver
+import nextflow.trace.TimelineObserver
+import nextflow.trace.TraceFileObserver
 /**
  * If reports are defined at `nf-<workflow_id>-tower.yml`, collects all published files
  * that are reports and writes `nf-<workflow_id>-reports.tsv` file with all the paths.
@@ -198,6 +202,35 @@ class TowerReports {
             }
         }
         return false
+    }
+
+    /**
+     * Send any built-in reports that are enabled to the reports file.
+     */
+    void sendRuntimeReports() {
+        final config = session.config
+        final Map<String,Map<String,String>> entries = [:]
+        if( config.navigate('report.enabled') ) {
+            final reportFile = config.navigate('report.file', ReportObserver.DEF_FILE_NAME) as String
+            entries[reportFile] = Map.of('display', 'Nextflow execution report')
+        }
+        if( config.navigate('timeline.enabled') ) {
+            final reportFile = config.navigate('timeline.file', TimelineObserver.DEF_FILE_NAME) as String
+            entries[reportFile] = Map.of('display', 'Nextflow timeline report')
+        }
+        if( config.navigate('trace.enabled') ) {
+            final reportFile = config.navigate('trace.file', TraceFileObserver.DEF_FILE_NAME) as String
+            entries[reportFile] = Map.of('display', 'Nextflow trace report')
+        }
+        if( config.navigate('dag.enabled') ) {
+            final reportFile = config.navigate('dag.file', GraphObserver.DEF_FILE_NAME) as String
+            entries[reportFile] = Map.of('display', 'Nextflow workflow diagram')
+        }
+
+        for( def entry : entries ) {
+            final destination = (entry.key as Path).complete()
+            writer.send((PrintWriter it) -> writeRecord(it, entry, destination))
+        }
     }
 
     private writeRecord(PrintWriter it, Map.Entry<String,Map<String,String>> reportEntry, Path destination) {
