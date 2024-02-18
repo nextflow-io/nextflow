@@ -508,36 +508,140 @@ The following variables are implicitly defined in the script global execution sc
 
 `baseDir`
 : :::{deprecated} 20.04.0
-  Use `projectDir` instead
   :::
-: The directory where the main workflow script is located.
+: Alias of `workflow.projectDir`.
 
 `launchDir`
-: :::{versionadded} 20.04.0
-  :::
-: The directory where the workflow is run.
+: Alias of `workflow.launchDir`.
 
 `moduleDir`
-: :::{versionadded} 20.04.0
-  :::
-: The directory where a module script is located for DSL2 modules or the same as `projectDir` for a non-module script.
+: The directory where a module script is located (equivalent to `projectDir` if used in the main script).
 
 `nextflow`
-: Dictionary like object representing nextflow runtime information (see {ref}`metadata-nextflow`).
+: Map of Nextflow runtime information.
+
+  `nextflow.build`
+  : Nextflow runtime build number.
+
+  `nextflow.timestamp`
+  : Nextflow runtime compile timestamp.
+
+  `nextflow.version`
+  : Nextflow runtime version number.
+
+  `nextflow.version.matches()`
+  : This method allows you to check if the Nextflow runtime satisfies a version requirement for your workflow script. The version requirement string can be prefixed with the usual comparison operators eg `>`, `>=`, `=`, etc. or postfixed with the `+` operator to specify a minimum version requirement. For example:
+
+  ```groovy
+  if( !nextflow.version.matches('21.04+') ) {
+      println "This workflow requires Nextflow version 21.04 or greater -- You are running version $nextflow.version"
+      exit 1
+  }
+  ```
 
 `params`
-: Dictionary like object holding workflow parameters specifying in the config file or as command line options.
+: Map of workflow parameters specified in the config file or as command line options.
 
 `projectDir`
-: :::{versionadded} 20.04.0
-  :::
-: The directory where the main script is located.
+: Alias of `workflow.projectDir`.
 
 `workDir`
-: The directory where tasks temporary files are created.
+: Alias of `workflow.workDir`.
 
 `workflow`
-: Dictionary like object representing workflow runtime information (see {ref}`metadata-workflow`).
+: Map of workflow runtime information.
+
+  `workflow.commandLine`
+  : Command line as entered by the user to launch the workflow execution.
+
+  `workflow.commitId`
+  : Git commit ID of the executed workflow repository.
+  : When providing a Git tag, branch name, or commit hash using the `-r` CLI option, the associated `workflow.commitId` is also populated.
+
+  `workflow.complete`
+  : *Available only in the `workflow.onComplete` handler*
+  : Timestamp of workflow when execution is completed.
+
+  `workflow.configFiles`
+  : Configuration files used for the workflow execution.
+
+  `workflow.container`
+  : Docker image used to run workflow tasks. When more than one image is used it returns a map object containing `[process name, image name]` pair entries.
+
+  `workflow.containerEngine`
+  : Returns the name of the container engine (e.g. docker or singularity) or null if no container engine is enabled.
+
+  `workflow.duration`
+  : *Available only in the `workflow.onComplete` handler*
+  : Time elapsed to complete workflow execution.
+
+  `workflow.errorMessage`
+  : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+  : Error message of the task that caused the workflow execution to fail.
+
+  `workflow.errorReport`
+  : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+  : Detailed error of the task that caused the workflow execution to fail.
+
+  `workflow.exitStatus`
+  : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+  : Exit status of the task that caused the workflow execution to fail.
+
+  `workflow.homeDir`
+  : User system home directory.
+
+  `workflow.launchDir`
+  : Directory where the workflow was launched.
+
+  `workflow.manifest`
+  : Entries of the workflow manifest.
+
+  `workflow.profile`
+  : Used configuration profile.
+
+  `workflow.projectDir`
+  : Directory where the workflow project is located.
+
+  `workflow.repository`
+  : Project repository Git remote URL.
+
+  `workflow.resume`
+  : Returns `true` whenever the current instance is resumed from a previous execution.
+
+  `workflow.revision`
+  : Git branch/tag of the executed workflow repository.
+  : When providing a Git tag or branch name using the `-r` CLI option, the `workflow.revision` is also populated.
+
+  `workflow.runName`
+  : Mnemonic name assigned to this execution instance.
+
+  `workflow.scriptFile`
+  : Project main script file path.
+
+  `workflow.scriptId`
+  : Project main script unique hash ID.
+
+  `workflow.scriptName`
+  : Project main script file name.
+
+  `workflow.sessionId`
+  : Unique identifier (UUID) associated to current execution.
+
+  `workflow.start`
+  : Timestamp of workflow at execution start.
+
+  `workflow.stubRun`
+  : Returns `true` whenever the current instance is a stub-run execution .
+
+  `workflow.success`
+  : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+  : Reports if the execution completed successfully.
+
+  `workflow.userName`
+  : User system account name.
+
+  `workflow.workDir`
+  : The directory where task temporary files are stored.
 
 ### Configuration implicit variables
 
@@ -545,18 +649,13 @@ The following variables are implicitly defined in the Nextflow configuration fil
 
 `baseDir`
 : :::{deprecated} 20.04.0
-  Use `projectDir` instead
   :::
-: The directory where the main workflow script is located.
+: Alias for `projectDir`.
 
 `launchDir`
-: :::{versionadded} 20.04.0
-  :::
-: The directory where the workflow is run.
+: The directory where the workflow was launched.
 
 `projectDir`
-: :::{versionadded} 20.04.0
-  :::
 : The directory where the main script is located.
 
 ### Process implicit variables
@@ -637,6 +736,12 @@ The following functions are available in Nextflow scripts:
 
 `tuple( ... args )`
 : Create a tuple object from the given arguments.
+
+`workflow.onComplete( closure )`
+: Define an action to take when the workflow completes (whether successful or not). Refer to the `workflow` implicit variable to see which additional properties are available in the completion handler.
+
+`workflow.onError( closure )`
+: Define an action to take if the workflow is terminated due to a runtime error or task failure. Refer to the `workflow` implicit variable to see which additional properties are available in the error handler.
 
 (implicit-classes)=
 

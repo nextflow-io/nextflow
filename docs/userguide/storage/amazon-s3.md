@@ -1,6 +1,6 @@
 (amazons3-page)=
 
-# AWS S3 storage
+# Amazon S3
 
 Nextflow includes support for AWS S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
 

@@ -22,11 +22,15 @@ The Nextflow runtime integrates with many popular execution platforms (HPC sched
 
 ```{toctree}
 :hidden:
-:caption: Introduction
+:caption: User Guide
 :maxdepth: 1
 
-getstarted
-basic
+userguide/running-pipelines/index
+userguide/developing-pipelines/index
+userguide/sharing-pipelines
+userguide/software-deps/index
+userguide/compute/index
+userguide/storage/index
 ```
 
 ```{toctree}
@@ -34,14 +38,14 @@ basic
 :caption: Language
 :maxdepth: 1
 
-script
-process
-channel
-operator
-workflow
-module
-config
-dsl1
+reference/script
+reference/process
+reference/channel
+reference/operator
+reference/workflow
+reference/module
+reference/config
+reference/dsl1
 ```
 
 ```{toctree}
@@ -49,49 +53,19 @@ dsl1
 :caption: Execution
 :maxdepth: 1
 
-cli
-executor
-cache-and-resume
-tracing
-metrics
-sharing
-metadata
-mail
-plugins
-secrets
+reference/cli
+reference/executor
+reference/git
+reference/plugins
 ```
 
 ```{toctree}
 :hidden:
-:caption: Software dependencies
+:caption: Tutorials
 :maxdepth: 1
 
-container
-conda
-spack
-wave
-```
-
-```{toctree}
-:hidden:
-:caption: Compute & storage platforms
-:maxdepth: 1
-
-aws
-amazons3
-azure
-fusion
-google
-kubernetes
-```
-
-```{toctree}
-:hidden:
-:caption: Additional integrations
-:maxdepth: 1
-
-flux
-ignite
+tutorials/flux
+tutorials/metrics
 ```
 
 ```{toctree}
@@ -99,7 +73,7 @@ ignite
 :caption: Contributing
 :maxdepth: 1
 
-developer/index
-developer/packages
-developer/plugins
+reference/developer/index
+reference/developer/packages
+reference/developer/plugins
 ```

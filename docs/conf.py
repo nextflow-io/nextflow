@@ -40,7 +40,7 @@ myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']
 myst_heading_anchors = 3
 
 rediraffe_redirects = {
-    'dsl2.md': 'dsl1.md'
+    'dsl2.md': 'reference/dsl1.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.

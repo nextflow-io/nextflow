@@ -1,3 +1,5 @@
+<!-- FROM tracing.md -->
+
 (tracing-page)=
 
 # Reports
@@ -345,7 +347,7 @@ The report file name can be specified as an optional parameter following the tim
 
 (dag-visualisation)=
 
-## DAG visualisation
+## Workflow diagram
 
 A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e. channels) between them.
 

@@ -53,7 +53,7 @@ To migrate this code to DSL2, you need to move all of your channel logic through
 
 Refer to the {ref}`workflow-page` page to learn how to define a workflow. The DSL2 version of the above script is duplicated here for your convenience:
 
-```{literalinclude} snippets/your-first-script.nf
+```{literalinclude} ../snippets/your-first-script.nf
 :language: groovy
 ```
 
