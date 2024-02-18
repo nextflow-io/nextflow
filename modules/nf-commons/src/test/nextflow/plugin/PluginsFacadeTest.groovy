@@ -35,6 +35,25 @@ class PluginsFacadeTest extends Specification {
         server?.stop(0)
     }
 
+    def 'should create plugin manager' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def plugins = new PluginsFacade(folder,MODE)
+        expect:
+        plugins.createManager(folder,EMBEDDED).class == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        MODE    | EMBEDDED      | EXPECTED
+        'dev'   | false         | DevPluginManager
+        'dev'   | true          | DevPluginManager
+        and:
+        'prod'  | false         | LocalPluginManager
+        'prod'  | true          | EmbeddedPluginManager
+    }
+
 
     def 'should parse plugins config' () {
         given:
