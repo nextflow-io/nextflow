@@ -162,8 +162,20 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    protected CustomPluginManager createManager(Path root) {
-        final result = mode!=DEV_MODE ? new LocalPluginManager(root) : new DevPluginManager(root)
+    private CustomPluginManager newPluginManager(Path root, boolean embedded) {
+        if( mode==DEV_MODE ) {
+            // plugin manage for dev purposes
+            return new DevPluginManager(root)
+        }
+        if( embedded ) {
+            // use the custom plugin manager to by-pass the creation of a local plugin repository
+            return new EmbeddedPluginManager(root)
+        }
+        return new LocalPluginManager(root)
+    }
+
+    protected CustomPluginManager createManager(Path root, boolean embedded) {
+        final result = newPluginManager(root, embedded)
         result.addPluginStateListener(this)
         return result
     }
@@ -194,7 +206,7 @@ class PluginsFacade implements PluginStateListener {
         if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
 
-        this.manager = createManager(root)
+        this.manager = createManager(root, embedded)
         this.updater = createUpdater(root, manager)
         manager.loadPlugins()
         if( embedded ) {
