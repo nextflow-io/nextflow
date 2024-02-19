@@ -578,6 +578,49 @@ class WaveClientTest extends Specification {
                 '''.stripIndent(true)
     }
 
+    def 'should create asset with conda recipe and pip packages' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:"bioconda::rseqc=3.0.1 'conda-forge::r-base>=3.5' pip:numpy pip:scipy"] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, false)
+        then:
+        assets.containerFile == '''\
+                FROM mambaorg/micromamba:1.5.5
+                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
+                RUN micromamba install -y -n base -f /tmp/conda.yml \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
+                    && micromamba clean -a -y
+                USER root
+                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - seqera
+                - conda-forge
+                - bioconda
+                - defaults
+                dependencies:
+                - bioconda::rseqc=3.0.1
+                - conda-forge::r-base>=3.5
+                - pip
+                - pip:
+                  - numpy
+                  - scipy
+                '''.stripIndent(true)
+    }
+
     def 'should create asset with conda lock file' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
@@ -776,6 +819,53 @@ class WaveClientTest extends Specification {
                 - salmon=1.2.3
                 '''.stripIndent(true)
     }
+
+    def 'should create asset with conda recipe, pip packages and singularity native build' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [conda:'salmon=1.2.3 pip:matplotlib'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null, true)
+        then:
+        assets.containerFile == '''\
+                BootStrap: docker
+                From: mambaorg/micromamba:1.5.5
+                %files
+                    {{wave_context_dir}}/conda.yml /scratch/conda.yml
+                %post
+                    micromamba install -y -n base -f /scratch/conda.yml
+                    micromamba install -y -n base conda-forge::procps-ng
+                    micromamba clean -a -y
+                %environment
+                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
+                    '''.stripIndent()
+        and:
+        assets.singularity
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+        and:
+        assets.condaFile.text == '''\
+                channels:
+                - seqera
+                - conda-forge
+                - bioconda
+                - defaults
+                dependencies:
+                - salmon=1.2.3
+                - pip
+                - pip:
+                  - matplotlib
+                '''.stripIndent(true)
+    }
+
 
     def 'should create asset with conda remote lock file and singularity native build' () {
         given:
