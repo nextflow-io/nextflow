@@ -76,20 +76,6 @@ dependencies:
   - bwa=0.7.15
 ```
 
-This other example shows how to leverage a Conda environment file to install Python packages from the [PyPI repository](https://pypi.org/)), through the `pip` package manager (which must also be explicitly listed as a required package):
-
-```yaml
-name: my-env-2
-channels:
-  - defaults
-dependencies:
-  - pip
-  - pip:
-    - numpy
-    - pandas
-    - matplotlib
-```
-
 Read the Conda documentation for more details about how to create [environment files](https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually).
 
 The path of an environment file can be specified using the `conda` directive:
@@ -132,6 +118,43 @@ process foo {
   your_command --here
   '''
 }
+```
+
+### Install Pip packages via Conda
+
+:::{versionadded} 24.02.0-edge
+:::
+
+You can use Conda to install Python packages from the [PyPI repository](https://pypi.org/)) through the `pip` package manager directly inside a Conda environment.
+
+If using the `conda` directive approach, specify Pypi packages by prepending each one of them with the `pip:` prefix. For example:
+
+```groovy
+process foo {
+  conda 'bwa samtools pip:numpy pip:scipy pip:matplotlib'
+
+  '''
+  your_command --here
+  '''
+}
+```
+
+This definition creates a Conda environment, that includes the Conda packages BWA and Samtools, plus the Pypi packages Numpy, Scipy and Matplotlib installed via `pip`.
+
+This other example shows how to leverage a Conda environment file to achieve the same installation (note how `pip` must also be explicitly listed as a required package):
+
+```yaml
+name: my-env-2
+channels:
+  - defaults
+dependencies:
+  - bwa
+  - samtools
+  - pip
+  - pip:
+    - numpy
+    - pandas
+    - matplotlib
 ```
 
 ### Use Mamba to resolve packages
