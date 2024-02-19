@@ -301,7 +301,7 @@ class CondaCache {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
         else if( containsPip(condaEnv) ) {
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file condaFileFromPackages(condaEnv, channels)"
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${condaFileFromPackages(condaEnv, channels)}"
         }
 
         else {
