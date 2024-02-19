@@ -16,6 +16,8 @@
 
 package nextflow.conda
 
+import static io.seqera.wave.util.DockerHelper.condaFileFromPackages
+
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -30,7 +32,6 @@ import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
-import nextflow.util.CondaHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
 import org.yaml.snakeyaml.Yaml
@@ -274,6 +275,14 @@ class CondaCache {
         env.startsWith('http://') || env.startsWith('https://')
     }
 
+    @PackageScope boolean containsPip(String str) {
+        for( String it : str.tokenize() ) {
+            if (it.startsWith("pip:"))
+                return true
+        }
+        return false
+    }
+
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
@@ -291,8 +300,8 @@ class CondaCache {
         else if( isTextFilePath(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
-        else if( CondaHelper.containsPip(condaEnv) ) {
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(CondaHelper.condaPipPackagesToCondaFile(condaEnv, channels)))}"
+        else if( containsPip(condaEnv) ) {
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file condaFileFromPackages(condaEnv, channels)"
         }
 
         else {
