@@ -112,7 +112,7 @@ allprojects {
         groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.18"
         groovyDoc "org.apache.groovy:groovy-ant:4.0.18"
 
-        api 'io.seqera:wave-utils:0.8.1'
+        api 'io.seqera:wave-utils:0.11.0'
     }
 
     test {
