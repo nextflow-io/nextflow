@@ -41,7 +41,7 @@ class CloudCacheFactory extends CacheFactory {
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
         final path = (Global.session as Session).cloudCachePath
         if( !path )
-            throw new IllegalArgumentException("Cloud-cache path not defined - use either -cloudcatch run option or NXF_CLOUDCACHE_PATH environment variable")
+            throw new IllegalArgumentException("Cloud-cache path not defined - use either -cloudcache run option or NXF_CLOUDCACHE_PATH environment variable")
         final store = new CloudCacheStore(uniqueId, runName, path)
         return new CacheDB(store)
     }
