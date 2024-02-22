@@ -27,6 +27,7 @@ guides/extra/index
 
 manual/overview
 manual/installation
+manual/config
 ```
 
 ```{toctree}
@@ -92,6 +93,8 @@ manual/reference/process
 manual/reference/channel
 manual/reference/operator
 manual/reference/config
+manual/reference/environment-vars
+manual/reference/feature-flags
 manual/reference/executor
 manual/reference/git
 ```
