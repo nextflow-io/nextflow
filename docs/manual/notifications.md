@@ -1,5 +1,3 @@
-<!-- FROM mail.md -->
-
 (mail-page)=
 
 # Notifications

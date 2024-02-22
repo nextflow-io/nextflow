@@ -1,10 +1,8 @@
-<!-- FROM getstarted.md -->
-
-(getstarted-page)=
+(install-page)=
 
 # Installation
 
-(getstarted-requirement)=
+(install-requirements)=
 
 ## Requirements
 
@@ -30,7 +28,7 @@ sdk install java 17.0.6-tem
 ```
 :::
 
-(getstarted-install)=
+(install-nextflow)=
 
 ## Installation
 

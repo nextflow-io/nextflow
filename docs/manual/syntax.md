@@ -491,13 +491,3 @@ If the last argument is a closure, the closure can be written outside of the par
 :::{note}
 In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
 :::
-
-## Pipeline DSL
-
-In addition to the basic syntax inherited from Groovy, Nextflow defines a DSL for describing computational pipelines in a declarative manner. These DSL components are described on separate pages, but are listed here:
-
-- {ref}`Process <process-page>`: an individual step in a pipeline, which typically encapsulates a script which is executed as separate tasks
-
-- {ref}`Workflow <workflow-page>`: a composition of processes and dataflow logic (i.e. channels and operators), which describes the overall workflow or a subworkflow
-
-- {ref}`Module <module-page>`: a Nextflow script which is "included" by another script in order to facilitate the reuse of components such as processes and workflows

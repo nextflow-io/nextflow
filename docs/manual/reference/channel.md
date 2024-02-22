@@ -1,80 +1,10 @@
-(channel-page)=
-
-# Channels
-
-Nextflow is based on the dataflow programming model in which processes communicate through channels.
-
-A channel has two major properties:
-
-1. Sending a message is an *asynchronous* (i.e. non-blocking) operation, which means the sender doesn't have to wait for the receiving process.
-2. Receiving a message is a *synchronous* (i.e. blocking) operation, which means the receiving process must wait until a message has arrived.
-
-(channel-types)=
-
-## Channel types
-
-In Nextflow there are two kinds of channels: *queue channels* and *value channels*.
-
-(channel-type-queue)=
-
-### Queue channel
-
-A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
-to a consumer process, or an operators.
-
-A queue channel can be created by factory methods ([of](#of), [fromPath](#frompath), etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
-
-(channel-type-value)=
-
-### Value channel
-
-A *value channel* can be bound (i.e. assigned) with one and only one value, and can be consumed any number of times by
-a process or an operator.
-
-A value channel can be created with the [value](#value) factory method or by any operator that produces a single value
-({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value
-channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
-
-For example:
-
-```groovy
-process foo {
-  input:
-  val x
-
-  output:
-  path 'x.txt'
-
-  """
-  echo $x > x.txt
-  """
-}
-
-workflow {
-  result = foo(1)
-  result.view { "Result: ${it}" }
-}
-```
-
-In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly
-wrapped in a value channel, and the output is also emitted as a value channel.
-
-See also: {ref}`process-multiple-input-channels`.
-
 (channel-factory)=
 
-## Channel factories
-
-Channels may be created explicitly using the following channel factory methods.
-
-:::{versionadded} 20.07.0
-`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or
-`Channel.of()`, and so on.
-:::
+# Channel factories
 
 (channel-empty)=
 
-### empty
+## empty
 
 The `channel.empty` factory method, by definition, creates a channel that doesn't emit any value.
 
@@ -82,7 +12,7 @@ See also: {ref}`operator-ifempty`.
 
 (channel-from)=
 
-### from
+## from
 
 :::{deprecated} 19.09.0-edge
 Use [channel.of](#of) or [channel.fromList](#fromlist) instead.
@@ -130,7 +60,7 @@ channel.from( [1, 2], [5,6], [7,9] )
 
 (channel-fromlist)=
 
-### fromList
+## fromList
 
 :::{versionadded} 19.10.0
 :::
@@ -156,7 +86,7 @@ See also: [channel.of](#of) factory method.
 
 (channel-path)=
 
-### fromPath
+## fromPath
 
 You can create a channel emitting one or more file paths by using the `channel.fromPath` method and specifying a path
 string as an argument. For example:
@@ -251,7 +181,7 @@ Available options:
 
 (channel-filepairs)=
 
-### fromFilePairs
+## fromFilePairs
 
 The `channel.fromFilePairs` method creates a channel emitting the file pairs matching a [glob][glob] pattern provided
 by the user. The matching files are emitted as tuples in which the first element is the grouping key of the matching pair and the second element is the list of files (sorted in lexicographical order). For example:
@@ -316,7 +246,7 @@ Available options:
 
 (channel-fromsra)=
 
-### fromSRA
+## fromSRA
 
 :::{versionadded} 19.04.0
 :::
@@ -390,7 +320,7 @@ Available options:
 
 (channel-of)=
 
-### of
+## of
 
 :::{versionadded} 19.10.0
 :::
@@ -437,7 +367,7 @@ See also: [channel.fromList](#fromlist) factory method.
 
 (channel-topic)=
 
-### topic
+## topic
 
 :::{versionadded} 23.11.0-edge
 :::
@@ -488,7 +418,7 @@ See also: {ref}`process-additional-options` for process outputs.
 
 (channel-value)=
 
-### value
+## value
 
 The `channel.value` method is used to create a value channel. An optional (not `null`) argument can be specified to bind
 the channel to a specific value. For example:
@@ -504,7 +434,7 @@ The third line creates a channel and binds a list object to it that will be emit
 
 (channel-watchpath)=
 
-### watchPath
+## watchPath
 
 The `channel.watchPath` method watches a folder for one or more files matching a specified pattern. As soon as there
 is a file that meets the specified condition, it is emitted over the channel that is returned by the `watchPath` method.

@@ -1,5 +1,3 @@
-<!-- FROM tracing.md -->
-
 (tracing-page)=
 
 # Reports
