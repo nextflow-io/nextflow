@@ -1,0 +1,12 @@
+set -e
+
+set +e
+echo ''
+$NXF_RUN > stdout
+status=$?
+set -e
+
+[ $status -ne 0 ] || false
+
+[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Error is ignored'` == 1 ]] || false
