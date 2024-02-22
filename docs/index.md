@@ -38,7 +38,8 @@ userguide/storage/index
 :caption: Language
 :maxdepth: 1
 
-reference/script
+reference/syntax
+reference/stdlib
 reference/process
 reference/channel
 reference/operator

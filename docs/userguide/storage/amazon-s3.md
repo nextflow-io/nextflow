@@ -20,7 +20,7 @@ The usual file operations can be applied to a path handle with the above notatio
 println file('s3://my-bucket/data/sequences.fa').text
 ```
 
-See the {ref}`script-file-io` section to learn more about available file operations.
+See the {ref}`stdlib-classes-path` section to learn more about available file operations.
 
 ## Security credentials
 

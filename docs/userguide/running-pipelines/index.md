@@ -9,7 +9,6 @@ installation
 configuration
 cli
 cache-and-resume
-data-sources
 reports
 notifications
 secrets

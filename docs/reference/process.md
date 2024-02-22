@@ -508,7 +508,7 @@ Available options:
   Can be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
 
 :::{note}
-Process `path` inputs have nearly the same interface as described in {ref}`script-file-io`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
+Process `path` inputs have nearly the same interface as described in {ref}`stdlib-classes-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
 ```groovy
 path x, stageAs: 'my-dir/*'
@@ -1546,7 +1546,7 @@ The following memory unit suffix can be used when specifying the disk value:
 | GB   | Gigabytes   |
 | TB   | Terabytes   |
 
-See {ref}`implicit-classes-memoryunit` for more information.
+See {ref}`stdlib-classes-memoryunit` for more information.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
@@ -1905,7 +1905,7 @@ The following memory unit suffix can be used when specifying the memory value:
 | GB   | Gigabytes   |
 | TB   | Terabytes   |
 
-See {ref}`implicit-classes-memoryunit` for more information.
+See {ref}`stdlib-classes-memoryunit` for more information.
 
 See also: [cpus](#cpus), [time](#time), [queue](#queue) and [Dynamic computing resources](#dynamic-computing-resources).
 
@@ -2562,7 +2562,7 @@ The following time unit suffixes can be used when specifying the duration value:
 
 Multiple units can be used in a single declaration, for example: `'1day 6hours 3minutes 30seconds'`
 
-See {ref}`implicit-classes-duration` for more information.
+See {ref}`stdlib-classes-duration` for more information.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
