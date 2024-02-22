@@ -55,6 +55,7 @@ reference/dsl1
 
 reference/cli
 reference/executor
+reference/container
 reference/git
 reference/plugins
 ```
