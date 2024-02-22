@@ -1,10 +1,6 @@
-(cli-page)=
+(cli-reference)=
 
-# Command line interface (CLI)
-
-Nextflow provides a robust command line interface for the management and execution pipelines.
-
-Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands.
+# CLI reference
 
 (cli-options)=
 
@@ -56,186 +52,11 @@ Available options:
 `-v, -version`
 : Print the program version.
 
-### Hard configuration override
-
-Use the specified configuration file(s) overriding any defaults.
-
-```console
-$ nextflow -C my.config COMMAND [arg...]
-```
-
-The `-C` option is used to override *all* settings specified in the default config file. For soft override, please refer the `-c` option.
-
-- Override **any** default configuration with a custom configuration file:
-
-  ```
-  $ nextflow -C my.config run nextflow-io/hello
-  ```
-
-### JVM properties
-
-Set JVM properties.
-
-```console
-$ nextflow -Dkey=value COMMAND [arg...]
-```
-
-This options allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
-
-For specifying other JVM level options, please refer to the {ref}`config-env-vars` section.
-
-- Add JVM properties to the invoked pipeline:
-
-  ```console
-  $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
-  ```
-
-### Execution as a background job
-
-Execute `nextflow` in the background.
-
-```console
-$ nextflow -bg COMMAND [arg...]
-```
-
-The `-bg` option is used to invoke the nextflow execution in the background and allows the user to continue interacting with the terminal. This option is similar to `nohup` in behavior.
-
-- Invoke any execution as a background job:
-
-  ```console
-  $ nextflow -bg run nextflow-io/hello
-  ```
-
-### Soft configuration override
-
-Add the specified file to configuration set.
-
-```console
-$ nextflow -c nxf.config COMMAND [arg...]
-```
-
-The `-c` option is used to append a new configuration to the default configuration. The `-c` option allows us to update the config in an additive manner. For **hard override**, refer to the `-C` option.
-
-- Update *some* fields of the default config for any pipeline:
-
-  ```console
-  $ nextflow -c nxf.config run nextflow-io/hello
-  ```
-
-### Docker driven execution
-
-:::{deprecated} 23.09.0-edge
-:::
-
-Launch Nextflow via Docker.
-
-```console
-$ nextflow -dockerize COMMAND [arg...]
-```
-
-The `-dockerize` option is used to invoke the execution of Nextflow within a Docker container itself without installing a Java VM in the hosting environment.
-
-This option is *not* needed to run containerised pipeline jobs. For invoking a pipeline with the `docker` profile or executor, please refer to the `-with-docker` options in the `run` command. When using the `-dockerize` option in combination with containerized tasks, Nextflow will launch the tasks as sibling containers in the host environment (i.e. no Docker-in-Docker).
-
-- Invoke `nextflow` as a Docker container to execute a pipeline:
-
-  ```console
-  $ nextflow -dockerize run nextflow-io/hello
-  ```
-
-### Help
-
-Print the help message.
-
-```console
-$ nextflow -h
-```
-
-The `-h` option prints out the overview of the CLI interface and enumerates the top-level *options* and *commands*.
-
-### Execution logs
-
-Sets the path of the nextflow log file.
-
-```console
-$ nextflow -log custom.log COMMAND [arg...]
-```
-
-The `-log` option takes a path of the new log file which to be used instead of the default `.nextflow.log` or to save logs files to another directory.
-
-- Save all execution logs to the custom `/var/log/nextflow.log` file:
-
-  ```console
-  $ nextflow -log /var/log/nextflow.log run nextflow-io/hello
-  ```
-
-### Quiet execution
-
-Disable the printing of information to the terminal.
-
-```console
-$ nextflow -q COMMAND [arg...]
-```
-
-The `-q` option suppresses the banner and process-related info, and exits once the execution is completed. Please note that it does not affect any explicit print statement within a pipeline.
-
-- Invoke the pipeline execution without the banner and pipeline information:
-
-  ```console
-  $ nextflow -q run nextflow-io/hello
-  ```
-
-### Logging to a syslog server
-
-Send logs to [Syslog](https://en.wikipedia.org/wiki/Syslog) server endpoint.
-
-```console
-$ nextflow -syslog localhost:1234 COMMAND [arg...]
-```
-
-The `-syslog` option is used to send logs to a Syslog logging server at the specified endpoint.
-
-- Send the logs to a Syslog server at specific endpoint:
-
-  ```console
-  $ nextflow -syslog localhost:1234 run nextflow-io/hello
-  ```
-
-### Version
-
-Print the Nextflow version information.
-
-```console
-$ nextflow -v
-```
-
-The `-v` option prints out information about Nextflow, such as the version and build. The `-version` option in addition prints out the citation reference and official website.
-
-- The short version:
-
-  ```
-  $ nextflow -v
-  nextflow version 20.07.1.5412
-  ```
-
-- The full version info with citation and website link:
-
-  ```
-  $ nextflow -version
-  N E X T F L O W
-  version 20.07.1 build 5412
-  created 24-07-2020 15:18 UTC (20:48 IDT)
-  cite doi:10.1038/nbt.3820
-  http://nextflow.io
-  ```
-
-(cli-commands)=
-
 ## Commands
 
 (cli-clean)=
 
-### clean
+### `clean`
 
 Clean up *cache* and *work* directories.
 
@@ -340,7 +161,7 @@ Would remove temp files from work/bf/334115deec60929dc18edf0010032a
 Would remove temp files from work/a3/06521d75da296d4dd7f4f8caaddad8
 ```
 
-### clone
+### `clone`
 
 Clone a remote project into a folder.
 
@@ -387,7 +208,7 @@ $ nextflow clone nextflow-io/hello -r v1.1
 nextflow-io/hello cloned to: hello
 ```
 
-### config
+### `config`
 
 Print the resolved pipeline configuration.
 
@@ -493,7 +314,7 @@ profiles {
 
 (cli-console)=
 
-### console
+### `console`
 
 Launch the Nextflow interactive console.
 
@@ -519,7 +340,7 @@ Launch the `console` GUI.
 $ nextflow console
 ```
 
-### drop
+### `drop`
 
 Delete the local copy of a project.
 
@@ -555,7 +376,7 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 $ nextflow drop nextflow-io/hello -f
 ```
 
-### fs
+### `fs`
 
 Perform basic filesystem operations.
 
@@ -615,7 +436,7 @@ Print file or directory attributes.
 $ nextflow fs stat <path>
 ```
 
-### help
+### `help`
 
 Print the top-level help or specific help for a command.
 
@@ -652,7 +473,7 @@ Usage: drop [options] name of the project to drop
           Default: false
 ```
 
-### info
+### `info`
 
 Print project or system runtime information.
 
@@ -713,7 +534,7 @@ $ nextflow info nextflow-io/hello
     v1.2 [t]
 ```
 
-### inspect
+### `inspect`
 
 :::{versionadded} 23.09.0-edge
 :::
@@ -764,7 +585,7 @@ Specify parameters as with the `run` command:
 $ nextflow inspect main.nf --alpha 1 --beta foo
 ```
 
-### kuberun
+### `kuberun`
 
 Launch a Nextflow pipeline on a Kubernetes cluster.
 
@@ -862,7 +683,7 @@ Execute a pipeline into a Kubernetes cluster.
 $ nextflow kuberun nextflow-io/hello
 ```
 
-### list
+### `list`
 
 List all downloaded projects.
 
@@ -894,7 +715,7 @@ nextflow-hub/fastqc
 
 (cli-log)=
 
-### log
+### `log`
 
 Print the execution history and log information.
 
@@ -1025,7 +846,7 @@ work/1f/f1ea9158fb23b53d5083953121d6b6
 
 (cli-plugin)=
 
-### plugin
+### `plugin`
 
 Manage plugins and run plugin-specific commands.
 
@@ -1043,7 +864,7 @@ The `plugin` command provides several subcommands for managing and using plugins
 
 : Execute a plugin-specific command.
 
-### pull
+### `pull`
 
 Download or update a project.
 
@@ -1109,7 +930,7 @@ Checking nextflow-io/hello ...
 checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
 ```
 
-### run
+### `run`
 
 Execute a pipeline.
 
@@ -1367,7 +1188,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
   The parameters specified with this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via a params file overwrite those of the same name in the Nextflow configuration file.
 
-### self-update
+### `self-update`
 
 Update the nextflow runtime to the latest available version.
 
@@ -1399,7 +1220,7 @@ Nextflow installation completed. Please note:
 - the executable file `nextflow` has been created in the folder: /usr/local/bin
 ```
 
-### view
+### `view`
 
 View a project's script file(s).
 
@@ -1491,27 +1312,3 @@ workflow {
   Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
-
-(cli-params)=
-
-## Pipeline parameters
-
-Pipeline scripts can use an arbitrary number of parameters that can be overridden, either using the command line or the Nextflow configuration file. Any script parameter can be specified on the command line, prefixing the parameter name with double dash characters, e.g.:
-
-```bash
-nextflow run <my script> --foo Hello
-```
-
-Then, the parameter can be accessed in the pipeline script using the `params.foo` identifier.
-
-:::{note}
-When the parameter name is formatted using `camelCase`, a second parameter is created with the same value using `kebab-case`, and vice versa.
-:::
-
-:::{warning}
-When a command line parameter includes one or more glob characters, i.e. wildcards like `*` or `?`, the parameter value must be enclosed in quotes to prevent Bash expansion and preserve the glob characters. For example:
-
-```bash
-nextflow run <my script> --files "*.fasta"
-```
-:::

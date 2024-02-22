@@ -27,6 +27,7 @@ guides/extra/index
 
 manual/overview
 manual/installation
+manual/cli
 manual/config
 ```
 
