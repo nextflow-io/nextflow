@@ -29,35 +29,18 @@ import groovy.util.logging.Slf4j
 class ParamsHelper {
 
     /**
-     * Parse the pipeline args and params from the positional
-     * args parsed by picocli. This method assumes that the first
-     * positional arg that starts with '--' is the first param,
-     * and parses the remaining args as params.
-     *
-     * NOTE: While the double-dash ('--') notation can be used to
-     * distinguish pipeline params from CLI options, it cannot be
-     * used to distinguish pipeline params from pipeline args.
+     * Parse pipeline params from the unmatched args from picocli.
      */
-    static List<String> parseArgs(List<String> args) {
-        int i = args.findIndexOf { it.startsWith('--') }
-        final resuit = i == -1 ? args : args[0..<i]
-
-        for( String arg : resuit )
-            if( arg.startsWith('-') )
-                log.warn "Possible legacy command line argument: $arg -- did you mean -$arg ?"
-
-        log.trace "Parsing pipeline args from CLI: $resuit"
-        return resuit
-    }
-
-    static Map<String,String> parseParams(List<String> args, List<String> parsedArgs) {
-        int i = parsedArgs.size()
+    static Map<String,String> parseParams(List<String> args) {
         Map<String,String> result = [:]
+        int i = 0
 
         while( i < args.size() ) {
             String current = args[i++]
             if( !current.startsWith('--') ) {
-                throw new IllegalArgumentException("Invalid argument '${current}' -- unable to parse it as a pipeline arg, pipeline param, or CLI option")
+                if( current.startsWith('-') )
+                    log.warn "Possible legacy command line argument: ${current} -- did you mean -${current} ?"
+                throw new IllegalArgumentException("Invalid argument: ${current} -- unable to parse it as a pipeline param or CLI option")
             }
 
             String key

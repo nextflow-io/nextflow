@@ -213,32 +213,15 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
     @Option(names = ['--with-weblog'], arity = '0..1', fallbackValue = '-', paramLabel = '<url>', description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
-    private List<String> args = null
-
     private Map<String,String> params = null
 
-    /**
-     * Get the list of pipeline args.
-     */
     @Override
-    List<String> getArgs() {
-        if( args == null ) {
-            args = ParamsHelper.parseArgs(unmatched)
-            params = ParamsHelper.parseParams(unmatched, args)
-        }
+    List<String> getArgs() { [] }
 
-        return args
-    }
-
-    /**
-     * Get the map of pipeline params.
-     */
     @Override
     Map<String,String> getParams() {
-        if( params == null ) {
-            args = ParamsHelper.parseArgs(unmatched)
-            params = ParamsHelper.parseParams(unmatched, args)
-        }
+        if( params == null )
+            params = ParamsHelper.parseParams(unmatched)
 
         return params
     }
@@ -260,10 +243,6 @@ class RunCmd extends AbstractCmd implements CmdRun.Options, HubOptionsV2 {
 
     void setLauncher(Launcher launcher) {
         this.launcher = launcher
-    }
-
-    void setArgs(List<String> args) {
-        this.args = args
     }
 
     void setParams(Map<String,String> params) {

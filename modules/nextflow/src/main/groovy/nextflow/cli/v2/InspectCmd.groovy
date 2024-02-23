@@ -69,9 +69,10 @@ class InspectCmd extends AbstractCmd implements CmdInspect.Options {
     @Option(names = ['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
     String revision
 
-    List<String> args
-
     Map<String,String> params
+
+    @Override
+    List<String> getArgs() { [] }
 
     @Override
     String getLauncherCli() {
@@ -85,15 +86,13 @@ class InspectCmd extends AbstractCmd implements CmdInspect.Options {
 
     @Override
     void run() {
-        args = ParamsHelper.parseArgs(unmatched)
-        params = ParamsHelper.parseParams(unmatched, args)
+        params = ParamsHelper.parseParams(unmatched)
 
         final opts = new RunCmd()
         opts.launcher = launcher
         opts.ansiLog = false
         opts.preview = true
         opts.pipeline = pipeline
-        opts.args = args
         opts.params = params
         opts.paramsFile = paramsFile
         opts.profile = profile
