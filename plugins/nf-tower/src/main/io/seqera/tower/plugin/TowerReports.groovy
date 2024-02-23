@@ -204,35 +204,6 @@ class TowerReports {
         return false
     }
 
-    /**
-     * Send any built-in reports that are enabled to the reports file.
-     */
-    void sendRuntimeReports() {
-        final config = session.config
-        final Map<String,Map<String,String>> entries = [:]
-        if( config.navigate('report.enabled') ) {
-            final reportFile = config.navigate('report.file', ReportObserver.DEF_FILE_NAME) as String
-            entries[reportFile] = Map.of('display', 'Nextflow execution report')
-        }
-        if( config.navigate('timeline.enabled') ) {
-            final reportFile = config.navigate('timeline.file', TimelineObserver.DEF_FILE_NAME) as String
-            entries[reportFile] = Map.of('display', 'Nextflow timeline report')
-        }
-        if( config.navigate('trace.enabled') ) {
-            final reportFile = config.navigate('trace.file', TraceFileObserver.DEF_FILE_NAME) as String
-            entries[reportFile] = Map.of('display', 'Nextflow trace report')
-        }
-        if( config.navigate('dag.enabled') ) {
-            final reportFile = config.navigate('dag.file', GraphObserver.DEF_FILE_NAME) as String
-            entries[reportFile] = Map.of('display', 'Nextflow workflow diagram')
-        }
-
-        for( def entry : entries ) {
-            final destination = (entry.key as Path).complete()
-            writer.send((PrintWriter it) -> writeRecord(it, entry, destination))
-        }
-    }
-
     private writeRecord(PrintWriter it, Map.Entry<String,Map<String,String>> reportEntry, Path destination) {
         try {
             final target = destination.toUriString()
@@ -252,5 +223,28 @@ class TowerReports {
     protected static String convertToGlobPattern(String reportKey) {
         final prefix = reportKey.startsWith("**/") ? "" : "**/"
         return "glob:${prefix}${reportKey}"
+    }
+
+    /**
+     * Publish any built-in reports that are enabled to the reports file.
+     */
+    void publishRuntimeReports() {
+        final config = session.config
+        final files = []
+
+        if( config.navigate('report.enabled') )
+            files << config.navigate('report.file', ReportObserver.DEF_FILE_NAME)
+
+        if( config.navigate('timeline.enabled') )
+            files << config.navigate('timeline.file', TimelineObserver.DEF_FILE_NAME)
+
+        if( config.navigate('trace.enabled') )
+            files << config.navigate('trace.file', TraceFileObserver.DEF_FILE_NAME)
+
+        if( config.navigate('dag.enabled') )
+            files << config.navigate('dag.file', GraphObserver.DEF_FILE_NAME)
+
+        for( def file : files )
+            filePublish( (file as Path).complete() )
     }
 }

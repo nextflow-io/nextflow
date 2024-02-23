@@ -390,8 +390,8 @@ class TowerClient implements TraceObserver {
     void onFlowComplete() {
         // submit the record
         events << new ProcessEvent(completed: true)
-        // send any runtime reports that are enabled
-        reports.sendRuntimeReports()
+        // publish runtime reports
+        reports.publishRuntimeReports()
         // wait the submission of pending events
         sender.join()
         // wait and flush reports content
