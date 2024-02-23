@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ allprojects {
         }
 
         // Documentation required libraries
-        groovyDoc 'org.fusesource.jansi:jansi:1.11'
+        groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
         groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.18"
         groovyDoc "org.apache.groovy:groovy-ant:4.0.18"
     }

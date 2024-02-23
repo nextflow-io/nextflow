@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ class CmdLogTest extends Specification {
         cache.writeTaskEntry0(h3, h3.getTraceRecord())
         cache.close()
 
-        def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
+        def history = new HistoryFile(folder.resolve(HistoryFile.defaultFileName()))
         history.write(runName,uuid,'b3d3aca8eb','run')
 
         when:
@@ -166,7 +166,7 @@ class CmdLogTest extends Specification {
         cache.writeTaskEntry0(h3, h3.getTraceRecord())
         cache.close()
 
-        def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
+        def history = new HistoryFile(folder.resolve(HistoryFile.defaultFileName()))
         history.write(runName,uuid,'b3d3aca8eb','run')
 
 

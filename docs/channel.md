@@ -486,57 +486,6 @@ Any process that consumes a channel topic should not send any outputs to that to
 
 See also: {ref}`process-additional-options` for process outputs.
 
-(channel-topic)=
-
-### topic
-
-:::{versionadded} 23.11.0-edge
-:::
-
-:::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
-:::
-
-A *topic* is a channel type introduced as of Nextflow 23.11.0-edge along with {ref}`channel-type-value` and
-{ref}`channel-type-queue`.
-
-A *topic channel*, similarly to a *queue channel*, is non-blocking unidirectional FIFO queue, however it connects
-multiple *producer* processes with multiple *consumer* processes or operators.
-
-:::{tip}
-You can think about it as a channel that is shared across many different process using the same *topic name*.
-:::
-
-A process output can be assigned to a topic using the `topic` option on an output, for example:
-
-```groovy
-process foo {
-  output:
-  val('foo'), topic: my_topic
-}
-
-process bar {
-  output:
-  val('bar'), topic: my_topic
-}
-```
-
-The `channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
-input or operator composition as any other Nextflow channel:
-
-```groovy
-Channel.topic('my-topic').view()
-```
-
-This approach is a convenient way to collect related items from many different sources without explicitly defining
-the logic connecting many different queue channels altogether, commonly using the `mix` operator.
-
-:::{warning}
-Any process that consumes a channel topic should not send any outputs to that topic, or else the pipeline will hang forever.
-:::
-
-See also: {ref}`process-additional-options` for process outputs.
-
 (channel-value)=
 
 ### value
