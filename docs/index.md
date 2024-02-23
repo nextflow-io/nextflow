@@ -29,6 +29,7 @@ manual/overview
 manual/installation
 manual/cli
 manual/config
+manual/executor
 manual/cache-and-resume
 manual/reports
 ```
@@ -97,7 +98,6 @@ manual/reference/operator
 manual/reference/config
 manual/reference/environment-vars
 manual/reference/feature-flags
-manual/reference/executor
 ```
 
 ```{toctree}

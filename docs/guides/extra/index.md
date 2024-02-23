@@ -1,5 +1,5 @@
 
-# Miscellaneous Guides
+# Miscellaneous guides
 
 ```{toctree}
 :maxdepth: 1

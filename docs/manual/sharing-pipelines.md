@@ -306,4 +306,4 @@ env {
 
 Similarly, if you use an HPC scheduler like SLURM or a cloud batch service like AWS Batch to execute tasks in a distributed manner, you can use a configuration profile to define the settings for a given environment.
 
-See the {ref}`config-page` page to learn more about Nextflow configuration, and the {ref}`executor-page` to learn more about specific executors.
+See the {ref}`config-page` page to learn more about Nextflow configuration, and the {ref}`executor-page` page to learn more about specific executors.
