@@ -86,6 +86,38 @@ curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/next
 The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
 :::
 
+## Updates
+
+With Nextflow installed in your environment, you can update to the latest version using the following command:
+
+```bash
+nextflow self-update
+```
+
+You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
+
+```bash
+NXF_VER=22.10.0 nextflow run hello
+```
+
+## Stable and Edge releases
+
+A *stable* version of Nextflow is released every six months, in the 4th and 10th month of each year.
+
+Additionally, an *edge* version is released on a monthly basis. The edge releases can be used to access the latest updates and experimental features.
+
+To use the latest edge release, set `NXF_EDGE=1` when updating:
+
+```bash
+NXF_EDGE=1 nextflow self-update
+```
+
+You can also use `NXF_VER` to switch to any edge release:
+
+```bash
+NXF_VER=24.01.0-edge nextflow run hello
+```
+
 (getstarted-first)=
 
 ## Your first script
@@ -205,35 +237,3 @@ uojnoB
 :::{versionchanged} 20.11.0-edge
 Any `.` (dot) character in a parameter name is interpreted as the delimiter of a nested scope. For example, `--foo.bar Hello` will be interpreted as `params.foo.bar`. If you want to have a parameter name that contains a `.` (dot) character, escape it using the back-slash character, e.g. `--foo\.bar Hello`.
 :::
-
-## Updates
-
-With Nextflow installed in your environment, you can update to the latest version using the following command:
-
-```bash
-nextflow self-update
-```
-
-You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
-
-```bash
-NXF_VER=22.10.0 nextflow run hello
-```
-
-## Stable and Edge releases
-
-A *stable* version of Nextflow is released every six months, in April and October of each year.
-
-Additionally, an *edge* version is released on a monthly basis. The edge releases can be used to access the latest updates and experimental features.
-
-To use the latest edge release, set `NXF_EDGE=1` when updating:
-
-```bash
-NXF_EDGE=1 nextflow self-update
-```
-
-You can also use `NXF_VER` to switch to any edge release:
-
-```bash
-NXF_VER=24.01.0-edge nextflow run hello
-```
