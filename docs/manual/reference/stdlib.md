@@ -8,8 +8,6 @@ This page describes the built-in constants, functions, and classes provided by N
 
 ## Constants
 
-### Script constants
-
 The following constants are globally available in a Nextflow script:
 
 `baseDir`
@@ -148,61 +146,6 @@ The following constants are globally available in a Nextflow script:
 
   `workflow.workDir`
   : The directory where task temporary files are stored.
-
-### Configuration constants
-
-The following constants are globally available in a Nextflow configuration file:
-
-`baseDir`
-: :::{deprecated} 20.04.0
-  :::
-: Alias for `projectDir`.
-
-`launchDir`
-: The directory where the workflow was launched.
-
-`projectDir`
-: The directory where the main script is located.
-
-### Task constants
-
-Each task has a `task` constant which contains the following properties:
-
-`task.attempt`
-: The current task attempt
-
-`task.hash`
-: *Available only in `exec:` blocks*
-: The task unique hash ID
-
-`task.index`
-: The task index (corresponds to `task_id` in the execution trace)
-
-`task.name`
-: *Available only in `exec:` blocks*
-: The current task name
-
-`task.process`
-: The current process name
-
-`task.workDir`
-: *Available only in `exec:` blocks*
-: The task unique directory
-
-The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
-
-```groovy
-process foo {
-  script:
-  """
-  some_tool --cpus $task.cpus --mem $task.memory
-  """
-}
-```
-
-In the above snippet the `task.cpus` holds the value for the {ref}`cpus directive<process-cpus>` and the `task.memory` the current value for {ref}`memory directive<process-memory>` depending on the actual setting given in the workflow configuration file.
-
-See {ref}`Process directives <process-directives>` for details.
 
 (stdlib-functions)=
 

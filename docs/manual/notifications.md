@@ -2,7 +2,44 @@
 
 # Notifications
 
-This page documents various ways to send notifications and respond to workflow events.
+This page documents how to handle workflow events and send notifications.
+
+<!-- FROM metadata.md -->
+
+(workflow-handlers)=
+
+## Workflow handlers
+
+(metadata-completion-handler)=
+
+### Completion handler
+
+Due to the asynchronous nature of Nextflow the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
+
+The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
+
+```groovy
+workflow.onComplete {
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
+(metadata-error-handler)=
+
+### Error handler
+
+The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
+
+```groovy
+workflow.onError {
+    println "Error: Pipeline execution stopped with the following message: ${workflow.errorMessage}"
+}
+```
+
+:::{note}
+Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
+:::
 
 ## Mail
 
@@ -222,58 +259,3 @@ By default the notification message is sent with the `sendmail` system tool, whi
 See the [Mail configuration](#mail-configuration) section to learn about the available mail delivery options and configuration settings.
 
 Read {ref}`Notification scope <config-notification>` section to learn more about the workflow notification configuration details.
-
-<!-- FROM metadata.md -->
-
-## Workflow handlers
-
-(metadata-completion-handler)=
-
-### Completion handler
-
-Due to the asynchronous nature of Nextflow the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
-
-The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
-
-```groovy
-workflow.onComplete {
-    println "Pipeline completed at: $workflow.complete"
-    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
-}
-```
-
-If you want an e-mail notification on completion, check {ref}`mail-page`.
-
-(metadata-error-handler)=
-
-### Error handler
-
-The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
-
-```groovy
-workflow.onError {
-    println "Error: Pipeline execution stopped with the following message: ${workflow.errorMessage}"
-}
-```
-
-:::{note}
-Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
-:::
-
-### Decoupling metadata
-
-The workflow event handlers can be defined also in the `nextflow.config` file. This is useful to decouple the handling of pipeline events from the main script logic.
-
-When the event handlers are included in a configuration file the only difference is that the `onComplete` and the `onError` closures have to be defined by using the assignment operator as shown below:
-
-```groovy
-workflow.onComplete = {
-    // any workflow property can be used here
-    println "Pipeline complete"
-    println "Command line: $workflow.commandLine"
-}
-
-workflow.onError = {
-    println "Error: something when wrong"
-}
-```

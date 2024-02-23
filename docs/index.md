@@ -29,6 +29,8 @@ manual/overview
 manual/installation
 manual/cli
 manual/config
+manual/cache-and-resume
+manual/reports
 ```
 
 ```{toctree}
@@ -39,11 +41,9 @@ manual/config
 manual/syntax
 manual/working-with-files
 manual/process
-manual/cache-and-resume
 manual/channel
 manual/workflow
 manual/module
-manual/reports
 manual/notifications
 manual/secrets
 manual/plugins
@@ -55,6 +55,7 @@ manual/sharing-pipelines
 :caption: Software Dependencies
 :maxdepth: 1
 
+manual/git
 manual/container
 manual/conda
 manual/spack
@@ -97,7 +98,6 @@ manual/reference/config
 manual/reference/environment-vars
 manual/reference/feature-flags
 manual/reference/executor
-manual/reference/git
 ```
 
 ```{toctree}

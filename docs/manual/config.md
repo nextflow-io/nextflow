@@ -62,6 +62,21 @@ includeConfig 'path/foo.config'
 
 When a relative path is used, it is resolved against the actual location of the including file.
 
+## Constants
+
+The following constants are globally available in a Nextflow configuration file:
+
+`baseDir`
+: :::{deprecated} 20.04.0
+  :::
+: Alias for `projectDir`.
+
+`launchDir`
+: The directory where the workflow was launched.
+
+`projectDir`
+: The directory where the main script is located.
+
 ## Config scopes
 
 Configuration settings can be organized in different scopes by dot prefixing the property names with a scope identifier, or grouping the properties in the same scope using the curly brackets notation. For example:
@@ -98,7 +113,7 @@ params {
 
 ## Process configuration
 
-The `process` scope allows you to specify default {ref}`directives <process-directives>` for processes in your pipeline.
+The `process` scope allows you to specify {ref}`process directives <process-reference>` separately from the pipeline code.
 
 For example:
 
@@ -262,3 +277,21 @@ profiles {
 
 In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also used in the `foo` and `bar` profiles.
 :::
+
+## Workflow handlers
+
+Workflow event handlers can be defined in the config file, which is useful for handling pipeline events without having to modify the pipeline code:
+
+```groovy
+workflow.onComplete = {
+    // any workflow property can be used here
+    println "Pipeline complete"
+    println "Command line: $workflow.commandLine"
+}
+
+workflow.onError = {
+    println "Error: something when wrong"
+}
+```
+
+See {ref}`workflow-handlers` for more information.
