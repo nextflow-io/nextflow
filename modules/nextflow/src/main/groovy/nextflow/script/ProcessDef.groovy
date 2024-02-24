@@ -113,7 +113,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // apply config settings to the process
-        def configs = [] as List<Map>
+        List<Map> configs = []
 
         // -- process module config
         configs << ScriptMeta.get(owner).getConfig()
@@ -123,10 +123,17 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             configs << ScriptMeta.get(workflow.getOwner()).getConfig()
 
         // -- session config
-        configs << (Map)session.config.process
+        configs << (Map)session.config
 
-        for( def config : configs )
-            processConfig.applyConfig(config, baseName, simpleName, processName)
+        for( def config : configs ) {
+            if( !config || !config.process )
+                continue
+            def unsupportedScopes = config.keySet()
+            unsupportedScopes.remove('process')
+            if( unsupportedScopes.size() > 0 )
+                log.warn "Module config only supports the process scope, other scopes will be ignored: ${unsupportedScopes.join(',')}"
+            processConfig.applyConfig((Map)config.process, baseName, simpleName, processName)
+        }
     }
 
     @Override

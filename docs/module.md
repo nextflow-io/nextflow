@@ -181,14 +181,14 @@ Ciao world!
 :::{versionadded} 24.01.0-edge
 :::
 
-Modules can define a config file called `module.config` in the module directory. This config file can be used to apply process configuration to processes that are invoked in the module. Unlike a regular Nextflow configuration file, the module config only supports {ref}`process config settings <config-process>`.
+Modules can define a `nextflow.config` file in the module directory to apply process configuration to processes that are invoked in the module. Unlike a regular Nextflow configuration file, the module config only supports the {ref}`process scope <config-process>`.
 
 Here is an example module with a module config:
 
 ```
 <module-dir>
 |── main.nf
-└── module.config
+└── nextflow.config
 ```
 
 ```groovy
@@ -202,18 +202,18 @@ workflow FOO {
 ```
 
 ```groovy
-// module.config
-publishDir = params.outdir
+// nextflow.config
+process {
+    publishDir = params.outdir
 
-withName:'FOO:BAR' {
-    ext.args = '--n-iters 1000'
-    publishDir = "${params.outdir}/foo_bar"
+    withName:'FOO:BAR' {
+        ext.args = '--n-iters 1000'
+        publishDir = "${params.outdir}/foo_bar"
+    }
 }
 ```
 
-In the above example, the module config defines process config settings using the same syntax as a Nextflow config file (including {ref}`process selectors <config-process-selectors>`) but implicitly within the process config scope. The selector `FOO:BAR` matches the process `BAR` invoked by workflow `FOO`.
-
-Furthermore, the selector `BAR` would have also worked in this case, even if `BAR` is used elsewhere in the pipeline, because the module config is only applied to this module. This assurance is the advantage of defining process config in module config files instead of the global pipeline config.
+In the above example, the selector `FOO:BAR` matches the process `BAR` invoked by workflow `FOO`. The selector `BAR` would have also worked in this case, even if `BAR` is used elsewhere in the pipeline, because the module config is only applied to this module. This assurance is the advantage of defining process config in module config files instead of the global pipeline config.
 
 Process configuration is applied to a process in the following order (from lowest to highest priority):
 
