@@ -12,12 +12,19 @@ Nextflow is a workflow system for creating scalable, portable, and reproducible 
 
 ```{toctree}
 :hidden:
-:caption: Running pipelines
+:caption: Introduction
 :maxdepth: 1
 
 overview
 installation
 your-first-script
+```
+
+```{toctree}
+:hidden:
+:caption: Running pipelines
+:maxdepth: 1
+
 cli
 config
 executor
