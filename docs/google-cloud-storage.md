@@ -1,2 +1,0 @@
-
-# Google Cloud Storage

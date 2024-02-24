@@ -44,7 +44,7 @@ dsl1
 
 ```{toctree}
 :hidden:
-:caption: Software Dependencies
+:caption: Software dependencies
 :maxdepth: 1
 
 git
@@ -57,23 +57,14 @@ wave
 
 ```{toctree}
 :hidden:
-:caption: Compute Platforms
+:caption: Compute & storage
 :maxdepth: 1
 
 aws
+amazons3
 azure
 google
 kubernetes
-```
-
-```{toctree}
-:hidden:
-:caption: Storage Platforms
-:maxdepth: 1
-
-amazons3
-azure-blob
-google-cloud-storage
 fusion
 ```
 
