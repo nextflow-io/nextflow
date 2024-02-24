@@ -4,8 +4,6 @@
 
 This page documents how to handle workflow events and send notifications.
 
-<!-- FROM metadata.md -->
-
 (workflow-handlers)=
 
 ## Workflow handlers

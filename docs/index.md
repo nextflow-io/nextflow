@@ -38,7 +38,7 @@ workflow
 module
 notifications
 secrets
-sharing-pipelines
+sharing
 dsl1
 ```
 

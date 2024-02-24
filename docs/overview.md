@@ -1,8 +1,6 @@
 
 # Overview
 
-Nextflow is a reactive workflow framework and a programming [DSL](http://en.wikipedia.org/wiki/Domain-specific_language) that eases the writing of data-intensive computational pipelines.
-
 ## Rationale
 
 The rise of big data has made it increasingly necessary to be able to analyze and perform experiments on large datasets in a portable and reproducible manner.

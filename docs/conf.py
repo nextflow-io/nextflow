@@ -44,8 +44,7 @@ rediraffe_redirects = {
     'basic.md': 'overview.md',
     'tracing.md': 'reports.md',
     'mail.md': 'notifications.md',
-    'sharing.md': 'sharing-pipelines.md',
-    'dsl2.md': 'dsl1.md',
+    'dsl2.md': 'dsl1.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.
