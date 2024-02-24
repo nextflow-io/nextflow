@@ -144,15 +144,26 @@ class IncludeDef {
                 .getScript()
 
         // load module config if it exists
-        final configPath = path.parent.resolve('module.config')
+        final configPath = path.parent.resolve('nextflow.config')
         if( configPath.exists() ) {
             final config = new ConfigParser()
                     .setParams(params)
                     .parse(configPath)
                     .toMap()
 
+            // check for unsupported config scopes
+            def unsupportedScopes = new ArrayList(config.keySet())
+            unsupportedScopes.remove('params')
+            unsupportedScopes.remove('process')
+            if( unsupportedScopes.size() > 0 )
+                log.warn "Module config only supports the process scope, other scopes will be ignored: ${unsupportedScopes.join(',')} (in module config for: $path)"
+
             // remove any params inserted by the config parser
-            for( def value : config.values() )
+            if( !config.process )
+                config.process = [:]
+
+            final processConfig = config.process as Map
+            for( def value : processConfig.values() )
                 if( value instanceof Map )
                     value.remove('params')
 

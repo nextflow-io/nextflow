@@ -128,10 +128,6 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         for( def config : configs ) {
             if( !config || !config.process )
                 continue
-            def unsupportedScopes = config.keySet()
-            unsupportedScopes.remove('process')
-            if( unsupportedScopes.size() > 0 )
-                log.warn "Module config only supports the process scope, other scopes will be ignored: ${unsupportedScopes.join(',')}"
             processConfig.applyConfig((Map)config.process, baseName, simpleName, processName)
         }
     }
