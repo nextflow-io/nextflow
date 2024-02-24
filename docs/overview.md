@@ -101,7 +101,7 @@ Nextflow is designed to have a minimal learning curve, without having to pick up
 
 Nextflow scripting is an extension of the [Groovy programming language](<http://en.wikipedia.org/wiki/Groovy_(programming_language)>), which in turn is a super-set of the Java programming language. Groovy can be considered as Python for Java in that it simplifies the writing of code and is more approachable.
 
-Read the {ref}`syntax-page` section to learn about the Nextflow scripting language.
+Read the {ref}`script-page` section to learn about the Nextflow scripting language.
 
 ## Configuration options
 

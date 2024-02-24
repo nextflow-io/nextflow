@@ -1,6 +1,6 @@
-(syntax-page)=
+(script-page)=
 
-# Syntax
+# Scripts
 
 Nextflow is a domain-specific language (DSL) based on Groovy, itself a general-purpose programming language for the Java virtual machine. Nextflow extends the Groovy syntax with features that ease the writing of computational pipelines in a declarative manner.
 

@@ -74,27 +74,6 @@ The `-c` option is used to append a new configuration to the default configurati
   $ nextflow -c nxf.config run nextflow-io/hello
   ```
 
-### Docker driven execution
-
-:::{deprecated} 23.09.0-edge
-:::
-
-Launch Nextflow via Docker.
-
-```console
-$ nextflow -dockerize COMMAND [arg...]
-```
-
-The `-dockerize` option is used to invoke the execution of Nextflow within a Docker container itself without installing a Java VM in the hosting environment.
-
-This option is *not* needed to run containerised pipeline jobs. For invoking a pipeline with the `docker` profile or executor, please refer to the `-with-docker` options in the `run` command. When using the `-dockerize` option in combination with containerized tasks, Nextflow will launch the tasks as sibling containers in the host environment (i.e. no Docker-in-Docker).
-
-- Invoke `nextflow` as a Docker container to execute a pipeline:
-
-  ```console
-  $ nextflow -dockerize run nextflow-io/hello
-  ```
-
 ### Help
 
 Print the help message.

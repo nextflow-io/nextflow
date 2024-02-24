@@ -1,14 +1,10 @@
-(getstarted-page)=
-
-# Get started
-
 (getstarted-first)=
 
-## Your first script
+# Your first script
 
 Copy the following example into your favorite text editor and save it to a file named `tutorial.nf`:
 
-```{literalinclude} ../../snippets/your-first-script.nf
+```{literalinclude} snippets/your-first-script.nf
 :language: groovy
 ```
 
@@ -48,7 +44,7 @@ The hexadecimal string, e.g. `22/7548fa`, is the unique hash of a task, and the 
 
 (getstarted-resume)=
 
-### Modify and resume
+## Modify and resume
 
 Nextflow keeps track of all the processes executed in your pipeline. If you modify some parts of your script, only the processes that are actually changed will be re-executed. The execution of the processes that are not changed will be skipped and the cached result used instead.
 
@@ -94,7 +90,7 @@ The pipeline results are cached by default in the directory `$PWD/work`. Dependi
 
 For more information, see the {ref}`cache-resume-page` page.
 
-### Pipeline parameters
+## Pipeline parameters
 
 Pipeline parameters are simply declared by prepending to a variable name the prefix `params`, separated by dot character. Their value can be specified on the command line by prefixing the parameter name with a double dash character, i.e. `--paramName`
 

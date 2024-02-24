@@ -12,26 +12,17 @@ Nextflow is a workflow system for creating scalable, portable, and reproducible 
 
 ```{toctree}
 :hidden:
-:caption: Guides
-:maxdepth: 1
-
-guides/get-started
-guides/dsl1
-guides/extra/index
-```
-
-```{toctree}
-:hidden:
 :caption: Running pipelines
 :maxdepth: 1
 
-manual/overview
-manual/installation
-manual/cli
-manual/config
-manual/executor
-manual/cache-and-resume
-manual/reports
+overview
+installation
+your-first-script
+cli
+config
+executor
+cache-and-resume
+reports
 ```
 
 ```{toctree}
@@ -39,16 +30,16 @@ manual/reports
 :caption: Developing pipelines
 :maxdepth: 1
 
-manual/syntax
-manual/working-with-files
-manual/process
-manual/channel
-manual/workflow
-manual/module
-manual/notifications
-manual/secrets
-manual/plugins
-manual/sharing-pipelines
+script
+working-with-files
+process
+channel
+workflow
+module
+notifications
+secrets
+sharing-pipelines
+dsl1
 ```
 
 ```{toctree}
@@ -56,11 +47,12 @@ manual/sharing-pipelines
 :caption: Software Dependencies
 :maxdepth: 1
 
-manual/git
-manual/container
-manual/conda
-manual/spack
-manual/wave
+git
+plugins
+container
+conda
+spack
+wave
 ```
 
 ```{toctree}
@@ -68,10 +60,10 @@ manual/wave
 :caption: Compute Platforms
 :maxdepth: 1
 
-manual/aws
-manual/azure
-manual/google
-manual/kubernetes
+aws
+azure
+google
+kubernetes
 ```
 
 ```{toctree}
@@ -79,10 +71,10 @@ manual/kubernetes
 :caption: Storage Platforms
 :maxdepth: 1
 
-manual/amazon-s3
-manual/azure-blob
-manual/google-cloud-storage
-manual/fusion
+amazons3
+azure-blob
+google-cloud-storage
+fusion
 ```
 
 ```{toctree}
@@ -90,14 +82,14 @@ manual/fusion
 :caption: Reference
 :maxdepth: 1
 
-manual/reference/cli
-manual/reference/stdlib
-manual/reference/process
-manual/reference/channel
-manual/reference/operator
-manual/reference/config
-manual/reference/environment-vars
-manual/reference/feature-flags
+reference/cli
+reference/config
+reference/environment-vars
+reference/feature-flags
+reference/stdlib
+reference/process
+reference/channel
+reference/operator
 ```
 
 ```{toctree}
@@ -105,7 +97,7 @@ manual/reference/feature-flags
 :caption: Contributing
 :maxdepth: 1
 
-manual/developer/index
-manual/developer/packages
-manual/developer/plugins
+developer/index
+developer/packages
+developer/plugins
 ```

@@ -1049,7 +1049,7 @@ To sum up, the use of output files with static names over dynamic ones is prefer
 
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
-```{literalinclude} ../snippets/process-out-env.nf
+```{literalinclude} snippets/process-out-env.nf
 :language: groovy
 ```
 
@@ -1063,7 +1063,7 @@ Prior to this version, if the environment variable contained multiple lines of o
 
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
-```{literalinclude} ../snippets/process-stdout.nf
+```{literalinclude} snippets/process-stdout.nf
 :language: groovy
 ```
 
@@ -1076,7 +1076,7 @@ The `stdout` qualifier allows you to output the `stdout` of the executed process
 
 The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
 
-```{literalinclude} ../snippets/process-out-eval.nf
+```{literalinclude} snippets/process-out-eval.nf
 :language: groovy
 ```
 
