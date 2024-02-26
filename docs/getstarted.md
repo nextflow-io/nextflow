@@ -22,28 +22,33 @@ bash --version
 java -version
 ```
 
-:::{tip}
-We recommend that you install Java through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information. 
+We recommend that you install Java through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information.
 
-To install Temurin 17:
+To install Java with SDKMAN:
 
-```bash
-sdk install java 17.0.6-tem
-```
-:::
+1. Install SDKMAN:
 
-If you're having trouble installing or upgrading Java:
+    ```bash
+    curl -s https://get.sdkman.io | bash
+    ```
 
-**Install SDKMAN!**
+2. Open a new terminal and install Java:
 
-```bash
-export NXF_VER=23.10.0
-curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-all
-```
+    ```bash
+    sdk install java 17.0.10-tem
+    ```
 
-:::{warning}
-The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
-:::
+3. Confirm that Java is installed correctly:
+
+    ```bash
+    java -version
+    ```
+
+4. To install Temurin 17:
+
+   ```bash
+   sdk install java 17.0.6-tem
+   ```
 
 ## Updates
 
@@ -83,23 +88,66 @@ For the execution in a cluster of computers, the use of a shared file system is 
 
 ## Installation
 
-Nextflow is distributed as a self-installing package, which means that it does not require any special installation procedure.
+Nextflow is distributed as a self-installing package, in order to make the installation process as simple as possible:
 
-1. Download the executable package by copying and pasting either one of the following commands in your terminal window: `wget -qO- https://get.nextflow.io | bash` or if you prefer `curl`: `curl -s https://get.nextflow.io | bash`. This will create the `nextflow` main executable file in the current directory.
-    a. If you don't have `curl` or `wget`, you can also download the Nextflow launcher script from the [project releases page](https://github.com/nextflow-io/nextflow/releases/latest) on GitHub.
-2. Make the binary executable on your system by running `chmod +x nextflow`.
-3. Optionally, move the `nextflow` file to a directory accessible by your `$PATH` variable. This is only required to avoid remembering and typing the full path to `nextflow` each time you need to run it.
+1. Install Nextflow:
 
-:::{tip}
-Set `export CAPSULE_LOG=none` to make the dependency installation logs less verbose.
+    ```bash
+    curl -s https://get.nextflow.io | bash
+    ```
+
+    This will create the `nextflow` executable in the current directory.
+
+    :::{tip}
+    You can set `export CAPSULE_LOG=none` to make the installation logs less verbose.
+    :::
+
+2. Make Nextflow executable:
+
+    ```bash
+    chmod +x nextflow
+    ```
+
+3. Move Nextflow into an executable path:
+
+    ```bash
+    sudo mv nextflow /usr/local/bin
+    ```
+
+4. Confirm that Nextflow is installed correctly:
+
+    ```bash
+    nextflow info
+    ```
+
+### Standalone distribution
+
+Nextflow has a set of {ref}`core plugins <plugins-core>` which are downloaded at runtime by default. There is also a standalone distribution (i.e. the `all` distribution) which comes pre-packaged with all core plugins. This distribution is mainly useful for offline environments.
+
+The installer for the `all` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
+
+```bash
+export NXF_VER=23.10.0
+curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-all
+```
+
+:::{warning}
+The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
 :::
 
-:::{tip}
-To avoid downloading the dependencies, you can also use the `nextflow-VERSION-all` distribution available for every Nextflow release on Github.
+## Updates
 
-1. Go to the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases) and expand the `Assets` section for a specific release.
-2. Copy the URL of the `nextflow-VERSION-all` asset and enter the download command in your terminal, e.g. `wget -qO- ASSET-URL`. It will create the completely self-contained `nextflow-VERSION-all` executable file in the current directory.
-:::
+With Nextflow installed in your environment, you can update to the latest version using the following command:
+
+```bash
+nextflow self-update
+```
+
+You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
+
+```bash
+NXF_VER=22.10.0 nextflow run hello
+```
 
 (getstarted-first)=
 
@@ -114,10 +162,6 @@ Copy the following example into your favorite text editor and save it to a file 
 ```{literalinclude} snippets/your-first-script.nf
 :language: groovy
 ```
-
-:::{note}
-For versions of Nextflow prior to `22.10.0`, you must explicitly enable DSL2 by adding `nextflow.enable.dsl=2` to the top of the script or by using the `-dsl2` command-line option.
-:::
 
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix `chunk_`, and the second receives these files and transforms their contents to uppercase letters. The resulting strings are emitted on the `result` channel and the final output is printed by the `view` operator.
 
@@ -225,21 +269,6 @@ uojnoB
 Any `.` (dot) character in a parameter name is interpreted as the delimiter of a nested scope. For example, `--foo.bar Hello` will be interpreted as `params.foo.bar`. If you want to have a parameter name that contains a `.` (dot) character, escape it using the back-slash character, e.g. `--foo\.bar Hello`.
 :::
 
-## Updates
-
-Having Nextflow installed in your computer you can update to the latest version using the following command:
-
-```bash
-nextflow self-update
-```
-
-:::{tip}
-You can temporarily switch to a specific version of Nextflow by prefixing the `nextflow` command with the `NXF_VER` environment variable. For example:
-
-```bash
-NXF_VER=20.04.0 nextflow run hello
-```
-:::
 
 ## Stable and Edge releases
 
