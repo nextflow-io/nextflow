@@ -1,15 +1,20 @@
 (getstarted-page)=
 
 # Get started
+ 
+ This guide covers the installation pThis guide will help you get started quickly. 
 
-Before you get started with Nextflow you need to install it. This guide will help you get started quickly. 
+- Requirements
+- Installation
+- Your first script
 
-- Check the requirements
-- Install Nextflow
-- Processes
-- Configuration files
-- Workflows
-- Operators
+Also take a look at:
+
+- {ref}`config-page`
+- {ref}`workflow-page`
+- {ref}`operator-page`
+
+If you're just starting out with Nextflow, [take a look at the tutorials on this page](https://www.nextflow.io/blog/2023/learn-nextflow-in-2023.html#nf-core). Then come back here. 
 
 (getstarted-requirement)=
 
@@ -18,7 +23,6 @@ Before you get started with Nextflow you need to install it. This guide will hel
 Nextflow can be used on any POSIX compatible system (Linux, macOS, etc). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 21)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can check what version you have using the following command:
 
 ```bash
-bash --version
 java -version
 ```
 
