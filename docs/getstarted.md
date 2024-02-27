@@ -2,19 +2,17 @@
 
 # Get started
 
-This guide will help you get started quickly. 
+If you're new to Nextflow, [take a look at the tutorials on this page](https://www.nextflow.io/blog/2023/learn-nextflow-in-2023.html#nf-core) first. This guide will help you get started with using Nextflow. It covers: 
 
 - Requirements
 - Installation
 - Your first script
 
-Also take a look at:
+We also recommend taking a look at these pages once you've installed Nextflow.
 
 - {ref}`config-page`
 - {ref}`workflow-page`
 - {ref}`operator-page`
-
-If you're just starting out with Nextflow, [take a look at the tutorials on this page](https://www.nextflow.io/blog/2023/learn-nextflow-in-2023.html#nf-core). Then come back here. 
 
 (getstarted-requirement)=
 
