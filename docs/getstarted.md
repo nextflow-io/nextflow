@@ -20,7 +20,7 @@ If you're just starting out with Nextflow, [take a look at the tutorials on this
 
 ## Requirements
 
-Nextflow can be used on any POSIX compatible system (Linux, macOS, etc). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 21)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can check what version you have using the following command:
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 21)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can check what version you have using the following command:
 
 ```bash
 java -version
@@ -161,13 +161,11 @@ NXF_VER=22.10.0 nextflow run hello
 For versions of Nextflow prior to `22.10.0`, you must explicitly enable DSL2 by adding `nextflow.enable.dsl=2` to the top of the script or by using the `-dsl2` command-line option.
 :::
 
-Copy the following example into your favorite text editor and save it to a file named `tutorial.nf`:
+This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix `chunk_`, and the second receives these files and transforms their contents to uppercase letters. The resulting strings are emitted on the `result` channel and the final output is printed by the `view` operator. Copy the following example into your favorite text editor and save it to a file named `tutorial.nf`:
 
 ```{literalinclude} snippets/your-first-script.nf
 :language: groovy
 ```
-
-This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix `chunk_`, and the second receives these files and transforms their contents to uppercase letters. The resulting strings are emitted on the `result` channel and the final output is printed by the `view` operator.
 
 Execute the script by entering the following command in your terminal:
 
@@ -184,9 +182,7 @@ WORLD!
 
 You can see that the first process is executed once, and the second twice. Finally the result string is printed.
 
-It's worth noting that the process `convertToUpper` is executed in parallel, so there's no guarantee that the instance processing the first split (the chunk `Hello`) will be executed before the one processing the second split (the chunk `world!`).
-
-Thus, it is perfectly possible that you will get the final result printed out in a different order:
+It's worth noting that the process `convertToUpper` is executed in parallel, so there's no guarantee that the instance processing the first split (the chunk `Hello`) will be executed before the one processing the second split (the chunk `world!`). Thus, it is perfectly possible that you will get the final result printed out in a different order:
 
 ```
 WORLD!
@@ -201,11 +197,9 @@ The hexadecimal string, e.g. `22/7548fa`, is the unique hash of a task, and the 
 
 ### Modify and resume
 
-Nextflow keeps track of all the processes executed in your pipeline. If you modify some parts of your script, only the processes that are actually changed will be re-executed. The execution of the processes that are not changed will be skipped and the cached result used instead.
+Nextflow keeps track of all the processes executed in your pipeline. If you modify some parts of your script, only the processes that are actually changed will be re-executed. The execution of the processes that are not changed will be skipped and the cached result used instead. This helps a lot when testing or modifying part of your pipeline without having to re-execute it from scratch.
 
-This helps a lot when testing or modifying part of your pipeline without having to re-execute it from scratch.
-
-For the sake of this tutorial, modify the `convertToUpper` process in the previous example, replacing the process script with the string `rev $x`, so that the process looks like this:
+For the sake of this tutorial, modify the `convertToUpper` process in the previous example, replacing the process script with the string `rev $x`, so the process looks like this:
 
 ```groovy
 process convertToUpper {
@@ -273,8 +267,7 @@ uojnoB
 Any `.` (dot) character in a parameter name is interpreted as the delimiter of a nested scope. For example, `--foo.bar Hello` will be interpreted as `params.foo.bar`. If you want to have a parameter name that contains a `.` (dot) character, escape it using the back-slash character, e.g. `--foo\.bar Hello`.
 :::
 
-
-## Stable and Edge releases
+## Stable and edge releases
 
 A *stable* version of Nextflow is released on a six-months basic schedule, in the 1st and 3rd quarter of every year.
 
