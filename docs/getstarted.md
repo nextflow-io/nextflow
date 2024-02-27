@@ -1,8 +1,8 @@
 (getstarted-page)=
 
 # Get started
- 
- This guide covers the installation pThis guide will help you get started quickly. 
+
+This guide will help you get started quickly. 
 
 - Requirements
 - Installation
