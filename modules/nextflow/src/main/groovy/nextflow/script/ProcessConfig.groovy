@@ -20,6 +20,7 @@ import static nextflow.util.CacheHelper.*
 
 import java.util.regex.Pattern
 
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -396,7 +397,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         final isNegated = pattern.startsWith('!')
         if( isNegated )
             pattern = pattern.substring(1).trim()
-        return Pattern.compile(pattern).matcher(name).matches() ^ isNegated
+        return compilePattern(pattern).matcher(name).matches() ^ isNegated
+    }
+
+    @Memoized(maxCacheSize = 10_000)
+    private static Pattern compilePattern(String pattern) {
+        Pattern.compile(pattern)
     }
 
     /**
