@@ -62,6 +62,8 @@ class AssetManager {
     @PackageScope
     static File root = DEFAULT_ROOT
 
+    static public final String revisionDelim = ':'
+
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
@@ -133,12 +135,12 @@ class AssetManager {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
-        this.project = resolveName(pipelineName, revision)
         this.revision = revision
-        this.localPath = checkProjectDir(project, revision)
+        this.project = resolveName(pipelineName, this.revision)
+        this.localPath = checkProjectDir(project, this.revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
-        this.provider.setRevision(revision)
+        this.provider.setRevision(this.revision)
         setupCredentials(cliOpts)
         validateProjectDir()
 
@@ -195,7 +197,7 @@ class AssetManager {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
-        new File(root, project + (revision ? ':'+revision : ''))
+        new File(root, project + (revision ? revisionDelim + revision : ''))
     }
 
     /**

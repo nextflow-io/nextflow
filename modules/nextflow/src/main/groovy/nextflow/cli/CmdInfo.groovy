@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.revisionDelim
+
 import java.lang.management.ManagementFactory
 import java.nio.file.spi.FileSystemProvider
 
@@ -80,7 +82,7 @@ class CmdInfo extends CmdBase {
         Plugins.init()
         final manager = new AssetManager(args[0], revision)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}${revision ? ':'+revision : ''}`")
+            throw new AbortOperationException("Unknown project `${args[0]}${revision ? revisionDelim + revision : ''}`")
 
         if( !format || format == 'text' ) {
             printText(manager,level)

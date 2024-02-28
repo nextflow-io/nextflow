@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.revisionDelim
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -53,13 +55,13 @@ class CmdDrop extends CmdBase {
         Plugins.init()
         def manager = new AssetManager(args[0], revision)
         if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${manager.project}${revision ? ':'+revision : ''}")
+            throw new AbortOperationException("No match found for: ${manager.project}${revision ? revisionDelim + revision : ''}")
         }
 
         if( this.force || manager.isClean() ) {
             manager.close()
             if( !manager.localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${manager.project}${revision ? ':'+revision : ''}` -- Check access permissions for path: ${manager.localPath}")
+                throw new AbortOperationException("Unable to delete project `${manager.project}${revision ? revisionDelim + revision : ''}` -- Check access permissions for path: ${manager.localPath}")
             return
         }
 
