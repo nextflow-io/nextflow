@@ -19,10 +19,8 @@ package nextflow.script.dsl
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.exception.ScriptRuntimeException
-import nextflow.script.OutputCollection
+import nextflow.script.OutputSelector
 import nextflow.script.WorkflowPublisher
-import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Implements the DSL for top-level workflow outputs
  *
@@ -31,115 +29,56 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class OutputDsl {
 
-    private Path path = Path.of('.')
+    private List<OutputSelector> selectors = []
 
-    private List<OutputCollection> collections = []
-
-    void path(String path) {
-        this.path = path as Path
-    }
-
-    void collect(String name, Closure closure) {
-        final dsl = new OutputCollectionDsl()
+    void path(String path, Closure closure) {
+        final dsl = new OutputPathDsl(this, Path.of(path))
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
-        this.collections << dsl.build()
+    }
+
+    void select(Map opts=[:], String name) {
+        if( opts.enabled == false )
+            return
+        this.selectors << new OutputSelector(name, Path.of('.'), opts)
+    }
+
+    void addSelector(OutputSelector selector) {
+        this.selectors << selector
     }
 
     WorkflowPublisher build() {
-        new WorkflowPublisher(path, collections)
+        new WorkflowPublisher(selectors)
     }
 
 }
 
 @CompileStatic
-class OutputCollectionDsl {
+class OutputPathDsl {
 
-    private String path = '.'
+    private OutputDsl root
 
-    private List<OutputCollection.Selector> selectors = []
+    private Path path
 
-    private OutputCollection.Index index
-
-    void path(String path) {
+    OutputPathDsl(OutputDsl root, Path path) {
+        this.root = root
         this.path = path
     }
 
-    void select(String name) {
-        this.selectors << new OutputCollection.Selector(name)
-    }
-
-    void select(String name, Closure closure) {
-        final dsl = new SelectorDsl()
-        dsl.name(name)
+    void path(String subpath, Closure closure) {
+        final dsl = new OutputPathDsl(root, path.resolve(subpath))
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
-        final selector = dsl.build()
-        if( selector )
-            this.selectors << selector
     }
 
-    void index(Closure closure) {
-        final dsl = new IndexDsl()
-        final cl = (Closure)closure.clone()
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.setDelegate(dsl)
-        cl.call()
-        this.index = dsl.build()
-    }
-
-    OutputCollection build() {
-        new OutputCollection(path, selectors, index)
-    }
-
-    static class SelectorDsl {
-        String name
-        boolean enabled = true
-        String path = '.'
-        String pattern
-
-        void name(String name) {
-            this.name = name
-        }
-
-        void when(boolean enabled) {
-            this.enabled = enabled
-        }
-
-        void path(String path) {
-            this.path = path
-        }
-
-        void pattern(String pattern) {
-            this.pattern = pattern
-        }
-
-        OutputCollection.Selector build() {
-            enabled
-                ? new OutputCollection.Selector(name, path, pattern)
-                : null
-        }
-    }
-
-    static class IndexDsl {
-        private String format
-        private String path
-
-        void format(String format) {
-            this.format = format
-        }
-
-        void path(String path) {
-            this.path = path
-        }
-
-        OutputCollection.Index build() {
-            new OutputCollection.Index(format, path)
-        }
+    void select(Map opts=[:], String name) {
+        if( opts.enabled == false )
+            return
+        root.addSelector(new OutputSelector(name, path, opts))
     }
 
 }

@@ -19,9 +19,7 @@ package nextflow.script
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.TupleConstructor
 import nextflow.Const
-import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.PublishDir
 import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
@@ -33,19 +31,10 @@ import nextflow.script.ProcessConfig
  */
 @CompileStatic
 class WorkflowPublisher {
-    private List<PublisherEntry> publishers = []
+    private List<OutputSelector> selectors
 
-    WorkflowPublisher(Path path, List<OutputCollection> collections) {
-        for( def collection : collections ) {
-            for( def selector : collection.selectors ) {
-                final params = [
-                    path: path.resolve(collection.path).resolve(selector.path),
-                    pattern: selector.pattern,
-                    failOnError: true
-                ]
-                publishers << new PublisherEntry(selector.name, PublishDir.create(params))
-            }
-        }
+    WorkflowPublisher(List<OutputSelector> selectors) {
+        this.selectors = selectors
     }
 
     void publish(TaskRun task) {
@@ -65,49 +54,29 @@ class WorkflowPublisher {
         // apply each publisher with matching process selector to task
         final processName = task.processor.name
         final simpleName = processName.split(Const.SCOPE_SEP).last()
-        for( final entry : publishers ) {
-            final selector = entry.selector
-            final publisher = entry.publisher
-            if( ProcessConfig.matchesSelector(simpleName, selector) || ProcessConfig.matchesSelector(processName, selector) )
-                synchronized (publisher) { publisher.apply(files, task) }
+        for( final selector : selectors ) {
+            if( ProcessConfig.matchesSelector(simpleName, selector.name) || ProcessConfig.matchesSelector(processName, selector.name) ) {
+                final params = [
+                    path: selector.path,
+                    pattern: selector.pattern,
+                    failOnError: true,
+                    overwrite: !task.cached
+                ]
+                PublishDir.create(params).apply(files, task)
+            }
         }
-    }
-
-    @TupleConstructor
-    private static class PublisherEntry {
-        String selector
-        PublishDir publisher
     }
 }
 
 @CompileStatic
-@TupleConstructor
-class OutputCollection {
+class OutputSelector {
+    String name
+    Path path
+    String pattern
 
-    String path
-    List<Selector> selectors
-    Index index
-
-    static class Selector {
-        String name
-        String path
-        String pattern
-
-        Selector(String name, String path, String pattern) {
-            this.name = name
-            this.path = path
-            this.pattern = pattern
-        }
-
-        Selector(String name) {
-            this(name, '.', null)
-        }
+    OutputSelector(String name, Path path, Map opts) {
+        this.name = name
+        this.path = path
+        this.pattern = opts.pattern
     }
-
-    @TupleConstructor
-    static class Index {
-        String format
-        String path
-    }
-
 }
