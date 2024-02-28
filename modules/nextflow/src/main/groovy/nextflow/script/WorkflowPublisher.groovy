@@ -69,7 +69,7 @@ class WorkflowPublisher {
             final selector = entry.selector
             final publisher = entry.publisher
             if( ProcessConfig.matchesSelector(simpleName, selector) || ProcessConfig.matchesSelector(processName, selector) )
-                publisher.apply(files, task)
+                synchronized (publisher) { publisher.apply(files, task) }
         }
     }
 
