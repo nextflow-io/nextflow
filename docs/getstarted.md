@@ -2,23 +2,17 @@
 
 # Get started
 
-If you're new to Nextflow, [take a look at the tutorials on this page](https://www.nextflow.io/blog/2023/learn-nextflow-in-2023.html#nf-core) first. This guide will help you get started with using Nextflow. It covers: 
+If you're new to Nextflow, check out [this blog post](https://www.nextflow.io/blog/2023/learn-nextflow-in-2023.html) first. This guide will help you get started with using Nextflow. It covers: 
 
 - Requirements
 - Installation
 - Your first script
 
-We also recommend taking a look at these pages once you've installed Nextflow.
-
-- {ref}`config-page`
-- {ref}`workflow-page`
-- {ref}`operator-page`
-
 (getstarted-requirement)=
 
 ## Requirements
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 21)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can check what version you have using the following command:
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 21)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
 
 ```bash
 java -version
@@ -51,40 +45,6 @@ To install Java with SDKMAN:
    ```bash
    sdk install java 17.0.6-tem
    ```
-
-## Updates
-
-With Nextflow installed in your environment, you can update to the latest version using the following command:
-
-```bash
-nextflow self-update
-```
-
-You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
-
-```bash
-NXF_VER=22.10.0 nextflow run hello
-```
-
-## Stable and Edge releases
-
-A *stable* version of Nextflow is released every six months, in the 4th and 10th month of each year.
-
-Additionally, an *edge* version is released on a monthly basis. The edge releases can be used to access the latest updates and experimental features.
-
-To use the latest edge release, set `NXF_EDGE=1` when updating:
-
-```bash
-NXF_EDGE=1 nextflow self-update
-```
-
-You can also use `NXF_VER` to switch to any edge release:
-
-```bash
-$ nextflow info
-```
-
-For the execution in a cluster of computers, the use of a shared file system is required to allow the sharing of tasks input/output files. Nextflow can also be run on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux).
 
 (getstarted-install)=
 
@@ -151,6 +111,24 @@ You can also temporarily switch to a specific version of Nextflow with the `NXF_
 NXF_VER=22.10.0 nextflow run hello
 ```
 
+## Stable and Edge releases
+
+A *stable* version of Nextflow is released every six months, in the 4th and 10th month of each year.
+
+Additionally, an *edge* version is released on a monthly basis. The edge releases can be used to access the latest updates and experimental features.
+
+To use the latest edge release, set `NXF_EDGE=1` when updating:
+
+```bash
+NXF_EDGE=1 nextflow self-update
+```
+
+You can also use `NXF_VER` to switch to any edge release:
+
+```bash
+$ nextflow info
+```
+
 (getstarted-first)=
 
 ## Your first script
@@ -180,7 +158,7 @@ WORLD!
 
 You can see that the first process is executed once, and the second twice. Finally the result string is printed.
 
-It's worth noting that the process `convertToUpper` is executed in parallel, so there's no guarantee that the instance processing the first split (the chunk `Hello`) will be executed before the one processing the second split (the chunk `world!`). Thus, it is perfectly possible that you will get the final result printed out in a different order:
+It's worth noting that the process `convertToUpper` is executed in parallel, so there's no guarantee that the instance processing the first split (the chunk `Hello`) will be executed before the one processing the second split (the chunk `world!`). Thus, you may very likely see the final result printed in a different order:
 
 ```
 WORLD!
@@ -197,7 +175,7 @@ The hexadecimal string, e.g. `22/7548fa`, is the unique hash of a task, and the 
 
 Nextflow keeps track of all the processes executed in your pipeline. If you modify some parts of your script, only the processes that are actually changed will be re-executed. The execution of the processes that are not changed will be skipped and the cached result used instead. This helps a lot when testing or modifying part of your pipeline without having to re-execute it from scratch.
 
-For the sake of this tutorial, modify the `convertToUpper` process in the previous example, replacing the process script with the string `rev $x`, so the process looks like this:
+For the sake of this tutorial, modify the `convertToUpper` process in the previous example, replacing the process script with the string `rev $x`, like so:
 
 ```groovy
 process convertToUpper {
@@ -264,17 +242,3 @@ uojnoB
 :::{versionchanged} 20.11.0-edge
 Any `.` (dot) character in a parameter name is interpreted as the delimiter of a nested scope. For example, `--foo.bar Hello` will be interpreted as `params.foo.bar`. If you want to have a parameter name that contains a `.` (dot) character, escape it using the back-slash character, e.g. `--foo\.bar Hello`.
 :::
-
-## Stable and edge releases
-
-A *stable* version of Nextflow is released on a six-months basic schedule, in the 1st and 3rd quarter of every year.
-
-Along with the stable release, an *edge* version is released on a monthly basis. This version is useful to test and use most recent updates and experimental features.
-
-To use the latest edge release run the following snippet in your shell terminal:
-
-```bash
-export NXF_EDGE=1
-nextflow self-update
-```
-
