@@ -555,7 +555,7 @@ class AssetManager {
     }
 
     /**
-     * @return The list of available revisions for a given AssetManager project
+     * @return The list of available revisions for a given project name
      */
     static List<String> listRevisions( String project ) {
         log.debug "Listing revisions for project: $project"
@@ -565,13 +565,9 @@ class AssetManager {
         if( !root.exists() )
             return result
 
-        def proj = project.tokenize('/').toList()
-        root.eachDir { File org ->
-            org.eachDir { File it ->
-                String itOrg = org.getName().toString() ;
-                String itName = it.getName().toString().tokenize(revisionDelim)[0] ;
-                Boolean matches = ( itOrg == proj[0] && itName == proj[1] )
-                result <<  ( matches ? "${org.getName()}/${it.getName()}".toString() : null )
+        list().each {
+            if( it.tokenize(revisionDelim)[0] == project ) {
+                result << it
             }
         }
 
