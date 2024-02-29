@@ -40,6 +40,8 @@ myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']
 myst_heading_anchors = 3
 
 rediraffe_redirects = {
+    'basic.md': 'overview.md',
+    'getstarted.md': 'install.md',
     'dsl2.md': 'dsl1.md'
 }
 
