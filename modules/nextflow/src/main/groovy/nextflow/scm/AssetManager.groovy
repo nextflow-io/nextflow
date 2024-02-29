@@ -554,6 +554,30 @@ class AssetManager {
         return result
     }
 
+    /**
+     * @return The list of available revisions for a given AssetManager project
+     */
+    static List<String> listRevisions( String project ) {
+        log.debug "Listing revisions for project: $project"
+
+        def result = new LinkedList()
+
+        if( !root.exists() )
+            return result
+
+        def proj = project.tokenize('/').toList()
+        root.eachDir { File org ->
+            org.eachDir { File it ->
+                String itOrg = org.getName().toString() ;
+                String itName = it.getName().toString().tokenize(revisionDelim)[0] ;
+                Boolean matches = ( itOrg == proj[0] && itName == proj[1] )
+                result <<  ( matches ? "${org.getName()}/${it.getName()}".toString() : null )
+            }
+        }
+
+        return result
+    }
+
     // updated for new localPath schema (see localPath declaration at top of this class file)
     static protected def find( String name, String revision = null ) {
         def exact = []
