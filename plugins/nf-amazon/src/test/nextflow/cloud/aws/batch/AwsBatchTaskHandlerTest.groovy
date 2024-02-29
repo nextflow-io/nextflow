@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,14 +35,16 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
+import nextflow.BuildInfo
+import nextflow.Session
 import nextflow.cloud.aws.config.AwsConfig
-import nextflow.Const
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -50,7 +52,9 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -333,7 +337,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result = handler.getJobDefinition(task)
         then:
         1 * task.getContainer() >> IMAGE
-        1 * handler.resolveJobDefinition(IMAGE) >> JOB_NAME
+        1 * handler.resolveJobDefinition(task) >> JOB_NAME
         result == JOB_NAME
 
     }
@@ -405,6 +409,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def JOB_ID= '123'
         def handler = Spy(AwsBatchTaskHandler)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE }
 
         def req = Mock(RegisterJobDefinitionRequest) {
             getJobDefinitionName() >> JOB_NAME
@@ -412,17 +417,17 @@ class AwsBatchTaskHandlerTest extends Specification {
         }
 
         when:
-        handler.resolveJobDefinition(IMAGE)
+        handler.resolveJobDefinition(task)
         then:
-        1 * handler.makeJobDefRequest(IMAGE) >> req
+        1 * handler.makeJobDefRequest(task) >> req
         1 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         1 * handler.createJobDef(req) >> null
 
         when:
-        handler.resolveJobDefinition(IMAGE)
+        handler.resolveJobDefinition(task)
         then:
         // second time are not invoked for the same image
-        1 * handler.makeJobDefRequest(IMAGE) >> req
+        1 * handler.makeJobDefRequest(task) >> req
         0 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         0 * handler.createJobDef(req) >> null
 
@@ -498,7 +503,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         result == "$JOB_NAME:10"
         and:
-        req.getTags().get('nextflow.io/version') == Const.APP_VER
+        req.getTags().get('nextflow.io/version') == BuildInfo.version
         Instant.parse(req.getTags().get('nextflow.io/createdAt'))
 
     }
@@ -550,14 +555,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig() >> Mock(TaskConfig) }
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = Mock(AwsBatchExecutor)
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
@@ -569,7 +575,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         !result.containerProperties.privileged
         
         when:
-        result = handler.makeJobDefRequest(IMAGE)
+        result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch'], region: 'us-east-1'))
@@ -587,18 +593,77 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should create a fargate job definition' () {
+        given:
+        def ARM64 = new Architecture('linux/arm64')
+        def _100GB = MemoryUnit.of('100GB')
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) { getContainer()>>IMAGE }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+        and:
+        def session =  Mock(Session) {
+            getConfig() >> [aws:[batch:[platformType:'fargate', jobRole: 'the-job-role', executionRole: 'the-exec-role']]]
+        }
+        def opts = new AwsOptions(session)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        task.getConfig() >> Mock(TaskConfig)
+        and:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> opts
+        and:
+        result.jobDefinitionName == JOB_NAME
+        result.type == 'container'
+        result.getPlatformCapabilities() == ['FARGATE']
+        result.containerProperties.getJobRoleArn() == 'the-job-role'
+        result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
+        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        and:
+        result.containerProperties.getEphemeralStorage().sizeInGiB == 50
+        result.containerProperties.getRuntimePlatform() == null
+
+        when:
+        result = handler.makeJobDefRequest(task)
+        then:
+        task.getConfig() >> Mock(TaskConfig) { getDisk()>>_100GB ; getArchitecture()>>ARM64 }
+        and:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> opts
+        and:
+        result.jobDefinitionName == JOB_NAME
+        result.type == 'container'
+        result.getPlatformCapabilities() == ['FARGATE']
+        result.containerProperties.getJobRoleArn() == 'the-job-role'
+        result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
+        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        and:
+        result.containerProperties.getEphemeralStorage().sizeInGiB == 100
+        result.containerProperties.getRuntimePlatform().getCpuArchitecture() == 'ARM64'
+    }
+
     def 'should create a job definition request object for fusion' () {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>Mock(TaskConfig)  }
+        and:
         AwsBatchTaskHandler handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> task
             fusionEnabled() >> true
         }
         handler.@executor = Mock(AwsBatchExecutor) {}
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
@@ -615,14 +680,16 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def executor = Mock(AwsBatchExecutor)
         def opts = Mock(AwsOptions)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>Mock(TaskConfig)  }
+        and:
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = executor
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
@@ -647,14 +714,16 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def opts = Mock(AwsOptions)
         def executor = Mock(AwsBatchExecutor)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>Mock(TaskConfig) }
+        and:
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig) }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = executor
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
@@ -672,14 +741,16 @@ class AwsBatchTaskHandlerTest extends Specification {
         def opts = Mock(AwsOptions)
         def taskConfig = new TaskConfig(containerOptions: '--privileged --user foo')
         def executor = Mock(AwsBatchExecutor)
+        def task = Mock(TaskRun) { getContainer()>>IMAGE; getConfig()>>taskConfig }
+        and:
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> taskConfig }
+            getTask() >> task
             fusionEnabled() >> false
         }
         handler.@executor = executor
 
         when:
-        def result = handler.makeJobDefRequest(IMAGE)
+        def result = handler.makeJobDefRequest(task)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
@@ -872,6 +943,36 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should render submit command with s5cmd' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            fusionEnabled() >> false
+        }
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> 's5cmd' }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd cp .command.log s3://work/log||true; exit $ret; }" EXIT; s5cmd cat s3://work/run | bash 2>&1 | tee .command.log'
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  {
+            getS5cmdPath() >> 's5cmd --debug'
+            getStorageEncryption() >> 'aws:kms'
+            getStorageKmsKeyId() >> 'kms-key-123'
+        }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/run | bash 2>&1 | tee .command.log'
+
+    }
+
     def 'should create an aws submit request with labels'() {
 
         given:
@@ -922,4 +1023,47 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.join(' ') == '/usr/bin/fusion bash /fusion/s3/my-bucket/work/dir/.command.run'
     }
 
+    @Unroll
+    def 'should normalise fargate mem' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+        expect:
+        handler.normaliseFargateMem(CPUS, MemoryUnit.of( MEM * 1024L*1024L )) == EXPECTED
+
+        where:
+        CPUS    | MEM       | EXPECTED
+        1       | 100       | 2048
+        1       | 1000      | 2048
+        1       | 2000      | 2048
+        1       | 3000      | 3072
+        1       | 7000      | 7168
+        1       | 8000      | 8192
+        1       | 10000     | 8192
+        and:
+        2       | 1000      | 4096
+        2       | 6000      | 6144
+        2       | 16000     | 16384
+        2       | 20000     | 16384
+        and:
+        4       | 1000      | 8192
+        4       | 8000      | 8192
+        4       | 16000     | 16384
+        4       | 30000     | 30720
+        4       | 40000     | 30720
+        and:
+        8       | 1000      | 16384
+        8       | 10000     | 16384
+        8       | 20000     | 20480
+        8       | 30000     | 32768
+        8       | 100000    | 61440
+        and:
+        16      | 1000      | 32768
+        16      | 30000     | 32768
+        16      | 40000     | 40960
+        16      | 60000     | 65536
+        16      | 100000    | 106496
+        16      | 200000    | 122880
+    }
 }

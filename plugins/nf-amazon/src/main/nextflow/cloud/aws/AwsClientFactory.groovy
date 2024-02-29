@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
@@ -256,9 +257,10 @@ class AwsClientFactory {
         else
             builder.withRegion(region)
 
-        final credentials = new S3CredentialsProvider(getCredentialsProvider0())
-        if( credentials )
-            builder.withCredentials(credentials)
+        final credentials = config.s3Config.anonymous
+                ? new AWSStaticCredentialsProvider(new AnonymousAWSCredentials())
+                : new S3CredentialsProvider(getCredentialsProvider0())
+        builder.withCredentials(credentials)
 
         if( clientConfig )
             builder.withClientConfiguration(clientConfig)

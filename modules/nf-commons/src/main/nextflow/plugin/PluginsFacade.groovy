@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
-        if( mode=='dev' && root.toString()=='plugins' && !isRunningFromDistArchive() )
+        if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
@@ -162,8 +162,20 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    protected CustomPluginManager createManager(Path root) {
-        final result = mode!=DEV_MODE ? new LocalPluginManager(root) : new DevPluginManager(root)
+    private CustomPluginManager newPluginManager(Path root, boolean embedded) {
+        if( mode==DEV_MODE ) {
+            // plugin manage for dev purposes
+            return new DevPluginManager(root)
+        }
+        if( embedded ) {
+            // use the custom plugin manager to by-pass the creation of a local plugin repository
+            return new EmbeddedPluginManager(root)
+        }
+        return new LocalPluginManager(root)
+    }
+
+    protected CustomPluginManager createManager(Path root, boolean embedded) {
+        final result = newPluginManager(root, embedded)
         result.addPluginStateListener(this)
         return result
     }
@@ -194,7 +206,7 @@ class PluginsFacade implements PluginStateListener {
         if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
 
-        this.manager = createManager(root)
+        this.manager = createManager(root, embedded)
         this.updater = createUpdater(root, manager)
         manager.loadPlugins()
         if( embedded ) {
@@ -219,11 +231,6 @@ class PluginsFacade implements PluginStateListener {
             manager.startPlugins()
             this.embedded = embedded
         }
-    }
-
-    synchronized void setup(Map config = Collections.emptyMap()) {
-        init()
-        load(config)
     }
 
     void load(Map config) {
@@ -371,8 +378,8 @@ class PluginsFacade implements PluginStateListener {
             specs << defaultPlugins.getPlugin('nf-wave')
         }
 
-        // add cloudcache plugin when NXF_CLOUDCACHE_PATH is set
-        if( env.NXF_CLOUDCACHE_PATH ) {
+        // add cloudcache plugin when cloudcache is enabled in the config
+        if( Bolts.navigate(config, 'cloudcache.enabled')==true ) {
             specs << defaultPlugins.getPlugin('nf-cloudcache')
         }
 
@@ -397,7 +404,7 @@ class PluginsFacade implements PluginStateListener {
         final bucketDir = config.bucketDir as String
         final executor = Bolts.navigate(config, 'process.executor')
 
-        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') )
+        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') || env.containsKey('NXF_ENABLE_AWS_SES') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
         if( executor == 'google-lifesciences' || executor == 'google-batch' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )

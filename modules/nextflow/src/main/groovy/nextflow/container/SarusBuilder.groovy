@@ -59,7 +59,7 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << '-w "$PWD" '
+        result << '-w "$NXF_TASK_WORKDIR" '
 
         if( runOptions )
             result << runOptions.join(' ') << ' '

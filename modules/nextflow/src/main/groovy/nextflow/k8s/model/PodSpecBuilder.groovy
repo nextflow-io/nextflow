@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,6 +115,12 @@ class PodSpecBuilder {
     Map<String,List<String>> capabilities
 
     List<String> devices
+
+    Map<String,?> resourcesLimits
+
+    String schedulerName
+
+    Integer ttlSecondsAfterFinished
 
     /**
      * @return A sequential volume unique identifier
@@ -306,13 +312,13 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withDevices(List<String> dev) {
-        this.devices = dev
+    PodSpecBuilder withActiveDeadline(int seconds) {
+        this.activeDeadlineSeconds = seconds
         return this
     }
 
-    PodSpecBuilder withActiveDeadline(int seconds) {
-        this.activeDeadlineSeconds = seconds
+    PodSpecBuilder withResourcesLimits(Map<String,?> limits) {
+        this.resourcesLimits = limits
         return this
     }
 
@@ -334,6 +340,9 @@ class PodSpecBuilder {
         // -- emptyDirs
         if( opts.getMountEmptyDirs() )
             emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- host paths
+        if( opts.getMountHostPaths() )
+            hostMounts.addAll( opts.getMountHostPaths() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
@@ -369,6 +378,11 @@ class PodSpecBuilder {
             tolerations.addAll(opts.tolerations)
         // -- privileged
         privileged = opts.privileged
+        // -- scheduler name
+        schedulerName = opts.schedulerName
+        // -- ttl seconds after finished (job)
+        if( opts.ttlSecondsAfterFinished != null )
+            ttlSecondsAfterFinished = opts.ttlSecondsAfterFinished
 
         return this
     }
@@ -410,9 +424,6 @@ class PodSpecBuilder {
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
 
-        if( devices )
-            container.devices = devices
-
         final secContext = new LinkedHashMap(10)
         if( privileged ) {
             // note: privileged flag needs to be defined in the *container* securityContext
@@ -433,6 +444,9 @@ class PodSpecBuilder {
 
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
+
+        if( schedulerName )
+            spec.schedulerName = schedulerName
 
         if( affinity )
             spec.affinity = affinity
@@ -493,6 +507,10 @@ class PodSpecBuilder {
 
         if( this.disk ) {
             container.resources = addDiskResources(this.disk, container.resources as Map)
+        }
+
+        if( this.resourcesLimits ) {
+            container.resources = addResourcesLimits(this.resourcesLimits, container.resources as Map)
         }
 
         // add storage definitions ie. volumes and mounts
@@ -563,19 +581,35 @@ class PodSpecBuilder {
 
     Map buildAsJob() {
         final pod = build()
+        final spec = [
+            backoffLimit: 0,
+            template: [
+                metadata: pod.metadata,
+                spec: pod.spec
+            ]
+        ]
+
+        if( ttlSecondsAfterFinished != null )
+            spec.ttlSecondsAfterFinished = ttlSecondsAfterFinished
 
         return [
             apiVersion: 'batch/v1',
             kind: 'Job',
             metadata: pod.metadata,
-            spec: [
-                backoffLimit: 0,
-                template: [
-                    metadata: pod.metadata,
-                    spec: pod.spec
-                ]
-            ]
+            spec: spec
         ]
+    }
+
+    @PackageScope
+    Map addResourcesLimits(Map limits, Map result) {
+        if( result == null )
+            result = new LinkedHashMap(10)
+
+        final limits0 = result.limits as Map ?: new LinkedHashMap(10)
+        limits0.putAll( limits )
+        result.limits = limits0
+
+        return result
     }
 
     @PackageScope

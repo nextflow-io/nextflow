@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,9 +124,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         // get input files paths
-        final paths = DockerBuilder.inputFilesToPaths(builder.getInputFiles())
-        final binDirs = builder.binDirs
-        final workDir = builder.workDir
+        final List<Path> paths = DockerBuilder.inputFilesToPaths(builder.getInputFiles())
+        final List<Path> binDirs = builder.binDirs
+        final Path workDir = builder.workDir
         // add standard paths
         if( binDirs )
             paths.addAll(binDirs)
@@ -249,7 +249,12 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         if ( fusionEnabled() ) {
-            builder.withPrivileged(true)
+            if( fusionConfig().privileged() )
+                builder.withPrivileged(true)
+            else {
+                final device= k8sConfig.fuseDevicePlugin()
+                builder.withResourcesLimits(device)
+            }
 
             final env = fusionLauncher().fusionEnv()
             for( Map.Entry<String,String> it : env )
@@ -473,7 +478,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 client.podDelete(podName)
         }
         else {
-            log.debug "[K8s] Oops.. invalid delete action"
+            log.debug "[K8s] Invalid delete action"
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,8 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 class CondaCache {
-
+    static final private Object condaLock = new Object()
+    
     /**
      * Cache the prefix path for each Conda environment
      */
@@ -59,7 +60,7 @@ class CondaCache {
 
     private String createOptions
 
-    private boolean useMamba 
+    private boolean useMamba
 
     private boolean useMicromamba 
 
@@ -97,23 +98,24 @@ class CondaCache {
     CondaCache(CondaConfig config) {
         this.config = config
 
-        if( config.createTimeout )
-            createTimeout = config.createTimeout as Duration
+        if( config.createTimeout() )
+            createTimeout = config.createTimeout()
 
-        if( config.createOptions )
-            createOptions = config.createOptions
+        if( config.createOptions() )
+            createOptions = config.createOptions()
 
-        if( config.cacheDir )
-            configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
+        if( config.cacheDir() )
+            configCacheDir0 = config.cacheDir().toAbsolutePath()
 
-        if( config.useMamba && config.useMicroMamba)
+        if( config.useMamba() && config.useMicromamba() )
             throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
         
-        if( config.useMamba )
-            useMamba = config.useMamba as boolean
+        if( config.useMamba() ) {
+            useMamba = config.useMamba()
+        }
 
-        if( config.useMicromamba )
-            useMicromamba = config.useMicromamba as boolean
+        if( config.useMicromamba() )
+            useMicromamba = config.useMicromamba()
 
         if( config.getChannels() )
             channels = config.getChannels()
@@ -273,7 +275,6 @@ class CondaCache {
 
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
-
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
@@ -296,7 +297,13 @@ class CondaCache {
         }
 
         try {
-            runCommand( cmd )
+            // Parallel execution of conda causes data and package corruption.
+            // https://github.com/nextflow-io/nextflow/issues/4233
+            // https://github.com/conda/conda/issues/13037
+            // Should be removed as soon as the upstream bug is fixed and released.
+            synchronized(condaLock) {
+                runCommand( cmd )
+            }
             log.debug "'${binaryName}' create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){

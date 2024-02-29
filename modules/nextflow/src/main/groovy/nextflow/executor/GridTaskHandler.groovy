@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -375,6 +375,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             catch( Exception e ) {
                 log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
+                return Integer.MAX_VALUE
             }
         }
 
@@ -400,9 +401,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return null
             }
             log.warn "Unable to read command status from: ${exitFile.toUriString()} after $delta ms"
+            return -1
         }
-
-        return Integer.MAX_VALUE
     }
 
     @Override
@@ -478,7 +478,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return true
             }
             // if the task is not complete (ie submitted or running)
-            // AND the work-dir does not exists ==> something is wrong
+            // AND the work-dir does not exist ==> something is wrong
             task.error = new ProcessException("Task work directory is missing (!)")
             // sanity check does not pass
             return false

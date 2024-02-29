@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        final ref = revision ?: getMainBranch()
+        final ref = revision ? getRefForRevision(revision) : getMainBranch()
         return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
     }
 
@@ -60,6 +60,11 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     String getMainBranch() {
         invokeAndParseResponse(getMainBranchUrl()) ?. mainbranch ?. name
+    }
+
+    private String getRefForRevision(String revision){
+        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/branches/$revision")
+        return resp?.target?.hash
     }
 
     @Memoized

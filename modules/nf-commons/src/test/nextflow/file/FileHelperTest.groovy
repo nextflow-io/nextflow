@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,29 @@ class FileHelperTest extends Specification {
         Files.createTempDirectory(tmp, 'test')
     }
 
+    def 'should match invalid url prefix' (){
+        expect:
+        FileHelper.INVALID_URL_PREFIX.matcher(STR).matches() == EXPECTED
+
+        where:
+        EXPECTED| STR
+        true    | 's3:/foo'
+        true    | 'az:/foo'
+        true    | 'gs:/foo'
+        true    | 'xyz:/foo'
+        and:
+        false   | 'file:/foo'   // <- this is ok
+        and:
+        false   | 's3://foo'
+        false   | 'az://foo'
+        false   | 'gs://foo'
+        false   | 'http://foo'
+        false   | 'https://foo'
+        false   | 'ftp://foo'
+        false   | 'xyz://foo'
+
+    }
+
     def 'should return a Path object' () {
 
         expect:
@@ -79,6 +102,12 @@ class FileHelperTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Path string cannot ends with a blank or special characters -- Offending path: '/some/file.txt\\n'"
+
+        when:
+        FileHelper.asPath('s3:/some/broken/url')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "File path is prefixed with an invalid URL scheme - Offending path: 's3:/some/broken/url'"
     }
 
     def 'should strip query params from http files' () {

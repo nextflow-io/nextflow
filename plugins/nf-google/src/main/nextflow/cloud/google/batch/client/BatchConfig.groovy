@@ -50,8 +50,10 @@ class BatchConfig {
     private List<String> allowedLocations
     private MemoryUnit bootDiskSize
     private String cpuPlatform
-    private boolean spot
+    private int maxSpotAttempts
+    private boolean installGpuDrivers
     private boolean preemptible
+    private boolean spot
     private boolean usePrivateAddress
     private String network
     private String subnetwork
@@ -62,6 +64,8 @@ class BatchConfig {
     List<String> getAllowedLocations() { allowedLocations }
     MemoryUnit getBootDiskSize() { bootDiskSize }
     String getCpuPlatform() { cpuPlatform }
+    int getMaxSpotAttempts() { maxSpotAttempts }
+    boolean getInstallGpuDrivers() { installGpuDrivers }
     boolean getPreemptible() { preemptible }
     boolean getSpot() { spot }
     boolean getUsePrivateAddress() { usePrivateAddress }
@@ -79,8 +83,10 @@ class BatchConfig {
         result.allowedLocations = (config.allowedLocations ?: List.of()) as List<String>
         result.bootDiskSize = config.bootDiskSize as MemoryUnit
         result.cpuPlatform = config.cpuPlatform
-        result.spot = config.spot ?: false
+        result.maxSpotAttempts = (config.maxSpotAttempts ?: 5) as int
+        result.installGpuDrivers = config.installGpuDrivers ?: false
         result.preemptible = config.preemptible ?: false
+        result.spot = config.spot ?: false
         result.usePrivateAddress = config.usePrivateAddress ?: false
         result.network = config.network
         result.subnetwork = config.subnetwork

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,9 @@
  */
 
 package nextflow
+
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.text.SimpleDateFormat
-
-import static nextflow.extension.Bolts.DATETIME_FORMAT
-
 /**
  * Application main constants
  *
@@ -49,62 +46,18 @@ class Const {
      */
     static public final Path APP_HOME_DIR = getHomeDir(APP_NAME)
 
-    /**
-     * The application version
-     */
-    static public final String APP_VER = "23.08.1-edge"
-
-    /**
-     * The app build time as linux/unix timestamp
-     */
-    static public final long APP_TIMESTAMP = 1692284319999
-
-    /**
-     * The app build number
-     */
-    static public final int APP_BUILDNUM = 5874
-
-    /**
-     * The app build time string relative to UTC timezone
-     */
-    static public final String APP_TIMESTAMP_UTC = {
-
-        def tz = TimeZone.getTimeZone('UTC')
-        def fmt = new SimpleDateFormat(DATETIME_FORMAT)
-        fmt.setTimeZone(tz)
-        fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
-
-    } ()
-
-
-    /**
-     * The app build time string relative to local timezone
-     */
-    static public final String APP_TIMESTAMP_LOCAL = {
-
-        def tz = TimeZone.getDefault()
-        def fmt = new SimpleDateFormat(DATETIME_FORMAT)
-        fmt.setTimeZone(tz)
-        fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
-
-    } ()
-
-    static String deltaLocal() {
-        def utc = APP_TIMESTAMP_UTC.split(' ')
-        def loc = APP_TIMESTAMP_LOCAL.split(' ')
-
-        if( APP_TIMESTAMP_UTC == APP_TIMESTAMP_LOCAL ) {
-            return ''
-        }
-
-        def result = utc[0] == loc[0] ? loc[1,-1].join(' ') : loc.join(' ')
-        return "($result)"
+    static Path sysHome() {
+        def home = System.getProperty("user.home")
+        if( !home || home=='?' )
+            home = System.getenv('HOME')
+        if( !home )
+            throw new IllegalStateException("Unable to detect system home path - Make sure the variable HOME or NXF_HOME is defined in your environment")
+        return Path.of(home)
     }
 
-
     private static Path getHomeDir(String appname) {
-        def home = System.getenv('NXF_HOME')
-        def result = home ? Paths.get(home) : Paths.get(System.getProperty("user.home")).resolve(".$appname")
+        final home = System.getenv('NXF_HOME')
+        final result = home ? Paths.get(home) : sysHome().resolve(".$appname")
 
         if( !result.exists() && !result.mkdir() ) {
             throw new IllegalStateException("Cannot create path '${result}' -- check file system access permission")
@@ -113,20 +66,9 @@ class Const {
         return result
     }
 
-    /*
-     * The application 'logo'
-     */
-    static public final String SPLASH =
-
-"""
-      N E X T F L O W
-      version ${APP_VER} build ${APP_BUILDNUM}
-      created ${APP_TIMESTAMP_UTC} ${deltaLocal()}
-      cite doi:10.1038/nbt.3820
-      http://nextflow.io
-"""
-
-    static public final String S3_UPLOADER_CLASS = 'nextflow.cloud.aws.nio'
+    static final Path getAppCacheDir() {
+        return Path.of(SysEnv.get('NXF_CACHE_DIR', '.nextflow'))
+    }
 
     static public final String ROLE_WORKER = 'worker'
 
@@ -140,7 +82,7 @@ class Const {
 
     static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
 
-    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : APP_HOME_DIR.resolve('assets').toFile()
 
     static public final String DEFAULT_BRANCH = 'master'
 

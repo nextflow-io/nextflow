@@ -20,6 +20,7 @@ import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
@@ -749,7 +750,12 @@ class AzBatchService implements Closeable {
                     .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) )
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
-        else {
+        else if( spec.opts.lowPriority ) {
+            log.debug "Creating low-priority pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
+            poolParams
+                .withTargetLowPriorityNodes(spec.opts.vmCount)
+        }
+        else  {
             log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
             poolParams
                     .withTargetDedicatedNodes(spec.opts.vmCount)
@@ -759,23 +765,24 @@ class AzBatchService implements Closeable {
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
+        final target = opts.lowPriority ? 'TargetLowPriorityNodes' : 'TargetDedicatedNodes'
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
-        def DEFAULT_FORMULA = '''
+        final DEFAULT_FORMULA = """
             // Get pool lifetime since creation.
             lifespan = time() - time("{{poolCreationTime}}");
             interval = TimeInterval_Minute * {{scaleInterval}};
             
             // Compute the target nodes based on pending tasks.
-            // $PendingTasks == The sum of $ActiveTasks and $RunningTasks
-            $samples = $PendingTasks.GetSamplePercent(interval);
-            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(interval)));
-            $targetVMs = $tasks > 0 ? $tasks : max(0, $TargetDedicatedNodes/2);
-            targetPoolSize = max(0, min($targetVMs, {{maxVmCount}}));
+            // \$PendingTasks == The sum of \$ActiveTasks and \$RunningTasks
+            \$samples = \$PendingTasks.GetSamplePercent(interval);
+            \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(interval)));
+            \$targetVMs = \$tasks > 0 ? \$tasks : max(0, \$TargetDedicatedNodes/2);
+            targetPoolSize = max(0, min(\$targetVMs, {{maxVmCount}}));
             
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
-            $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
-            $NodeDeallocationOption = taskcompletion;
-            '''.stripIndent(true)
+            \$${target} = lifespan < interval ? {{vmCount}} : targetPoolSize;
+            \$NodeDeallocationOption = taskcompletion;
+            """.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
         final vars = poolCreationBindings(opts, Instant.now())
@@ -906,8 +913,22 @@ class AzBatchService implements Closeable {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof BatchErrorException && e.body().code() in RETRY_CODES)  as Predicate<? extends Throwable>
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if( t instanceof BatchErrorException && t.body().code() in RETRY_CODES )
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
         final policy = retryPolicy(cond)
+        // apply the action with
         return Failsafe.with(policy).get(action)
     }
 }
