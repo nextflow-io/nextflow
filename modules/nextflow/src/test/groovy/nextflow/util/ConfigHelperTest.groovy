@@ -19,8 +19,6 @@ package nextflow.util
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.NextflowMeta
-import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -275,26 +273,6 @@ class ConfigHelperTest extends Specification {
         "withName:2foo"     | "'withName:2foo'"     | "withName:'2foo'"
     }
 
-   def 'should validate config schema' () {
-      given:
-      def validOptions = ['bar'] as Set
-      and:
-      SysEnv.push(NXF_ENABLE_STRICT_CONFIG: 'true')
-      NextflowMeta.instance.strictMode(true)
 
-      when:
-      ConfigHelper.checkInvalidConfigOptions('foo', ['bar': 1], validOptions)
-      then:
-      noExceptionThrown()
-
-      when:
-      ConfigHelper.checkInvalidConfigOptions('foo', ['bar': 1, 'baz': 2], validOptions)
-      then:
-      def e = thrown(IllegalArgumentException)
-      e.message == 'Unrecognized config option -- foo.baz'
-
-      cleanup:
-      SysEnv.pop()
-   }
 
 }

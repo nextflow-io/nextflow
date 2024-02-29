@@ -23,6 +23,8 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.config.ConfigOption
+import nextflow.config.ConfigSchema
 import nextflow.exception.AbortOperationException
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
@@ -31,7 +33,6 @@ import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
-import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 /**
  * Model Kubernetes specific settings defined in the nextflow
@@ -41,29 +42,7 @@ import nextflow.util.Duration
  */
 @Slf4j
 @CompileStatic
-class K8sConfig implements Map<String,Object> {
-
-    static private final Set<String> VALID_OPTIONS = [
-        'autoMountHostPaths',
-        'computeResourceType',
-        'context',
-        'fetchNodeName',
-        'httpConnectTimeout',
-        'httpReadTimeout',
-        'launchDir',
-        'maxErrorRetry',
-        'namespace',
-        'pod',
-        'projectDir',
-        'pullPolicy',
-        'runAsUser',
-        'securityContext',
-        'serviceAccount',
-        'storageClaimName',
-        'storageMountPath',
-        'storageSubPath',
-        'workDir',
-    ]
+class K8sConfig implements Map<String,Object>, ConfigSchema {
 
     static final private Map<String,?> DEFAULT_FUSE_PLUGIN = Map.of('nextflow.io/fuse', 1)
 
@@ -72,9 +51,10 @@ class K8sConfig implements Map<String,Object> {
 
     private PodOptions podOptions
 
-    K8sConfig(Map<String,Object> config) {
-        ConfigHelper.checkInvalidConfigOptions('k8s', config, VALID_OPTIONS)
+    /* required by extension point -- do not remove */
+    K8sConfig() {}
 
+    K8sConfig(Map<String,Object> config) {
         target = config ?: Collections.<String,Object>emptyMap()
 
         this.podOptions = createPodOptions(target.pod)
@@ -131,18 +111,22 @@ class K8sConfig implements Map<String,Object> {
         target.userName ?: System.properties.get('user.name')
     }
 
+    @ConfigOption('k8s.storageClaimName')
     String getStorageClaimName() {
         target.storageClaimName as String
     }
 
+    @ConfigOption('k8s.storageMountPath')
     String getStorageMountPath() {
         target.storageMountPath ?: '/workspace' as String
     }
 
+    @ConfigOption('k8s.storageSubPath')
     String getStorageSubPath() {
         target.storageSubPath
     }
 
+    @ConfigOption('k8s.fuseDevicePlugin')
     Map<String,?> fuseDevicePlugin() {
         final result = target.fuseDevicePlugin
         if( result instanceof Map && result.size()==1 )
@@ -172,6 +156,7 @@ class K8sConfig implements Map<String,Object> {
     /**
      * @return the path where the workflow is launched and the user data is stored
      */
+    @ConfigOption('k8s.launchDir')
     String getLaunchDir() {
         if( target.userDir ) {
             log.warn "K8s `userDir` has been deprecated -- Use `launchDir` instead"
@@ -183,6 +168,7 @@ class K8sConfig implements Map<String,Object> {
     /**
      * @return Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:<user-dir>/work).
      */
+    @ConfigOption('k8s.workDir')
     String getWorkDir() {
         target.workDir ?: "${getLaunchDir()}/work" as String
     }
@@ -190,14 +176,18 @@ class K8sConfig implements Map<String,Object> {
     /**
      * @return Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: <volume-claim-mount-path>/projects).
      */
+    @ConfigOption('k8s.projectDir')
     String getProjectDir() {
         target.projectDir ?: "${getStorageMountPath()}/projects" as String
     }
 
+    @ConfigOption('k8s.namespace')
     String getNamespace() { target.namespace }
 
+    // TODO: computeResourceType
     boolean useJobResource() { ResourceType.Job.name() == target.computeResourceType?.toString() }
 
+    @ConfigOption('k8s.serviceAccount')
     String getServiceAccount() { target.serviceAccount }
 
     String getNextflowImageName() {
@@ -205,15 +195,18 @@ class K8sConfig implements Map<String,Object> {
         return target.navigate('nextflow.image', defImage)
     }
 
+    @ConfigOption('k8s.autoMountHostPaths')
     boolean getAutoMountHostPaths() {
         Boolean.valueOf( target.autoMountHostPaths as String )
     }
 
+    @ConfigOption('k8s.pod')
     PodOptions getPodOptions() {
         podOptions
     }
 
     @Memoized
+    @ConfigOption('k8s.fetchNodeName')
     boolean fetchNodeName() {
         Boolean.valueOf( target.fetchNodeName as String )
     }

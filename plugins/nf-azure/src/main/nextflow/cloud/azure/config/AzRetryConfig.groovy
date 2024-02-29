@@ -43,7 +43,7 @@ class AzRetryConfig {
     }
 
     AzRetryConfig(Map config) {
-        ConfigHelper.checkInvalidConfigOptions('azure.retryPolicy', config, this)
+        // ConfigHelper.checkInvalidConfigOptions('azure.retryPolicy', config, this)
 
         if( config.delay )
             delay = config.delay as Duration

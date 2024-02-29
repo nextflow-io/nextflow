@@ -1261,7 +1261,7 @@ class Session implements ISession {
         assert engine
         final entry = this.config?.get(engine)
         if( entry instanceof Map ) {
-            ConfigHelper.checkInvalidConfigOptions(engine, entry, CONTAINER_VALID_OPTIONS[engine])
+            // ConfigHelper.checkInvalidConfigOptions(engine, entry, CONTAINER_VALID_OPTIONS[engine])
             final config0 = new LinkedHashMap()
             config0.putAll((Map)entry)
             config0.put('engine', engine)

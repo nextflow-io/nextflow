@@ -90,7 +90,7 @@ class GoogleOpts {
     }
 
     protected static GoogleOpts fromSession0(Map config) {
-        ConfigHelper.checkInvalidConfigOptions('google', config, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('google', config, VALID_OPTIONS)
 
         final result = new GoogleOpts( config.google as Map ?: Map.of() )
 

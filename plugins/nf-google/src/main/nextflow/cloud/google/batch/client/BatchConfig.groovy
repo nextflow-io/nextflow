@@ -75,7 +75,7 @@ class BatchConfig {
 
     static BatchConfig create(Session session) {
         final config = session.config.navigate('google.batch', [:]) as Map
-        ConfigHelper.checkInvalidConfigOptions('google.batch', config, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('google.batch', config, VALID_OPTIONS)
 
         final result = new BatchConfig()
         result.googleOpts = GoogleOpts.create(session)

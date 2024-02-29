@@ -49,7 +49,7 @@ class TowerConfig {
     final String workflowId
 
     TowerConfig(Map opts, Map<String,String> env) {
-        ConfigHelper.checkInvalidConfigOptions('tower', opts, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('tower', opts, VALID_OPTIONS)
         this.accessToken = accessToken0(opts, env)
         this.refreshToken = refreshToken0(opts, env)
         this.workspaceId = workspaceId0(opts, env) as Long

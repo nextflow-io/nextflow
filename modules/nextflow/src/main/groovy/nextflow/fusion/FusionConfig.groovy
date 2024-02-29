@@ -21,7 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Global
 import nextflow.SysEnv
-import nextflow.util.ConfigHelper
+import nextflow.config.ConfigOption
+import nextflow.config.ConfigSchema
 import nextflow.util.MemoryUnit
 
 /**
@@ -30,18 +31,7 @@ import nextflow.util.MemoryUnit
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class FusionConfig {
-
-    final static private Set<String> VALID_OPTIONS = [
-        'enabled',
-        'containerConfigUrl',
-        'exportAwsAccessKeys',
-        'exportStorageCredentials',
-        'logLevel',
-        'logOutput',
-        'tagsEnabled',
-        'tagsPattern',
-    ]
+class FusionConfig implements ConfigSchema {
 
     final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
     final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
@@ -49,20 +39,41 @@ class FusionConfig {
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
 
+    @ConfigOption('fusion.enabled')
     final private Boolean enabled
+
+    @ConfigOption('fusion.containerConfigUrl')
     final private String containerConfigUrl
-    @Deprecated final private Boolean exportAwsAccessKeys
+
+    @Deprecated
+    @ConfigOption('fusion.exportAwsAccessKeys')
+    final private Boolean exportAwsAccessKeys
+
+    @ConfigOption('fusion.exportStorageCredentials')
     final private Boolean exportStorageCredentials
+
+    @ConfigOption('fusion.logOutput')
     final private String logOutput
+
+    @ConfigOption('fusion.logLevel')
     final private String logLevel
+
+    @ConfigOption('fusion.tagsEnabled')
     final private boolean tagsEnabled
+
+    @ConfigOption('fusion.tagsPattern')
     final private String tagsPattern
+
+    @ConfigOption('fusion.privileged')
     final private boolean privileged
+
+    @ConfigOption('fusion.cacheSize')
     final private MemoryUnit cacheSize
 
     boolean enabled() { enabled }
 
-    @Deprecated boolean exportAwsAccessKeys() { exportAwsAccessKeys }
+    @Deprecated
+    boolean exportAwsAccessKeys() { exportAwsAccessKeys }
 
     boolean exportStorageCredentials() {
         return exportStorageCredentials!=null
@@ -88,9 +99,10 @@ class FusionConfig {
         return privileged
     }
 
-    FusionConfig(Map opts, Map<String,String> env=System.getenv()) {
-        ConfigHelper.checkInvalidConfigOptions('fusion', opts, VALID_OPTIONS)
+    /* required by extension point -- do not remove */
+    FusionConfig() {}
 
+    FusionConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.exportAwsAccessKeys = opts.exportAwsAccessKeys
         this.exportStorageCredentials = opts.exportStorageCredentials

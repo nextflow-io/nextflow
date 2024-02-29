@@ -92,7 +92,7 @@ class AzPoolOpts implements CacheFunnel {
     }
 
     AzPoolOpts(Map opts, String name='auto') {
-        ConfigHelper.checkInvalidConfigOptions("azure.batch.pools.${name}".toString(), opts, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions("azure.batch.pools.${name}".toString(), opts, VALID_OPTIONS)
 
         this.runAs = opts.runAs ?: ''
         this.privileged = opts.privileged ?: false

@@ -26,6 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
+import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
@@ -807,6 +808,9 @@ class ConfigBuilder {
 
         if( cmdRun )
             configRunOptions(config, System.getenv(), cmdRun)
+
+        if( SysEnv.get('NXF_ENABLE_STRICT_CONFIG')=='true' )
+            ConfigSchemaValidator.validate(config)
 
         return config
     }

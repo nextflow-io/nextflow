@@ -82,7 +82,7 @@ class AwsS3Config {
     private Boolean anonymous
 
     AwsS3Config(Map opts) {
-        ConfigHelper.checkInvalidConfigOptions('aws.client', opts, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('aws.client', opts, VALID_OPTIONS)
 
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')

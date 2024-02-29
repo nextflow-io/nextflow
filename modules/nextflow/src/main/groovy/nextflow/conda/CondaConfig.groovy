@@ -19,7 +19,8 @@ package nextflow.conda
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.util.ConfigHelper
+import nextflow.config.ConfigOption
+import nextflow.config.ConfigSchema
 import nextflow.util.Duration
 
 /**
@@ -28,28 +29,19 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class CondaConfig extends LinkedHashMap {
-
-    static private final Set<String> VALID_OPTIONS = [
-        'enabled',
-        'cacheDir',
-        'createOptions',
-        'createTimeout',
-        'useMamba',
-        'useMicromamba'
-    ]
+class CondaConfig extends LinkedHashMap implements ConfigSchema {
 
     private Map<String,String> env
 
-    /* required by Kryo deserialization -- do not remove */
-    private CondaConfig() { }
+    /* required by extension point -- do not remove */
+    CondaConfig() { }
 
     CondaConfig(Map config, Map<String, String> env) {
         super(config)
-        ConfigHelper.checkInvalidConfigOptions('conda', config, VALID_OPTIONS)
         this.env = env
     }
 
+    @ConfigOption('conda.enabled')
     boolean isEnabled() {
         def enabled = get('enabled')
         if( enabled == null )
@@ -57,6 +49,7 @@ class CondaConfig extends LinkedHashMap {
         return enabled?.toString() == 'true'
     }
 
+    @ConfigOption('conda.channels')
     List<String> getChannels() {
         final value = get('channels')
         if( !value ) {
@@ -72,22 +65,27 @@ class CondaConfig extends LinkedHashMap {
         throw new IllegalArgumentException("Unexpected conda.channels value: $value")
     }
 
+    @ConfigOption('conda.createTimeout')
     Duration createTimeout() {
         get('createTimeout') as Duration
     }
 
+    @ConfigOption('conda.createOptions')
     String createOptions() {
         get('createOptions') as String
     }
 
+    @ConfigOption('conda.cacheDir')
     Path cacheDir() {
         get('cacheDir') as Path
     }
 
+    @ConfigOption('conda.useMamba')
     boolean useMamba() {
         get('useMamba') as boolean
     }
 
+    @ConfigOption('conda.useMicromamba')
     boolean useMicromamba() {
         get('useMicromamba') as boolean
     }

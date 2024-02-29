@@ -41,7 +41,7 @@ class AzActiveDirectoryOpts {
 
     AzActiveDirectoryOpts(Map config, Map<String, String> env = null) {
         assert config != null
-        ConfigHelper.checkInvalidConfigOptions('azure.activeDirectory', config, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('azure.activeDirectory', config, VALID_OPTIONS)
 
         this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env
         this.servicePrincipalId = config.servicePrincipalId ?: sysEnv.get('AZURE_CLIENT_ID')

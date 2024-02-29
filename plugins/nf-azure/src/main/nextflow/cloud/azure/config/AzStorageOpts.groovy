@@ -46,7 +46,7 @@ class AzStorageOpts {
 
     AzStorageOpts(Map config, Map<String,String> env=null) {
         assert config!=null
-        ConfigHelper.checkInvalidConfigOptions('azure.storage', config, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('azure.storage', config, VALID_OPTIONS)
 
         this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
         this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')

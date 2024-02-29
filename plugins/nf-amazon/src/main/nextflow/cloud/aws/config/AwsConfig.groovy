@@ -60,7 +60,7 @@ class AwsConfig {
     private AwsS3Legacy s3Legacy
 
     AwsConfig(Map config) {
-        ConfigHelper.checkInvalidConfigOptions('aws', config, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('aws', config, VALID_OPTIONS)
 
         this.accessKey = config.accessKey
         this.secretKey = config.secretKey

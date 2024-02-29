@@ -73,7 +73,7 @@ class AzBatchOpts implements CloudTransferOptions {
 
     AzBatchOpts(Map config, Map<String,String> env=null) {
         assert config!=null
-        ConfigHelper.checkInvalidConfigOptions('azure.batch', config, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('azure.batch', config, VALID_OPTIONS)
 
         sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
         accountName = config.accountName ?: sysEnv.get('AZURE_BATCH_ACCOUNT_NAME')

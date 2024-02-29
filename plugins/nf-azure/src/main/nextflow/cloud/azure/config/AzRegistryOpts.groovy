@@ -46,7 +46,7 @@ class AzRegistryOpts {
 
     AzRegistryOpts(Map config, Map<String,String> env=null) {
         assert config!=null
-        ConfigHelper.checkInvalidConfigOptions('azure.registry', config, VALID_OPTIONS)
+        // ConfigHelper.checkInvalidConfigOptions('azure.registry', config, VALID_OPTIONS)
 
         this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
         this.server = config.server ?: 'docker.io'
