@@ -36,7 +36,7 @@ class CmdList extends CmdBase {
 
     static final public NAME = 'list'
 
-    @Parameter(names=['-r','-revisions'], description = 'For each project, also list revisions')
+    @Parameter(names=['-a','-all-revisions'], description = 'For each project, also list revisions')
     Boolean revisions
 
     @Override
@@ -58,7 +58,7 @@ class CmdList extends CmdBase {
     } else {
         all.collect{ it.replaceAll( /$revisionDelim.*/, '' ) }
            .unique()
-           .each{println it}
+           .each{ println it }
     }
     }
 
