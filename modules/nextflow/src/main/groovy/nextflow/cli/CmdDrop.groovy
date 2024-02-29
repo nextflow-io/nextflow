@@ -44,6 +44,9 @@ class CmdDrop extends CmdBase {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to drop (either a git branch, tag or commit SHA number)')
     String revision
 
+    @Parameter(names=['-a','-all-revisions'], description = 'For specified project, drop all revisions')
+    Boolean allrevisions
+
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
     boolean force
 
@@ -53,18 +56,33 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0], revision)
-        if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${manager.project}${revision ? revisionDelim + revision : ''}")
+
+        List<AssetManager> dropList = []
+        if ( allrevisions ) {
+            AssetManager.listRevisions(args[0]).each {
+                dropList << new AssetManager(it.tokenize(revisionDelim)[0], it.tokenize(revisionDelim)[1])
+            }
+        } else {
+            dropList << new AssetManager(args[0], revision)
         }
 
-        if( this.force || manager.isClean() ) {
-            manager.close()
-            if( !manager.localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${manager.project}${revision ? revisionDelim + revision : ''}` -- Check access permissions for path: ${manager.localPath}")
-            return
+        if ( !dropList ) {
+            throw new AbortOperationException("No revisions found for specified project: ${args[0]}")
         }
 
-        throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
+        dropList.each { manager ->
+            if( !manager.localPath.exists() ) {
+                throw new AbortOperationException("No match found for: ${manager.project}${manager.revision ? revisionDelim + manager.revision : ''}")
+            }
+
+            if( this.force || manager.isClean() ) {
+                manager.close()
+                if( !manager.localPath.deleteDir() )
+                    throw new AbortOperationException("Unable to delete project `${manager.project}${manager.revision ? revisionDelim + manager.revision : ''}` -- Check access permissions for path: ${manager.localPath}")
+                return
+            }
+
+            throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
+        }
     }
 }
