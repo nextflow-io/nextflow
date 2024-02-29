@@ -54,7 +54,7 @@ class CmdList extends CmdBase {
     if (revisions) {
         all.collect{ it.tokenize(revisionDelim) }
            .groupBy{ it[0] }
-           .each{ println it.value[0][0] ; it.value.each{ y -> println ( y.size()==1 ? '    (default)' : '    ' + y[1] ) } }
+           .each{ println ' ' + it.value[0][0] ; it.value.each{ y -> println ( y.size()==1 ? '   (default)' : '   ' + y[1] ) } }
     } else {
         all.collect{ it.replaceAll( /$revisionDelim.*/, '' ) }
            .unique()
