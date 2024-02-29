@@ -31,8 +31,8 @@ class OutputDsl {
 
     private List<OutputSelector> selectors = []
 
-    void path(String path, Closure closure) {
-        final dsl = new OutputPathDsl(this, Path.of(path))
+    void path(Map opts=[:], String path, Closure closure) {
+        final dsl = new OutputPathDsl(this, Path.of(path), opts)
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
@@ -40,8 +40,6 @@ class OutputDsl {
     }
 
     void select(Map opts=[:], String name) {
-        if( opts.enabled == false )
-            return
         this.selectors << new OutputSelector(name, Path.of('.'), opts)
     }
 
@@ -52,23 +50,23 @@ class OutputDsl {
     WorkflowPublisher build() {
         new WorkflowPublisher(selectors)
     }
-
 }
 
 @CompileStatic
 class OutputPathDsl {
 
     private OutputDsl root
-
     private Path path
+    private Map defaults
 
-    OutputPathDsl(OutputDsl root, Path path) {
+    OutputPathDsl(OutputDsl root, Path path, Map defaults) {
         this.root = root
         this.path = path
+        this.defaults = defaults
     }
 
-    void path(String subpath, Closure closure) {
-        final dsl = new OutputPathDsl(root, path.resolve(subpath))
+    void path(Map opts=[:], String subpath, Closure closure) {
+        final dsl = new OutputPathDsl(root, path.resolve(subpath), defaults + opts)
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
@@ -76,9 +74,6 @@ class OutputPathDsl {
     }
 
     void select(Map opts=[:], String name) {
-        if( opts.enabled == false )
-            return
-        root.addSelector(new OutputSelector(name, path, opts))
+        root.addSelector(new OutputSelector(name, path, defaults + opts))
     }
-
 }

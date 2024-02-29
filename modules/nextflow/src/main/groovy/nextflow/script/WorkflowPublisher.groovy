@@ -58,11 +58,10 @@ class WorkflowPublisher {
             if( ProcessConfig.matchesSelector(simpleName, selector.name) || ProcessConfig.matchesSelector(processName, selector.name) ) {
                 final params = [
                     path: selector.path,
-                    pattern: selector.pattern,
                     failOnError: true,
                     overwrite: !task.cached
                 ]
-                PublishDir.create(params).apply(files, task)
+                PublishDir.create(params + selector.opts).apply(files, task)
             }
         }
     }
@@ -72,11 +71,11 @@ class WorkflowPublisher {
 class OutputSelector {
     String name
     Path path
-    String pattern
+    Map opts
 
     OutputSelector(String name, Path path, Map opts) {
         this.name = name
         this.path = path
-        this.pattern = opts.pattern
+        this.opts = opts
     }
 }
