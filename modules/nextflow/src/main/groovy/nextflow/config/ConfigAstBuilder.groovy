@@ -135,7 +135,9 @@ class ConfigAstBuilder {
     }
 
     private static Statement configBlock(ConfigBlockContext ctx) {
-        final name = constX(ctx.identifier().text)
+        final name = ctx.identifier()
+            ? constX(ctx.identifier().text)
+            : constX(unquote(ctx.stringLiteral().text))
         final statements = ctx.configBlockStatement().collect( ctx1 -> configBlockStatement(ctx1) )
         final closure = closureX(new BlockStatement(statements, new VariableScope()))
         stmt(callX(varX('this'), constX('block'), argsX([name, closure])))
