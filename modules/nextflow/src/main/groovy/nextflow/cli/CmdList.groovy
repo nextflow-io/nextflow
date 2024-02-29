@@ -58,7 +58,7 @@ class CmdList extends CmdBase {
     } else {
         all.collect{ it.replaceAll( /$revisionDelim.*/, '' ) }
            .unique()
-           .each{ println it }
+           .each{ println ' ' + it }
     }
     }
 
