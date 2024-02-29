@@ -3,7 +3,7 @@ apply plugin: 'application'
 apply plugin: 'antlr'
 
 sourceSets {
-    main.java.srcDirs = []
+    main.java.srcDirs = ['build/generated-src/antlr/main']
     main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
     main.resources.srcDirs = ['src/main/resources']
     test.java.srcDirs = []
@@ -16,7 +16,7 @@ compileGroovy {
 }
 
 dependencies {
-    antlr 'org.antlr:antlr4:4.9.2'    
+    antlr 'org.antlr:antlr4:4.9.2'
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
     api "org.apache.groovy:groovy:4.0.18"
