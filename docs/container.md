@@ -337,9 +337,6 @@ Docker advanced configuration settings are described in {ref}`config-docker` sec
 :::{versionadded} 20.01.0
 :::
 
-:::{warning} *Experimental: not recommended for production environments.*
-:::
-
 [Podman](http://www.podman.io) is a drop-in replacement for Docker that can run containers with or without root privileges.
 
 ### Prerequisites
