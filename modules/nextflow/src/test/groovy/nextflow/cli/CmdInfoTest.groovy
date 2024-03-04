@@ -95,7 +95,7 @@ class CmdInfoTest extends Specification {
         json.manifest.defaultBranch == 'master'
         json.revisions.current == 'master'
         json.revisions.master == 'master'
-        json.revisions.pulled.size()>1
+        json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
@@ -124,7 +124,7 @@ class CmdInfoTest extends Specification {
         json.manifest.defaultBranch == 'master'
         json.revisions.current == 'master'
         json.revisions.master == 'master'
-        json.revisions.pulled.size()>1
+        json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
