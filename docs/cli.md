@@ -535,6 +535,9 @@ The `drop` command is used to remove the projects which have been downloaded int
 
 **Options**
 
+`-a, -all-revisions`
+: For specified project, drop all revisions.
+
 `-f`
 : Delete the repository without taking care of local changes.
 
@@ -877,6 +880,9 @@ $ nextflow list [options]
 The `list` commands prints a list of the projects which are already downloaded into the global cache `~/.nextflow/assets`.
 
 **Options**
+
+`-a, -all-revisions`
+: For each project, also list revisions.
 
 `-h, -help`
 : Print the command usage.
