@@ -104,7 +104,9 @@ class CmdInfo extends CmdBase {
     protected printText(AssetManager manager, int level) {
         final manifest = manager.getManifest()
 
+        def printedRevision = manager.revision ?: manager.getDefaultBranch()
         out.println " project name: ${manager.project}"
+        out.println " revision    : ${printedRevision}"
         out.println " repository  : ${manager.repositoryUrl}"
         out.println " local path  : ${manager.localPath}"
         out.println " main script : ${manager.mainScriptName}"
@@ -142,6 +144,7 @@ class CmdInfo extends CmdBase {
     protected Map createMap(AssetManager manager) {
         def result = [:]
         result.projectName = manager.project
+        result.revision = manager.revision ?: manager.getDefaultBranch()
         result.repository = manager.repositoryUrl
         result.localPath = manager.localPath?.toString()
         result.manifest = manager.manifest.toMap()

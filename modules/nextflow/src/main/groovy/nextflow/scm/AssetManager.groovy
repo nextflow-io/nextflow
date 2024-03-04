@@ -314,6 +314,8 @@ class AssetManager {
 
     String getProject() { project }
 
+    String getRevision() { revision }
+
     String getHub() { hub }
 
     @PackageScope
@@ -557,8 +559,8 @@ class AssetManager {
     /**
      * @return The list of available revisions for a given project name
      */
-    static List<String> listRevisions( String project ) {
-        log.debug "Listing revisions for project: $project"
+    List<String> listRevisions( String projectName = project ) {
+        log.debug "Listing revisions for project: $projectName"
 
         def result = new LinkedList()
 
@@ -566,7 +568,7 @@ class AssetManager {
             return result
 
         list().each {
-            if( it.tokenize(revisionDelim)[0] == project ) {
+            if( it.tokenize(revisionDelim)[0] == projectName ) {
                 result << it
             }
         }
@@ -744,6 +746,18 @@ class AssetManager {
         names.get( head.objectId ) ?: head.objectId.name()
     }
 
+    /**
+     * @return The  name of all currently pulled revisions for a given project, i.e. locally available
+     * 
+     * If revision is null, default is assumed
+     */
+    List<String> getPulledRevisions() {
+        return listRevisions().collect{
+            it -> String y = it.tokenize(revisionDelim)[1]
+            it = ( y != null ? y : getDefaultBranch() )
+        }
+    }
+
     RevisionInfo getCurrentRevisionAndName() {
         Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
@@ -771,30 +785,32 @@ class AssetManager {
     /**
      * @return A list of existing branches and tags names. For example
      * <pre>
-     *     * master (default)
-     *       patch-x
-     *       v1.0 (t)
-     *       v1.1 (t)
+     *     * P master (default)
+     *         patch-x
+     *         v1.0 (t)
+     *         v1.1 (t)
      * </pre>
      *
-     * The star character on the left highlight the current revision, the string {@code (default)}
-     *  ticks that it is the default working branch (usually the master branch), while the string {@code (t)}
-     *  shows that the revision is a git tag (instead of a branch)
+     * The star character on the left highlights the selected revision,
+     *  the character {@code P} on the left indicates the revision is pulled locally,
+     *  the string {@code (default)} ticks that it is the default working branch,
+     *  while the string {@code (t)} shows that the revision is a git tag (instead of a branch)
      */
     @Deprecated
     List<String> getRevisions(int level) {
 
         def current = getCurrentRevision()
         def master = getDefaultBranch()
+        def pulled = getPulledRevisions()
 
         List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
             .unique { shortenRefName(it.name) }
-            .collect { Ref it -> refToString(it,current,master,false,level) }
+            .collect { Ref it -> refToString(it,current,master,pulled,false,level) }
 
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { refToString(it,current,master,true,level) }
+                .collect { refToString(it,current,master,pulled,true,level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
@@ -834,6 +850,7 @@ class AssetManager {
 
         result.current = current    // current branch name
         result.master = master      // master branch name
+        result.pulled = getPulledRevisions() // list of pulled revisions
         result.branches = branches  // collection of branches
         result.tags = tags          // collect of tags 
         return result
@@ -868,11 +885,12 @@ class AssetManager {
         return human ? obj.name.substring(0,10) : obj.name
     }
 
-    protected String refToString(Ref ref, String current, String master, boolean tag, int level ) {
+    protected String refToString(Ref ref, String current, String master, List<String> pulled, boolean tag, int level ) {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
         result << (name == current ? '*' : ' ')
+        result << (name in pulled ? ' P' : '  ')
 
         if( level ) {
             def peel = git.getRepository().peel(ref)

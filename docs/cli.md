@@ -691,6 +691,9 @@ If no run name or session id is provided, it will clean the latest run.
 `-o` (`text`)
 : Output format, either `text`, `json` or `yaml`.
 
+`-r, -revision`
+: Revision of the project (either a git branch, tag or commit SHA number).
+
 **Examples**
 
 Display Nextflow runtime and system info:

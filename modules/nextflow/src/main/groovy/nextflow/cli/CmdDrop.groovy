@@ -59,7 +59,8 @@ class CmdDrop extends CmdBase {
 
         List<AssetManager> dropList = []
         if ( allrevisions ) {
-            AssetManager.listRevisions(args[0]).each {
+            def referenceManager = new AssetManager(args[0])
+            referenceManager.listRevisions().each {
                 dropList << new AssetManager(it.tokenize(revisionDelim)[0], it.tokenize(revisionDelim)[1])
             }
         } else {
