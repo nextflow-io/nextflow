@@ -80,9 +80,15 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0], revision)
-        if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}${revision ? revisionDelim + revision : ''}`")
+        def manager = new AssetManager(args[0], revision)
+        if( !manager.isLocal() ) {
+            if ( manager.listRevisions() && !revision ) {
+                manager = new AssetManager(args[0], manager.getPulledRevisions()[0])
+            }
+            else {
+                throw new AbortOperationException("Unknown project `${args[0]}${revision ? revisionDelim + revision : ''}`")
+            }
+        }
 
         if( !format || format == 'text' ) {
             printText(manager,level)
