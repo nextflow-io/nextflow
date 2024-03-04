@@ -673,7 +673,7 @@ $ nextflow info [options] [project]
 
 **Description**
 
-The `info` command prints out the nextflow runtime information about the hardware as well as the software versions of the Nextflow version and build, operating system, and Groovy and Java runtime. It can also be used to display information about a specific project.
+The `info` command prints out the nextflow runtime information about the hardware as well as the software versions of the Nextflow version and build, operating system, and Groovy and Java runtime. It can also be used to display information about a specific project; in this case, note how revisions marked as `P` are pulled locally.
 
 If no run name or session id is provided, it will clean the latest run.
 
