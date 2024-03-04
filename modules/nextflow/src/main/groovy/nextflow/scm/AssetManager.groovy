@@ -133,6 +133,13 @@ class AssetManager {
     @PackageScope
     AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
 
+        if ( revision ) {
+            def referenceManager = new AssetManager(pipelineName, null, cliOpts)
+            if ( revision == referenceManager.getDefaultBranch() ) {
+                revision = null
+            }
+        }
+
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.revision = revision
