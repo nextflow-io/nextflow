@@ -103,6 +103,32 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def testListRevisions() {
+        given:
+        def folder = tempDir.getRoot()
+        folder.resolve('cbcrg/pipe1').mkdirs()
+        folder.resolve('cbcrg/pipe2').mkdirs()
+        folder.resolve('cbcrg/pipe2:v2').mkdirs()
+        folder.resolve('cbcrg/pipe3:v3').mkdirs()
+
+        def manager = new AssetManager()
+
+        when:
+        def list = manager.listRevisions('cbcrg/pipe1')
+        then:
+        list == ['cbcrg/pipe1']
+
+        when:
+        list = manager.listRevisions('cbcrg/pipe3')
+        then:
+        list == ['cbcrg/pipe3:v3']
+
+        when:
+        list = manager.listRevisions('cbcrg/pipe2')
+        then:
+        list == ['cbcrg/pipe2', 'cbcrg/pipe2:v2']
+    }
+
 
     def testResolveName() {
 
