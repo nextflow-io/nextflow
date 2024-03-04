@@ -82,6 +82,7 @@ class CmdInfo extends CmdBase {
         Plugins.init()
         def manager = new AssetManager(args[0], revision)
         if( !manager.isLocal() ) {
+            // if no revision specified and default branch not found locally, use first one from list of local pulls
             if ( manager.listRevisions() && !revision ) {
                 manager = new AssetManager(args[0], manager.getPulledRevisions()[0])
             }
