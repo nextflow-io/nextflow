@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
+import com.amazonaws.services.s3.AmazonS3URI;
 import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.Tag;
@@ -410,12 +411,12 @@ public class S3Path implements Path, TagAwareFile {
 		builder.append("s3://");
 		if (fileSystem.getEndpoint() != null) {
 			builder.append(fileSystem.getEndpoint());
-		}
-		builder.append("/");
+            builder.append("/");
+        }
 		builder.append(bucket);
 		builder.append(PATH_SEPARATOR);
 		builder.append(Joiner.on(PATH_SEPARATOR).join(parts));
-		return URI.create(builder.toString());
+        return new AmazonS3URI(builder.toString()).getURI();
 	}
 
 	@Override

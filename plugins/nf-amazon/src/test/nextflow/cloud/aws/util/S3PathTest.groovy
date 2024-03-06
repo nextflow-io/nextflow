@@ -43,6 +43,17 @@ class S3PathTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should convert to encoded URI' () {
+        expect:
+        FileHelper.asPath(PATH).toUri() == URI.create(STR)
+
+        where:
+        _ | PATH                                 | STR
+        _ | 's3://foo/some/file with spaces.txt' | 's3://foo/some/file%20with%20spaces.txt'
+        _ | 's3://foo/some/file+with+pluses.txt' | 's3://foo/some/file%2Bwith%2Bpluses.txt'
+    }
+
     def 'should check equals and hashcode' () {
         given:
         def path1 = FileHelper.asPath('s3://foo/some/foo.txt')
