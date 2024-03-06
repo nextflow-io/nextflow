@@ -133,6 +133,8 @@ class AssetManager {
     @PackageScope
     AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
 
+        // if requested revision corresponds to the default branch, then unset it
+        // this avoids duplication of the default branch
         if ( revision ) {
             def referenceManager = new AssetManager(pipelineName, null, cliOpts)
             if ( revision == referenceManager.getDefaultBranch() ) {
@@ -570,7 +572,6 @@ class AssetManager {
         log.debug "Listing revisions for project: $projectName"
 
         def result = new LinkedList()
-
         if( !root.exists() )
             return result
 
@@ -754,7 +755,7 @@ class AssetManager {
     }
 
     /**
-     * @return The  name of all currently pulled revisions for a given project, i.e. locally available
+     * @return The names of all locally pulled revisions for a given project
      * 
      * If revision is null, default is assumed
      */
