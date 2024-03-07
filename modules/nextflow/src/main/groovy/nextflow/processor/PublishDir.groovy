@@ -385,8 +385,10 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
-            // don't copy source path if target is identical, but still emit publish event
+            // don't copy source path if target is identical, but still emit the publish event
+            // see also https://github.com/nextflow-io/nf-prov/issues/22
             final sameRealPath = checkIsSameRealPath(source, destination)
+
             // make sure destination and source does not overlap
             // see https://github.com/nextflow-io/nextflow/issues/2177
             if( !sameRealPath && checkSourcePathConflicts(destination))
