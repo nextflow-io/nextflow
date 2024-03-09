@@ -78,6 +78,7 @@ import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.UploadContext;
 import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.util.AwsHelper;
+import nextflow.extension.FilesEx;
 import nextflow.util.Duration;
 import nextflow.util.ThreadPoolHelper;
 import nextflow.util.ThreadPoolManager;
@@ -551,7 +552,7 @@ public class S3Client {
 				String delta = rel != null ? rel.toString() : null;
 				Path newFile = delta != null ? target.resolve(delta) : target;
 				if( log.isTraceEnabled())
-					log.trace("Copy file: " + current + " -> "+newFile.toUri());
+					log.trace("Copy file: " + current + " -> "+ FilesEx.toUriString(newFile));
 
 				String sourceKey = ((S3Path) current).getKey();
 				Download it = transferManager() .download(source.getBucket(), sourceKey, newFile.toFile());
