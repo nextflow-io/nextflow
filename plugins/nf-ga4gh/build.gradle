@@ -45,6 +45,6 @@ dependencies {
     api 'joda-time:joda-time:2.9.9'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.18"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.18"
+    testImplementation "org.apache.groovy:groovy:4.0.19"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.19"
 }
