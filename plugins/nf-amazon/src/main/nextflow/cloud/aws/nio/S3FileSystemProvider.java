@@ -666,7 +666,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				return (V) new S3FileAttributesView(readAttr0(s3Path));
 			}
 			catch (IOException e) {
-				throw new RuntimeException("Unable read attributes for file: " + s3Path.toUri(), e);
+				throw new RuntimeException("Unable read attributes for file: " + FilesEx.toUriString(s3Path), e);
 			}
 		}
 		throw new UnsupportedOperationException("Not a valid S3 file system provider file attribute view: " + type.getName());

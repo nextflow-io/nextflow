@@ -333,7 +333,7 @@ class FilePorter {
         }
 
         private String fmtError(Path filePath, Exception e) {
-            def message = "Can't stage file ${filePath.toUri().toString()}"
+            def message = "Can't stage file ${FilesEx.toUriString(filePath)}"
             if( e instanceof NoSuchFileException )
                 message += " -- file does not exist"
             else if( e.message )
