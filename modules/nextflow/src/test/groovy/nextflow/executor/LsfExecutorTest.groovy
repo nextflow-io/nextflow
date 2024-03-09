@@ -717,7 +717,7 @@ class LsfExecutorTest extends Specification {
         name             | expected
         'hello'          | 'nf-hello'
         '12 45'          | 'nf-12_45'
-        'hello[123]'     | 'nf-hello123'
+        'hello[123]-[xyz]'     | 'nf-hello123-xyz'
         'a'.repeat(4095) | 'nf-'.concat("a".repeat(4091))
     }
 
