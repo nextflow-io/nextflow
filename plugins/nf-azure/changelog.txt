@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.5.1 - 10 Mar 2024
+- Update Azure dependencies [1bcbaf0d]
+- Bump groovy 4.0.19 [854dc1f0]
+
 1.5.0 - 5 Feb 2024
 - Fix azure retry policy (#4638) [85bab699]
 - Use AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e02afbf]
