@@ -112,6 +112,13 @@ class LsfExecutor extends AbstractGridExecutor {
         return result
     }
 
+    @Override
+    String sanitizeJobName( String name ) {
+        // LSF does not allow square brackets in job names except for job arrays
+        name = name.replace('[','').replace(']','')
+        // Old LSF versions do not allow job names longer than 511 chars
+        name.size()>511 ? name.substring(0,511) : name
+    }
 
     /**
      * The command line to submit this job
