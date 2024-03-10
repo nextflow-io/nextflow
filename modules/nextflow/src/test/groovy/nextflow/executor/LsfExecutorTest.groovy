@@ -714,11 +714,11 @@ class LsfExecutorTest extends Specification {
         executor.getJobNameFor(task).size() <= 4094
 
         where:
-        name             | expected
-        'hello'          | 'nf-hello'
-        '12 45'          | 'nf-12_45'
-        'hello[123]-[xyz]'     | 'nf-hello123-xyz'
-        'a'.repeat(4095) | 'nf-'.concat("a".repeat(4091))
+        name               | expected
+        'hello'            | 'nf-hello'
+        '12 45'            | 'nf-12_45'
+        'hello[123]-[xyz]' | 'nf-hello123-xyz'
+        'a'.repeat(509)    | 'nf-'.concat("a".repeat(508))
     }
 
 }
