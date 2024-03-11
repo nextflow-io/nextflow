@@ -25,6 +25,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -699,4 +701,25 @@ class LsfExecutorTest extends Specification {
         config.RESOURCE_RESERVE_PER_TASK == 'Y'
     }
 
+    // Adapted from PbsExecutorTest.groovy
+    @Unroll
+    def 'should return valid job name given #name'() {
+        given:
+        def executor = [:] as LsfExecutor
+        def task = Mock(TaskRun)
+        task.getName() >> name
+
+        expect:
+        executor.getJobNameFor(task) == expected
+        executor.getJobNameFor(task).size() <= 4094
+
+        where:
+        name               | expected
+        'hello'            | 'nf-hello'
+        '12 45'            | 'nf-12_45'
+        'hello[123]-[xyz]' | 'nf-hello123-xyz'
+        'a'.repeat(509)    | 'nf-'.concat("a".repeat(508))
+    }
+
 }
+
