@@ -1,6 +1,6 @@
 (aws-page)=
 
-# AWS Cloud
+# Amazon Web Services
 
 ## AWS security credentials
 

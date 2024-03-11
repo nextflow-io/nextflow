@@ -179,39 +179,4 @@ process.scratch = false
 
 ## Advanced settings
 
-The following configuration options are available:
-
-`fusion.enabled`
-: Enable/disable the use of Fusion file system.
-
-`fusion.cacheSize`
-: :::{versionadded} 23.11.0-edge
-  :::
-: The maximum size of the local cache used by the Fusion client.
-
-`fusion.containerConfigUrl`
-: The URL from where the container layer provisioning the Fusion client is downloaded.
-
-`fusion.exportStorageCredentials`
-: :::{versionadded} 23.05.0-edge
-  This option was previously named `fusion.exportAwsAccessKeys`.
-  :::
-: When `true` the access credentials required by the underlying object storage are exported the pipeline jobs execution environment.
-
-`fusion.logLevel`
-: The level of logging emitted by the Fusion client.
-
-`fusion.logOutput`
-: Where the logging output is written. 
-
-`fusion.privileged`
-: :::{versionadded} 23.10.0
-  :::
-: This allows disabling the privileged container execution when using the Fusion file system.
-  The effective use of this setting depends on the target execution. Currently, it's only supported by the Kubernetes
-  executor which requires the use the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) to be installed
-  in the target cluster (default: `true`).
-
-`fusion.tags`
-: The pattern that determines how tags are applied to files created via the Fusion client. To disable tags
-  set it to `false`. (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
+Fusion advanced configuration settings are described in the {ref}`Fusion <config-fusion>` section on the Nextflow configuration page.

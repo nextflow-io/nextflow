@@ -10,55 +10,43 @@
 
 Nextflow is a workflow system for creating scalable, portable, and reproducible workflows.
 
-## Rationale
-
-The rise of big data has made it increasingly necessary to be able to analyze and perform experiments on large datasets in a portable and reproducible manner.
-
-Parallelization and distributed computing are the best ways to tackle this challenge, but the tools commonly available to computational scientists often lack good support for these techniques, or they provide a model that fits poorly with the needs of computational scientists and often require knowledge of complex tools and APIs.
-
-The Nextflow language is inspired by [the Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy), in which many simple command line tools can be chained together into increasingly complex tasks. Similarly, a Nextflow script consists of composing many simple processes into increasingly complex pipelines. Each process executes a given tool or scripting language, and by specifying the process inputs and outputs, Nextflow coordinates the execution of tasks for you.
-
-The Nextflow runtime integrates with many popular execution platforms (HPC schedulers, cloud providers) and software tools (Git, Docker, Conda), allowing you to fully describe a computational pipeline with all of its dependencies and run it in nearly any environment -- write once, run anywhere.
-
 ```{toctree}
 :hidden:
 :caption: Introduction
 :maxdepth: 1
 
-getstarted
-basic
+overview
+installation
+your-first-script
 ```
 
 ```{toctree}
 :hidden:
-:caption: Language
-:maxdepth: 1
-
-script
-process
-channel
-operator
-workflow
-module
-config
-dsl1
-```
-
-```{toctree}
-:hidden:
-:caption: Execution
+:caption: Running pipelines
 :maxdepth: 1
 
 cli
+config
 executor
 cache-and-resume
-tracing
-metrics
-sharing
-metadata
-mail
-plugins
+reports
+```
+
+```{toctree}
+:hidden:
+:caption: Developing pipelines
+:maxdepth: 1
+
+script
+working-with-files
+process
+channel
+workflow
+module
+notifications
 secrets
+sharing
+dsl1
 ```
 
 ```{toctree}
@@ -66,6 +54,8 @@ secrets
 :caption: Software dependencies
 :maxdepth: 1
 
+git
+plugins
 container
 conda
 spack
@@ -74,24 +64,30 @@ wave
 
 ```{toctree}
 :hidden:
-:caption: Compute & storage platforms
+:caption: Compute & storage
 :maxdepth: 1
 
 aws
 amazons3
 azure
-fusion
 google
 kubernetes
+fusion
 ```
 
 ```{toctree}
 :hidden:
-:caption: Additional integrations
+:caption: Reference
 :maxdepth: 1
 
-flux
-ignite
+reference/cli
+reference/config
+reference/environment-vars
+reference/feature-flags
+reference/stdlib
+reference/process
+reference/channel
+reference/operator
 ```
 
 ```{toctree}
