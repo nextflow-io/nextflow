@@ -17,9 +17,6 @@ Any process can define one or more channels as *input* and *output*. The interac
 A Nextflow script looks like this:
 
 ```groovy
-// Declare syntax version
-nextflow.enable.dsl=2
-
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
@@ -45,7 +42,7 @@ process extractTopHits {
     path "sequences.txt"
 
     """
-    blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
+    blastdbcmd -db $params.db -entry_batch $top_hits > sequences.txt
     """
 }
 

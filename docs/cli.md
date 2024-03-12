@@ -1430,7 +1430,6 @@ $ nextflow view nextflow-io/hello
 
 == content of file: .nextflow/assets/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:
@@ -1471,7 +1470,6 @@ View the contents of a downloaded pipeline without omitting the header:
 $ nextflow view -q nextflow-io/hello
 
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:
