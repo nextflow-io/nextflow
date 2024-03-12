@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -385,14 +385,16 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
-            if( checkIsSameRealPath(source, destination) )
-                return 
+            // don't copy source path if target is identical, but still emit the publish event
+            // see also https://github.com/nextflow-io/nf-prov/issues/22
+            final sameRealPath = checkIsSameRealPath(source, destination)
+
             // make sure destination and source does not overlap
             // see https://github.com/nextflow-io/nextflow/issues/2177
-            if( checkSourcePathConflicts(destination))
+            if( !sameRealPath && checkSourcePathConflicts(destination))
                 return
             
-            if( overwrite ) {
+            if( !sameRealPath && overwrite ) {
                 FileHelper.deletePath(destination)
                 processFileImpl(source, destination)
             }
@@ -504,7 +506,12 @@ class PublishDir {
     }
 
     protected void createPublishDir() {
-        makeDirs(this.path)
+        try {
+            makeDirs(path)
+        }
+        catch( Throwable e ) {
+            throw new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e)
+        }
     }
 
     protected void makeDirs(Path dir) {

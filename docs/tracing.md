@@ -1,6 +1,6 @@
 (tracing-page)=
 
-# Tracing & visualisation
+# Reports
 
 (execution-log)=
 

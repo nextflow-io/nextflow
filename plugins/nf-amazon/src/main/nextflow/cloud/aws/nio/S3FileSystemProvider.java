@@ -666,7 +666,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				return (V) new S3FileAttributesView(readAttr0(s3Path));
 			}
 			catch (IOException e) {
-				throw new RuntimeException("Unable read attributes for file: " + s3Path.toUri(), e);
+				throw new RuntimeException("Unable read attributes for file: " + FilesEx.toUriString(s3Path), e);
 			}
 		}
 		throw new UnsupportedOperationException("Not a valid S3 file system provider file attribute view: " + type.getName());
@@ -845,9 +845,9 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
-		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
-		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
-		client.setGlacierRetrievalTier(props.getProperty("glacier_retrieval_tier"));
+
+		if( props.getProperty("glacier_auto_retrieval") != null )
+			log.warn("Glacier auto-retrieval is no longer supported, config option `aws.client.glacierAutoRetrieval` will be ignored");
 
 		return new S3FileSystem(this, client, uri, props);
 	}
