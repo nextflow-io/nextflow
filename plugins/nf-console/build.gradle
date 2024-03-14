@@ -37,13 +37,13 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.7'
     compileOnly 'org.pf4j:pf4j:3.10.0'
 
-    api("org.apache.groovy:groovy-console:4.0.19") { transitive=false }
-    api("org.apache.groovy:groovy-swing:4.0.19")  { transitive=false }
+    api("org.apache.groovy:groovy-console:4.0.20") { transitive=false }
+    api("org.apache.groovy:groovy-swing:4.0.20")  { transitive=false }
     // this is required by 'groovy-console'  
     api("com.github.javaparser:javaparser-core:3.25.8")
 
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.19"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.19"
+    testImplementation "org.apache.groovy:groovy:4.0.20"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.20"
 }
 
