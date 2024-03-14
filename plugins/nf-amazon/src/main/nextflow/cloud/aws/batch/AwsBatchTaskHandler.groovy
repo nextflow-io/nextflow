@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.model.AssignPublicIp
 import com.amazonaws.services.batch.model.AttemptContainerDetail
 import com.amazonaws.services.batch.model.ClientException
 import com.amazonaws.services.batch.model.ContainerOverrides
@@ -32,6 +33,7 @@ import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
+import com.amazonaws.services.batch.model.EphemeralStorage
 import com.amazonaws.services.batch.model.EvaluateOnExit
 import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
@@ -41,18 +43,22 @@ import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.LogConfiguration
 import com.amazonaws.services.batch.model.MountPoint
+import com.amazonaws.services.batch.model.NetworkConfiguration
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.ResourceRequirement
 import com.amazonaws.services.batch.model.ResourceType
 import com.amazonaws.services.batch.model.RetryStrategy
+import com.amazonaws.services.batch.model.RuntimePlatform
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.Const
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
@@ -67,6 +73,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+import nextflow.util.MemoryUnit
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -204,6 +211,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( !result ) {
             log.debug "[AWS BATCH] cannot find running status for job=$jobId"
         }
+        else {
+            log.trace "[AWS BATCH] Job id=$jobId details=$result"
+        }
 
         return result
     }
@@ -255,7 +265,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             task.exitStatus = job.container.exitCode ?: readExitFile()
             // finalize the task
             task.stdout = outputFile
-            if( job?.status == 'FAILED' ) {
+            if( job?.status == 'FAILED' || task.exitStatus==Integer.MAX_VALUE ) {
                 task.error = new ProcessUnrecoverableException(errReason(job))
                 task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
             }
@@ -369,7 +379,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             return container.substring(17)
         }
 
-        resolveJobDefinition(container)
+        return resolveJobDefinition(task)
     }
 
     /**
@@ -379,14 +389,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The Batch Job Definition name associated with the specified container
      */
     @CompileStatic
-    protected String resolveJobDefinition(String container) {
+    protected String resolveJobDefinition(TaskRun task) {
         final int DEFAULT_BACK_OFF_BASE = 3
         final int DEFAULT_BACK_OFF_DELAY = 250
         final int MAX_ATTEMPTS = 5
         int attempt=0
         while( true ) {
             try {
-                return resolveJobDefinition0(container)
+                return resolveJobDefinition0(task)
             }
             catch (ClientException e) {
                 if( e.statusCode != 404 || attempt++ > MAX_ATTEMPTS)
@@ -399,8 +409,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
-    protected String resolveJobDefinition0(String container) {
-        final req = makeJobDefRequest(container)
+    @CompileStatic
+    protected String resolveJobDefinition0(TaskRun task) {
+        final req = makeJobDefRequest(task)
+        final container = task.getContainer()
         final token = req.getParameters().get('nf-token')
         final jobKey = "$container:$token".toString()
         if( jobDefinitions.containsKey(jobKey) )
@@ -436,9 +448,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param image The Docker container image for which is required to create a Batch job definition
      * @return An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
+    protected RegisterJobDefinitionRequest makeJobDefRequest(TaskRun task) {
         final uniq = new ArrayList()
-        final result = configJobDefRequest(image, uniq)
+        final result = configJobDefRequest(task, uniq)
 
         // create a job marker uuid
         def hash = computeUniqueToken(uniq)
@@ -462,7 +474,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return
      *      An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest configJobDefRequest(String image, List hashingTokens) {
+    protected RegisterJobDefinitionRequest configJobDefRequest(TaskRun task, List hashingTokens) {
+        final image = task.getContainer()
         final name = normalizeJobDefinitionName(image)
         final opts = getAwsOptions()
 
@@ -470,23 +483,27 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
 
-        // create the container opts based on task config 
+        // create the container opts based on task config
         final containerOpts = task.getConfig().getContainerOptionsMap()
         final container = createContainerProperties(containerOpts)
 
         // container definition
-        final _1_cpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
-        final _1_gb = new ResourceRequirement().withType(ResourceType.MEMORY).withValue('1024')
+        // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
+        final reqCpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
+        final reqMem = new ResourceRequirement().withType(ResourceType.MEMORY).withValue( opts.fargateMode ? '2048' : '1024')
         container
                 .withImage(image)
                 .withCommand('true')
                 // note the actual command, memory and cpus are overridden when the job is executed
-                .withResourceRequirements( _1_cpus, _1_gb )
+                .withResourceRequirements( reqCpus, reqMem )
 
         final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
 
+        if( opts.executionRole )
+            container.setExecutionRoleArn(opts.executionRole)
+        
         final logsGroup = opts.getLogsGroup()
         if( logsGroup )
             container.setLogConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
@@ -496,7 +513,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
-        if( awscli ) {
+        if( awscli && !opts.fargateMode ) {
             def path = Paths.get(awscli).parent.parent.toString()
             mountsMap.put('aws-cli', "$path:$path:ro")
         }
@@ -509,6 +526,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         if( mountsMap )
             addVolumeMountsToContainer(mountsMap, container)
+
+        // Fargate specific settings
+        if( opts.isFargateMode() ) {
+            result.setPlatformCapabilities(List.of('FARGATE'))
+            container.withNetworkConfiguration( new NetworkConfiguration().withAssignPublicIp(AssignPublicIp.ENABLED) )
+            // use at least 50 GB as disk local storage
+            final diskGb = task.config.getDisk()?.toGiga()?.toInteger() ?: 50
+            container.withEphemeralStorage( new EphemeralStorage().withSizeInGiB(diskGb) )
+            // check for arm64 cpu architecture
+            if( task.config.getArchitecture()?.arch == 'arm64' )
+                container.withRuntimePlatform(new RuntimePlatform().withCpuArchitecture('ARM64'))
+        }
 
         // finally set the container options
         result.setContainerProperties(container)
@@ -595,7 +624,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected String createJobDef(RegisterJobDefinitionRequest req) {
         // add nextflow tags
         req.addTagsEntry('nextflow.io/createdAt', Instant.now().toString())
-        req.addTagsEntry('nextflow.io/version', Const.APP_VER)
+        req.addTagsEntry('nextflow.io/version', BuildInfo.version)
         // create the job def
         final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName}:$res.revision"
@@ -625,13 +654,26 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected List<String> classicSubmitCli() {
         // the cmd list to launch it
         final opts = getAwsOptions()
+        final cmd = opts.s5cmdPath ? s5Cmd(opts) : s3Cmd(opts)
+        return ['bash','-o','pipefail','-c', cmd.toString()]
+    }
+
+    protected String s3Cmd(AwsOptions opts) {
         final cli = opts.getAwsCli()
         final debug = opts.debug ? ' --debug' : ''
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
         final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return ['bash','-o','pipefail','-c', cmd.toString()]
+        return cmd
+    }
+
+    protected String s5Cmd(AwsOptions opts) {
+        final cli = opts.getS5cmdPath()
+        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
+        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        final cmd = "trap \"{ ret=\$?; $cli cp${sse}${kms} ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $cli cat s3:/${getWrapperFile()} | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        return cmd
     }
 
     protected List<String> getSubmitCommand() {
@@ -656,6 +698,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         /*
          * create the request object
          */
+        final opts = getAwsOptions()
         final labels = task.config.getResourceLabels()
         final result = new SubmitJobRequest()
         result.setJobName(normalizeJobName(task.name))
@@ -666,9 +709,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             result.setPropagateTags(true)
         }
         // set the share identifier
-        if( this.getAwsOptions().shareIdentifier ) {
-            result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
-            result.setSchedulingPriorityOverride(this.getAwsOptions().schedulingPriority)
+        if( opts.shareIdentifier ) {
+            result.setShareIdentifier(opts.shareIdentifier)
+            result.setSchedulingPriorityOverride(opts.schedulingPriority)
         }
 
         /*
@@ -700,18 +743,20 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
-        def container = new ContainerOverrides()
+        final container = new ContainerOverrides()
         container.command = getSubmitCommand()
         // set the task memory
-        if( task.config.getMemory() ) {
-            final mega = (int)task.config.getMemory().toMega()
+        final cpus = task.config.getCpus()
+        final mem = task.config.getMemory()
+        if( mem ) {
+            final mega = opts.fargateMode ? normaliseFargateMem(cpus, mem) : mem.toMega()
             if( mega >= 4 )
                 resources << new ResourceRequirement().withType(ResourceType.MEMORY).withValue(mega.toString())
             else
                 log.warn "Ignoring task ${task.lazyName()} memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
         }
         // set the task cpus
-        if( task.config.getCpus() > 1 )
+        if( cpus > 1 )
             resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
         final accelerator = task.config.getAccelerator()
@@ -838,5 +883,41 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
+    @Canonical
+    static class MemSlot {
+        int min
+        int max
+        int step
+
+        static ofGiga(int min, int max, int step) {
+            new MemSlot(min *1024, max *1024, step *1024)
+        }
+    }
+
+    static final Map<Integer, MemSlot> FARGATE_MEM = [1 : MemSlot.ofGiga(2,8,1),
+                                                      2 : MemSlot.ofGiga(4, 16, 1),
+                                                      4 : MemSlot.ofGiga(8, 30, 1),
+                                                      8 : MemSlot.ofGiga(16,60, 4),
+                                                      16: MemSlot.ofGiga(32, 120, 8) ]
+
+    protected long normaliseFargateMem(Integer cpus, MemoryUnit mem) {
+        final mega = mem.toMega()
+        final slot = FARGATE_MEM.get(cpus)
+        if( slot==null )
+            new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
+        if( mega <=slot.min ) {
+            log.warn "Process '${task.lazyName()}' memory requirement of ${mem} is below the minimum allowed by Fargate of ${MemoryUnit.of(mega+'MB')}"
+            return slot.min
+        }
+        if( mega >slot.max ) {
+            log.warn "Process '${task.lazyName()}' memory requirement of ${mem} is above the maximum allowed by Fargate of ${MemoryUnit.of(mega+'MB')}"
+            return slot.max
+        }
+        return ceilDiv(mega, slot.step) * slot.step
+    }
+
+    static private long ceilDiv(long x, long y){
+        return -Math.floorDiv(-x,y);
+    }
 }
 

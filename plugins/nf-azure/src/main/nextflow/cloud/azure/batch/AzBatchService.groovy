@@ -20,6 +20,7 @@ import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
@@ -36,9 +37,11 @@ import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ContainerRegistry
+import com.microsoft.azure.batch.protocol.models.ContainerType
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
+import com.microsoft.azure.batch.protocol.models.MetadataItem
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
 import com.microsoft.azure.batch.protocol.models.OnAllTasksComplete
@@ -85,6 +88,8 @@ import nextflow.util.MemoryUnit
 import nextflow.util.MustacheTemplateEngine
 import nextflow.util.Rnd
 import org.joda.time.Period
+
+import static com.microsoft.azure.batch.protocol.models.ContainerType.DOCKER_COMPATIBLE
 /**
  * Implements Azure Batch operations for Nextflow executor
  *
@@ -274,7 +279,7 @@ class AzBatchService implements Closeable {
             if (!config.batch().accountName)
                 throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
             if (!config.batch().accountKey)
-                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
 
             return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
 
@@ -563,9 +568,10 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        final key = CacheHelper.hasher([vmType.name, opts]).hash().toString()
+        final metadata = task.config.getResourceLabels()
+        final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
-        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts)
+        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
     protected void checkPool(CloudPool pool, AzVmPoolSpec spec) {
@@ -664,7 +670,7 @@ class AzBatchService implements Closeable {
                     .withRegistryServer(registryOpts.server)
                     .withUserName(registryOpts.userName)
                     .withPassword(registryOpts.password)
-            containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
+            containerConfig.withContainerRegistries(containerRegistries).withType(DOCKER_COMPATIBLE)
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
@@ -697,6 +703,16 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
+
+        // resource labels
+        if( spec.metadata ) {
+            final metadata = spec.metadata.collect { name, value ->
+                new MetadataItem()
+                    .withName(name)
+                    .withValue(value)
+            }
+            poolParams.withMetadata(metadata)
+        }
 
         // virtual network
         if( spec.opts.virtualNetwork )
@@ -737,7 +753,12 @@ class AzBatchService implements Closeable {
                     .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) )
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
-        else {
+        else if( spec.opts.lowPriority ) {
+            log.debug "Creating low-priority pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
+            poolParams
+                .withTargetLowPriorityNodes(spec.opts.vmCount)
+        }
+        else  {
             log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
             poolParams
                     .withTargetDedicatedNodes(spec.opts.vmCount)
@@ -747,23 +768,24 @@ class AzBatchService implements Closeable {
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
+        final target = opts.lowPriority ? 'TargetLowPriorityNodes' : 'TargetDedicatedNodes'
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
-        def DEFAULT_FORMULA = '''
+        final DEFAULT_FORMULA = """
             // Get pool lifetime since creation.
             lifespan = time() - time("{{poolCreationTime}}");
             interval = TimeInterval_Minute * {{scaleInterval}};
             
             // Compute the target nodes based on pending tasks.
-            // $PendingTasks == The sum of $ActiveTasks and $RunningTasks
-            $samples = $PendingTasks.GetSamplePercent(interval);
-            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(interval)));
-            $targetVMs = $tasks > 0 ? $tasks : max(0, $TargetDedicatedNodes/2);
-            targetPoolSize = max(0, min($targetVMs, {{maxVmCount}}));
+            // \$PendingTasks == The sum of \$ActiveTasks and \$RunningTasks
+            \$samples = \$PendingTasks.GetSamplePercent(interval);
+            \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(interval)));
+            \$targetVMs = \$tasks > 0 ? \$tasks : max(0, \$TargetDedicatedNodes/2);
+            targetPoolSize = max(0, min(\$targetVMs, {{maxVmCount}}));
             
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
-            $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
-            $NodeDeallocationOption = taskcompletion;
-            '''.stripIndent(true)
+            \$${target} = lifespan < interval ? {{vmCount}} : targetPoolSize;
+            \$NodeDeallocationOption = taskcompletion;
+            """.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
         final vars = poolCreationBindings(opts, Instant.now())
@@ -872,7 +894,7 @@ class AzBatchService implements Closeable {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
             }
         }
         return RetryPolicy.<T>builder()
@@ -894,8 +916,22 @@ class AzBatchService implements Closeable {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof BatchErrorException && e.body().code() in RETRY_CODES)  as Predicate<? extends Throwable>
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if( t instanceof BatchErrorException && t.body().code() in RETRY_CODES )
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
         final policy = retryPolicy(cond)
+        // apply the action with
         return Failsafe.with(policy).get(action)
     }
 }

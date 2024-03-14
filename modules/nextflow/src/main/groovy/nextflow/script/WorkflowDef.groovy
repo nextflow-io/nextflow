@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private BaseScript owner
 
-    // -- following attributes are mutable and instance dependant
+    // -- following attributes are mutable and instance dependent
     // -- therefore should not be cloned
 
     private ChannelOut output

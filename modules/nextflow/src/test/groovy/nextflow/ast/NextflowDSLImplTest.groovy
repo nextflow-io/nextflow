@@ -1,23 +1,33 @@
 package nextflow.ast
 
+import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
+import nextflow.script.ScriptParser
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import test.BaseSpec
+import test.Dsl2Spec
+import test.MockExecutorFactory
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowDSLImplTest extends BaseSpec {
+class NextflowDSLImplTest extends Dsl2Spec {
+
+    def createCompilerConfig() {
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(BaseScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        return config
+    }
+
 
     def 'should fetch method names' () {
 
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def config = createCompilerConfig()
 
         def SCRIPT = '''
             def foo() { 
@@ -35,8 +45,8 @@ class NextflowDSLImplTest extends BaseSpec {
             process alpha {
               /hello/
             }
-
         '''
+
         when:
         new GroovyShell(config).parse(SCRIPT)
         then:
@@ -45,12 +55,9 @@ class NextflowDSLImplTest extends BaseSpec {
 
     def 'should not allow duplicate processes' () {
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def config = createCompilerConfig()
 
         def SCRIPT = '''
-                    
             process alpha {
               /hello/
             }
@@ -58,7 +65,6 @@ class NextflowDSLImplTest extends BaseSpec {
             process alpha {
               /world/
             }
-
         '''
 
         when:
@@ -71,12 +77,9 @@ class NextflowDSLImplTest extends BaseSpec {
 
     def 'should not allow duplicate workflow' () {
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def config = createCompilerConfig()
 
         def SCRIPT = '''
-                    
             workflow alpha {
               /hello/
             }
@@ -84,7 +87,6 @@ class NextflowDSLImplTest extends BaseSpec {
             workflow alpha {
               /world/
             }
-
         '''
 
         when:
@@ -97,29 +99,24 @@ class NextflowDSLImplTest extends BaseSpec {
     def 'should throw illegal name exception' () {
 
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def config = createCompilerConfig()
 
         when:
         def SCRIPT = '''
             workflow 'foo:bar' {
               /hello/
             }
-
         '''
         new GroovyShell(config).parse(SCRIPT)
         then:
         def e = thrown(MultipleCompilationErrorsException)
         e.message.contains 'Process and workflow names cannot contain colon character'
 
-
         when:
         SCRIPT = '''
             process 'foo:bar' {
               /hello/
             }
-
         '''
         new GroovyShell(config).parse(SCRIPT)
         then:
@@ -129,12 +126,12 @@ class NextflowDSLImplTest extends BaseSpec {
 
     def 'should set process name in the script meta' () {
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        and:
+        def parser = new ScriptParser(session)
 
         def SCRIPT = '''
-                    
             process alpha {
               /hello/
             }
@@ -142,14 +139,16 @@ class NextflowDSLImplTest extends BaseSpec {
             process beta {
               /world/
             }
-
+            
+            workflow {
+              alpha(); beta()
+            }
         '''
 
         when:
-        def script = new GroovyShell(config).parse(SCRIPT)
+        parser.runScript(SCRIPT)
         then:
-        ScriptMeta.get(script).getDsl1ProcessNames() == ['alpha', 'beta']
-        ScriptMeta.get(script).getProcessNames() == ['alpha', 'beta'] as Set
+        ScriptMeta.get(parser.getScript()).getProcessNames() == ['alpha', 'beta'] as Set
     }
 
 }

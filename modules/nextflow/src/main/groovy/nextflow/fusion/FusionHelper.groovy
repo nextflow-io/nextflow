@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ class FusionHelper {
         final containerCmd = containerBuilder
                 .build()
                 .getRunCommand(patchCmd.join(' '))
-                .replaceAll('-w "\\$PWD" ','') // <-- hack to remove the PWD work dir
+                .replaceAll('-w "\\$NXF_TASK_WORKDIR" ','') // <-- hack to remove the PWD work dir
 
         return containerCmd
     }

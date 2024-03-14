@@ -1,12 +1,18 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This Source Code Form is "Incompatible With Secondary Licenses", as
- * defined by the Mozilla Public License, v. 2.0.
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 package io.seqera.tower.plugin
@@ -132,7 +138,6 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
-    private TowerArchiver archiver
 
     /**
      * Constructor that consumes a URL and creates
@@ -145,7 +150,6 @@ class TowerClient implements TraceObserver {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
-        this.archiver = TowerArchiver.create(session, env)
     }
 
     TowerClient withEnvironment(Map env) {
@@ -264,7 +268,7 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
+        log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
         
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
@@ -289,7 +293,7 @@ class TowerClient implements TraceObserver {
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
         if( !workflowId )
-            throw new AbortOperationException("Invalid Tower response - Missing workflow Id")
+            throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
         if( ret.message )
             log.warn(ret.message.toString())
 
@@ -363,7 +367,7 @@ class TowerClient implements TraceObserver {
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
         this.sender = Threads.start('Tower-thread', this.&sendTasks0)
-        final msg = "Monitor the execution with Nextflow Tower using this URL: ${watchUrl}"
+        final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
 
@@ -375,7 +379,7 @@ class TowerClient implements TraceObserver {
                 ? env.get('TOWER_ACCESS_TOKEN')
                 : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
         if( !token )
-            throw new AbortOperationException("Missing Nextflow Tower access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
+            throw new AbortOperationException("Missing personal access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return token
     }
 
@@ -386,6 +390,8 @@ class TowerClient implements TraceObserver {
     void onFlowComplete() {
         // submit the record
         events << new ProcessEvent(completed: true)
+        // publish runtime reports
+        reports.publishRuntimeReports()
         // wait the submission of pending events
         sender.join()
         // wait and flush reports content
@@ -395,8 +401,6 @@ class TowerClient implements TraceObserver {
         final req = makeCompleteReq(session)
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
-        // shutdown file archiver
-        archiver?.shutdown(session)
     }
 
     @Override
@@ -440,7 +444,6 @@ class TowerClient implements TraceObserver {
             aggregator.aggregate(trace)
         }
 
-        archiver?.archiveTaskLogs(trace.workDir)
     }
 
     @Override
@@ -476,9 +479,7 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFilePublish(Path destination) {
-        final result = reports.filePublish(destination)
-        if( result && archiver )
-            archiver.archiveFile(destination)
+        reports.filePublish(destination)
     }
 
     protected void refreshToken(String refresh) {
@@ -539,7 +540,7 @@ class TowerClient implements TraceObserver {
                 return new Response(httpClient.responseCode, httpClient.getResponse())
             }
             catch( ConnectException e ) {
-                String msg = "Unable to connect to Tower API: ${getHostUrl(url)}"
+                String msg = "Unable to connect to Seqera Platform API: ${getHostUrl(url)}"
                 return new Response(0, msg)
             }
             catch (IOException e) {
@@ -557,7 +558,7 @@ class TowerClient implements TraceObserver {
 
                 String msg
                 if( code == 401 ) {
-                    msg = 'Unauthorized Tower access -- Make sure you have specified the correct access token'
+                    msg = 'Unauthorized Seqera Platform API access -- Make sure you have specified the correct access token'
                 }
                 else {
                     msg = parseCause(httpClient.response) ?: "Unexpected response for request $url"
@@ -649,10 +650,10 @@ class TowerClient implements TraceObserver {
         if( obj instanceof CharSequence )
             return obj.toString()
         if( obj instanceof Map ) {
-            def map = obj as Map
-            return map.collect { k,v -> "$k:$v" }.join(',')
+            // turn this off for multiple containers because the string representation is broken
+            return null
         }
-        throw new IllegalArgumentException("Illegal container attribut type: ${obj.getClass().getName()} = ${obj}" )
+        throw new IllegalArgumentException("Illegal container attribute type: ${obj.getClass().getName()} = ${obj}" )
     }
 
     protected Map makeTaskMap0(TraceRecord trace) {
@@ -744,7 +745,7 @@ class TowerClient implements TraceObserver {
         def cause = parseCause(resp.cause)
 
         def msg = """\
-                Unexpected Tower response
+                Unexpected Seqera Platform API response
                 - endpoint url: $endpoint
                 - status code : $resp.code
                 - response msg: ${resp.message} 

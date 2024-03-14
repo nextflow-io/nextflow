@@ -37,7 +37,7 @@ public class S3ObjectSummaryLookup {
     private static final Logger log = LoggerFactory.getLogger(S3ObjectSummary.class);
 
     /**
-     * Get the {@link com.amazonaws.services.s3.model.S3ObjectSummary} that represent this Path or her first child if this path not exists
+     * Get the {@link com.amazonaws.services.s3.model.S3ObjectSummary} that represent this Path or its first child if the path does not exist
      * @param s3Path {@link S3Path}
      * @return {@link com.amazonaws.services.s3.model.S3ObjectSummary}
      * @throws java.nio.file.NoSuchFileException if not found the path and any child
@@ -139,7 +139,7 @@ public class S3ObjectSummaryLookup {
     /**
      * get S3Object represented by this S3Path try to access with or without end slash '/'
      * @param s3Path S3Path
-     * @return S3Object or null if not exists
+     * @return S3Object or null if it does not exist
      */
     @Deprecated
     private S3Object getS3Object(S3Path s3Path){
