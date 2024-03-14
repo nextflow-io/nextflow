@@ -78,7 +78,7 @@ class CondorExecutor extends AbstractGridExecutor {
         if( task.config.clusterOptions ) {
             def opts = task.config.clusterOptions
             if( opts instanceof Collection ) {
-                result.addAll(opts)
+                result.addAll(opts as Collection)
             }
             else {
                 result.addAll( opts.toString().tokenize(';\n').collect{ it.trim() })
