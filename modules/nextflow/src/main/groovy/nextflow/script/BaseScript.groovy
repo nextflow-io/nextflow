@@ -80,6 +80,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.owner = this
         session = binding.getSession()
         processFactory = session.newProcessFactory(this)
+        final secretsProvider = SecretsLoader.isEnabled() ? SecretsLoader.instance.load() : null
 
         binding.setVariable( 'baseDir', session.baseDir )
         binding.setVariable( 'projectDir', session.baseDir )
@@ -88,18 +89,15 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'nextflow', NextflowMeta.instance )
         binding.setVariable( 'launchDir', Paths.get('./').toRealPath() )
         binding.setVariable( 'moduleDir', meta.moduleDir )
-        binding.setVariable( 'secrets', makeSecretsContext() )
+        binding.setVariable( 'secrets', makeSecretsContext(secretsProvider) )
     }
 
-    def makeSecretsContext() {
-        if( !SecretsLoader.isEnabled() )
-            return null
+    protected makeSecretsContext(SecretsProvider provider) {
 
         return new Object() {
-            private SecretsProvider provider = SecretsLoader.instance.load()
-
-            @Override
             def getProperty(String name) {
+                if( !provider )
+                    throw new AbortOperationException("Unable to resolve secrets.$name - no secret provider is available")
                 provider.getSecret(name)?.value
             }
         }
