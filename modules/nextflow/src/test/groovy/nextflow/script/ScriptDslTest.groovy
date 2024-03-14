@@ -359,7 +359,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == 'Process `bar` declares 1 input channel but 0 were specified'
+        err.message == 'Process `bar` was invoked with 0 positional argument(s) but 1 were expected'
     }
 
     def 'should report error accessing undefined out/a' () {
@@ -451,7 +451,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Process `bar` declares 1 input channel but 0 were specified"
+        err.message == "Process `bar` was invoked with 0 positional argument(s) but 1 were expected"
     }
 
     def 'should report error accessing undefined out/e' () {

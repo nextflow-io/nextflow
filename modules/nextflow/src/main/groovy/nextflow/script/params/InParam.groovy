@@ -37,4 +37,6 @@ interface InParam extends Cloneable {
 
     def decodeInputs( List values )
 
+    String getChannelTakeName()
+
 }
