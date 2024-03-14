@@ -533,6 +533,11 @@ The following variables are implicitly defined in the script global execution sc
   :::
 : The directory where the main script is located.
 
+`secrets`
+: :::{versionadded} 24.02.0-edge
+  :::
+: Dictionary like object holding workflow secrets. Read the {ref}`secrets-page` page for more information.
+
 `workDir`
 : The directory where tasks temporary files are created.
 
