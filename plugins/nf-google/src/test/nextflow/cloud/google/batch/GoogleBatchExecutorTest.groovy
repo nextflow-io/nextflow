@@ -9,6 +9,7 @@ package nextflow.cloud.google.batch
 
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.google.batch.client.BatchClient
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -61,5 +62,17 @@ class GoogleBatchExecutorTest extends Specification {
         [:]                             | true
         [NXF_CLOUDINFO_ENABLED:'true']  | true
         [NXF_CLOUDINFO_ENABLED:'false'] | false
+    }
+
+    def 'should kill tasks' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = new GoogleBatchExecutor(client: client)
+
+        when:
+        executor.killTask('job-id')
+        executor.killTask('job-id')
+        then:
+        1 * client.deleteJob('job-id')
     }
 }

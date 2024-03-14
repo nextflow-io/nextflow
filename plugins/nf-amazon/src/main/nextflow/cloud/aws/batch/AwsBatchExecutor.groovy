@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.ecs.model.AccessDeniedException
 import com.amazonaws.services.logs.model.ResourceNotFoundException
 import nextflow.cloud.aws.nio.S3Path
@@ -33,6 +34,7 @@ import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.executor.TaskArrayAware
 import nextflow.fusion.FusionHelper
 import nextflow.extension.FilesEx
 import nextflow.processor.ParallelPollingMonitor
@@ -54,7 +56,7 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName('awsbatch')
 @CompileStatic
-class AwsBatchExecutor extends Executor implements ExtensionPoint {
+class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAware {
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -81,6 +83,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     private Path remoteBinDir = null
 
     private AwsOptions awsOptions
+
+    private Set<String> deletedJobs = [] as Set
 
     AwsOptions getAwsOptions() {  awsOptions  }
 
@@ -263,6 +267,28 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     @PackageScope
     ThrottlingExecutor getReaper() { reaper }
 
+    void killTask(String jobId) {
+        // extract job array id
+        if( jobId.contains(':') )
+            jobId = jobId.split(':')[0]
+
+        // prevent duplicate delete requests on the same job
+        if( jobId in deletedJobs )
+            return
+        else
+            deletedJobs.add(jobId)
+
+        // submit terminate request
+        reaper.submit({ killTask0(jobId) })
+    }
+
+    protected void killTask0(String jobId) {
+        final req = new TerminateJobRequest()
+            .withJobId(jobId)
+            .withReason('Job killed by NF')
+        final resp = client.terminateJob(req)
+        log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
+    }
 
     CloudMachineInfo getMachineInfoByQueueAndTaskArn(String queue, String taskArn) {
         try {
@@ -305,6 +331,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
         ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
     }
+
+    @Override
+    String getArrayIndexName() { 'AWS_BATCH_JOB_ARRAY_INDEX' }
 
 }
 

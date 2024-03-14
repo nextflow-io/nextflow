@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -104,7 +105,13 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << getJobNameFor(task)
+        if( task instanceof TaskArray ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
+        }
+        else {
+            result << '-J' << getJobNameFor(task)
+        }
 
         // -- at the end append the command script wrapped file name
         result.addAll( task.config.getClusterOptionsAsList() )
@@ -311,4 +318,14 @@ class LsfExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() { 'LSB_JOBINDEX' }
+
+    @Override
+    int getArrayIndexStart() { 1 }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) { "${jobId}[${index + 1}]" }
+
 }

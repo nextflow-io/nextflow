@@ -19,6 +19,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -36,6 +37,11 @@ class SgeExecutor extends AbstractGridExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
+
+        if( task instanceof TaskArray ) {
+            final arraySize = task.getArraySize()
+            result << '-t' << "1-${arraySize}".toString()
+        }
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -114,8 +120,14 @@ class SgeExecutor extends AbstractGridExecutor {
             if( entry.toString().isLong() )
                 return entry
 
+            if( (id=entry.tokenize('.').get(0)).isLong() )
+                return id
+
             if( entry.startsWith('Your job') && entry.endsWith('has been submitted') && (id=entry.tokenize().get(2)) )
                 return id
+
+            if( entry.startsWith('Your job array') && entry.endsWith('has been submitted') && (id=entry.tokenize().get(3)) )
+                return id.tokenize('.').get(0)
         }
 
         throw new IllegalStateException("Invalid SGE submit response:\n$text\n\n")
@@ -185,4 +197,14 @@ class SgeExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() { 'SGE_TASK_ID' }
+
+    @Override
+    int getArrayIndexStart() { 1 }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) { "${jobId}.${index}" }
+
 }

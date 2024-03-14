@@ -18,6 +18,7 @@ package nextflow.executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * An executor specialised for CRG cluster
@@ -39,6 +40,11 @@ class CrgExecutor extends SgeExecutor {
         if( task.config.getCpus()>1 && !task.config.penv ) {
             log.debug 'Parallel environment not specified -- Using default value: `smp`'
             task.config.penv = 'smp'
+        }
+
+        if( task instanceof TaskArray ) {
+            final arraySize = task.getArraySize()
+            result << '-t' << "1-${arraySize}".toString()
         }
 
         result << '-N' << getJobNameFor(task)

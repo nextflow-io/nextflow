@@ -38,11 +38,13 @@ import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.Throttle
 /**
  * Handles a job execution in the underlying grid platform
@@ -98,6 +100,27 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.exitStatusReadTimeoutMillis = duration.toMillis()
         this.queue = task.config?.queue
         this.sanityCheckInterval = duration
+    }
+
+    @Override
+    void prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
+    }
+
+    @Override
+    String getWorkDir() {
+        fusionEnabled()
+            ? FusionHelper.toContainerMount(task.workDir).toString()
+            : task.workDir.toString()
+    }
+
+    @Override
+    List<String> getLaunchCommand() {
+        final workDir = Escape.path(getWorkDir())
+        final cmd = "bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}"
+
+        List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
     }
 
     protected ProcessBuilder createProcessBuilder() {
@@ -189,7 +212,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             // -- wait the the process completes
             final result = process.text
             final exitStatus = process.waitFor()
-            final cmd = launchCmd0(builder,pipeScript)
+            final cmd = submitCmd0(builder,pipeScript)
 
             if( exitStatus ) {
                 throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, cmd)
@@ -237,12 +260,12 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    protected String launchCmd0(ProcessBuilder builder, String pipeScript) {
+    protected String submitCmd0(ProcessBuilder builder, String pipeScript) {
         def result = CmdLineHelper.toLine(builder.command())
         if( pipeScript ) {
-            result = "cat << 'LAUNCH_COMMAND_EOF' | ${result}\n"
+            result = "cat << 'SUBMIT_COMMAND_EOF' | ${result}\n"
             result += pipeScript.trim() + '\n'
-            result += 'LAUNCH_COMMAND_EOF\n'
+            result += 'SUBMIT_COMMAND_EOF\n'
         }
         return result
     }
@@ -254,17 +277,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     void submit() {
         ProcessBuilder builder = null
         try {
-            // -- create the wrapper script
-            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
             final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
-            // -- save the JobId in the
-            this.jobId = executor.parseJobId(result)
-            this.status = SUBMITTED
+            // -- save the job id
+            final jobId = (String)executor.parseJobId(result)
+            this.onSubmit(jobId)
             log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
 
         }
@@ -284,6 +305,18 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     }
 
+    void onSubmit(String jobId) {
+        if( task instanceof TaskArray ) {
+            task.children.eachWithIndex { handler, i ->
+                final arrayTaskId = executor.getArrayTaskId(jobId, i)
+                ((GridTaskHandler)handler).onSubmit(arrayTaskId)
+            }
+        }
+        else {
+            this.jobId = jobId
+            this.status = SUBMITTED
+        }
+    }
 
     private long startedMillis
 

@@ -41,7 +41,9 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -66,10 +68,17 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private BatchClient client
 
+    private BashWrapperBuilder launcher
+
     /**
      * Job Id assigned by Nextflow
      */
     private String jobId
+
+    /**
+     * Task id assigned by Google Batch service
+     */
+    private String taskId
 
     /**
      * Job unique id assigned by Google Batch service
@@ -77,9 +86,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private String uid
 
     /**
-     * Job state assigned by Google Batch service
+     * Task state assigned by Google Batch service
      */
-    private String jobState
+    private String taskState
 
     private volatile CloudMachineInfo machineInfo
 
@@ -120,22 +129,51 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void submit() {
-        /*
-         * create the task runner script
-         */
-        final launcher = createTaskWrapper()
+    void prepareLauncher() {
+        launcher = createTaskWrapper()
         launcher.build()
+    }
 
+    @Override
+    String getWorkDir() {
+        launcher.workDir.toString()
+    }
+
+    @Override
+    List<String> getLaunchCommand() {
+        spec0(launcher).launchCommand()
+    }
+
+    List<String> getContainerMounts() {
+        spec0(launcher).getContainerMounts()
+    }
+
+    @Override
+    void submit() {
         /*
          * create submit request
          */
         final req = newSubmitRequest(task, spec0(launcher))
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
-        this.uid = resp.getUid()
-        this.status = TaskStatus.SUBMITTED
+        final uid = resp.getUid()
+        this.onSubmit(jobId, '0', uid)
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
+    }
+
+    void onSubmit(String jobId, String taskId, String uid) {
+        if( task instanceof TaskArray ) {
+            task.children.eachWithIndex { handler, i ->
+                final arrayTaskId = i.toString()
+                ((GoogleBatchTaskHandler)handler).onSubmit(jobId, arrayTaskId, uid)
+            }
+        }
+        else {
+            this.jobId = jobId
+            this.taskId = taskId
+            this.uid = uid
+            this.status = TaskStatus.SUBMITTED
+        }
     }
 
     protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
@@ -191,6 +229,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( containerOptions )
             container.setOptions( containerOptions )
+
+        // add child container mounts if task is an array
+        if( task instanceof TaskArray )
+            for( TaskHandler handler : task.children )
+                container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
         // task spec
         final env = Environment
@@ -361,12 +404,18 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .addNetworkInterfaces(networkInterface)
             )
 
+        // task group
+        final taskGroup = TaskGroup.newBuilder()
+            .setTaskSpec(taskSpec)
+
+        if( task instanceof TaskArray ) {
+            final arraySize = task.getArraySize()
+            taskGroup.setTaskCount(arraySize)
+        }
+
         // create the job
         return Job.newBuilder()
-            .addTaskGroups(
-                TaskGroup.newBuilder()
-                    .setTaskSpec(taskSpec)
-            )
+            .addTaskGroups(taskGroup)
             .setAllocationPolicy(allocationPolicy)
             .setLogsPolicy(
                 LogsPolicy.newBuilder()
@@ -377,38 +426,42 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
-     * @return Retrieve the submitted job state
+     * @return Retrieve the submitted task state
      */
-    protected String getJobState() {
+    protected String getTaskState() {
+        final tasks = client.listTasks(jobId)
+        if( !tasks.iterator().hasNext() )
+            return 'PENDING'
+
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
-        if( !jobState || delta >= 1_000) {
-            final status = client.getJobStatus(jobId)
+        if( !taskState || delta >= 1_000) {
+            final status = client.getTaskStatus(jobId, taskId)
             final newState = status?.state as String
             if( newState ) {
-                log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
-                jobState = newState
+                log.trace "[GOOGLE BATCH] Get job=$jobId task=$taskId state=$newState"
+                taskState = newState
                 timestamp = now
             }
-            if( newState == 'SCHEDULED' ) {
+            if( newState == 'PENDING' ) {
                 final eventsCount = status.getStatusEventsCount()
                 final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
                 if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
                     log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
             }
         }
-        return jobState
+        return taskState
     }
 
-    static private List<String> RUNNING_AND_TERMINATED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
+    static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED']
 
-    static private List<String> TERMINATED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
+    static private final List<String> COMPLETED = ['SUCCEEDED', 'FAILED']
 
     @Override
     boolean checkIfRunning() {
         if(isSubmitted()) {
             // include `terminated` state to allow the handler status to progress
-            if (getJobState() in RUNNING_AND_TERMINATED) {
+            if( getTaskState() in RUNNING_OR_COMPLETED ) {
                 status = TaskStatus.RUNNING
                 return true
             }
@@ -418,9 +471,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
-        final state = getJobState()
-        if( state in TERMINATED ) {
-            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; state=$state"
+        final state = getTaskState()
+        if( state in COMPLETED ) {
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; task=$taskId; state=$state"
             // finalize the task
             task.exitStatus = getJobExitCode()
             if( task.exitStatus == null )
@@ -442,7 +495,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected Integer getJobExitCode() {
         try {
-            final status = client.getJobStatus(jobId)
+            final status = client.getTaskStatus(jobId, taskId)
             final eventsCount = status.getStatusEventsCount()
             final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}"
@@ -473,7 +526,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     void kill() {
         if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
-            client.deleteJob(jobId)
+            executor.killTask(jobId)
         }
         else {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"
@@ -487,9 +540,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
-        if( jobId && uid ) {
-            result.put('native_id', "$jobId/$uid")
-        }
+        if( jobId && uid )
+            result.put('native_id', "$jobId/$taskId/$uid")
         result.machineInfo = getMachineInfo()
         return result
     }

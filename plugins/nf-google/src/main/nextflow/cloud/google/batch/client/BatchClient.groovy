@@ -23,9 +23,11 @@ import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
-import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LocationName
+import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
+import com.google.cloud.batch.v1.TaskName
+import com.google.cloud.batch.v1.TaskStatus
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
@@ -85,16 +87,16 @@ class BatchClient {
         return batchServiceClient.createJob(parent, job, jobId)
     }
 
-    Job describeJob(String jobId) {
-        final name = JobName.of(projectId, location, jobId)
-
-        return batchServiceClient.getJob(name)
-    }
-
-    Iterable<?> listTasks(String jobId) {
+    Iterable<Task> listTasks(String jobId) {
         final parent = TaskGroupName.of(projectId, location, jobId, 'group0')
 
         return batchServiceClient.listTasks(parent).iterateAll()
+    }
+
+    Task describeTask(String jobId, String taskId) {
+        final name = TaskName.of(projectId, location, jobId, 'group0', taskId)
+
+        return batchServiceClient.getTask(name)
     }
 
     void deleteJob(String jobId) {
@@ -103,13 +105,12 @@ class BatchClient {
         batchServiceClient.deleteJobAsync(name)
     }
 
-    JobStatus getJobStatus(String jobId) {
-        final job = describeJob(jobId)
-        return job.getStatus()
+    TaskStatus getTaskStatus(String jobId, String taskId) {
+        return describeTask(jobId, taskId).getStatus()
     }
 
-    String getJobState(String jobId) {
-        final status = getJobStatus(jobId)
+    String getTaskState(String jobId, String taskId) {
+        final status = getTaskStatus(jobId, taskId)
         return status ? status.getState().toString() : null
     }
 

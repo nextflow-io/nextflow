@@ -22,6 +22,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Processor for SLURM resource manager
@@ -53,6 +54,11 @@ class SlurmExecutor extends AbstractGridExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
+
+        if( task instanceof TaskArray ) {
+            final arraySize = task.getArraySize()
+            result << '--array' << "0-${arraySize - 1}".toString()
+        }
 
         result << '-J' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
@@ -211,4 +217,11 @@ class SlurmExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
+
 }

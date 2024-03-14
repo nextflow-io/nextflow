@@ -192,13 +192,26 @@ class TaskPollingMonitor implements TaskMonitor {
      *      A {@link TaskHandler} instance representing the task to be submitted for execution
      */
     protected void submit(TaskHandler handler) {
-        // submit the job execution -- throws a ProcessException when submit operation fail
-        handler.submit()
-        // note: add the 'handler' into the polling queue *after* the submit operation,
-        // this guarantees that in the queue are only jobs successfully submitted
-        runningQueue.add(handler)
-        // notify task submission
-        session.notifyTaskSubmit(handler)
+        if( handler.task instanceof TaskArray ) {
+            // submit task array
+            handler.prepareLauncher()
+            handler.submit()
+            // add each child task to the running queue
+            for( TaskHandler h0 : handler.task.children ) {
+                runningQueue.add(h0)
+                session.notifyTaskSubmit(h0)
+            }
+        }
+        else {
+            // submit the job execution -- throws a ProcessException when submit operation fail
+            handler.prepareLauncher()
+            handler.submit()
+            // note: add the 'handler' into the polling queue *after* the submit operation,
+            // this guarantees that in the queue are only jobs successfully submitted
+            runningQueue.add(handler)
+            // notify task submission
+            session.notifyTaskSubmit(handler)
+        }
     }
 
     /**
@@ -226,7 +239,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try{
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
-            session.notifyTaskPending(handler)
+            notifyTaskPending0(handler)
             log.trace "Scheduled task > $handler"
         }
         finally {
@@ -566,7 +579,7 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             catch ( Throwable e ) {
                 handleException(handler, e)
-                session.notifyTaskComplete(handler)
+                notifyTaskComplete0(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
@@ -686,6 +699,22 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected Queue<TaskHandler> getPendingQueue() {
         return pendingQueue
+    }
+
+    protected void notifyTaskPending0(TaskHandler handler) {
+        if( handler.task instanceof TaskArray )
+            for( TaskHandler h0 : handler.task.children )
+                session.notifyTaskPending(h0)
+        else
+            session.notifyTaskPending(handler)
+    }
+
+    protected void notifyTaskComplete0(TaskHandler handler) {
+        if( handler.task instanceof TaskArray )
+            for( TaskHandler h0 : handler.task.children )
+                session.notifyTaskComplete(h0)
+        else
+            session.notifyTaskComplete(handler)
     }
 
 }

@@ -24,6 +24,7 @@ import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.model.ArrayProperties
 import com.amazonaws.services.batch.model.AssignPublicIp
 import com.amazonaws.services.batch.model.AttemptContainerDetail
 import com.amazonaws.services.batch.model.ClientException
@@ -52,7 +53,6 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.RuntimePlatform
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
-import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -68,6 +68,7 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -283,7 +284,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.debug "[AWS BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
+            log.debug "[AWS BATCH] Cannot read exit status for task: `${task.lazyName()}` | ${e.message}"
             return Integer.MAX_VALUE
         }
     }
@@ -294,18 +295,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     void kill() {
         assert jobId
-        log.trace "[AWS BATCH] killing job=$jobId"
-        final req = new TerminateJobRequest().withJobId(jobId).withReason('Job killed by NF')
-        terminateJob(req)
+        log.trace "[AWS BATCH] Process `${task.lazyName()}` - killing job=$jobId"
+
+        executor.killTask(jobId)
     }
 
-    protected void terminateJob(TerminateJobRequest req) {
-
-        final batch = bypassProxy(client)
-        executor.reaper.submit({
-            final resp = batch.terminateJob(req)
-            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
-        })
+    @Override
+    void prepareLauncher() {
+        createTaskWrapper().build()
     }
 
     /**
@@ -313,11 +310,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     @Override
     void submit() {
-        /*
-         * create task wrapper
-         */
-        buildTaskWrapper()
-
         /*
          * create submit request
          */
@@ -330,10 +322,22 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // note use the real client object because this method
         // is supposed to be invoked by the thread pool
         final resp = submit0(bypassProxy(client), req)
-        this.jobId = resp.jobId
-        this.status = TaskStatus.SUBMITTED
-        this.queueName = req.getJobQueue()
-        log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
+        this.onSubmit(resp.jobId, req.getJobQueue())
+        log.debug "[AWS BATCH] Process `${task.lazyName()}` submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
+    }
+
+    void onSubmit(String jobId, String queueName) {
+        if( task instanceof TaskArray ) {
+            task.children.eachWithIndex { handler, i ->
+                final arrayTaskId = "${jobId}:${i}"
+                ((AwsBatchTaskHandler)handler).onSubmit(arrayTaskId, queueName)
+            }
+        }
+        else {
+            this.jobId = jobId
+            this.queueName = queueName
+            this.status = TaskStatus.SUBMITTED
+        }
     }
 
     protected BashWrapperBuilder createTaskWrapper() {
@@ -676,11 +680,19 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return cmd
     }
 
-    protected List<String> getSubmitCommand() {
+    @Override
+    List<String> getLaunchCommand() {
         // final launcher command
         return fusionEnabled()
                 ? fusionSubmitCli()
                 : classicSubmitCli()
+    }
+
+    @Override
+    String getWorkDir() {
+        fusionEnabled()
+            ? FusionHelper.toContainerMount(task.workDir).toString()
+            : task.workDir.toUriString()
     }
 
     protected int maxSpotAttempts() {
@@ -744,7 +756,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
         final container = new ContainerOverrides()
-        container.command = getSubmitCommand()
+        container.command = getLaunchCommand()
         // set the task memory
         final cpus = task.config.getCpus()
         final mem = task.config.getMemory()
@@ -775,6 +787,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             container.setEnvironment(vars)
 
         result.setContainerOverrides(container)
+
+        // set the array properties
+        if( task instanceof TaskArray ) {
+            final arraySize = task.getArraySize()
+
+            if( arraySize > 10_000 )
+                throw new IllegalArgumentException("Job arrays on AWS Batch may not have more than 10,000 tasks")
+
+            result.setArrayProperties(new ArrayProperties().withSize(arraySize))
+        }
 
         return result
     }

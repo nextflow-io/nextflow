@@ -27,6 +27,7 @@ import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.executor.TaskArrayAware
 import nextflow.extension.FilesEx
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
@@ -44,12 +45,14 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName(value='google-batch')
 @CompileStatic
-class GoogleBatchExecutor extends Executor implements ExtensionPoint {
+class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAware {
 
     private BatchClient client
     private BatchConfig config
     private Path remoteBinDir
     private BatchLogging logging
+
+    private Set<String> deletedJobs = [] as Set
 
     BatchClient getClient() { return client }
     BatchConfig getConfig() { return config }
@@ -129,4 +132,18 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     boolean isCloudinfoEnabled() {
         return Boolean.parseBoolean(SysEnv.get('NXF_CLOUDINFO_ENABLED', 'true') )
     }
+
+    void killTask(String jobId) {
+        // prevent duplicate delete requests on the same job
+        if( jobId in deletedJobs )
+            return
+        else
+            deletedJobs.add(jobId)
+
+        // delete job
+        client.deleteJob(jobId)
+    }
+
+    @Override
+    String getArrayIndexName() { 'BATCH_TASK_INDEX' }
 }

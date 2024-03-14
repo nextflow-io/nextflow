@@ -89,6 +89,24 @@ abstract class TaskHandler {
     abstract void submit()
 
     /**
+     * Prepare the launcher script.
+     *
+     * This method is optional. If it is not implemented, the launcher script should
+     * be prepared in the submit() method.
+     */
+    void prepareLauncher() {}
+
+    /**
+     * Get the work directory as it will be seen from the launcher script.
+     */
+    String getWorkDir() { null }
+
+    /**
+     * Get the command to execute the launcher script.
+     */
+    List<String> getLaunchCommand() { null }
+
+    /**
      * Task status attribute setter.
      *
      * @param status The sask status as defined by {@link TaskStatus}

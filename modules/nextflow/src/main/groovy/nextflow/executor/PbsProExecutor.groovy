@@ -18,6 +18,7 @@ package nextflow.executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskArray
 import nextflow.processor.TaskRun
 /**
  * Implements a executor for PBSPro cluster executor
@@ -44,7 +45,12 @@ class PbsProExecutor extends PbsExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result ) {
         assert result !=null
-        
+
+        if( task instanceof TaskArray ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "0-${arraySize - 1}".toString()
+        }
+
         // when multiple competing directives are provided, only the first one will take effect
         // therefore clusterOptions is added as first to give priority over other options as expected
         // by the clusterOptions semantics -- see https://github.com/nextflow-io/nextflow/pull/2036
