@@ -114,9 +114,9 @@ class ContainerConfigTest extends Specification {
 
     def 'should compute config fingerprint' () {
         given:
-        def config1 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/foo')
-        def config2 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/foo')
-        def config3 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/bar')
+        def config1 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/foo', labels: ['foo=bar'])
+        def config2 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/foo', labels: ['foo=bar'])
+        def config3 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/bar', labels: ['foo=bar'])
         and:
         def layer1 = new ContainerLayer('http://this/that', 'abd', 100, 'efg')
         def layer2 = new ContainerLayer('http://this/that', 'abd', 100, 'efg')
@@ -160,5 +160,24 @@ class ContainerConfigTest extends Specification {
         // makes the config to ignore it
         fusion1.fingerprint() != fusion2.fingerprint()
         config1.fingerprint() == config2.fingerprint()
+    }
+
+    @Unroll
+    def 'should merge labels' () {
+        given:
+        def config = new ContainerConfig()
+
+        expect:
+        config.mergeEnv(LABEL1, LABEL2) == EXPECTED
+
+        where:
+        LABEL1              | LABEL2            | EXPECTED
+        null                | null              | null
+        []                  | null              | []
+        ['foo=1']           | []                | ['foo=1']
+        ['foo=1']           | ['bar=2']         | ['foo=1','bar=2']
+        ['foo=1']           | ['foo=2']         | ['foo=2']         // <-- label2 overrides label1
+        ['foo=1','baz=3']   | ['foo=2']         | ['foo=2','baz=3'] // <-- overrides 'foo' in label1 and keep as first entry
+        ['foo=1']           | ['baz=3','foo=2'] | ['foo=2','baz=3'] // <-- overrides 'foo' in label1 and keep as first entry
     }
 }
