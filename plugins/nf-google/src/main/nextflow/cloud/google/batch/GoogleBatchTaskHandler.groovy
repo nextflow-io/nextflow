@@ -44,6 +44,7 @@ import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
@@ -85,15 +86,69 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private volatile long timestamp
 
+    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
+
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
         this.client = executor.getClient()
-        this.jobId = "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
+        this.jobId = getJobNameFor(task)
         this.executor = executor
         // those files are access via NF runtime, keep based on CloudStoragePath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+    }
+
+    /**
+     * Given a task returns a *clean* name used to submit the job to Google Batch.
+     * Assuming the string should not contain blank or special shell characters e.g. parenthesis, etc
+     *
+     * A job name in Google Batch needs to be unique for each project and region pair, see
+     * https://cloud.google.com/batch/docs/samples/batch-create-container-job
+     *
+     * @param task A {@code TaskRun} instance
+     * @return A string that represent to submit job name
+     */
+    protected String getJobNameFor(TaskRun task) {
+        // -- check for a custom `jobName` defined in the nextflow config file
+         def customName = resolveCustomJobName(task)
+         if( customName )
+             return sanitizeJobName(customName, 256)
+
+        // -- if not available fallback on a custom naming strategy
+        final result = new StringBuilder("nf-")
+        final name = task.getName()
+        for( int i=0; i<name.size(); i++ ) {
+            final ch = name[i]
+            result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
+        }
+        // sanitize to len = 242 = 256 minus the prefix "-" and the output of currentTimeMillis()
+        return sanitizeJobName(result.toString(), 242) + "-${System.currentTimeMillis()}"
+    }
+
+    protected String sanitizeJobName(String name, Integer max) {
+        name.size() > max ? name.substring(0,max) : name
+    }
+
+    /**
+     * Resolve the `jobName` property defined in the nextflow config file
+     *
+     * @param task
+     * @return
+     */
+    protected String resolveCustomJobName(TaskRun task) {
+        try {
+            def custom = (Closure)executor.session?.getExecConfigProp(executor.name, 'jobName', null)
+            if( !custom )
+                return null
+
+            def ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
+            custom.cloneWith(ctx).call()?.toString()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to resolve job custom name", e
+            return null
+        }
     }
 
     protected BashWrapperBuilder createTaskWrapper() {
