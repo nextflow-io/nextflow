@@ -111,20 +111,14 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     protected String getJobNameFor(TaskRun task) {
         // -- check for a custom `jobName` defined in the nextflow config file
-         def customName = resolveCustomJobName(task)
-         if( customName )
-             return sanitizeJobName(customName, 256)
+        def customName = resolveCustomJobName(task)
+        if( customName )
+            return sanitizeJobName(customName, 256)
 
         // -- if not available fallback on a custom naming strategy
-        final result = new StringBuilder("nf-")
-        final name = task.getName()
-        if ( name )
-            for( int i=0; i<name.size(); i++ ) {
-                final ch = name[i]
-                result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
-            }
+        def defaultName = "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         // sanitize to len = 242 = 256 minus the prefix "-" and the output of currentTimeMillis()
-        return sanitizeJobName(result.toString(), 242) + "-${System.currentTimeMillis()}"
+        return sanitizeJobName(defaultName, 242) + "-${System.currentTimeMillis()}"
     }
 
     protected String sanitizeJobName(String name, Integer max) {
