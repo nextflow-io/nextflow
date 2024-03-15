@@ -24,6 +24,7 @@ import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
@@ -234,6 +235,47 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.findBestMachineType(_, false) >> null
         and:
         req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
+    }
+
+    def 'should use custom job name'() {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def sess = Mock(Session) { getConfig() >> [:] }
+        def exec = new GoogleBatchExecutor(session: sess)
+
+        when:
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [:]
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        then:
+        handler.resolveCustomJobName(task) == null
+
+        when:
+        task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getName() >> 'hello world'
+                getCpus() >> 2
+                getResourceLabels() >> [:]
+            }
+        }
+        handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        then:
+        handler.resolveCustomJobName(task) == 'hello_world'
     }
 
     def 'should use instance template' () {
