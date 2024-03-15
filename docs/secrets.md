@@ -74,7 +74,7 @@ This feature is only available when using the local or grid executors (Slurm, Gr
 
 ## Pipeline script
 
-:::{versionadded} 23.09.0-edge
+:::{versionadded} 24.03.0-edge
 :::
 
 Secrets can be accessed in the pipeline script using the `secrets` variable. For example:
@@ -86,5 +86,5 @@ workflow.onComplete {
 ```
 
 :::{note}
-This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Nextflow Tower](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
+This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
 :::
