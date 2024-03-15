@@ -24,6 +24,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.ast.NextflowDSLImpl
+import nextflow.config.ConfigOption
+import nextflow.config.ConfigSchema
 import nextflow.exception.ConfigParseException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
@@ -56,7 +58,7 @@ import nextflow.script.params.ValueOutParam
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class ProcessConfig implements Map<String,Object>, Cloneable {
+class ProcessConfig implements Map<String,Object>, Cloneable, ConfigSchema {
 
     static final public transient LABEL_REGEXP = ~/[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9]+)?/
 
@@ -66,12 +68,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'arch',
             'beforeScript',
             'cache',
-            'conda',
-            'cpus',
-            'container',
-            'containerOptions',
             'cleanup',
             'clusterOptions',
+            'conda',
+            'container',
+            'containerOptions',
+            'cpus',
             'debug',
             'disk',
             'echo', // deprecated
@@ -79,35 +81,28 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'executor',
             'ext',
             'fair',
-            'machineType',
-            'queue',
             'label',
-            'maxSubmitAwait',
+            'machineType',
             'maxErrors',
             'maxForks',
             'maxRetries',
+            'maxSubmitAwait',
             'memory',
             'module',
             'penv',
             'pod',
             'publishDir',
+            'queue',
+            'resourceLabels',
             'scratch',
+            'secret',
             'shell',
             'spack',
+            'stageInMode',
+            'stageOutMode',
             'storeDir',
             'tag',
             'time',
-            // input-output qualifiers
-            'file',
-            'val',
-            'each',
-            'env',
-            'secret',
-            'stdin',
-            'stdout',
-            'stageInMode',
-            'stageOutMode',
-            'resourceLabels'
     ]
 
     /**
@@ -183,6 +178,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     ProcessConfig( Map delegate ) {
         configProperties = delegate
     }
+
+    /* required by extension point -- do not remove */
+    ProcessConfig() {}
 
     @Override
     ProcessConfig clone() {
@@ -746,14 +744,17 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    @ConfigOption('process.resourceLabels')
     Map<String,Object> getResourceLabels() {
         (configProperties.get('resourceLabels') ?: Collections.emptyMap()) as Map<String, Object>
     }
 
+    @ConfigOption('process.label')
     List<String> getLabels() {
         (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
     }
 
+    @ConfigOption('process.fair')
     boolean getFair() {
         final value = configProperties.get('fair')
         if( value == null )
@@ -784,6 +785,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    @ConfigOption('process.secret')
     List<String> getSecret() {
         (List<String>) configProperties.get('secret') ?: Collections.<String>emptyList()
     }

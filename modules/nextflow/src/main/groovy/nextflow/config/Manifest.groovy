@@ -19,6 +19,8 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.config.ConfigOption
+import nextflow.config.ConfigSchema
 import static nextflow.Const.DEFAULT_BRANCH
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 /**
@@ -28,41 +30,38 @@ import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
  */
 @Slf4j
 @CompileStatic
-class Manifest {
+class Manifest implements ConfigSchema {
 
     private Map target
 
     Manifest() { target = Collections.emptyMap() }
 
-    Manifest(Map object) {
-        assert object != null
-        this.target = new HashMap(object.size())
-        final validFields = this.metaClass.properties.collect { it.name }.findAll { it!='class' }
-        object.each { key, value ->
-            if( validFields.contains(key) )
-                target.put(key, value)
-            else
-                log.warn("Invalid config manifest attribute `$key`")
-        }
+    Manifest(Map config) {
+        assert config != null
+        this.target = config
     }
 
+    @ConfigOption('manifest.homePage')
     String getHomePage() {
         target.homePage
     }
 
-
+    @ConfigOption('manifest.defaultBranch')
     String getDefaultBranch() {
         target.defaultBranch ?: DEFAULT_BRANCH
     }
 
+    @ConfigOption('manifest.description')
     String getDescription() {
-        target.description 
+        target.description
     }
 
+    @ConfigOption('manifest.author')
     String getAuthor() {
         target.author
     }
 
+    @ConfigOption('manifest.mainScript')
     String getMainScript() {
         target.mainScript ?: DEFAULT_MAIN_FILE_NAME
     }
@@ -78,22 +77,27 @@ class Manifest {
         target.gitmodules
     }
 
+    @ConfigOption('manifest.recurseSubmodules')
     boolean getRecurseSubmodules() {
         target.recurseSubmodules
     }
 
+    @ConfigOption('manifest.nextflowVersion')
     String getNextflowVersion() {
         target.nextflowVersion
     }
 
+    @ConfigOption('manifest.version')
     String getVersion() {
         target.version
     }
 
+    @ConfigOption('manifest.name')
     String getName() {
         target.name
     }
 
+    @ConfigOption('manifest.doi')
     String getDoi() {
         target.doi
     }

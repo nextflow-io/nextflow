@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.SysEnv
+import nextflow.util.ConfigHelper
 import nextflow.util.IniFile
 /**
  * Model AWS cloud configuration settings
@@ -34,6 +35,15 @@ import nextflow.util.IniFile
 @Slf4j
 @CompileStatic
 class AwsConfig {
+
+    static private final Set<String> VALID_OPTIONS = [
+        'accessKey',
+        'profile',
+        'region',
+        'secretKey',
+        'batch',
+        'client',
+    ]
 
     private AwsBatchConfig batchConfig
 
@@ -50,6 +60,8 @@ class AwsConfig {
     private AwsS3Legacy s3Legacy
 
     AwsConfig(Map config) {
+        // ConfigHelper.checkInvalidConfigOptions('aws', config, VALID_OPTIONS)
+
         this.accessKey = config.accessKey
         this.secretKey = config.secretKey
         this.profile = getAwsProfile0(SysEnv.get(), config)

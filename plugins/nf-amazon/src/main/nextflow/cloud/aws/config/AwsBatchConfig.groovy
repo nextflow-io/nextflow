@@ -24,6 +24,8 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.config.ConfigOption
+import nextflow.config.ConfigSchema
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 
@@ -34,22 +36,28 @@ import nextflow.util.Duration
  */
 @Slf4j
 @CompileStatic
-class AwsBatchConfig implements CloudTransferOptions {
+class AwsBatchConfig implements CloudTransferOptions, ConfigSchema {
 
     public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 5
 
     public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
 
+    @ConfigOption('aws.batch.maxParallelTransfers')
     private int maxParallelTransfers = MAX_TRANSFER
 
+    @ConfigOption('aws.batch.maxTransferAttempts')
     private int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
 
+    @ConfigOption('aws.batch.delayBetweenAttempts')
     private Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
+    @ConfigOption('aws.batch.cliPath')
     private String cliPath
 
+    @ConfigOption('aws.batch.retryMode')
     private String retryMode
 
+    @ConfigOption('aws.batch.maxSpotAttempts')
     private Integer maxSpotAttempts
 
     private Boolean debug
@@ -57,31 +65,37 @@ class AwsBatchConfig implements CloudTransferOptions {
     /**
      * The job role ARN that should be used
      */
+    @ConfigOption('aws.batch.jobRole')
     private String jobRole
 
     /**
      * The name of the logs group used by jobs
      */
+    @ConfigOption('aws.batch.logsGroup')
     private String logsGroup
 
     /**
      * Volume mounts
      */
+    @ConfigOption('aws.batch.volumes')
     private List<String> volumes
 
     /**
      * The share identifier for all tasks when using fair-share scheduling
      */
+    @ConfigOption('aws.batch.shareIdentifier')
     private String shareIdentifier
 
     /**
      * The scheduling priority for all tasks when using fair-share scheduling (0 to 9999)
      */
+    @ConfigOption('aws.batch.schedulingPriority')
     private Integer schedulingPriority
 
     /**
      * The container execution role
      */
+    @ConfigOption('aws.batch.executionRole')
     String executionRole
 
     /**

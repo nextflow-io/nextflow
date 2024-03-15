@@ -17,6 +17,8 @@
 package nextflow.spack
 
 import groovy.transform.CompileStatic
+import nextflow.config.ConfigOption
+import nextflow.config.ConfigSchema
 
 /**
  * Model Spack configuration
@@ -24,11 +26,11 @@ import groovy.transform.CompileStatic
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
 @CompileStatic
-class SpackConfig extends LinkedHashMap {
+class SpackConfig extends LinkedHashMap implements ConfigSchema {
 
     private Map<String,String> env
 
-    /* required by Kryo deserialization -- do not remove */
+    /* required by extension point -- do not remove */
     private SpackConfig() { }
 
     SpackConfig(Map config, Map<String, String> env) {
@@ -36,6 +38,7 @@ class SpackConfig extends LinkedHashMap {
         this.env = env
     }
 
+    @ConfigOption('spack.enabled')
     boolean isEnabled() {
         def enabled = get('enabled')
         if( enabled == null )
@@ -43,6 +46,7 @@ class SpackConfig extends LinkedHashMap {
         return enabled?.toString() == 'true'
     }
 
+    @ConfigOption('spack.channels')
     List<String> getChannels() {
         final value = get('channels')
         if( !value ) {

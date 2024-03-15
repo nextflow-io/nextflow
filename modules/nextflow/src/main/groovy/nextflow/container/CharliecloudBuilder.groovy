@@ -30,6 +30,15 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'cacheDir',
+        'enabled',
+        'envWhitelist',
+        'pullTimeout',
+        'runOptions',
+        'temp',
+    ]
+
     CharliecloudBuilder(String name) {
         this.image = name
     }

@@ -28,6 +28,21 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
+    public static final Set<String> VALID_OPTIONS = [
+        'enabled',
+        'engineOptions',
+        'envWhitelist',
+        'fixOwnership',
+        'legacy',
+        'mountFlags',
+        'registry',
+        'remove',
+        'runOptions',
+        'sudo',
+        'temp',
+        'tty',
+    ]
+
     private boolean sudo
 
     private boolean remove = true

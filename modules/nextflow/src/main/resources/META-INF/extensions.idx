@@ -14,12 +14,18 @@
 # limitations under the License.
 #
 
-nextflow.trace.DefaultObserverFactory
-nextflow.util.DefaultSerializers
-nextflow.secret.LocalSecretsProvider
 nextflow.cache.DefaultCacheFactory
-nextflow.scm.RepositoryFactory
+nextflow.conda.CondaConfig
+nextflow.config.Manifest
 nextflow.container.resolver.DefaultContainerResolver
+nextflow.fusion.FusionConfig
+nextflow.k8s.K8sConfig
+nextflow.mail.JavaMailProvider
 nextflow.mail.SendMailProvider
 nextflow.mail.SimpleMailProvider
-nextflow.mail.JavaMailProvider
+nextflow.scm.RepositoryFactory
+nextflow.script.ProcessConfig
+nextflow.secret.LocalSecretsProvider
+nextflow.spack.SpackConfig
+nextflow.trace.DefaultObserverFactory
+nextflow.util.DefaultSerializers

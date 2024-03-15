@@ -39,6 +39,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
      * Create workflow report file observer
      */
     protected void createReportObserver(Collection<TraceObserver> result) {
+        // TODO: report scope
+
         Boolean isEnabled = config.navigate('report.enabled') as Boolean
         if( !isEnabled )
             return
@@ -57,6 +59,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
      * Create timeline report file observer
      */
     protected void createTimelineObserver(Collection<TraceObserver> result) {
+        // TODO: timeline scope
+
         Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
         if( !isEnabled )
             return
@@ -70,6 +74,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
     }
 
     protected void createDagObserver(Collection<TraceObserver> result) {
+        // TODO: dag scope
+
         Boolean isEnabled = config.navigate('dag.enabled') as Boolean
         if( !isEnabled )
             return
@@ -86,6 +92,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
      * create the execution trace observer
      */
     protected void createTraceFileObserver(Collection<TraceObserver> result) {
+        // TODO: trace scope
+
         Boolean isEnabled = config.navigate('trace.enabled') as Boolean
         if( !isEnabled )
             return

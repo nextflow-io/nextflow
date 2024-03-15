@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.file.FileHelper
+import nextflow.util.ConfigHelper
 /**
  * Model AWS S3 config settings
  *
@@ -32,6 +33,37 @@ import nextflow.file.FileHelper
 @Slf4j
 @CompileStatic
 class AwsS3Config {
+
+    static private final Set<String> VALID_OPTIONS = [
+        'anonymous',
+        'connectionTimeout',
+        'endpoint',
+        'glacierAutoRetrieval',
+        'glacierExpirationDays',
+        'glacierRetrievalTier',
+        'maxConnections',
+        'maxErrorRetry',
+        'protocol',
+        'proxyHost',
+        'proxyPort',
+        'proxyUsername',
+        'proxyPassword',
+        's3Acl',
+        's3PathStyleAccess',
+        'signerOverride',
+        'socketSendBufferSizeHint',
+        'socketRecvBufferSizeHint',
+        'socketTimeout',
+        'storageEncryption',
+        'storageKmsKeyId',
+        'userAgent',
+        // legacy
+        'uploadChunkSize',
+        'uploadMaxAttempts',
+        'uploadMaxThreads',
+        'uploadRetrySleep',
+        'uploadStorageClass',
+    ]
 
     private String endpoint
 
@@ -50,6 +82,8 @@ class AwsS3Config {
     private Boolean anonymous
 
     AwsS3Config(Map opts) {
+        // ConfigHelper.checkInvalidConfigOptions('aws.client', opts, VALID_OPTIONS)
+
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
         if( endpoint && FileHelper.getUrlProtocol(endpoint) !in ['http','https'] )
