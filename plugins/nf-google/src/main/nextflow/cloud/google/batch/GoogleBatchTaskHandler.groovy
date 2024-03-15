@@ -118,10 +118,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // -- if not available fallback on a custom naming strategy
         final result = new StringBuilder("nf-")
         final name = task.getName()
-        for( int i=0; i<name.size(); i++ ) {
-            final ch = name[i]
-            result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
-        }
+        if ( name )
+            for( int i=0; i<name.size(); i++ ) {
+                final ch = name[i]
+                result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
+            }
         // sanitize to len = 242 = 256 minus the prefix "-" and the output of currentTimeMillis()
         return sanitizeJobName(result.toString(), 242) + "-${System.currentTimeMillis()}"
     }
