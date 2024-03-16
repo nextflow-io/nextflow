@@ -22,6 +22,7 @@ import groovy.transform.Memoized
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
+import nextflow.exception.IllegalConfigException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -71,7 +72,8 @@ abstract class ConfigBase extends Script {
      * Implements the config file include
      */
     def includeConfig( includeFile ) {
-        assert includeFile
+        if( !includeFile )
+            throw new IllegalConfigException("includeConfig argument cannot be empty")
 
         if( ignoreIncludes )
             return
