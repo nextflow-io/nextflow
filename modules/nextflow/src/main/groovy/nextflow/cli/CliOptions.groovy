@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,8 +84,8 @@ class CliOptions {
     @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
     boolean selfUpdate
 
-    @Parameter(names = ['-d','-dockerize'], description = 'Launch nextflow via Docker (experimental)', arity = 0)
-    boolean dockerize
+    @Parameter(names=['-remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
+    boolean remoteDebug
 
     Boolean ansiLog
 

@@ -17,12 +17,13 @@
 
 package nextflow.cloud.aws.config
 
-import static nextflow.cloud.aws.util.AwsHelper.parseS3Acl
+import static nextflow.cloud.aws.util.AwsHelper.*
 
 import com.amazonaws.services.s3.model.CannedAccessControlList
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.file.FileHelper
 /**
  * Model AWS S3 config settings
  *
@@ -46,13 +47,18 @@ class AwsS3Config {
 
     private Boolean pathStyleAccess
 
+    private Boolean anonymous
+
     AwsS3Config(Map opts) {
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
+        if( endpoint && FileHelper.getUrlProtocol(endpoint) !in ['http','https'] )
+            throw new IllegalArgumentException("S3 endpoint must begin with http:// or https:// prefix - offending value: '${endpoint}'")
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
         this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
+        this.anonymous = opts.anonymous as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
     }
 
@@ -103,5 +109,13 @@ class AwsS3Config {
 
     Boolean getPathStyleAccess() {
         return pathStyleAccess
+    }
+
+    Boolean getAnonymous() {
+        return anonymous
+    }
+
+    boolean isCustomEndpoint() {
+        endpoint && !endpoint.contains(".amazonaws.com")
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,17 +55,6 @@ class IncludeDef {
     @PackageScope Map params
     @PackageScope Map addedParams
     private Session session
-
-    @Deprecated
-    IncludeDef( String module ) {
-        final msg = "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
-        this.path = module
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(null,null)
-    }
 
     IncludeDef(TokenVar token, String alias=null) {
         def component = token.name; if(alias) component += " as $alias"

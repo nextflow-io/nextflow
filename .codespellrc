@@ -1,0 +1,6 @@
+[codespell]
+skip = .git,*.pdf,*.svg,timeline-expected.html,*.fq,*.min.js,ScriptDslTest.groovy
+# some cases where we need to catch using regex
+ignore-regex = \bhel\*|fo\\
+# some variables, names, etc to ignore
+ignore-words-list = splitted,ois,tre,marge,smoot,afile,bams,bais,pre-pending,re-use

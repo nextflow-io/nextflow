@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,7 @@ class CmdConfig extends CmdBase {
 
     /**
      * Prints a {@link ConfigObject} using Java {@link Properties} in canonical format
-     * ie. any nested config object is printed withing curly brackets
+     * ie. any nested config object is printed within curly brackets
      *
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation

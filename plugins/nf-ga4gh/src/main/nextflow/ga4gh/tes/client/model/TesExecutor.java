@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,10 +197,10 @@ public class TesExecutor {
   }
 
    /**
-   * Enviromental variables to set within the container.
+   * Environmental variables to set within the container.
    * @return env
   **/
-  @ApiModelProperty(value = "Enviromental variables to set within the container.")
+  @ApiModelProperty(value = "Environmental variables to set within the container.")
   public Map<String, String> getEnv() {
     return env;
   }

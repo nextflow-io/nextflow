@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import com.google.cloud.storage.StorageOptions
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
+import nextflow.cloud.google.config.GoogleRetryOpts
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -87,6 +88,14 @@ class GsPathFactoryTest extends Specification {
             getConfig() >> [google:[httpConnectTimeout: CONNECT, httpReadTimeout: READ]]
         }
         and:
+        def policy = new GoogleRetryOpts([:])
+        def retrySettings = StorageOptions.getDefaultRetrySettings()
+            .toBuilder()
+            .setMaxAttempts(policy.maxAttempts)
+            .setRetryDelayMultiplier(policy.multiplier)
+            .setTotalTimeout(org.threeten.bp.Duration.ofSeconds(policy.maxDelaySecs()))
+            .build()
+        and:
         def opts = GoogleOpts.fromSession(session)
         and:
         def storageOptions = GsPathFactory.getCloudStorageOptions(opts)
@@ -98,6 +107,7 @@ class GsPathFactoryTest extends Specification {
         expect:
         storageOptions == StorageOptions.getDefaultInstance().toBuilder()
             .setTransportOptions(transportOptions.build())
+            .setRetrySettings(retrySettings)
             .build()
 
         where:
@@ -105,5 +115,20 @@ class GsPathFactoryTest extends Specification {
         null    | 60000          | null  | 60000
         '30s'   | 30000          | '30s' | 30000
         '60s'   | 60000          | '60s' | 60000
+    }
+
+    def 'should apply retry settings' () {
+        given:
+        def session = Mock(Session) {
+            getConfig() >> [google:[storage:[retryPolicy: [maxAttempts: 5, maxDelay:'50s', multiplier: 500]]]]
+        }
+
+        when:
+        def opts = GoogleOpts.fromSession(session)
+        then:
+        opts.storageOpts.retryPolicy.maxAttempts == 5
+        opts.storageOpts.retryPolicy.maxDelaySecs() == 50
+        opts.storageOpts.retryPolicy.multiplier == 500d
+
     }
 }

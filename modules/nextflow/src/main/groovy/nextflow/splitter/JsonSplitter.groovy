@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -219,9 +219,9 @@ class JsonSplitter extends AbstractTextSplitter {
                 break
             }
 
-            final map = Map.of(
-                 OBJECT_KEY, reader.nextName(),
-                 OBJECT_VALUE, fromJson(reader))
+            final map = new LinkedHashMap<>(1)
+            map[OBJECT_KEY] = reader.nextName()
+            map[OBJECT_VALUE] = fromJson(reader)
 
             // -- apply the splitting logic for the fetched record
             result = processChunk( map )

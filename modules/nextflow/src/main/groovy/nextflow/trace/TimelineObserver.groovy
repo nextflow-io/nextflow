@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -71,6 +72,8 @@ class TimelineObserver implements TraceObserver {
     @Override
     void onFlowCreate(Session session) {
         beginMillis = startMillis = System.currentTimeMillis()
+        if( Files.exists(reportFile) && !overwrite )
+            throw new AbortOperationException("Timeline file already exists: ${reportFile.toUriString()} -- enable the 'timelime.overwrite' option in your config file to overwrite existing files")
     }
 
     /**

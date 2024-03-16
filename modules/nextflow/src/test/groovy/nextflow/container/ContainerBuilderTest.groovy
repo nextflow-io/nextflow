@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ class ContainerBuilderTest extends Specification {
         when:
         result = builder.makeEnv( 'FOO' )
         then:
-        result.toString() == '${FOO:+-e "FOO=$FOO"}'
+        result.toString() == '-e "FOO"'
 
         when:
         builder.makeEnv( 1 )
