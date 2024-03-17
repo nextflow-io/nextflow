@@ -219,6 +219,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         new AwsBatchTaskHandler(task, this)
     }
 
+    private static final List<Integer> RETRYABLE_STATUS = [429, 500, 502, 503, 504]
+
     /**
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
@@ -231,7 +233,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && t.errorCode=='TooManyRequestsException' }
+                .retryOn { Throwable t -> t instanceof AWSBatchException && (t.errorCode=='TooManyRequestsException' || t.statusCode in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
