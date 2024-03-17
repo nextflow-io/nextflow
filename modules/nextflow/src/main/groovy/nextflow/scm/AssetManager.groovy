@@ -242,6 +242,7 @@ class AssetManager {
      * @param name A project name or URL e.g. {@code cbcrg/foo} or {@code https://github.com/cbcrg/foo.git}
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
+    @PackageScope
     String resolveName( String name ) {
         assert name
 
@@ -359,11 +360,6 @@ class AssetManager {
 
     AssetManager setLocalPath(File path) {
         this.localPath = path
-        return this
-    }
-
-    AssetManager setForce( boolean value ) {
-        this.force = value
         return this
     }
 
