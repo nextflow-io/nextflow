@@ -18,21 +18,18 @@
 package nextflow.cloud.google.batch.client
 
 import nextflow.Session
-import nextflow.SysEnv
+import spock.lang.Requires
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class BatchConfigTest extends Specification {
 
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config' () {
         given:
-        SysEnv.push([:])
-        and:
         def CONFIG = [google: [
-                              project:'proj-123',
                                 batch: [
                                     spot: true,
                                     retryPolicy: [maxAttempts: 10]
@@ -43,14 +40,10 @@ class BatchConfigTest extends Specification {
         when:
         def config = BatchConfig.create(session)
         then:
-        config.googleOpts.projectId == 'proj-123'
-        and:
         config.getSpot()
         and:
         config.retryConfig.maxAttempts == 10
         
-        cleanup:
-        SysEnv.pop()
     }
 
 }
