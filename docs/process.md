@@ -2244,6 +2244,26 @@ Available options:
 `pattern`
 : Specifies a [glob][glob] file pattern that selects which files to publish from the overall set of output files.
 
+`retryPolicy.delay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Delay when retrying a failed publish operation (default: `350ms`).
+
+`retryPolicy.jitter`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Jitter value when retrying a failed publish operation (default: `0.25`).
+
+`retryPolicy.maxAttempt`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max attempts when retrying a failed publish operation (default: `5`).
+
+`retryPolicy.maxDelay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max delay when retrying a failed publish operation (default: `90s`).
+
 `saveAs`
 : A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them.
 

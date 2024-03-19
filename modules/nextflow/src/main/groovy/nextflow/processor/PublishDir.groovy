@@ -121,6 +121,8 @@ class PublishDir {
      */
     private String storageClass
 
+    private RetryConfig retryConfig
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -220,6 +222,9 @@ class PublishDir {
 
         if( params.storageClass )
             result.storageClass = params.storageClass as String
+
+        if( params.retryPolicy )
+            result.retryConfig = new RetryConfig(params.retryPolicy)
 
         return result
     }
@@ -370,10 +375,6 @@ class PublishDir {
                 @Override
                 boolean test(Throwable t) { return true }
             }
-            final delay = Duration.of('250ms')
-            final maxDelay = Duration.of('90s')
-            final maxAttempts = 3
-            final jitter = 0.25
             final listener = new EventListener<ExecutionAttemptedEvent>() {
                 @Override
                 void accept(ExecutionAttemptedEvent event) throws Throwable {
@@ -382,9 +383,9 @@ class PublishDir {
             }
             final retryPolicy = RetryPolicy.builder()
                 .handleIf(cond)
-                .withBackoff(delay.toMillis(), maxDelay.toMillis(), ChronoUnit.MILLIS)
-                .withMaxAttempts(maxAttempts)
-                .withJitter(jitter)
+                .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(retryConfig.maxAttempts)
+                .withJitter(retryConfig.jitter)
                 .onRetry(listener)
                 .build()
             Failsafe
@@ -584,6 +585,28 @@ class PublishDir {
 
     protected void notifyFilePublish(Path destination, Path source=null) {
         session.notifyFilePublish(destination, source)
+    }
+
+    static class RetryConfig {
+        Duration delay = Duration.of('350ms')
+        Duration maxDelay = Duration.of('90s')
+        int maxAttempts = 5
+        double jitter = 0.25
+
+        RetryConfig() {
+            this(Collections.emptyMap())
+        }
+
+        RetryConfig(Map config) {
+            if( config.delay )
+                delay = config.delay as Duration
+            if( config.maxDelay )
+                maxDelay = config.maxDelay as Duration
+            if( config.maxAttempts )
+                maxAttempts = config.maxAttempts as int
+            if( config.jitter )
+                jitter = config.jitter as double
+        }
     }
 
 }
