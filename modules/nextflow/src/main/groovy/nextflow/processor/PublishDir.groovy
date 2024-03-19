@@ -24,9 +24,15 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.time.temporal.ChronoUnit
+import java.util.function.Predicate
 import java.util.concurrent.ExecutorService
 import java.util.regex.Pattern
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -41,6 +47,7 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
 import nextflow.fusion.FusionHelper
+import nextflow.util.Duration
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -95,7 +102,7 @@ class PublishDir {
     /**
      * Trow an exception in case publish fails
      */
-    boolean failOnError = false
+    boolean failOnError = true
 
     /**
      * Tags to be associated to the target file
@@ -359,11 +366,34 @@ class PublishDir {
 
     protected void safeProcessFile(Path source, Path target) {
         try {
-            processFile(source, target)
+            final cond = new Predicate<? extends Throwable>() {
+                @Override
+                boolean test(Throwable t) { return true }
+            }
+            final delay = Duration.of('250ms')
+            final maxDelay = Duration.of('90s')
+            final maxAttempts = 3
+            final jitter = 0.25
+            final listener = new EventListener<ExecutionAttemptedEvent>() {
+                @Override
+                void accept(ExecutionAttemptedEvent event) throws Throwable {
+                    log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}"
+                }
+            }
+            final retryPolicy = RetryPolicy.builder()
+                .handleIf(cond)
+                .withBackoff(delay.toMillis(), maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(maxAttempts)
+                .withJitter(jitter)
+                .onRetry(listener)
+                .build()
+            Failsafe
+                .with( retryPolicy )
+                .get( ()-> processFile(source, target) )
         }
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
-            if( NF.strictMode || failOnError){
+            if( NF.strictMode || failOnError ) {
                 session?.abort(e)
             }
         }
