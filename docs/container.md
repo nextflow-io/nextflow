@@ -585,8 +585,7 @@ Nextflow automatically mounts the required host paths in the container. To re-en
 :::
 
 :::{versionchanged} 23.09.0-edge
-Nextflow uses the command `run` to carry out the execution of Singularity containers instead of the `exec` command.
-To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_RUN_COMMAND` to `exec`.
+The execution command for Singularity/Apptainer containers can be set to `run` by means of the environment variable `NXF_SINGULARITY_RUN_COMMAND` (default command is `exec`).
 :::
 
 ### Multiple containers
