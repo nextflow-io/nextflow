@@ -70,7 +70,7 @@ nextflow run tutorial.nf -resume
 It will print output similar to this:
 
 ```
-N E X T F L O W  ~  version 22.10.0
+N E X T F L O W  ~  version 23.10.0
 executor >  local (2)
 [69/c8ea4a] process > splitLetters   [100%] 1 of 1, cached: 1 ✔
 [d0/e94f07] process > convertToUpper [100%] 2 of 2 ✔
@@ -101,7 +101,7 @@ nextflow run tutorial.nf --str 'Bonjour le monde'
 The string specified on the command line will override the default value of the parameter. The output will look like this:
 
 ```
-N E X T F L O W  ~  version 22.10.0
+N E X T F L O W  ~  version 23.10.0
 executor >  local (4)
 [8b/16e7d7] process > splitLetters   [100%] 1 of 1 ✔
 [eb/729772] process > convertToUpper [100%] 3 of 3 ✔
