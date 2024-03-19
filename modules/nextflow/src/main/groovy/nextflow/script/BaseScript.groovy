@@ -23,7 +23,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.script.dsl.OutputDsl
+import nextflow.script.dsl.WorkflowPublishDsl
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -115,7 +115,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected output(Closure closure) {
-        final dsl = new OutputDsl()
+        final dsl = new WorkflowPublishDsl()
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)

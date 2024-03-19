@@ -22,17 +22,17 @@ import groovy.transform.CompileStatic
 import nextflow.script.OutputSelector
 import nextflow.script.WorkflowPublisher
 /**
- * Implements the DSL for top-level workflow outputs
+ * Implements the DSL for publishing workflow outputs
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class OutputDsl {
+class WorkflowPublishDsl {
 
     private List<OutputSelector> selectors = []
 
     void path(Map opts=[:], String path, Closure closure) {
-        final dsl = new OutputPathDsl(this, Path.of(path), opts)
+        final dsl = new PathDsl(Path.of(path), opts)
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
@@ -50,30 +50,27 @@ class OutputDsl {
     WorkflowPublisher build() {
         new WorkflowPublisher(selectors)
     }
-}
 
-@CompileStatic
-class OutputPathDsl {
+    class PathDsl {
 
-    private OutputDsl root
-    private Path path
-    private Map defaults
+        private Path path
+        private Map defaults
 
-    OutputPathDsl(OutputDsl root, Path path, Map defaults) {
-        this.root = root
-        this.path = path
-        this.defaults = defaults
-    }
+        PathDsl(Path path, Map defaults) {
+            this.path = path
+            this.defaults = defaults
+        }
 
-    void path(Map opts=[:], String subpath, Closure closure) {
-        final dsl = new OutputPathDsl(root, path.resolve(subpath), defaults + opts)
-        final cl = (Closure)closure.clone()
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.setDelegate(dsl)
-        cl.call()
-    }
+        void path(Map opts=[:], String subpath, Closure closure) {
+            final dsl = new PathDsl(path.resolve(subpath), defaults + opts)
+            final cl = (Closure)closure.clone()
+            cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+            cl.setDelegate(dsl)
+            cl.call()
+        }
 
-    void select(Map opts=[:], String name) {
-        root.addSelector(new OutputSelector(name, path, defaults + opts))
+        void select(Map opts=[:], String name) {
+            this.addSelector(new OutputSelector(name, path, defaults + opts))
+        }
     }
 }
