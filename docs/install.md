@@ -76,21 +76,6 @@ Nextflow is distributed as a self-installing package, in order to make the insta
     nextflow info
     ```
 
-### Standalone distribution
-
-Nextflow has a set of {ref}`core plugins <plugins-core>` which are downloaded at runtime by default. There is also a standalone distribution (i.e. the `all` distribution) which comes pre-packaged with all core plugins. This distribution is mainly useful for offline environments.
-
-The installer for the `all` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
-
-```bash
-export NXF_VER=23.10.0
-curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-all
-```
-
-:::{warning}
-The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
-:::
-
 ## Updates
 
 With Nextflow installed in your environment, you can update to the latest version using the following command:
@@ -102,7 +87,7 @@ nextflow self-update
 You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
 
 ```bash
-NXF_VER=22.10.0 nextflow run hello
+NXF_VER=23.10.0 nextflow run hello
 ```
 
 ## Stable and edge releases
@@ -122,3 +107,18 @@ You can also use `NXF_VER` to switch to any edge release:
 ```bash
 $ nextflow info
 ```
+
+## Standalone distribution
+
+Nextflow has a set of {ref}`core plugins <plugins-core>` which are downloaded at runtime by default. There is also a standalone distribution (i.e. the `all` distribution) which comes pre-packaged with all core plugins. This distribution is mainly useful for offline environments.
+
+The installer for the `all` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
+
+```bash
+export NXF_VER=23.10.0
+curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-all
+```
+
+:::{warning}
+The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
+:::
