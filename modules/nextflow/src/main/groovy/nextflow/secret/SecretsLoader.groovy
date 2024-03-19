@@ -17,12 +17,11 @@
 
 package nextflow.secret
 
-import groovy.transform.Memoized
+
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-
 /**
  * Implements dynamic secret providing loading strategy
  *
@@ -32,12 +31,23 @@ import nextflow.plugin.Plugins
 @Singleton
 class SecretsLoader {
 
+    private SecretsProvider provider
+
     static boolean isEnabled() {
         SysEnv.get('NXF_ENABLE_SECRETS', 'true') == 'true'
     }
 
-    @Memoized
     SecretsProvider load() {
+        if( provider )
+            return provider
+        synchronized (this) {
+            if( provider )
+                return provider
+            return provider = load0()
+        }
+    }
+
+    private SecretsProvider load0() {
         // discover all available secrets provider
         final all = Plugins.getPriorityExtensions(SecretsProvider)
         // find first activable in the current environment
@@ -49,4 +59,7 @@ class SecretsLoader {
             throw new AbortOperationException("Unable to load secrets provider")
     }
 
+    void reset() {
+        provider=null
+    }
 }
