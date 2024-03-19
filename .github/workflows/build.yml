@@ -67,7 +67,12 @@ jobs:
 
       - name: Test
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: make test
+        run: |
+            # configure test env
+            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+            # run tests  
+            make test
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

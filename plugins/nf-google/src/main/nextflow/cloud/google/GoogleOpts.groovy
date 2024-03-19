@@ -24,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.google.config.GoogleStorageOpts
 import nextflow.exception.AbortOperationException
 import nextflow.util.Duration
@@ -39,7 +40,7 @@ class GoogleOpts {
 
     static final public String DEFAULT_LOCATION = 'us-central1'
 
-    static Map<String,String> env = System.getenv()
+    static Map<String,String> env = SysEnv.get()
 
     private String projectId
     private String location
