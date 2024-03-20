@@ -4,6 +4,8 @@
 
 Nextflow has a plugin system that allows the use of extensible components that are downloaded and installed at runtime.
 
+(plugins-core)=
+
 ## Core plugins
 
 The following functionalities are provided via plugin components, and they make part of the Nextflow *core* plugins:
@@ -377,7 +379,7 @@ nextflow run <pipeline> -plugins nf-hello
 
 To use Nextflow plugins in an offline environment:
 
-1. {ref}`Download Nextflow <getstarted-install>` and install it on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
+1. {ref}`Download Nextflow <install-nextflow>` and install it on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
 
 2. Download any additional plugins by running `nextflow plugin install <pluginId,..>`. Alternatively, simply run your pipeline once and Nextflow will download all of the plugins that it needs.
 

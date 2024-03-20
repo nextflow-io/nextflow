@@ -18,7 +18,7 @@ export NXF_DEFAULT_DSL=2
 
 ## Processes and workflows
 
-In DSL1, a process definition is also the process invocation. Process inputs and outputs are connected to channels using `from` and `into`. Here is the {ref}`getstarted-first` example written in DSL1:
+In DSL1, a process definition is also the process invocation. Process inputs and outputs are connected to channels using `from` and `into`. Here is the {ref}`your-first-script` example written in DSL1:
 
 ```groovy
 nextflow.enable.dsl=1
