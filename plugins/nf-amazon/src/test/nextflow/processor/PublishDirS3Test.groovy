@@ -63,7 +63,7 @@ class PublishDirS3Test extends Specification {
         when:
         spy.apply1(source, true)
         then:
-        1 * spy.safeProcessFile(source, _) >> { sourceFile, s3File ->
+        1 * spy.safeProcessPath(source, _) >> { sourceFile, s3File ->
             assert s3File instanceof S3Path
             assert (s3File as S3Path).getTagsList().find{ it.getKey()=='FOO'}.value == 'this'
             assert (s3File as S3Path).getTagsList().find{ it.getKey()=='BAR'}.value == 'that'
