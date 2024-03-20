@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.script.dsl.WorkflowPublishDsl
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -115,12 +114,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected output(Closure closure) {
-        final dsl = new WorkflowPublishDsl()
-        final cl = (Closure)closure.clone()
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.setDelegate(dsl)
-        cl.call()
-        session.publisher = dsl.build()
+        if( !entryFlow )
+            throw new IllegalStateException("Publish definition must be defined after the anonymous workflow")
+        if( ExecutionStack.withinWorkflow() )
+            throw new IllegalStateException("Publish definition is not allowed within a workflow")
+
+        entryFlow.publisher = closure
     }
 
     protected IncludeDef include( IncludeDef include ) {

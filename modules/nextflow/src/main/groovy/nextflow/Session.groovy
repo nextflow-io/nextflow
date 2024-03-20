@@ -63,7 +63,6 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
-import nextflow.script.WorkflowPublisher
 import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
@@ -275,8 +274,6 @@ class Session implements ISession {
     boolean disableJobsCancellation
 
     AnsiLogObserver ansiLogObserver
-
-    WorkflowPublisher publisher
 
     FilePorter getFilePorter() { filePorter }
 
@@ -1039,9 +1036,6 @@ class Session implements ISession {
         final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
-        // notfiy the workflow publisher
-        publisher.publish(handler.task)
-
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
@@ -1061,9 +1055,6 @@ class Session implements ISession {
         if( trace ) {
             cache.cacheTaskAsync(handler)
         }
-
-        // notfiy the workflow publisher
-        publisher.publish(handler.task)
 
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
