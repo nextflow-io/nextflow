@@ -12,7 +12,7 @@ Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on 
 java -version
 ```
 
-We recommend that you install Java through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information.
+If you don't have a compatible version of Java installed in your computer, We recommend that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information.
 
 To install Java with SDKMAN:
 

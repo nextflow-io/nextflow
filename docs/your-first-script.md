@@ -15,7 +15,7 @@ Execute the script by entering the following command in your terminal:
 ```console
 $ nextflow run tutorial.nf
 
-N E X T F L O W  ~  version 22.10.0
+N E X T F L O W  ~  version 23.10.0
 executor >  local (3)
 [69/c8ea4a] process > splitLetters   [100%] 1 of 1 ✔
 [84/c8b7f1] process > convertToUpper [100%] 2 of 2 ✔
