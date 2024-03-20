@@ -274,11 +274,6 @@ if [ ! -x "$JAVA_CMD" ] ; then
         else
             JAVA_CMD="$JAVA_HOME/bin/java"
         fi
-    elif [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" && ! -n "$SDKMAN_PLATFORM" ]]; then
-            # Having an installation of SDKMAN which is not sourced
-            source "$HOME/.sdkman/bin/sdkman-init.sh"
-            JAVA_CMD="$(which java)" || JAVA_CMD=java
-            FOUND_SDKMAN="yes"
     elif [ -x /usr/libexec/java_home ]; then
         JAVA_CMD="$(/usr/libexec/java_home -v 1.8+ 2>/dev/null)/bin/java" || JAVA_CMD=java
     else
@@ -295,11 +290,13 @@ else
   if [ $? -ne 0 ]; then
       getstarted_web="https://www.nextflow.io/docs/latest/getstarted.html"
       echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
-      echo_red "NOTE: please refer to the Nextflow Get Started page at ${getstarted_web}."
+      echo_red "NOTE: Nextflow needs a Java virtual machine to run. To this end:
+ - make sure a \`java\` command can be found; or
+ - manually define the variables NXF_JAVA_HOME, JAVA_HOME or JAVA_CMD to point to an existing installation; or
+ - install a Java virtual machine, for instance through https://sdkman.io (read the docs);
+ - for more details please refer to the Nextflow Get Started page at ${getstarted_web}."
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
       exit 1
-  elif [ -n "$FOUND_SDKMAN" ]; then
-      echo_yellow 'NOTE: Nextflow has found a working SDKMAN Java installation and is going to use it. For a more robust setup, add the following lines at the end of your Bash .profile or .bash_profile:\n export SDKMAN_DIR="$HOME/.sdkman"\n [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"'
   fi
   JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
   # check NF version
