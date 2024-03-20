@@ -268,7 +268,7 @@ class K8sDriverLauncher {
                 .setShowClosures(true)
                 .setOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
-                .setCmdRun(cmd)
+                .setCmdRun(new CmdRun(cmd))
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
@@ -386,9 +386,9 @@ class K8sDriverLauncher {
     }
 
 
-    private Field getField(CmdRun cmd, String name) {
+    private Field getField(CmdRun.V1 cmd, String name) {
         def clazz = cmd.class
-        while( clazz != CmdRun ) {
+        while( clazz != CmdRun.V1 ) {
             clazz = cmd.class.getSuperclass()
         }
         clazz.getDeclaredField(name)
@@ -484,7 +484,7 @@ class K8sDriverLauncher {
         addOption(result, cmd.&dumpHashes )
         addOption(result, cmd.&dumpChannels )
         addOption(result, cmd.&env )
-        addOption(result, cmd.&process )
+        addOption(result, cmd.&processOptions )
         addOption(result, cmd.&params )
         addOption(result, cmd.&entryName )
 
@@ -498,7 +498,7 @@ class K8sDriverLauncher {
         if ( cmd.remoteProfile )
             result << "-profile ${cmd.remoteProfile}"
 
-        if( cmd.process?.executor )
+        if( cmd.processOptions?.executor )
             abort('process.executor')
 
         unsupportedCliOptions(

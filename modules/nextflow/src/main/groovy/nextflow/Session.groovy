@@ -432,10 +432,7 @@ class Session implements ISession {
     }
 
     /**
-     * Given the `run` command line options creates the required {@link TraceObserver}s
-     *
-     * @param runOpts The {@code CmdRun} object holding the run command options
-     * @return A list of {@link TraceObserver} objects or an empty list
+     * Creates the required {@link TraceObserver}s for the workflow run.
      */
     @PackageScope
     List<TraceObserver> createObservers() {

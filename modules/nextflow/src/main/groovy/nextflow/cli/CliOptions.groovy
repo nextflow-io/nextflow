@@ -28,79 +28,100 @@ import org.fusesource.jansi.Ansi
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class CliOptions {
+abstract class CliOptions {
 
-    /**
-     * The packages to debug
-     */
-    @Parameter(hidden = true, names='-debug')
-    List<String> debug
+    abstract Boolean getAnsiLogCli()
+    abstract boolean isBackground()
+    abstract List<String> getConfig()
+    abstract List<String> getDebug()
+    abstract boolean getIgnoreConfigIncludes()
+    abstract String getLogFile()
+    abstract boolean isQuiet()
+    abstract boolean getRemoteDebug()
+    abstract String getSyslog()
+    abstract List<String> getTrace()
+    abstract List<String> getUserConfig()
+    abstract boolean getVersion()
+    abstract void setAnsiLog(boolean value)
+    abstract void setBackground(boolean value)
 
-    @Parameter(names=['-log'], description = 'Set nextflow log file path')
-    String logFile
+    static class V1 extends CliOptions {
 
-    @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
-    List<String> userConfig
+        /**
+         * The packages to debug
+         */
+        @Parameter(hidden = true, names='-debug')
+        List<String> debug
 
-    @Parameter(names=['-config-ignore-includes'], description = 'Disable the parsing of config includes')
-    boolean ignoreConfigIncludes
+        @Parameter(names=['-log'], description = 'Set nextflow log file path')
+        String logFile
 
-    @Parameter(names=['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
-    List<String> config
+        @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
+        List<String> userConfig
 
-    /**
-     * the packages to trace
-     */
-    @Parameter(names='-trace', description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
-    List<String> trace
+        @Parameter(names=['-config-ignore-includes'], description = 'Disable the parsing of config includes')
+        boolean ignoreConfigIncludes
 
-    /**
-     * Enable syslog appender
-     */
-    @Parameter(names = ['-syslog'], description = 'Send logs to syslog server (eg. localhost:514)' )
-    String syslog
+        @Parameter(names=['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
+        List<String> config
 
-    /**
-     * Print out the version number and exit
-     */
-    @Parameter(names = ['-v','-version'], description = 'Print the program version')
-    boolean version
+        /**
+         * the packages to trace
+         */
+        @Parameter(names='-trace', description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
+        List<String> trace
 
-    /**
-     * Print out the 'help' and exit
-     */
-    @Parameter(names = ['-h'], description = 'Print this help', help = true)
-    boolean help
+        /**
+         * Enable syslog appender
+         */
+        @Parameter(names = ['-syslog'], description = 'Send logs to syslog server (eg. localhost:514)' )
+        String syslog
 
-    @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
-    boolean quiet
+        /**
+         * Print out the version number and exit
+         */
+        @Parameter(names = ['-v','-version'], description = 'Print the program version')
+        boolean version
 
-    @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
-    boolean background
+        /**
+         * Print out the 'help' and exit
+         */
+        @Parameter(names = ['-h'], description = 'Print this help', help = true)
+        boolean help
 
-    @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
-    Map<String,String> jvmOpts = [:]
+        @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
+        boolean quiet
 
-    @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
-    boolean selfUpdate
+        @Parameter(names = ['-bg','-background'], description = 'Execute nextflow in background', arity = 0)
+        boolean background
 
-    @Parameter(names=['-remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
-    boolean remoteDebug
+        @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
+        Map<String,String> jvmOpts = [:]
 
-    Boolean ansiLog
+        @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
+        boolean selfUpdate
+
+        @Parameter(names=['-remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
+        boolean remoteDebug
+
+        Boolean ansiLogCli
+
+        void setAnsiLog(boolean value) { ansiLogCli = value }
+
+    }
 
     boolean getAnsiLog() {
-        if( ansiLog && quiet )
+        if( ansiLogCli && quiet )
             throw new AbortOperationException("Command line options `quiet` and `ansi-log` cannot be used together")
 
-        if( ansiLog != null )
-            return ansiLog
+        if( ansiLogCli != null )
+            return ansiLogCli
 
         if( background )
-            return ansiLog = false
+            return ansiLogCli = false
 
         if( quiet )
-            return ansiLog = false
+            return ansiLogCli = false
 
         final env = System.getenv('NXF_ANSI_LOG')
         if( env ) try {
@@ -113,7 +134,7 @@ class CliOptions {
     }
 
     boolean hasAnsiLogFlag() {
-        ansiLog==true || System.getenv('NXF_ANSI_LOG')=='true'
+        ansiLogCli==true || System.getenv('NXF_ANSI_LOG')=='true'
     }
 
 }

@@ -70,10 +70,10 @@ class CmdConfigTest extends Specification {
         config.process.omega = "Hi' there"
 
         final buffer = new ByteArrayOutputStream()
-        def cmd = new CmdConfig()
+        def options = Mock(CmdConfig.Options) { sort >> true }
+        def cmd = new CmdConfig(options)
 
         when:
-        cmd.sort = true
         cmd.printProperties0(config, buffer)
 
         then:
@@ -87,12 +87,13 @@ class CmdConfigTest extends Specification {
                 .stripIndent().leftTrim()
 
     }
+
     def 'should canonical notation' () {
 
         given:
         ByteArrayOutputStream buffer
         ConfigObject config
-        def cmd = new CmdConfig()
+        def cmd = new CmdConfig( Mock(CmdConfig.Options) )
 
         when:
         buffer = new ByteArrayOutputStream()
@@ -137,7 +138,7 @@ class CmdConfigTest extends Specification {
         given:
         ByteArrayOutputStream buffer
         ConfigObject config
-        def cmd = new CmdConfig()
+        def cmd = new CmdConfig( Mock(CmdConfig.Options) )
 
         when:
         buffer = new ByteArrayOutputStream()
@@ -214,10 +215,11 @@ class CmdConfigTest extends Specification {
         '''
         def buffer = new ByteArrayOutputStream()
         // command definition 
-        def cmd = new CmdConfig()
-        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
-        cmd.stdout = buffer
-        cmd.args = [ '.' ]
+        def options = Mock(CmdConfig.Options) {
+            launcherOptions >> new CliOptions.V1(config: [CONFIG.toString()])
+            pipeline >> '.'
+        }
+        def cmd = new CmdConfig(options: options, stdout: buffer)
 
         when:
         cmd.run()
@@ -265,10 +267,11 @@ class CmdConfigTest extends Specification {
 
         def buffer = new ByteArrayOutputStream()
         // command definition
-        def cmd = new CmdConfig()
-        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
-        cmd.stdout = buffer
-        cmd.args = [ '.' ]
+        def options = Mock(CmdConfig.Options) {
+            launcherOptions >> new CliOptions.V1(config: [CONFIG.toString()])
+            pipeline >> '.'
+        }
+        def cmd = new CmdConfig(options: options, stdout: buffer)
 
         when:
         cmd.run()
@@ -305,11 +308,12 @@ class CmdConfigTest extends Specification {
     def 'should resolve remote config' () {
         given:
         def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdConfig(
-                args: ['https://github.com/nextflow-io/hello'],
-                showAllProfiles: true,
-                launcher: Mock(Launcher),
-                stdout: buffer  )
+        def options = Mock(CmdConfig.Options) {
+            pipeline >> 'https://github.com/nextflow-io/hello'
+            showAllProfiles >> true
+            launcherOptions >> Mock(CliOptions.V1)
+        }
+        def cmd = new CmdConfig(options: options, stdout: buffer)
 
         when:
         cmd.run()
@@ -349,10 +353,12 @@ class CmdConfigTest extends Specification {
 
         def buffer = new ByteArrayOutputStream()
         // command definition
-        def cmd = new CmdConfig(showAllProfiles: true)
-        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
-        cmd.stdout = buffer
-        cmd.args = ['.']
+        def options = Mock(CmdConfig.Options) {
+            showAllProfiles >> true
+            launcherOptions >> new CliOptions.V1(config: [CONFIG.toString()])
+            pipeline >> '.'
+        }
+        def cmd = new CmdConfig(options: options, stdout: buffer)
 
         when:
         cmd.run()

@@ -251,7 +251,7 @@ task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
     commandLine 'bash', '-e', temp.absolutePath
 }
 
-task installLauncher(type: Copy, dependsOn: ['pack']) {
+task installLauncher(type: Copy, dependsOn: ['packOne']) {
     from "$releaseDir/nextflow-$version-one.jar"
     into "$homeDir/.nextflow/framework/$version/"
 }

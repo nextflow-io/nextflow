@@ -21,8 +21,6 @@ import java.nio.file.Files
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import spock.lang.Specification
-import spock.lang.Unroll
-import spock.util.environment.RestoreSystemProperties
 import test.OutputCapture
 /**
  *
@@ -45,7 +43,6 @@ class LauncherTest extends Specification {
         then:
         assert launcher.options.version
         assert launcher.fullVersion
-
 
     }
 
@@ -76,14 +73,14 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('info')
         then:
-        launcher.command instanceof CmdInfo
-        launcher.command.args == null
+        launcher.command instanceof CmdInfo.V1
+        launcher.command.pipeline == null
 
         when:
         launcher = new Launcher().parseMainArgs('info','xxx')
         then:
-        launcher.command instanceof CmdInfo
-        launcher.command.args == ['xxx']
+        launcher.command instanceof CmdInfo.V1
+        launcher.command.pipeline == 'xxx'
 
     }
 
@@ -92,14 +89,14 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('pull','alpha')
         then:
-        launcher.command instanceof CmdPull
-        launcher.command.args == ['alpha']
+        launcher.command instanceof CmdPull.V1
+        launcher.command.pipeline == 'alpha'
 
         when:
         launcher = new Launcher().parseMainArgs('pull','xxx', '-hub', 'bitbucket', '-user','xx:11')
         then:
-        launcher.command instanceof CmdPull
-        launcher.command.args == ['xxx']
+        launcher.command instanceof CmdPull.V1
+        launcher.command.pipeline == 'xxx'
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
         launcher.command.hubPassword == '11'
@@ -110,7 +107,7 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
-        launcher.command instanceof CmdClone
+        launcher.command instanceof CmdClone.V1
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
@@ -122,8 +119,8 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
-        launcher.command instanceof CmdRun
-        launcher.command.args == ['xxx']
+        launcher.command instanceof CmdRun.V1
+        launcher.command.pipeline == 'xxx'
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
         launcher.command.hubPassword == 'yy'
@@ -131,14 +128,16 @@ class LauncherTest extends Specification {
         when:
         launcher = new Launcher().parseMainArgs('run','alpha', '-hub', 'github')
         then:
-        launcher.command instanceof CmdRun
-        launcher.command.args == ['alpha']
+        launcher.command instanceof CmdRun.V1
+        launcher.command.pipeline == 'alpha'
         launcher.command.hubProvider == 'github'
 
         when:
-        launcher = new Launcher().parseMainArgs('run', 'script.nf', '--alpha', '0', '--omega', '9')
+        launcher = new Launcher().parseMainArgs('run', 'script.nf', 'arg1', 'arg2', '--alpha', '0', '--omega', '9')
         then:
-        launcher.command instanceof CmdRun
+        launcher.command instanceof CmdRun.V1
+        launcher.command.pipeline == 'script.nf'
+        launcher.command.args == ['arg1', 'arg2']
         launcher.command.params.'alpha' == '0'
         launcher.command.params.'omega' == '9'
 
@@ -149,8 +148,8 @@ class LauncherTest extends Specification {
 
         given:
         def script = Files.createTempFile('file',null)
-        def launcher = [:] as Launcher
-        launcher.allCommands = [ new CmdRun(), new CmdInfo() ]
+        def launcher = new Launcher()
+        launcher.allCommands = [ new CmdRun.V1(), new CmdInfo.V1() ]
 
         expect:
         launcher.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
@@ -292,164 +291,6 @@ class LauncherTest extends Specification {
         '-x=y'              | false
     }
 
-
-    @RestoreSystemProperties
-    def 'should setup proxy properties'() {
-
-        when:
-        Launcher.setProxy('HTTP', [HTTP_PROXY: 'alpha.com:333'])
-        then:
-        System.getProperty('http.proxyHost') == 'alpha.com'
-        System.getProperty('http.proxyPort') == '333'
-
-        when:
-        Launcher.setProxy('http', [http_proxy: 'gamma.com:444'])
-        then:
-        System.getProperty('http.proxyHost') == 'gamma.com'
-        System.getProperty('http.proxyPort') == '444'
-
-        when:
-        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'beta.com:5466'])
-        then:
-        System.getProperty('https.proxyHost') == 'beta.com'
-        System.getProperty('https.proxyPort') == '5466'
-
-        when:
-        Launcher.setProxy('https', [https_proxy: 'zeta.com:6646'])
-        then:
-        System.getProperty('https.proxyHost') == 'zeta.com'
-        System.getProperty('https.proxyPort') == '6646'
-
-        when:
-        Launcher.setProxy('FTP', [FTP_PROXY: 'delta.com:7566'])
-        then:
-        System.getProperty('ftp.proxyHost') == 'delta.com'
-        System.getProperty('ftp.proxyPort') == '7566'
-
-        when:
-        Launcher.setProxy('ftp', [ftp_proxy: 'epsilon.com:6658'])
-        then:
-        System.getProperty('ftp.proxyHost') == 'epsilon.com'
-        System.getProperty('ftp.proxyPort') == '6658'
-    }
-
-    @RestoreSystemProperties
-    def 'should setup proxy properties and configure the network authenticator'() {
-
-        when:
-        Launcher.setProxy('HTTP', [HTTP_PROXY: 'http://alphauser:alphapass@alpha.com:333'])
-        PasswordAuthentication auth = Authenticator.requestPasswordAuthentication(
-            'alpha.com', null, 333, 'http', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('http.proxyHost') == 'alpha.com'
-        System.getProperty('http.proxyPort') == '333'
-        and:
-        auth.getUserName() == 'alphauser'
-        auth.getPassword() == 'alphapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('http', [http_proxy: 'http://gammauser:gammapass@gamma.com:444'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'gamma.com', null, 444, 'http', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('http.proxyHost') == 'gamma.com'
-        System.getProperty('http.proxyPort') == '444'
-        and:
-        auth.getUserName() == 'gammauser'
-        auth.getPassword() == 'gammapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://betauser:betapass@beta.com:5466'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'beta.com', null, 5466, 'HTTPS', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('https.proxyHost') == 'beta.com'
-        System.getProperty('https.proxyPort') == '5466'
-        and:
-        auth.getUserName() == 'betauser'
-        auth.getPassword() == 'betapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('https', [https_proxy: 'https://zetauser:zetapass@zeta.com:6646'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'zeta.com', null, 6646, 'https', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('https.proxyHost') == 'zeta.com'
-        System.getProperty('https.proxyPort') == '6646'
-        and:
-        auth.getUserName() == 'zetauser'
-        auth.getPassword() == 'zetapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('FTP', [FTP_PROXY: 'ftp://deltauser:deltapass@delta.com:7566'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'delta.com', null, 7566, 'ftp', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('ftp.proxyHost') == 'delta.com'
-        System.getProperty('ftp.proxyPort') == '7566'
-        and:
-        auth.getUserName() == 'deltauser'
-        auth.getPassword() == 'deltapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('ftp', [ftp_proxy: 'ftp://epsilonuser:epsilonpass@epsilon.com:6658'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'epsilon.com', null, 6658, 'ftp', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('ftp.proxyHost') == 'epsilon.com'
-        System.getProperty('ftp.proxyPort') == '6658'
-        and:
-        auth.getUserName() == 'epsilonuser'
-        auth.getPassword() == 'epsilonpass'.toCharArray()
-    }
-
-    @RestoreSystemProperties
-    def 'should set no proxy property' () {
-
-        given:
-        System.properties.remove('http.nonProxyHosts')
-        
-        when:
-        Launcher.setNoProxy(ENV)
-        then:
-        System.getProperty('http.nonProxyHosts') == EXPECTED
-
-        where:
-        ENV                         | EXPECTED
-        [:]                         | null
-        [no_proxy: 'localhost' ]    | 'localhost'
-        [NO_PROXY: '127.0.0.1' ]    | '127.0.0.1'
-        [NO_PROXY:'localhost,127.0.0.1,.localdomain.com']  | 'localhost|127.0.0.1|.localdomain.com'
-
-    }
-
-    @RestoreSystemProperties
-    @Unroll
-    def 'should set http client timeout' () {
-        when:
-        Launcher.setHttpClientProperties(ENV)
-        then:
-        System.getProperty('jdk.httpclient.keepalive.timeout') == TIMEOUT
-        and:
-        System.getProperty('jdk.httpclient.connectionPoolSize') == POOLSIZE
-
-        where:
-        ENV                                             | TIMEOUT   | POOLSIZE
-        [:]                                             | '10'      | null
-        and:
-        [NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT: '1']     | '1'       | null
-        [NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT: '100']   | '100'     | null
-        and:
-        [NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE: '0']    | '10'      | '0'
-        [NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE: '99']   | '10'      | '99'
-    }
-
     def 'should make cli' () {
         given:
         def launcher = new Launcher()
@@ -483,7 +324,7 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdList()] )
+        launcher.printCommands( [new CmdInfo.V1(), new CmdRun.V1(), new CmdList.V1()] )
         then:
         capture.toString() == '''
                 Commands:

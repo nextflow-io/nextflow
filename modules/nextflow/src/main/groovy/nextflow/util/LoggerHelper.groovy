@@ -57,7 +57,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.cli.CliOptions
-import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ProcessException
@@ -353,11 +352,11 @@ class LoggerHelper {
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
-    static void configureLogger( Launcher launcher ) {
-        INSTANCE = new LoggerHelper(launcher.options)
-                .setDaemon(launcher.isDaemon())
+    static void configureLogger( final CliOptions opts, boolean daemon = false ) {
+        INSTANCE = new LoggerHelper(opts)
+                .setDaemon(daemon)
                 .setRolling(true)
-                .setSyslog(launcher.options.syslog)
+                .setSyslog(opts.syslog)
                 .setup()
     }
 

@@ -61,7 +61,8 @@ class CmdInfoTest extends Specification {
         def buffer = new ByteArrayOutputStream()
 
         when:
-        new CmdInfo(args: ['hello'], out: new PrintStream(buffer)).run()
+        def options = Mock(CmdInfo.Options) { pipeline >> 'hello' }
+        new CmdInfo(options: options, out: new PrintStream(buffer)).run()
         def screen = buffer.toString()
 
         then:
@@ -77,7 +78,8 @@ class CmdInfoTest extends Specification {
 
         given:
         def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdInfo(args: ['hello'], format: 'json', out: new PrintStream(buffer))
+        def options = Mock(CmdInfo.Options) { pipeline >> 'hello' ; format >> 'json' }
+        def cmd = new CmdInfo(options: options, out: new PrintStream(buffer))
 
         when:
         cmd.run()
@@ -103,7 +105,8 @@ class CmdInfoTest extends Specification {
 
         given:
         def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdInfo(args: ['hello'], format: 'yaml', out: new PrintStream(buffer))
+        def options = Mock(CmdInfo.Options) { pipeline >> 'hello' ; format >> 'yaml' }
+        def cmd = new CmdInfo(options: options, out: new PrintStream(buffer))
 
         when:
         cmd.run()

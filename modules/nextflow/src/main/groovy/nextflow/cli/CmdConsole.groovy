@@ -28,13 +28,38 @@ import nextflow.ui.console.ConsoleExtension
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Launch Nextflow interactive console")
-class CmdConsole extends CmdBase {
+class CmdConsole {
 
-    @Parameter(description = 'Nextflow console arguments')
-    List<String> args
+    interface Options {
+        String getScript()
+    }
 
-    String getName() { 'console' }
+    @Parameters(commandDescription = "Launch Nextflow interactive console")
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(description = 'Nextflow console arguments')
+        List<String> args = []
+
+        @Override
+        String getScript() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        String getName() { 'console' }
+
+        @Override
+        void run() {
+            new CmdConsole(this).run()
+        }
+    }
+
+    @Delegate
+    private Options options
+
+    CmdConsole(Options options) {
+        this.options = options
+    }
 
     void run() {
         Plugins.init()
@@ -42,11 +67,6 @@ class CmdConsole extends CmdBase {
         final console = Plugins.getExtension(ConsoleExtension)
         if( !console )
             throw new IllegalStateException("Failed to find Nextflow Console extension")
-        // normalise the console args prepending the `console` command itself
-        if( args == null )
-            args = []
-        args.add(0, 'console')
-        // go !
-        console.run(args as String[])
+        console.run(script)
     }
 }

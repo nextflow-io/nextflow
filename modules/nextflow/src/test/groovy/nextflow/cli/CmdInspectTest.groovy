@@ -29,7 +29,9 @@ class CmdInspectTest extends Specification {
     @Unroll
     def 'should ask for confirmation' () {
         given:
-        def cmd = Spy(new CmdInspect(concretize: CONCRETIZE))
+        def cmd = Spy(CmdInspect) {
+            concretize >> CONCRETIZE
+        }
         Map wave
 
         when:

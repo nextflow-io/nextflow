@@ -29,36 +29,64 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download or update a project")
-class CmdPull extends CmdBase implements HubOptions {
+class CmdPull {
 
     static final public NAME = 'pull'
 
-    @Parameter(description = 'project name or repository url to pull', arity = 1)
-    List<String> args
+    interface Options extends HubOptions {
+        String getPipeline()
+        boolean getAll()
+        Integer getDepth()
+        String getRevision()
+    }
 
-    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
-    boolean all
+    @Parameters(commandDescription = "Download or update a project")
+    static class V1 extends CmdBase implements Options, HubOptions.V1 {
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
-    String revision
+        @Parameter(description = 'project name or repository url to pull', arity = 1)
+        List<String> args = []
 
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-    Integer deep
+        @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+        boolean all
 
-    @Override
-    final String getName() { NAME }
+        @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+        String revision
+
+        @Parameter(names=['-d','-depth','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer depth
+
+        @Override
+        String getPipeline() { args[0] }
+
+        @Override
+        final String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdPull(this).run()
+        }
+
+    }
+
+    @Delegate
+    private Options options
 
     /* only for testing purpose */
     protected File root
 
-    @Override
+    CmdPull(Options options) {
+        this.options = options
+    }
+
+    /* only for testing purpose */
+    CmdPull() {}
+
     void run() {
 
-        if( !all && !args )
-            throw new AbortOperationException('Missing argument')
+        if( !all && !pipeline )
+            throw new AbortOperationException('Project name or option `-all` is required')
 
-        def list = all ? AssetManager.list() : args.toList()
+        def list = all ? AssetManager.list() : [pipeline]
         if( !list ) {
             log.info "(nothing to do)"
             return
@@ -71,12 +99,12 @@ class CmdPull extends CmdBase implements HubOptions {
 
         // init plugin system
         Plugins.init()
-        
+
         list.each {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision,deep)
+            def result = manager.download(revision,depth)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

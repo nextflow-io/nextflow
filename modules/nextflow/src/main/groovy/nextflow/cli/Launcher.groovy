@@ -35,10 +35,9 @@ import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
-import nextflow.util.ProxyConfig
+import nextflow.util.ProxyHelper
 import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 /**
@@ -51,15 +50,9 @@ import org.eclipse.jgit.api.errors.GitAPIException
 @CompileStatic
 class Launcher {
 
-    /**
-     * Create the application command line parser
-     *
-     * @return An instance of {@code CliBuilder}
-     */
-
     private JCommander jcommander
 
-    private CliOptions options
+    private CliOptions.V1 options
 
     private boolean fullVersion
 
@@ -86,35 +79,33 @@ class Launcher {
 
     protected void init() {
         allCommands = (List<CmdBase>)[
-                new CmdClean(),
-                new CmdClone(),
-                new CmdConsole(),
-                new CmdFs(),
-                new CmdInfo(),
-                new CmdList(),
-                new CmdLog(),
-                new CmdPull(),
-                new CmdRun(),
-                new CmdKubeRun(),
-                new CmdDrop(),
-                new CmdConfig(),
-                new CmdNode(),
-                new CmdView(),
+                new CmdClean.V1(),
+                new CmdClone.V1(),
+                new CmdConfig.V1(),
+                new CmdConsole.V1(),
+                new CmdDrop.V1(),
+                new CmdFs.V1(),
                 new CmdHelp(),
+                new CmdInfo.V1(),
+                new CmdInspect.V1(),
+                new CmdKubeRun(),
+                new CmdList.V1(),
+                new CmdLog.V1(),
+                new CmdNode.V1(),
+                new CmdPlugin.V1(),
+                new CmdPull.V1(),
+                new CmdRun.V1(),
+                new CmdSecret.V1(),
                 new CmdSelfUpdate(),
-                new CmdPlugin(),
-                new CmdInspect()
+                new CmdView.V1()
         ]
-
-        if(SecretsLoader.isEnabled())
-            allCommands.add(new CmdSecret())
 
         // legacy command
         final cmdCloud = SpuriousDeps.cmdCloud()
         if( cmdCloud )
             allCommands.add(cmdCloud)
 
-        options = new CliOptions()
+        options = new CliOptions.V1()
         jcommander = new JCommander(options)
         allCommands.each { cmd ->
             cmd.launcher = this;
@@ -140,7 +131,7 @@ class Launcher {
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         // whether is running a daemon
-        daemonMode = command instanceof CmdNode
+        daemonMode = command instanceof CmdNode.V1
         // set the log file name
         checkLogFileName()
 
@@ -166,7 +157,7 @@ class Launcher {
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
-            else if( command instanceof CmdRun || options.debug || options.trace )
+            else if( command instanceof CmdRun.V1 || options.debug || options.trace )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
     }
@@ -376,7 +367,7 @@ class Launcher {
         }
 
         println "Usage: nextflow [options] COMMAND [arg...]\n"
-        printOptions(CliOptions)
+        printOptions(CliOptions.V1)
         printCommands(allCommands)
     }
 
@@ -430,7 +421,7 @@ class Launcher {
          */
         try {
             parseMainArgs(args)
-            LoggerHelper.configureLogger(this)
+            LoggerHelper.configureLogger(options, isDaemon())
         }
         catch( ParameterException e ) {
             // print command line parsing errors
@@ -477,9 +468,9 @@ class Launcher {
     int run() {
 
         /*
-         * setup environment
+         * setup proxy environment
          */
-        setupEnvironment()
+        ProxyHelper.setupEnvironment()
 
         /*
          * Real execution starts here
@@ -572,98 +563,6 @@ class Launcher {
     }
 
     /**
-     * set up environment and system properties. It checks the following
-     * environment variables:
-     * <li>http_proxy</li>
-     * <li>https_proxy</li>
-     * <li>ftp_proxy</li>
-     * <li>HTTP_PROXY</li>
-     * <li>HTTPS_PROXY</li>
-     * <li>FTP_PROXY</li>
-     * <li>NO_PROXY</li>
-     */
-    private void setupEnvironment() {
-
-        final env = System.getenv()
-        setProxy('HTTP',env)
-        setProxy('HTTPS',env)
-        setProxy('FTP',env)
-
-        setProxy('http',env)
-        setProxy('https',env)
-        setProxy('ftp',env)
-
-        setNoProxy(env)
-
-        setHttpClientProperties(env)
-    }
-
-    static void setHttpClientProperties(Map<String,String> env) {
-        // Set the httpclient connection pool timeout to 10 seconds.
-        // This required because the default is 20 minutes, which cause the error
-        // "HTTP/1.1 header parser received no bytes" when in some circumstances
-        // https://github.com/nextflow-io/nextflow/issues/3983#issuecomment-1702305137
-        System.setProperty("jdk.httpclient.keepalive.timeout", env.getOrDefault("NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT","10"))
-        if( env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE") )
-            System.setProperty("jdk.httpclient.connectionPoolSize", env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE"))
-    }
-
-    /**
-     * Set no proxy property if defined in the launching env
-     *
-     * See for details
-     * https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html
-     *
-     * @param env
-     */
-    @PackageScope
-    static void setNoProxy(Map<String,String> env) {
-        final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
-        if(noProxy) {
-            System.setProperty('http.nonProxyHosts', noProxy.tokenize(',').join('|'))
-        }
-    }
-
-
-    /**
-     * Setup proxy system properties and optionally configure the network authenticator
-     *
-     * See:
-     * http://docs.oracle.com/javase/6/docs/technotes/guides/net/proxies.html
-     * https://github.com/nextflow-io/nextflow/issues/24
-     *
-     * @param qualifier Either {@code http/HTTP} or {@code https/HTTPS}.
-     * @param env The environment variables system map
-     */
-    @PackageScope
-    static void setProxy(String qualifier, Map<String,String> env ) {
-        assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
-        def str = null
-        def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
-
-        // -- setup HTTP proxy
-        try {
-            final proxy = ProxyConfig.parse(str = env.get(var.toString()))
-            if( proxy ) {
-                // set the expected protocol
-                proxy.protocol = qualifier.toLowerCase()
-                log.debug "Setting $qualifier proxy: $proxy"
-                System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy.host)
-                if( proxy.port )
-                    System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy.port)
-                if( proxy.authenticator() ) {
-                    log.debug "Setting $qualifier proxy authenticator"
-                    Authenticator.setDefault(proxy.authenticator())
-                }
-            }
-        }
-        catch ( MalformedURLException e ) {
-            log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
-        }
-
-    }
-
-    /**
      * Hey .. Nextflow starts here!
      *
      * @param args The program options as specified by the user on the CLI
@@ -691,9 +590,6 @@ class Launcher {
 
     }
 
-    /*
-     * The application 'logo'
-     */
     /*
      * The application 'logo'
      */

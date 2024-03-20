@@ -28,15 +28,32 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all downloaded projects")
-class CmdList extends CmdBase {
+class CmdList {
 
     static final public NAME = 'list'
 
-    @Override
-    final String getName() { NAME }
+    interface Options {}
 
-    @Override
+    @Parameters(commandDescription = "List all downloaded projects")
+    static class V1 extends CmdBase implements Options {
+
+        @Override
+        final String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdList(this).run()
+        }
+
+    }
+
+    @Delegate
+    private Options options
+
+    CmdList(Options options) {
+        this.options = options
+    }
+
     void run() {
 
         def all = AssetManager.list()

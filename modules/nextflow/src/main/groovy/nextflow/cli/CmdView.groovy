@@ -31,29 +31,54 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "View project script file(s)")
-class CmdView extends CmdBase {
+class CmdView {
 
     static final public NAME = 'view'
 
-    @Override
-    String getName() { NAME }
+    interface Options {
+        String getPipeline()
+        boolean getQuiet()
+        boolean getAll()
+    }
 
-    @Parameter(description = 'project name', required = true)
-    List<String> args = []
+    @Parameters(commandDescription = "View project script file(s)")
+    static class V1 extends CmdBase implements Options {
 
-    @Parameter(names = '-q', description = 'Hide header line', arity = 0)
-    boolean quiet
+        @Override
+        String getName() { NAME }
 
-    @Parameter(names = '-l', description = 'List repository content', arity = 0)
-    boolean all
+        @Parameter(description = 'project name', required = true)
+        List<String> args = []
 
-    @Override
+        @Parameter(names = '-q', description = 'Hide header line', arity = 0)
+        boolean quiet
+
+        @Parameter(names = '-l', description = 'List repository content', arity = 0)
+        boolean all
+
+        @Override
+        String getPipeline() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        void run() {
+            new CmdView(this).run()
+        }
+    }
+
+    @Delegate
+    private Options options
+
+    CmdView(Options options) {
+        this.options = options
+    }
+
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(pipeline)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project name `${args[0]}`")
+            throw new AbortOperationException("Unknown project name `${pipeline}`")
 
         if( all ) {
             if( !quiet )

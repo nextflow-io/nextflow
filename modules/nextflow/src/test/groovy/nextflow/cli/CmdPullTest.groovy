@@ -16,11 +16,10 @@
 
 package nextflow.cli
 
-import nextflow.plugin.Plugins
-import spock.lang.IgnoreIf
-
 import java.nio.file.Files
 
+import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 /**
@@ -40,7 +39,11 @@ class CmdPullTest extends Specification {
         given:
         def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def dir = Files.createTempDirectory('test')
-        def cmd = new CmdPull(args: ['nextflow-io/hello'], root: dir.toFile(), hubUser: accessToken)
+        def options = Mock(CmdPull.Options) {
+            pipeline >> 'nextflow-io/hello'
+            hubUser >> accessToken
+        }
+        def cmd = new CmdPull(options: options, root: dir.toFile())
 
         when:
         cmd.run()

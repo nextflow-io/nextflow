@@ -40,44 +40,75 @@ import org.yaml.snakeyaml.Yaml
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print project and system runtime information")
-class CmdInfo extends CmdBase {
+class CmdInfo {
 
     static final public NAME = 'info'
 
+    interface Options {
+        abstract String getPipeline()
+        abstract boolean getDetailed()
+        abstract boolean getMoreDetailed()
+        abstract String getFormat()
+        abstract boolean getCheckForUpdates()
+    }
+
+    @Parameters(commandDescription = "Print project and system runtime information")
+    static class V1 extends CmdBase implements Options {
+
+        @Parameter(description = 'project name')
+        List<String> args = []
+
+        @Parameter(names='-d',description = 'Show detailed information', arity = 0)
+        boolean detailed
+
+        @Parameter(names='-dd', hidden = true, arity = 0)
+        boolean moreDetailed
+
+        @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
+        String format
+
+        @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
+        boolean checkForUpdates
+
+        @Override
+        String getPipeline() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        final String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdInfo(this).run()
+        }
+
+    }
+
     private PrintStream out = System.out
 
-    @Parameter(description = 'project name')
-    List<String> args
+    @Delegate
+    private Options options
 
-    @Parameter(names='-d',description = 'Show detailed information', arity = 0)
-    boolean detailed
+    CmdInfo(Options options) {
+        this.options = options
+    }
 
-    @Parameter(names='-dd', hidden = true, arity = 0)
-    boolean moreDetailed
+    /* For testing purposes only */
+    CmdInfo() {}
 
-    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
-    String format
-
-    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
-    boolean checkForUpdates
-
-    @Override
-    final String getName() { NAME }
-
-    @Override
     void run() {
 
         int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
-        if( !args ) {
+        if( !pipeline ) {
             println getInfo(level)
             return
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
+        final manager = new AssetManager(pipeline)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}`")
+            throw new AbortOperationException("Unknown project `${pipeline}`")
 
         if( !format || format == 'text' ) {
             printText(manager,level)

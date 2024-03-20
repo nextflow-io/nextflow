@@ -47,51 +47,76 @@ import nextflow.util.HistoryFile.Record
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Clean up project cache and work directories")
-class CmdClean extends CmdBase implements CacheBase {
+class CmdClean implements CacheBase {
 
     static final public NAME = 'clean'
 
-    @Parameter(names=['-q', '-quiet'], description = 'Do not print names of files removed', arity = 0)
-    boolean quiet
+    interface Options {
+        String getAfter()
+        String getBefore()
+        String getBut()
+        boolean getDryRun()
+        boolean getForce()
+        boolean getKeepLogs()
+        boolean getQuiet()
+        List<String> getArgs()
 
-    @Parameter(names=['-f', '-force'], description = 'Force clean command', arity = 0)
-    boolean force
+        CliOptions getLauncherOptions()
+    }
 
-    @Parameter(names=['-n', '-dry-run'], description = 'Print names of file to be removed without deleting them' , arity = 0)
-    boolean dryRun
+    @Parameters(commandDescription = 'Clean up project cache and work directories')
+    static class V1 extends CmdBase implements Options {
 
-    @Parameter(names='-after', description = 'Clean up runs executed after the specified one')
-    String after
+        @Parameter(names=['-q', '-quiet'], description = 'Do not print names of files removed', arity = 0)
+        boolean quiet
 
-    @Parameter(names='-before', description = 'Clean up runs executed before the specified one')
-    String before
+        @Parameter(names=['-f', '-force'], description = 'Force clean command', arity = 0)
+        boolean force
 
-    @Parameter(names='-but', description = 'Clean up all runs except the specified one')
-    String but
+        @Parameter(names=['-n', '-dry-run'], description = 'Print names of file to be removed without deleting them' , arity = 0)
+        boolean dryRun
 
-    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
-    boolean keepLogs
+        @Parameter(names='-after', description = 'Clean up runs executed after the specified one')
+        String after
 
-    @Parameter
-    List<String> args
+        @Parameter(names='-before', description = 'Clean up runs executed before the specified one')
+        String before
+
+        @Parameter(names='-but', description = 'Clean up all runs except the specified one')
+        String but
+
+        @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
+        boolean keepLogs
+
+        @Parameter
+        List<String> args
+
+        @Override
+        CliOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdClean(this).run()
+        }
+
+    }
+
+    @Delegate
+    private Options options
 
     private CacheDB currentCacheDb
 
     private Map<HashCode, Short> dryHash = new HashMap<>()
 
-    /**
-     * @return The name of this command {@code clean}
-     */
-    @Override
-    String getName() {
-        return NAME
+    CmdClean(Options options) {
+        this.options = options
     }
 
-    /**
-     * Command entry method
-     */
-    @Override
     void run() {
         init()
         validateOptions()
@@ -108,7 +133,7 @@ class CmdClean extends CmdBase implements CacheBase {
             final builder = new ConfigBuilder()
                     .setShowClosures(true)
                     .showMissingVariables(true)
-                    .setOptions(launcher.options)
+                    .setOptions(launcherOptions)
                     .setBaseDir(Paths.get('.'))
 
             final config = builder.buildConfigObject()

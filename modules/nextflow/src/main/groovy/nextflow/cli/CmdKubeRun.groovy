@@ -16,12 +16,15 @@
 
 package nextflow.cli
 
+import java.util.regex.Pattern
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.k8s.K8sDriverLauncher
+import nextflow.util.HistoryFile
 /**
  * Extends `run` command to support Kubernetes deployment
  * 
@@ -30,7 +33,7 @@ import nextflow.k8s.K8sDriverLauncher
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a workflow in a Kubernetes cluster (experimental)")
-class CmdKubeRun extends CmdRun {
+class CmdKubeRun extends CmdRun.V1 {
 
     static private String POD_NAME = /[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/
 
@@ -68,11 +71,10 @@ class CmdKubeRun extends CmdRun {
     @Override
     String getName() { 'kuberun' }
 
-    @Override
     protected void checkRunName() {
         if( runName && !runName.matches(POD_NAME) )
             throw new AbortOperationException("Not a valid K8s pod name -- It can only contain lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character")
-        super.checkRunName()
+        checkRunName0()
         runName = runName.replace('_','-')
     }
 
@@ -97,6 +99,31 @@ class CmdKubeRun extends CmdRun {
         driver.run(pipeline, scriptArgs)
         final status = driver.shutdown()
         System.exit(status)
+    }
+
+    /* copied from {@code CmdRun} */
+
+    protected void checkRunName0() {
+        if( runName == 'last' )
+            throw new AbortOperationException("Not a valid run name: `last`")
+        if( runName && !matchRunName(runName) )
+            throw new AbortOperationException("Not a valid run name: `$runName` -- It must match the pattern $RUN_NAME_PATTERN")
+
+        if( !runName ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("Missing workflow run name")
+            // -- make sure the generated name does not exist already
+            runName = HistoryFile.DEFAULT.generateNextName()
+        }
+
+        else if( !HistoryFile.disabled() && HistoryFile.DEFAULT.checkExistsByName(runName) )
+            throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
+    }
+
+    static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
+
+    static protected boolean matchRunName(String name) {
+        RUN_NAME_PATTERN.matcher(name).matches()
     }
 
 }

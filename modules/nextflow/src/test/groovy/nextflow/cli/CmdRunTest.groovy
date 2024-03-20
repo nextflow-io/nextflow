@@ -138,7 +138,7 @@ class CmdRunTest extends Specification {
         def file = folder.resolve('params.json')
         file.text = JSON
         and:
-        def cmd = new CmdRun(paramsFile: file.toString())
+        def cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> file.toString() } )
         def params = cmd.parsedParams()
         then:
         params.abc == 1
@@ -150,7 +150,7 @@ class CmdRunTest extends Specification {
         file = folder.resolve('params.yaml')
         file.text = YAML
         and:
-        cmd = new CmdRun(paramsFile: file.toString())
+        cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> file.toString() } )
         params = cmd.parsedParams()
         then:
         params.foo == 1
@@ -159,7 +159,7 @@ class CmdRunTest extends Specification {
         cmd.hasParams()
 
         when:
-        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: file.toString()])
+        cmd = new CmdRun(options: Mock(CmdRun.Options), sysEnv: [NXF_PARAMS_FILE: file.toString()])
         params = cmd.parsedParams()
         then:
         params.foo == 1
@@ -168,7 +168,7 @@ class CmdRunTest extends Specification {
         cmd.hasParams()
 
         when:
-        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: '/missing/path.yml'])
+        cmd = new CmdRun(options: Mock(CmdRun.Options), sysEnv: [NXF_PARAMS_FILE: '/missing/path.yml'])
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
@@ -191,7 +191,7 @@ class CmdRunTest extends Specification {
             }
             '''.stripIndent()
         when:
-        def cmd = new CmdRun(paramsFile: json.toString())
+        def cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> json.toString() } )
         and:
         def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR'] )
         then:
@@ -217,7 +217,7 @@ class CmdRunTest extends Specification {
                 omega: "${baseDir}/end"
             '''.stripIndent()
         when:
-        def cmd = new CmdRun(paramsFile: json.toString())
+        def cmd = new CmdRun( Mock(CmdRun.Options) { paramsFile >> json.toString() } )
         and:
         def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR'] )
         then:
@@ -231,22 +231,37 @@ class CmdRunTest extends Specification {
     }
 
     def 'should check has params' () {
-        expect:
-        !new CmdRun().hasParams()
-        and:
-        new CmdRun(params: [foo:'x']).hasParams()
-        new CmdRun(paramsFile: '/some/file.yml').hasParams()
-        new CmdRun(sysEnv:[NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
+        def options
+
+        when:
+        options = Mock(CmdRun.Options)
+        then:
+        !new CmdRun(options).hasParams()
+
+        when:
+        options = Mock(CmdRun.Options) { params >> [foo:'x'] }
+        then:
+        new CmdRun(options).hasParams()
+
+        when:
+        options = Mock(CmdRun.Options) { paramsFile >> '/some/file.yml' }
+        then:
+        new CmdRun(options).hasParams()
+
+        when:
+        options = Mock(CmdRun.Options)
+        then:
+        new CmdRun(options: options, sysEnv: [NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
     }
 
     def 'should replace values' () {
         expect:
         // only dollar are ignored
-        new CmdRun().replaceVars0('some $xxx there', [xxx:'here']) == 'some $xxx there'
+        new CmdRun( Mock(CmdRun.Options) ).replaceVars0('some $xxx there', [xxx:'here']) == 'some $xxx there'
 
         and:
         // dollar wrapped with {} are interpreted as vars
-        new CmdRun().replaceVars0('some ${xxx} ${xxx}', [xxx:'here']) == 'some here here'
+        new CmdRun( Mock(CmdRun.Options) ).replaceVars0('some ${xxx} ${xxx}', [xxx:'here']) == 'some here here'
 
         and:
         def text = '''\
@@ -256,7 +271,7 @@ class CmdRunTest extends Specification {
             omega: "${unknown}"
             '''.stripIndent()
         
-        new CmdRun().replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK' ] ) == '''\
+        new CmdRun( Mock(CmdRun.Options) ).replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK' ] ) == '''\
             alpha: "/HOME/hello"
             delta: "/WORK/world"
             gamma: "${012345}"
@@ -266,17 +281,17 @@ class CmdRunTest extends Specification {
 
     def 'should validate dont kill jobs' () {
         when:
-        def cmd = new CmdRun()
+        def cmd = new CmdRun( Mock(CmdRun.Options) )
         then:
         cmd.getDisableJobsCancellation() == false
 
         when:
-        cmd = new CmdRun(disableJobsCancellation: true)
+        cmd = new CmdRun( Mock(CmdRun.Options) { disableJobsCancellation >> true } )
         then:
         cmd.getDisableJobsCancellation() == true
 
         when:
-        cmd = new CmdRun(sysEnv: [NXF_DISABLE_JOBS_CANCELLATION: true])
+        cmd = new CmdRun(options: Mock(CmdRun.Options), sysEnv: [NXF_DISABLE_JOBS_CANCELLATION: true])
         then:
         cmd.getDisableJobsCancellation() == true
     }
@@ -364,7 +379,7 @@ class CmdRunTest extends Specification {
         def ENV = [NXF_ANSI_SUMMARY: 'true']
 
         when:
-        new CmdRun().checkConfigEnv(new ConfigMap([env:ENV]))
+        new CmdRun( Mock(CmdRun.Options) ).checkConfigEnv(new ConfigMap([env:ENV]))
 
         then:
         def warning = capture
@@ -381,7 +396,7 @@ class CmdRunTest extends Specification {
         def ENV = [FOO: '/something', NXF_DEBUG: 'true']
 
         when:
-        new CmdRun().checkConfigEnv(new ConfigMap([env:ENV]))
+        new CmdRun( Mock(CmdRun.Options) ).checkConfigEnv(new ConfigMap([env:ENV]))
 
         then:
         def warning = capture

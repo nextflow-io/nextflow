@@ -35,18 +35,13 @@ class ConsoleRunner implements ConsoleExtension {
     /**
      * Nextflow REPL entry point
      *
-     * @param args
+     * @param script
      */
     @Override
-    void run(String... args) {
-        CliOptions opts = new CliOptions()
+    void run(String script) {
+        def opts = new CliOptions.V1()
         opts.logFile = '.nextflow-console.log'
         new LoggerHelper(opts).setup()
-
-        if (args.length == 2 && args[1] == '--help') {
-            println 'usage: nextflow console [filename]'
-            return
-        }
 
         // full stack trace should not be logged to the output window - GROOVY-4663
         java.util.logging.Logger.getLogger(StackTraceUtils.STACK_LOG_NAME).useParentHandlers = false
@@ -57,12 +52,12 @@ class ConsoleRunner implements ConsoleExtension {
         def console = new Nextflow(ConsoleRunner.getClassLoader())
         console.useScriptClassLoaderForScriptExecution = true
         console.run()
-        if (args.length == 2)
+        if( script )
             try {
-                console.loadScriptFile(args[1] as File)
+                console.loadScriptFile(new File(script))
             }
             catch( IOException e ) {
-                log.warn("Can't open script file: ${args[1]}" )
+                log.warn("Can't open script file: ${script}" )
             }
 
     }

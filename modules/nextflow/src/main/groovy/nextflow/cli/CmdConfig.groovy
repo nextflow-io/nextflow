@@ -36,42 +36,82 @@ import nextflow.util.ConfigHelper
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print a project configuration")
-class CmdConfig extends CmdBase {
+class CmdConfig {
 
     static final public NAME = 'config'
 
-    @Parameter(description = 'project name')
-    List<String> args = []
+    interface Options {
+        String getPipeline()
+        boolean getShowAllProfiles()
+        String getProfile()
+        boolean getPrintProperties()
+        boolean getPrintFlatten()
+        String getPrintValue()
+        boolean getSort()
 
-    @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
-    boolean showAllProfiles
+        CliOptions getLauncherOptions()
+    }
 
-    @Parameter(names=['-profile'], description = 'Choose a configuration profile')
-    String profile
+    @Parameters(commandDescription = "Print a project configuration")
+    static class V1 extends CmdBase implements Options {
 
-    @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
-    boolean printProperties
+        @Parameter(description = 'project name')
+        List<String> args = []
 
-    @Parameter(names = '-flat', description = 'Print config using flat notation')
-    boolean printFlatten
+        @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
+        boolean showAllProfiles
 
-    @Parameter(names = '-sort', description = 'Sort config attributes')
-    boolean sort
+        @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+        String profile
 
-    @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
-    String printValue
+        @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
+        boolean printProperties
 
-    @Override
-    String getName() { NAME }
+        @Parameter(names = '-flat', description = 'Print config using flat notation')
+        boolean printFlatten
+
+        @Parameter(names = '-sort', description = 'Sort config attributes')
+        boolean sort
+
+        @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
+        String printValue
+
+        @Override
+        String getPipeline() {
+            args.size() > 0 ? args[0] : null
+        }
+
+        @Override
+        CliOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdConfig(this).run()
+        }
+
+    }
 
     private OutputStream stdout = System.out
 
-    @Override
+    @Delegate
+    private Options options
+
+    CmdConfig(Options options) {
+        this.options = options
+    }
+
+    /* For testing purposes only */
+    CmdConfig() {}
+
     void run() {
         Plugins.init()
         Path base = null
-        if( args ) base = getBaseDir(args[0])
+        if( pipeline ) base = getBaseDir(pipeline)
         if( !base ) base = Paths.get('.')
 
         if( profile && showAllProfiles ) {
@@ -90,7 +130,7 @@ class CmdConfig extends CmdBase {
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
                 .showMissingVariables(true)
-                .setOptions(launcher.options)
+                .setOptions(launcherOptions)
                 .setBaseDir(base)
                 .setCmdConfig(this)
 

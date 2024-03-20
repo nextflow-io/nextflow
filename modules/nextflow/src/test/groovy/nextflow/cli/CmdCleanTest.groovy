@@ -30,7 +30,7 @@ class CmdCleanTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def cleaner = new CmdClean()
+        def cleaner = new CmdClean( Mock(CmdClean.Options) )
 
         when:
         def result = cleaner.deleteFolder(folder,false)
@@ -51,7 +51,7 @@ class CmdCleanTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def cleaner = new CmdClean()
+        def cleaner = new CmdClean( Mock(CmdClean.Options) )
 
         when:
         def result = cleaner.deleteFolder(folder,true)
@@ -73,7 +73,7 @@ class CmdCleanTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def file = Files.createFile(folder.resolve('.command.test'))
-        def cleaner = new CmdClean()
+        def cleaner = new CmdClean( Mock(CmdClean.Options) )
 
         when:
         def result = cleaner.deleteFolder(file,true)

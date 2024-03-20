@@ -20,18 +20,28 @@ import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
 /**
   * Defines the command line parameters for command that need to interact with a pipeline service hub i.e. GitHub or BitBucket
-  *
-  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
-  */
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
 
 @CompileStatic
 trait HubOptions {
 
-    @Parameter(names=['-hub'], description = "Service hub where the project is hosted")
-    String hubProvider
+    abstract String getHubProvider()
 
-    @Parameter(names='-user', description = 'Private repository user name')
-    String hubUser
+    abstract String getHubUserCli()
+
+    abstract void setHubProvider(String hub)
+
+    static trait V1 implements HubOptions {
+
+        @Parameter(names=['-hub'], description = "Service hub where the project is hosted")
+        String hubProvider
+
+        @Parameter(names='-user', description = 'Private repository user name')
+        String hubUserCli
+
+    }
 
     /**
      * Return the password provided on the command line or stop allowing the user to enter it on the console
@@ -40,12 +50,12 @@ trait HubOptions {
      */
     String getHubPassword() {
 
-        if( !hubUser )
+        if( !hubUserCli )
             return null
 
-        def p = hubUser.indexOf(':')
+        def p = hubUserCli.indexOf(':')
         if( p != -1 )
-            return hubUser.substring(p+1)
+            return hubUserCli.substring(p+1)
 
         def console = System.console()
         if( !console )
@@ -57,12 +67,12 @@ trait HubOptions {
     }
 
     String getHubUser() {
-        if(!hubUser) {
-            return hubUser
+        if( !hubUserCli ) {
+            return hubUserCli
         }
 
-        def p = hubUser.indexOf(':')
-        return p != -1 ? hubUser.substring(0,p) : hubUser
+        def p = hubUserCli.indexOf(':')
+        return p != -1 ? hubUserCli.substring(0,p) : hubUserCli
     }
 
 }

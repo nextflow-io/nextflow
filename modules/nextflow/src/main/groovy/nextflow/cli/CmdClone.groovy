@@ -29,34 +29,61 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Clone a project into a folder")
-class CmdClone extends CmdBase implements HubOptions {
+class CmdClone {
 
     static final public NAME = 'clone'
 
-    @Parameter(required=true, description = 'name of the project to clone')
-    List<String> args
+    interface Options extends HubOptions {
+        String getPipeline()
+        String getTargetName()
+        Integer getDepth()
+        String getRevision()
+    }
 
-    @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
-    String revision
+    @Parameters(commandDescription = "Clone a project into a folder")
+    static class V1 extends CmdBase implements Options, HubOptions.V1 {
 
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-    Integer deep
+        @Parameter(required=true, description = 'name of the project to clone')
+        List<String> args = []
 
-    @Override
-    final String getName() { NAME }
+        @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
+        String revision
 
-    @Override
+        @Parameter(names=['-d','-depth','-deep'], description = 'Create a shallow clone of the specified depth')
+        Integer depth
+
+        @Override
+        String getPipeline() { args[0] }
+
+        @Override
+        String getTargetName() {
+            args.size() > 1 ? args[1] : null
+        }
+
+        @Override
+        final String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdClone(this).run()
+        }
+    }
+
+    @Delegate
+    private Options options
+
+    CmdClone(Options options) {
+        this.options = options
+    }
+
     void run() {
         // init plugin system
         Plugins.init()
-        // the pipeline name
-        String pipeline = args[0]
         final manager = new AssetManager(pipeline, this)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
-        def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
+        def target = new File(targetName ?: manager.getBaseName())
         if( target.exists() ) {
             if( target.isFile() )
                 throw new AbortOperationException("A file with the same name already exists: $target")
@@ -69,7 +96,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
-        manager.clone(target, revision, deep)
+        manager.clone(target, revision, depth)
         print "\r"
         println "${manager.project} cloned to: $target"
     }

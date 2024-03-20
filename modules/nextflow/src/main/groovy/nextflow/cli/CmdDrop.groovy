@@ -31,26 +31,48 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete the local copy of a project")
-class CmdDrop extends CmdBase {
+class CmdDrop {
 
     static final public NAME = 'drop'
 
-    @Parameter(required=true, description = 'name of the project to drop')
-    List<String> args
+    interface Options {
+        String getPipeline()
+        boolean getForce()
+    }
 
-    @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
-    boolean force
+    @Parameters(commandDescription = "Delete the local copy of a project")
+    static class V1 extends CmdBase implements Options {
 
-    @Override
-    final String getName() { NAME }
+        @Parameter(required=true, description = 'name of the project to drop')
+        List<String> args = []
 
-    @Override
+        @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
+        boolean force
+
+        @Override
+        String getPipeline() { args[0] }
+
+        @Override
+        final String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdDrop(this).run()
+        }
+    }
+
+    @Delegate
+    private Options options
+
+    CmdDrop(Options options) {
+        this.options = options
+    }
+
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(pipeline)
         if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${args[0]}")
+            throw new AbortOperationException("No match found for: ${pipeline}")
         }
 
         if( this.force || manager.isClean() ) {

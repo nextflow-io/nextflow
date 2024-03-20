@@ -558,7 +558,7 @@ class ConfigBuilder {
             config.libDir = env.get('NXF_LIB')
 
         // -- override 'process' parameters defined on the cmd line
-        cmdRun.process.each { name, value ->
+        cmdRun.processOptions.each { name, value ->
             config.process[name] = parseValue(value)
         }
 
@@ -712,13 +712,13 @@ class ConfigBuilder {
 
         // -- set cloudcache options
         final envCloudPath = env.get('NXF_CLOUDCACHE_PATH')
-        if( cmdRun.cloudCachePath || envCloudPath ) {
+        if( cmdRun.withCloudCache || envCloudPath ) {
             if( !(config.cloudcache instanceof Map) )
                 config.cloudcache = [:]
             if( !config.cloudcache.isSet('enabled') )
                 config.cloudcache.enabled = true
-            if( cmdRun.cloudCachePath && cmdRun.cloudCachePath != '-' )
-                config.cloudcache.path = cmdRun.cloudCachePath
+            if( cmdRun.withCloudCache && cmdRun.withCloudCache != '-' )
+                config.cloudcache.path = cmdRun.withCloudCache
             else if( !config.cloudcache.isSet('path') && envCloudPath )
                 config.cloudcache.path = envCloudPath
         }
@@ -900,7 +900,7 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
-                .setOptions(cmdRun.launcher.options)
+                .setOptions(cmdRun.launcherOptions)
                 .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)
                 .buildConfigObject()

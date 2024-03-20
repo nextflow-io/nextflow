@@ -17,12 +17,14 @@
 package nextflow.cli
 
 import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
 
 /**
  * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 abstract class CmdBase implements Runnable {
 
     private Launcher launcher

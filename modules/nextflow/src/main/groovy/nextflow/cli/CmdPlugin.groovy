@@ -30,53 +30,65 @@ import static nextflow.cli.PluginExecAware.CMD_SEP
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Execute plugin-specific commands")
-class CmdPlugin extends CmdBase {
+class CmdPlugin {
 
-    @Override
-    String getName() {
-        return 'plugin'
+    @Parameters(commandDescription = "Execute plugin-specific commands")
+    static class V1 extends CmdBase {
+
+        @Override
+        String getName() {
+            return 'plugin'
+        }
+
+        @Parameter(hidden = true)
+        List<String> args = []
+
+        @Override
+        void run() {
+            if( !args )
+                throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
+            // plugin install command
+            if( args[0] == 'install' ) {
+                if( args.size()!=2 )
+                    throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
+                CmdPlugin.install(args[1].tokenize(','))
+            }
+            // plugin run command
+            else if( args[0].contains(CMD_SEP) ) {
+                CmdPlugin.exec(args.pop(), args, launcher.options)
+            }
+
+            else {
+                throw new AbortOperationException("Invalid plugin command: ${args[0]}")
+            }
+        }
+
     }
 
-    @Parameter(hidden = true)
-    List<String> args
-
-    @Override
-    void run() {
-        if( !args )
-            throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
-        // setup plugins system
+    static void install(List<String> ids) {
         Plugins.init()
-        // check for the plugins install
-        if( args[0] == 'install' ) {
-            if( args.size()!=2 )
-                throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
-            Plugins.pull(args[1].tokenize(','))
-        }
-        // plugin run command
-        else if( args[0].contains(CMD_SEP) ) {
-            final head = args.pop()
-            final items = head.tokenize(CMD_SEP)
-            final target = items[0]
-            final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
+        Plugins.pull(ids)
+    }
 
-            // push back the command as the first item
-            Plugins.start(target)
-            final wrapper = Plugins.manager.getPlugin(target)
-            if( !wrapper )
-                throw new AbortOperationException("Cannot find target plugin: $target")
-            final plugin = wrapper.getPlugin()
-            if( plugin instanceof PluginExecAware ) {
-                final ret = plugin.exec(getLauncher(), target, cmd, args)
-                // use explicit exit to invoke the system shutdown hooks
-                System.exit(ret)
-            }
-            else
-                throw new AbortOperationException("Invalid target plugin: $target")
+    static void exec(String head, List<String> args, CliOptions launcherOptions) {
+        final items = head.tokenize(CMD_SEP)
+        final target = items[0]
+        final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
+
+        // push back the command as the first item
+        Plugins.init()
+        Plugins.start(target)
+        final wrapper = Plugins.manager.getPlugin(target)
+        if( !wrapper )
+            throw new AbortOperationException("Cannot find target plugin: $target")
+        final plugin = wrapper.getPlugin()
+        if( plugin instanceof PluginExecAware ) {
+            final ret = plugin.exec(launcherOptions, target, cmd, args)
+            // use explicit exit to invoke the system shutdown hooks
+            System.exit(ret)
         }
-        else {
-            throw new AbortOperationException("Invalid plugin command: ${args[0]}")
-        }
+        else
+            throw new AbortOperationException("Invalid target plugin: $target")
     }
 
 }

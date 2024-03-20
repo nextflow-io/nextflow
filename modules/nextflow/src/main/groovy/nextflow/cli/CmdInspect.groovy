@@ -33,58 +33,115 @@ import nextflow.util.LoggerHelper
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Inspect process settings in a pipeline project")
-class CmdInspect extends CmdBase {
+class CmdInspect {
 
-    @Override
-    String getName() {
-        return 'inspect'
+    static final public String NAME = 'inspect'
+
+    interface Options {
+        String getPipeline()
+        List<String> getArgs()
+        Map<String,String> getParams()
+
+        boolean getConcretize()
+        String getFormat()
+        boolean getIgnoreErrors()
+        String getParamsFile()
+        String getProfile()
+        String getRevision()
+        List<String> getRunConfig()
+
+        String getLauncherCli()
+        CliOptions getLauncherOptions()
     }
 
-    @Parameter(names=['-concretize'], description = "Build the container images resolved by the inspect command")
-    boolean concretize
+    @Parameters(commandDescription = "Inspect process settings in a pipeline project")
+    static class V1 extends CmdBase implements Options {
 
-    @Parameter(names=['-c','-config'], hidden = true)
-    List<String> runConfig
+        @Parameter(names=['-concretize'], description = "Build the container images resolved by the inspect command")
+        boolean concretize
 
-    @Parameter(names=['-format'], description = "Inspect output format. Can be 'json' or 'config'")
-    String format = 'json'
+        @Parameter(names=['-c','-config'], hidden = true)
+        List<String> runConfig
 
-    @Parameter(names=['-i','-ignore-errors'], description = 'Ignore errors while inspecting the pipeline')
-    boolean ignoreErrors
+        @Parameter(names=['-format'], description = "Inspect output format. Can be 'json' or 'config'")
+        String format = 'json'
 
-    @DynamicParameter(names = '--', hidden = true)
-    Map<String,String> params = new LinkedHashMap<>()
+        @Parameter(names=['-i','-ignore-errors'], description = 'Ignore errors while inspecting the pipeline')
+        boolean ignoreErrors
 
-    @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
-    String paramsFile
+        @DynamicParameter(names = '--', hidden = true)
+        Map<String,String> params = new LinkedHashMap<>()
 
-    @Parameter(names=['-profile'], description = 'Use the given configuration profile(s)')
-    String profile
+        @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
+        String paramsFile
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
-    String revision
+        @Parameter(names=['-profile'], description = 'Use the given configuration profile(s)')
+        String profile
 
-    @Parameter(description = 'Project name or repository url')
-    List<String> args
+        @Parameter(names=['-r','-revision'], description = 'Revision of the project to inspect (either a git branch, tag or commit SHA number)')
+        String revision
 
-    @Override
-    void run() {
+        @Parameter(description = 'Project name or repository url')
+        List<String> args
+
+        @Override
+        String getPipeline() {
+            args[0]
+        }
+
+        @Override
+        List<String> getArgs() {
+            args.size() > 1 ? args[1..-1] : []
+        }
+
+        @Override
+        String getLauncherCli() {
+            launcher.cliString
+        }
+
+        @Override
+        CliOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { NAME }
+
+        @Override
+        void run() {
+            final opts = new CmdRun.V1()
+            opts.launcher = launcher
+            opts.ansiLog = false
+            opts.preview = true
+            opts.args = args
+            opts.params = params
+            opts.paramsFile = paramsFile
+            opts.profile = profile
+            opts.revision = revision
+            opts.runConfig = runConfig
+
+            new CmdInspect(this).run(opts)
+        }
+
+    }
+
+    @Delegate
+    private Options options
+
+    CmdInspect(Options options) {
+        this.options = options
+    }
+
+    /* For testing purposes only */
+    CmdInspect() {}
+
+    void run(CmdRun.Options opts) {
         ContainerInspectMode.activate(true)
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command
-        final target = new CmdRun()
-        target.launcher = this.launcher
-        target.args = args
-        target.profile = this.profile
-        target.revision = this.revision
-        target.runConfig = this.runConfig
-        target.params = this.params
-        target.paramsFile = this.paramsFile
-        target.preview = true
+        final target = new CmdRun(opts)
         target.previewAction = this.&applyInspect
-        target.ansiLog = false
         // run it
         target.run()
     }

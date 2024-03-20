@@ -15,6 +15,7 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.Files
 
 import nextflow.plugin.Plugins
@@ -34,8 +35,12 @@ class CmdCloneTest extends Specification {
         given:
         def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def dir = Files.createTempDirectory('test')
-        def cmd = new CmdClone(hubUser: accessToken)
-        cmd.args = ['nextflow-io/hello', dir.toFile().toString()]
+        def options = Mock(CmdClone.Options) {
+            hubUser >> accessToken
+            pipeline >> 'nextflow-io/hello'
+            targetName >> dir.toFile().toString()
+        }
+        def cmd = new CmdClone(options)
 
         when:
         cmd.run()

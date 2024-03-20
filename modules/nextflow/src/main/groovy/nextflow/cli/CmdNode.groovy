@@ -31,29 +31,61 @@ import nextflow.util.ServiceDiscover
  */
 @Slf4j
 @CompileStatic
-@Parameters
-class CmdNode extends CmdBase {
+class CmdNode {
 
     static final public NAME = 'node'
 
-    @Override
-    final String getName() { NAME }
+    interface Options {
+        Map<String,String> getClusterOptions()
+        String getProvider()
 
-    @DynamicParameter(names ='-cluster.', description='Define cluster config options')
-    Map<String,String> clusterOptions = [:]
-
-    @Parameter(names = ['-bg'], arity = 0, description = 'Start the cluster node daemon in background')
-    void setBackground(boolean value) {
-        launcher.options.background = value
+        CliOptions getLauncherOptions()
     }
 
-    @Parameter
-    List<String> provider
+    @Parameters(commandDescription = 'Launch Nextflow in daemon mode')
+    static class V1 extends CmdBase implements Options {
 
-    @Override
+        @DynamicParameter(names ='-cluster.', description='Define cluster config options')
+        Map<String,String> clusterOptions = [:]
+
+        @Parameter(names = ['-bg'], arity = 0, description = 'Start the cluster node daemon in background')
+        void setBackground(boolean value) {
+            launcher.options.background = value
+        }
+
+        @Parameter
+        List<String> args = []
+
+        @Override
+        String getProvider() {
+            args.size() ? args[0] : null
+        }
+
+        @Override
+        CliOptions getLauncherOptions() {
+            launcher.options
+        }
+
+        @Override
+        String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdNode(this).run()
+        }
+
+    }
+
+    @Delegate
+    private Options options
+
+    CmdNode(Options options) {
+        this.options = options
+    }
+
     void run() {
         System.setProperty('nxf.node.daemon', 'true')
-        launchDaemon(provider ? provider[0] : null)
+        launchDaemon(provider)
     }
 
 
@@ -62,13 +94,13 @@ class CmdNode extends CmdBase {
      *
      * @param config The nextflow configuration map
      */
-    protected launchDaemon(String name = null) {
+    protected launchDaemon(String name) {
 
         // create the config object
         def config = new ConfigBuilder()
-                            .setOptions(launcher.options)
-                            .setCmdNode(this)
-                            .build()
+            .setOptions(launcherOptions)
+            .setCmdNode(this)
+            .build()
 
         DaemonLauncher instance
         if( name ) {

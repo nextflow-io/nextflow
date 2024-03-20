@@ -41,8 +41,7 @@ import static nextflow.cli.CmdHelper.fixEqualsOp
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print executions log and runtime info")
-class CmdLog extends CmdBase implements CacheBase {
+class CmdLog implements CacheBase {
 
     static private List<String> ALL_FIELDS
 
@@ -59,35 +58,64 @@ class CmdLog extends CmdBase implements CacheBase {
 
     static final public NAME = 'log'
 
-    @Parameter(names = ['-s'], description='Character used to separate column values')
-    String sep = '\\t'
+    interface Options {
+        String getAfter()
+        String getBefore()
+        String getBut()
+        String getFields()
+        String getFilterStr()
+        boolean getListFields()
+        boolean getQuiet()
+        String getSeparator()
+        String getTemplateStr()
+        List<String> getArgs()
+    }
 
-    @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
-    String fields
+    @Parameters(commandDescription = "Print executions log and runtime info")
+    static class V1 extends CmdBase implements Options {
 
-    @Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
-    String templateStr
+        @Parameter(names = ['-s'], description='Character used to separate column values')
+        String separator = '\\t'
 
-    @Parameter(names=['-l','-list-fields'], description = 'Show all available fields', arity = 0)
-    boolean listFields
+        @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
+        String fields
 
-    @Parameter(names=['-F','-filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
-    String filterStr
+        @Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
+        String templateStr
 
-    @Parameter(names='-after', description = 'Show log entries for runs executed after the specified one')
-    String after
+        @Parameter(names=['-l','-list-fields'], description = 'Show all available fields', arity = 0)
+        boolean listFields
 
-    @Parameter(names='-before', description = 'Show log entries for runs executed before the specified one')
-    String before
+        @Parameter(names=['-F','-filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
+        String filterStr
 
-    @Parameter(names='-but', description = 'Show log entries of all runs except the specified one')
-    String but
+        @Parameter(names='-after', description = 'Show log entries for runs executed after the specified one')
+        String after
 
-    @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
-    boolean quiet
+        @Parameter(names='-before', description = 'Show log entries for runs executed before the specified one')
+        String before
 
-    @Parameter(description = 'Run name or session id')
-    List<String> args
+        @Parameter(names='-but', description = 'Show log entries of all runs except the specified one')
+        String but
+
+        @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
+        boolean quiet
+
+        @Parameter(description = 'Run name or session id')
+        List<String> args = []
+
+        @Override
+        final String getName() { NAME }
+
+        @Override
+        void run() {
+            new CmdLog(this).run()
+        }
+
+    }
+
+    @Delegate
+    private Options options
 
     private Script filterScript
 
@@ -97,9 +125,12 @@ class CmdLog extends CmdBase implements CacheBase {
 
     private Map<HashCode,Boolean> printed = new HashMap<>()
 
-    @Override
-    final String getName() { NAME }
+    CmdLog(Options options) {
+        this.options = options
+    }
 
+    /* For testing purposes only */
+    CmdLog() {}
 
     void init() {
         CacheBase.super.init()
@@ -124,21 +155,24 @@ class CmdLog extends CmdBase implements CacheBase {
         //
         // initialize the template engine
         //
+        def templateStr0
         if( !templateStr ) {
-            if( !fields ) fields = DEFAULT_FIELDS
-            templateStr = fields.tokenize(',  \n').collect { '$'+it } .join(sep)
+            String fields0 = fields ?: DEFAULT_FIELDS
+            templateStr0 = fields0
+                .tokenize(',  \n')
+                .collect { '$'+it }
+                .join(separator)
         }
         else if( new File(templateStr).exists() ) {
-            templateStr = new File(templateStr).text
+            templateStr0 = new File(templateStr).text
         }
 
-        templateScript = new TaskTemplateEngine().createTemplate(templateStr)
+        templateScript = new TaskTemplateEngine().createTemplate(templateStr0)
     }
 
     /**
      * Implements the `log` command
      */
-    @Override
     void run() {
         Plugins.init()
         init()
@@ -159,9 +193,9 @@ class CmdLog extends CmdBase implements CacheBase {
         listIds().each { entry ->
 
             cacheFor(entry)
-                        .openForRead()
-                        .eachRecord(this.&printRecord)
-                        .close()
+                .openForRead()
+                .eachRecord(this.&printRecord)
+                .close()
 
         }
 
@@ -197,13 +231,13 @@ class CmdLog extends CmdBase implements CacheBase {
 
     private void printHistory() {
         def table = new TableBuilder(cellSeparator: '\t')
-                    .head('TIMESTAMP')
-                    .head('DURATION')
-                    .head('RUN NAME')
-                    .head('STATUS')
-                    .head('REVISION ID')
-                    .head('SESSION ID')
-                    .head('COMMAND')
+            .head('TIMESTAMP')
+            .head('DURATION')
+            .head('RUN NAME')
+            .head('STATUS')
+            .head('REVISION ID')
+            .head('SESSION ID')
+            .head('COMMAND')
 
         history.eachRow { List<String> row ->
             row[4] = row[4].size()>10 ? row[4].substring(0,10) : row[4]

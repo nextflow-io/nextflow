@@ -38,20 +38,16 @@ trait PluginAbstractExec implements PluginExecAware {
     private static Logger log = LoggerFactory.getLogger(PluginAbstractExec)
 
     private Session session
-    private Launcher launcher
 
     Session getSession() { session }
-
-    Launcher getLauncher() { launcher }
 
     abstract List<String> getCommands()
 
     @Override
-    final int exec(Launcher launcher1, String pluginId, String cmd, List<String> args) {
-        this.launcher = launcher1
+    final int exec(CliOptions options, String pluginId, String cmd, List<String> args) {
         // create the config
         final config = new ConfigBuilder()
-                .setOptions(launcher1.options)
+                .setOptions(options)
                 .setBaseDir(Paths.get('.'))
                 .build()
 

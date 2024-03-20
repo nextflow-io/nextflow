@@ -1285,13 +1285,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Disable process execution with Docker.
 
 `-without-podman`
-: Disable process execution in a Podman container.
+: Disable process execution with Podman.
 
 `-without-spack`
 : Disable process execution with Spack.
-
-`-without-wave`
-: Disable the use of Wave containers.
 
 `-w, -work-dir` (`work`)
 : Directory where intermediate result files are stored.
@@ -1513,3 +1510,28 @@ When a command line parameter includes one or more glob characters, i.e. wildcar
 nextflow run <my script> --files "*.fasta"
 ```
 :::
+
+(cli-v2)=
+
+## CLI v2
+
+:::{versionadded} 24.04.0
+:::
+
+Nextflow now has an alternative command-line interface called `nf`, which more closely follows conventions for CLI options. In particular, long options for `nf` have two dashes, i.e. `-resume` is now `--resume`.
+
+Pipeline parameters can be specified alongside CLI options as before, as long as they are named differently. If for some reason you have a conflicting param, you can use a double dash `--` to separate it from the CLI options.
+
+The `nf` command is a near drop-in replacement, by simply using double dashes for long options. The following minor changes were also introduced:
+
+- The `-deep` option was renamed to `--depth` for the `clone`, `pull`, and `run` commands
+
+- The `-without-*` options were removed from the `run` command
+
+- Pipeline positional args were removed from the `inspect` and `run` commands
+
+- Clustered short options (e.g. `-xvfShortFile` as a shorthand for `-x -v -f ShortFile`) are not supported. Each option should be specified separately and options with values should be separated by a space or `=`. The following dynamic options are affected by this change:
+  - `node -cluster.<name>=<value>` -> `node --cluster <name>=<value>`
+  - `run -e.<name>=<value>` -> `run (-e|--env) <name>=<value>`
+  - `run -executor.<name>=<value>` -> `run --executor <name>=<value>`
+  - `run -process.<name>=<value>` -> `run --process <name>=<value>`
