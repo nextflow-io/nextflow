@@ -47,7 +47,6 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
 import nextflow.fusion.FusionHelper
-import nextflow.util.Duration
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -67,7 +66,7 @@ class PublishDir {
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
 
-    private Session session = Global.session as Session
+    private static Session getSession() { Global.getSession() as Session }
 
     /**
      * The target path where create the links or copy the output files
@@ -121,7 +120,7 @@ class PublishDir {
      */
     private String storageClass
 
-    private RetryConfig retryConfig
+    private PublishRetryConfig retryConfig
 
     private PathMatcher matcher
 
@@ -223,8 +222,8 @@ class PublishDir {
         if( params.storageClass )
             result.storageClass = params.storageClass as String
 
-        if( params.retryPolicy )
-            result.retryConfig = new RetryConfig(params.retryPolicy)
+        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
+        result.retryConfig = new PublishRetryConfig(retryOpts)
 
         return result
     }
@@ -585,28 +584,6 @@ class PublishDir {
 
     protected void notifyFilePublish(Path destination, Path source=null) {
         session.notifyFilePublish(destination, source)
-    }
-
-    static class RetryConfig {
-        Duration delay = Duration.of('350ms')
-        Duration maxDelay = Duration.of('90s')
-        int maxAttempts = 5
-        double jitter = 0.25
-
-        RetryConfig() {
-            this(Collections.emptyMap())
-        }
-
-        RetryConfig(Map config) {
-            if( config.delay )
-                delay = config.delay as Duration
-            if( config.maxDelay )
-                maxDelay = config.maxDelay as Duration
-            if( config.maxAttempts )
-                maxAttempts = config.maxAttempts as int
-            if( config.jitter )
-                jitter = config.jitter as double
-        }
     }
 
 }
