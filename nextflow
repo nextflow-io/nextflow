@@ -288,13 +288,12 @@ if [ -f "$JAVA_KEY" ]; then
 else
   JAVA_VER="$("$JAVA_CMD" $NXF_OPTS -version 2>&1)"
   if [ $? -ne 0 ]; then
-      getstarted_web="https://www.nextflow.io/docs/latest/getstarted.html"
       echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
       echo_red "NOTE: Nextflow needs a Java virtual machine to run. To this end:
  - make sure a \`java\` command can be found; or
  - manually define the variables JAVA_HOME to point to an existing installation; or
  - install a Java virtual machine, for instance through https://sdkman.io (read the docs);
- - for more details please refer to the Nextflow Get Started page at ${getstarted_web}."
+ - for more details please refer to the Nextflow Get Started page at http://docs.nextflow.io."
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
       exit 1
   fi
