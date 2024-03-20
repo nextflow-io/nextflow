@@ -85,7 +85,7 @@ class WaveClient {
 
     private static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
 
-    private static final String DEFAULT_SPACK_ARCH = 'x86_64'
+    private static final String DEFAULT_SPACK_TARGET = 'x86_64_v3'
 
     private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
@@ -188,6 +188,7 @@ class WaveClient {
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
                 spackFile: assets.spackFileEncoded(),
+                spackTarget: assets.spackTarget,
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
@@ -400,9 +401,9 @@ class WaveClient {
     WaveAssets resolveAssets(TaskRun task, String containerImage, boolean singularity) {
         // get the bundle
         final bundle = task.getModuleBundle()
-        // get the Spack architecture
+        // get platform and target architecture
         final arch = task.config.getArchitecture()
-        final spackArch = arch ? arch.spackArch : DEFAULT_SPACK_ARCH
+        final spackTarget = arch ? arch.spackTarget : DEFAULT_SPACK_TARGET
         final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
         def attrs = new HashMap<String,String>()
@@ -424,10 +425,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackTarget)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackTarget) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -521,6 +522,7 @@ class WaveClient {
                     containerScript,
                     condaFile,
                     spackFile,
+                    spackFile ? spackTarget : null,
                     projectRes,
                     singularity)
     }

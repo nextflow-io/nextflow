@@ -82,6 +82,11 @@ class SubmitContainerTokenRequest {
     String spackFile
 
     /**
+     * Target architecture for Spack builds
+     */
+    String spackTarget
+
+    /**
      * The request container platform
      */
     String containerPlatform
