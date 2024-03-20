@@ -1,5 +1,5 @@
 
-# Nextflow's documentation!
+# Nextflow reference documentation
 
 [![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)](https://github.com/nextflow-io/nextflow/actions/workflows/build.yml?query=branch%3Amaster+event%3Apush)
 [![Nextflow version](https://img.shields.io/github/release/nextflow-io/nextflow.svg?colorB=58bd9f&style=popout)](https://github.com/nextflow-io/nextflow/releases/latest)
@@ -10,23 +10,18 @@
 
 Nextflow is a workflow system for creating scalable, portable, and reproducible workflows.
 
-## Rationale
-
-The rise of big data has made it increasingly necessary to be able to analyze and perform experiments on large datasets in a portable and reproducible manner.
-
-Parallelization and distributed computing are the best ways to tackle this challenge, but the tools commonly available to computational scientists often lack good support for these techniques, or they provide a model that fits poorly with the needs of computational scientists and often require knowledge of complex tools and APIs.
-
-The Nextflow language is inspired by [the Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy), in which many simple command line tools can be chained together into increasingly complex tasks. Similarly, a Nextflow script consists of composing many simple processes into increasingly complex pipelines. Each process executes a given tool or scripting language, and by specifying the process inputs and outputs, Nextflow coordinates the execution of tasks for you.
-
-The Nextflow runtime integrates with many popular execution platforms (HPC schedulers, cloud providers) and software tools (Git, Docker, Conda), allowing you to fully describe a computational pipeline with all of its dependencies and run it in nearly any environment -- write once, run anywhere.
+- Get an {ref}`overview <overview-page>` of Nextflow and its key concepts.
+- Get started with Nextflow by {ref}`installing <install-page>` it and running {ref}`your first script <your-first-script>`.
+- Check out [this blog post](https://www.nextflow.io/blog/2023/learn-nextflow-in-2023.html) for even more resources on how to learn Nextflow.
 
 ```{toctree}
 :hidden:
 :caption: Introduction
 :maxdepth: 1
 
-getstarted
-basic
+overview
+install
+your-first-script
 ```
 
 ```{toctree}

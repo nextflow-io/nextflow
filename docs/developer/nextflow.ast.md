@@ -23,7 +23,7 @@ You can see the effect of Nextflow's AST transforms by using the Nextflow consol
 3. Execute the script
 4. Go to **Script** > **Inspect AST**
 
-Here is the example from {ref}`getstarted-first`:
+Here is the example from {ref}`your-first-script`:
 
 ```groovy
 params.str = 'Hello world!'
