@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.revisionDelim
+import static nextflow.scm.AssetManager.REVISION_DELIM
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -76,7 +76,7 @@ class CmdPull extends CmdBase implements HubOptions {
         Plugins.init()
         
         list.each {
-            log.info "Checking $it${revision ? revisionDelim + revision : ''} ..."
+            log.info "Checking $it${revision ? REVISION_DELIM + revision : ''} ..."
             def manager = new AssetManager(it, revision, this)
 
             def result = manager.download(deep)

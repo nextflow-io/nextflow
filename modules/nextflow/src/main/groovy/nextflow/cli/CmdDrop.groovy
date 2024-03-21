@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.revisionDelim
+import static nextflow.scm.AssetManager.REVISION_DELIM
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -61,7 +61,7 @@ class CmdDrop extends CmdBase {
         if ( allrevisions ) {
             def referenceManager = new AssetManager(args[0])
             referenceManager.listRevisions().each {
-                dropList << new AssetManager(it.tokenize(revisionDelim)[0], it.tokenize(revisionDelim)[1])
+                dropList << new AssetManager(it.tokenize(REVISION_DELIM)[0], it.tokenize(REVISION_DELIM)[1])
             }
         } else {
             dropList << new AssetManager(args[0], revision)
@@ -73,13 +73,13 @@ class CmdDrop extends CmdBase {
 
         dropList.each { manager ->
             if( !manager.localPath.exists() ) {
-                throw new AbortOperationException("No match found for: ${manager.project}${manager.revision ? revisionDelim + manager.revision : ''}")
+                throw new AbortOperationException("No match found for: ${manager.project}${manager.revision ? REVISION_DELIM + manager.revision : ''}")
             }
 
             if( this.force || manager.isClean() ) {
                 manager.close()
                 if( !manager.localPath.deleteDir() )
-                    throw new AbortOperationException("Unable to delete project `${manager.project}${manager.revision ? revisionDelim + manager.revision : ''}` -- Check access permissions for path: ${manager.localPath}")
+                    throw new AbortOperationException("Unable to delete project `${manager.project}${manager.revision ? REVISION_DELIM + manager.revision : ''}` -- Check access permissions for path: ${manager.localPath}")
                 return
             }
 
