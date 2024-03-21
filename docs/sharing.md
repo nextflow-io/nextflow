@@ -58,6 +58,15 @@ nextflow run nextflow-io/hello -r v1.1
 
 It will execute two different project revisions corresponding to the Git tag/branch having that names.
 
+:::{versionadded} 24.03.0-edge
+:::
+
+Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time.
+
+:::{warning}
+If you really care about reproducibility of your pipelines, you should explicitly refer to them by tag or commit ID, rather than my branch. This is because the same branch will point to different underlying commits over time, as pipeline development goes on. This caveat is particularly relevant in a scenario where multiple people manage and share the same local collection of pipelines.
+:::
+
 ## Commands to manage projects
 
 The following commands allows you to perform some basic operations that can be used to manage your projects.
