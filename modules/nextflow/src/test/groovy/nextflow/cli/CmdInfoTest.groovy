@@ -67,12 +67,11 @@ class CmdInfoTest extends Specification {
 
         then:
         screen.contains(" project name: nextflow-io/hello")
-        screen.contains(" revision    : master")
         screen.contains(" repository  : https://github.com/nextflow-io/hello")
         screen.contains(" local path  : $tempDir/nextflow-io/hello" )
         screen.contains(" main script : main.nf")
         screen.contains(" revisions   : ")
-        screen.contains(" * P master (default)")
+        screen.contains(" P master (default)")
     }
 
     def 'should print json info' () {
@@ -88,12 +87,10 @@ class CmdInfoTest extends Specification {
 
         then:
         json.projectName == "nextflow-io/hello"
-        json.revision == "master"
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == 'master'
-        json.revisions.current == 'master'
         json.revisions.master == 'master'
         json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
@@ -117,12 +114,10 @@ class CmdInfoTest extends Specification {
 
         then:
         json.projectName == "nextflow-io/hello"
-        json.revision == "master"
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == 'master'
-        json.revisions.current == 'master'
         json.revisions.master == 'master'
         json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
