@@ -503,10 +503,11 @@ class AssetManager {
     }
 
 
-    String getBaseName() {
+    String getBaseNameWithRevision() {
         def result = project.tokenize('/')
         if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name: $project")
-        return result.size()==1 ? result[0] : result[1]
+        result = ( result.size()==1 ? result[0] : result[1] )
+        return result + ( revision ? REVISION_DELIM + revision : '' )
     }
 
     boolean isLocal() {
