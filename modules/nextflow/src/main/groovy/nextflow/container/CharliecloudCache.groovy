@@ -188,20 +188,6 @@ class CharliecloudCache {
                 Thread.sleep(30000)
             }
         }   
-        /*
-        Broken mutex approach below
-            def cacheDir = getCacheDir()
-            final file = new File("${cacheDir.parent}/.ch-pulling.lock")
-            final wait = "Another Nextflow instance is pulling the image $imageUrl with Charliecloud -- please wait until the download completes"
-            final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
-            final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
-            try {
-            mutex .lock { downloadCharliecloudImage0(imageUrl, localPath) }
-            }
-            finally {
-            file.delete()
-            }
-            */
         return localPath
 
     }
