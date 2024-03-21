@@ -326,6 +326,8 @@ class AssetManager {
 
     String getRevision() { revision }
 
+    String getProjectWithRevision() { project + ( revision ? REVISION_DELIM + revision : '' ) }
+
     String getHub() { hub }
 
     @PackageScope

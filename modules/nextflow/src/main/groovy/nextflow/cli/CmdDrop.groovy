@@ -73,13 +73,13 @@ class CmdDrop extends CmdBase {
 
         dropList.each { manager ->
             if( !manager.localPath.exists() ) {
-                throw new AbortOperationException("No match found for: ${manager.project}${manager.revision ? REVISION_DELIM + manager.revision : ''}")
+                throw new AbortOperationException("No match found for: ${manager.getProjectWithRevision()}")
             }
 
             if( this.force || manager.isClean() ) {
                 manager.close()
                 if( !manager.localPath.deleteDir() )
-                    throw new AbortOperationException("Unable to delete project `${manager.project}${manager.revision ? REVISION_DELIM + manager.revision : ''}` -- Check access permissions for path: ${manager.localPath}")
+                    throw new AbortOperationException("Unable to delete project `${manager.getProjectWithRevision()}` -- Check access permissions for path: ${manager.localPath}")
                 return
             }
 
