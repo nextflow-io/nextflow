@@ -73,8 +73,6 @@ class ConfigBuilder {
 
     List<Path> parsedConfigFiles = []
 
-    List<String> parsedProfileNames
-
     boolean showClosures
 
     boolean showMissingVariables
@@ -365,7 +363,6 @@ class ConfigBuilder {
 
             // merge of the provided configuration files
             for( def entry : configEntries ) {
-
                 try {
                     merge0(result, slurper, entry)
                 }
@@ -373,16 +370,17 @@ class ConfigBuilder {
                     throw e
                 }
                 catch( Exception e ) {
-                    def message = (entry instanceof Path ? "Unable to parse config file: '$entry'" : "Unable to parse configuration ")
+                    final message = entry instanceof Path
+                        ? "Unable to parse config file: '$entry'".toString()
+                        : "Unable to parse configuration "
                     throw new ConfigParseException(message,e)
                 }
             }
 
-            this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
-                checkValidProfile(slurper.getConditionalBlockNames())
+                final profileNames = result.profiles.keySet() as List<String>
+                checkValidProfile(profileNames)
             }
-
         }
 
         // guarantee top scopes
@@ -405,19 +403,16 @@ class ConfigBuilder {
         if( !entry )
             return
 
-        // select the profile
-        if( showAllProfiles ) {
-            def config = parse0(slurper,entry)
-            validate(config,entry)
-            result.merge(config)
-            return
+        def config = parse0(slurper,entry)
+
+        if( !showAllProfiles ) {
+            log.debug "Applying config profiles: `${profile}`"
+            def allNames = profile.tokenize(',')
+            for( def profile : allNames )
+                config.merge(config.profiles[profile])
+            config.remove('profiles')
         }
 
-        log.debug "Applying config profile: `${profile}`"
-        def allNames = profile.tokenize(',')
-        slurper.registerConditionalBlock('profiles', allNames)
-
-        def config = parse0(slurper,entry)
         validate(config,entry)
         result.merge(config)
     }

@@ -34,9 +34,8 @@ import groovy.util.logging.Slf4j
  * project hosted in a source code repository
  *
  * @see nextflow.config.ConfigParser
- * @see nextflow.config.ConfigBase
+ * @see nextflow.config.ConfigDsl
  *
- * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @EqualsAndHashCode

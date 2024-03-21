@@ -21,21 +21,28 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 
 /**
- * Placeholder class that replacing closure definitions in the nextflow configuration
- * file in order to print the closure content itself
+ * Placeholder class that contains a closure and its string
+ * representation, which can be unwrapped to one or the other
+ * based on runtime conditions.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-@EqualsAndHashCode
 @CompileStatic
+@EqualsAndHashCode
 @PackageScope
-class ConfigClosurePlaceholder {
+class ClosureWithSource {
+
+    private Closure target
 
     private String str
 
-    ConfigClosurePlaceholder(String str) {
+    ClosureWithSource(Closure target, String str) {
+        this.target = target
         this.str = str
     }
 
-    @Override String toString() { str }
+    Closure getTarget() { target }
+
+    @Override
+    String toString() { str }
 }
