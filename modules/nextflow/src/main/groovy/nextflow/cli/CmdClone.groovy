@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.REVISION_DELIM
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -55,7 +53,6 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        String revisionSuffix = revision ? REVISION_DELIM + revision : ''
         final manager = new AssetManager(pipeline, revision, this)
 
         // the target directory is the second parameter
@@ -72,9 +69,9 @@ class CmdClone extends CmdBase implements HubOptions {
         }
 
         manager.checkValidRemoteRepo()
-        print "Cloning ${manager.project}${revisionSuffix} ..."
+        print "Cloning ${manager.getProjectWithRevision()} ..."
         manager.clone(target, deep)
         print "\r"
-        println "${manager.project}${revisionSuffix} cloned to: $target"
+        println "${manager.getProjectWithRevision()} cloned to: $target"
     }
 }
