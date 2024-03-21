@@ -52,9 +52,6 @@ class CmdInfo extends CmdBase {
     @Parameter(description = 'project name')
     List<String> args
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project (either a git branch, tag or commit SHA number)')
-    String revision
-
     @Parameter(names='-d',description = 'Show detailed information', arity = 0)
     boolean detailed
 
@@ -80,14 +77,14 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        def manager = new AssetManager(args[0], revision)
+        def manager = new AssetManager(args[0], null)
         if( !manager.isLocal() ) {
-            // if no revision specified and default branch not found locally, use first one from list of local pulls
-            if ( manager.listRevisions() && !revision ) {
+            // if default branch not found locally, use first one from list of local pulls
+            if ( manager.listRevisions() ) {
                 manager = new AssetManager(args[0], manager.getPulledRevisions()[0])
             }
             else {
-                throw new AbortOperationException("Unknown project `${args[0]}${revision ? REVISION_DELIM + revision : ''}`")
+                throw new AbortOperationException("Unknown project `${args[0]}`")
             }
         }
 
@@ -111,11 +108,9 @@ class CmdInfo extends CmdBase {
     protected printText(AssetManager manager, int level) {
         final manifest = manager.getManifest()
 
-        def printedRevision = manager.revision ?: manager.getDefaultBranch()
         out.println " project name: ${manager.project}"
-        out.println " revision    : ${printedRevision}"
         out.println " repository  : ${manager.repositoryUrl}"
-        out.println " local path  : ${manager.localPath}"
+        out.println " local path  : ${manager.localPath.toString().tokenize(REVISION_DELIM)[0]}"
         out.println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
             out.println " home page   : ${manager.homePage}"
@@ -151,9 +146,8 @@ class CmdInfo extends CmdBase {
     protected Map createMap(AssetManager manager) {
         def result = [:]
         result.projectName = manager.project
-        result.revision = manager.revision ?: manager.getDefaultBranch()
         result.repository = manager.repositoryUrl
-        result.localPath = manager.localPath?.toString()
+        result.localPath = manager.localPath?.toString().tokenize(REVISION_DELIM)[0]
         result.manifest = manager.manifest.toMap()
         result.revisions = manager.getBranchesAndTags(checkForUpdates)
         return result
