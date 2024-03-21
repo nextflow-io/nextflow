@@ -807,8 +807,7 @@ class AssetManager {
      *         v1.1 (t)
      * </pre>
      *
-     * The star character on the left highlights the selected revision,
-     *  the character {@code P} on the left indicates the revision is pulled locally,
+     * The character {@code P} on the left indicates the revision is pulled locally,
      *  the string {@code (default)} ticks that it is the default working branch,
      *  while the string {@code (t)} shows that the revision is a git tag (instead of a branch)
      */
@@ -847,7 +846,6 @@ class AssetManager {
 
     Map getBranchesAndTags(boolean checkForUpdates) {
         final result = [:]
-        final current = getCurrentRevision()
         final master = getDefaultBranch()
 
         final branches = []
@@ -864,7 +862,6 @@ class AssetManager {
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .each { Ref it -> tags << refToMap(it,remote) }
 
-        result.current = current    // current branch name
         result.master = master      // master branch name
         result.pulled = getPulledRevisions() // list of pulled revisions
         result.branches = branches  // collection of branches
@@ -905,8 +902,7 @@ class AssetManager {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        result << (name == current ? '*' : ' ')
-        result << (name in pulled ? ' P' : '  ')
+        result << (name in pulled ? 'P' : ' ')
 
         if( level ) {
             def peel = git.getRepository().peel(ref)
