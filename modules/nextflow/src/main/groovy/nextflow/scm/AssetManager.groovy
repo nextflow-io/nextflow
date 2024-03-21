@@ -62,7 +62,7 @@ class AssetManager {
     @PackageScope
     static File root = DEFAULT_ROOT
 
-    static public final String revisionDelim = ':'
+    static public final String REVISION_DELIM = ':'
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
@@ -206,7 +206,7 @@ class AssetManager {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
-        new File(root, project + (revision ? revisionDelim + revision : ''))
+        new File(root, project + (revision ? REVISION_DELIM + revision : ''))
     }
 
     /**
@@ -572,7 +572,7 @@ class AssetManager {
             return result
 
         list().each {
-            if( it.tokenize(revisionDelim)[0] == projectName ) {
+            if( it.tokenize(REVISION_DELIM)[0] == projectName ) {
                 result << it
             }
         }
@@ -580,19 +580,28 @@ class AssetManager {
         return result
     }
 
-    // updated for new localPath schema (see localPath declaration at top of this class file)
+    // Updated for new localPath schema (see localPath declaration at top of this class file)
     static protected def find( String name, String revision = null ) {
         def exact = []
         def partial = []
 
         list().each {
             def items = it.split('/')
-            def itemsRev = items[1].tokenize(':')
+            /**
+             * itemsRev[0] is the name of each list'ed project
+             * itemsRev[1] is the revision
+             */
+            def itemsRev = items[1].tokenize(REVISION_DELIM)
+            // Check on matching revision: either null or same revision string
             if( (!revision && !itemsRev[1]) || (revision && itemsRev[1] == revision) ) {
+                // Exact name match
                 if( itemsRev[0] == name )
-                    exact << it.tokenize(':')[0]
+                    // Return item without revision
+                    exact << it.tokenize(REVISION_DELIM)[0]
+                // Partial name match
                 else if( itemsRev[0].startsWith(name ) )
-                    partial << it.tokenize(':')[0]
+                    // Return item without revision
+                    partial << it.tokenize(REVISION_DELIM)[0]
             }
         }
 
@@ -757,7 +766,7 @@ class AssetManager {
      */
     List<String> getPulledRevisions() {
         return listRevisions().collect{
-            it -> String y = it.tokenize(revisionDelim)[1]
+            it -> String y = it.tokenize(REVISION_DELIM)[1]
             it = ( y != null ? y : getDefaultBranch() )
         }
     }

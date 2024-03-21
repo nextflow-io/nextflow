@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.revisionDelim
+import static nextflow.scm.AssetManager.REVISION_DELIM
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
@@ -55,7 +55,7 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        String revisionSuffix = revision ? revisionDelim + revision : ''
+        String revisionSuffix = revision ? REVISION_DELIM + revision : ''
         final manager = new AssetManager(pipeline, revision, this)
 
         // the target directory is the second parameter

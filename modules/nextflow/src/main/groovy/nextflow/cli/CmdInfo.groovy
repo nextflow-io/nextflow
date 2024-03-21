@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.revisionDelim
+import static nextflow.scm.AssetManager.REVISION_DELIM
 
 import java.lang.management.ManagementFactory
 import java.nio.file.spi.FileSystemProvider
@@ -87,7 +87,7 @@ class CmdInfo extends CmdBase {
                 manager = new AssetManager(args[0], manager.getPulledRevisions()[0])
             }
             else {
-                throw new AbortOperationException("Unknown project `${args[0]}${revision ? revisionDelim + revision : ''}`")
+                throw new AbortOperationException("Unknown project `${args[0]}${revision ? REVISION_DELIM + revision : ''}`")
             }
         }
 

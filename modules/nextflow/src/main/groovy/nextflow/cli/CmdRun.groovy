@@ -18,7 +18,7 @@ package nextflow.cli
 
 
 import static org.fusesource.jansi.Ansi.*
-import static nextflow.scm.AssetManager.revisionDelim
+import static nextflow.scm.AssetManager.REVISION_DELIM
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -580,8 +580,8 @@ class CmdRun extends CmdBase implements HubOptions {
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
             if( offline )
-                throw new AbortOperationException("Unknown project `$repo${revision ? revisionDelim + revision : ''}` -- NOTE: automatic download from remote repositories is disabled")
-            log.info "Pulling $repo${revision ? revisionDelim + revision : ''} ..."
+                throw new AbortOperationException("Unknown project `$repo${revision ? REVISION_DELIM + revision : ''}` -- NOTE: automatic download from remote repositories is disabled")
+            log.info "Pulling $repo${revision ? REVISION_DELIM + revision : ''} ..."
             def result = manager.download(deep)
             if( result )
                 log.info " $result"
@@ -600,7 +600,7 @@ class CmdRun extends CmdBase implements HubOptions {
             throw e
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Unknown error accessing project `$repo${revision ? revisionDelim + revision : ''}` -- Repository may be corrupted: ${manager.localPath}", e)
+            throw new AbortOperationException("Unknown error accessing project `$repo${revision ? REVISION_DELIM + revision : ''}` -- Repository may be corrupted: ${manager.localPath}", e)
         }
 
     }
