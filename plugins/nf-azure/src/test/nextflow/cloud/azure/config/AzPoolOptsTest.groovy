@@ -69,7 +69,7 @@ class AzPoolOptsTest extends Specification {
             userName: 'some-user',
             password: 'some-pwd',
             virtualNetwork: 'some-vnet',
-            lowPriority: true
+            lowPriority: true,
             startTask: 'echo hello-world'
         ])
         then:
