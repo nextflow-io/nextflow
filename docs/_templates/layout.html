@@ -1,5 +1,12 @@
 {% extends "!layout.html" %}
 
+{% block sidebartitle %}
+    {{ super() }}
+    <div class="sidebar_version">
+        Version {{ release }} {{ release_checked_out }}
+    </div>
+{% endblock %}
+
 {% block navigation %}
     {{ super() }}
     <div class="nav-footer-logo">
