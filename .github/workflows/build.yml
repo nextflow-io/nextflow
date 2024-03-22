@@ -39,9 +39,17 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v43
         with:
           files_ignore: docs
+
+      - name: List all changed files
+        env:
+            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+            for file in ${ALL_CHANGED_FILES}; do
+                echo "$file was changed"
+            done
 
       - name: Setup env
         if: steps.changed-files.outputs.any_changed == 'true'
@@ -71,7 +79,7 @@ jobs:
             # configure test env
             echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
             export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
-            # run tests  
+            # run tests
             make test
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
