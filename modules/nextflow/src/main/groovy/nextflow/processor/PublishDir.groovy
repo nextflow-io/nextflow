@@ -66,7 +66,7 @@ class PublishDir {
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
 
-    private static Session getSession() { Global.getSession() as Session }
+    private Session session = Global.session as Session
 
     /**
      * The target path where create the links or copy the output files
@@ -222,14 +222,14 @@ class PublishDir {
         if( params.storageClass )
             result.storageClass = params.storageClass as String
 
-        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
-        result.retryConfig = new PublishRetryConfig(retryOpts)
-
         return result
     }
 
     protected void apply0(Set<Path> files) {
         assert path
+
+        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
+        this.retryConfig = new PublishRetryConfig(retryOpts)
 
         createPublishDir()
         validatePublishMode()
@@ -370,26 +370,7 @@ class PublishDir {
 
     protected void safeProcessFile(Path source, Path target) {
         try {
-            final cond = new Predicate<? extends Throwable>() {
-                @Override
-                boolean test(Throwable t) { return true }
-            }
-            final listener = new EventListener<ExecutionAttemptedEvent>() {
-                @Override
-                void accept(ExecutionAttemptedEvent event) throws Throwable {
-                    log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}"
-                }
-            }
-            final retryPolicy = RetryPolicy.builder()
-                .handleIf(cond)
-                .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
-                .withMaxAttempts(retryConfig.maxAttempts)
-                .withJitter(retryConfig.jitter)
-                .onRetry(listener)
-                .build()
-            Failsafe
-                .with( retryPolicy )
-                .get( ()-> processFile(source, target) )
+            retryableProcessFile(source, target)
         }
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
@@ -397,6 +378,29 @@ class PublishDir {
                 session?.abort(e)
             }
         }
+    }
+
+    protected void retryableProcessFile(Path source, Path target) {
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) { return true }
+        }
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}"
+            }
+        }
+        final retryPolicy = RetryPolicy.builder()
+            .handleIf(cond)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
+            .onRetry(listener)
+            .build()
+        Failsafe
+            .with( retryPolicy )
+            .get( ()-> processFile(source, target) )
     }
 
     protected void processFile( Path source, Path destination ) {
