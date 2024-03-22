@@ -37,6 +37,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.config.scope.nextflow.PublishDirOpts
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
@@ -178,41 +179,55 @@ class PublishDir {
      * @return An instance of {@link PublishDir} class
      */
     @CompileDynamic
-    static PublishDir create( Map params ) {
+    static PublishDir create( Map params, PublishDirOpts defaults=PublishDirOpts.EMPTY ) {
         assert params
 
         def result = new PublishDir()
         if( params.path )
             result.path = params.path
 
-        if( params.mode )
-            result.mode = params.mode
+        final mode = params.mode as String ?: defaults.mode
+        if( mode )
+            result.setMode(mode as String)
 
-        if( params.pattern )
-            result.pattern = params.pattern
+        final pattern = params.pattern ?: defaults.pattern
+        if( pattern )
+            result.pattern = pattern
 
-        if( params.overwrite != null )
-            result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
+        final overwrite = params.overwrite!=null
+            ? Boolean.parseBoolean(params.overwrite.toString())
+            : defaults.overwrite
+        if( overwrite != null )
+            result.overwrite = overwrite
 
         if( params.saveAs )
             result.saveAs = (Closure) params.saveAs
 
-        if( params.enabled != null )
-            result.enabled = Boolean.parseBoolean(params.enabled.toString())
+        final enabled  = params.enabled!=null
+            ? Boolean.parseBoolean(params.enabled.toString())
+            : defaults.enabled
+        if( enabled != null )
+            result.enabled = enabled
 
-        if( params.failOnError != null )
-            result.failOnError = Boolean.parseBoolean(params.failOnError.toString())
+        final failOnError = params.failOnError!=null
+            ? Boolean.parseBoolean(params.failOnError.toString())
+            : defaults.failOnError
+        if( failOnError != null )
+            result.failOnError = failOnError
 
-        if( params.tags != null )
-            result.tags = params.tags
+        final tags = params.tags ?: defaults.tags
+        if( tags != null )
+            result.tags = tags
 
-        if( params.contentType instanceof Boolean )
-            result.contentType = params.contentType
-        else if( params.contentType )
-            result.contentType = params.contentType as String
+        final contentType = params.contentType!=null ? params.contentType : defaults.contentType
+        if( contentType instanceof Boolean )
+            result.contentType = contentType
+        else if( contentType )
+            result.contentType = contentType as String
 
-        if( params.storageClass )
-            result.storageClass = params.storageClass as String
+        final storageClass = params.storageClass as String ?: defaults.storageClass
+        if( storageClass )
+            result.storageClass = storageClass
 
         return result
     }
