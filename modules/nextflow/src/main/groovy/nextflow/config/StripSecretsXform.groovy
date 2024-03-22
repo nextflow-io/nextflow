@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Sage-Bionetworks
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,23 @@
  *
  */
 
-package nextflow.secret
+package nextflow.config
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Model a context to access secret values in nextflow config files
- *
+ * AST transformation that replaces properties prefixed with `secrets.`
+ * with a static string
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@CompileStatic
-class SecretsContext {
-
-    SecretsContext() {}
-
-    @Override
-    Object getProperty(String name) {
-        if( metaClass.hasProperty(name) )
-            return metaClass.getProperty(this,name)
-        else {
-            return new SecretHolder(name)
-        }
-    }
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [StripSecretsXformImpl])
+@interface StripSecretsXform {
 }

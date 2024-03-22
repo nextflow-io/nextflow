@@ -24,7 +24,7 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.secret.SecretsLoader
-import nextflow.secret.SecretsProvider
+
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -80,7 +80,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.owner = this
         session = binding.getSession()
         processFactory = session.newProcessFactory(this)
-        final secretsProvider = SecretsLoader.isEnabled() ? SecretsLoader.instance.load() : null
 
         binding.setVariable( 'baseDir', session.baseDir )
         binding.setVariable( 'projectDir', session.baseDir )
@@ -89,18 +88,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'nextflow', NextflowMeta.instance )
         binding.setVariable( 'launchDir', Paths.get('./').toRealPath() )
         binding.setVariable( 'moduleDir', meta.moduleDir )
-        binding.setVariable( 'secrets', makeSecretsContext(secretsProvider) )
-    }
-
-    protected makeSecretsContext(SecretsProvider provider) {
-
-        return new Object() {
-            def getProperty(String name) {
-                if( !provider )
-                    throw new AbortOperationException("Unable to resolve secrets.$name - no secret provider is available")
-                provider.getSecret(name)?.value
-            }
-        }
+        binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
     protected process( String name, Closure<BodyDef> body ) {

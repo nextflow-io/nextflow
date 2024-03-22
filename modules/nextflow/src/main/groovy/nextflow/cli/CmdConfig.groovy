@@ -89,6 +89,7 @@ class CmdConfig extends CmdBase {
 
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .showMissingVariables(true)
                 .setOptions(launcher.options)
                 .setBaseDir(base)

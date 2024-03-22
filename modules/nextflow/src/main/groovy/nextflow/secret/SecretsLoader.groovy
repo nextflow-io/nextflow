@@ -17,11 +17,11 @@
 
 package nextflow.secret
 
-
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+
 /**
  * Implements dynamic secret providing loading strategy
  *
@@ -62,4 +62,21 @@ class SecretsLoader {
     void reset() {
         provider=null
     }
+
+    static protected makeSecretsContext(SecretsProvider provider) {
+
+        return new Object() {
+            def getProperty(String name) {
+                if( !provider )
+                    throw new AbortOperationException("Unable to resolve secrets.$name - no secret provider is available")
+                provider.getSecret(name)?.value
+            }
+        }
+    }
+
+    static Object secretContext() {
+        final provider = isEnabled() ? getInstance().load() : new NullProvider()
+        return makeSecretsContext(provider)
+    }
+    
 }
