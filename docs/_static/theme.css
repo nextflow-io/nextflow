@@ -234,3 +234,13 @@ div.deprecated p:first-child::before     { color: #C3514D; }
 .sidebar_version samp {
     font-size: 0.6rem;
 }
+.sidebar_version select {
+    background-color: #0DC09D;
+    box-shadow: none;
+    color: #fff;
+    border: 1px solid #FFFFFF66;
+    border-radius: 1rem;
+    padding: 0.15rem 0.2rem;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+}
