@@ -376,14 +376,7 @@ class CmdConfigTest extends Specification {
         and:
         def secrets  = folder.resolve('store.json')
         and:
-        secrets.text = """
-            [
-              {
-                "name": "MISTERY",
-                "value": "my-secret-queue"
-              }
-            ]
-            """
+        secrets.text = "[ ]"
         FilesEx.setPermissions(secrets, 'rw-------')
         SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
 
