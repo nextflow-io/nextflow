@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -38,7 +39,6 @@ import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -79,8 +79,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
-    @Deprecated final static private String WORKFLOW_GET = 'get'
-    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
@@ -149,63 +147,6 @@ class NextflowDSLImpl implements ASTTransformation {
                     functionNames.add(node.name)
             }
             super.visitMethod(node)
-        }
-
-        protected Statement makeSetProcessNamesStm() {
-            final names = new ListExpression()
-            for( String it: processNames ) {
-                names.addExpression(new ConstantExpression(it.toString()))
-            }
-
-            // the method list argument
-            final args = new ArgumentListExpression()
-            args.addExpression(names)
-
-            // some magic code
-            // this generates the invocation of the method:
-            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
-            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
-            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
-            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
-            final call = new MethodCallExpression( meta, 'setDsl1ProcessNames', args)
-            final stm = new ExpressionStatement(call)
-            return stm
-        }
-
-        /**
-         * Add to constructor a method call to inject parsed metadata.
-         * Only needed by DSL1.
-         *
-         * @param node The node representing the class to be invoked
-         */
-        protected void injectMetadata(ClassNode node) {
-            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
-                def code = constructor.getCode()
-                if( code instanceof BlockStatement ) {
-                    code.addStatement(makeSetProcessNamesStm())
-                }
-                else if( code instanceof ExpressionStatement ) {
-                    def expr = code
-                    def block = new BlockStatement()
-                    block.addStatement(expr)
-                    block.addStatement(makeSetProcessNamesStm())
-                    constructor.setCode(block)
-                }
-                else
-                    throw new IllegalStateException("Invalid constructor expression: $code")
-            }
-        }
-
-        /**
-         * Only needed by DSL1 to inject process names declared in the script
-         *
-         * @param node The node representing the class to be invoked
-         */
-        @Override
-        protected void visitObjectInitializerStatements(ClassNode node) {
-            if( node.getSuperClass().getName() == BaseScript.getName() )
-                injectMetadata(node)
-            super.visitObjectInitializerStatements(node)
         }
 
         @Override
@@ -508,12 +449,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 visited[context] = true
 
                 switch (context) {
-                    case WORKFLOW_GET:
-                        syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
-
-                    case WORKFLOW_PUBLISH:
-                        syntaxError(stm, "Workflow 'publish' is not supported anymore use process 'publishDir' instead")
-
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
@@ -981,15 +916,16 @@ class NextflowDSLImpl implements ASTTransformation {
 
         /**
          * Transform a map entry `emit: something` into `emit: 'something'
+         * and `topic: something` into `topic: 'something'
          * (ie. as a constant) in a map expression passed as argument to
          * a method call. This allow the syntax
          *
          *   output:
-         *   path 'foo', emit: bar
+         *   path 'foo', emit: bar, topic: baz
          *
          * @param call
          */
-        protected void fixOutEmitOption(MethodCallExpression call) {
+        protected void fixOutEmitAndTopicOptions(MethodCallExpression call) {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
             if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
@@ -1000,6 +936,9 @@ class NextflowDSLImpl implements ASTTransformation {
                 final key = isConstX(entry.keyExpression)
                 final val = isVariableX(entry.valueExpression)
                 if( key?.text == 'emit' && val ) {
+                    map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
+                }
+                else if( key?.text == 'topic' && val ) {
                     map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
                 }
             }
@@ -1017,11 +956,11 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','eval','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
-                fixOutEmitOption(methodCall)
+                fixOutEmitAndTopicOptions(methodCall)
             }
 
             else if( methodName in ['into','mode'] ) {
@@ -1185,6 +1124,11 @@ class NextflowDSLImpl implements ASTTransformation {
                     return createX( TokenEnvCall, args )
                 }
 
+                if( methodCall.methodAsString == 'eval' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenEvalCall, args )
+                }
+
                 /*
                  * input:
                  *   tuple val(x), .. from q
@@ -1218,7 +1162,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * @return A tuple in which:
          *      <li>1st item: {@code true} if successful or {@code false} otherwise
          *      <li>2nd item: on error condition the line containing the error in the source script, zero otherwise
-         *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
+         *      <li>3rd item: on error condition the column containing the error in the source script, zero otherwise
          *
          */
         protected boolean wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {

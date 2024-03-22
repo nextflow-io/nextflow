@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ class LogsCheckpoint implements TraceObserver {
     private Thread thread
     private Duration interval
     private LogsHandler handler
+    private volatile boolean terminated
 
     @Override
     void onFlowCreate(Session session) {
@@ -59,14 +60,14 @@ class LogsCheckpoint implements TraceObserver {
 
     @Override
     void onFlowComplete() {
-        thread.interrupt()
+        this.terminated = true
         thread.join()
     }
 
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !thread.isInterrupted() ) {
+            while( !terminated && !thread.isInterrupted() ) {
                 // just wait the declared delay
                 await(interval)
                 // checkpoint the logs

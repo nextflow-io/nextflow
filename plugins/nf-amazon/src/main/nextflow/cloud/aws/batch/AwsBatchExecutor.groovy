@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,7 +151,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         helper = new AwsBatchHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
-        log.debug "[AWS BATCH] Executor options=$awsOptions"
+        log.debug "[AWS BATCH] Executor ${awsOptions.fargateMode ? '(FARGATE mode) ' : ''}options=$awsOptions"
     }
 
     /**
@@ -219,6 +219,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         new AwsBatchTaskHandler(task, this)
     }
 
+    private static final List<Integer> RETRYABLE_STATUS = [429, 500, 502, 503, 504]
+
     /**
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
@@ -231,7 +233,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && t.errorCode=='TooManyRequestsException' }
+                .retryOn { Throwable t -> t instanceof AWSBatchException && (t.errorCode=='TooManyRequestsException' || t.statusCode in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,17 +32,6 @@ interface OutParam extends Cloneable {
     String getName()
 
     /**
-     * Defines the channel to which bind the output(s) in the script context
-     *
-     * @param value It can be a string representing a channel variable name in the script context. If
-     *      the variable does not exist it creates a {@code DataflowVariable} in the script with that name.
-     *      If the specified {@code value} is a {@code DataflowWriteChannel} object, use this object
-     *      as the output channel
-     * @return
-     */
-    OutParam into( def value )
-
-    /**
      * @return The output channel instance
      */
     DataflowWriteChannel getOutChannel()
@@ -50,5 +39,7 @@ interface OutParam extends Cloneable {
     short getIndex()
 
     String getChannelEmitName()
+
+    String getChannelTopicName()
 
 }

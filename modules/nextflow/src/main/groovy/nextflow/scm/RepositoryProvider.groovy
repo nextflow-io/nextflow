@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ abstract class RepositoryProvider {
     }
 
     boolean hasCredentials() {
-        config ? config.user && config.password : false
+        getUser() && getPassword()
     }
 
     String getUser() { config?.user }
@@ -205,7 +205,7 @@ abstract class RepositoryProvider {
      */
     protected void auth( URLConnection connection ) {
         if( hasCredentials() ) {
-            String authString = "${config.user}:${config.password}".bytes.encodeBase64().toString()
+            String authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
             connection.setRequestProperty("Authorization","Basic " + authString)
         }
     }

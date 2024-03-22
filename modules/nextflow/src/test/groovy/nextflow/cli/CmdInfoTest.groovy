@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package nextflow.cli
 
 import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
@@ -31,6 +32,7 @@ import org.yaml.snakeyaml.Yaml
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
 class CmdInfoTest extends Specification {
 

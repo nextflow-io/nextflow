@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package nextflow.script
 
-
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 
-import nextflow.Const
 import nextflow.Session
+import nextflow.BuildInfo
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
@@ -82,9 +82,9 @@ class WorkflowMetadataTest extends Specification {
         metadata.start <= OffsetDateTime.now()
         metadata.complete == null
         metadata.commandLine == 'nextflow run -this -that'
-        metadata.nextflow.version == new VersionNumber(Const.APP_VER)
-        metadata.nextflow.build == Const.APP_BUILDNUM
-        metadata.nextflow.timestamp == Const.APP_TIMESTAMP_UTC
+        metadata.nextflow.version == new VersionNumber(BuildInfo.version)
+        metadata.nextflow.build == BuildInfo.buildNum as int
+        metadata.nextflow.timestamp == BuildInfo.timestampUTC
         metadata.profile == 'standard'
         metadata.sessionId == session.uniqueId
         metadata.runName == session.runName
@@ -169,6 +169,24 @@ class WorkflowMetadataTest extends Specification {
         result7 == 'Hello world'
 
 
+    }
+
+    def 'should be able to throw an error from onComplete handler' () {
+
+        given:
+        def session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        
+        def metadata = new WorkflowMetadata(session, null)
+
+        when:
+        metadata.onComplete {
+            throw new WorkflowScriptErrorException('You failed!')
+        }
+        metadata.invokeOnComplete()
+
+        then:
+        thrown(WorkflowScriptErrorException)
     }
 
     def 'should access workflow script variables onError' () {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -230,6 +230,24 @@ class TaskConfigTest extends Specification {
         new Duration('1s')  || 1000
         new Duration('2h')  || '2h'
         new Duration('10h') || { "$ten hours" }
+
+    }
+
+    def 'test max submit await'() {
+
+        when:
+        def config = new TaskConfig()
+        config.maxSubmitAwait = value
+
+        then:
+        config.maxSubmitAwait == expected
+        config.getMaxSubmitAwait() == expected
+
+        where:
+        expected            || value
+        null                || null
+        new Duration('1s')  || 1000
+        new Duration('2h')  || '2h'
 
     }
 
