@@ -41,7 +41,7 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v43
         with:
-          files_ignore: docs
+          files_ignore: docs/**
 
       - name: List all changed files
         env:
