@@ -169,8 +169,10 @@ class ConfigParser {
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
         def params = [:]
-        if( renderClosureAsString )
+        if( renderClosureAsString ) {
             params.put('renderClosureAsString', true)
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(SecretsXform))
+        }
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         //  add implicit types

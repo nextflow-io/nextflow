@@ -95,8 +95,10 @@ abstract class ConfigBase extends Script {
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
         def params = [:]
-        if( renderClosureAsString )
+        if( renderClosureAsString ) {
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(SecretsXform))
             params.put('renderClosureAsString', true)
+        }
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
 
         // -- setup the grengine instance

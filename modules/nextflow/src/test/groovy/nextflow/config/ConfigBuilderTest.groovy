@@ -2619,11 +2619,13 @@ class ConfigBuilderTest extends Specification {
         and:
         configMain.text = '''
         p1 = 'one'
-        includeConfig "$secrets.SECRET_FILE1"
+        // include config via a secret property
+        includeConfig secrets.SECRET_FILE1
         '''
 
         snippet1.text = '''
         p2 = 'two'
+        // include config via string interpolation using a secret 
         includeConfig "$secrets.SECRET_FILE2"
         '''
 
@@ -2643,5 +2645,74 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
         SysEnv.pop()
     }
+
+    def 'should not render secret values' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def configMain = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('config1.txt')
+        def snippet2 = folder.resolve('config2.txt')
+
+        and:
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = """
+            [
+              {
+                "name": "SECRET_FILE1",
+                "value": "${snippet1.toAbsolutePath()}"
+              },
+              {
+                "name": "SECRET_FILE2",
+                "value": "${snippet2.toAbsolutePath()}"
+              },
+              {
+                "name": "ALPHA",
+                "value": "one"
+              },
+              {
+                "name": "DELTA",
+                "value": "two"
+              },
+              {
+                "name": "GAMMA",
+                "value": "three"
+              }
+            ]
+            """
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        configMain.text = '''
+        p1 = secrets.ALPHA
+        // include config via a secret property
+        includeConfig secrets.SECRET_FILE1
+        '''
+
+        snippet1.text = '''
+        p2 = "$secrets.DELTA"
+        // include config via string interpolation using a secret 
+        includeConfig "$secrets.SECRET_FILE2"
+        '''
+
+        snippet2.text = '''
+        p3 = "$secrets.GAMMA"
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).setShowClosures(true) .buildGivenFiles(configMain)
+        then:
+        config.p1 == 'secrets.ALPHA'
+        config.p2 == 'secrets.DELTA'
+        config.p3 == 'secrets.GAMMA'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
 }
 
