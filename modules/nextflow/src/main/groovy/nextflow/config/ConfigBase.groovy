@@ -50,6 +50,12 @@ abstract class ConfigBase extends Script {
 
     private boolean renderClosureAsString
 
+    private boolean stripSecrets
+
+    protected void setStripSecrets( boolean value ) {
+        this.stripSecrets = value
+    }
+
     protected void setIgnoreIncludes( boolean value ) {
         this.ignoreIncludes = value
     }
@@ -94,11 +100,11 @@ abstract class ConfigBase extends Script {
         // -- set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
         def params = [:]
-        if( renderClosureAsString ) {
-            config.addCompilationCustomizers(new ASTTransformationCustomizer(SecretsXform))
+        if( renderClosureAsString )
             params.put('renderClosureAsString', true)
-        }
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
 
         // -- setup the grengine instance

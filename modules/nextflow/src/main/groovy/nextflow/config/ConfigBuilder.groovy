@@ -75,6 +75,8 @@ class ConfigBuilder {
 
     boolean showClosures
 
+    boolean stripSecrets
+
     boolean showMissingVariables
 
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
@@ -90,6 +92,11 @@ class ConfigBuilder {
 
     ConfigBuilder setShowClosures(boolean value) {
         this.showClosures = value
+        return this
+    }
+
+    ConfigBuilder setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 
@@ -341,6 +348,7 @@ class ConfigBuilder {
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
         final slurper = new ConfigParser()
                 .setRenderClosureAsString(showClosures)
+                .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
@@ -893,6 +901,7 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)

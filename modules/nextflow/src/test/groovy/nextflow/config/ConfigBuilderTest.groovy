@@ -2687,27 +2687,51 @@ class ConfigBuilderTest extends Specification {
         and:
         configMain.text = '''
         p1 = secrets.ALPHA
+        foo.p1 = secrets.ALPHA 
+        bar {
+          p1 = secrets.ALPHA 
+        }
         // include config via a secret property
         includeConfig secrets.SECRET_FILE1
         '''
 
         snippet1.text = '''
         p2 = "$secrets.DELTA"
+        foo.p2 = "$secrets.DELTA"
+        bar {
+          p2 = "$secrets.DELTA"
+        }
         // include config via string interpolation using a secret 
         includeConfig "$secrets.SECRET_FILE2"
         '''
 
         snippet2.text = '''
         p3 = "$secrets.GAMMA"
+        foo.p3 = "$secrets.GAMMA"
+        bar {
+          p3 = "$secrets.GAMMA"
+        }
         '''
 
         when:
         def opt = new CliOptions()
-        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).setShowClosures(true) .buildGivenFiles(configMain)
+        def config = new ConfigBuilder()
+                            .setBaseDir(folder)
+                            .setOptions(opt)
+                            .setStripSecrets(true)
+                            .buildGivenFiles(configMain)
         then:
         config.p1 == 'secrets.ALPHA'
         config.p2 == 'secrets.DELTA'
         config.p3 == 'secrets.GAMMA'
+        and:
+        config.foo.p1 == 'secrets.ALPHA'
+        config.foo.p2 == 'secrets.DELTA'
+        config.foo.p3 == 'secrets.GAMMA'
+        and:
+        config.bar.p1 == 'secrets.ALPHA'
+        config.bar.p2 == 'secrets.DELTA'
+        config.bar.p3 == 'secrets.GAMMA'
 
         cleanup:
         folder?.deleteDir()

@@ -25,6 +25,7 @@ import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
@@ -43,7 +44,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @Slf4j
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
-class SecretsXformImpl implements ASTTransformation {
+class StripSecretsXformImpl implements ASTTransformation {
 
     private SourceUnit unit
 
@@ -70,12 +71,13 @@ class SecretsXformImpl implements ASTTransformation {
                 if( result ) {
                     return result
                 }
-
                 if( expr instanceof MethodCallExpression ) {
                     return transformMethodCall(expr as MethodCallExpression)
                 }
-                else
-                    return super.transform(expr)
+                if( expr instanceof ClosureExpression) {
+                    visitClosureExpression(expr)
+                }
+                return super.transform(expr)
             }
 
             protected Expression transformMethodCall(MethodCallExpression call) {

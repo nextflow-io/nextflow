@@ -32,6 +32,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
-@GroovyASTTransformationClass(classes = [SecretsXformImpl])
-@interface SecretsXform {
+@GroovyASTTransformationClass(classes = [StripSecretsXformImpl])
+@interface StripSecretsXform {
 }

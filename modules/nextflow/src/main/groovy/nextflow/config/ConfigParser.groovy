@@ -106,6 +106,8 @@ class ConfigParser {
 
     private boolean renderClosureAsString
 
+    private boolean stripSecrets
+
     private Grengine grengine
 
     ConfigParser() {
@@ -168,11 +170,11 @@ class ConfigParser {
         // set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
         def params = [:]
-        if( renderClosureAsString ) {
+        if( renderClosureAsString )
             params.put('renderClosureAsString', true)
-            config.addCompilationCustomizers(new ASTTransformationCustomizer(SecretsXform))
-        }
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         //  add implicit types
@@ -185,6 +187,11 @@ class ConfigParser {
 
     ConfigParser setRenderClosureAsString(boolean value) {
         this.renderClosureAsString = value
+        return this
+    }
+
+    ConfigParser setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 
@@ -472,6 +479,7 @@ class ConfigParser {
         // disable include parsing when required
         script.setIgnoreIncludes(ignoreIncludes)
         script.setRenderClosureAsString(renderClosureAsString)
+        script.setStripSecrets(stripSecrets)
 
         // -- set the binding and run
         script.binding = binding
