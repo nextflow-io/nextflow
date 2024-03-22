@@ -23,9 +23,7 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
-import nextflow.secret.Secret
 import nextflow.secret.SecretsLoader
-import nextflow.secret.SecretsProvider
 import test.Dsl2Spec
 import test.TestHelper
 /**
@@ -146,19 +144,6 @@ class BaseScriptTest extends Dsl2Spec {
         folder?.delete()
     }
 
-    def 'should create secret context' () {
-        given:
-        def script = Spy(BaseScript)
-        def provider = Mock(SecretsProvider)
-        and:
-        def ctx = script.makeSecretsContext(provider)
-        when:
-        def result = ctx.'MY_SECRET'
-        then:
-        provider.getSecret('MY_SECRET') >> Mock(Secret) { getValue()>>'123' }
-        result == '123'
-    }
-
     def 'should resolve secret in a script' () {
         given:
         SecretsLoader.instance.reset()
@@ -198,7 +183,6 @@ class BaseScriptTest extends Dsl2Spec {
 
         cleanup:
         folder?.deleteDir()
-        and:
         SysEnv.pop()
     }
 
