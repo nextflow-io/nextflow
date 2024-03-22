@@ -116,7 +116,7 @@ allprojects {
     test {
         useJUnitPlatform()
     }
-    
+
     // this is required due to this IDEA bug
     // https://youtrack.jetbrains.com/issue/IDEA-129282
     sourceSets {
@@ -213,19 +213,11 @@ task buildInfo { doLast {
     timestamp=${System.currentTimeMillis()}
     commitId=${project.property('commitId')}
     """.stripIndent()
-    
+
     // -- update 'nextflow' wrapper
     file0 = file('nextflow')
     src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
-    file0.text = src
-
-    // -- update sphynx
-    def major = version.split(/\./)[0..1].join('.')
-    file0 = file('docs/conf.py')
-    src = file0.text
-    src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
-    src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
     file0.text = src
 
     // -- update dockerfile
