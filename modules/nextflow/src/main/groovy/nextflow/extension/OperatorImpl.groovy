@@ -43,6 +43,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.JsonSplitter
 import nextflow.splitter.TextSplitter
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
@@ -1237,6 +1238,14 @@ class OperatorImpl {
         new MultiMapOp(source, action)
                 .apply()
                 .getOutput()
+    }
+
+    DataflowWriteChannel topic(DataflowReadChannel source, String name) {
+        if( !NF.topicChannelEnabled ) throw new MissingMethodException('topic', OperatorImpl.class, InvokerHelper.EMPTY_ARGS)
+        final op = new IntoTopicOp(source, name)
+        final target = op.apply()
+        OpCall.current.get().outputs.addAll( op.outputs )
+        return target
     }
 
 }
