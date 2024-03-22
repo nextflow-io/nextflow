@@ -224,3 +224,13 @@ div.versionchanged                       { border-color: #BC6437; background-col
 div.versionchanged p:first-child::before { color: #BC6437; }
 div.deprecated                           { border-color: #C3514D; background-color: #FEEDEC; }
 div.deprecated p:first-child::before     { color: #C3514D; }
+
+/* Version in sidebar */
+.sidebar_version {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #ffffffbf;
+}
+.sidebar_version samp {
+    font-size: 0.6rem;
+}
