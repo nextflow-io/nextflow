@@ -47,6 +47,7 @@ class AzPoolOptsTest extends Specification {
         !opts.password
         !opts.virtualNetwork
         !opts.lowPriority
+        !opts.startTask
     }
 
     def 'should create pool with custom options' () {
@@ -69,6 +70,7 @@ class AzPoolOptsTest extends Specification {
             password: 'some-pwd',
             virtualNetwork: 'some-vnet',
             lowPriority: true
+            startTask: 'echo hello-world'
         ])
         then:
         opts.runAs == 'foo'
@@ -89,6 +91,7 @@ class AzPoolOptsTest extends Specification {
         opts.password == 'some-pwd'
         opts.virtualNetwork == 'some-vnet'
         opts.lowPriority
+        opts.startTask == 'echo hello-world'
     }
 
 }

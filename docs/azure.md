@@ -318,6 +318,18 @@ In the above snippet, replace `<name>` with the name of your Azure node pool.
 
 See the {ref}`Azure configuration <config-azure>` section and the [Azure Batch nodes](https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes) documentation for more details.
 
+### Start Task
+
+Nextflow uses azcopy to stage files in and out of the worker nodes. To do this, it installs azcopy to a shared directory by running a start task. If you have additional requirements for the worker nodes, you can modify this start task by setting the property `startTask`. This is the default shell script:
+
+```shell
+bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"
+```
+
+:::{warning}
+If you modify the `startTask` causing azcopy to be unavailable on the worker machine your tasks be unable to correctly stage files in and out and they may fail.
+:::
+
 ### Private container registry
 
 :::{versionadded} 21.05.0-edge

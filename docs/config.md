@@ -414,6 +414,10 @@ The following settings are available:
 : *New in `nf-azure` version `0.11.0`*
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
+`azure.batch.pools.<name>.startTask`
+: *New in `nf-azure` version `something`*
+: Specify the startTask that is executed as the node joins the Azure Batch node pool (default: `bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"`).
+
 `azure.batch.pools.<name>.virtualNetwork`
 : :::{versionadded} 23.03.0-edge
   :::

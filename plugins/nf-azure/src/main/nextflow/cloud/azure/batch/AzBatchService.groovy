@@ -691,7 +691,7 @@ class AzBatchService implements Closeable {
                 .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()
-                .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
+                .withCommandLine(startTaskCmd(spec.opts))
                 .withResourceFiles(resourceFiles)
 
         final poolParams = new PoolAddParameter()
@@ -765,6 +765,13 @@ class AzBatchService implements Closeable {
         }
 
         apply(() -> client.poolOperations().createPool(poolParams))
+    }
+
+    protected String startTaskCmd(AzPoolOpts opts) {
+        final DEFAULT_START_TASK = 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        final startTask = opts.startTask ?: DEFAULT_START_TASK
+        log.debug "Start task command:\n$startTask"
+        return startTask
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
