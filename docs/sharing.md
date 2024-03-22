@@ -58,6 +58,15 @@ nextflow run nextflow-io/hello -r v1.1
 
 It will execute two different project revisions corresponding to the Git tag/branch having that names.
 
+:::{versionadded} 24.03.0-edge
+:::
+
+Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time. Each downloaded revision is stored in a sister path to the default revision one, featuring an extra suffix string `:<revision id>`.
+
+:::{warning}
+If you really care about reproducibility of your pipelines, you should explicitly refer to them by tag or commit ID, rather than my branch. This is because the same branch will point to different underlying commits over time, as pipeline development goes on. This caveat is particularly relevant in a scenario where multiple people manage and share the same local collection of pipelines.
+:::
+
 ## Commands to manage projects
 
 The following commands allows you to perform some basic operations that can be used to manage your projects.
@@ -94,13 +103,13 @@ repository  : http://github.com/nextflow-io/hello
 local path  : $HOME/.nextflow/assets/nextflow-io/hello
 main script : main.nf
 revisions   :
-* master (default)
+P master (default)
   mybranch
-  v1.1 [t]
+P v1.1 [t]
   v1.2 [t]
 ```
 
-Starting from the top it shows: 1) the project name; 2) the Git repository URL; 3) the local folder where the project has been downloaded; 4) the script that is executed when launched; 5) the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right, the current checked-out revision is marked with a `*` on the left.
+Starting from the top it shows: 1) the project name; 2) the Git repository URL; 3) the local path where the default project can be found (alternate revisions are in sister paths with an extra suffix `:<revision id>`); 4) the script that is executed when launched; 5) the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right, the locally pulled revisions are marked with a `P` on the left.
 
 ### Pulling or updating a project
 
