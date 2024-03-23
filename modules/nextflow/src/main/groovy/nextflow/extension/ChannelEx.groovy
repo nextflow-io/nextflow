@@ -72,6 +72,26 @@ class ChannelEx {
     }
 
     /**
+     * Apply a channel as the first argument to a closure and return the result.
+     *
+     * @param source
+     * @param closure
+     */
+    static Object then(final DataflowWriteChannel source, Closure closure) {
+        def out = closure.call(source)
+        if( out instanceof DataflowWriteChannel || out instanceof ChannelOut )
+            return out
+        throw new ScriptRuntimeException("Pipeline closure did not return a channel or multi-channel")
+    }
+
+    static Object then(final ChannelOut source, Closure closure) {
+        def out = closure.call(source)
+        if( out instanceof DataflowWriteChannel || out instanceof ChannelOut )
+            return out
+        throw new ScriptRuntimeException("Pipeline closure did not return a channel or multi-channel")
+    }
+
+    /**
      * Creates a channel emitting the entries in the collection to which is applied
      *
      * @param values A list of values to be emitted by the resulting channel
@@ -106,11 +126,10 @@ class ChannelEx {
     }
 
     /**
-     * Implements pipe operation between a channel and a process or a sub-workflow
+     * Pipe a channel INTO a process or workflow.
      *
-     * @param left A dataflow channel instance
-     * @param right A {@link ChainableDef} object eg. a nextflow process
-     * @return The channel resulting the pipe operation
+     * @param left
+     * @param right
      */
     static Object or(DataflowWriteChannel left, ChainableDef right) {
         checkContext('or', right)
@@ -118,11 +137,10 @@ class ChannelEx {
     }
 
     /**
-     * Implements pipe operation between a channel WITH a operator
+     * Pipe a channel INTO an operator.
      *
-     * @param left A {@code DataflowWriteChannel} channel as left operand
-     * @param right A {@code OpCall} object representing a operator call as right operand
-     * @return The resulting channel object
+     * @param left
+     * @param right
      */
     static Object or(DataflowWriteChannel left, OpCall right) {
         checkContext('or', right)
@@ -130,11 +148,21 @@ class ChannelEx {
     }
 
     /**
-     * Implements pipe operation between a multi-channels WITH a process or a sub-workflow
+     * Pipe a channel INTO a closure that defines a custom
+     * invocation of a process, workflow, or operator.
      *
-     * @param left A {@code ChannelOut} multi-channel object as left operand
-     * @param right A {@code ChainableDef} object representing a process or sub-workflow call as right operand
-     * @return The resulting channel object
+     * @param left
+     * @param right
+     */
+    static Object or(DataflowWriteChannel left, Closure right) {
+        then(left, right)
+    }
+
+    /**
+     * Pipe a multi-channel INTO a process or workflow.
+     *
+     * @param left
+     * @param right
      */
     static Object or(ChannelOut left, ChainableDef right) {
         checkContext('or', right)
@@ -142,11 +170,10 @@ class ChannelEx {
     }
 
     /**
-     * Implements pipe operation between a multi-channels WITH a operator
+     * Pipe a multi-channel INTO an operator.
      *
-     * @param left A {@code ChannelOut} multi-channel object as left operand
-     * @param right A {@code OpCall} object representing a operator call as right operand
-     * @return The resulting channel object
+     * @param left
+     * @param right
      */
     static Object or(ChannelOut left, OpCall right) {
         checkContext('or', right)
@@ -154,31 +181,21 @@ class ChannelEx {
     }
 
     /**
-     * Implements pipe operation between a process or sub-workflow WITH a operator
+     * Pipe a multi-channel INTO a closure that defines a custom
+     * invocation of a process, workflow, or operator.
      *
-     * @param left A {@code ChainableDef} object representing a process or sub-workflow call as left operand
-     * @param right A {@code OpCall} object representing a operator call as right operand
-     * @return The resulting channel object
+     * @param left
+     * @param right
      */
-    static Object or(ChainableDef left, OpCall right) {
-        checkContext('or', left)
-        def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
-
-        if( out instanceof DataflowWriteChannel )
-            return or((DataflowWriteChannel)out, right)
-
-        if( out instanceof ChannelOut )
-            return or((ChannelOut)out, right)
-
-        throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
+    static Object or(ChannelOut left, Closure right) {
+        then(left, right)
     }
 
     /**
-     * Implements pipe operation between a process or sub-workflow WITH another process or sub-workflow
+     * Pipe a process or workflow INTO another process or workflow.
      *
-     * @param left A {@code ChainableDef} object representing a process or sub-workflow call as left operand
-     * @param right A {@code ChainableDef} object representing a process or sub-workflow call as right operand
-     * @return
+     * @param left
+     * @param right
      */
     static Object or(ChainableDef left, ChainableDef right) {
         checkContext('or', left)
@@ -195,6 +212,77 @@ class ChannelEx {
         throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }
 
+    /**
+     * Pipe a process or workflow INTO an operator.
+     *
+     * @param left
+     * @param right
+     */
+    static Object or(ChainableDef left, OpCall right) {
+        checkContext('or', left)
+        def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
+
+        if( out instanceof DataflowWriteChannel )
+            return or((DataflowWriteChannel)out, right)
+
+        if( out instanceof ChannelOut )
+            return or((ChannelOut)out, right)
+
+        throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
+    }
+
+    /**
+     * Pipe a process or workflow INTO a closure that defines a custom
+     * invocation of a process, workflow, or operator.
+     *
+     * @param left
+     * @param right
+     */
+    static Object or(ChainableDef left, Closure right) {
+        checkContext('or', left)
+        def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
+
+        if( out instanceof DataflowWriteChannel )
+            return then((DataflowWriteChannel)out, right)
+
+        if( out instanceof ChannelOut )
+            return then((ChannelOut)out, right)
+
+        throw new ScriptRuntimeException("Pipeline closure did not return a channel or multi-channel")
+    }
+
+    /**
+     * Compose a channel with another channel into a multi-channel.
+     *
+     * @param left
+     * @param right
+     */
+    static ChannelOut and(DataflowWriteChannel left, DataflowWriteChannel right) {
+        new ChannelOut(List.of(left, right))
+    }
+
+    static ChannelOut and(ChannelOut left, DataflowWriteChannel right) {
+        def elements = ChannelOut.spread(left)
+        elements << right
+
+        new ChannelOut(elements)
+    }
+
+    static ChannelOut and(ChannelOut left, ChannelOut right) {
+        def elements = ChannelOut.spread(left)
+        elements.addAll(ChannelOut.spread(right))
+
+        new ChannelOut(elements)
+    }
+
+    /**
+     * Compose a process or workflow with another process or workflow
+     * such that they receive the same input channels and their outputs
+     * are concatenated.
+     *
+     * @param left
+     * @param right
+     */
     static CompositeDef and(ChainableDef left, ChainableDef right) {
         checkContext('and', left)
         checkContext('and', right)
