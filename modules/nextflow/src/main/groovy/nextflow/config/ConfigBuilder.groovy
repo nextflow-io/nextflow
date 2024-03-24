@@ -597,6 +597,12 @@ class ConfigBuilder {
         if( cmdRun.resume )
             config.resume = cmdRun.resume
 
+        // -- sets the dry run option
+        if( cmdRun.dryRun ) {
+            config.resume = true
+            config.dryRun = cmdRun.dryRun
+        }
+
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 

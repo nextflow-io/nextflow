@@ -810,6 +810,12 @@ class TaskProcessor {
                 continue
             }
 
+            if( session.dryRun ) {
+                println "[DRY RUN] new task > ${safeTaskName(task)} [${hash}]"
+                updateState { StateObj it -> it.incCompleted() }
+                break
+            }
+
             final lock = lockManager.acquire(hash)
             final workDir = task.getWorkDirFor(hash)
             try {
@@ -2410,7 +2416,11 @@ class TaskProcessor {
         }
 
         // increment the number of processes executed
-        state.update { StateObj it -> it.incCompleted() }
+        updateState { StateObj it -> it.incCompleted() }
+    }
+
+    private void updateState(Closure action) {
+        state.update action
     }
 
     protected void terminateProcess() {
@@ -2507,7 +2517,7 @@ class TaskProcessor {
             if( log.isTraceEnabled() )
                 log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
-            state.update { StateObj it -> it.incSubmitted() }
+            updateState { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
             final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
@@ -2554,7 +2564,7 @@ class TaskProcessor {
                 if( log.isTraceEnabled() )
                     log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
-                state.update { StateObj it -> it.poison() }
+                updateState { StateObj it -> it.poison() }
             }
 
             return message
