@@ -16,6 +16,7 @@
 
 package nextflow.config
 
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.ast.ASTNode
@@ -203,5 +204,4 @@ class ConfigTransformImpl implements ASTTransformation {
         }
 
     }
-
 }

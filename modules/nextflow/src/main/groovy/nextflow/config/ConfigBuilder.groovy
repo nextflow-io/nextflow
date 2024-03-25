@@ -32,8 +32,6 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
-import nextflow.secret.SecretHolder
-import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
@@ -77,6 +75,8 @@ class ConfigBuilder {
 
     boolean showClosures
 
+    boolean stripSecrets
+
     boolean showMissingVariables
 
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
@@ -92,6 +92,11 @@ class ConfigBuilder {
 
     ConfigBuilder setShowClosures(boolean value) {
         this.showClosures = value
+        return this
+    }
+
+    ConfigBuilder setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 
@@ -333,8 +338,7 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        if( SecretsLoader.isEnabled() )
-            binding.put('secrets', new SecretsContext())
+        binding.put('secrets', SecretsLoader.secretContext())
         return binding
     }
 
@@ -344,6 +348,7 @@ class ConfigBuilder {
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
         final slurper = new ConfigParser()
                 .setRenderClosureAsString(showClosures)
+                .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
@@ -841,10 +846,6 @@ class ConfigBuilder {
             }
             return result
         }
-        else if( config instanceof GString ) {
-            final holdSecrets = config.values.any { it instanceof SecretHolder }
-            return holdSecrets ? config : config.toString()
-        }
         else {
             return config
         }
@@ -900,6 +901,7 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)
