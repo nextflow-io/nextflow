@@ -86,7 +86,6 @@ kubernetes
 :maxdepth: 1
 
 flux
-ignite
 ```
 
 ```{toctree}
