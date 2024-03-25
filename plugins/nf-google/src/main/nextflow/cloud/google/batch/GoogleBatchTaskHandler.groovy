@@ -41,7 +41,9 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskBatch
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -66,6 +68,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private Path errorFile
 
     private BatchClient client
+
+    private BashWrapperBuilder launcher
 
     /**
      * Job Id assigned by Nextflow
@@ -142,13 +146,27 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void submit() {
-        /*
-         * create the task runner script
-         */
-        final launcher = createTaskWrapper()
+    void prepareLauncher() {
+        launcher = createTaskWrapper()
         launcher.build()
+    }
 
+    @Override
+    String getWorkDir() {
+        launcher.workDir.toString()
+    }
+
+    @Override
+    List<String> getLaunchCommand() {
+        spec0(launcher).launchCommand()
+    }
+
+    List<String> getContainerMounts() {
+        spec0(launcher).getContainerMounts()
+    }
+
+    @Override
+    void submit() {
         /*
          * create submit request
          */
@@ -213,6 +231,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( containerOptions )
             container.setOptions( containerOptions )
+
+        // add child container mounts if task is a group
+        if( task instanceof TaskBatch )
+            for( TaskHandler handler : task.children )
+                container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
         // task spec
         final env = Environment

@@ -43,6 +43,7 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.Throttle
 /**
  * Handles a job execution in the underlying grid platform
@@ -98,6 +99,27 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.exitStatusReadTimeoutMillis = duration.toMillis()
         this.queue = task.config?.queue
         this.sanityCheckInterval = duration
+    }
+
+    @Override
+    void prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
+    }
+
+    @Override
+    String getWorkDir() {
+        fusionEnabled()
+            ? FusionHelper.toContainerMount(task.workDir).toString()
+            : task.workDir.toString()
+    }
+
+    @Override
+    List<String> getLaunchCommand() {
+        final workDir = Escape.path(getWorkDir())
+        final cmd = "bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}"
+
+        List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
     }
 
     protected ProcessBuilder createProcessBuilder() {
@@ -254,8 +276,6 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     void submit() {
         ProcessBuilder builder = null
         try {
-            // -- create the wrapper script
-            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required

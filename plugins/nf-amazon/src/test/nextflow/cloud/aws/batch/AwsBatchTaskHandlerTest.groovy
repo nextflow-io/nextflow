@@ -92,7 +92,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.getLaunchCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
         _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'])) }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -113,7 +113,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         req = handler.newSubmitRequest(task)
         then:
-        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.getLaunchCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 0
         _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'], region: 'eu-west-1')) }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -143,7 +143,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.getLaunchCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
         _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'],client: [storageEncryption: 'AES256'])) }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -160,7 +160,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req2 = handler.newSubmitRequest(task)
         then:
-        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.getLaunchCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
         _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws',schedulingPriority: 9999,shareIdentifier: 'priority/high'], client:[storageEncryption: 'AES256', debug: true])) }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -286,7 +286,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10])) }
         and:
         _ * handler.fusionEnabled() >> false
-        1 * handler.getSubmitCommand() >> ['bash','-c','foo']
+        1 * handler.getLaunchCommand() >> ['bash','-c','foo']
         1 * handler.maxSpotAttempts() >> 3
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
@@ -852,7 +852,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         handler.submit()
         then:
-        1 * handler.buildTaskWrapper() >> null
         1 * handler.newSubmitRequest(task) >> req
         1 * handler.bypassProxy(proxy) >> client
         1 * client.submitJob(req) >> resp
@@ -919,7 +918,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         }
 
         when:
-        def result =  handler.getSubmitCommand()
+        def result =  handler.getLaunchCommand()
         then:
         handler.getAwsOptions() >> Mock(AwsOptions)  { getAwsCli() >> 'aws' }
         handler.getLogFile() >> Paths.get('/work/log')
@@ -928,7 +927,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/run - | bash 2>&1 | tee .command.log'
 
         when:
-        result =  handler.getSubmitCommand()
+        result =  handler.getLaunchCommand()
         then:
         handler.getAwsOptions() >> Mock(AwsOptions)  {
             getAwsCli() >> 'aws';
@@ -950,7 +949,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         }
 
         when:
-        def result =  handler.getSubmitCommand()
+        def result =  handler.getLaunchCommand()
         then:
         handler.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> 's5cmd' }
         handler.getLogFile() >> Paths.get('/work/log')
@@ -959,7 +958,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd cp .command.log s3://work/log||true; exit $ret; }" EXIT; s5cmd cat s3://work/run | bash 2>&1 | tee .command.log'
 
         when:
-        result =  handler.getSubmitCommand()
+        result =  handler.getLaunchCommand()
         then:
         handler.getAwsOptions() >> Mock(AwsOptions)  {
             getS5cmdPath() >> 's5cmd --debug'
@@ -987,7 +986,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        1 * handler.getSubmitCommand() >> ['sh','-c','hello']
+        1 * handler.getLaunchCommand() >> ['sh','-c','hello']
         1 * handler.maxSpotAttempts() >> 5
         1 * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'])) }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -1018,7 +1017,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         }
 
         when:
-        def result =  handler.getSubmitCommand()
+        def result =  handler.getLaunchCommand()
         then:
         result.join(' ') == '/usr/bin/fusion bash /fusion/s3/my-bucket/work/dir/.command.run'
     }

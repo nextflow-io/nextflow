@@ -64,6 +64,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'accelerator',
             'afterScript',
             'arch',
+            'batch',
             'beforeScript',
             'cache',
             'conda',
@@ -1001,6 +1002,39 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
         return this
+    }
+
+    ProcessConfig batch( Map params, size ) {
+        params.size = size
+        batch(params)
+        return this
+    }
+
+    ProcessConfig batch( value ) {
+        if( value instanceof Integer )
+            configProperties.put('batch', [size: value])
+        else if( value instanceof Map )
+            configProperties.put('batch', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `batch` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    int getBatchSize() {
+        final params = configProperties.get('batch')
+        if( params == null )
+            return 0
+        if( params.size !instanceof Integer )
+            throw new IllegalArgumentException("Process directive `batch` should be an integer greater than 1 -- offending value: '$params.size'", e)
+        final size = params.size as Integer
+        if( size < 1 )
+            throw new IllegalArgumentException("Process directive `batch` should be an integer greater than 1 -- offending value: '$size'", e)
+        return size
+    }
+
+    boolean isBatchParallel() {
+        final params = configProperties.get('batch')
+        return params?.parallel as boolean
     }
 
 }

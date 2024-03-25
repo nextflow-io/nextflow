@@ -253,6 +253,8 @@ class TaskProcessor {
 
     private Boolean isFair0
 
+    private TaskBatchCollector batchCollector
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -307,6 +309,10 @@ class TaskProcessor {
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+
+        final batchSize = config.getBatchSize()
+        final batchParallel = config.isBatchParallel()
+        this.batchCollector = batchSize > 0 ? new TaskBatchCollector(executor, batchSize, batchParallel) : null
     }
 
     /**
@@ -2319,7 +2325,10 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task)
+        if( batchCollector )
+            batchCollector.collect(task)
+        else
+            executor.submit(task)
 
     }
 
@@ -2349,6 +2358,14 @@ class TaskProcessor {
      */
     @PackageScope
     final finalizeTask( TaskRun task ) {
+        // finalize each child if task is a group
+        if( task instanceof TaskBatch ) {
+            task.finalize()
+            for( TaskHandler handler : task.children )
+                finalizeTask(handler.task)
+            return
+        }
+
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
@@ -2411,6 +2428,10 @@ class TaskProcessor {
 
         // increment the number of processes executed
         state.update { StateObj it -> it.incCompleted() }
+    }
+
+    protected void closeProcess() {
+        batchCollector?.close()
     }
 
     protected void terminateProcess() {
@@ -2565,6 +2586,7 @@ class TaskProcessor {
             // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**
