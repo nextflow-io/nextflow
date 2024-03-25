@@ -25,7 +25,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.secret.SecretHolder
 import org.apache.commons.lang.StringUtils
 /**
  * Defines the script execution context. By default provided the following variables
@@ -277,11 +276,7 @@ class ScriptBinding extends WorkflowBinding {
         }
 
         private String put0(String name, Object value) {
-            if( value instanceof SecretHolder ) {
-                log.warn "`params.$name` cannot be assigned to a secret value -- Assignment is ignored"
-                return null
-            }
-            
+
             // keep track of the real name
             realNames << name
 
