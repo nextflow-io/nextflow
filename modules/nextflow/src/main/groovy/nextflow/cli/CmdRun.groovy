@@ -16,7 +16,6 @@
 
 package nextflow.cli
 
-
 import static org.fusesource.jansi.Ansi.*
 
 import java.nio.file.NoSuchFileException
@@ -44,7 +43,6 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
-import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
@@ -336,12 +334,6 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
         Plugins.load(cfg)
-
-        // -- load secret provider
-        if( SecretsLoader.isEnabled() ) {
-            final provider = SecretsLoader.instance.load()
-            config.withSecretProvider(provider)
-        }
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
