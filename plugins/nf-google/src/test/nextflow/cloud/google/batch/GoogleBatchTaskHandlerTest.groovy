@@ -24,6 +24,7 @@ import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
@@ -234,6 +235,42 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.findBestMachineType(_, false) >> null
         and:
         req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
+    }
+
+    def 'should use custom job name'() {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def sess = Mock(Session)
+        def exec = new GoogleBatchExecutor(session: sess)
+
+        and:
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig)
+        }
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def result = handler.customJobName(task)
+        then:
+        1 * sess.getExecConfigProp(_,'jobName', null) >> null
+        and:
+        result == null
+
+        when:
+        result = handler.customJobName(task)
+        then:
+        1 * sess.getExecConfigProp(_,'jobName', null) >> { return { "foo-${task.hashLog}" }  }
+        and:
+        result == 'foo-abcd1234'
+
     }
 
     def 'should use instance template' () {
