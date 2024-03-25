@@ -105,7 +105,7 @@ This operator has multiple variants:
   :language: console
   ```
 
-`buffer( size: n )`
+`buffer( size: n, remainder: true | false )`
 
 : Emits a new subset for every `n` items. Remaining items are discarded. For example:
 
@@ -127,7 +127,7 @@ This operator has multiple variants:
   :language: console
   ```
 
-`buffer( size: n, skip: m )`
+`buffer( size: n, skip: m, remainder: true | false )`
 
 : Emits a new subset for every `n` items, skipping `m` items before collecting each subset. For example:
 
@@ -1397,7 +1397,7 @@ See also: [countLines](#countlines)
 
 ## subscribe
 
-*Returns: nothing*
+*Returns: the source channel*
 
 The `subscribe` operator invokes a custom function for each item from a source channel:
 
