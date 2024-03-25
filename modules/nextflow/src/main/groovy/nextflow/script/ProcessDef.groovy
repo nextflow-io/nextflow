@@ -113,7 +113,23 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // apply config settings to the process
-        processConfig.applyConfig((Map)session.config.process, baseName, simpleName, processName)
+        List<Map> configs = []
+
+        // -- process module config
+        configs << ScriptMeta.get(owner).getConfig()
+
+        // -- workflow module configs
+        for( def workflow : ExecutionStack.workflows() )
+            configs << ScriptMeta.get(workflow.getOwner()).getConfig()
+
+        // -- session config
+        configs << (Map)session.config
+
+        for( def config : configs ) {
+            if( !config || !config.process )
+                continue
+            processConfig.applyConfig((Map)config.process, baseName, simpleName, processName)
+        }
     }
 
     @Override

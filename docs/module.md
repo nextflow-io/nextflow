@@ -174,6 +174,56 @@ The above snippet prints:
 Ciao world!
 ```
 
+(module-config)=
+
+## Module configuration
+
+:::{versionadded} 24.01.0-edge
+:::
+
+Modules can define a `nextflow.config` file in the module directory to apply process configuration to processes that are invoked in the module. Unlike a regular Nextflow configuration file, the module config only supports the {ref}`process scope <config-process>`.
+
+Here is an example module with a module config:
+
+```
+<module-dir>
+|── main.nf
+└── nextflow.config
+```
+
+```groovy
+// main.nf
+process BAR {
+}
+
+workflow FOO {
+    BAR()
+}
+```
+
+```groovy
+// nextflow.config
+process {
+    publishDir = params.outdir
+
+    withName:'FOO:BAR' {
+        ext.args = '--n-iters 1000'
+        publishDir = "${params.outdir}/foo_bar"
+    }
+}
+```
+
+In the above example, the selector `FOO:BAR` matches the process `BAR` invoked by workflow `FOO`. The selector `BAR` would have also worked in this case, even if `BAR` is used elsewhere in the pipeline, because the module config is only applied to this module. This assurance is the advantage of defining process config in module config files instead of the global pipeline config.
+
+Process configuration is applied to a process in the following order (from lowest to highest priority):
+
+1. Process {ref}`directives <process-directives>`
+2. Module config files
+3. Pipeline config files
+4. Command line options (e.g. `-process.*`)
+
+Similarly, if a "caller" module invokes a process in a "callee" module, the "caller" module config will take priority over the "callee" module config. In this way, a module can define a "default" configuration that can be overridden at higher and higher levels, where a process might be called in different contexts that require different config settings.
+
 (module-templates)=
 
 ## Module templates
