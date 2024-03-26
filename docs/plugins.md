@@ -175,7 +175,7 @@ import nextflow.Session
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.PluginExtensionPoint
 
-class MyExtension implements PluginExtensionPoint {
+class MyExtension extends PluginExtensionPoint {
 
     @Override
     void init(Session session) {}
@@ -219,7 +219,7 @@ import nextflow.plugin.extension.Factory
 import nextflow.plugin.extension.Operator
 import nextflow.plugin.extension.PluginExtensionPoint
 
-class MyExtension implements PluginExtensionPoint {
+class MyExtension extends PluginExtensionPoint {
 
     @Override
     void init(Session session) {}

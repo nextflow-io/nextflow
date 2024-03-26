@@ -44,6 +44,7 @@ import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
@@ -88,12 +89,33 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
         this.client = executor.getClient()
-        this.jobId = "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         this.executor = executor
+        this.jobId = customJobName(task) ?: "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         // those files are access via NF runtime, keep based on CloudStoragePath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+    }
+
+    /**
+     * Resolve the `jobName` property defined in the nextflow config file
+     *
+     * @param task The underlying task to be executed
+     * @return The custom job name for the specified task or {@code null} if the `jobName` attribute has been specified
+     */
+    protected String customJobName(TaskRun task) {
+        try {
+            final custom = (Closure)executor.session?.getExecConfigProp(executor.name, 'jobName', null)
+            if( !custom )
+                return null
+
+            final ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
+            return custom.cloneWith(ctx).call()?.toString()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to resolve job custom name", e
+            return null
+        }
     }
 
     protected BashWrapperBuilder createTaskWrapper() {
