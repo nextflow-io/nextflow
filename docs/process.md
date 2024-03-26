@@ -2219,7 +2219,10 @@ Available options:
 : Enable or disable the publish rule depending on the boolean value specified (default: `true`).
 
 `failOnError`
-: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)
+: :::{versionchanged} 24.03.0-edge
+  The default value was change from `false` to `true`
+  :::
+: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `true`)
 
 `mode`
 : The file publishing method. Can be one of the following values:
