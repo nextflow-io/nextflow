@@ -21,6 +21,9 @@ import java.nio.file.Paths
 
 import nextflow.NextflowMeta
 import nextflow.Session
+import nextflow.SysEnv
+import nextflow.extension.FilesEx
+import nextflow.secret.SecretsLoader
 import test.Dsl2Spec
 import test.TestHelper
 /**
@@ -139,6 +142,48 @@ class BaseScriptTest extends Dsl2Spec {
 
         cleanup:
         folder?.delete()
+    }
+
+    def 'should resolve secret in a script' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def script = folder.resolve('main.nf')
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = '''
+            [
+              {
+                "name": "FOO",
+                "value": "ciao"
+              }
+            ]
+            '''
+        and:
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        def session = Mock(Session)
+        def binding = new ScriptBinding([:])
+        def parser = new ScriptParser(session)
+
+        when:
+        script.text = '''
+                return secrets.FOO
+                '''
+
+        def result = parser
+            .setBinding(binding)
+            .runScript(script)
+            .getResult()
+
+        then:
+        result == 'ciao'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
     }
 
 }

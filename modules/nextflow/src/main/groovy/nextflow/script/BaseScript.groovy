@@ -23,6 +23,8 @@ import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.secret.SecretsLoader
+
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -84,8 +86,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'workDir', session.workDir )
         binding.setVariable( 'workflow', session.workflowMetadata )
         binding.setVariable( 'nextflow', NextflowMeta.instance )
-        binding.setVariable('launchDir', Paths.get('./').toRealPath())
-        binding.setVariable('moduleDir', meta.moduleDir )
+        binding.setVariable( 'launchDir', Paths.get('./').toRealPath() )
+        binding.setVariable( 'moduleDir', meta.moduleDir )
+        binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
     protected process( String name, Closure<BodyDef> body ) {

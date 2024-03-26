@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+1.3.1 - 10 Mar 2024
+- Bump snakeyaml 2.2 [07480779]
+- Bump groovy 4.0.19 [854dc1f0]
+
 1.3.0 - 5 Feb 2024
 - Fix handling of  wave.s5cmdConfigUrl setting [ci fast] (#4707) [3a19386d]
 - Fix Wave container replicable checksum [da382ddf]
