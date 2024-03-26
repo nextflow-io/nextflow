@@ -24,9 +24,14 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 import java.util.regex.Pattern
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -95,7 +100,7 @@ class PublishDir {
     /**
      * Trow an exception in case publish fails
      */
-    boolean failOnError = false
+    boolean failOnError = true
 
     /**
      * Tags to be associated to the target file
@@ -113,6 +118,8 @@ class PublishDir {
      * Currently only supported by AWS S3.
      */
     private String storageClass
+
+    private PublishRetryConfig retryConfig
 
     private PathMatcher matcher
 
@@ -219,6 +226,9 @@ class PublishDir {
 
     protected void apply0(Set<Path> files) {
         assert path
+
+        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
+        this.retryConfig = new PublishRetryConfig(retryOpts)
 
         createPublishDir()
         validatePublishMode()
@@ -359,14 +369,37 @@ class PublishDir {
 
     protected void safeProcessFile(Path source, Path target) {
         try {
-            processFile(source, target)
+            retryableProcessFile(source, target)
         }
         catch( Throwable e ) {
-            log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
-            if( NF.strictMode || failOnError){
+            final msg =  "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details"
+            final shouldFail = NF.strictMode || failOnError
+            if( shouldFail ) {
+                log.error(msg,e)
                 session?.abort(e)
             }
+            else
+                log.warn(msg,e)
         }
+    }
+
+    protected void retryableProcessFile(Path source, Path target) {
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}"
+            }
+        }
+        final retryPolicy = RetryPolicy.builder()
+            .handle(Exception)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
+            .onRetry(listener)
+            .build()
+        Failsafe
+            .with( retryPolicy )
+            .get({it-> processFile(source, target)})
     }
 
     protected void processFile( Path source, Path destination ) {
