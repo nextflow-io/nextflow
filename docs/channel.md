@@ -388,6 +388,27 @@ Available options:
 `protocol`
 : Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
+(channel-interval)=
+
+### interval
+
+The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
+
+```groovy
+Channel.interval('1s').view()
+```
+
+The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as {ref}`operator-take`, {ref}`operator-timeout`, or {ref}`operator-until` to close the channel based on a stopping condition.
+
+An optional closure can be used to transform the index. Additionally, returning `Channel.STOP` will close the channel. For example:
+
+```groovy
+ch = Channel.interval('1s') { i ->
+    i == 10 ? Channel.STOP : i
+}
+ch.view()
+```
+
 (channel-of)=
 
 ### of
