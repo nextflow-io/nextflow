@@ -73,8 +73,8 @@ class ProgressRecordTest extends Specification {
         rec.stored =STORED
 
         then:
-        rec.getCompletedCount() == SUCCEEDED+ FAILED+ CACHED+ STORED
-        rec.getTotalCount() == PENDING+ SUBMITTED+ RUNNING + SUCCEEDED+ FAILED+ CACHED+ STORED
+        rec.getCompletedCount() == SUCCEEDED+ CACHED+ STORED
+        rec.getTotalCount() == PENDING+ SUBMITTED+ RUNNING + SUCCEEDED+ CACHED+ STORED
     }
 
 
