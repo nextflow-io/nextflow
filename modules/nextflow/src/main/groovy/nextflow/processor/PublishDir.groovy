@@ -25,7 +25,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
 import java.util.concurrent.ExecutorService
 import java.util.regex.Pattern
 
@@ -373,18 +372,18 @@ class PublishDir {
             retryableProcessFile(source, target)
         }
         catch( Throwable e ) {
-            log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
-            if( NF.strictMode || failOnError ) {
+            final msg =  "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details"
+            final shouldFail = NF.strictMode || failOnError
+            if( shouldFail ) {
+                log.error(msg,e)
                 session?.abort(e)
             }
+            else
+                log.warn(msg,e)
         }
     }
 
     protected void retryableProcessFile(Path source, Path target) {
-        final cond = new Predicate<? extends Throwable>() {
-            @Override
-            boolean test(Throwable t) { return true }
-        }
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {
@@ -392,7 +391,7 @@ class PublishDir {
             }
         }
         final retryPolicy = RetryPolicy.builder()
-            .handleIf(cond)
+            .handle(Exception)
             .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
             .withMaxAttempts(retryConfig.maxAttempts)
             .withJitter(retryConfig.jitter)
@@ -400,7 +399,7 @@ class PublishDir {
             .build()
         Failsafe
             .with( retryPolicy )
-            .get( ()-> processFile(source, target) )
+            .get({it-> processFile(source, target)})
     }
 
     protected void processFile( Path source, Path destination ) {
