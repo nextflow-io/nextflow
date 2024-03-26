@@ -1634,7 +1634,6 @@ The following executors are available:
 | `azurebatch`          | [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service                    |
 | `condor`              | [HTCondor](https://research.cs.wisc.edu/htcondor/) job scheduler                            |
 | `google-lifesciences` | [Google Genomics Pipelines](https://cloud.google.com/life-sciences) service                 |
-| `ignite`              | [Apache Ignite](https://ignite.apache.org/) cluster                                         |
 | `k8s`                 | [Kubernetes](https://kubernetes.io/) cluster                                                |
 | `local`               | The computer where `Nextflow` is launched                                                   |
 | `lsf`                 | [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler                     |
