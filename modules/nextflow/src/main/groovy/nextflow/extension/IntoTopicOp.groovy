@@ -36,23 +36,15 @@ class IntoTopicOp {
 
     private String name
 
-    private List<DataflowWriteChannel> outputs
-
     IntoTopicOp( DataflowReadChannel source, String name ) {
         this.source = source
         this.name = name
     }
 
     DataflowWriteChannel apply() {
-        final target = CH.createBy(source)
-        final topicSource = CH.createTopicSource(name)
-        this.outputs = [target, topicSource]
-        newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()))
+        final target = CH.createTopicSource(name)
+        newOperator(source, target, new ChainWithClosure(new CopyChannelsClosure()))
         return target
-    }
-
-    List<DataflowWriteChannel> getOutputs() {
-        return outputs
     }
 
 }
