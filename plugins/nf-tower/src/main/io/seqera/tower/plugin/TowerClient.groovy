@@ -215,7 +215,6 @@ class TowerClient implements TraceObserver {
         // report a warning for legacy endpoint
         if( url.contains('https://api.tower.nf') ) {
             log.warn "The endpoint `https://api.tower.nf` is deprecated - Please use `https://api.cloud.seqera.io` instead"
-            return DEF_ENDPOINT_URL
         }
         if( url =~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" ) {
             while( url.endsWith('/') )

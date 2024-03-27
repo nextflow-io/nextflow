@@ -129,7 +129,6 @@ class TowerClientTest extends Specification {
         observer.checkUrl('http://google.com:8080/foo/bar') == 'http://google.com:8080/foo/bar'
         observer.checkUrl('http://google.com:8080/foo/bar/') == 'http://google.com:8080/foo/bar'
         observer.checkUrl('http://google.com:8080/foo/bar///') == 'http://google.com:8080/foo/bar'
-        observer.checkUrl('https://api.tower.nf') == 'https://api.cloud.seqera.io'
 
         when:
         observer.checkUrl('ftp://localhost')
