@@ -130,3 +130,12 @@ developer/index
 developer/packages
 developer/plugins
 ```
+
+```{toctree}
+:hidden:
+:caption: Tutorials
+:maxdepth: 1
+
+flux
+metrics
+```
