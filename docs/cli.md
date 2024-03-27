@@ -1,4 +1,4 @@
-(cli-page)=
+
 
 # Command line interface (CLI)
 
@@ -6,14 +6,14 @@ Nextflow provides a robust command line interface for the management and executi
 
 Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands.
 
-(cli-options)=
+
 
 ## Options
 
 The top-level options are meant to be invoked in relation to the core Nextflow application and are applied to all commands. For options specific to any command, refer the CLI Commands section.
 
-:::{note}
-Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
+:::note
+Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for [Pipeline parameters ](cli-params).
 :::
 
 Available options:
@@ -31,7 +31,7 @@ Available options:
 : Add the specified file to configuration set.
 
 `-d, -dockerize`
-: :::{deprecated} 23.09.0-edge
+: :::info[Deprecated: 23.09.0-edge]
   :::
 : Launch nextflow via Docker (experimental).
 
@@ -82,7 +82,7 @@ $ nextflow -Dkey=value COMMAND [arg...]
 
 This options allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
 
-For specifying other JVM level options, please refer to the {ref}`config-env-vars` section.
+For specifying other JVM level options, please refer to the `config-env-vars` section.
 
 - Add JVM properties to the invoked pipeline:
 
@@ -124,7 +124,7 @@ The `-c` option is used to append a new configuration to the default configurati
 
 ### Docker driven execution
 
-:::{deprecated} 23.09.0-edge
+:::info[Deprecated: 23.09.0-edge]
 :::
 
 Launch Nextflow via Docker.
@@ -229,11 +229,11 @@ The `-v` option prints out information about Nextflow, such as the version and b
   http://nextflow.io
   ```
 
-(cli-commands)=
+
 
 ## Commands
 
-(cli-clean)=
+
 
 ### clean
 
@@ -399,7 +399,7 @@ $ nextflow config [options] [project name or path]
 
 **Description**
 
-The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, please refer the {ref}`config-profiles` section.
+The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, please refer the `config-profiles` section.
 
 **Options**
 
@@ -422,7 +422,7 @@ The `config` command is used for printing the project's configuration i.e. the `
 : Sort config attributes.
 
 `-value`
-: :::{versionadded} 23.08.0-edge
+: :::info[Version added: 23.08.0-edge]
   :::
 : Print the value of a config option, or fail if the option is not defined.
 
@@ -491,7 +491,7 @@ profiles {
 }
 ```
 
-(cli-console)=
+
 
 ### console
 
@@ -606,7 +606,7 @@ Delete a file or directory.
 $ nextflow fs rm <path>
 ```
 
-:::{versionadded} 23.10.0
+:::info[Version added: 23.10.0]
 :::
 
 Print file or directory attributes.
@@ -715,7 +715,7 @@ $ nextflow info nextflow-io/hello
 
 ### inspect
 
-:::{versionadded} 23.09.0-edge
+:::info[Version added: 23.09.0-edge]
 :::
 
 Inspect process settings in a pipeline project. Currently only supports the `container` directive.
@@ -776,7 +776,7 @@ $ nextflow kuberun [options] [project]
 
 **Description**
 
-The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. For more information please refer to the {ref}`k8s-page` page.
+The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. For more information please refer to the `k8s-page` page.
 
 **Options**
 
@@ -823,22 +823,22 @@ The `kuberun` command supports the following options from [`run`](#run):
 The following new options are also available:
 
 `-head-cpus`
-: :::{versionadded} 22.01.0-edge
+: :::info[Version added: 22.01.0-edge]
   :::
 : Specify number of CPUs requested for the Nextflow pod.
 
 `-head-image`
-: :::{versionadded} 22.07.1-edge
+: :::info[Version added: 22.07.1-edge]
   :::
 : Specify the container image for the Nextflow driver pod.
 
 `-head-memory`
-: :::{versionadded} 22.01.0-edge
+: :::info[Version added: 22.01.0-edge]
   :::
 : Specify amount of memory requested for the Nextflow pod.
 
 `-head-prescript`
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 : Specify script to be run before the Nextflow pod starts.
 
@@ -892,7 +892,7 @@ nextflow-io/hello
 nextflow-hub/fastqc
 ```
 
-(cli-log)=
+
 
 ### log
 
@@ -1023,7 +1023,7 @@ $ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
 
-(cli-plugin)=
+
 
 ### plugin
 
@@ -1144,12 +1144,12 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
-: :::{deprecated} 23.09.0-edge
+: :::info[Deprecated: 23.09.0-edge]
   :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
-: :::{deprecated} 23.09.0-edge
+: :::info[Deprecated: 23.09.0-edge]
   :::
 : Execute the workflow using DSL2 syntax.
 
@@ -1158,8 +1158,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-dump-hashes`
 : Dump task hash keys for debugging purposes.
-: :::{versionadded} 23.10.0
-  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`caching and resuming tips <cache-compare-hashes>` for more details.
+: :::info[Version added: 23.10.0]
+  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the [caching and resuming tips ](cache-compare-hashes) for more details.
   :::
 
 `-e.<key>=<value>`
@@ -1181,7 +1181,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: :::{versionadded} 20.09.1-edge
+: :::info[Version added: 20.09.1-edge]
   :::
 : The script file to be executed when launching a project directory or repository.
 
@@ -1198,7 +1198,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Comma separated list of plugin ids to be applied in the pipeline execution.
 
 `-preview`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : Run the workflow script skipping the execution of all processes.
 
@@ -1241,7 +1241,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-with-dag` (`dag-<timestamp>.html`)
 : Create pipeline DAG file.
-: :::{versionchanged} 23.10.0
+: :::info[Version changed: 23.10.0]
   The default format was changed from `dot` to `html`.
   :::
 
@@ -1313,7 +1313,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -profile docker
   ```
 
-- Execute a pipeline and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
+- Execute a pipeline and generate the summary HTML report. For more information on the metrics, please refer the `tracing-page` section:
 
   ```console
   $ nextflow run main.nf -with-report
@@ -1490,7 +1490,7 @@ workflow {
 }
 ```
 
-(cli-params)=
+
 
 ## Pipeline parameters
 
@@ -1502,11 +1502,11 @@ nextflow run <my script> --foo Hello
 
 Then, the parameter can be accessed in the pipeline script using the `params.foo` identifier.
 
-:::{note}
+:::note
 When the parameter name is formatted using `camelCase`, a second parameter is created with the same value using `kebab-case`, and vice versa.
 :::
 
-:::{warning}
+:::warning
 When a command line parameter includes one or more glob characters, i.e. wildcards like `*` or `?`, the parameter value must be enclosed in quotes to prevent Bash expansion and preserve the glob characters. For example:
 
 ```bash

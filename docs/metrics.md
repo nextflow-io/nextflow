@@ -1,8 +1,8 @@
-(metrics-page)=
+
 
 # Metrics
 
-This section details how the resource usage metrics from the {ref}`Execution report <execution-report>` are computed.
+This section details how the resource usage metrics from the [Execution report ](execution-report) are computed.
 
 ## CPU Usage
 
@@ -45,9 +45,11 @@ process CpuUsageEx2 {
 
 Indeed, the percentage of the CPU that this process got is a weighted average taking into account the percentage of the CPU and duration of each individual program over the job duration (a.k.a. elapsed real time, real time or wall time ) as follows:
 
+{/*
 $$
 \frac{ 100\% \times 10s + 100\% \times 5s + 0\% \times 5s }{10s+5s+5s} = 75\%
 $$
+*/}
 
 The third example is similar to the second one except that the pure computation stage is performed in a single step forked on 2 CPUs:
 
@@ -66,13 +68,15 @@ process CpuUsageEx3 {
 
 The `Raw Usage` tab would report 100% in the `Raw Usage` tab:
 
+{/*
 $$
 \frac{ 200\% \times 10s }{10s+10s} = 100\%
 $$
+*/}
 
 The `% Allocated` tab would report 50%, however, it would not be relevant to change the `cpus` directive from 2 to 1 as the process really uses 2 CPUs at it peak load.
 
-:::{tip}
+:::tip
 The [stress](https://people.seas.harvard.edu/~apw/stress/) program can be installed with `sudo apt-get install stress` or `sudo yum install stress` depending on your Linux distribution.
 :::
 
@@ -80,7 +84,7 @@ The [stress](https://people.seas.harvard.edu/~apw/stress/) program can be instal
 
 The plot has three tabs showing the usage of the physical memory (RAM), the virtual memory (vmem) and the percentage of RAM used by the process with respect to what was set in the `memory` directive. The peak usage during the execution of the process is reported for both physical and virtual memories.
 
-:::{note}
+:::note
 To better understand the memory usage plot, it is important to know that:
 
 - the total amount of memory used by a process is the `virtual memory (vmem)`. The `vmem` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
@@ -261,7 +265,7 @@ As expected, the `% RAM Allocated` tab shows that 0% of the resource set in the 
 ```{image} _static/report-resource-memory-pctram.png
 ```
 
-:::{warning}
+:::warning
 Memory and storage metrics are reported in bytes. This means that 1KB = $1024$ bytes, 1 MB = $1024^2$ bytes, 1 GB = $1024^3$ bytes, etc.
 :::
 

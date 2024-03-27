@@ -1,4 +1,4 @@
-(k8s-page)=
+
 
 # Kubernetes
 
@@ -25,10 +25,10 @@ At least a [Persistent Volume](https://kubernetes.io/docs/concepts/storage/persi
 
 Such volume needs to be accessible through a [Persistent Volume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims), which will be used by Nextflow to run the application and store the scratch data and the pipeline final result.
 
-The workflow application has to be containerised using the usual Nextflow {ref}`container<process-container>` directive.
+The workflow application has to be containerised using the usual Nextflow [container](process-container) directive.
 
-:::{tip}
-When using {ref}`wave-page` and {ref}`fusion-page` there is no need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes. You can ignore this requirement when using the Fusion file system. See the {ref}`fusion-page` documentation for further details.
+:::tip
+When using `wave-page` and `fusion-page` there is no need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes. You can ignore this requirement when using the Fusion file system. See the `fusion-page` documentation for further details.
 :::
 
 ## Execution
@@ -47,7 +47,7 @@ KubeDNS is running at https://your-host:6443/api/v1/namespaces/kube-system/servi
 
 ### Launch with `kuberun`
 
-:::{warning}
+:::warning
 The `kuberun` is considered an obsolete approach for the deployment of Nextflow pipeline with Kubernetes and is no longer maintained. For a better alternative, consider using [Launch with Fusion](#launch-with-fusion).
 :::
 
@@ -59,7 +59,7 @@ nextflow kuberun <pipeline-name> -v vol-claim:/mount/path
 
 This command will create and execute a pod running the nextflow orchestrator for the specified workflow. In the above example replace `<pipeline-name>` with an existing nextflow project or the absolute path of a workflow already deployed in the Kubernetes cluster.
 
-The `-v` command line option is required to specify the volume claim name and mount path to use for the workflow execution. In the above example replace `vol-claim` with the name of an existing persistent volume claim and `/mount/path` with the path where the volume is required to be mount in the container. Volume claims can also be specified in the Nextflow configuration file, see the {ref}`Kubernetes configuration section<config-k8s>` for details.
+The `-v` command line option is required to specify the volume claim name and mount path to use for the workflow execution. In the above example replace `vol-claim` with the name of an existing persistent volume claim and `/mount/path` with the path where the volume is required to be mount in the container. Volume claims can also be specified in the Nextflow configuration file, see the [Kubernetes configuration section](config-k8s) for details.
 
 Once the pod execution starts, the application in the foreground prints the console output produced by the running workflow pod.
 
@@ -73,16 +73,16 @@ nextflow kuberun login -v vol-claim:/mount/path
 
 This command creates a pod, sets up the volume claim(s), configures the Nextflow environment and finally launches a Bash login session.
 
-:::{warning}
+:::warning
 The pod is automatically destroyed once the shell session terminates. Do not use it to launch long-running workflows in the background.
 :::
 
 ### Launch with Fusion
 
-:::{versionadded} 22.10.0
+:::info[Version added: 22.10.0]
 :::
 
-The use of {ref}`fusion-page` allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
+The use of `fusion-page` allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
 
 This also makes unnecessary the use of the special `kuberun` command for the pipeline execution.
 
@@ -120,7 +120,7 @@ Then the pipeline execution can be launched using the usual run command and spec
 nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR-BUCKET>/scratch
 ```
 
-:::{note}
+:::note
 When using Fusion, pods will run as *privileged* by default.
 :::
 
@@ -135,7 +135,7 @@ fusion {
 ```
 
 To use a custom FUSE device plugin, specify it via the setting `k8s.fuseDevicePlugin`. See
-the {ref}`Kubernetes configuration section<config-k8s>` for details.
+the [Kubernetes configuration section](config-k8s) for details.
 
 ### Running in a pod
 
@@ -155,11 +155,11 @@ k8s {
 
 In the above snippet replace `vol-claim` with the name of an existing persistent volume claim and replace `/mount/path` with the actual desired mount path (default: `/workspace`) and `storageSubPath` with the directory in the volume to be mounted (default: `/`).
 
-:::{warning}
+:::warning
 The running pod must have been created with the same persistent volume claim name and mount as the one specified in your Nextflow configuration file. Note also that the `run` command does not support the `-v` option.
 :::
 
-:::{tip}
+:::tip
 It is also possible to mount multiple volumes using the `pod` directive, for example:
 
 ```groovy
@@ -169,7 +169,7 @@ k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]
 
 ## Pod settings
 
-The process {ref}`process-pod` directive allows the definition of pods specific settings, such as environment variables, secrets and config maps when using the {ref}`k8s-executor` executor. See the {ref}`process-pod` directive for more details.
+The process `process-pod` directive allows the definition of pods specific settings, such as environment variables, secrets and config maps when using the `k8s-executor` executor. See the `process-pod` directive for more details.
 
 ## Limitations
 
@@ -177,4 +177,4 @@ The `kuberun` command does not allow the execution of local Nextflow scripts. It
 
 ## Advanced configuration
 
-Read the {ref}`Kubernetes configuration<config-k8s>` and {ref}`executor <k8s-executor>` sections to learn more about advanced configuration options.
+Read the [executor ](k8s-executor) sections to learn more about advanced configuration options.

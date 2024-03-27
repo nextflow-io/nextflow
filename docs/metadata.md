@@ -1,8 +1,8 @@
-(metadata-page)=
+
 
 # Workflow introspection
 
-(metadata-workflow)=
+
 
 ## Runtime metadata
 
@@ -15,7 +15,7 @@ println "Cmd line: $workflow.commandLine"
 println "Manifest's pipeline version: $workflow.manifest.version"
 ```
 
-:::{tip}
+:::tip
 To shortcut access to multiple `workflow` properties, you can use the Groovy [with](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Object.html#with(groovy.lang.Closure)>) method.
 :::
 
@@ -114,7 +114,7 @@ The following table lists the properties that can be accessed on the `workflow` 
 `workflow.workDir`
 : Workflow working directory.
 
-(metadata-nextflow)=
+
 
 ## Nextflow metadata
 
@@ -139,7 +139,7 @@ The implicit `nextflow` object allows you to access the metadata information of 
   }
   ```
 
-(metadata-completion-handler)=
+
 
 ## Completion handler
 
@@ -154,9 +154,9 @@ workflow.onComplete {
 }
 ```
 
-If you want an e-mail notification on completion, check {ref}`mail-page`.
+If you want an e-mail notification on completion, check `mail-page`.
 
-(metadata-error-handler)=
+
 
 ## Error handler
 
@@ -168,8 +168,8 @@ workflow.onError {
 }
 ```
 
-:::{note}
-Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
+:::note
+Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` `process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
 :::
 
 ## Decoupling metadata
@@ -190,6 +190,6 @@ workflow.onError = {
 }
 ```
 
-:::{note}
+:::note
 It is possible to define workflow event handlers both in the pipeline script **and** in the configuration file.
 :::

@@ -1,8 +1,8 @@
-(tracing-page)=
+
 
 # Reports
 
-(execution-log)=
+
 
 ## Execution log
 
@@ -12,8 +12,8 @@ The `nextflow log` command shows information about executed pipelines in the cur
 nextflow log <run name> [options]
 ```
 
-:::{note}
-Both the {ref}`execution report <execution-report>` and the {ref}`trace report <trace-report>` must be specified when the pipeline is first called. By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
+:::note
+Both the [trace report ](trace-report) must be specified when the pipeline is first called. By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
 :::
 
 By default, `log` prints the list of executed pipelines:
@@ -50,7 +50,7 @@ ec/3100e7  mapping (ggal_gut)                                       0  COMPLETED
 94/dfdfb6  makeTranscript (ggal_gut)                                0  COMPLETED
 ```
 
-The fields accepted by the `-f` options are the ones in the {ref}`trace report<trace-fields>`, as well as: script, stdout, stderr, env. List available fields using the `-l` (`-list-fields`) option.
+The fields accepted by the `-f` options are the ones in the [trace report](trace-fields), as well as: script, stdout, stderr, env. List available fields using the `-l` (`-list-fields`) option.
 
 The `script` field is useful for examining script commands run in each task:
 
@@ -91,7 +91,7 @@ The `filter` option makes it possible to select which entries to include in the 
 nextflow log goofy_kilby -filter 'name =~ /foo.*/ && status == "FAILED"'
 ```
 
-(execution-report)=
+
 
 ## Execution report
 
@@ -121,9 +121,9 @@ Plots are shown for CPU, memory, job duration and disk I/O. They have two (or th
 ```{image} _static/report-resource-cpu.png
 ```
 
-Learn more about how resource usage is computed in the {ref}`Metrics documentation <metrics-page>`.
+Learn more about how resource usage is computed in the [Metrics documentation ](metrics-page).
 
-(execution-report-tasks)=
+
 
 ### Tasks
 
@@ -132,17 +132,17 @@ The `Tasks` section lists all executed tasks, reporting for each of them the sta
 ```{image} _static/report-tasks-min.png
 ```
 
-:::{note}
+:::note
 Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Moreover, some of these metrics are not reported when running on Mac OS X. See the note about that in the [Trace report](#trace-report) below.
 :::
 
-:::{warning}
+:::warning
 A common problem when using a third party container image is that it does not include one or more of the above utilities, resulting in an empty execution report.
 :::
 
-Please read {ref}`Report scope <config-report>` section to learn more about the execution report configuration details.
+Please read [Report scope ](config-report) section to learn more about the execution report configuration details.
 
-(trace-report)=
+
 
 ## Trace report
 
@@ -178,7 +178,7 @@ It will create a file named `trace.txt` in the current directory. The content lo
 | 56      | c3/ec5f4a | 2066      | similarity (5) | COMPLETED | 0    | 2014-10-23 17:13:23.948 | 30s      | 616ms    | 0.0%   | 10.4 MB  | 34.6 MB  | 238 MB   | 8.4 MB   |
 | 98      | de/d6c0a6 | 2099      | matrix (1)     | COMPLETED | 0    | 2014-10-23 17:14:27.139 | 30s      | 1s       | 0.0%   | 4.8 MB   | 42 MB    | 240.6 MB | 79 KB    |
 
-(trace-fields)=
+
 
 The following table shows the fields that can be included in the execution report:
 
@@ -303,24 +303,24 @@ The following table shows the fields that can be included in the execution repor
 : The action applied on errof task failure.
 
 `hostname`
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 : The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
 
 `cpu_model`
-: :::{versionadded} 22.07.0-edge
+: :::info[Version added: 22.07.0-edge]
   :::
 : The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
 
-:::{note}
+:::note
 These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
 :::
 
 Trace report layout and other configuration settings can be specified by using the `nextflow.config` configuration file.
 
-Please read {ref}`Trace scope <config-trace>` section to learn more about it.
+Please read [Trace scope ](config-trace) section to learn more about it.
 
-(timeline-report)=
+
 
 ## Timeline report
 
@@ -343,7 +343,7 @@ nextflow run <pipeline> -with-timeline [file name]
 
 The report file name can be specified as an optional parameter following the timeline option.
 
-(dag-visualisation)=
+
 
 ## DAG visualisation
 
@@ -357,11 +357,11 @@ The workflow DAG can be rendered in a different format by specifying an output f
 nextflow run <pipeline> -with-dag flowchart.png
 ```
 
-:::{versionadded} 22.06.0-edge
+:::info[Version added: 22.06.0-edge]
 You can use the `-preview` option with `-with-dag` to render the workflow DAG without executing any tasks.
 :::
 
-:::{versionchanged} 23.10.0
+:::info[Version changed: 23.10.0]
 The default output format was changed from DOT to HTML.
 :::
 
@@ -375,12 +375,12 @@ The following file formats are supported:
 
 `html`
 : HTML file with Mermaid diagram
-: :::{versionchanged} 23.10.0
+: :::info[Version changed: 23.10.0]
   The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
   :::
 
 `mmd`
-: :::{versionadded} 22.04.0
+: :::info[Version added: 22.04.0]
   :::
 : Mermaid diagram
 

@@ -1,4 +1,4 @@
-(channel-page)=
+
 
 # Channels
 
@@ -9,22 +9,22 @@ A channel has two major properties:
 1. Sending a message is an *asynchronous* (i.e. non-blocking) operation, which means the sender doesn't have to wait for the receiving process.
 2. Receiving a message is a *synchronous* (i.e. blocking) operation, which means the receiving process must wait until a message has arrived.
 
-(channel-types)=
+
 
 ## Channel types
 
 In Nextflow there are two kinds of channels: *queue channels* and *value channels*.
 
-(channel-type-queue)=
+
 
 ### Queue channel
 
 A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
 to a consumer process, or an operators.
 
-A queue channel can be created by factory methods ([of](#of), [fromPath](#frompath), etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
+A queue channel can be created by factory methods ([of](#of), [fromPath](#frompath), etc), operators ([Process outputs ](process-output)).
 
-(channel-type-value)=
+
 
 ### Value channel
 
@@ -32,7 +32,7 @@ A *value channel* can be bound (i.e. assigned) with one and only one value, and 
 a process or an operator.
 
 A value channel can be created with the [value](#value) factory method or by any operator that produces a single value
-({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value
+(`operator-first`, `operator-collect`, `operator-reduce`, etc). Additionally, a process will emit value
 channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
 
 For example:
@@ -59,32 +59,32 @@ workflow {
 In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly
 wrapped in a value channel, and the output is also emitted as a value channel.
 
-See also: {ref}`process-multiple-input-channels`.
+See also: `process-multiple-input-channels`.
 
-(channel-factory)=
+
 
 ## Channel factories
 
 Channels may be created explicitly using the following channel factory methods.
 
-:::{versionadded} 20.07.0
+:::info[Version added: 20.07.0]
 `channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or
 `Channel.of()`, and so on.
 :::
 
-(channel-empty)=
+
 
 ### empty
 
 The `channel.empty` factory method, by definition, creates a channel that doesn't emit any value.
 
-See also: {ref}`operator-ifempty`.
+See also: `operator-ifempty`.
 
-(channel-from)=
+
 
 ### from
 
-:::{deprecated} 19.09.0-edge
+:::info[Deprecated: 19.09.0-edge]
 Use [channel.of](#of) or [channel.fromList](#fromlist) instead.
 :::
 
@@ -111,7 +111,7 @@ zeroToNine = channel.from( 0..9 )
 strings = channel.from( 'A'..'Z' )
 ```
 
-:::{note}
+:::note
 When the `channel.from` argument is an object implementing the (Java) [Collection](http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html) interface, the resulting channel emits the collection entries as individual items.
 :::
 
@@ -128,11 +128,11 @@ But when more than one argument is provided, they are always managed as *single*
 channel.from( [1, 2], [5,6], [7,9] )
 ```
 
-(channel-fromlist)=
+
 
 ### fromList
 
-:::{versionadded} 19.10.0
+:::info[Version added: 19.10.0]
 :::
 
 The `channel.fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
@@ -154,7 +154,7 @@ value: d
 
 See also: [channel.of](#of) factory method.
 
-(channel-path)=
+
 
 ### fromPath
 
@@ -168,7 +168,7 @@ myFileChannel = channel.fromPath( '/data/some/bigfile.txt' )
 The above line creates a channel and binds it to a [Path](http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html)
 object for the specified file.
 
-:::{note}
+:::note
 `channel.fromPath` does not check whether the file exists.
 :::
 
@@ -181,7 +181,7 @@ myFileChannel = channel.fromPath( '/data/big/*.txt' )
 
 This example creates a channel and emits as many `Path` items as there are files with `txt` extension in the `/data/big` folder.
 
-:::{tip}
+:::tip
 Two asterisks, i.e. `**`, works like `*` but crosses directory boundaries. This syntax is generally used for matching complete paths. Curly brackets specify a collection of sub-patterns.
 :::
 
@@ -195,7 +195,7 @@ pairFiles = channel.fromPath( 'data/file_{1,2}.fq' )
 
 The first line returns a channel emitting the files ending with the suffix `.fa` in the `data` folder *and* recursively in all its sub-folders. While the second one only emits the files which have the same suffix in *any* sub-folder in the `data` path. Finally the last example emits two files: `data/file_1.fq` and `data/file_2.fq`.
 
-:::{note}
+:::note
 As in Linux Bash, the `*` wildcard does not catch hidden files (i.e. files whose name starts with a `.` character).
 :::
 
@@ -249,7 +249,7 @@ Available options:
 `type`
 : Type of paths returned, either `file`, `dir` or `any` (default: `file`)
 
-(channel-filepairs)=
+
 
 ### fromFilePairs
 
@@ -273,7 +273,7 @@ It will produce an output similar to the following:
 [SRR493371, [/my/data/SRR493371_1.fastq, /my/data/SRR493371_2.fastq]]
 ```
 
-:::{note}
+:::note
 The glob pattern must contain at least one `*` wildcard character.
 :::
 
@@ -314,11 +314,11 @@ Available options:
 `type`
 : Type of paths returned, either `file`, `dir` or `any` (default: `file`)
 
-(channel-fromsra)=
+
 
 ### fromSRA
 
-:::{versionadded} 19.04.0
+:::info[Version added: 19.04.0]
 :::
 
 The `channel.fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
@@ -356,7 +356,7 @@ channel
 [ERR908505, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_2.fastq.gz]]
 ```
 
-:::{note}
+:::note
 Each read pair is implicitly managed and returned as a list of files.
 :::
 
@@ -388,7 +388,7 @@ Available options:
 `protocol`
 : Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
-(channel-interval)=
+
 
 ### interval
 
@@ -398,7 +398,7 @@ The `interval` method emits an incrementing index (starting from zero) at a peri
 Channel.interval('1s').view()
 ```
 
-The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as {ref}`operator-take`, {ref}`operator-timeout`, or {ref}`operator-until` to close the channel based on a stopping condition.
+The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as `operator-take`, `operator-timeout`, or `operator-until` to close the channel based on a stopping condition.
 
 An optional closure can be used to transform the index. Additionally, returning `Channel.STOP` will close the channel. For example:
 
@@ -409,11 +409,11 @@ ch = Channel.interval('1s') { i ->
 ch.view()
 ```
 
-(channel-of)=
+
 
 ### of
 
-:::{versionadded} 19.10.0
+:::info[Version added: 19.10.0]
 :::
 
 The `channel.of` method allows you to create a channel that emits the arguments provided to it, for example:
@@ -456,24 +456,24 @@ Y
 
 See also: [channel.fromList](#fromlist) factory method.
 
-(channel-topic)=
+
 
 ### topic
 
-:::{versionadded} 23.11.0-edge
+:::info[Version added: 23.11.0-edge]
 :::
 
-:::{note}
+:::note
 This feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-A *topic* is a channel type introduced as of Nextflow 23.11.0-edge along with {ref}`channel-type-value` and
-{ref}`channel-type-queue`.
+A *topic* is a channel type introduced as of Nextflow 23.11.0-edge along with `channel-type-value` and
+`channel-type-queue`.
 
 A *topic channel*, similarly to a *queue channel*, is non-blocking unidirectional FIFO queue, however it connects
 multiple *producer* processes with multiple *consumer* processes or operators.
 
-:::{tip}
+:::tip
 You can think about it as a channel that is shared across many different process using the same *topic name*.
 :::
 
@@ -501,13 +501,13 @@ channel.topic('my-topic').view()
 This approach is a convenient way to collect related items from many different sources without explicitly defining
 the logic connecting many different queue channels altogether, commonly using the `mix` operator.
 
-:::{warning}
+:::warning
 Any process that consumes a channel topic should not send any outputs to that topic, or else the pipeline will hang forever.
 :::
 
-See also: {ref}`process-additional-options` for process outputs.
+See also: `process-additional-options` for process outputs.
 
-(channel-value)=
+
 
 ### value
 
@@ -523,7 +523,7 @@ expl3 = channel.value( [1,2,3,4,5] )
 The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
 The third line creates a channel and binds a list object to it that will be emitted as a single value.
 
-(channel-watchpath)=
+
 
 ### watchPath
 
@@ -554,7 +554,7 @@ channel
     .subscribe { println "File created or modified: $it" }
 ```
 
-:::{warning}
+:::warning
 The `channel.watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means
 that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to close the channel when
 a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).

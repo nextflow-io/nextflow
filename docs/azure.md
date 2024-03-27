@@ -1,11 +1,11 @@
-(azure-page)=
+
 
 # Azure Cloud
 
-:::{versionadded} 21.04.0
+:::info[Version added: 21.04.0]
 :::
 
-(azure-blobstorage)=
+
 
 ## Azure Blob Storage
 
@@ -24,11 +24,11 @@ azure {
 
 Alternatively, the **Shared Access Token** can be specified with the `sasToken` option instead of `accountKey`.
 
-:::{tip}
+:::tip
 When creating the Shared Access Token, make sure to allow the resource types `Container` and `Object` and allow the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 :::
 
-:::{tip}
+:::tip
 The value of `sasToken` is the token stripped by the character `?` from the beginning of the token.
 :::
 
@@ -81,14 +81,14 @@ azure {
 }
 ```
 
-The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount. 
+The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount.
 
-:::{warning}
-Azure File shares do not support authentication and management with Active Directory. The storage account key must be 
+:::warning
+Azure File shares do not support authentication and management with Active Directory. The storage account key must be
 set in the configuration if a share is mounted.
 :::
 
-(azure-batch)=
+
 
 ## Azure Batch
 
@@ -96,7 +96,7 @@ set in the configuration if a share is mounted.
 
 Nextflow provides built-in support for Azure Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`Azure Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
+Read the [Azure Batch executor ](azurebatch-executor) section to learn more about the `azurebatch` executor in Nextflow.
 
 ### Get started
 
@@ -105,7 +105,7 @@ Read the {ref}`Azure Batch executor <azurebatch-executor>` section to learn more
 3. Create a Storage account and, within that, an Azure Blob Container in the same location where the Batch account was created. Take note of the account name and key.
 4. If you plan to use Azure Files, create an Azure File share within the same Storage account and upload your input data.
 5. Associate the Storage account with the Azure Batch account.
-6. Make sure every process in your pipeline specifies one or more Docker containers with the {ref}`process-container` directive.
+6. Make sure every process in your pipeline specifies one or more Docker containers with the `process-container` directive.
 7. Make sure all of your container images are published in a Docker registry that can be accessed by your Azure Batch environment, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Azure Container Registry](https://docs.microsoft.com/en-us/azure/container-registry/) .
 
 A minimal Nextflow configuration for Azure Batch looks like the following snippet:
@@ -131,7 +131,7 @@ azure {
 
 In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values corresponding to your configuration.
 
-:::{tip}
+:::tip
 The list of Azure regions can be found by executing the following Azure CLI command:
 
 ```bash
@@ -170,15 +170,15 @@ azure {
 }
 ```
 
-:::{warning}
+:::warning
 To avoid any extra charges in the Batch account, remember to clean up the Batch pools or use auto scaling.
 :::
 
-:::{warning}
+:::warning
 Make sure your Batch account has enough resources to satisfy the pipeline's requirements and the pool configuration.
 :::
 
-:::{warning}
+:::warning
 Nextflow uses the same pool ID across pipeline executions, if the pool features have not changed. Therefore, when using `deletePoolsOnCompletion = true`, make sure the pool is completely removed from the Azure Batch account before re-running the pipeline. The following message is returned when the pool is still shutting down:
 
 ```
@@ -190,7 +190,7 @@ Caused by:
 
 ### Named pools
 
-If you want to have more precise control over the compute node pools used in your pipeline, such as using a different pool depending on the task in your pipeline, you can use the {ref}`process-queue` directive in Nextflow to specify the ID of a Azure Batch compute pool that should be used to execute that process.
+If you want to have more precise control over the compute node pools used in your pipeline, such as using a different pool depending on the task in your pipeline, you can use the `process-queue` directive in Nextflow to specify the ID of a Azure Batch compute pool that should be used to execute that process.
 
 The pool is expected to be already available in the Batch environment, unless the setting `allowPoolCreation = true` is provided in the `azure.batch` config scope in the pipeline configuration file. In the latter case, Nextflow will create the pools on-demand.
 
@@ -214,13 +214,13 @@ azure {
 }
 ```
 
-The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type `Standard_D2_v2`, the second 5 nodes of type `Standard_E2_v3`. See the {ref}`Azure configuration <config-azure>` section for the complete list of available configuration options.
+The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type `Standard_D2_v2`, the second 5 nodes of type `Standard_E2_v3`. See the [Azure configuration ](config-azure) section for the complete list of available configuration options.
 
-:::{warning}
+:::warning
 The pool name can only contain alphanumeric, hyphen and underscore characters.
 :::
 
-:::{warning}
+:::warning
 If the pool name includes a hyphen, make sure to wrap it with single quotes. For example:
 
 ```groovy
@@ -316,11 +316,11 @@ By default, Nextflow creates pool nodes based on CentOS 8, but this behavior can
 
 In the above snippet, replace `<name>` with the name of your Azure node pool.
 
-See the {ref}`Azure configuration <config-azure>` section and the [Azure Batch nodes](https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes) documentation for more details.
+See the [Azure configuration ](config-azure) section and the [Azure Batch nodes](https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes) documentation for more details.
 
 ### Private container registry
 
-:::{versionadded} 21.05.0-edge
+:::info[Version added: 21.05.0-edge]
 :::
 
 A private container registry for Docker images can be specified as follows:
@@ -337,16 +337,16 @@ azure {
 
 The private registry is an addition, not a replacement, to the existing configuration. Public images from other registries will still be pulled as normal, if they are requested.
 
-:::{note}
-When using containers hosted in a private registry, the registry name must also be provided in the container name specified via the {ref}`container <process-container>` directive using the format: `[server]/[your-organization]/[your-image]:[tag]`. Read more about fully qualified image names in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry).
+:::note
+When using containers hosted in a private registry, the registry name must also be provided in the container name specified via the [container ](process-container) directive using the format: `[server]/[your-organization]/[your-image]:[tag]`. Read more about fully qualified image names in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry).
 :::
 
 ### Virtual Network
 
-:::{versionadded} 23.03.0-edge
+:::info[Version added: 23.03.0-edge]
 :::
 
-Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the 
+Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the
 `virtualNetwork` option can be added to the pool settings as follows:
 
 ```groovy
@@ -370,13 +370,13 @@ The value of the setting must be the identifier of a subnet available in the vir
 /subscriptions/<YOUR SUBSCRIPTION ID>/resourceGroups/<YOUR RESOURCE GROUP NAME>/providers/Microsoft.Network/virtualNetworks/<YOUR VIRTUAL NETWORK NAME>/subnets/<YOUR SUBNET NAME>
 ```
 
-:::{warning}
+:::warning
 Batch Authentication with Shared Keys does not allow to link external resources (like Virtual Networks) to the pool. Therefore, Active Directory Authentication must be used in conjunction with the `virtualNetwork` setting.
 :::
 
 ## Microsoft Entra (formerly Active Directory Authentication)
 
-:::{versionadded} 22.11.0-edge
+:::info[Version added: 22.11.0-edge]
 :::
 
 [Service Principal](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts.
@@ -387,7 +387,7 @@ The Service Principal should have the at least the following role assignments:
 2. Storage Blob Data Reader
 3. Storage Blob Data Contributor
 
-:::{note}
+:::note
 To assign the necessary roles to the Service Principal, refer to the [official Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
 :::
 
@@ -414,4 +414,4 @@ azure {
 
 ## Advanced configuration
 
-Read the {ref}`Azure configuration<config-azure>` section to learn more about advanced configuration options.
+Read the [Azure configuration](config-azure) section to learn more about advanced configuration options.

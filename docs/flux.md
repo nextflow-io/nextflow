@@ -1,8 +1,8 @@
-(flux-page)=
+
 
 # Flux Framework
 
-:::{versionadded} 22.11.0-edge
+:::info[Version added: 22.11.0-edge]
 :::
 
 The [Flux Framework](https://flux-framework.org/) is a modern resource manager that can span the space between cloud and HPC. If your center does not provide Flux for you, you can [build Flux on your own](https://flux-framework.readthedocs.io/en/latest/quickstart.html#building-the-code) and launch it as a job with your resource manager of choice (e.g. SLURM or a cloud provider).
@@ -32,7 +32,7 @@ process {
 }
 ```
 
-For additional Flux settings, see the {ref}`flux-executor` section.
+For additional Flux settings, see the `flux-executor` section.
 
 Here is an example pipeline that we will use:
 
@@ -91,7 +91,7 @@ $ flux start --test-size=4
 
 #### Getting Familiar with Flux
 
-:::{note}
+:::note
 This step is optional!
 :::
 

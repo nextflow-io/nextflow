@@ -1,4 +1,4 @@
-(operator-page)=
+
 
 # Operators
 
@@ -14,18 +14,18 @@ This page is a comprehensive reference for all Nextflow operators. However, if y
 - Maths: [count](#count), [max](#max), [min](#min), [sum](#sum)
 - Other: [ifEmpty](#ifempty), [map](#map), [set](#set), [view](#view)
 
-(operator-branch)=
+
 
 ## branch
 
-:::{versionadded} 19.08.0-edge
+:::info[Version added: 19.08.0-edge]
 :::
 
 *Returns: map of queue channels*
 
 The `branch` operator forwards each item from a source channel to one of multiple output channels, based on a selection criteria.
 
-The selection criteria is a {ref}`closure <script-closure>` that defines, for each output channel, a unique label followed by a boolean expression. When an item is received, it is routed to the first output channel whose expression evaluates to `true`. For example:
+The selection criteria is a [closure ](script-closure) that defines, for each output channel, a unique label followed by a boolean expression. When an item is received, it is routed to the first output channel whose expression evaluates to `true`. For example:
 
 ```{literalinclude} snippets/branch.nf
 :language: groovy
@@ -35,7 +35,7 @@ The selection criteria is a {ref}`closure <script-closure>` that defines, for ea
 :language: console
 ```
 
-:::{note}
+:::note
 The above output may be printed in any order since the two `view` operations are executed asynchronously.
 :::
 
@@ -59,7 +59,7 @@ The value emitted to each branch can be customized with an expression statement 
 :language: console
 ```
 
-:::{tip}
+:::tip
 When the `return` keyword is omitted, the value of the last expression statement is implicitly returned.
 :::
 
@@ -83,7 +83,7 @@ This operator has multiple variants:
 
 `buffer( closingCondition )`
 
-: Emits each subset when `closingCondition` is satisfied. The closing condition can be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
+: Emits each subset when `closingCondition` is satisfied. The closing condition can be a literal value, a [regular expression ](script-regexp), a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
   ```{literalinclude} snippets/buffer-with-closing.nf
   :language: groovy
@@ -95,7 +95,7 @@ This operator has multiple variants:
 
 `buffer( openingCondition, closingCondition )`
 
-: Creates a new subset when `openingCondition` is satisfied and emits the subset when is `closingCondition` is satisfied. The opening and closing conditions can each be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
+: Creates a new subset when `openingCondition` is satisfied and emits the subset when is `closingCondition` is satisfied. The opening and closing conditions can each be a literal value, a [regular expression ](script-regexp), a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
   ```{literalinclude} snippets/buffer-with-opening-closing.nf
   :language: groovy
@@ -173,7 +173,7 @@ This operator has multiple variants:
   :language: console
   ```
 
-  :::{note}
+  :::note
   This version of `collate` is equivalent to `buffer( size: n, remainder: true | false )`.
   :::
 
@@ -193,7 +193,7 @@ This operator has multiple variants:
 
 See also: [buffer](#buffer)
 
-(operator-collect)=
+
 
 ## collect
 
@@ -209,7 +209,7 @@ The `collect` operator collects all items from a source channel into a list and 
 :language: console
 ```
 
-An optional {ref}`closure <script-closure>` can be used to transform each item before it is collected:
+An optional [closure ](script-closure) can be used to transform each item before it is collected:
 
 ```{literalinclude} snippets/collect-with-mapper.nf
 :language: groovy
@@ -225,7 +225,7 @@ Available options:
 : When `true`, nested list structures are flattened and their items are collected individually (default: `true`).
 
 `sort`
-: When `true`, the collected items are sorted by their natural ordering (default: `false`). Can also be a {ref}`closure <script-closure>` or a [Comparator](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) which defines how items are compared during sorting.
+: When `true`, the collected items are sorted by their natural ordering (default: `false`). Can also be a [closure ](script-closure) or a [Comparator](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) which defines how items are compared during sorting.
 
 See also: [toList](#tolist), [toSortedList](#tosortedlist)
 
@@ -247,7 +247,7 @@ This operator has multiple variants:
 
 `collectFile( closure, options = [:] )`
 
-: Collects the items into groups and saves each group to a file, using a grouping criteria. The grouping criteria is a {ref}`closure <script-closure>` that maps each item to a pair, where the first element is the file name for the group and the second element is the content to be appended to that file. For example:
+: Collects the items into groups and saves each group to a file, using a grouping criteria. The grouping criteria is a [closure ](script-closure) that maps each item to a pair, where the first element is the file name for the group and the second element is the content to be appended to that file. For example:
 
   ```{literalinclude} snippets/collectfile-closure.nf
   :language: groovy
@@ -271,14 +271,14 @@ Channel
     .view { it.text }
 ```
 
-:::{warning}
+:::warning
 The `collectFile` operator needs to store files in a temporary directory that is automatically deleted on workflow completion. For performance reasons, this directory is located in the machine's local storage, and it should have as much free space as the data that is being collected. The `tempDir` option can be used to specify a different temporary directory.
 :::
 
 Available options:
 
 `cache`
-: Controls the caching ability of the `collectFile` operator when using the *resume* feature. It follows the same semantic of the {ref}`process-cache` directive (default: `true`).
+: Controls the caching ability of the `collectFile` operator when using the *resume* feature. It follows the same semantic of the `process-cache` directive (default: `true`).
 
 `keepHeader`
 : Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the `skip` option (default: `0`), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
@@ -303,7 +303,7 @@ Available options:
   - `'index'`: Order the content by the incremental index number assigned to each entry while they are collected.
   - `'hash'`: (default) Order the content by the hash number associated to each entry
   - `'deep'`: Similar to the previous, but the hash number is created on actual entries content e.g. when the entry is a file the hash is created on the actual file content.
-  - A custom sorting criteria can be specified with a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
+  - A custom sorting criteria can be specified with a [Closure ](script-closure) or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
 
   The file content is sorted in such a way that it does not depend on the order in which entries were added to it, which guarantees that it is consistent (i.e. does not change) across different executions with the same data.
 
@@ -313,7 +313,7 @@ Available options:
 `tempDir`
 : Folder where temporary files, used by the collecting process, are stored.
 
-(operator-combine)=
+
 
 ## combine
 
@@ -341,7 +341,7 @@ The `by` option can be used to combine items that share a matching key. The valu
 :language: console
 ```
 
-:::{note}
+:::note
 The `combine` operator is similar to `cross` and `join`, making them easy to confuse. Their differences can be summarized as follows:
 
 - `combine` and `cross` both produce an *outer product* or *cross product*, whereas `join` produces an *inner product*.
@@ -353,7 +353,7 @@ The `combine` operator is similar to `cross` and `join`, making them easy to con
 
 See also: [cross](#cross), [join](#join)
 
-(operator-concat)=
+
 
 ## concat
 
@@ -375,7 +375,7 @@ For example:
 
 See also: [mix](#mix)
 
-(operator-count)=
+
 
 ## count
 
@@ -391,7 +391,7 @@ The `count` operator computes the total number of items in a source channel and 
 :language: console
 ```
 
-An optional filter can be provided to select which items to count. The selection criteria can be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
+An optional filter can be provided to select which items to count. The selection criteria can be a literal value, a [regular expression ](script-regexp), a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
 ```{literalinclude} snippets/count-with-filter-number.nf
 :language: groovy
@@ -417,7 +417,7 @@ An optional filter can be provided to select which items to count. The selection
 :language: console
 ```
 
-(operator-countfasta)=
+
 
 ## countFasta
 
@@ -425,7 +425,7 @@ An optional filter can be provided to select which items to count. The selection
 
 Counts the total number of records in a channel of FASTA files, equivalent to `splitFasta | count`. See [splitFasta](#splitfasta) for the list of available options.
 
-(operator-countfastq)=
+
 
 ## countFastq
 
@@ -433,7 +433,7 @@ Counts the total number of records in a channel of FASTA files, equivalent to `s
 
 Counts the total number of records in a channel of FASTQ files, equivalent to `splitFastq | count`. See [splitFastq](#splitfastq) for the list of available options.
 
-(operator-countjson)=
+
 
 ## countJson
 
@@ -441,7 +441,7 @@ Counts the total number of records in a channel of FASTQ files, equivalent to `s
 
 Counts the total number of records in a channel of JSON files, equivalent to `splitJson | count`. See [splitJson](#splitjson) for the list of available options.
 
-(operator-countlines)=
+
 
 ## countLines
 
@@ -449,7 +449,7 @@ Counts the total number of records in a channel of JSON files, equivalent to `sp
 
 Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
 
-(operator-cross)=
+
 
 ## cross
 
@@ -498,7 +498,7 @@ The `distinct` operator forwards a source channel with *consecutively* repeated 
 :language: console
 ```
 
-An optional {ref}`closure <script-closure>` can be used to transform each value before it is evaluated for distinct-ness:
+An optional [closure ](script-closure) can be used to transform each value before it is evaluated for distinct-ness:
 
 ```{literalinclude} snippets/distinct-with-mapper.nf
 :language: groovy
@@ -510,7 +510,7 @@ An optional {ref}`closure <script-closure>` can be used to transform each value 
 
 See also: [unique](#unique)
 
-(operator-dump)=
+
 
 ## dump
 
@@ -529,7 +529,7 @@ Then, you can run your pipeline with `-dump-channels foo` or `-dump-channels bar
 Available options:
 
 `pretty`
-: :::{versionadded} 22.10.0
+: :::info[Version added: 22.10.0]
   :::
 : When `true`, format the output as pretty-printed JSON (default: `false`).
 
@@ -540,7 +540,7 @@ Available options:
 
 *Returns: queue channel*
 
-The `filter` operator emits the items from a source channel that satisfy a condition, discarding all other items. The filter condition can be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate.
+The `filter` operator emits the items from a source channel that satisfy a condition, discarding all other items. The filter condition can be a literal value, a [regular expression ](script-regexp), a type qualifier (i.e. Java class), or a boolean predicate.
 
 The following example filters a channel with a regular expression that only matches strings beginning with `a`:
 
@@ -562,7 +562,7 @@ The following example filters a channel with the `Number` type qualifier so that
 :language: console
 ```
 
-The following example filters a channel using a boolean predicate, which is a {ref}`closure <script-closure>` that returns a boolean value. In this case, the predicate is used to select only odd numbers:
+The following example filters a channel using a boolean predicate, which is a [closure ](script-closure) that returns a boolean value. In this case, the predicate is used to select only odd numbers:
 
 ```{literalinclude} snippets/filter-closure.nf
 :language: groovy
@@ -572,19 +572,19 @@ The following example filters a channel using a boolean predicate, which is a {r
 :language: console
 ```
 
-(operator-first)=
+
 
 ## first
 
 *Returns: value channel*
 
-The `first` operator emits the first item in a source channel, or the first item that matches a condition. The condition can be a {ref}`regular expression<script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
+The `first` operator emits the first item in a source channel, or the first item that matches a condition. The condition can be a [regular expression](script-regexp), a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
 ```{literalinclude} snippets/first.nf
 :language: groovy
 ```
 
-(operator-flatmap)=
+
 
 ## flatMap
 
@@ -612,7 +612,7 @@ When the mapping function returns a map, each key-value pair in the map is emitt
 :language: console
 ```
 
-(operator-flatten)=
+
 
 ## flatten
 
@@ -632,7 +632,7 @@ As shown in the above example, deeply nested collections are also flattened.
 
 See also: [flatMap](#flatmap)
 
-(operator-grouptuple)=
+
 
 ## groupTuple
 
@@ -690,9 +690,9 @@ Available options:
   - `true`: Order the grouped items by the item's natural ordering i.e. numerical for number, lexicographic for string, etc. See the [Java documentation](http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html) for more information.
   - `'hash'`: Order the grouped items by the hash number associated to each entry.
   - `'deep'`: Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.
-  - A custom sorting criteria used to order the nested list elements of each tuple. It can be a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
+  - A custom sorting criteria used to order the nested list elements of each tuple. It can be a [Closure ](script-closure) or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
 
-(operator-ifempty)=
+
 
 ## ifEmpty
 
@@ -716,11 +716,11 @@ The `ifEmpty` operator emits a source channel, or a default value if the source 
 :language: console
 ```
 
-The default value can also be a {ref}`closure <script-closure>`, in which case the closure is evaluated and the result is emitted when the source channel is empty.
+The default value can also be a [closure ](script-closure), in which case the closure is evaluated and the result is emitted when the source channel is empty.
 
-See also: {ref}`channel-empty` channel factory
+See also: `channel-empty` channel factory
 
-(operator-join)=
+
 
 ## join
 
@@ -758,17 +758,17 @@ Available options:
 : The zero-based index of each item to use as the matching key. Can also be a list of indices, e.g. `by: [0, 2]` (default: `[0]`).
 
 `failOnDuplicate`
-: When `true`, an error is reported when the operator receives multiple items from the same channel with the same key (default: `true` if {ref}`strict mode <config-feature-flags>` is enabled, `false` otherwise).
+: When `true`, an error is reported when the operator receives multiple items from the same channel with the same key (default: `true` if [strict mode ](config-feature-flags) is enabled, `false` otherwise).
 
 `failOnMismatch`
-: When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `true` if {ref}`strict mode <config-feature-flags>` is enabled, `false` otherwise). This option cannot be used with `remainder`.
+: When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `true` if [strict mode ](config-feature-flags) is enabled, `false` otherwise). This option cannot be used with `remainder`.
 
 `remainder`
-: When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`). 
+: When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`).
 
 See also: [combine](#combine), [cross](#cross)
 
-(operator-last)=
+
 
 ## last
 
@@ -784,7 +784,7 @@ The `last` operator emits the last item from a source channel:
 :language: console
 ```
 
-(operator-map)=
+
 
 ## map
 
@@ -800,7 +800,7 @@ The `map` operator applies a *mapping function* to each item from a source chann
 :language: console
 ```
 
-(operator-max)=
+
 
 ## max
 
@@ -816,7 +816,7 @@ The `max` operator emits the item with the greatest value from a source channel:
 :language: console
 ```
 
-An optional {ref}`closure <script-closure>` can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
+An optional [closure ](script-closure) can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
 
 The following examples show how to find the longest string in a channel:
 
@@ -836,7 +836,7 @@ The following examples show how to find the longest string in a channel:
 :language: console
 ```
 
-(operator-merge)=
+
 
 ## merge
 
@@ -862,13 +862,13 @@ An optional closure can be used to control how two items are merged:
 :language: console
 ```
 
-:::{danger}
-In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to {ref}`not work properly <cache-nondeterministic-inputs>`.
+:::danger
+In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to [not work properly ](cache-nondeterministic-inputs).
 
 You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are combined in a deterministic way. For this purpose, you can use the [join](#join) operator.
 :::
 
-(operator-min)=
+
 
 ## min
 
@@ -884,7 +884,7 @@ The `min` operator emits the item with the lowest value from a source channel:
 :language: console
 ```
 
-An optional {ref}`closure <script-closure>` can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
+An optional [closure ](script-closure) can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
 
 The following examples show how to find the shortest string in a channel:
 
@@ -904,7 +904,7 @@ The following examples show how to find the shortest string in a channel:
 :language: console
 ```
 
-(operator-mix)=
+
 
 ## mix
 
@@ -933,18 +933,18 @@ b
 
 See also: [concat](#concat)
 
-(operator-multimap)=
+
 
 ## multiMap
 
-:::{versionadded} 19.11.0-edge
+:::info[Version added: 19.11.0-edge]
 :::
 
 *Returns: map of queue channels*
 
 The `multiMap` operator applies a set of mapping functions to a source channel, producing a separate output channel for each mapping function.
 
-The multi-map criteria is a {ref}`closure <script-closure>` that defines, for each output channel, a label followed by a mapping expression.
+The multi-map criteria is a [closure ](script-closure) that defines, for each output channel, a label followed by a mapping expression.
 
 For example:
 
@@ -974,11 +974,11 @@ You can use the `multiMapCriteria()` method to create a multi-map criteria as a 
 :language: groovy
 ```
 
-:::{note}
+:::note
 If you use `multiMap` to split a tuple or map into multiple channels, it is recommended that you retain a matching key (e.g. sample ID) with *each* new channel, so that you can re-combine these channels later on if needed. In general, you should not expect to be able to merge channels correctly without a matching key, due to the concurrent nature of Nextflow pipelines.
 :::
 
-(operator-randomsample)=
+
 
 ## randomSample
 
@@ -1000,7 +1000,7 @@ An optional second parameter can be used to set the initial *seed* for the rando
 
 The above example will print 10 randomly-selected numbers between 1 and 100 (without replacement). Each subsequent script execution will produce the same sequence.
 
-(operator-reduce)=
+
 
 ## reduce
 
@@ -1028,7 +1028,7 @@ By default, the first item is used as the initial accumulated value. You can opt
 :language: console
 ```
 
-(operator-set)=
+
 
 ## set
 
@@ -1048,7 +1048,7 @@ my_channel = Channel.of(10, 20, 30)
 
 See also: [tap](#tap)
 
-(operator-splitcsv)=
+
 
 ## splitCsv
 
@@ -1120,7 +1120,7 @@ Available options:
 `strip`
 : When `true`, remove leading and trailing blanks from values (default: `false`).
 
-(operator-splitfasta)=
+
 
 ## splitFasta
 
@@ -1137,7 +1137,7 @@ Channel
      .view()
 ```
 
-:::{warning}
+:::warning
 Chunks are stored in memory by default. When splitting large files, specify `file: true` to save the chunks into files in order to avoid running out of memory. See the list of options below for details.
 :::
 
@@ -1192,7 +1192,7 @@ Available options:
 
 See also: [countFasta](#countfasta)
 
-(operator-splitfastq)=
+
 
 ## splitFastq
 
@@ -1209,7 +1209,7 @@ Channel
     .view()
 ```
 
-:::{warning}
+:::warning
 Chunks are stored in memory by default. When splitting large files, specify `file: true` to save the chunks into files in order to avoid running out of memory. See the list of options below for details.
 :::
 
@@ -1231,11 +1231,11 @@ Channel
     .view()
 ```
 
-:::{note}
+:::note
 `Channel.fromFilePairs()` requires the `flat: true` option in order to emit the file pairs as separate elements in the produced tuples.
 :::
 
-:::{note}
+:::note
 This operator assumes that the order of the paired-end reads correspond with each other and that both files contain the same number of reads.
 :::
 
@@ -1275,7 +1275,7 @@ Available options:
 
 See also: [countFastq](#countfastq)
 
-(operator-splitjson)=
+
 
 ## splitJson
 
@@ -1323,7 +1323,7 @@ Available options:
 
 See also: [countJson](#countjson)
 
-(operator-splittext)=
+
 
 ## splitText
 
@@ -1352,7 +1352,7 @@ Channel
     }
 ```
 
-An optional {ref}`closure <script-closure>` can be used to transform each text chunk produced by the operator. The following example shows how to split text files into chunks of 10 lines and transform them to uppercase letters:
+An optional [closure ](script-closure) can be used to transform each text chunk produced by the operator. The following example shows how to split text files into chunks of 10 lines and transform them to uppercase letters:
 
 ```groovy
 Channel
@@ -1361,7 +1361,7 @@ Channel
     .view()
 ```
 
-:::{note}
+:::note
 Text chunks returned by the `splitText` operator are always terminated by a `\n` newline character.
 :::
 
@@ -1393,7 +1393,7 @@ Available options:
 
 See also: [countLines](#countlines)
 
-(operator-subscribe)=
+
 
 ## subscribe
 
@@ -1440,7 +1440,7 @@ Available options:
 `onError`
 : Closure that is invoked when an exception is raised while handling the `onNext` event. It will not make further calls to `onNext` or `onComplete`. The `onError` method takes as its parameter the `Throwable` that caused the error.
 
-(operator-sum)=
+
 
 ## sum
 
@@ -1456,7 +1456,7 @@ The `sum` operator emits the sum of all items in a source channel:
 :language: console
 ```
 
-An optional {ref}`closure <script-closure>` can be used to transform each item before it is added to the sum:
+An optional [closure ](script-closure) can be used to transform each item before it is added to the sum:
 
 ```{literalinclude} snippets/sum-with-mapper.nf
 :language: groovy
@@ -1480,7 +1480,7 @@ The `take` operator takes the first *N* items from a source channel:
 :language: console
 ```
 
-:::{tip}
+:::tip
 Specifying a size of `-1` causes the operator to take all values.
 :::
 
@@ -1516,7 +1516,7 @@ The `toInteger` operator converts string values from a source channel to integer
 :language: console
 ```
 
-:::{note}
+:::note
 `toInteger` is equivalent to:
 
 ```groovy
@@ -1524,7 +1524,7 @@ map { it -> it as Integer }
 ```
 :::
 
-:::{note}
+:::note
 You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numerical types.
 :::
 
@@ -1542,7 +1542,7 @@ The `toList` operator collects all the items from a source channel into a list a
 :language: console
 ```
 
-:::{note}
+:::note
 There are two main differences between `toList` and `collect`:
 
 - When there is no input, `toList` emits an empty list whereas `collect` emits nothing.
@@ -1581,7 +1581,7 @@ An optional closure can be used to control how items are compared when sorting. 
 :language: console
 ```
 
-:::{note}
+:::note
 `toSortedList` is equivalent to:
 
 ```groovy
@@ -1635,7 +1635,7 @@ Available options:
 : The zero-based index of the element to be transposed. Can also be a list of indices, e.g. `by: [0,2]`. By default, every list element is transposed.
 
 `remainder`
-: When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`). 
+: When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`).
 
 See also: [groupTuple](#grouptuple)
 
@@ -1653,7 +1653,7 @@ The `unique` operator emits the unique items from a source channel:
 :language: console
 ```
 
-An optional {ref}`closure <script-closure>` can be used to transform each item before it is evaluated for uniqueness:
+An optional [closure ](script-closure) can be used to transform each item before it is evaluated for uniqueness:
 
 ```{literalinclude} snippets/unique-with-mapper.nf
 :language: groovy
@@ -1663,7 +1663,7 @@ An optional {ref}`closure <script-closure>` can be used to transform each item b
 :language: console
 ```
 
-:::{note}
+:::note
 The difference between `unique` and `distinct` is that `unique` removes *all* duplicate values, whereas `distinct` removes only *consecutive* duplicate values. As a result, `unique` must process the entire source channel before it can emit anything, whereas `distinct` can emit each value immediately.
 :::
 
@@ -1685,7 +1685,7 @@ The `until` operator emits each item from a source channel until a stopping cond
 
 See also: [take](#take)
 
-(operator-view)=
+
 
 ## view
 

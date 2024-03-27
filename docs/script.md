@@ -1,4 +1,4 @@
-(script-page)=
+
 
 # Scripts
 
@@ -14,11 +14,11 @@ For a detailed description of the Groovy programming language, reference these l
 
 Below you can find a crash course in the most important language constructs used in the Nextflow scripting language.
 
-:::{warning}
+:::warning
 Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
 :::
 
-:::{warning}
+:::warning
 Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them as modules.
 :::
 
@@ -113,7 +113,7 @@ new_scores = scores + ["Pete": 3, "Cedric": 120]
 
 When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys are overwritten by the second map.
 
-:::{tip}
+:::tip
 Copying a map with the `+` operator is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, a new instance of the map will be created, and any references to the original map won't be affected.
 :::
 
@@ -123,7 +123,7 @@ Learn more about maps:
 - [Groovy Map API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html)
 - [Java Map API](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html)
 
-(script-multiple-assignment)=
+
 
 ### Multiple assignment
 
@@ -168,7 +168,7 @@ a = "world"
 print "hello " + a + "\n"
 ```
 
-(string-interpolation)=
+
 
 ### String interpolation
 
@@ -203,7 +203,7 @@ text = """
     """
 ```
 
-:::{note}
+:::note
 Like before, multi-line strings inside double quotes support variable interpolation, while single-quoted multi-line strings do not.
 :::
 
@@ -223,7 +223,7 @@ result = myLongCmdline.execute().text
 
 In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` switches and their arguments are effectively a single line.
 
-:::{warning}
+:::warning
 When using backslashes to continue a multi-line command, make sure to not put any spaces after the backslash, otherwise it will be interpreted by the Groovy lexer as an escaped space instead of a backslash, which will make your script incorrect. It will also print this warning:
 
 ```
@@ -231,7 +231,7 @@ unknown recognition error type: groovyjarjarantlr4.v4.runtime.LexerNoViableAltEx
 ```
 :::
 
-(script-regexp)=
+
 
 ### Regular expressions
 
@@ -373,7 +373,7 @@ def fib( x ) {
 }
 ```
 
-(script-closure)=
+
 
 ### Closures
 
@@ -448,8 +448,8 @@ myMap.keySet().each {
 }
 ```
 
-:::{warning}
-Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
+:::warning
+Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a [race condition ](cache-global-var-race-condition).
 :::
 
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
@@ -494,11 +494,11 @@ If the last argument is a closure, the closure can be written outside of the par
 [1, 2, 3].inject('result:') { accum, v -> accum + ' ' + v }
 ```
 
-:::{note}
+:::note
 In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
 :::
 
-(implicit-variables)=
+
 
 ## Implicit variables
 
@@ -507,60 +507,60 @@ In some cases, you might not be able to omit the parentheses because it would be
 The following variables are implicitly defined in the script global execution scope:
 
 `baseDir`
-: :::{deprecated} 20.04.0
+: :::info[Deprecated: 20.04.0]
   Use `projectDir` instead
   :::
 : The directory where the main workflow script is located.
 
 `launchDir`
-: :::{versionadded} 20.04.0
+: :::info[Version added: 20.04.0]
   :::
 : The directory where the workflow is run.
 
 `moduleDir`
-: :::{versionadded} 20.04.0
+: :::info[Version added: 20.04.0]
   :::
 : The directory where a module script is located for DSL2 modules or the same as `projectDir` for a non-module script.
 
 `nextflow`
-: Dictionary like object representing nextflow runtime information (see {ref}`metadata-nextflow`).
+: Dictionary like object representing nextflow runtime information (see `metadata-nextflow`).
 
 `params`
 : Dictionary like object holding workflow parameters specifying in the config file or as command line options.
 
 `projectDir`
-: :::{versionadded} 20.04.0
+: :::info[Version added: 20.04.0]
   :::
 : The directory where the main script is located.
 
 `secrets`
-: :::{versionadded} 24.02.0-edge
+: :::info[Version added: 24.02.0-edge]
   :::
-: Dictionary like object holding workflow secrets. Read the {ref}`secrets-page` page for more information.
+: Dictionary like object holding workflow secrets. Read the `secrets-page` page for more information.
 
 `workDir`
 : The directory where tasks temporary files are created.
 
 `workflow`
-: Dictionary like object representing workflow runtime information (see {ref}`metadata-workflow`).
+: Dictionary like object representing workflow runtime information (see `metadata-workflow`).
 
 ### Configuration implicit variables
 
 The following variables are implicitly defined in the Nextflow configuration file:
 
 `baseDir`
-: :::{deprecated} 20.04.0
+: :::info[Deprecated: 20.04.0]
   Use `projectDir` instead
   :::
 : The directory where the main workflow script is located.
 
 `launchDir`
-: :::{versionadded} 20.04.0
+: :::info[Version added: 20.04.0]
   :::
 : The directory where the workflow is run.
 
 `projectDir`
-: :::{versionadded} 20.04.0
+: :::info[Version added: 20.04.0]
   :::
 : The directory where the main script is located.
 
@@ -600,24 +600,24 @@ process foo {
 }
 ```
 
-In the above snippet the `task.cpus` holds the value for the {ref}`cpus directive<process-cpus>` and the `task.memory` the current value for {ref}`memory directive<process-memory>` depending on the actual setting given in the workflow configuration file.
+In the above snippet the `task.cpus` holds the value for the [memory directive](process-memory) depending on the actual setting given in the workflow configuration file.
 
-See {ref}`Process directives <process-directives>` for details.
+See [Process directives ](process-directives) for details.
 
-(implicit-functions)=
+
 
 ## Implicit functions
 
 The following functions are available in Nextflow scripts:
 
 `branchCriteria( closure )`
-: Create a branch criteria to use with the {ref}`operator-branch` operator.
+: Create a branch criteria to use with the `operator-branch` operator.
 
 `error( message = null )`
 : Throw a script runtime error with an optional error message.
 
 `exit( exitCode = 0, message = null )`
-: :::{deprecated} 22.06.0-edge
+: :::info[Deprecated: 22.06.0-edge]
   Use `error()` instead
   :::
 : Stop the pipeline execution and return an exit code and optional error message.
@@ -629,13 +629,13 @@ The following functions are available in Nextflow scripts:
 : Convenience method for `file()` that always returns a list.
 
 `groupKey( key, size )`
-: Create a grouping key to use with the {ref}`operator-grouptuple` operator.
+: Create a grouping key to use with the `operator-grouptuple` operator.
 
 `multiMapCriteria( closure )`
-: Create a multi-map criteria to use with the {ref}`operator-multiMap` operator.
+: Create a multi-map criteria to use with the `operator-multiMap` operator.
 
 `sendMail( params )`
-: Send an email. See {ref}`mail-page`.
+: Send an email. See `mail-page`.
 
 `tuple( collection )`
 : Create a tuple object from the given collection.
@@ -643,7 +643,7 @@ The following functions are available in Nextflow scripts:
 `tuple( ... args )`
 : Create a tuple object from the given arguments.
 
-(implicit-classes)=
+
 
 ## Implicit classes
 
@@ -663,9 +663,9 @@ Additionally, Nextflow imports several new classes which are described below.
 
 ### Channel
 
-The `Channel` class provides the channel factory methods. See {ref}`channel-factory` for more information.
+The `Channel` class provides the channel factory methods. See `channel-factory` for more information.
 
-(implicit-classes-duration)=
+
 
 ### Duration
 
@@ -724,7 +724,7 @@ The following methods are available for a `Duration` object:
 `getSeconds()`, `toSeconds()`
 : Get the duration value in seconds (rounded down).
 
-(implicit-classes-memoryunit)=
+
 
 ### MemoryUnit
 
@@ -743,7 +743,7 @@ You can create a memory unit by adding a unit suffix to an integer, e.g. `1.GB`.
 | `EB` | Exabytes    |
 | `ZB` | Zettabytes  |
 
-:::{note}
+:::note
 Technically speaking, a kilobyte is equal to 1000 bytes, whereas 1024 bytes is called a "kibibyte" and abbreviated as "KiB", and so on for the other units. In practice, however, kilobyte is commonly understood to mean 1024 bytes, and Nextflow follows this convention in its implementation as well as this documentation.
 :::
 
@@ -791,7 +791,7 @@ The following methods are available for a `MemoryUnit` object:
 
 `ValueObject` is an AST transformation for classes and enums, which simply combines [AutoClone](http://docs.groovy-lang.org/latest/html/gapi/groovy/transform/AutoClone.html) and [Immutable](https://docs.groovy-lang.org/latest/html/gapi/groovy/transform/Immutable.html). It is useful for defining custom "record" types.
 
-(script-file-io)=
+
 
 ## Files and I/O
 
@@ -811,11 +811,11 @@ When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is inte
 listOfFiles = file('some/path/*.fa')
 ```
 
-:::{note}
+:::note
 The `file()` method does not return a list if only one file is matched. Use the `files()` method to always return a list.
 :::
 
-:::{note}
+:::note
 A double asterisk (`**`) in a glob pattern works like `*` but also searches through subdirectories.
 :::
 
@@ -825,7 +825,7 @@ By default, wildcard characters do not match directories or hidden files. For ex
 listWithHidden = file('some/path/*.fa', hidden: true)
 ```
 
-:::{note}
+:::note
 To compose paths, instead of string interpolation, use the `resolve()` method or the `/` operator:
 
 ```groovy
@@ -857,7 +857,7 @@ The following options are available:
 `type`
 : Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`)
 
-See also: {ref}`Channel.fromPath <channel-path>`.
+See also: [Channel.fromPath ](channel-path).
 
 ### Getting file attributes
 
@@ -917,7 +917,7 @@ Additionally, the following methods are also defined for Paths in Nextflow:
   assert ref.toUriString() == 's3://some-bucket/foo.txt'
   ```
 
-:::{tip}
+:::tip
 In Groovy, any method that looks like `get*()` can also be accessed as a field. For example, `myFile.getName()` is equivalent to `myFile.name`, `myFile.getBaseName()` is equivalent to `myFile.baseName`, and so on.
 :::
 
@@ -949,11 +949,11 @@ Or you can save a byte array to a file:
 myFile.bytes = binaryContent
 ```
 
-:::{note}
+:::note
 The above assignment overwrites any existing file contents, and implicitly creates the file if it doesn't exist.
 :::
 
-:::{warning}
+:::warning
 The above methods read and write the **entire** file contents at once, in a single variable or buffer. For this reason, when dealing with large files it is recommended that you use a more memory efficient approach, such as reading/writing a file line by line or using a fixed size buffer.
 :::
 
@@ -991,7 +991,7 @@ file('some/my_file.txt')
     .each { println it }
 ```
 
-:::{warning}
+:::warning
 The method `readLines()` reads the **entire** file at once and returns a list containing all the lines. For this reason, do not use it to read big files.
 :::
 
@@ -1035,10 +1035,10 @@ The methods `newInputStream()` and `withInputStream()` work similarly. The main 
 The following methods are useful for reading files:
 
 `eachByte( closure )`
-: Iterates over the file byte by byte, applying the specified {ref}`closure <script-closure>`.
+: Iterates over the file byte by byte, applying the specified [closure ](script-closure).
 
 `eachLine( closure )`
-: Iterates over the file line by line, applying the specified {ref}`closure <script-closure>`.
+: Iterates over the file line by line, applying the specified [closure ](script-closure).
 
 `getBytes()`
 : Returns the file content as a byte array.
@@ -1137,7 +1137,7 @@ The following methods are available for manipulating files and directories in a 
 
   The result of the above example depends on the existence of the target directory. If the target directory exists, the source is moved into the target directory, resulting in the path `/any/dir_b/dir_a`. If the target directory does not exist, the source is just renamed to the target name, resulting in the path `/any/dir_b`.
 
-: :::{note}
+: :::note
   The `copyTo()` method follows the semantics of the Linux command `cp -r <source> <target>`, with the following caveat: while Linux tools often treat paths ending with a slash (e.g. `/some/path/name/`) as directories, and those not (e.g. `/some/path/name`) as regular files, Nextflow (due to its use of the Java files API) views both of these paths as the same file system object. If the path exists, it is handled according to its actual type (i.e. as a regular file or as a directory). If the path does not exist, it is treated as a regular file, with any missing parent directories created automatically.
   :::
 
@@ -1269,7 +1269,7 @@ The following methods are available for listing and traversing directories:
 `eachFileRecurse( closure )`
 : Iterates through files and directories depth-first. [Read more](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachFileRecurse(groovy.lang.Closure))
 
-See also: {ref}`Channel.fromPath <channel-path>`.
+See also: [Channel.fromPath ](channel-path).
 
 ### Fetching HTTP/FTP files
 
@@ -1287,7 +1287,7 @@ println pdb.text
 
 The above one-liner prints the content of the remote PDB file. Previous sections provide code examples showing how to stream or copy the content of files.
 
-:::{note}
+:::note
 Write and list operations are not supported for HTTP(S) and FTP files.
 :::
 
@@ -1296,28 +1296,28 @@ Write and list operations are not supported for HTTP(S) and FTP files.
 The following methods are defined for Paths for splitting and counting records:
 
 `countFasta()`
-: Counts the number of records in a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. See the {ref}`operator-splitfasta` operator for available options.
+: Counts the number of records in a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. See the `operator-splitfasta` operator for available options.
 
 `countFastq()`
-: Counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file. See the {ref}`operator-splitfastq` operator for available options.
+: Counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file. See the `operator-splitfastq` operator for available options.
 
 `countJson()`
-: Counts the number of records in a JSON file. See the {ref}`operator-splitjson` operator for available options.
+: Counts the number of records in a JSON file. See the `operator-splitjson` operator for available options.
 
 `countLines()`
-: Counts the number of lines in a text file. See the {ref}`operator-splittext` operator for available options.
+: Counts the number of lines in a text file. See the `operator-splittext` operator for available options.
 
 `splitCsv()`
-: Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
+: Splits a CSV file into a list of records. See the `operator-splitcsv` operator for available options.
 
 `splitFasta()`
-: Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
+: Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the `operator-splitfasta` operator for available options.
 
 `splitFastq()`
-: Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the {ref}`operator-splitfastq` operator for available options.
+: Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the `operator-splitfastq` operator for available options.
 
 `splitJson()`
-: Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
+: Splits a JSON file into a list of records. See the `operator-splitjson` operator for available options.
 
 `splitText()`
-: Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
+: Splits a text file into a list of lines. See the `operator-splittext` operator for available options.

@@ -1,4 +1,4 @@
-(config-page)=
+
 
 # Configuration
 
@@ -16,7 +16,7 @@ When a pipeline script is launched, Nextflow looks for configuration files in mu
 
 When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
 
-:::{tip}
+:::tip
 If you want to ignore any default configuration files and use only a custom one, use `-C <config file>`.
 :::
 
@@ -42,7 +42,7 @@ anotherProp = "Hello $propertyOne"
 customPath = "$PATH:/my/app/folder"
 ```
 
-Please note, the usual rules for {ref}`string-interpolation` are applied, thus a string containing a variable reference must be wrapped in double-quote chars instead of single-quote chars.
+Please note, the usual rules for `string-interpolation` are applied, thus a string containing a variable reference must be wrapped in double-quote chars instead of single-quote chars.
 
 The same mechanism allows you to access environment variables defined in the hosting system. Any variable name not defined in the Nextflow configuration file(s) is interpreted to be a reference to an environment variable with that name. So, in the above example, the property `customPath` is defined as the current system `PATH` to which the string `/my/app/folder` is appended.
 
@@ -78,7 +78,7 @@ beta {
 }
 ```
 
-(config-apptainer)=
+
 
 ### Scope `apptainer`
 
@@ -105,7 +105,7 @@ The following settings are available:
 : Pull the Apptainer image with http protocol (default: `false`).
 
 `apptainer.ociAutoPull`
-: :::{versionadded} 23.12.0-edge
+: :::info[Version added: 23.12.0-edge]
   :::
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
@@ -118,9 +118,9 @@ The following settings are available:
 `apptainer.runOptions`
 : This attribute can be used to provide any extra command line options supported by `apptainer exec`.
 
-Read the {ref}`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
+Read the `container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
 
-(config-aws)=
+
 
 ### Scope `aws`
 
@@ -146,11 +146,11 @@ aws {
 }
 ```
 
-:::{tip}
+:::tip
 This scope can also be used to configure access to S3-compatible storage outside of AWS, such as [Ceph](https://ceph.com/en/) and [MinIO](https://min.io/).
 :::
 
-Read the {ref}`aws-page` and {ref}`amazons3-page` pages for more information.
+Read the `aws-page` and `amazons3-page` pages for more information.
 
 The following settings are available:
 
@@ -158,7 +158,7 @@ The following settings are available:
 : AWS account access key
 
 `aws.profile`
-: :::{versionadded} 22.12.0-edge
+: :::info[Version added: 22.12.0-edge]
   :::
 : AWS profile from `~/.aws/credentials`
 
@@ -175,7 +175,7 @@ The following settings are available:
 : Delay between download attempts from S3 (default: `10 sec`).
 
 `aws.batch.executionRole`
-: :::{versionadded} 23.12.0-edge
+: :::info[Version added: 23.12.0-edge]
   :::
 : The AWS Batch Execution Role ARN that needs to be used to execute the Batch Job. This is mandatory when using AWS Fargate platform type. See [AWS documentation](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) for more details.
 
@@ -183,7 +183,7 @@ The following settings are available:
 : The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
 
 `aws.batch.logsGroup`
-: :::{versionadded} 22.09.0-edge
+: :::info[Version added: 22.09.0-edge]
   :::
 : The name of the logs group used by Batch Jobs (default: `/aws/batch`).
 
@@ -191,7 +191,7 @@ The following settings are available:
 : Max parallel upload/download transfer operations *per job* (default: `4`).
 
 `aws.batch.maxSpotAttempts`
-: :::{versionadded} 22.04.0
+: :::info[Version added: 22.04.0]
   :::
 : Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
 
@@ -199,7 +199,7 @@ The following settings are available:
 : Max number of downloads attempts from S3 (default: `1`).
 
 `aws.batch.platformType`
-: :::{versionadded} 23.12.0-edge
+: :::info[Version added: 23.12.0-edge]
   :::
 : Allow specifying the compute platform type used by AWS Batch, that can be either `ec2` or `fargate`. See AWS documentation to learn more about [AWS Fargate platform type](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html) for AWS Batch.
 
@@ -207,12 +207,12 @@ The following settings are available:
 : The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`, other options: `legacy`, `adaptive`); this handling is delegated to AWS. To have Nextflow handle retries instead, use `built-in`.
 
 `aws.batch.schedulingPriority`
-: :::{versionadded} 23.01.0-edge
+: :::info[Version added: 23.01.0-edge]
   :::
 : The scheduling priority for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`)
 
 `aws.batch.shareIdentifier`
-: :::{versionadded} 22.09.0-edge
+: :::info[Version added: 22.09.0-edge]
   :::
 : The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/)
 
@@ -232,18 +232,18 @@ The following settings are available:
 : The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. Note: the endpoint must include the protocol prefix e.g. `https://`.
 
 `aws.client.glacierAutoRetrieval`
-: :::{deprecated} 24.02.0-edge
+: :::info[Deprecated: 24.02.0-edge]
   Glacier auto-retrieval is no longer supported. Instead, consider using the AWS CLI to restore any Glacier objects before or at the beginning of your pipeline (i.e. in a Nextflow process).
   :::
 : Enable auto retrieval of S3 objects with a Glacier storage class (default: `false`).
 
 `aws.client.glacierExpirationDays`
-: :::{deprecated} 24.02.0-edge
+: :::info[Deprecated: 24.02.0-edge]
   :::
 : The time, in days, between when an object is restored to the bucket and when it expires (default: `7`).
 
 `aws.client.glacierRetrievalTier`
-: :::{deprecated} 24.02.0-edge
+: :::info[Deprecated: 24.02.0-edge]
   :::
 : The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
@@ -287,7 +287,7 @@ The following settings are available:
 : The S3 server side encryption to be used when saving objects on S3, either `AES256` or `aws:kms` values are allowed.
 
 `aws.client.storageKmsKeyId`
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 : The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
@@ -309,13 +309,13 @@ The following settings are available:
 `aws.client.uploadStorageClass`
 : The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
 
-(config-azure)=
+
 
 ### Scope `azure`
 
 The `azure` scope allows you to configure the interactions with Azure, including Azure Batch and Azure Blob Storage.
 
-Read the {ref}`azure-page` page for more information.
+Read the `azure-page` page for more information.
 
 The following settings are available:
 
@@ -345,7 +345,7 @@ The following settings are available:
 
 `azure.batch.deleteJobsOnCompletion`
 : Delete all jobs when the workflow completes (default: `false`).
-: :::{versionchanged} 23.08.0-edge
+: :::info[Version changed: 23.08.0-edge]
   Default value was changed from `true` to `false`.
   :::
 
@@ -353,7 +353,7 @@ The following settings are available:
 : Delete all compute node pools when the workflow completes (default: `false`).
 
 `azure.batch.deleteTasksOnCompletion`
-: :::{versionadded} 23.08.0-edge
+: :::info[Version added: 23.08.0-edge]
   :::
 : Delete each task when it completes (default: `true`).
 : Although this setting is enabled by default, failed tasks will not be deleted unless it is explicitly enabled. This way, the default behavior is that successful tasks are deleted while failed tasks are preserved for debugging purposes.
@@ -365,7 +365,7 @@ The following settings are available:
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
 
 `azure.batch.terminateJobsOnCompletion`
-: :::{versionadded} 23.05.0-edge
+: :::info[Version added: 23.05.0-edge]
   :::
 : When the workflow completes, set all jobs to terminate on task completion. (default: `true`).
 
@@ -415,7 +415,7 @@ The following settings are available:
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
 `azure.batch.pools.<name>.virtualNetwork`
-: :::{versionadded} 23.03.0-edge
+: :::info[Version added: 23.03.0-edge]
   :::
 : Specify the subnet ID of a virtual network in which to create the pool.
 
@@ -461,7 +461,7 @@ The following settings are available:
 `azure.storage.tokenDuration`
 : The duration of the shared access signature token created by Nextflow when the `sasToken` option is *not* specified (default: `48h`).
 
-(config-charliecloud)=
+
 
 ### Scope `charliecloud`
 
@@ -487,9 +487,9 @@ The following settings are available:
 `charliecloud.temp`
 : Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
 
-Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
+Read the `container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
-(config-conda)=
+
 
 ### Scope `conda`
 
@@ -513,13 +513,13 @@ The following settings are available:
 : Uses the `mamba` binary instead of `conda` to create the Conda environments. For details see the [Mamba documentation](https://github.com/mamba-org/mamba).
 
 `conda.useMicromamba`
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 : uses the `micromamba` binary instead of `conda` to create the Conda environments. For details see the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html).
 
-Read the {ref}`conda-page` page to learn more about how to use Conda environments with Nextflow.
+Read the `conda-page` page to learn more about how to use Conda environments with Nextflow.
 
-(config-dag)=
+
 
 ### Scope `dag`
 
@@ -531,13 +531,13 @@ The following settings are available:
 : When `true` enables the generation of the DAG file (default: `false`).
 
 `dag.depth`
-: :::{versionadded} 23.10.0
+: :::info[Version added: 23.10.0]
   :::
 : *Only supported by the HTML and Mermaid renderers.*
 : Controls the maximum depth at which to render sub-workflows (default: no limit).
 
 `dag.direction`
-: :::{versionadded} 23.10.0
+: :::info[Version added: 23.10.0]
   :::
 : *Only supported by the HTML and Mermaid renderers.*
 : Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
@@ -549,14 +549,14 @@ The following settings are available:
 : When `true` overwrites any existing DAG file with the same name (default: `false`).
 
 `dag.verbose`
-: :::{versionadded} 23.10.0
+: :::info[Version added: 23.10.0]
   :::
 : *Only supported by the HTML and Mermaid renderers.*
 : When `false`, channel names are omitted, operators are collapsed, and empty workflow inputs are removed (default: `false`).
 
-Read the {ref}`dag-visualisation` page to learn more about the workflow graph that can be generated by Nextflow.
+Read the `dag-visualisation` page to learn more about the workflow graph that can be generated by Nextflow.
 
-(config-docker)=
+
 
 ### Scope `docker`
 
@@ -600,9 +600,9 @@ The following settings are available:
 `docker.tty`
 : Allocates a pseudo-tty (default: `false`).
 
-Read the {ref}`container-docker` page to learn more about how to use Docker containers with Nextflow.
+Read the `container-docker` page to learn more about how to use Docker containers with Nextflow.
 
-(config-env)=
+
 
 ### Scope `env`
 
@@ -620,15 +620,15 @@ env {
 }
 ```
 
-:::{note}
+:::note
 In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important for variables like `$PATH`, which may be different in the workflow environment versus the task environment.
 :::
 
-:::{warning}
+:::warning
 The `env` scope provides environment variables to *tasks*, not Nextflow itself. Nextflow environment variables such as `NXF_VER` should be set in the environment in which Nextflow is launched.
 :::
 
-(config-executor)=
+
 
 ### Scope `executor`
 
@@ -658,22 +658,22 @@ The following settings are available:
 : The name of the executor to be used (default: `local`).
 
 `executor.perCpuMemAllocation`
-: :::{versionadded} 23.07.0-edge
+: :::info[Version added: 23.07.0-edge]
   :::
-: *Used only by the {ref}`slurm-executor` executor.*
+: *Used only by the `slurm-executor` executor.*
 : When `true`, specifies memory allocations for SLURM jobs as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
 
 `executor.perJobMemLimit`
-: Specifies Platform LSF *per-job* memory limit mode. See {ref}`lsf-executor`.
+: Specifies Platform LSF *per-job* memory limit mode. See `lsf-executor`.
 
 `executor.perTaskReserve`
-: Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
+: Specifies Platform LSF *per-task* memory reserve mode. See `lsf-executor`.
 
 `executor.pollInterval`
 : Determines how often to check for process termination. Default varies for each executor (see below).
 
 `executor.queueGlobalStatus`
-: :::{versionadded} 23.01.0-edge
+: :::info[Version added: 23.01.0-edge]
   :::
 : Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
 
@@ -684,27 +684,27 @@ The following settings are available:
 : Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.
 
 `executor.retry.delay`
-: :::{versionadded} 22.03.0-edge
+: :::info[Version added: 22.03.0-edge]
   :::
 : Delay when retrying failed job submissions (default: `500ms`). Used only by grid executors.
 
 `executor.retry.jitter`
-: :::{versionadded} 22.03.0-edge
+: :::info[Version added: 22.03.0-edge]
   :::
 : Jitter value when retrying failed job submissions (default: `0.25`). Used only by grid executors.
 
 `executor.retry.maxAttempt`
-: :::{versionadded} 22.03.0-edge
+: :::info[Version added: 22.03.0-edge]
   :::
 : Max attempts when retrying failed job submissions (default: `3`). Used only by grid executors.
 
 `executor.retry.maxDelay`
-: :::{versionadded} 22.03.0-edge
+: :::info[Version added: 22.03.0-edge]
   :::
 : Max delay when retrying failed job submissions (default: `30s`). Used only by grid executors.
 
 `executor.retry.reason`
-: :::{versionadded} 22.03.0-edge
+: :::info[Version added: 22.03.0-edge]
   :::
 : Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`). Used only by grid executors.
 
@@ -757,11 +757,11 @@ executor.$local.cpus = 8
 executor.$local.memory = '32 GB'
 ```
 
-(config-fusion)=
+
 
 ### Scope `fusion`
 
-The `fusion` scope provides advanced configuration for the use of the {ref}`Fusion file system <fusion-page>`.
+The `fusion` scope provides advanced configuration for the use of the [Fusion file system ](fusion-page).
 
 The following settings are available:
 
@@ -769,7 +769,7 @@ The following settings are available:
 : Enable/disable the use of Fusion file system.
 
 `fusion.cacheSize`
-: :::{versionadded} 23.11.0-edge
+: :::info[Version added: 23.11.0-edge]
   :::
 : The maximum size of the local cache used by the Fusion client.
 
@@ -777,7 +777,7 @@ The following settings are available:
 : The URL from where the container layer provisioning the Fusion client is downloaded.
 
 `fusion.exportStorageCredentials`
-: :::{versionadded} 23.05.0-edge
+: :::info[Version added: 23.05.0-edge]
   This option was previously named `fusion.exportAwsAccessKeys`.
   :::
 : When `true` the access credentials required by the underlying object storage are exported to the task execution environment.
@@ -786,10 +786,10 @@ The following settings are available:
 : The level of logging emitted by the Fusion client.
 
 `fusion.logOutput`
-: Where the logging output is written. 
+: Where the logging output is written.
 
 `fusion.privileged`
-: :::{versionadded} 23.10.0
+: :::info[Version added: 23.10.0]
   :::
 : Enables the use of privileged containers when using Fusion (default: `true`).
 : The use of Fusion without privileged containers is currently only supported for Kubernetes, and it requires the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) (or similar FUSE device plugin) to be installed in the cluster.
@@ -798,13 +798,13 @@ The following settings are available:
 : The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`).
 : To disable tags set it to `false`.
 
-(config-google)=
+
 
 ### Scope `google`
 
 The `google` scope allows you to configure the interactions with Google Cloud, including Google Cloud Batch, Google Life Sciences, and Google Cloud Storage.
 
-Read the {ref}`google-page` page for more information.
+Read the `google-page` page for more information.
 
 #### Cloud Batch
 
@@ -814,12 +814,12 @@ The following settings are available for Google Cloud Batch:
 : When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
 
 `google.httpConnectTimeout`
-: :::{versionadded} 23.06.0-edge
+: :::info[Version added: 23.06.0-edge]
   :::
 : Defines the HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
 
 `google.httpReadTimeout`
-: :::{versionadded} 23.06.0-edge
+: :::info[Version added: 23.06.0-edge]
   :::
 : Defines the HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
 
@@ -827,7 +827,7 @@ The following settings are available for Google Cloud Batch:
 : The Google Cloud location where jobs are executed (default: `us-central1`).
 
 `google.batch.maxSpotAttempts`
-: :::{versionadded} 23.11.0-edge
+: :::info[Version added: 23.11.0-edge]
   :::
 : Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
 
@@ -835,7 +835,7 @@ The following settings are available for Google Cloud Batch:
 : The Google Cloud project ID to use for pipeline execution
 
 `google.batch.allowedLocations`
-: :::{versionadded} 22.12.0-edge
+: :::info[Version added: 22.12.0-edge]
   :::
 : Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
 
@@ -850,9 +850,9 @@ The following settings are available for Google Cloud Batch:
 
   You can specify the network as a full or partial URL. For example, the following are all valid URLs:
 
-  - https://www.googleapis.com/compute/v1/projects/{project}/global/networks/{network}
-  - projects/{project}/global/networks/{network}
-  - global/networks/{network}
+  - https://www.googleapis.com/compute/v1/projects/[project]/global/networks/[network]
+  - projects/[project]/global/networks/[network]
+  - global/networks/[network]
 
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
@@ -865,25 +865,25 @@ The following settings are available for Google Cloud Batch:
 
   You can specify the subnetwork as a full or partial URL. For example, the following are all valid URLs:
 
-  - https://www.googleapis.com/compute/v1/projects/{project}/regions/{region}/subnetworks/{subnetwork}
-  - projects/{project}/regions/{region}/subnetworks/{subnetwork}
-  - regions/{region}/subnetworks/{subnetwork}
+  - https://www.googleapis.com/compute/v1/projects/[project]/regions/[region]/subnetworks/[subnetwork]
+  - projects/[project]/regions/[region]/subnetworks/[subnetwork]
+  - regions/[region]/subnetworks/[subnetwork]
 
 `google.batch.usePrivateAddress`
 : When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
 
 `google.storage.maxAttempts`
-: :::{versionadded} 23.11.0-edge
+: :::info[Version added: 23.11.0-edge]
   :::
 : Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
 
 `google.storage.maxDelay`
-: :::{versionadded} 23.11.0-edge
+: :::info[Version added: 23.11.0-edge]
   :::
 : Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
 
 `google.storage.multiplier`
-: :::{versionadded} 23.11.0-edge
+: :::info[Version added: 23.11.0-edge]
   :::
 : Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
 
@@ -895,12 +895,12 @@ The following settings are available for Cloud Life Sciences:
 : When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
 
 `google.httpConnectTimeout`
-: :::{versionadded} 23.06.0-edge
+: :::info[Version added: 23.06.0-edge]
   :::
 : Defines the HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
 
 `google.httpReadTimeout`
-: :::{versionadded} 23.06.0-edge
+: :::info[Version added: 23.06.0-edge]
   :::
 : Defines the HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
 
@@ -917,7 +917,7 @@ The following settings are available for Cloud Life Sciences:
 : The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
 
 `google.batch.allowedLocations`
-: :::{versionadded} 22.12.0-edge
+: :::info[Version added: 22.12.0-edge]
   :::
 : Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
 
@@ -928,7 +928,7 @@ The following settings are available for Cloud Life Sciences:
 : Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
 
 `google.batch.installGpuDrivers`
-: :::{versionadded} 23.08.0-edge
+: :::info[Version added: 23.08.0-edge]
   :::
 : When `true` automatically installs the appropriate GPU drivers to the VM when a GPU is requested (default: `false`). Only needed when using an instance template.
 
@@ -960,12 +960,12 @@ The following settings are available for Cloud Life Sciences:
 : When `true` copies the `/google` debug directory in that task bucket directory (default: `false`).
 
 `google.lifeSciences.keepAliveOnFailure`
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   :::
 : When `true` and a task complete with an unexpected exit status the associated compute node is kept up for 1 hour. This options implies `sshDaemon=true` (default: `false`).
 
 `google.lifeSciences.network`
-: :::{versionadded} 21.03.0-edge
+: :::info[Version added: 21.03.0-edge]
   :::
 : Set network name to attach the VM's network interface to. The value will be prefixed with `global/networks/` unless it contains a `/`, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
 
@@ -973,12 +973,12 @@ The following settings are available for Cloud Life Sciences:
 : When `true` enables the usage of *preemptible* virtual machines or `false` otherwise (default: `true`).
 
 `google.lifeSciences.serviceAccountEmail`
-: :::{versionadded} 20.05.0-edge
+: :::info[Version added: 20.05.0-edge]
   :::
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
 
 `google.lifeSciences.subnetwork`
-: :::{versionadded} 21.03.0-edge
+: :::info[Version added: 21.03.0-edge]
   :::
 : Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
 
@@ -989,36 +989,36 @@ The following settings are available for Cloud Life Sciences:
 : The container image used to run the SSH daemon (default: `gcr.io/cloud-genomics-pipelines/tools`).
 
 `google.lifeSciences.usePrivateAddress`
-: :::{versionadded} 20.03.0-edge
+: :::info[Version added: 20.03.0-edge]
   :::
 : When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
 
 `google.storage.delayBetweenAttempts`
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   :::
 : Delay between download attempts from Google Storage (default `10 sec`).
 
 `google.storage.downloadMaxComponents`
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   :::
 : Defines the value for the option `GSUtil:sliced_object_download_max_components` used by `gsutil` for transfer input and output data (default: `8`).
 
 `google.storage.maxParallelTransfers`
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   :::
 : Max parallel upload/download transfer operations *per job* (default: `4`).
 
 `google.storage.maxTransferAttempts`
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   :::
 : Max number of downloads attempts from Google Storage (default: `1`).
 
 `google.storage.parallelThreadCount`
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   :::
 : Defines the value for the option `GSUtil:parallel_thread_count` used by `gsutil` for transfer input and output data (default: `1`).
 
-(config-k8s)=
+
 
 ### Scope `k8s`
 
@@ -1030,7 +1030,7 @@ The following settings are available:
 : Automatically mounts host paths into the task pods (default: `false`). Only intended for development purposes when using a single node.
 
 `k8s.computeResourceType`
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 : Define whether use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
 
@@ -1041,22 +1041,22 @@ The following settings are available:
 : When `true`, saves the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
 
 `k8s.fetchNodeName`
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 : If you trace the hostname, activate this option (default: `false`).
 
 `k8s.fuseDevicePlugin`
-: :::{versionadded} 24.01.0-edge
+: :::info[Version added: 24.01.0-edge]
   :::
 : The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default: `['nextflow.io/fuse': 1]`).
 
 `k8s.httpConnectTimeout`
-: :::{versionadded} 22.10.0
+: :::info[Version added: 22.10.0]
   :::
 : Defines the Kubernetes client request HTTP connection timeout e.g. `'60s'`.
 
 `k8s.httpReadTimeout`
-: :::{versionadded} 22.10.0
+: :::info[Version added: 22.10.0]
   :::
 : Defines the Kubernetes client request HTTP connection read timeout e.g. `'60s'`.
 
@@ -1064,7 +1064,7 @@ The following settings are available:
 : Defines the path where the workflow is launched and the user data is stored. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/<user-name>`).
 
 `k8s.maxErrorRetry`
-: :::{versionadded} 22.09.6-edge
+: :::info[Version added: 22.09.6-edge]
   :::
 : Defines the Kubernetes API max request retries (default: 4).
 
@@ -1072,7 +1072,7 @@ The following settings are available:
 : Defines the Kubernetes namespace to use (default: `default`).
 
 `k8s.pod`
-: Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the {ref}`process-pod` process directive.
+: Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the `process-pod` process directive.
 : When using the `kuberun` command, this setting also applies to the submitter pod.
 
 `k8s.projectDir`
@@ -1102,9 +1102,9 @@ The following settings are available:
 `k8s.workDir`
 : Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default: `<user-dir>/work`).
 
-See the {ref}`k8s-page` page for more details.
+See the `k8s-page` page for more details.
 
-(config-mail)=
+
 
 ### Scope `mail`
 
@@ -1153,7 +1153,7 @@ mail {
 }
 ```
 
-:::{note}
+:::note
 Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be addressed by setting the following config option:
 
 ```groovy
@@ -1163,7 +1163,7 @@ mail {
 ```
 :::
 
-(config-manifest)=
+
 
 ### Scope `manifest`
 
@@ -1222,35 +1222,35 @@ manifest {
 }
 ```
 
-Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHub, BitBucket or GitLab.
+Read the `sharing-page` page to learn how to publish your pipeline to GitHub, BitBucket or GitLab.
 
-(config-nextflow)=
+
 
 ### Scope `nextflow`
 
 The `nextflow` scope provides configuration options for the Nextflow runtime.
 
 `nextflow.publish.retryPolicy.delay`
-: :::{versionadded} 24.03.0-edge
+: :::info[Version added: 24.03.0-edge]
   :::
 : Delay when retrying a failed publish operation (default: `350ms`).
 
 `nextflow.publish.retryPolicy.jitter`
-: :::{versionadded} 24.03.0-edge
+: :::info[Version added: 24.03.0-edge]
   :::
 : Jitter value when retrying a failed publish operation (default: `0.25`).
 
 `nextflow.publish.retryPolicy.maxAttempt`
-: :::{versionadded} 24.03.0-edge
+: :::info[Version added: 24.03.0-edge]
   :::
 : Max attempts when retrying a failed publish operation (default: `5`).
 
 `nextflow.publish.retryPolicy.maxDelay`
-: :::{versionadded} 24.03.0-edge
+: :::info[Version added: 24.03.0-edge]
   :::
 : Max delay when retrying a failed publish operation (default: `90s`).
 
-(config-notification)=
+
 
 ### Scope `notification`
 
@@ -1271,11 +1271,11 @@ The `notification` scope allows you to define the automatic sending of a notific
 `notification.to`
 : Recipient address for the notification email. Multiple addresses can be specified separating them with a comma.
 
-The notification message is sent my using the STMP server defined in the configuration {ref}`mail scope<config-mail>`.
+The notification message is sent my using the STMP server defined in the configuration [mail scope](config-mail).
 
 If no mail configuration is provided, it tries to send the notification message by using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
 
-(config-params)=
+
 
 ### Scope `params`
 
@@ -1291,7 +1291,7 @@ params {
 }
 ```
 
-(config-podman)=
+
 
 ### Scope `podman`
 
@@ -1323,13 +1323,13 @@ The following settings are available:
 `podman.temp`
 : Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
 
-Read the {ref}`container-podman` page to learn more about how to use Podman containers with Nextflow.
+Read the `container-podman` page to learn more about how to use Podman containers with Nextflow.
 
-(config-process)=
+
 
 ### Scope `process`
 
-The `process` scope allows you to specify default {ref}`directives <process-directives>` for processes in your pipeline.
+The `process` scope allows you to specify default [directives ](process-directives) for processes in your pipeline.
 
 For example:
 
@@ -1343,11 +1343,11 @@ process {
 
 By using this configuration, all processes in your pipeline will be executed through the SGE cluster, with the specified settings.
 
-(config-process-selectors)=
+
 
 #### Process selectors
 
-The `withLabel` selectors allow the configuration of all processes annotated with a {ref}`process-label` directive as shown below:
+The `withLabel` selectors allow the configuration of all processes annotated with a `process-label` directive as shown below:
 
 ```groovy
 process {
@@ -1373,15 +1373,15 @@ process {
 }
 ```
 
-:::{note}
+:::note
 The `withName` selector applies to a process even when it is included from a module under an alias. For example, `withName: hello` will apply to any process originally defined as `hello`, regardless of whether it is included under an alias. Similarly, it will not apply to any process not originally defined as `hello`, even if it is included under the alias `hello`.
 :::
 
-:::{tip}
+:::tip
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
 :::
 
-(config-selector-expressions)=
+
 
 #### Selector expressions
 
@@ -1410,7 +1410,7 @@ process {
 
 The above configuration snippet sets 2 cpus for the processes annotated with the `foo` label and 4 cpus to all processes *not* annotated with that label. Finally it sets the use of `long` queue to all process whose name does *not* start with `align`.
 
-(config-selector-priority)=
+
 
 #### Selector priority
 
@@ -1433,11 +1433,11 @@ process {
 
 Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow script. Moreover processes annotated with the `foo` label use 8 cpus. Finally the process named `bar` uses 32 cpus.
 
-(config-report)=
+
 
 ### Scope `report`
 
-The `report` scope allows you to configure the workflow {ref}`execution-report`.
+The `report` scope allows you to configure the workflow `execution-report`.
 
 The following settings are available:
 
@@ -1450,7 +1450,7 @@ The following settings are available:
 `report.overwrite`
 : When `true` overwrites any existing report file with the same name.
 
-(config-sarus)=
+
 
 ### Scope `sarus`
 
@@ -1470,9 +1470,9 @@ The following settings are available:
 `sarus.tty`
 : Allocates a pseudo-tty (default: `false`).
 
-Read the {ref}`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
+Read the `container-sarus` page to learn more about how to use Sarus containers with Nextflow.
 
-(config-shifter)=
+
 
 ### Scope `shifter`
 
@@ -1483,9 +1483,9 @@ The following settings are available:
 `shifter.enabled`
 : Enable Shifter execution (default: `false`).
 
-Read the {ref}`container-shifter` page to learn more about how to use Shifter containers with Nextflow.
+Read the `container-shifter` page to learn more about how to use Shifter containers with Nextflow.
 
-(config-singularity)=
+
 
 ### Scope `singularity`
 
@@ -1495,7 +1495,7 @@ The following settings are available:
 
 `singularity.autoMounts`
 : When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `true`).
-: :::{versionchanged} 23.09.0-edge
+: :::info[Version changed: 23.09.0-edge]
   Default value was changed from `false` to `true`.
   :::
 
@@ -1515,12 +1515,12 @@ The following settings are available:
 : Pull the Singularity image with http protocol (default: `false`).
 
 `singularity.ociAutoPull`
-: :::{versionadded} 23.12.0-edge
+: :::info[Version added: 23.12.0-edge]
   :::
 : When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
 `singularity.ociMode`
-: :::{versionadded} 23.12.0-edge
+: :::info[Version added: 23.12.0-edge]
   :::
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
@@ -1528,16 +1528,16 @@ The following settings are available:
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
 
 `singularity.registry`
-: :::{versionadded} 22.12.0-edge
+: :::info[Version added: 22.12.0-edge]
   :::
 : The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
 `singularity.runOptions`
 : This attribute can be used to provide any extra command line options supported by `singularity exec`.
 
-Read the {ref}`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
+Read the `container-singularity` page to learn more about how to use Singularity containers with Nextflow.
 
-(config-spack)=
+
 
 ### Scope `spack`
 
@@ -1559,7 +1559,7 @@ The following settings are available:
 
 Nextflow does not allow for fine-grained configuration of the Spack package manager. Instead, this has to be performed directly on the host Spack installation. For more information see the [Spack documentation](https://spack.readthedocs.io).
 
-(config-timeline)=
+
 
 ### Scope `timeline`
 
@@ -1576,7 +1576,7 @@ The following settings are available:
 `timeline.overwrite`
 : When `true` overwrites any existing timeline file with the same name.
 
-(config-tower)=
+
 
 ### Scope `tower`
 
@@ -1600,7 +1600,7 @@ The following settings are available:
 
   The workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
 
-(config-trace)=
+
 
 ### Scope `trace`
 
@@ -1612,7 +1612,7 @@ The following settings are available:
 : When `true` turns on the generation of the execution trace report file (default: `false`).
 
 `trace.fields`
-: Comma separated list of fields to be included in the report. The available fields are listed at {ref}`this page <trace-fields>`.
+: Comma separated list of fields to be included in the report. The available fields are listed at [this page ](trace-fields).
 
 `trace.file`
 : Trace file name (default: `trace-<timestamp>.txt`).
@@ -1636,13 +1636,13 @@ trace {
 }
 ```
 
-Read the {ref}`trace-report` page to learn more about the execution report that can be generated by Nextflow.
+Read the `trace-report` page to learn more about the execution report that can be generated by Nextflow.
 
-(config-wave)=
+
 
 ### Scope `wave`
 
-The `wave` scope provides advanced configuration for the use of {ref}`Wave containers <wave-page>`.
+The `wave` scope provides advanced configuration for the use of [Wave containers ](wave-page).
 
 The following settings are available:
 
@@ -1665,12 +1665,12 @@ The following settings are available:
 : The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
 
 `wave.build.spack.basePackages`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : One or more Spack packages to be always added in the resulting container.
 
 `wave.build.spack.commands`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : One or more commands to be added to the Dockerfile used to build a Spack based image.
 
@@ -1678,43 +1678,43 @@ The following settings are available:
 : The Wave service endpoint (default: `https://wave.seqera.io`).
 
 `wave.freeze`
-: :::{versionadded} 23.07.0-edge
+: :::info[Version added: 23.07.0-edge]
   :::
 : Enables Wave container freezing. Wave will provision a non-ephemeral container image that will be pushed to a container repository of your choice. It requires the use of the `wave.build.repository` setting.
 : It is also recommended to specify a custom cache repository using `wave.build.cacheRepository`.
-: :::{note}
+: :::note
   The container repository authentication must be managed by the underlying infrastructure.
   :::
 
 `wave.httpClient.connectTime`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
 
 `wave.retryPolicy.delay`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : The initial delay when a failing HTTP request is retried (default: `150ms`).
 
 `wave.retryPolicy.jitter`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : The jitter factor used to randomly vary retry delays (default: `0.25`).
 
 `wave.retryPolicy.maxAttempts`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : The max number of attempts a failing HTTP request is retried (default: `5`).
 
 `wave.retryPolicy.maxDelay`
-: :::{versionadded} 22.06.0-edge
+: :::info[Version added: 22.06.0-edge]
   :::
 : The max delay when a failing HTTP request is retried (default: `90 seconds`).
 
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
-(config-miscellaneous)=
+
 
 ### Miscellaneous
 
@@ -1723,7 +1723,7 @@ There are additional variables that can be defined within a configuration file t
 `cleanup`
 : If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
 
-  :::{warning}
+  :::warning
   The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
   :::
 
@@ -1736,7 +1736,7 @@ There are additional variables that can be defined within a configuration file t
 `workDir`
 : Defines the pipeline work directory. Equivalent to the `-work-dir` option of the `run` command.
 
-(config-profiles)=
+
 
 ## Config profiles
 
@@ -1769,7 +1769,7 @@ profiles {
 This configuration defines three different profiles: `standard`, `cluster`, and `cloud`, that each set different process
 configuration strategies depending on the target runtime platform. The `standard` profile is used by default when no profile is specified.
 
-:::{tip}
+:::tip
 Multiple configuration profiles can be specified by separating the profile names with a comma, for example:
 
 ```bash
@@ -1777,7 +1777,7 @@ nextflow run <your script> -profile standard,cloud
 ```
 :::
 
-:::{danger}
+:::danger
 When using the `profiles` feature in your config file, do NOT set attributes in the same scope both inside and outside a `profiles` context. For example:
 
 ```groovy
@@ -1797,7 +1797,7 @@ profiles {
 In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also used in the `foo` and `bar` profiles.
 :::
 
-(config-env-vars)=
+
 
 ## Environment variables
 
@@ -1813,7 +1813,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
 
 `NXF_CACHE_DIR`
-: :::{versionadded} 24.02.0-edge
+: :::info[Version added: 24.02.0-edge]
   :::
 : Defines the base cache directory when using the default cache store (default: `"$launchDir/.nextflow"`).
 
@@ -1824,7 +1824,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Allows the extension of the Java runtime classpath with extra JAR files or class folders.
 
 `NXF_CLOUDCACHE_PATH`
-: :::{versionadded} 23.07.0-edge
+: :::info[Version added: 23.07.0-edge]
   :::
 : Defines the base cache path when using the cloud cache store.
 
@@ -1835,59 +1835,59 @@ The following environment variables control the configuration of the Nextflow ru
 : Directory where Conda environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
 `NXF_CONDA_ENABLED`
-: :::{versionadded} 22.08.0-edge
+: :::info[Version added: 22.08.0-edge]
   :::
-: Enable the use of Conda recipes defined by using the {ref}`process-conda` directive. (default: `false`).
+: Enable the use of Conda recipes defined by using the `process-conda` directive. (default: `false`).
 
 `NXF_DEFAULT_DSL`
-: :::{versionadded} 22.03.0-edge
+: :::info[Version added: 22.03.0-edge]
   :::
 : Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
 `NXF_DISABLE_CHECK_LATEST`
-: :::{versionadded} 23.09.0-edge
+: :::info[Version added: 23.09.0-edge]
   :::
 : Nextflow automatically checks for a newer version of itself unless this option is enabled (default: `false`).
 
 `NXF_DISABLE_JOBS_CANCELLATION`
-: :::{versionadded} 21.12.0-edge
+: :::info[Version added: 21.12.0-edge]
   :::
 : Disables the cancellation of child jobs on workflow execution termination.
 
 `NXF_DISABLE_PARAMS_TYPE_DETECTION`
-: :::{versionadded} 23.07.0-edge
+: :::info[Version added: 23.07.0-edge]
   :::
 : Disables the automatic type detection of command line parameters.
 
 `NXF_DISABLE_WAVE_SERVICE`
-: :::{versionadded} 23.08.0-edge
+: :::info[Version added: 23.08.0-edge]
   :::
 : Disables the requirement for Wave service when enabling the Fusion file system.
 
 `NXF_ENABLE_AWS_SES`
-: :::{versionadded} 23.06.0-edge
+: :::info[Version added: 23.06.0-edge]
   :::
 : Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default: `false`)
 
 `NXF_ENABLE_FS_SYNC`
-: :::{versionadded} 23.10.0
+: :::info[Version added: 23.10.0]
   :::
 : When enabled the job script will execute Linux `sync` command on job completion. This may be useful to synchronize the job state over shared file systems (default: `false`)
 
 `NXF_ENABLE_SECRETS`
-: :::{versionadded} 21.09.0-edge
+: :::info[Version added: 21.09.0-edge]
   :::
 : Enable Nextflow secrets features (default: `true`)
 
 `NXF_ENABLE_STRICT`
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 : Enable Nextflow *strict* execution mode (default: `false`)
 
 `NXF_ENABLE_VIRTUAL_THREADS`
-: :::{versionadded} 23.05.0-edge
+: :::info[Version added: 23.05.0-edge]
   :::
-: :::{versionchanged} 23.10.0
+: :::info[Version changed: 23.10.0]
   Enabled by default when using Java 21 or later.
   :::
 : Enable the use of virtual threads in the Nextflow runtime (default: `false`)
@@ -1896,7 +1896,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the default process executor, e.g. `sge`
 
 `NXF_FILE_ROOT`
-: :::{versionadded} 23.05.0-edge
+: :::info[Version added: 23.05.0-edge]
   :::
 : The file storage path against which relative file paths are resolved.
 : For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
@@ -1908,7 +1908,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the `JAVA_HOME` variable if defined.
 
 `NXF_JVM_ARGS`
-: :::{versionadded} 21.12.1-edge
+: :::info[Version added: 21.12.1-edge]
   :::
 : Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's only applied the JVM running Nextflow and not to any java pre-launching commands.
 
@@ -1917,10 +1917,10 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_OFFLINE`
 : When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default: `false`).
-: :::{versionchanged} 23.09.0-edge
+: :::info[Version changed: 23.09.0-edge]
   This option also disables the automatic version check (see `NXF_DISABLE_CHECK_LATEST`).
   :::
-: :::{versionchanged} 23.11.0-edge
+: :::info[Version changed: 23.11.0-edge]
   This option also prevents plugins from being downloaded. Plugin versions must be specified in offline mode, or else Nextflow will fail.
   :::
 
@@ -1931,7 +1931,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
 
 `NXF_PARAMS_FILE`
-: :::{versionadded} 20.10.0
+: :::info[Version added: 20.10.0]
   :::
 : Defines the path location of the pipeline parameters file .
 
@@ -1945,12 +1945,12 @@ The following environment variables control the configuration of the Nextflow ru
 : The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
 `NXF_PLUGINS_TEST_REPOSITORY`
-: :::{versionadded} 23.04.0
+: :::info[Version added: 23.04.0]
   :::
-: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See {ref}`testing-plugins` for more information.
+: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See `testing-plugins` for more information.
 
 `NXF_SCM_FILE`
-: :::{versionadded} 20.10.0
+: :::info[Version added: 20.10.0]
   :::
 : Defines the path location of the SCM config file .
 
@@ -1958,7 +1958,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
 `NXF_SINGULARITY_LIBRARYDIR`
-: :::{versionadded} 21.09.0-edge
+: :::info[Version added: 21.09.0-edge]
   :::
 : Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes.
 
@@ -1966,9 +1966,9 @@ The following environment variables control the configuration of the Nextflow ru
 : Directory where Spack environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
 `NXF_SPACK_ENABLED`
-: :::{versionadded} 23.02.0-edge
+: :::info[Version added: 23.02.0-edge]
   :::
-: Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
+: Enable the use of Spack recipes defined by using the `process-spack` directive. (default: `false`).
 
 `NXF_TEMP`
 : Directory where temporary files are stored
@@ -1983,7 +1983,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Directory where working files are stored (usually your *scratch* directory)
 
 `NXF_WRAPPER_STAGE_FILE_THRESHOLD`
-: :::{versionadded} 23.05.0-edge
+: :::info[Version added: 23.05.0-edge]
   :::
 : Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
@@ -1996,25 +1996,25 @@ The following environment variables control the configuration of the Nextflow ru
 
 `HTTP_PROXY`
 : Defines the HTTP proxy server.
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`.
   :::
 
 `HTTPS_PROXY`
 : Defines the HTTPS proxy server.
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`.
   :::
 
 `FTP_PROXY`
-: :::{versionadded} 21.06.0-edge
+: :::info[Version added: 21.06.0-edge]
   :::
 : Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`.
 
 `NO_PROXY`
 : Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
 
-(config-feature-flags)=
+
 
 ## Feature flags
 
@@ -2028,21 +2028,21 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
 : Defines the DSL version to use (`1` or `2`).
 
-: :::{versionadded} 22.03.0-edge
+: :::info[Version added: 22.03.0-edge]
   DSL2 is the default DSL version.
   :::
 
-: :::{versionadded} 22.12.0-edge
+: :::info[Version added: 22.12.0-edge]
   DSL1 is no longer supported.
   :::
 
 `nextflow.enable.moduleBinaries`
 
-: When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
+: When `true`, enables the use of modules with binary scripts. See `module-binaries` for more information.
 
 `nextflow.enable.strict`
 
-: :::{versionadded} 22.05.0-edge
+: :::info[Version added: 22.05.0-edge]
   :::
 
 : When `true`, the pipeline is executed in "strict" mode, which introduces the following rules:
@@ -2071,7 +2071,7 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
 `nextflow.preview.recursion`
 
-: :::{versionadded} 21.11.0-edge
+: :::info[Version added: 21.11.0-edge]
   :::
 
 : *Experimental: may change in a future release.*
@@ -2080,9 +2080,9 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
 `nextflow.preview.topic`
 
-: :::{versionadded} 23.11.0-edge
+: :::info[Version added: 23.11.0-edge]
   :::
 
 : *Experimental: may change in a future release.*
 
-: When `true`, enables {ref}`topic channels <channel-topic>` feature.
+: When `true`, enables [topic channels ](channel-topic) feature.

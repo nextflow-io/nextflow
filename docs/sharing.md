@@ -1,4 +1,4 @@
-(sharing-page)=
+
 
 # Pipeline sharing
 
@@ -24,7 +24,7 @@ or using the project URL:
 nextflow run http://github.com/foo/bar
 ```
 
-:::{note}
+:::note
 In the first case, if your project is hosted on a service other than GitHub, you will need to specify this hosting service in the command line by using the `-hub` option. For example `-hub bitbucket` or `-hub gitlab`. In the second case, i.e. when using the project URL as name, the `-hub` option is not needed.
 :::
 
@@ -34,11 +34,11 @@ You can try this feature out by simply entering the following command in your sh
 nextflow run nextflow-io/hello
 ```
 
-It will download a trivial `Hello` example from the repository published at the following address <http://github.com/nextflow-io/hello> and execute it in your computer.
+It will download a trivial `Hello` example from the repository published at the following address [http://github.com/nextflow-io/hello](http://github.com/nextflow-io/hello) and execute it in your computer.
 
 If the `owner` part in the pipeline name is omitted, Nextflow will look for a pipeline between the ones you have already executed having a name that matches the name specified. If none is found it will try to download it using the `organisation` name defined by the environment variable `NXF_ORG` (which by default is `nextflow-io`).
 
-:::{tip}
+:::tip
 To access a private repository, specify the access credentials by using the `-user` command line option, then the program will ask you to enter the password interactively. Private repository access credentials can also be defined in the [SCM configuration file](#scm-configuration-file)(#s.
 :::
 
@@ -62,7 +62,7 @@ It will execute two different project revisions corresponding to the Git tag/bra
 
 The following commands allows you to perform some basic operations that can be used to manage your projects.
 
-:::{note}
+:::note
 Nextflow is not meant to completely replace the [Git](https://git-scm.com/) tool. You may still need `git` to create new repositories or commit changes, etc.
 :::
 
@@ -148,7 +148,7 @@ Downloaded pipelines can be deleted by using the `drop` command, as shown below:
 nextflow drop nextflow-io/hello
 ```
 
-(sharing-scm-file)=
+
 
 ## SCM configuration file
 
@@ -167,7 +167,7 @@ providers {
 
 In the above template replace `<provider-name>` with one of the "default" servers (i.e. `bitbucket`, `github` or `gitlab`) or a custom identifier representing a private SCM server installation.
 
-:::{versionadded} 20.10.0
+:::info[Version added: 20.10.0]
 A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable.
 :::
 
@@ -210,7 +210,7 @@ providers {
 }
 ```
 
-:::{note}
+:::note
 App passwords are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more at [this link](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/).
 :::
 
@@ -218,7 +218,7 @@ App passwords are substitute passwords for a user account which you can use for 
 
 [BitBucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
 
-:::{note}
+:::note
 BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
 :::
 
@@ -251,7 +251,7 @@ providers {
 
 GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs. Learn more about PAT and how to create it at [this link](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
-:::{versionadded} 23.01.0-edge
+:::info[Version added: 23.01.0-edge]
 Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
 :::
 
@@ -269,7 +269,7 @@ providers {
 }
 ```
 
-:::{tip}
+:::tip
 The GitLab *token* string can be used as the `password` value in the above setting. When doing that the `token` field can be omitted.
 :::
 
@@ -305,15 +305,15 @@ providers {
 }
 ```
 
-:::{tip}
+:::tip
 The Personal access token can be generated in the repository `Clone Repository` dialog.
 :::
 
-(aws-codecommit)=
+
 
 ### AWS CodeCommit credentials
 
-:::{versionadded} 22.06.0-edge
+:::info[Version added: 22.06.0-edge]
 :::
 
 Nextflow supports [AWS CodeCommit](https://aws.amazon.com/codecommit/) as a Git provider to access and to share pipelines code.
@@ -332,7 +332,7 @@ providers {
 
 In the above snippet replace `<AWS ACCESS KEY>` and `<AWS SECRET KEY>` with your AWS credentials, and `my_aws_repo` with a name of your choice.
 
-:::{tip}
+:::tip
 The `user` and `password` are optional settings, if omitted the [AWS default credentials provider chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used.
 :::
 
@@ -344,7 +344,7 @@ nextflow run https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo
 
 In the above example replace `my-repo` with your own repository. Note also that AWS CodeCommit has different URLs depending the region in which you are working.
 
-:::{note}
+:::note
 The support for protocols other than HTTPS is not available at this time.
 :::
 
@@ -380,11 +380,11 @@ Or, in alternative, using the Git clone URL:
 nextflow run http://gitlab.acme.org/foo/bar.git
 ```
 
-:::{note}
+:::note
 You must also specify the server API endpoint URL if it differs from the server base URL. For example, for GitHub Enterprise V3, add `endpoint = 'https://git.your-domain.com/api/v3'`.
 :::
 
-:::{warning}
+:::warning
 When accessing a private SCM installation over `https` from a server that uses a custom SSL certificate, you may need to import the certificate into your local Java keystore. Read more [here](https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html).
 :::
 
@@ -410,7 +410,7 @@ Nextflow only requires that the main script in your pipeline project is called `
 manifest.mainScript = 'my_very_long_script_name.nf'
 ```
 
-To learn more about this and other project metadata information, that can be defined in the Nextflow configuration file, read the {ref}`Manifest <config-manifest>` section on the Nextflow configuration page.
+To learn more about this and other project metadata information, that can be defined in the Nextflow configuration file, read the [Manifest ](config-manifest) section on the Nextflow configuration page.
 
 Once you have uploaded your pipeline project to GitHub other people can execute it simply using the project name or the repository URL.
 
@@ -455,17 +455,17 @@ docker.enabled = true
 
 In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run your tasks.
 
-Read the {ref}`container-page` page to learn more on how to use containers with Nextflow.
+Read the `container-page` page to learn more on how to use containers with Nextflow.
 
 This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
 
 [^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.
 
-(bundling-executables)=
+
 
 ### Bundling executables in the workflow
 
-In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)). 
+In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)).
 
 In cases where you do not wish to modify the execution environment(s), executable scripts can be included in the `bin/` directory in the workflow repository root. This can be useful to make changes that affect task execution across all environments with a single change.
 
@@ -475,8 +475,8 @@ To ensure your scripts can be made available to the task:
 2. Specify a portable shebang (see note below for details).
 3. Ensure the scripts are executable. For example: `chmod a+x bin/my_script.py`
 
-:::{tip}
-To maximize portability of your bundled script, it is recommended to avoid hard-coding the interpreter path in the shebang line. 
+:::tip
+To maximize portability of your bundled script, it is recommended to avoid hard-coding the interpreter path in the shebang line.
 
 For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` both hard-code specific paths to the python interpreter. To improve portability, rely on `env` to dynamically resolve the path to the interpreter. An example of the recommended approach is:
 
@@ -485,7 +485,7 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 ```
 :::
 
-### Using bundled executables in the workflow 
+### Using bundled executables in the workflow
 
 Nextflow will automatically add the `bin/` directory to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
 
@@ -504,7 +504,7 @@ env {
 }
 ```
 
-See the {ref}`config-page` page to learn more about the Nextflow configuration file.
+See the `config-page` page to learn more about the Nextflow configuration file.
 
 ### Resource manager
 

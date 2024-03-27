@@ -1,7 +1,7 @@
 
 # Core plugins
 
-This page describes the build process for Nextflow core plugins. See the {ref}`plugins-page` page to learn how to create your own plugins outside of Nextflow.
+This page describes the build process for Nextflow core plugins. See the `plugins-page` page to learn how to create your own plugins outside of Nextflow.
 
 ## Plugin subprojects
 

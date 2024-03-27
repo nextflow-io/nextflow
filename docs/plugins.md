@@ -1,10 +1,10 @@
-(plugins-page)=
+
 
 # Plugins
 
 Nextflow has a plugin system that allows the use of extensible components that are downloaded and installed at runtime.
 
-(plugins-core)=
+
 
 ## Core plugins
 
@@ -12,7 +12,7 @@ The following functionalities are provided via plugin components, and they make 
 
 - `nf-amazon`: Support for Amazon Web Services.
 - `nf-azure`: Support for Microsoft Azure.
-- `nf-cloudcache`: Support for the cloud cache (see `NXF_CLOUDCACHE_PATH` under {ref}`config-env-vars`).
+- `nf-cloudcache`: Support for the cloud cache (see `NXF_CLOUDCACHE_PATH` under `config-env-vars`).
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
 - `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
 - `nf-google`: Support for Google Cloud.
@@ -50,11 +50,11 @@ To get started with your own plugin, refer to the [nf-hello](https://github.com/
 
 Nextflow's plugin system exposes a variety of extension points for plugins. The following sections describe how to use these extension points when writing a plugin, as well as how they are used in a pipeline.
 
-:::{note}
+:::note
 If you would like to implement something in a plugin that isn't covered by any of the following sections, feel free to create an issue on GitHub and describe your use case. In general, any class in the Nextflow codebase that implements `ExtensionPoint` can be extended by a plugin, and existing plugins are a great source of examples when writing new plugins.
 :::
 
-:::{note}
+:::note
 Plugin extension points must be added to `extensions.idx` in the plugin repository to make them discoverable. See the `nf-hello` plugin for an example.
 :::
 
@@ -94,7 +94,7 @@ You can then execute this command using the `nextflow plugin` command:
 nextflow plugin my-plugin:hello --foo --bar
 ```
 
-See the {ref}`cli-plugin` CLI command for usage information.
+See the `cli-plugin` CLI command for usage information.
 
 ### Configuration
 
@@ -157,13 +157,13 @@ process foo {
 }
 ```
 
-:::{tip}
+:::tip
 Refer to the source code of Nextflow's built-in executors to see how to implement the various components of an executor. You might be able to implement most of your executor by simply reusing existing code.
 :::
 
 ### Functions
 
-:::{versionadded} 22.09.0-edge
+:::info[Version added: 22.09.0-edge]
 :::
 
 Plugins can define custom Groovy functions, which can then be included into Nextflow pipelines.
@@ -204,7 +204,7 @@ include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 
 ### Operators
 
-:::{versionadded} 22.04.0
+:::info[Version added: 22.04.0]
 :::
 
 Plugins can define custom channel factories and operators, which can then be included into Nextflow pipelines.
@@ -248,14 +248,14 @@ channel
     .sqlInsert(into: 'BAR', columns: 'id', db: 'test')
 ```
 
-The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory 
+The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory
 is included under the alias `fromTable`.
 
 ### Process directives
 
-Plugins that implement a [custom executor](#executors) will likely need to access {ref}`process directives <process-directives>` that affect the task execution. When an executor receives a task, the process directives can be accessed through that task's configuration. As a best practice, custom executors should try to support all process directives that have executor-specific behavior and are relevant to your executor.
+Plugins that implement a [custom executor](#executors) will likely need to access [process directives ](process-directives) that affect the task execution. When an executor receives a task, the process directives can be accessed through that task's configuration. As a best practice, custom executors should try to support all process directives that have executor-specific behavior and are relevant to your executor.
 
-Nextflow does not provide the ability to define custom process directives in a plugin. Instead, you can use the {ref}`process-ext` directive to provide custom process settings to your executor. Try to use specific names that are not likely to conflict with other plugins or existing pipelines.
+Nextflow does not provide the ability to define custom process directives in a plugin. Instead, you can use the `process-ext` directive to provide custom process settings to your executor. Try to use specific names that are not likely to conflict with other plugins or existing pipelines.
 
 Here is an example of a custom executor that uses existing process directives as well as a custom setting through the `ext` directive:
 
@@ -307,7 +307,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 
 class MyObserver implements TraceObserver {
-    
+
     @Override
     void onFlowBegin() {
         println "Okay, let's begin!"
@@ -327,7 +327,7 @@ class MyObserver implements TraceObserver {
     void onFilePublish(Path destination, Path source) {
         println "I published a file! It's located at ${path.toUriString()}"
     }
-    
+
     @Override
     void onFlowError(TaskHandler handler, TraceRecord trace) {
         println "Uh oh, something went wrong..."
@@ -354,11 +354,11 @@ Nextflow resolves plugins through a plugin registry, which stores metadata for e
 
 To publish a plugin release to the main registry, simply create a pull request with the requested plugin metadata.
 
-(testing-plugins)=
+
 
 ### Testing plugins
 
-:::{versionadded} 23.04.0
+:::info[Version added: 23.04.0]
 :::
 
 You can also use a different plugin registry with the `NXF_PLUGINS_TEST_REPOSITORY` environment variable. This setting is useful for testing a plugin release before publishing it to the main registry. It can refer to the JSON file for a custom registry or a plugin release.
@@ -379,7 +379,7 @@ nextflow run <pipeline> -plugins nf-hello
 
 To use Nextflow plugins in an offline environment:
 
-1. {ref}`Download Nextflow <install-nextflow>` and install it on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
+1. [Download Nextflow ](install-nextflow) and install it on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
 
 2. Download any additional plugins by running `nextflow plugin install <pluginId,..>`. Alternatively, simply run your pipeline once and Nextflow will download all of the plugins that it needs.
 

@@ -1,11 +1,11 @@
-(module-page)=
+
 
 # Modules
 
 In Nextflow, a **module** is a script that may contain functions, processes, and workflows (collectively referred to as *components*). A module can be included in other modules or pipeline scripts and even shared across workflows.
 
-:::{note}
-Modules were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
+:::note
+Modules were introduced in DSL2. If you are still using DSL1, see the `dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
 ## Module inclusion
@@ -32,11 +32,11 @@ Module includes are subject to the following rules:
 - Relative paths must begin with the `./` prefix.
 - Include statements are not allowed from within a workflow. They must occur at the script level.
 
-(module-directory)=
+
 
 ## Module directory
 
-:::{versionadded} 22.10.0
+:::info[Version added: 22.10.0]
 :::
 
 A module can be defined as a directory with the same name as the module and with a script named `main.nf`. For example:
@@ -69,7 +69,7 @@ workflow {
 }
 ```
 
-(module-aliases)=
+
 
 ## Module aliases
 
@@ -128,11 +128,11 @@ The above snippet prints:
 Hola Mundo
 ```
 
-:::{note}
+:::note
 The module inherits the parameters defined *before* the `include` statement, therefore any parameters set afterwards will not be used by the module.
 :::
 
-:::{tip}
+:::tip
 It is best to define all pipeline parameters *before* any `include` statements.
 :::
 
@@ -174,11 +174,11 @@ The above snippet prints:
 Ciao world!
 ```
 
-(module-templates)=
+
 
 ## Module templates
 
-The module script can be defined in an external {ref}`template <process-template>` file. The template file can be placed in the `templates` directory where the module script is located.
+The module script can be defined in an external [template ](process-template) file. The template file can be placed in the `templates` directory where the module script is located.
 
 For example, suppose we have a project L with a module script that defines two processes, P1 and P2, both of which use templates. The template files can be made available in the local `templates` directory:
 
@@ -238,11 +238,11 @@ baseDir
         └── P7-template.sh
 ```
 
-(module-binaries)=
+
 
 ## Module binaries
 
-:::{versionadded} 22.10.0
+:::info[Version added: 22.10.0]
 :::
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
@@ -267,8 +267,8 @@ The binary scripts must be placed in the module directory names `<module-dir>/re
 
 Those scripts will be made accessible like any other command in the task environment, provided they have been granted the Linux execute permissions.
 
-:::{note}
-This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
+:::note
+This feature requires the use of a local or shared file system for the pipeline work directory, or `wave-page` when using cloud-based executors.
 :::
 
 ## Sharing modules

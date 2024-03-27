@@ -1,4 +1,4 @@
-(your-first-script)=
+
 
 # Your first script
 
@@ -23,7 +23,7 @@ HELLO
 WORLD!
 ```
 
-:::{note}
+:::note
 For versions of Nextflow prior to `22.10.0`, you must explicitly enable DSL2 by adding `nextflow.enable.dsl=2` to the top of the script or by using the `-dsl2` command-line option.
 :::
 
@@ -36,11 +36,11 @@ WORLD!
 HELLO
 ```
 
-:::{tip}
+:::tip
 The hexadecimal string, e.g. `22/7548fa`, is the unique hash of a task, and the prefix of the directory where the task is executed. You can inspect a task's files by changing to the directory `$PWD/work` and using this string to find the specific task directory.
 :::
 
-(getstarted-resume)=
+
 
 ## Modify and resume
 
@@ -80,13 +80,13 @@ olleH
 
 You will see that the execution of the process `splitLetters` is actually skipped (the process ID is the same), and its results are retrieved from the cache. The second process is executed as expected, printing the reversed strings.
 
-:::{tip}
+:::tip
 The pipeline results are cached by default in the directory `$PWD/work`. Depending on your script, this folder can take up a lot of disk space. It's a good idea to clean this folder periodically, as long as you know you won't need to resume any pipeline runs.
 :::
 
-For more information, see the {ref}`cache-resume-page` page.
+For more information, see the `cache-resume-page` page.
 
-(getstarted-params)=
+
 
 ## Pipeline parameters
 
@@ -110,6 +110,6 @@ edno
 uojnoB
 ```
 
-:::{versionchanged} 20.11.0-edge
+:::info[Version changed: 20.11.0-edge]
 Any `.` (dot) character in a parameter name is interpreted as the delimiter of a nested scope. For example, `--foo.bar Hello` will be interpreted as `params.foo.bar`. If you want to have a parameter name that contains a `.` (dot) character, escape it using the back-slash character, e.g. `--foo\.bar Hello`.
 :::

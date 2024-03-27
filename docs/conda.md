@@ -1,4 +1,4 @@
-(conda-page)=
+
 
 # Conda environments
 
@@ -16,24 +16,24 @@ This feature requires the Conda or [Miniconda](https://conda.io/miniconda.html) 
 
 Nextflow automatically creates and activates the Conda environment(s) given the dependencies specified by each process.
 
-Dependencies are specified by using the {ref}`process-conda` directive, providing either the names of the required Conda packages, the path of a Conda environment yaml file or the path of an existing Conda environment directory.
+Dependencies are specified by using the `process-conda` directive, providing either the names of the required Conda packages, the path of a Conda environment yaml file or the path of an existing Conda environment directory.
 
-:::{note}
+:::note
 Conda environments are stored on the file system. By default Nextflow instructs Conda to save the required environments in the pipeline work directory. Therefore the same environment can be created/saved multiple times across multiple executions when using a different work directory.
 :::
 
-You can specify the directory where the Conda environments are stored using the `conda.cacheDir` configuration property (see the {ref}`configuration page <config-conda>` for details). When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes.
+You can specify the directory where the Conda environments are stored using the `conda.cacheDir` configuration property (see the [configuration page ](config-conda) for details). When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes.
 
-:::{warning}
+:::warning
 The Conda environment feature is not supported by executors that use remote object storage as a work directory e.g. AWS Batch.
 :::
 
 ### Enabling Conda environment
 
-:::{versionadded} 22.08.0-edge
+:::info[Version added: 22.08.0-edge]
 :::
 
-The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
+The use of Conda recipes specified using the `process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
 
 ```groovy
 conda.enabled = true
@@ -104,7 +104,7 @@ process foo {
 }
 ```
 
-:::{warning}
+:::warning
 The environment file name **must** have a `.yml` or `.yaml` extension or else it won't be properly recognised.
 :::
 
@@ -116,7 +116,7 @@ bioconda::bwa=0.7.15
 bioconda::multiqc=1.4
 ```
 
-:::{warning}
+:::warning
 Like before, the extension matters. Make sure the dependencies file has a `.txt` extension.
 :::
 
@@ -136,16 +136,16 @@ process foo {
 
 ### Use Mamba to resolve packages
 
-:::{warning} *Experimental: may change in a future release.*
+:::warning *Experimental: may change in a future release.*
 :::
 
-It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
+It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to [Conda ](config-conda).
 
 ## Best practices
 
 When a `conda` directive is used in any `process` definition within the workflow script, Conda tool is required for the workflow execution.
 
-Specifying the Conda environments in a separate configuration {ref}`profile <config-profiles>` is therefore recommended to allow the execution via a command line option and to enhance the workflow portability. For example:
+Specifying the Conda environments in a separate configuration [profile ](config-profiles) is therefore recommended to allow the execution via a command line option and to enhance the workflow portability. For example:
 
 ```groovy
 profiles {
@@ -164,4 +164,4 @@ The above configuration snippet allows the execution either with Conda or Docker
 
 ## Advanced settings
 
-Conda advanced configuration settings are described in the {ref}`Conda <config-conda>` section on the Nextflow configuration page.
+Conda advanced configuration settings are described in the [Conda ](config-conda) section on the Nextflow configuration page.

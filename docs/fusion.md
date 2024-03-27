@@ -1,11 +1,11 @@
-(fusion-page)=
+
 
 # Fusion file system
 
-:::{versionadded} 22.10.0
+:::info[Version added: 22.10.0]
 :::
 
-:::{versionadded} 23.02.0-edge
+:::info[Version added: 23.02.0-edge]
 Support for Google Cloud Storage.
 :::
 
@@ -19,7 +19,7 @@ It bridges the gap between cloud-native storage and data analysis workflow by im
 
 ### Requirements
 
-Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container engine such as Docker or a container native platform for the execution of your pipeline e.g. AWS Batch or Kubernetes. It also requires the use of {ref}`Wave containers<wave-page>`.
+Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container engine such as Docker or a container native platform for the execution of your pipeline e.g. AWS Batch or Kubernetes. It also requires the use of [Wave containers](wave-page).
 
 ### AWS S3 configuration
 
@@ -168,7 +168,7 @@ The Fusion file system implements a lazy download and upload algorithm that runs
 
 The temporary folder is used only as a temporary cache, so the size of the volume can be much lower than the actual needs of your pipeline processes. Fusion has a built-in garbage collector that constantly monitors remaining disk space on the temporary folder and immediately evicts old cached entries when necessary.
 
-The recommended setup to get maximum performance is to mount a NVMe disk as the temporary folder and run the pipeline with the {ref}`scratch <process-scratch>` directive set to `false` to also avoid stage-out transfer time.
+The recommended setup to get maximum performance is to mount a NVMe disk as the temporary folder and run the pipeline with the [scratch ](process-scratch) directive set to `false` to also avoid stage-out transfer time.
 
 Example configuration for using AWS Batch with [NVMe disks](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ssd-instance-store.html) to maximize performance:
 
@@ -179,4 +179,4 @@ process.scratch = false
 
 ## Advanced settings
 
-Fusion advanced configuration settings are described in the {ref}`Fusion <config-fusion>` section on the Nextflow configuration page.
+Fusion advanced configuration settings are described in the [Fusion ](config-fusion) section on the Nextflow configuration page.

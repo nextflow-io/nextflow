@@ -1,4 +1,4 @@
-(google-page)=
+
 
 # Google Cloud
 
@@ -35,26 +35,26 @@ Then, define the following variable replacing the path in the example with the o
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 ```
 
-(google-batch)=
+
 
 ## Cloud Batch
 
-:::{versionadded} 22.07.1-edge
+:::info[Version added: 22.07.1-edge]
 :::
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
 Nextflow provides built-in support for Google Cloud Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded to the Cloud Batch service.
 
-Read the {ref}`Google Cloud Batch executor <google-batch-executor>` section to learn more about the `google-batch` executor in Nextflow.
+Read the [Google Cloud Batch executor ](google-batch-executor) section to learn more about the `google-batch` executor in Nextflow.
 
-(google-batch-config)=
+
 
 ### Configuration
 
 Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable. See the [Credentials](#credentials) section for details.
 
-:::{note}
+:::note
 Make sure your Google account is allowed to access the Google Cloud Batch service by checking the [APIs & Services](https://console.cloud.google.com/apis/dashboard) dashboard.
 :::
 
@@ -80,13 +80,13 @@ google {
 
 Notes:
 
-- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
+- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more `config-process-selectors`.
 - Make sure to specify the project ID, not the project name.
 - Make sure to specify a location where Google Batch is available. Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
 
-Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
+Read the [Google configuration](config-google) section to learn more about advanced configuration options.
 
-(google-batch-process)=
+
 
 ### Process definition
 
@@ -115,7 +115,7 @@ process anotherTask {
 }
 ```
 
-:::{versionadded} 23.02.0-edge
+:::info[Version added: 23.02.0-edge]
 :::
 
 The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
@@ -133,7 +133,7 @@ process myTask {
 }
 ```
 
-:::{versionadded} 23.12.0-edge
+:::info[Version added: 23.12.0-edge]
 :::
 
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
@@ -151,7 +151,7 @@ process myTask {
 }
 ```
 
-:::{note}
+:::note
 Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
 config options: `cpuPlatform`, `preemptible`, and `spot`.
 :::
@@ -162,7 +162,7 @@ To use an instance template with Fusion, the instance template must include a `l
 See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
 
 
-:::{versionadded} 23.06.0-edge
+:::info[Version added: 23.06.0-edge]
 :::
 
 The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
@@ -190,11 +190,11 @@ The pipeline execution must specify a Google Storage bucket where the workflow's
 nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
-:::{tip}
+:::tip
 Any input data **not** stored in a Google Storage bucket will automatically be transferred to the pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
 :::
 
-:::{warning}
+:::warning
 The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name e.g. `gs://my-bucket`.
 :::
 
@@ -208,7 +208,7 @@ google {
 }
 ```
 
-:::{versionadded} 23.11.0-edge
+:::info[Version added: 23.11.0-edge]
 :::
 
 Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
@@ -222,10 +222,10 @@ process {
 
 ### Fusion file system
 
-:::{versionadded} 23.02.0-edge
+:::info[Version added: 23.02.0-edge]
 :::
 
-The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
+The Google Batch executor supports the use of `fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
 
 To enable the use of Fusion file system in your pipeline, add the following snippet to your Nextflow configuration file:
 
@@ -236,37 +236,37 @@ process.scratch = false
 tower.accessToken = '<YOUR ACCESS TOKEN>'
 ```
 
-The [Seqera Platform](https://seqera.io) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
+The [Seqera Platform](https://seqera.io) access token is optional, but it enables higher API rate limits for the `wave-page` service required by Fusion.
 
 By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
 
-:::{versionadded} 23.06.0-edge
+:::info[Version added: 23.06.0-edge]
 :::
 
-The `disk` directive can be used to override the disk requested by Fusion. See the {ref}`Process definition <google-batch-process>` section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
+The `disk` directive can be used to override the disk requested by Fusion. See the [Process definition ](google-batch-process) section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
 
 ### Supported directives
 
 The integration with Google Batch is a developer preview feature. Currently, the following Nextflow directives are supported:
 
-- {ref}`process-accelerator`
-- {ref}`process-container`
-- {ref}`process-containeroptions`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-executor`
-- {ref}`process-machinetype`
-- {ref}`process-memory`
-- {ref}`process-time`
+- `process-accelerator`
+- `process-container`
+- `process-containeroptions`
+- `process-cpus`
+- `process-disk`
+- `process-executor`
+- `process-machinetype`
+- `process-memory`
+- `process-time`
 
-(google-lifesciences)=
+
 
 ## Cloud Life Sciences
 
-:::{versionadded} 20.01.0-edge
+:::info[Version added: 20.01.0-edge]
 :::
 
-:::{note}
+:::note
 In versions of Nextflow prior to `21.04.0`, the following variables must be defined in your system environment:
 
 ```bash
@@ -279,19 +279,19 @@ export NXF_MODE=google
 
 Nextflow provides built-in support for Cloud Life Sciences, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded to the Cloud Life Sciences service.
 
-Read the {ref}`Google Life Sciences executor <google-lifesciences-executor>` page to learn about the `google-lifesciences` executor in Nextflow.
+Read the [Google Life Sciences executor ](google-lifesciences-executor) page to learn about the `google-lifesciences` executor in Nextflow.
 
-:::{warning}
+:::warning
 This API works well for coarse-grained workloads (i.e. long-running jobs). It's not suggested the use this feature for pipelines spawning many short lived tasks.
 :::
 
-(google-lifesciences-config)=
+
 
 ### Configuration
 
 Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable. See the section [Credentials](#credentials) for details.
 
-:::{tip}
+:::tip
 Make sure to enable the Cloud Life Sciences API beforehand. To learn how to enable it follow [this link](https://cloud.google.com/life-sciences/docs/quickstart).
 :::
 
@@ -318,11 +318,11 @@ google {
 ```
 
 Notes:
-- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
+- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more `config-process-selectors`.
 - Make sure to specify the project ID, not the project name.
 - Make sure to specify a location where Google Life Sciences is available. Refer to the [Google Cloud documentation](https://cloud.google.com/life-sciences/docs/concepts/locations) for details.
 
-Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
+Read the [Google configuration](config-google) section to learn more about advanced configuration options.
 
 ### Process definition
 
@@ -362,7 +362,7 @@ The pipeline execution must specify a Google Storage bucket where the workflow's
 nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
-:::{tip}
+:::tip
 Any input data *not* stored in a Google Storage bucket will be automatically transferred to the pipeline work bucket. Use this feature with caution, being careful to avoid unnecessary data transfers.
 :::
 
@@ -385,11 +385,11 @@ process {
 }
 ```
 
-:::{note}
+:::note
 Preemptible instances have a [runtime limit](https://cloud.google.com/compute/docs/instances/preemptible) of 24 hours.
 :::
 
-:::{tip}
+:::tip
 For an exhaustive list of error codes, refer to the official Google Life Sciences [documentation](https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes).
 :::
 
@@ -397,7 +397,7 @@ For an exhaustive list of error codes, refer to the official Google Life Science
 
 Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Life Sciences.
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Life Sciences executor to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more `config-process-selectors` in your Nextflow configuration file to apply the Google Life Sciences executor to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
@@ -419,7 +419,7 @@ Then launch the pipeline with the `-bucket-dir` option to specify a Google Stora
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 ```
 
-:::{warning}
+:::warning
 The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
 :::
 

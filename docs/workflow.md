@@ -1,4 +1,4 @@
-(workflow-page)=
+
 
 # Workflows
 
@@ -33,15 +33,15 @@ workflow [ name ] {
 }
 ```
 
-:::{tip}
+:::tip
 The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
 :::
 
-:::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
+:::note
+Workflows were introduced in DSL2. If you are still using DSL1, see the `dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
-(workflow-process-invocation)=
+
 
 ## Process invocation
 
@@ -78,8 +78,8 @@ workflow {
 }
 ```
 
-:::{warning}
-A process can be only be invoked once in a single workflow, however you can get around this restriction by using {ref}`module-aliases`.
+:::warning
+A process can be only be invoked once in a single workflow, however you can get around this restriction by using `module-aliases`.
 :::
 
 ### Process composition
@@ -144,7 +144,7 @@ workflow {
 }
 ```
 
-See {ref}`process outputs <process-additional-options>` for more details.
+See [process outputs ](process-additional-options) for more details.
 
 ### Process named stdout
 
@@ -171,7 +171,7 @@ workflow {
 }
 ```
 
-:::{note}
+:::note
 Optional params for a process input/output are always prefixed with a comma, except for `stdout`. Because `stdout` does not have an associated name or value like other types, the first param should not be prefixed.
 :::
 
@@ -235,7 +235,7 @@ workflow my_pipeline {
 }
 ```
 
-:::{warning}
+:::warning
 When the `take` keyword is used, the beginning of the workflow body must be defined with the `main` keyword.
 :::
 
@@ -285,7 +285,7 @@ The result of the above workflow can be accessed using `my_pipeline.out.my_data`
 
 A workflow with no name (also known as the *implicit workflow*) is the default entrypoint of the Nextflow pipeline. A different workflow entrypoint can be specified using the `-entry` command line option.
 
-:::{note}
+:::note
 Implicit workflow definitions are ignored when a script is included as a module. This way, a workflow script can be written in such a way that it can be used either as a library module or an application script.
 :::
 
@@ -320,12 +320,12 @@ workflow {
 }
 ```
 
-:::{note}
+:::note
 Each workflow invocation has its own scope. As a result, the same process can be invoked in two different workflow scopes, like `foo` in the above snippet, which is used in both `flow1` and `flow2`. The workflow execution path, along with the process names, determines the *fully qualified process name* that is used to distinguish the different process invocations, i.e. `flow1:foo` and `flow2:foo` in the above example.
 :::
 
-:::{tip}
-The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
+:::tip
+The fully qualified process name can be used as a [process selector ](config-process-selectors) in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
 ## Special operators
@@ -351,9 +351,9 @@ workflow {
 }
 ```
 
-The above snippet defines a process named `foo` and invokes it with the `data` channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
+The above snippet defines a process named `foo` and invokes it with the `data` channel. The result is then piped to the `operator-map` operator, which converts each string to uppercase, and finally to the `operator-view` operator which prints it.
 
-:::{tip}
+:::tip
 Statements can also be split across multiple lines for better readability:
 
 ```groovy
@@ -402,4 +402,4 @@ workflow {
 }
 ```
 
-In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+In the above snippet, the initial channel is piped to the `operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the `operator-mix` operator. Finally, the result is printed using the `operator-view` operator.

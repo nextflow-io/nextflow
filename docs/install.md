@@ -1,8 +1,8 @@
-(install-page)=
+
 
 # Installation
 
-(install-requirements)=
+
 
 ## Requirements
 
@@ -34,7 +34,7 @@ To install Java with SDKMAN:
     java -version
     ```
 
-(install-nextflow)=
+
 
 ## Install Nextflow
 
@@ -48,7 +48,7 @@ Nextflow is distributed as a self-installing package, in order to make the insta
 
     This will create the `nextflow` executable in the current directory.
 
-    :::{tip}
+    :::tip
     You can set `export CAPSULE_LOG=none` to make the installation logs less verbose.
     :::
 
@@ -104,7 +104,7 @@ $ nextflow info
 
 ## Standalone distribution
 
-Nextflow has a set of {ref}`core plugins <plugins-core>` which are downloaded at runtime by default. There is also a standalone distribution (i.e. the `all` distribution) which comes pre-packaged with all core plugins. This distribution is mainly useful for offline environments.
+Nextflow has a set of [core plugins ](plugins-core) which are downloaded at runtime by default. There is also a standalone distribution (i.e. the `all` distribution) which comes pre-packaged with all core plugins. This distribution is mainly useful for offline environments.
 
 The installer for the `all` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
 
@@ -113,6 +113,6 @@ export NXF_VER=23.10.0
 curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-all
 ```
 
-:::{warning}
-The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
+:::warning
+The `all` distribution does not support third-party plugins. Only the [core plugins ](plugins-core) are supported.
 :::

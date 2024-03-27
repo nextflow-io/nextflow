@@ -23,7 +23,7 @@ You can see the effect of Nextflow's AST transforms by using the Nextflow consol
 3. Execute the script
 4. Go to **Script** > **Inspect AST**
 
-Here is the example from {ref}`your-first-script`:
+Here is the example from `your-first-script`:
 
 ```groovy
 params.str = 'Hello world!'
@@ -98,7 +98,7 @@ import nextflow.io.ValueObject as ValueObject
 import nextflow.Channel as channel
 
 @groovy.transform.BaseScript
-public class script1677225313239 extends nextflow.script.BaseScript { 
+public class script1677225313239 extends nextflow.script.BaseScript {
 
     public script1677225313239() {
         nextflow.script.ScriptMeta.get(this).setDsl1ProcessNames(['splitLetters', 'convertToUpper'])
@@ -117,7 +117,7 @@ public class script1677225313239 extends nextflow.script.BaseScript {
     protected java.lang.Object runScript() {
         params.str = 'Hello world!'
 
-        this.process('splitLetters', { 
+        this.process('splitLetters', {
             this._out_path('chunk_*')
             new nextflow.script.BodyDef(
                 {
@@ -131,11 +131,11 @@ public class script1677225313239 extends nextflow.script.BaseScript {
             )
         })
 
-        this.process('convertToUpper', { 
+        this.process('convertToUpper', {
             this._in_path(new nextflow.script.TokenVar('x'))
             this._out_stdout()
             new nextflow.script.BodyDef(
-                { 
+                {
                     "cat $x | tr '[a-z]' '[A-Z]'"
                 },
                 '"""\n  cat $x | tr \'[a-z]\' \'[A-Z]\'\n  """\n',
@@ -146,10 +146,10 @@ public class script1677225313239 extends nextflow.script.BaseScript {
             )
         })
 
-        this.workflow({ 
+        this.workflow({
             new nextflow.script.BodyDef(
                 {
-                    splitLetters | flatten | convertToUpper | this.view({ 
+                    splitLetters | flatten | convertToUpper | this.view({
                         it.trim()
                     })
                 },

@@ -2,7 +2,8 @@
 # Nextflow
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
-<br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
+
+[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
 
 [![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)](https://github.com/nextflow-io/nextflow/actions/workflows/build.yml?query=branch%3Amaster+event%3Apush)
 [![Nextflow version](https://img.shields.io/github/release/nextflow-io/nextflow.svg?colorB=58bd9f&style=popout)](https://github.com/nextflow-io/nextflow/releases/latest)
@@ -15,8 +16,8 @@ Nextflow is a workflow system for creating scalable, portable, and reproducible 
 
 ## Get started
 
-- Get an {ref}`overview <overview-page>` of Nextflow and its key concepts.
-- Get started with Nextflow by {ref}`installing <install-page>` it and running {ref}`your first script <your-first-script>`.
+- Get an [overview ](overview-page) of Nextflow and its key concepts.
+- Get started with Nextflow by [your first script ](your-first-script).
 - Check out [this blog post](https://www.nextflow.io/blog/2023/learn-nextflow-in-2023.html) for even more resources on how to learn Nextflow.
 
 ## Community
@@ -29,7 +30,7 @@ The [nf-core](https://nf-co.re/) project is a community effort aggregating high 
 
 ## Contributing
 
-Contributions are more than welcome. See the {ref}`Contributing <contributing-page>` page for details.
+Contributions are more than welcome. See the [Contributing ](contributing-page) page for details.
 
 ## License
 
@@ -40,87 +41,3 @@ Nextflow is released under the Apache 2.0 license. Nextflow is a [registered tra
 If you use Nextflow in your work, please cite:
 
 P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319 (2017) doi:[10.1038/nbt.3820](http://www.nature.com/nbt/journal/v35/n4/full/nbt.3820.html)
-
-```{toctree}
-:hidden:
-:caption: Get started
-:maxdepth: 1
-
-overview
-install
-your-first-script
-```
-
-```{toctree}
-:hidden:
-:caption: Language
-:maxdepth: 1
-
-script
-process
-channel
-operator
-workflow
-module
-config
-dsl1
-```
-
-```{toctree}
-:hidden:
-:caption: Execution
-:maxdepth: 1
-
-cli
-executor
-cache-and-resume
-tracing
-metrics
-sharing
-metadata
-mail
-plugins
-secrets
-```
-
-```{toctree}
-:hidden:
-:caption: Software dependencies
-:maxdepth: 1
-
-container
-conda
-spack
-wave
-```
-
-```{toctree}
-:hidden:
-:caption: Compute & storage platforms
-:maxdepth: 1
-
-aws
-amazons3
-azure
-fusion
-google
-kubernetes
-```
-
-```{toctree}
-:hidden:
-:caption: Additional integrations
-:maxdepth: 1
-
-flux
-```
-
-```{toctree}
-:hidden:
-:caption: Contributing
-:maxdepth: 1
-
-developer/index
-developer/packages
-developer/plugins
-```

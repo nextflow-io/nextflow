@@ -1,4 +1,4 @@
-(mail-page)=
+
 
 # Mail & Notifications
 
@@ -6,7 +6,7 @@
 
 The built-in function `sendMail` allows you to send a mail message from a workflow script.
 
-(mail-basic)=
+
 
 ### Basic mail
 
@@ -70,7 +70,7 @@ The following parameters can be specified:
 `attach`
 : Single file or a list of files to be included as mail attachments.
 
-(mail-advanced)=
+
 
 ### Advanced mail
 
@@ -94,15 +94,15 @@ sendMail {
 
 The same attributes listed in the table in the previous section are allowed.
 
-:::{tip}
+:::tip
 A string expression at the end is implicitly interpreted as the mail body content, therefore the `body` parameter can be omitted as shown above.
 :::
 
-:::{tip}
+:::tip
 To send an email that includes text and HTML content, use both the `text` and `body` attributes. The first is used for the plain text content, while the second is used for the rich HTML content.
 :::
 
-(mail-attachments)=
+
 
 ### Mail attachments
 
@@ -136,7 +136,7 @@ sendMail {
 }
 ```
 
-(mail-config)=
+
 
 ### Mail configuration
 
@@ -152,11 +152,11 @@ mail {
 }
 ```
 
-See the {ref}`mail scope <config-mail>` section to learn more the mail server configuration options.
+See the [mail scope ](config-mail) section to learn more the mail server configuration options.
 
 ### AWS SES configuration
 
-:::{versionadded} 23.06.0-edge
+:::info[Version added: 23.06.0-edge]
 :::
 
 Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative
@@ -176,7 +176,7 @@ ses:SendRawEmail
 
 ## Mail notification
 
-You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify the completion of a workflow completion. For example:
+You can use the `sendMail` function with a [workflow completion handler ](metadata-completion-handler) to notify the completion of a workflow completion. For example:
 
 ```groovy
 workflow.onComplete {
@@ -213,10 +213,10 @@ It will send a notification mail when the execution completes similar to the one
 ```{image} _static/workflow-notification-min.png
 ```
 
-:::{warning}
+:::warning
 By default the notification message is sent with the `sendmail` system tool, which is assumed to be available in the environment where Nextflow is running. Make sure it's properly installed and configured. Alternatively, you can provide the SMTP server configuration settings to use the Nextflow built-in mail support, which doesn't require any external system tool.
 :::
 
 See the [Mail configuration](#mail-configuration) section to learn about the available mail delivery options and configuration settings.
 
-Read {ref}`Notification scope <config-notification>` section to learn more about the workflow notification configuration details.
+Read [Notification scope ](config-notification) section to learn more about the workflow notification configuration details.

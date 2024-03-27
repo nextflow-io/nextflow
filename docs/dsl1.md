@@ -1,4 +1,4 @@
-(dsl1-page)=
+
 
 # Migrating from DSL 1
 
@@ -18,7 +18,7 @@ export NXF_DEFAULT_DSL=2
 
 ## Processes and workflows
 
-In DSL1, a process definition is also the process invocation. Process inputs and outputs are connected to channels using `from` and `into`. Here is the {ref}`your-first-script` example written in DSL1:
+In DSL1, a process definition is also the process invocation. Process inputs and outputs are connected to channels using `from` and `into`. Here is the `your-first-script` example written in DSL1:
 
 ```groovy
 nextflow.enable.dsl=1
@@ -51,7 +51,7 @@ result.view { it.trim() }
 
 To migrate this code to DSL2, you need to move all of your channel logic throughout the script into a `workflow` definition. Additionally, you must call each process explicitly, passing any input channels as arguments (instead of `from ...`) and receiving any output channels as return values (instead of `into ...`).
 
-Refer to the {ref}`workflow-page` page to learn how to define a workflow. The DSL2 version of the above script is duplicated here for your convenience:
+Refer to the `workflow-page` page to learn how to define a workflow. The DSL2 version of the above script is duplicated here for your convenience:
 
 ```{literalinclude} snippets/your-first-script.nf
 :language: groovy
@@ -85,9 +85,9 @@ Similarly, process outputs can be consumed by multiple consumers automatically, 
 
 In DSL1, the entire Nextflow pipeline must be defined in a single file (e.g. `main.nf`). This restriction becomes quite cumbersome as a pipeline becomes larger, and it hinders the sharing and reuse of pipeline components.
 
-DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2 by any means, modules can help you organize a large pipeline into multiple smaller files, and take advantage of modules created by others. Check out the {ref}`module-page` to get started.
+DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2 by any means, modules can help you organize a large pipeline into multiple smaller files, and take advantage of modules created by others. Check out the `module-page` to get started.
 
-:::{note}
+:::note
 With DSL2, the Groovy shell used by Nextflow also imposes a 64KB size limit on pipeline scripts, so if your DSL1 script is very large, you may need to split your script into modules anyway to avoid this limit.
 :::
 
@@ -95,11 +95,11 @@ With DSL2, the Groovy shell used by Nextflow also imposes a 64KB size limit on p
 
 ### Processes
 
-- The `set` process input type is no longer supported, use {ref}`tuple <process-input-tuple>` instead.
+- The `set` process input type is no longer supported, use [tuple ](process-input-tuple) instead.
 
-- The `set` process output type is no longer supported, use {ref}`tuple <process-out-tuple>` instead.
+- The `set` process output type is no longer supported, use [tuple ](process-out-tuple) instead.
 
-- The `mode flatten` option for process outputs is no longer available. Use the {ref}`operator-flatten` operator on the corresponding output channel instead.
+- The `mode flatten` option for process outputs is no longer available. Use the `operator-flatten` operator on the corresponding output channel instead.
 
 - Unqualified value and file elements in a tuple declaration are no longer allowed. Use an explicit `val` or `path` qualifier.
 
@@ -143,16 +143,16 @@ With DSL2, the Groovy shell used by Nextflow also imposes a 64KB size limit on p
 
 ### Operators
 
-- Operator `choice` has been deprecated in DSL2. Use {ref}`operator-branch` instead.
+- Operator `choice` has been deprecated in DSL2. Use `operator-branch` instead.
 - Operator `close` has been deprecated in DSL2.
 - Operator `countBy` has been deprecated in DSL2.
 - Operator `into` has been deprecated in DSL2, as it is no longer needed.
-- Operator `fork` has been renamed to {ref}`operator-multimap`.
-- Operator `groupBy` has been deprecated in DSL2. Use {ref}`operator-grouptuple` instead.
-- Operators `print` and `println` have been deprecated in DSL2. Use {ref}`operator-view` instead.
+- Operator `fork` has been renamed to `operator-multimap`.
+- Operator `groupBy` has been deprecated in DSL2. Use `operator-grouptuple` instead.
+- Operators `print` and `println` have been deprecated in DSL2. Use `operator-view` instead.
 - Operator `route` has been deprecated in DSL2.
 - Operator `separate` has been deprecated in DSL2.
-- Operator `spread` has been deprecated in DSL2. Use {ref}`operator-combine` instead.
+- Operator `spread` has been deprecated in DSL2. Use `operator-combine` instead.
 
 ### DSL2 Preview
 
