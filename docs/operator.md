@@ -1466,6 +1466,8 @@ An optional {ref}`closure <script-closure>` can be used to transform each item b
 :language: console
 ```
 
+(operator-take)=
+
 ## take
 
 *Returns: queue channel*
@@ -1591,6 +1593,31 @@ collect(flat: false, sort: true).ifEmpty([])
 
 See also: [collect](#collect)
 
+(operator-topic)=
+
+## topic
+
+:::{versionadded} 24.04.0
+:::
+
+:::{note}
+This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+:::
+
+*Returns: the source channel*
+
+The `topic` operator sends each value from a source channel to a given {ref}`channel topic <channel-topic>`.
+
+For example:
+
+```{literalinclude} snippets/topic.nf
+:language: groovy
+```
+
+```{literalinclude} snippets/topic.out
+:language: console
+```
+
 ## transpose
 
 *Returns: queue channel*
@@ -1668,6 +1695,8 @@ The difference between `unique` and `distinct` is that `unique` removes *all* du
 :::
 
 See also: [distinct](#distinct)
+
+(operator-until)=
 
 ## until
 

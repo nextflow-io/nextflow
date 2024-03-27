@@ -1109,6 +1109,8 @@ Checking nextflow-io/hello ...
 checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
 ```
 
+(cli-run)=
+
 ### run
 
 Execute a pipeline.
@@ -1190,6 +1192,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-offline`
 : Do not check for remote project updates.
+
+`-o, -output-dir`
+: :::{versionadded} 24.04.0
+  :::
+: Directory where workflow outputs are published.
 
 `-params-file`
 : Load script parameters from a JSON/YAML file.

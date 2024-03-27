@@ -41,9 +41,115 @@ The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
 Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
+## Implicit workflow
+
+A script can define a single workflow without a name (also known as the *implicit workflow*), which is the default entrypoint of the script. The `-entry` command line option can be used to execute a different workflow as the entrypoint at runtime.
+
+:::{note}
+Implicit workflow definitions are ignored when a script is included as a module. This way, a script can be written such that it can be either imported as a module or executed as a pipeline.
+:::
+
+## Named workflows
+
+A named workflow is a "subworkflow" that can be invoked from other workflows. For example:
+
+```groovy
+workflow my_pipeline {
+    foo()
+    bar( foo.out.collect() )
+}
+
+workflow {
+    my_pipeline()
+}
+```
+
+The above snippet defines a workflow named `my_pipeline`, that can be invoked from another workflow as `my_pipeline()`, just like any other function or process.
+
+## Using variables and params
+
+A workflow can access any variable or parameter defined in the global scope:
+
+```groovy
+params.data = '/some/data/file'
+
+workflow {
+    if( params.data )
+        bar(params.data)
+    else
+        bar(foo())
+}
+```
+
+:::{tip}
+The use of global variables and params in subworkflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the implicit workflow.
+:::
+
+## Workflow inputs (`take`)
+
+A workflow can declare one or more input channels using the `take` keyword. For example:
+
+```groovy
+workflow my_pipeline {
+    take:
+    data1
+    data2
+
+    main:
+    foo(data1, data2)
+    bar(foo.out)
+}
+```
+
+:::{warning}
+When the `take` keyword is used, the beginning of the workflow body must be defined with the `main` keyword.
+:::
+
+Inputs can be specified like arguments when invoking the workflow:
+
+```groovy
+workflow {
+    my_pipeline( channel.from('/some/data') )
+}
+```
+
+## Workflow outputs (`emit`)
+
+A workflow can declare one or more output channels using the `emit` keyword. For example:
+
+```groovy
+workflow my_pipeline {
+    main:
+    foo(data)
+    bar(foo.out)
+
+    emit:
+    bar.out
+}
+```
+
+When invoking the workflow, the output channel(s) can be accessed using the `out` property, i.e. `my_pipeline.out`. When multiple output channels are declared, use the array bracket notation or the assignment syntax to access each output channel as described for [process outputs](#process-outputs).
+
+### Named outputs
+
+If an output channel is assigned to an identifier in the `emit` block, the identifier can be used to reference the channel from the calling workflow. For example:
+
+```groovy
+workflow my_pipeline {
+    main:
+    foo(data)
+    bar(foo.out)
+
+    emit:
+    my_data = bar.out
+}
+```
+
+The result of the above workflow can be accessed using `my_pipeline.out.my_data`.
+
 (workflow-process-invocation)=
 
-## Process invocation
+## Invoking processes
 
 A process can be invoked like a function in a workflow definition, passing the expected input channels like function arguments. For example:
 
@@ -116,7 +222,7 @@ workflow {
 }
 ```
 
-### Process named outputs
+#### Named outputs
 
 The `emit` option can be added to the process output definition to assign a name identifier. This name can be used to reference the channel from the calling workflow. For example:
 
@@ -146,9 +252,10 @@ workflow {
 
 See {ref}`process outputs <process-additional-options>` for more details.
 
-### Process named stdout
+#### Named stdout
 
-The `emit` option can also be used to name a `stdout` output:
+The `emit` option can also be used to name a `stdout` output. However, while process output options are usually prefixed with a comma, this is not the case for `stdout`. This is because `stdout` does not have an argument like other types.
+
 
 ```groovy
 process sayHello {
@@ -171,125 +278,7 @@ workflow {
 }
 ```
 
-:::{note}
-Optional params for a process input/output are always prefixed with a comma, except for `stdout`. Because `stdout` does not have an associated name or value like other types, the first param should not be prefixed.
-:::
-
-## Subworkflows
-
-A named workflow is a "subworkflow" that can be invoked from other workflows. For example:
-
-```groovy
-workflow my_pipeline {
-    foo()
-    bar( foo.out.collect() )
-}
-
-workflow {
-    my_pipeline()
-}
-```
-
-The above snippet defines a workflow named `my_pipeline`, that can be invoked from another workflow as `my_pipeline()`, just like any other function or process.
-
-### Workflow parameters
-
-A workflow component can access any variable or parameter defined in the global scope:
-
-```groovy
-params.data = '/some/data/file'
-
-workflow my_pipeline {
-    if( params.data )
-        bar(params.data)
-    else
-        bar(foo())
-}
-```
-
-### Workflow inputs
-
-A workflow can declare one or more input channels using the `take` keyword. For example:
-
-```groovy
-workflow my_pipeline {
-    take: data
-
-    main:
-    foo(data)
-    bar(foo.out)
-}
-```
-
-Multiple inputs must be specified on separate lines:
-
-```groovy
-workflow my_pipeline {
-    take:
-    data1
-    data2
-
-    main:
-    foo(data1, data2)
-    bar(foo.out)
-}
-```
-
-:::{warning}
-When the `take` keyword is used, the beginning of the workflow body must be defined with the `main` keyword.
-:::
-
-Inputs can be specified like arguments when invoking the workflow:
-
-```groovy
-workflow {
-    my_pipeline( channel.from('/some/data') )
-}
-```
-
-### Workflow outputs
-
-A workflow can declare one or more output channels using the `emit` keyword. For example:
-
-```groovy
-workflow my_pipeline {
-    main:
-    foo(data)
-    bar(foo.out)
-
-    emit:
-    bar.out
-}
-```
-
-When invoking the workflow, the output channel(s) can be accessed using the `out` property, i.e. `my_pipeline.out`. When multiple output channels are declared, use the array bracket notation or the assignment syntax to access each output channel as described for [process outputs](#process-outputs).
-
-### Workflow named outputs
-
-If an output channel is assigned to an identifier in the `emit` block, the identifier can be used to reference the channel from the calling workflow. For example:
-
-```groovy
-workflow my_pipeline {
-    main:
-    foo(data)
-    bar(foo.out)
-
-    emit:
-    my_data = bar.out
-}
-```
-
-The result of the above workflow can be accessed using `my_pipeline.out.my_data`.
-
-### Workflow entrypoint
-
-A workflow with no name (also known as the *implicit workflow*) is the default entrypoint of the Nextflow pipeline. A different workflow entrypoint can be specified using the `-entry` command line option.
-
-:::{note}
-Implicit workflow definitions are ignored when a script is included as a module. This way, a workflow script can be written in such a way that it can be used either as a library module or an application script.
-:::
-
-### Workflow composition
+## Invoking subworkflows
 
 Named workflows can be invoked and composed just like any other process or function.
 
@@ -326,6 +315,218 @@ Each workflow invocation has its own scope. As a result, the same process can be
 
 :::{tip}
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
+:::
+
+(workflow-output-dsl)=
+
+## Publishing outputs
+
+:::{versionadded} 24.04.0
+:::
+
+A script may define the set of outputs that should be published by the implicit workflow, known as the workflow output definition or "output block":
+
+```groovy
+workflow {
+    foo(bar())
+}
+
+output {
+    directory 'results'
+
+    'foo' {
+        select foo.out
+    }
+
+    'bar' {
+        defaults mode: 'copy', pattern: '*.txt'
+        select bar.out
+    }
+}
+```
+
+The output block must be defined after the implicit workflow.
+
+### Output directory
+
+The `directory` statement is used to set the top-level output directory of the workflow:
+
+```groovy
+output {
+    directory 'results'
+
+    // ...
+}
+```
+
+It is optional, and it defaults to the launch directory (`workflow.launchDir`).
+
+The output directory can also be defined using the `-output-dir` {ref}`command line option <cli-run>` or the `outputDir` {ref}`config option <config-miscellaneous>`.
+
+### Path definitions
+
+Path definitions are used to definte the directory structure of the published outputs. A path definition is a path name followed by a block which defines the outputs to be published within that path. Like directories, path definitions can be nested.
+
+The path name defines a subdirectory within the output directory, or the parent path if the path definition is nested.
+
+For example, given the following output block:
+
+```groovy
+output {
+    directory 'results'
+
+    'foo' {
+        // ...
+    }
+
+    'bar' {
+        // ...
+
+        'baz' {
+            // ...
+        }
+    }
+}
+```
+
+The following directory structure will be created by the workflow:
+
+```
+results/
+└── foo/
+    └── ...
+└── bar/
+    └── baz/
+        └── ...
+    └── ...
+```
+
+The path name may also contain multiple subdirectories separated by a slash `/`:
+
+```groovy
+output {
+    'foo/bar/baz' {
+        // ...
+    }
+}
+```
+
+It is a shorthand for the following:
+
+```groovy
+output {
+    'foo' {
+        'bar' {
+            'baz' {
+                // ...
+            }
+        }
+    }
+}
+```
+
+### Channel selectors
+
+The `select` statement is used to select channels to publish:
+
+```groovy
+output {
+    'foo' {
+        select foo.out
+    }
+}
+```
+
+Any channel defined in the implicit workflow can be referenced in a channel selector, including process and subworkflow outputs.
+
+:::{note}
+A process/subworkflow output (e.g. `foo.out`) can only be selected directly if it contains a single output channel. Multi-channel outputs must be selected by index or name, e.g. `foo.out[0]` or `foo.out.samples`.
+:::
+
+By default, all files emitted by the channel will be published into the specified directory. If a list value emitted by the channel contains any files, including files within nested lists, they will also be published. For example:
+
+```groovy
+workflow {
+    ch_samples = Channel.of(
+        [ [id: 'sample1'], file('sample1.txt') ]
+    )
+}
+
+output {
+    'samples' {
+        // sample1.txt will be published
+        select ch_samples
+    }
+}
+```
+
+The publishing behavior can be customized further by using [publish options](#publish-options). See that section for more details.
+
+### Topic selectors
+
+:::{note}
+This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+:::
+
+The `topic` statement can be used to select a channel topic for publishing:
+
+```groovy
+output {
+    'samples' {
+        topic 'samples'
+
+        // equivalent to:
+        select Channel.topic('samples')
+    }
+}
+```
+
+Topic selectors are a useful way to select channels which are deeply nested within subworkflows, without needing to propagate them to the top-level workflow. You can use the {ref}`operator-topic` operator or the `topic` option for {ref}`process outputs <process-additional-options>` to send a channel to a given topic.
+
+Like a channel selector, a topic selector publishes every file that it receives by default, and it can specify [publish options](#publish-options).
+
+### Publish options
+
+The publishing behavior can be configured using the same options available in the {ref}`process-publishdir` directive.
+
+There are two ways to define publish options:
+
+- The `defaults` statement, which defines publish options for a path defintion
+
+- Channel and topic selectors
+
+Publish options are resolved in a cascading manner, in which more specific settings take priority.
+
+Consider the following example:
+
+```groovy
+output {
+    'samples' {
+        defaults mode: 'copy'
+        // ...
+        select ch_samples, pattern: '*.txt', mode: 'link'
+
+        'md5' {
+            defaults mode: 'link'
+            // ...
+            topic 'md5', mode: 'copy'
+        }
+    }
+}
+```
+
+In this example, the following rules are applied:
+
+- All files published to `samples` will be copied by default
+
+- The channel selector `select ch_samples` will publish via hard link, overriding the default from `samples`. Additionally, only files matching the pattern `*.txt` will be published.
+
+- All files published to `samples/md5` will be hard-linked by default, overriding the default from `samples`.
+
+- The topic selector `topic 'md5'` will publish via copy, overriding the default from `samples/md5`.
+
+:::{note}
+The only option from `publishDir` that is not allowed is `path`, because the publish path is defined using path definitions.
 :::
 
 ## Special operators
