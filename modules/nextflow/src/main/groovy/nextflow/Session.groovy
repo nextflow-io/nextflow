@@ -120,6 +120,11 @@ class Session implements ISession {
     boolean resumeMode
 
     /**
+     * The folder where pipeline results are published
+     */
+    Path outputDir
+
+    /**
      * The folder where tasks temporary files are stored
      */
     Path workDir
@@ -361,6 +366,9 @@ class Session implements ISession {
 
         // -- DAG object
         this.dag = new DAG()
+
+        // -- init output dir
+        this.outputDir = ((config.outputDir ?: '.') as Path).complete()
 
         // -- init work dir
         this.workDir = ((config.workDir ?: 'work') as Path).complete()

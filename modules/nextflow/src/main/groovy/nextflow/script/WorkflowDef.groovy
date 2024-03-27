@@ -23,6 +23,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
+import nextflow.Global
+import nextflow.Session
 import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
@@ -283,7 +285,9 @@ class WorkflowPublishDsl {
 
     private Binding binding
 
-    private Path directory = Path.of('.')
+    private Path directory = (Global.session as Session).outputDir
+
+    private boolean directoryOnce = false
 
     WorkflowPublishDsl(Binding binding) {
         this.binding = binding
@@ -300,7 +304,11 @@ class WorkflowPublishDsl {
     }
 
     void directory(String directory) {
-        this.directory = Path.of(directory)
+        if( directoryOnce )
+            throw new ScriptRuntimeException("Output directory cannot be defined more than once in the workflow output definition")
+        directoryOnce = true
+
+        this.directory = (directory as Path).complete()
     }
 
     void path(String path, Closure closure) {
