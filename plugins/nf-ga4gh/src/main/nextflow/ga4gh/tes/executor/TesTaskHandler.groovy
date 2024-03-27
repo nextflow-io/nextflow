@@ -175,31 +175,27 @@ class TesTaskHandler extends TaskHandler {
         if( !task.container )
             throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
 
-        // the cmd list to launch it
-        def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
-        List cmd = ['/bin/bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
-
-        def exec = new TesExecutorModel()
-        exec.command = cmd
+        final exec = new TesExecutorModel()
+        exec.command = List.of('/bin/bash', '-c', "${BashWrapperBuilder.BASH} ${wrapperFile.getName()} &> ${TaskRun.CMD_LOG}".toString())
         exec.image = task.container
         exec.workdir = WORK_DIR
 
-        def body = new TesTask()
+        final body = new TesTask()
 
         // add task control files
         body.addInputsItem(inItem(scriptFile))
         body.addInputsItem(inItem(wrapperFile))
 
-        Path remoteBinDir = executor.getRemoteBinDir()
-        if (remoteBinDir) {
-            body.addInputsItem(inItem(remoteBinDir, null, true))
-        }
+        final remoteBinDir = executor.getRemoteBinDir()
+        if( remoteBinDir )
+            body.addInputsItem(inItemFromBin(remoteBinDir))
 
         // add task input files
-        if(inputFile.exists()) body.addInputsItem(inItem(inputFile))
+        if( inputFile.exists() )
+            body.addInputsItem(inItem(inputFile))
 
-        task.getInputFilesMap()?.each { String name, Path path ->
-            body.addInputsItem(inItem(path,name))
+        task.getInputFilesMap().each { String name, Path path ->
+            body.addInputsItem(inItem(path, name))
         }
 
         // add the task output files
@@ -211,23 +207,23 @@ class TesTaskHandler extends TaskHandler {
         // set requested resources
         body.setResources(getResources(task.config))
 
-        task.outputFilesNames?.each { fileName ->
+        task.getOutputFilesNames().each { fileName ->
             body.addOutputsItem(outItem(fileName))
         }
 
         body.setName(task.getName())
 
         // add the executor
-        body.executors = [exec]
+        body.executors = List.of(exec)
 
         return body
     }
 
-    private TesResources getResources(TaskConfig cfg) {
-        def res = new TesResources()
-        res.cpuCores(cfg.getCpus())
-            .ramGb(toGiga(cfg.getMemory()))
-            .diskGb(cfg.getDisk()?.toGiga())
+    private TesResources getResources(TaskConfig config) {
+        final res = new TesResources()
+            .cpuCores(config.getCpus())
+            .ramGb(toGiga(config.getMemory()))
+            .diskGb(config.getDisk()?.toGiga())
         log.trace("[TES] Adding resource request: $res")
         // @TODO preemptible
         // @TODO zones
@@ -239,17 +235,24 @@ class TesTaskHandler extends TaskHandler {
         return size != null ? ((double)size.bytes)/1073741824 : null
     }
 
-    private TesInput inItem( Path realPath, String fileName = null, boolean isBin = false) {
-        def result = new TesInput()
+    private TesInput inItem(Path realPath, String fileName = null) {
+        final result = new TesInput()
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
         log.trace "[TES] Adding INPUT file: $result"
-        result.path = isBin ? realPath : result.path
+        return result
+    }
+
+    private TesInput inItemFromBin(Path realPath) {
+        final result = new TesInput()
+        result.url = realPath.toUriString()
+        result.path = realPath.toString()
+        log.trace "[TES] Adding INPUT file: $result"
         return result
     }
 
     private TesOutput outItem( String fileName ) {
-        def result = new TesOutput()
+        final result = new TesOutput()
         if( fileName.contains('*') || fileName.contains('?') ) {
             result.path = "$WORK_DIR/$fileName"
             result.pathPrefix = WORK_DIR

@@ -86,7 +86,7 @@ class TesExecutor extends Executor implements ExtensionPoint {
          * upload local binaries
          */
         if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
-            def tempBin = getTempDir()
+            final tempBin = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${tempBin.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, tempBin)
         }
@@ -104,26 +104,26 @@ class TesExecutor extends Executor implements ExtensionPoint {
     }
 
     protected Map<String, Authentication> getAuthentications() {
-        def result = [:] as Map<String, Authentication>
+        final Map<String, Authentication> result = [:]
 
         // basic
-        def username = session.config.navigate('tes.basicUsername')
-        def password = session.config.navigate('tes.basicPassword')
+        final username = session.config.navigate('tes.basicUsername')
+        final password = session.config.navigate('tes.basicPassword')
         if( username && password )
             result['basic'] = new HttpBasicAuth(username: username, password: password)
 
         // API key
-        def apiKeyParamMode = session.config.navigate('tes.apiKeyParamMode', 'query') as String
-        def apiKeyParamName = session.config.navigate('tes.apiKeyParamName') as String
-        def apiKey = session.config.navigate('tes.apiKey') as String
+        final apiKeyParamMode = session.config.navigate('tes.apiKeyParamMode', 'query') as String
+        final apiKeyParamName = session.config.navigate('tes.apiKeyParamName') as String
+        final apiKey = session.config.navigate('tes.apiKey') as String
         if( apiKeyParamName && apiKey ) {
-            def auth = new ApiKeyAuth(apiKeyParamMode, apiKeyParamName)
+            final auth = new ApiKeyAuth(apiKeyParamMode, apiKeyParamName)
             auth.setApiKey(apiKey)
             result['apikey'] = auth
         }
 
         // OAuth
-        def oauthToken = session.config.navigate('tes.oauthToken')
+        final oauthToken = session.config.navigate('tes.oauthToken')
         if( oauthToken )
             result['oauth'] = new OAuth(accessToken: oauthToken)
 
