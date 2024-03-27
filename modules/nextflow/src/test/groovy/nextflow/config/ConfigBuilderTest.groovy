@@ -1110,7 +1110,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.tower instanceof Map
         config.tower.enabled
-        config.tower.endpoint == 'https://api.tower.nf'
+        config.tower.endpoint == 'https://api.cloud.seqera.io'
     }
 
     def 'should set wave options' () {

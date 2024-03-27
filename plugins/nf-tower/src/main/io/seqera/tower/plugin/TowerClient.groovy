@@ -56,7 +56,7 @@ import nextflow.util.Threads
 @CompileStatic
 class TowerClient implements TraceObserver {
 
-    static final public String DEF_ENDPOINT_URL = 'https://api.tower.nf'
+    static final public String DEF_ENDPOINT_URL = 'https://api.cloud.seqera.io'
 
     static private final int TASKS_PER_REQUEST = 100
 
