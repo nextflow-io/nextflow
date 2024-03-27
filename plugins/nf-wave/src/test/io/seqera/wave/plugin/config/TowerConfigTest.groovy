@@ -118,12 +118,12 @@ class TowerConfigTest extends Specification {
         when:
         config = new TowerConfig([:], [:])
         then:
-        config.endpoint == 'https://api.tower.nf'
+        config.endpoint == 'https://api.cloud.seqera.io'
 
         when:
         config = new TowerConfig([endpoint:'-'], [:])
         then:
-        config.endpoint == 'https://api.tower.nf'
+        config.endpoint == 'https://api.cloud.seqera.io'
 
         when:
         config = new TowerConfig([endpoint:'http://foo.com'], [:])
