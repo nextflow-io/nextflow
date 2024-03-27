@@ -81,12 +81,36 @@ See {ref}`channel-factory` for the full list of channel factories.
 
 Operators are methods that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel, without using a process. As a result, operators are useful for implementing the "glue logic" between processes.
 
-See {ref}`operator-page` for the full list of operators. If you are new to Nextflow, here are some suggested operators to learn for common use cases:
+See {ref}`operator-page` for the full list of operators. If you are new to Nextflow, here are some commonly-used operators to learn first:
 
-- Filtering: {ref}`operator-filter`, {ref}`operator-randomsample`, {ref}`operator-take`, {ref}`operator-unique`
-- Reduction: {ref}`operator-collect`, {ref}`operator-grouptuple`, {ref}`operator-reduce`
-- Text processing: {ref}`operator-splitcsv`, {ref}`operator-splitjson`, {ref}`operator-splittext`
-- Combining channels: {ref}`operator-combine`, {ref}`operator-concat`, {ref}`operator-join`, {ref}`operator-mix`
-- Forking channels: {ref}`operator-branch`, {ref}`operator-multimap`
-- Maths: {ref}`operator-count`, {ref}`operator-max`, {ref}`operator-min`, {ref}`operator-sum`
-- Other: {ref}`operator-ifempty`, {ref}`operator-map`, {ref}`operator-set`, {ref}`operator-view`
+Filtering:
+
+- {ref}`operator-filter`: select all values in a channel that satisfy a condition
+- {ref}`operator-first`: select the first value in a channel
+- {ref}`operator-take`: select the first *n* values in a channel
+- {ref}`operator-unique`: select the unique values in a channel (i.e. remove duplicates)
+
+Transforming:
+
+- {ref}`operator-collect`: collect the values from a channel into a list value
+- {ref}`operator-grouptuple`: group the values from a channel based on a grouping key
+- {ref}`operator-map`: transform each value from a channel with a mapping function
+- {ref}`operator-reduce`: accumulate each value from a channel into a single value
+
+Combining (i.e. multiple inputs):
+
+- {ref}`operator-combine`: emit the combinations of two channels
+- {ref}`operator-concat`: emit the values from multiple channels (in the order in which the channels were given)
+- {ref}`operator-join`: join the values from two channels based on a matching key
+- {ref}`operator-mix`: emit the values from multiple channels (in the order in which items arrive)
+
+Forking (i.e. multiple outputs):
+
+- {ref}`operator-branch`: send each value from a channel into one of multiple output "branches" based on a condition
+- {ref}`operator-multimap`: send each value from a channel into multiple outputs, with each output applying its own mapping function
+
+Miscellaneous:
+
+- {ref}`operator-ifempty`: emit a channel, or a default value if the channel is empty
+- {ref}`operator-set`: assign a channel to a variable
+- {ref}`operator-view`: print each value in a channel to standard output
