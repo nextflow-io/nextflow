@@ -50,7 +50,7 @@ class TowerConfig {
     private String endpoint0(Map opts, Map<String,String> env) {
         def result = opts.endpoint as String
         if( !result || result=='-' )
-            result = env.get('TOWER_API_ENDPOINT') ?: 'https://api.tower.nf'
+            result = env.get('TOWER_API_ENDPOINT') ?: 'https://api.cloud.seqera.io'
         return result.stripEnd('/')
     }
 
