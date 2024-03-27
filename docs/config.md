@@ -1580,20 +1580,20 @@ The following settings are available:
 
 ### Scope `tower`
 
-The `tower` scope controls the settings for the [Seqera Platform](https://tower.nf) (formerly Tower Cloud).
+The `tower` scope controls the settings for the [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 
 The following settings are available:
 
 `tower.accessToken`
 : The unique access token specific to your account on an instance of Seqera Platform.
 
-  Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://tower.nf/tokens).
+  Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
 
 `tower.enabled`
 : When `true` Nextflow sends the workflow tracing and execution metrics to Seqera Platform (default: `false`).
 
 `tower.endpoint`
-: The endpoint of your Seqera Platform instance (default: `https://tower.nf`).
+: The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqera.io`).
 
 `tower.workspaceId`
 : The ID of the Seqera Platform workspace where the run should be added (default: the launching user personal workspace).

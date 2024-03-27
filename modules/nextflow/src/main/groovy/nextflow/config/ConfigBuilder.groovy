@@ -694,7 +694,7 @@ class ConfigBuilder {
             if( cmdRun.withTower != '-' )
                 config.tower.endpoint = cmdRun.withTower
             else if( !config.tower.endpoint )
-                config.tower.endpoint = 'https://api.tower.nf'
+                config.tower.endpoint = 'https://api.cloud.seqera.io'
         }
 
         // -- set wave options
