@@ -1,0 +1,4 @@
+# DOCUMENTATION -------------------------------------------------------
+# Docs folder ownership
+/docs/ @nextflow-io/docs
+/.github/workflows/ @nextflow-io/docs
