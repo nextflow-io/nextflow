@@ -1083,8 +1083,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-timeline` (`timeline-<timestamp>.html`)
 : Create workflow execution timeline.
 
-`-with-tower` (`https://api.tower.nf`)
-: Monitor workflow execution with [Seqera Platform](https://cloud.tower.nf/) (formerly Tower Cloud).
+`-with-tower` (`https://api.cloud.seqera.io`)
+: Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
 
 `-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
@@ -1148,7 +1148,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -entry workflow_A
   ```
 
-- Execute a pipeline with integrated monitoring in [Seqera Platform](https://cloud.tower.nf).
+- Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io).
 
   ```console
   $ nextflow run nextflow-io/hello -with-tower
@@ -1250,7 +1250,6 @@ $ nextflow view nextflow-io/hello
 
 == content of file: .nextflow/assets/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:
@@ -1291,7 +1290,6 @@ View the contents of a downloaded pipeline without omitting the header:
 $ nextflow view -q nextflow-io/hello
 
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:

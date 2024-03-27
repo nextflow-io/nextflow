@@ -382,7 +382,6 @@ The following executors are available:
 | `azurebatch`          | [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service                    |
 | `condor`              | [HTCondor](https://research.cs.wisc.edu/htcondor/) job scheduler                            |
 | `google-lifesciences` | [Google Genomics Pipelines](https://cloud.google.com/life-sciences) service                 |
-| `ignite`              | [Apache Ignite](https://ignite.apache.org/) cluster                                         |
 | `k8s`                 | [Kubernetes](https://kubernetes.io/) cluster                                                |
 | `local`               | The computer where `Nextflow` is launched                                                   |
 | `lsf`                 | [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler                     |
@@ -539,7 +538,7 @@ See also: [cpus](#cpus) and [memory](#memory).
 
 ## maxSubmitAwait
 
-The `maxSubmitAwait` directives allows you to specify how long a task can remain in submission queue without being executed.
+The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
 Elapsed this time the task execution will fail.
 
 When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
@@ -968,7 +967,10 @@ Available options:
 : Enable or disable the publish rule depending on the boolean value specified (default: `true`).
 
 `failOnError`
-: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)
+: :::{versionchanged} 24.03.0-edge
+  The default value was changed from `false` to `true`
+  :::
+: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `true`)
 
 `mode`
 : The file publishing method. Can be one of the following values:

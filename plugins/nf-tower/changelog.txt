@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.8.1 - 10 Mar 2024
+- Add NXF_CACHE_DIR environment var (#4655) [4b00170a]
+- Rename Tower -> Seqera Platform in docs and log messages (#4727) [7caffef9]
+- Bump groovy 4.0.19 [854dc1f0]
+
 1.8.0 - 5 Feb 2024
 - Truncate max size exceeded error message (#4644) [36090b70]
 - Bump Groovy 4 (#4443) [9d32503b]

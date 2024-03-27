@@ -1,11 +1,10 @@
+(overview-page)=
 
 # Overview
 
-## Rationale
+## Why Nextflow?
 
-The rise of big data has made it increasingly necessary to be able to analyze and perform experiments on large datasets in a portable and reproducible manner.
-
-Parallelization and distributed computing are the best ways to tackle this challenge, but the tools commonly available to computational scientists often lack good support for these techniques, or they provide a model that fits poorly with the needs of computational scientists and often require knowledge of complex tools and APIs.
+The rise of big data has made it increasingly necessary to be able to analyze and perform experiments on large datasets in a portable and reproducible manner. Parallelization and distributed computing are the best ways to tackle this challenge, but the tools commonly available to computational scientists often lack good support for these techniques, or they provide a model that fits poorly with the needs of computational scientists and often require knowledge of complex tools and APIs. Nextflow was created to address these challenges.
 
 The Nextflow language is inspired by [the Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy), in which many simple command line tools can be chained together into increasingly complex tasks. Similarly, a Nextflow script consists of composing many simple processes into increasingly complex pipelines. Each process executes a given tool or scripting language, and by specifying the process inputs and outputs, Nextflow coordinates the execution of tasks for you.
 
@@ -22,41 +21,41 @@ Any process can define one or more channels as *input* and *output*. The interac
 A Nextflow script looks like this:
 
 ```groovy
-// Declare syntax version
-nextflow.enable.dsl=2
-
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
 
 process blastSearch {
   input:
-    path query
-    path db
-  output:
-    path "top_hits.txt"
+  path query
+  path db
 
-    """
-    blastp -db $db -query $query -outfmt 6 > blast_result
-    cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
-    """
+  output:
+  path "top_hits.txt"
+
+  """
+  blastp -db $db -query $query -outfmt 6 > blast_result
+  cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
+  """
 }
 
 process extractTopHits {
   input:
-    path top_hits
+  path top_hits
+  path db
 
   output:
-    path "sequences.txt"
+  path "sequences.txt"
 
-    """
-    blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
-    """
+  """
+  blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
+  """
 }
 
 workflow {
   def query_ch = Channel.fromPath(params.query)
-  blastSearch(query_ch, params.db) | extractTopHits | view
+  blastSearch(query_ch, params.db)
+  extractTopHits(blastSearch.out, params.db).view()
 }
 ```
 
@@ -76,18 +75,19 @@ In other words, Nextflow provides an abstraction between the pipeline's function
 
 The following batch schedulers are supported:
 
-- [Open grid engine](http://gridscheduler.sourceforge.net/)
-- [Univa grid engine](http://www.univa.com/)
+- [Open Grid Engine](http://gridscheduler.sourceforge.net/)
+- [Univa Grid Engine](http://www.univa.com/)
 - [Platform LSF](http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/)
-- [Linux SLURM](https://computing.llnl.gov/linux/slurm/)
+- [SLURM](https://computing.llnl.gov/linux/slurm/)
 - [Flux Framework](https://flux-framework.org/)
-- [PBS Works](http://www.pbsworks.com/gridengine/)
+- [PBS](http://www.pbsworks.com/gridengine/)
 - [Torque](http://www.adaptivecomputing.com/products/open-source/torque/)
 - [HTCondor](https://research.cs.wisc.edu/htcondor/)
 
 The following cloud platforms are supported:
 
 - [Amazon Web Services (AWS)](https://aws.amazon.com/)
+- [Microsoft Azure](https://azure.microsoft.com/)
 - [Google Cloud Platform (GCP)](https://cloud.google.com/)
 - [Kubernetes](https://kubernetes.io/)
 

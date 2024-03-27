@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Sage-Bionetworks
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     private Map<String,String> env = SysEnv.get()
 
-    private Map<String,Secret> secretsMap
+    private Map<String, Secret> secretsMap
 
     private Path storeFile
 

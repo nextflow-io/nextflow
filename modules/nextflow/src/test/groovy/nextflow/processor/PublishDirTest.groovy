@@ -30,6 +30,10 @@ import test.TestHelper
  */
 class PublishDirTest extends Specification {
 
+    def setup() {
+        Global.session = Mock(Session) { getConfig()>>[:] }
+    }
+
     def 'should create a publish dir obj'() {
 
         PublishDir publish
@@ -116,8 +120,6 @@ class PublishDirTest extends Specification {
 
     def 'should create symlinks for output files' () {
         given:
-        Global.session = Mock(Session) { getConfig()>>[:] }
-        and:
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()
         folder.resolve('work-dir/file1.txt').text = 'aaa'

@@ -49,6 +49,11 @@ The following constants are globally available in a Nextflow script:
 `projectDir`
 : Alias of `workflow.projectDir`.
 
+`secrets`
+: :::{versionadded} 24.02.0-edge
+  :::
+: Dictionary like object holding workflow secrets. Read the {ref}`secrets-page` page for more information.
+
 `workDir`
 : Alias of `workflow.workDir`.
 
@@ -214,6 +219,9 @@ The following functions are available in Nextflow scripts:
 `sendMail( params )`
 : Send an email. See {ref}`mail-page`.
 
+`splitCsv()`
+: Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
+
 `splitFasta()`
 : Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
 
@@ -223,7 +231,7 @@ The following functions are available in Nextflow scripts:
 `splitJson()`
 : Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
 
-`splitLines()`
+`splitText()`
 : Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
 
 `tuple( collection )`

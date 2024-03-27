@@ -1,3 +1,5 @@
+(contributing-page)=
+
 # Overview
 
 This section provides a high-level overview of the Nextflow source code for users who want to understand or contribute to it. Rather than a comprehensive API documentation, these docs simply provide a conceptual map to help you understand the key concepts of the Nextflow implementation, and to quickly find code sections of interest for further investigation.

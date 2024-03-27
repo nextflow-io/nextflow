@@ -16,6 +16,8 @@
 
 package nextflow.cloud.azure.batch
 
+import static com.microsoft.azure.batch.protocol.models.ContainerType.DOCKER_COMPATIBLE
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -658,7 +660,7 @@ class AzBatchService implements Closeable {
          *
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
-        final containerConfig = new ContainerConfiguration();
+        final containerConfig = new ContainerConfiguration().withType(DOCKER_COMPATIBLE);
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
@@ -667,7 +669,7 @@ class AzBatchService implements Closeable {
                     .withRegistryServer(registryOpts.server)
                     .withUserName(registryOpts.userName)
                     .withPassword(registryOpts.password)
-            containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
+            containerConfig.withContainerRegistries(containerRegistries)
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 

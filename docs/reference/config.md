@@ -571,6 +571,7 @@ The following settings are available:
 
 `executor.jobName`
 : Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+: This setting is supported by the following executors: Bridge, Condor, Flux, HyperQueue, Lsf, Moab, Nqsii, Oar, PBS, PBS Pro, SGE, SLURM and Google Batch.
 
 `executor.killBatchSize`
 : Determines the number of jobs that can be killed in a single command execution (default: `100`).
@@ -1148,6 +1149,32 @@ manifest {
 
 Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHub, BitBucket or GitLab.
 
+(config-nextflow)=
+
+## `nextflow`
+
+The `nextflow` scope provides configuration options for the Nextflow runtime.
+
+`nextflow.publish.retryPolicy.delay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Delay when retrying a failed publish operation (default: `350ms`).
+
+`nextflow.publish.retryPolicy.jitter`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Jitter value when retrying a failed publish operation (default: `0.25`).
+
+`nextflow.publish.retryPolicy.maxAttempt`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max attempts when retrying a failed publish operation (default: `5`).
+
+`nextflow.publish.retryPolicy.maxDelay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max delay when retrying a failed publish operation (default: `90s`).
+
 (config-notification)=
 
 ## `notification`
@@ -1354,20 +1381,20 @@ The following settings are available:
 
 ## `tower`
 
-The `tower` scope controls the settings for the [Seqera Platform](https://tower.nf) (formerly Tower Cloud).
+The `tower` scope controls the settings for the [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 
 The following settings are available:
 
 `tower.accessToken`
 : The unique access token specific to your account on an instance of Seqera Platform.
 
-  Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://tower.nf/tokens).
+  Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
 
 `tower.enabled`
 : When `true` Nextflow sends the workflow tracing and execution metrics to Seqera Platform (default: `false`).
 
 `tower.endpoint`
-: The endpoint of your Seqera Platform instance (default: `https://tower.nf`).
+: The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqera.io`).
 
 `tower.workspaceId`
 : The ID of the Seqera Platform workspace where the run should be added (default: the launching user personal workspace).
@@ -1454,8 +1481,11 @@ The following settings are available:
 `wave.freeze`
 : :::{versionadded} 23.07.0-edge
   :::
-: When enabling the container freeze mode, Wave will provision an non-ephemeral container image that will be pushed to a container repository your choice. It requires the use of the `wave.build.repository` setting.
-: It is also suggested to specify a custom cache repository via the setting `wave.build.cacheRepository`. Note: when using container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.
+: Enables Wave container freezing. Wave will provision a non-ephemeral container image that will be pushed to a container repository of your choice. It requires the use of the `wave.build.repository` setting.
+: It is also recommended to specify a custom cache repository using `wave.build.cacheRepository`.
+: :::{note}
+  The container repository authentication must be managed by the underlying infrastructure.
+  :::
 
 `wave.httpClient.connectTime`
 : :::{versionadded} 22.06.0-edge
@@ -1470,7 +1500,7 @@ The following settings are available:
 `wave.retryPolicy.jitter`
 : :::{versionadded} 22.06.0-edge
   :::
-: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).
+: The jitter factor used to randomly vary retry delays (default: `0.25`).
 
 `wave.retryPolicy.maxAttempts`
 : :::{versionadded} 22.06.0-edge

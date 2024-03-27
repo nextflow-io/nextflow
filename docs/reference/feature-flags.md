@@ -9,11 +9,11 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 
 `nextflow.enable.dsl`
 : Defines the DSL version to use (`1` or `2`).
-: :::{versionadded} 22.03.0-edge
-  DSL2 is the default DSL version.
+: :::{versionchanged} 22.03.0-edge
+  DSL2 was made the default DSL version.
   :::
-: :::{versionadded} 22.12.0-edge
-  DSL1 is no longer supported.
+: :::{versionchanged} 22.12.0-edge
+  DSL1 was removed.
   :::
 
 `nextflow.enable.moduleBinaries`
