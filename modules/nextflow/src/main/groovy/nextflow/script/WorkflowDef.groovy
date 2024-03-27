@@ -283,6 +283,18 @@ class WorkflowParamsResolver {
 @CompileStatic
 class WorkflowPublishDsl {
 
+    private static final List<String> PUBLISH_OPTIONS = List.of(
+        'contentType',
+        'enabled',
+        'failOnError',
+        'mode',
+        'overwrite',
+        'pattern',
+        'saveAs',
+        'storageClass',
+        'tags'
+    )
+
     private Binding binding
 
     private Path directory = (Global.session as Session).outputDir
@@ -334,11 +346,13 @@ class WorkflowPublishDsl {
             if( defaultsOnce )
                 throw new ScriptRuntimeException("Publish defaults cannot be defined more than once for a given path")
             defaultsOnce = true
+
+            validatePublishOptions(opts)
             defaults.putAll(opts)
         }
 
-        void path(Map opts=[:], String subpath, Closure closure) {
-            final dsl = new PathDsl(path.resolve(subpath), defaults + opts)
+        void path(String subpath, Closure closure) {
+            final dsl = new PathDsl(path.resolve(subpath), defaults)
             final cl = (Closure)closure.clone()
             cl.setResolveStrategy(Closure.DELEGATE_FIRST)
             cl.setDelegate(dsl)
@@ -346,6 +360,7 @@ class WorkflowPublishDsl {
         }
 
         void select(Map opts=[:], DataflowWriteChannel source) {
+            validatePublishOptions(opts)
             new PublishOp(CH.getReadChannel(source), defaults + opts + [path: path]).apply()
         }
 
@@ -357,6 +372,17 @@ class WorkflowPublishDsl {
 
         void topic(Map opts=[:], String name) {
             select(opts, Channel.topic(name))
+        }
+
+        private void validatePublishOptions(Map opts) {
+            for( final name : opts.keySet() ) {
+                if( name !in PUBLISH_OPTIONS ) {
+                    final msg = name == 'path'
+                        ? "Publish option 'path' is not allowed in the workflow output definition, use path definitions instead"
+                        : "Unrecognized publish option '${name}' in the workflow output definition".toString()
+                    throw new IllegalArgumentException(msg)
+                }
+            }
         }
 
     }
