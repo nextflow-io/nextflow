@@ -692,6 +692,11 @@ Available options:
   - `'deep'`: Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.
   - A custom sorting criteria used to order the nested list elements of each tuple. It can be a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
 
+`unwrap`
+: :::{versionadded} 24.01.0-edge
+  :::
+: If the key is wrapped with `groupKey()`, unwrap the group key when the group is emitted (default: `false`).
+
 (operator-ifempty)=
 
 ## ifEmpty
