@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+nextflow.preview.topic = true
 
 process align {
   input:
@@ -65,7 +65,7 @@ workflow {
   my_combine( bam, bai )
   my_combine.out.view{ it.text }
 
-  foo()
+  foo | topic('foo')
 }
 
 output {
@@ -73,7 +73,7 @@ output {
     select align.out[0], mode: 'copy'
     select align.out[1], mode: 'copy'
     select my_combine.out
-    select foo.out, mode: 'link'
+    topic 'foo', mode: 'link'
   }
 
   path('more/data') {

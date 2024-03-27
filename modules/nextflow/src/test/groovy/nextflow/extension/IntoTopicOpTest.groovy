@@ -25,26 +25,25 @@ import test.MockScriptRunner
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TopicOpTest extends Dsl2Spec {
+class IntoTopicOpTest extends Dsl2Spec {
 
-    def 'should define a process with output alias' () {
+    def 'should send a channel into a topic' () {
         given:
         def SCRIPT = '''
         nextflow.preview.topic = true
-        
         Channel.of(1,2,3) | topic('foo')
-        
+        Channel.value(4) | topic('foo')
+        Channel.topic('foo').collect()
         '''
 
         when:
         def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runner.setScript(SCRIPT).execute().getVal()
         then:
-        result.getVal() == 1
-        result.getVal() == 2
-        result.getVal() == 3
-        and:
-        result.getVal() == Channel.STOP
+        1 in result
+        2 in result
+        3 in result
+        4 in result
     }
 
 }

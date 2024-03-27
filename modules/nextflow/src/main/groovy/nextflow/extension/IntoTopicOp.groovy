@@ -19,10 +19,15 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
-import static nextflow.extension.DataflowHelper.newOperator
+import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.Channel
+import nextflow.Global
+import nextflow.Session
+import nextflow.extension.DataflowHelper
 /**
  * Implements the {@link OperatorImpl#topic} operator
  *
@@ -36,15 +41,43 @@ class IntoTopicOp {
 
     private String name
 
+    private Session session = Global.session as Session
+
     IntoTopicOp( DataflowReadChannel source, String name ) {
         this.source = source
         this.name = name
     }
 
-    DataflowWriteChannel apply() {
+    void apply() {
         final target = CH.createTopicSource(name)
-        newOperator(source, target, new ChainWithClosure(new CopyChannelsClosure()))
-        return target
+        final listener = new DataflowEventAdapter() {
+            @Override
+            void afterRun(DataflowProcessor processor, List<Object> messages) {
+                if( source !instanceof DataflowExpression )
+                    return
+                // -- terminate the process
+                processor.terminate()
+                // -- send a poison pill if needed
+                if( target !instanceof DataflowExpression )
+                    target.bind(Channel.STOP)
+                else if( !(target as DataflowExpression).isBound() )
+                    target.bind(Channel.STOP)
+            }
+
+            @Override
+            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+                log.error("@unknown", e)
+                session.abort(e)
+                return true
+            }
+        }
+
+        final params = [
+            inputs: List.of(source),
+            outputs: List.of(target),
+            listeners: List.of(listener)
+        ]
+        DataflowHelper.newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
     }
 
 }

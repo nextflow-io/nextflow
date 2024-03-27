@@ -1240,10 +1240,10 @@ class OperatorImpl {
                 .getOutput()
     }
 
-    DataflowWriteChannel topic(DataflowReadChannel source, String name) {
+    DataflowReadChannel topic(DataflowReadChannel source, String name) {
         if( !NF.topicChannelEnabled ) throw new MissingMethodException('topic', OperatorImpl.class, InvokerHelper.EMPTY_ARGS)
-        final op = new IntoTopicOp(source, name)
-        return op.apply()
+        new IntoTopicOp(source, name).apply()
+        return source
     }
 
 }
