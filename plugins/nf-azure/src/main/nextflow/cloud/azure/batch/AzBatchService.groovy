@@ -16,6 +16,8 @@
 
 package nextflow.cloud.azure.batch
 
+import static com.microsoft.azure.batch.protocol.models.ContainerType.DOCKER_COMPATIBLE
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -37,7 +39,6 @@ import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ContainerRegistry
-import com.microsoft.azure.batch.protocol.models.ContainerType
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
@@ -88,8 +89,6 @@ import nextflow.util.MemoryUnit
 import nextflow.util.MustacheTemplateEngine
 import nextflow.util.Rnd
 import org.joda.time.Period
-
-import static com.microsoft.azure.batch.protocol.models.ContainerType.DOCKER_COMPATIBLE
 /**
  * Implements Azure Batch operations for Nextflow executor
  *
