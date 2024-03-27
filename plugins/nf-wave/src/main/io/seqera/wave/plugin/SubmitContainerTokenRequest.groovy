@@ -121,4 +121,9 @@ class SubmitContainerTokenRequest {
      */
     Boolean dryRun
 
+    /**
+     * Labels to be added in conda and spack build images
+     */
+    public Map<String, String> labels
+
 }

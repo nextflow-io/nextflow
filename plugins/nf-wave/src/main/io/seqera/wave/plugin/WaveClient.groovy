@@ -180,6 +180,15 @@ class WaveClient {
 
         if( assets.containerImage && assets.containerFile )
             throw new IllegalArgumentException("Wave container image and container file cannot be specified in the same request")
+        //convert labels to map
+        Map<String, String> labelsMap = null
+        if( assets.containerConfig.labels ){
+            labelsMap = new HashMap<>();
+            for(String singleLabel: assets.containerConfig.labels){
+                String[]  singleLabelArray = singleLabel.split("=");
+                labelsMap.put(singleLabelArray[0], singleLabelArray[1]);
+            }
+        }
 
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
@@ -194,8 +203,10 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: ContainerInspectMode.active()
+                dryRun: ContainerInspectMode.active(),
+                labels: labelsMap
         )
+
     }
 
     SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
