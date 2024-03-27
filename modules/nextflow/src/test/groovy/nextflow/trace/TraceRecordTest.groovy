@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow.trace
 
 import groovy.json.JsonSlurper
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 
 /**
@@ -298,6 +299,38 @@ class TraceRecordTest extends Specification {
         rec.store.env = 'aws_key=1234'
         then:
         rec.env == 'aws_key=[secure]'
+    }
+
+    @Unroll
+    def 'should validate cached status' () {
+        given:
+        def rec = new TraceRecord([status:STATUS])
+
+        expect:
+        rec.isCached() == EXPECTED
+
+        where:
+        STATUS      | EXPECTED
+        null        | false
+        'NEW'       | false
+        'ABORTED'   | false
+        'CACHED'    | true
+    }
+
+    @Unroll
+    def 'should validate completed status' () {
+        given:
+        def rec = new TraceRecord([status:STATUS])
+
+        expect:
+        rec.isCompleted() == EXPECTED
+
+        where:
+        STATUS      | EXPECTED
+        null        | false
+        'NEW'       | false
+        'ABORTED'   | false
+        'COMPLETED' | true
     }
 
 }

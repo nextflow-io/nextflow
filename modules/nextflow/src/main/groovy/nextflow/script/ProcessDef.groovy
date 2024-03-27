@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -194,8 +194,14 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
                 throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
             for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
-                (declaredOutputs[i] as BaseOutParam).setInto(ch)
+                final param = (declaredOutputs[i] as BaseOutParam)
+                final topicName = param.channelTopicName
+                if( topicName && feedbackChannels )
+                    throw new IllegalArgumentException("Output topic conflicts with recursion feature - process `$processName` should not declare any output topic" )
+                final ch = feedbackChannels
+                        ? feedbackChannels[i]
+                        : ( topicName ? CH.createTopicSource(topicName) : CH.create(singleton) )
+                param.setInto(ch)
             }
         }
 

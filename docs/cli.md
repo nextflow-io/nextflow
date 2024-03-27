@@ -31,6 +31,8 @@ Available options:
 : Add the specified file to configuration set.
 
 `-d, -dockerize`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Launch nextflow via Docker (experimental).
 
 `-h`
@@ -42,8 +44,14 @@ Available options:
 `-q, -quiet`
 : Do not print information messages.
 
+`-remote-debug`
+: Enable JVM interactive remote debugging (experimental).
+
 `-syslog`
 : Send logs to syslog server (e.g. localhost:514).
+
+`-trace`
+: Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
 
 `-v, -version`
 : Print the program version.
@@ -116,7 +124,7 @@ The `-c` option is used to append a new configuration to the default configurati
 
 ### Docker driven execution
 
-:::{warning} *Experimental: not recommended for production environments.*
+:::{deprecated} 23.09.0-edge
 :::
 
 Launch Nextflow via Docker.
@@ -224,6 +232,8 @@ The `-v` option prints out information about Nextflow, such as the version and b
 (cli-commands)=
 
 ## Commands
+
+(cli-clean)=
 
 ### clean
 
@@ -545,6 +555,66 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 $ nextflow drop nextflow-io/hello -f
 ```
 
+### fs
+
+Perform basic filesystem operations.
+
+**Usage**
+
+```console
+$ nextflow fs [subcommands]
+```
+
+**Description**
+
+The `fs` command is used to perform filesystem operations like copy, move, delete, list directory, etc. Like the `file()` method, it can work with local files, remote URLs, and remote object storage. Storage credentials can be provided through the same manner as launching a pipeline (Nextflow config, environment vars, etc).
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Examples**
+
+List a directory.
+
+```console
+$ nextflow fs list <directory>
+```
+
+Print the contents of a file to standard output.
+
+```console
+$ nextflow fs cat <file>
+```
+
+Copy a file or directory.
+
+```console
+$ nextflow fs cp <source> <target>
+```
+
+Move a file or directory.
+
+```console
+$ nextflow fs mv <source> <target>
+```
+
+Delete a file or directory.
+
+```console
+$ nextflow fs rm <path>
+```
+
+:::{versionadded} 23.10.0
+:::
+
+Print file or directory attributes.
+
+```console
+$ nextflow fs stat <path>
+```
+
 ### help
 
 Print the top-level help or specific help for a command.
@@ -641,6 +711,57 @@ $ nextflow info nextflow-io/hello
     testing
     v1.1 [t]
     v1.2 [t]
+```
+
+### inspect
+
+:::{versionadded} 23.09.0-edge
+:::
+
+Inspect process settings in a pipeline project. Currently only supports the `container` directive.
+
+**Usage**
+
+```console
+$ nextflow inspect [options] [project]
+```
+
+**Description**
+
+The `inspect` command allows you to determine the container for each process in a pipeline without running the pipeline. It prints to stdout a listing of containers for each process, formatted either as JSON or Nextflow configuration.
+
+**Options**
+
+`-concretize`
+: Build the container images resolved by the inspect command.
+
+`-format` (`json`)
+: Inspect output format. Can be `json` or `config`.
+
+`-i, -ignore-errors`
+: Ignore errors while inspecting the pipeline.
+
+`-params-file`
+: Load script parameters from a JSON/YAML file.
+
+`-profile`
+: Use the given configuration profile(s).
+
+`-r, revision`
+: Revision of the project to inspect (either a git branch, tag or commit SHA number).
+
+**Examples**
+
+Get the list of containers used by a pipeline.
+
+```console
+$ nextflow inspect nextflow-io/hello
+```
+
+Specify parameters as with the `run` command:
+
+```console
+$ nextflow inspect main.nf --alpha 1 --beta foo
 ```
 
 ### kuberun
@@ -770,6 +891,8 @@ $ nextflow list
 nextflow-io/hello
 nextflow-hub/fastqc
 ```
+
+(cli-log)=
 
 ### log
 
@@ -1009,7 +1132,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Enable/disable ANSI console logging.
 
 `-bucket-dir`
-: Remote bucket where intermediate result files are stored.
+: Remote bucket where intermediate result files are stored. When running a hybrid workflow, `-bucket-dir` and `-work-dir` should define separate work directories for remote tasks and local tasks, respectively.
 
 `-cache`
 : Enable/disable processes caching.
@@ -1021,16 +1144,23 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
+: :::{deprecated} 23.09.0-edge
+  :::
 : Execute the workflow using DSL2 syntax.
 
 `-dump-channels`
 : Dump channels for debugging purpose.
 
 `-dump-hashes`
-: Dump task hash keys for debugging purpose.
+: Dump task hash keys for debugging purposes.
+: :::{versionadded} 23.10.0
+  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`caching and resuming tips <cache-compare-hashes>` for more details.
+  :::
 
 `-e.<key>=<value>`
 : Add the specified variable to execution environment.
@@ -1070,7 +1200,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-preview`
 : :::{versionadded} 22.06.0-edge
   :::
-: Run the workflow script skipping the execution of all processes
+: Run the workflow script skipping the execution of all processes.
 
 `-process.<key>=<value>`
 : Set process config options.
@@ -1103,11 +1233,17 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-charliecloud`
 : Enable process execution in a Charliecloud container.
 
+`-with-cloudcache`
+: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
+
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
-`-with-dag` (`dag.dot`)
+`-with-dag` (`dag-<timestamp>.html`)
 : Create pipeline DAG file.
+: :::{versionchanged} 23.10.0
+  The default format was changed from `dot` to `html`.
+  :::
 
 `-with-docker`
 : Enable process execution in a Docker container.
@@ -1118,7 +1254,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-podman`
 : Enable process execution in a Podman container.
 
-`-with-report` (`report.html`)
+`-with-report` (`report-<timestamp>.html`)
 : Create workflow execution HTML report.
 
 `-with-singularity`
@@ -1127,19 +1263,19 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-spack`
 : Use the specified Spack environment package or file (must end with `.yaml`)
 
-`-with-timeline` (`timeline.html`)
+`-with-timeline` (`timeline-<timestamp>.html`)
 : Create workflow execution timeline.
 
-`-with-tower`
-: Monitor workflow execution with [Tower](https://cloud.tower.nf/).
+`-with-tower` (`https://api.cloud.seqera.io`)
+: Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
 
-`-with-trace` (`trace.txt`)
+`-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
 
-`-with-wave`
+`-with-wave` (`https://wave.seqera.io`)
 : Enable the use of Wave containers.
 
-`-with-weblog`
+`-with-weblog` (`http://localhost`)
 : Send workflow status messages via HTTP to target URL.
 
 `-without-conda`
@@ -1189,19 +1325,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run nextflow-io/hello -qs 4
   ```
 
-- Execute the pipeline with DSL-2 syntax.
-
-  ```console
-  $ nextflow run nextflow-io/hello -dsl2
-  ```
-
-- Execute a pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
+- Invoke the pipeline with a specific workflow as the entry-point.
 
   ```console
   $ nextflow run main.nf -entry workflow_A
   ```
 
-- Execute a pipeline with integrated monitoring in [Tower](https://cloud.tower.nf).
+- Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io).
 
   ```console
   $ nextflow run nextflow-io/hello -with-tower
@@ -1303,7 +1433,6 @@ $ nextflow view nextflow-io/hello
 
 == content of file: .nextflow/assets/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:
@@ -1344,7 +1473,6 @@ View the contents of a downloaded pipeline without omitting the header:
 $ nextflow view -q nextflow-io/hello
 
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:

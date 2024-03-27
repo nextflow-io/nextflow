@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import groovy.transform.Memoized
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
+import nextflow.exception.IllegalConfigException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -49,6 +50,12 @@ abstract class ConfigBase extends Script {
 
     private boolean renderClosureAsString
 
+    private boolean stripSecrets
+
+    protected void setStripSecrets( boolean value ) {
+        this.stripSecrets = value
+    }
+
     protected void setIgnoreIncludes( boolean value ) {
         this.ignoreIncludes = value
     }
@@ -71,7 +78,8 @@ abstract class ConfigBase extends Script {
      * Implements the config file include
      */
     def includeConfig( includeFile ) {
-        assert includeFile
+        if( !includeFile )
+            throw new IllegalConfigException("includeConfig argument cannot be empty")
 
         if( ignoreIncludes )
             return
@@ -92,6 +100,8 @@ abstract class ConfigBase extends Script {
         // -- set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
         def params = [:]
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)

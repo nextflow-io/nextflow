@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ class ProviderPath implements Path {
             return true
         }
         catch (Exception e) {
-            log.trace "Failed to check existance -- cause [${e.class.name}] ${e.message}"
+            log.trace "Failed to check existence -- cause [${e.class.name}] ${e.message}"
             return false
         }
     }

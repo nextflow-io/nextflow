@@ -23,11 +23,14 @@ The pipeline can be launched either in a local computer, or an EC2 instance. EC2
 Resource requests and other job characteristics can be controlled via the following process directives:
 
 - {ref}`process-accelerator`
+- {ref}`process-arch` (only when using Fargate platform type for AWS Batch)
 - {ref}`process-container`
 - {ref}`process-containerOptions`
 - {ref}`process-cpus`
+- {ref}`process-disk` (only when using Fargate platform type for AWS Batch)
 - {ref}`process-memory`
 - {ref}`process-queue`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
@@ -55,6 +58,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-machineType`
 - {ref}`process-memory`
 - {ref}`process-queue`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
@@ -196,8 +200,8 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-disk`
 - {ref}`process-machineType`
 - {ref}`process-memory`
-- {ref}`process-time`
 - {ref}`process-resourcelabels`
+- {ref}`process-time`
 
 See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
 
@@ -223,6 +227,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-disk`
 - {ref}`process-machineType`
 - {ref}`process-memory`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`Google Life Sciences <google-lifesciences>` page for further configuration details.
@@ -270,7 +275,7 @@ Nextflow manages each process as a separate job that is submitted to the cluster
 
 The pipeline must be launched from a node where the `hq` command is available, which is typically the cluster login node.
 
-To enable the HTCondor executor, set `process.executor = 'hyperqueue'` in the `nextflow.config` file.
+To enable the HyperQueue executor, set `process.executor = 'hq'` in the `nextflow.config` file.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -279,30 +284,6 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-time`
-
-(ignite-executor)=
-
-## Ignite
-
-:::{warning}
-This feature is no longer maintained.
-:::
-
-:::{versionchanged} 22.01.0-edge
-The `ignite` executor must be enabled via the `nf-ignite` plugin.
-:::
-
-The `ignite` executor allows you to run a pipeline on an [Apache Ignite](https://ignite.apache.org/) cluster.
-
-To enable this executor, set `process.executor = 'ignite'` in the `nextflow.config` file.
-
-Resource requests and other job characteristics can be controlled via the following process directives:
-
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-memory`
-
-See the {ref}`ignite-page` page to learn how to configure Nextflow to deploy and run an Ignite cluster in your infrastructure.
 
 (k8s-executor)=
 
@@ -317,6 +298,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-disk`
 - {ref}`process-memory`
 - {ref}`process-pod`
+- {ref}`process-resourcelabels`
 - {ref}`process-time`
 
 See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cluster to run Nextflow pipelines.
@@ -328,6 +310,10 @@ See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cl
 The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelised by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
 
 The `local` executor is useful for developing and testing a pipeline script on your computer, before switching to a cluster or cloud environment with production data.
+
+:::{note}
+While the `local` executor limits the number of concurrent tasks based on requested vs available resources, it does not enforce task resource requests. In other words, it is possible for a local task to use more CPUs and memory than it requested, in which case it may starve other tasks. An exception to this behavior is when using {ref}`container-docker` or {ref}`container-podman` containers, in which case the resource requests are enforced by the container runtime.
+:::
 
 (lsf-executor)=
 

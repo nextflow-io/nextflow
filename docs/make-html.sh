@@ -1,4 +1,4 @@
 #!/bin/bash
 
-docker run -v $(pwd):/tmp nextflow/sphinx:5.3.0 -- make html
+docker run -v $(pwd):/tmp $(wave -f Dockerfile --context .) -- make html
 echo "Done. See _build/html/index.html"

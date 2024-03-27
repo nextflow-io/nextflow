@@ -1,5 +1,41 @@
 nf-amazon changelog
 ===================
+2.4.1 - 10 Mar 2024
+- Fix Error while publishing S3 file with blanks [b74c0227]
+- Update copyright info [e3089f0e]
+- Bump groovy 4.0.19 [854dc1f0]
+
+2.4.0 - 5 Feb 2024
+- Remove Glacier auto-retrieval (#4705) [5f0ec50d]
+- Bump nextflow 23.12.0-edge as min version [63e83702]
+- Bump Groovy 4 (#4443) [9d32503b]
+
+2.3.0 - 20 Dec 2023
+- Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
+- Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
+
+2.2.0 - 24 Nov 2023
+- Add support for FUSION_AWS_REGION (#4481) [8f8b09fa]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix typos (#4519) [ci fast] [6b1ea726]
+- Fix Fusion symlinks when publishing files (#4348) [89f09fe0]
+- Bump javax.xml.bind:jaxb-api:2.4.0-b180830.0359
+
+2.1.4 - 10 Oct 2023
+- Improve S3 endpoint validation [2b9ae6aa]
+- Add -cloudcache CLI option (#4385) [73fda582]
+
+2.1.3 - 28 Sep 2023
+- Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
+- Fix List of S3 bucket for custom endpoint [4327fa58]
+- Fix support for S3 custom endpoint with anonymous access [03752815]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
+
+2.1.2 - 10 Sep 2023
+- Disable staging script for remote work dir (#4282) [80f7cd46]
+- Allow setting shell directive when using the trace file. (#4210) [7d6ad624]
+- Bump groovy 3.0.19 [cb411208]
+
 2.1.1 - 5 Aug 2023
 - Fix glob resolution for remove files [19a72c40]
 - Fix Option fixOwnership traverse parent directories [f2a2ea35]
@@ -110,7 +146,7 @@ nf-amazon changelog
 
 1.9.0 - 1 Aug 2022
 - Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
-- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix NPE while setting S3 ObjectMetadata #3031 [d6163431] <Jorge Aguilera>
 - Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b] <Paolo Di Tommaso>
 - Fix AWS Batch job definition conflict (#3048) [e5084418] <Paolo Di Tommaso>
 - Improve S3 file upload/download via Transfer manager [7e8d2a5a] [b7bf9fe5] <Jorge Aguilera>

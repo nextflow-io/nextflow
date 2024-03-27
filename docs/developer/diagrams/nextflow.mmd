@@ -1,0 +1,21 @@
+classDiagram
+    %%
+    %% nextflow
+    %%
+    class Nextflow
+    class Channel
+    class Session {
+        baseDir : Path
+        binding : ScriptBinding
+        cache : CacheDB
+        commandLine : String
+        commitId : String
+        config : Map
+        configFiles : List~Path~
+        dag : DAG
+        profile : String
+        runName : String
+        script : BaseScript
+        uniqueId : UUID
+        workDir : Path
+    }
