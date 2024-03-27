@@ -64,12 +64,8 @@ class TowerFactory implements TraceObserverFactory {
         Duration requestInterval = config.navigate('tower.requestInterval') as Duration
         Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
 
-        if ( !endpoint || endpoint=='-' ) {
-            String env_api_endpoint = env.get('TOWER_API_ENDPOINT')
-            if( env_api_endpoint && env_api_endpoint.equals('https://api.tower.nf'))
-                log.warn "The endpoint `https://api.tower.nf` is deprecated. Please use `https://api.cloud.seqera.io` instead."
-            endpoint = env_api_endpoint ?: TowerClient.DEF_ENDPOINT_URL
-        }
+        if ( !endpoint || endpoint=='-' )
+            endpoint = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
 
         final tower = new TowerClient(session, endpoint).withEnvironment(env)
         if( aliveInterval )

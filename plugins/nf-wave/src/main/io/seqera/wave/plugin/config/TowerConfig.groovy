@@ -19,7 +19,6 @@ package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
-import groovy.util.logging.Slf4j
 
 /**
  * Model Tower config accessed by Wave
@@ -27,7 +26,6 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)
-@Slf4j
 @CompileStatic
 class TowerConfig {
 
@@ -51,12 +49,8 @@ class TowerConfig {
 
     private String endpoint0(Map opts, Map<String,String> env) {
         def result = opts.endpoint as String
-        if( !result || result=='-' ) {
-            String env_api_endpoint = env.get('TOWER_API_ENDPOINT')
-            if( env_api_endpoint && env_api_endpoint.equals('https://api.tower.nf'))
-                log.warn "The endpoint `https://api.tower.nf` is deprecated. Please use `https://api.cloud.seqera.io` instead."
-            result = env_api_endpoint ?: 'https://api.cloud.seqera.io'
-        }
+        if( !result || result=='-' )
+            result = env.get('TOWER_API_ENDPOINT') ?: 'https://api.tower.nf'
         return result.stripEnd('/')
     }
 
