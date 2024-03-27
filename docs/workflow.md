@@ -489,7 +489,9 @@ Like a channel selector, a topic selector publishes every file that it receives 
 
 The publishing behavior can be configured using the same options available in the {ref}`process-publishdir` directive.
 
-There are two ways to define publish options:
+There are several ways to define publish options:
+
+- The `directory` statement
 
 - The `defaults` statement, which defines publish options for a path defintion
 
@@ -501,9 +503,9 @@ Consider the following example:
 
 ```groovy
 output {
+    directory 'results', mode: 'copy'
+
     'samples' {
-        defaults mode: 'copy'
-        // ...
         select ch_samples, pattern: '*.txt', mode: 'link'
 
         'md5' {
@@ -517,11 +519,11 @@ output {
 
 In this example, the following rules are applied:
 
-- All files published to `samples` will be copied by default
+- All files will be copied by default
 
-- The channel selector `select ch_samples` will publish via hard link, overriding the default from `samples`. Additionally, only files matching the pattern `*.txt` will be published.
+- The channel selector `select ch_samples` will publish via hard link, overriding the output directory default. Additionally, only files matching the pattern `*.txt` will be published.
 
-- All files published to `samples/md5` will be hard-linked by default, overriding the default from `samples`.
+- All files published to `samples/md5` will be hard-linked by default, overriding the output directory default.
 
 - The topic selector `topic 'md5'` will publish via copy, overriding the default from `samples/md5`.
 

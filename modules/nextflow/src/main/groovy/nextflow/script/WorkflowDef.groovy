@@ -299,6 +299,8 @@ class WorkflowPublishDsl {
 
     private Path directory = (Global.session as Session).outputDir
 
+    private Map defaults = [:]
+
     private boolean directoryOnce = false
 
     WorkflowPublishDsl(Binding binding) {
@@ -315,16 +317,17 @@ class WorkflowPublishDsl {
         }
     }
 
-    void directory(String directory) {
+    void directory(Map defaults=[:], String directory) {
         if( directoryOnce )
             throw new ScriptRuntimeException("Output directory cannot be defined more than once in the workflow output definition")
         directoryOnce = true
 
         this.directory = (directory as Path).complete()
+        this.defaults = defaults
     }
 
     void path(String path, Closure closure) {
-        final dsl = new PathDsl(directory.resolve(path), [:])
+        final dsl = new PathDsl(directory.resolve(path), defaults)
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
