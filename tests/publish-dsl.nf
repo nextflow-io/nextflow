@@ -17,36 +17,36 @@
 
 
 process align {
-    input:
-    val(x)
+  input:
+  val(x)
 
-    output:
-    path("*.bam")
-    path("${x}.bai")
+  output:
+  path("*.bam")
+  path("${x}.bai")
 
-    """
-    echo ${x} > ${x}.bam
-    echo ${x} | rev > ${x}.bai
-    """
+  """
+  echo ${x} > ${x}.bam
+  echo ${x} | rev > ${x}.bai
+  """
 }
 
 process my_combine {
-    input:
-    path(bamfile)
-    path(baifile)
+  input:
+  path(bamfile)
+  path(baifile)
 
-    output:
-    path 'result.txt'
+  output:
+  path 'result.txt'
 
-    """
-    cat $bamfile > result.txt
-    cat $baifile >> result.txt
-    """
+  """
+  cat $bamfile > result.txt
+  cat $baifile >> result.txt
+  """
 }
 
 process foo {
   output:
-  file 'xxx'
+  path 'xxx'
 
   '''
   mkdir xxx
