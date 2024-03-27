@@ -172,8 +172,14 @@ class NextflowDSLImpl implements ASTTransformation {
                     currentTaskName = null
                 }
             }
+
             else if( methodName == 'workflow' && preCondition ) {
                 convertWorkflowDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
+            }
+
+            else if( methodName == 'output' && preCondition ) {
+                convertOutputDef(methodCall,sourceUnit)
                 super.visitMethodCallExpression(methodCall)
             }
 
@@ -486,6 +492,75 @@ class NextflowDSLImpl implements ASTTransformation {
             int line = node.lineNumber
             int coln = node.columnNumber
             unit.addError( new SyntaxException(message,line,coln))
+        }
+
+        /**
+         * Apply syntax transformations to the output DSL
+         *
+         * @param methodCall
+         * @param unit
+         */
+        protected void convertOutputDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'output' ${methodCall.arguments}"
+
+            assert methodCall.arguments instanceof ArgumentListExpression
+            final args = (ArgumentListExpression)methodCall.arguments
+
+            if( args.size() != 1 || args[0] !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid output definition")
+                return                
+            }
+
+            fixOutputPath( (ClosureExpression)args[0] )
+        }
+
+        /**
+         * Fix path declaration in output DSL:
+         *
+         *   output {
+         *     'results' { ... }
+         *   }
+         *
+         * becomes:
+         *
+         *   output {
+         *     path('results') { ... }
+         *   }
+         *
+         * @param body
+         */
+        protected void fixOutputPath(ClosureExpression body) {
+            final block = (BlockStatement)body.code
+            for( Statement stmt : block.statements ) {
+                if( stmt !instanceof ExpressionStatement )
+                    continue
+
+                final stmtExpr = (ExpressionStatement)stmt
+                if( stmtExpr.expression !instanceof MethodCallExpression )
+                    continue
+
+                final methodCall = (MethodCallExpression)stmtExpr.expression
+                if( methodCall.arguments !instanceof ArgumentListExpression )
+                    continue
+
+                // HACK: detect implicit path() call as method call with single closure argument
+                //       custom parser will be able to detect more elegantly
+                final args = (ArgumentListExpression)methodCall.arguments
+                if( args.size() != 1 || args[0] !instanceof ClosureExpression )
+                    continue
+
+                final pathName = methodCall.getMethodAsString()
+                final pathBody = (ClosureExpression)args[0]
+                final pathCall = new MethodCallExpression(
+                    new VariableExpression('this'),
+                    'path',
+                    new ArgumentListExpression(constX(pathName), pathBody)
+                )
+                stmtExpr.setExpression(pathCall)
+
+                // recursively check nested path calls
+                fixOutputPath(pathBody)
+            }
         }
 
         /**

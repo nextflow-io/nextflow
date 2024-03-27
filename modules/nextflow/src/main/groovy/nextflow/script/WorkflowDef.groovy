@@ -283,6 +283,8 @@ class WorkflowPublishDsl {
 
     private Binding binding
 
+    private Path directory = Path.of('.')
+
     WorkflowPublishDsl(Binding binding) {
         this.binding = binding
     }
@@ -297,8 +299,12 @@ class WorkflowPublishDsl {
         }
     }
 
-    void path(Map opts=[:], String path, Closure closure) {
-        final dsl = new PathDsl(Path.of(path), opts)
+    void directory(String directory) {
+        this.directory = Path.of(directory)
+    }
+
+    void path(String path, Closure closure) {
+        final dsl = new PathDsl(directory.resolve(path), [:])
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
@@ -309,10 +315,18 @@ class WorkflowPublishDsl {
 
         private Path path
         private Map defaults
+        private boolean defaultsOnce = false
 
         PathDsl(Path path, Map defaults) {
             this.path = path
             this.defaults = defaults
+        }
+
+        void defaults(Map opts) {
+            if( defaultsOnce )
+                throw new ScriptRuntimeException("Publish defaults cannot be defined more than once for a given path")
+            defaultsOnce = true
+            defaults.putAll(opts)
         }
 
         void path(Map opts=[:], String subpath, Closure closure) {
@@ -336,5 +350,6 @@ class WorkflowPublishDsl {
         void topic(Map opts=[:], String name) {
             select(opts, Channel.topic(name))
         }
+
     }
 }

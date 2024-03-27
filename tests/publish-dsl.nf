@@ -69,14 +69,17 @@ workflow {
 }
 
 output {
-  path('data') {
+  directory 'results'
+
+  'data' {
     select align.out[0], mode: 'copy'
     select align.out[1], mode: 'copy'
     select my_combine.out
     topic 'foo', mode: 'link'
   }
 
-  path('more/data') {
-    select my_combine.out, mode: 'copy'
+  'data/more' {
+    defaults mode: 'copy'
+    select my_combine.out
   }
 }
