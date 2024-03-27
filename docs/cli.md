@@ -1,10 +1,14 @@
 (cli-page)=
 
-# Command line
+# Command line interface (CLI)
 
 Nextflow provides a robust command line interface for the management and execution pipelines.
 
-Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands.
+Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. Refer to the {ref}`cli-reference` for the full list of subcommands and examples for each.
+
+:::{note}
+Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
+:::
 
 ## Basic usage
 
@@ -20,7 +24,7 @@ The `-C` option is used to override *all* settings specified in the default conf
 
 - Override **any** default configuration with a custom configuration file:
 
-  ```
+  ```console
   $ nextflow -C my.config run nextflow-io/hello
   ```
 
@@ -144,14 +148,14 @@ The `-v` option prints out information about Nextflow, such as the version and b
 
 - The short version:
 
-  ```
+  ```console
   $ nextflow -v
   nextflow version 20.07.1.5412
   ```
 
 - The full version info with citation and website link:
 
-  ```
+  ```console
   $ nextflow -version
   N E X T F L O W
   version 20.07.1 build 5412
@@ -160,26 +164,70 @@ The `-v` option prints out information about Nextflow, such as the version and b
   http://nextflow.io
   ```
 
-(cli-commands)=
+## Running pipelines
 
-## Commands
+The main purpose of the Nextflow CLI is to run Nextflow pipelines with the `run` command. Nextflow can execute a local script (e.g. `./main.nf`) or a remote project (e.g. `github.com/foo/bar`).
 
-The Nextflow CLI provides subcommands for a variety of actions, including:
+### Launching a remote project
 
-- `nextflow run`: run a pipeline
-- `nextflow config`: view the resolved configuration of a pipeline
-- `nextflow log`: view metadata of previous runs
+To launch the execution of a pipeline project, hosted in a remote code repository, you simply need to specify its qualified name or the repository URL after the `run` command. The qualified name is formed by two parts: the `owner` name and the `repository` name separated by a `/` character.
 
-Refer to the {ref}`cli-reference` for the full list of subcommands and examples for each.
+In other words if a Nextflow project is hosted, for example, in a GitHub repository at the address `http://github.com/foo/bar`, it can be executed by entering the following command in your shell terminal:
+
+```bash
+nextflow run foo/bar
+```
+
+or using the project URL:
+
+```bash
+nextflow run http://github.com/foo/bar
+```
+
+If the project is found, it will be automatically downloaded to the Nextflow home directory (`$HOME/.nextflow` by default) and cached for subsequent runs.
+
+:::{note}
+In the first case, if your project is hosted on a service other than GitHub, you will need to specify this hosting service in the command line by using the `-hub` option. For example `-hub bitbucket` or `-hub gitlab`. In the second case, i.e. when using the project URL as name, the `-hub` option is not needed.
+:::
+
+You can try this feature out by entering the following command in your terminal:
+
+```bash
+nextflow run nextflow-io/hello
+```
+
+It will download a trivial example from the repository published at the following address <http://github.com/nextflow-io/hello> and execute it in your computer.
+
+If the `owner` part in the pipeline name is omitted, Nextflow will look for a pipeline between the ones you have already executed having a name that matches the name specified. If none is found it will try to download it using the `organization` name defined by the environment variable `NXF_ORG` (which by default is `nextflow-io`).
+
+:::{tip}
+To access a private repository, specify the access credentials by using the `-user` command line option, then the program will ask you to enter the password interactively. Private repository access credentials can also be defined in the {ref}`Git configuration <git-page>`.
+:::
+
+### Using a specific revision
+
+Any Git branch, tag, or commit of a project repository can be used when launching a pipeline by specifying the `-r` option:
+
+```bash
+nextflow run nextflow-io/hello -r mybranch
+```
+
+or
+
+```bash
+nextflow run nextflow-io/hello -r v1.1
+```
+
+These commands will execute two different project revisions based on the given Git branch/tag/commit.
 
 (cli-params)=
 
-## Pipeline parameters
+### Pipeline parameters
 
 Pipeline scripts can use an arbitrary number of parameters that can be overridden, either using the command line or the Nextflow configuration file. Any script parameter can be specified on the command line, prefixing the parameter name with double dash characters, e.g.:
 
 ```bash
-nextflow run <my script> --foo Hello
+nextflow run <pipeline> --foo Hello
 ```
 
 Then, the parameter can be accessed in the pipeline script using the `params.foo` identifier.
@@ -192,6 +240,94 @@ When the parameter name is formatted using `camelCase`, a second parameter is cr
 When a command line parameter includes one or more glob characters, i.e. wildcards like `*` or `?`, the parameter value must be enclosed in quotes to prevent Bash expansion and preserve the glob characters. For example:
 
 ```bash
-nextflow run <my script> --files "*.fasta"
+nextflow run <pipeline> --files "*.fasta"
 ```
 :::
+
+## Managing projects
+
+Nextflow seamlessly integrates with popular Git providers, including [BitBucket](http://bitbucket.org/), [GitHub](http://github.com), and [GitLab](http://gitlab.com) for managing Nextflow pipelines as version-controlled Git repositories.
+
+The following commands allows you to perform some basic operations that can be used to manage your projects.
+
+### Listing available projects
+
+The `list` command allows you to list all the projects you have downloaded in your computer. For example:
+
+```bash
+nextflow list
+```
+
+This prints a list similar to the following one:
+
+```
+cbcrg/ampa-nf
+cbcrg/piper-nf
+nextflow-io/hello
+nextflow-io/examples
+```
+
+### Showing project information
+
+By using the `info` command you can show information from a downloaded project. For example:
+
+```console
+$ nextflow info hello
+project name: nextflow-io/hello
+repository  : http://github.com/nextflow-io/hello
+local path  : $HOME/.nextflow/assets/nextflow-io/hello
+main script : main.nf
+revisions   :
+* master (default)
+  mybranch
+  v1.1 [t]
+  v1.2 [t]
+```
+
+Starting from the top it shows: the project name; the Git repository URL; the local directory where the project has been downloaded; the script that is executed when launched; the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right, the current checked-out revision is marked with a `*` on the left.
+
+### Pulling or updating a project
+
+The `pull` command allows you to download a project from a GitHub repository or to update it if that repository has already been downloaded. For example:
+
+```bash
+nextflow pull nextflow-io/examples
+```
+
+Alternatively, you can use the repository URL as the name of the project to pull:
+
+```bash
+nextflow pull https://github.com/nextflow-io/examples
+```
+
+Downloaded pipeline projects are stored in the directory `$HOME/.nextflow/assets` in your computer.
+
+### Viewing the project code
+
+The `view` command allows you to quickly show the content of the pipeline script you have downloaded. For example:
+
+```bash
+nextflow view nextflow-io/hello
+```
+
+By adding the `-l` option to the example above it will list the content of the repository.
+
+### Cloning a project into a directory
+
+The `clone` command allows you to copy a Nextflow pipeline project to a directory of your choice. For example:
+
+```bash
+nextflow clone nextflow-io/hello target-dir
+```
+
+If the destination directory is omitted the specified project is cloned to a directory with the same name as the pipeline base name (e.g. `hello`) in the current directory.
+
+The clone command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push back your changes by using the usual Git/GitHub workflow.
+
+### Deleting a project
+
+Downloaded pipelines can be deleted by using the `drop` command, as shown below:
+
+```bash
+nextflow drop nextflow-io/hello
+```
