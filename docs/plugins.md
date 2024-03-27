@@ -16,7 +16,7 @@ The following functionalities are provided via plugin components, and they make 
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
 - `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
 - `nf-google`: Support for Google Cloud.
-- `nf-tower`: Support for [Seqera Platform](https://tower.nf) (formerly Tower Cloud).
+- `nf-tower`: Support for [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 - `nf-wave`: Support for [Wave containers](https://seqera.io/wave/) service.
 
 
