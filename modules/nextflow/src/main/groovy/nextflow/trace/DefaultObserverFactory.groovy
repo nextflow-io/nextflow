@@ -25,6 +25,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
+        createTaskCleanupObserver(result)
         return result
     }
 
@@ -99,6 +100,14 @@ class DefaultObserverFactory implements TraceObserverFactory {
         config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
         config.navigate('trace.overwrite') { observer.overwrite = it }
         result << observer
+    }
+
+    protected void createTaskCleanupObserver(Collection<TraceObserver> result) {
+        final strategy = session.config.cleanup
+        if( strategy instanceof CharSequence && !CleanupStrategy.isValid(strategy) )
+            throw new IllegalArgumentException("Invalid cleanup strategy '${strategy}' -- available strategies are ${CleanupStrategy.values().join(',').toLowerCase()}")
+        if( strategy )
+            result << new TaskCleanupObserver(strategy.toString().toUpperCase() as CleanupStrategy)
     }
 
 }

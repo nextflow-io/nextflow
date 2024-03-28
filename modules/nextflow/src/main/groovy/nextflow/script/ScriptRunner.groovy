@@ -257,7 +257,6 @@ class ScriptRunner {
 
     protected shutdown() {
         session.destroy()
-        session.cleanup()
         Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"
     }
