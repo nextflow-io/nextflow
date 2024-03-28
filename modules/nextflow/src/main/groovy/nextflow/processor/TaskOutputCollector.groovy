@@ -55,14 +55,13 @@ class TaskOutputCollector implements Map<String,?> {
     /**
      * Get an environment variable from the task environment.
      *
-     * @param key
+     * @param name
      */
-    String env(String key) {
-        final varName = declaredOutputs.getEnv().get(key)
-        final result = env0(task.workDir).get(varName)
+    String env(String name) {
+        final result = env0(task.workDir).get(name)
 
         if( result == null && !optional )
-            throw new MissingValueException("Missing environment variable: $varName")
+            throw new MissingValueException("Missing environment variable: $name")
 
         return result
     }
@@ -70,14 +69,14 @@ class TaskOutputCollector implements Map<String,?> {
     /**
      * Get the result of an eval command from the task environment.
      *
-     * @param varName
+     * @param name
      */
-    String eval(String varName) {
+    String eval(String name) {
         final evalCmds = task.getOutputEvals()
-        final result = env0(task.workDir, evalCmds).get(varName)
+        final result = env0(task.workDir, evalCmds).get(name)
 
         if( result == null && !optional )
-            throw new MissingValueException("Missing result of eval command: '${evalCmds.get(varName)}'")
+            throw new MissingValueException("Missing result of eval command: '${evalCmds.get(name)}'")
 
         return result
     }

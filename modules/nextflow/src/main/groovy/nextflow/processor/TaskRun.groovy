@@ -505,7 +505,7 @@ class TaskRun implements Cloneable {
 
     List<String> getOutputEnvNames() {
         final declaredOutputs = processor.config.getOutputs()
-        return new ArrayList(declaredOutputs.env.values())
+        return new ArrayList(declaredOutputs.getEnv())
     }
 
     Map<String,String> getOutputEvals() {

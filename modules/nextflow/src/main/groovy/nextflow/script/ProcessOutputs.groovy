@@ -34,7 +34,7 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
      * task environment for each task and made available to
      * process outputs.
      */
-    private Map<String,String> env = [:]
+    private Set<String> env = []
 
     /**
      * Shell commands which will be executed in the task environment
@@ -61,8 +61,8 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
         params.add(param)
     }
 
-    void addEnv(String name, String value) {
-        env.put(name, value)
+    void addEnv(String name) {
+        env.add(name)
     }
 
     String addEval(Object value) {
@@ -71,8 +71,10 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
         return key
     }
 
-    void addFile(String key, ProcessFileOutput file) {
+    String addFile(ProcessFileOutput file) {
+        final key = "\$file${files.size()}"
         files.put(key, file)
+        return key
     }
 
     List<String> getNames() {
@@ -83,7 +85,7 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
         return params*.getChannel()
     }
 
-    Map<String,String> getEnv() {
+    Set<String> getEnv() {
         return env
     }
 

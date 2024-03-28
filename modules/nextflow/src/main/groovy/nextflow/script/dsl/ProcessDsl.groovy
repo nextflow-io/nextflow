@@ -175,7 +175,7 @@ class ProcessDsl extends ProcessBuilder {
             opts.name = opts.remove('emit')
 
         final name = _out_env0(target)
-        outputs.addEnv(name, name)
+        outputs.addEnv(name)
         outputs.addParam(new LazyEnvCall(name), opts)
     }
 
@@ -226,9 +226,7 @@ class ProcessDsl extends ProcessBuilder {
     }
 
     private String _out_path0(Object target, boolean pathQualifier, Map opts) {
-        final key = "\$file${outputs.getFiles().size()}".toString()
-        outputs.addFile(key, new ProcessFileOutput(target, pathQualifier, opts))
-        return key
+        outputs.addFile(new ProcessFileOutput(target, pathQualifier, opts))
     }
 
     void _out_stdout(Map opts=[:]) {
@@ -261,7 +259,7 @@ class ProcessDsl extends ProcessBuilder {
             }
             else if( item instanceof TokenEnvCall ) {
                 final name = _out_env0(item.val)
-                outputs.addEnv(name, name)
+                outputs.addEnv(name)
                 target << new LazyEnvCall(name)
             }
             else if( item instanceof TokenEvalCall ) {
@@ -329,10 +327,10 @@ class LazyTupleElement extends LazyVar {
 
 @CompileStatic
 class LazyEnvCall implements LazyAware {
-    String key
+    String name
 
-    LazyEnvCall(String key) {
-        this.key = key
+    LazyEnvCall(String name) {
+        this.name = name
     }
 
     @Override
@@ -340,7 +338,7 @@ class LazyEnvCall implements LazyAware {
         if( binding !instanceof TaskOutputCollector )
             throw new IllegalStateException()
 
-        ((TaskOutputCollector)binding).env(key)
+        ((TaskOutputCollector)binding).env(name)
     }
 }
 
