@@ -660,7 +660,7 @@ class AzBatchService implements Closeable {
          *
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
-        final containerConfig = new ContainerConfiguration().withType(DOCKER_COMPATIBLE);
+        final containerConfig = new ContainerConfiguration().withType(DOCKER_COMPATIBLE)
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
@@ -690,7 +690,7 @@ class AzBatchService implements Closeable {
                 .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()
-                .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
+                .withCommandLine(startTaskCmd(spec.opts))
                 .withResourceFiles(resourceFiles)
 
         final poolParams = new PoolAddParameter()
@@ -764,6 +764,13 @@ class AzBatchService implements Closeable {
         }
 
         apply(() -> client.poolOperations().createPool(poolParams))
+    }
+
+    protected String startTaskCmd(AzPoolOpts opts) {
+        final DEFAULT_START_TASK = 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        final startTask = opts.startTask ?: DEFAULT_START_TASK
+        log.debug "Start task command:\n$startTask"
+        return startTask
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
