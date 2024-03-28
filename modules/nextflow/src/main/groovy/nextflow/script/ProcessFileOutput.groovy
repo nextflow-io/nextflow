@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
 import nextflow.util.BlankSeparatedList
-import nextflow.util.LazyHelper
 /**
  * Models a process file output, which defines a file
  * or set of files to be unstaged from a task work directory.

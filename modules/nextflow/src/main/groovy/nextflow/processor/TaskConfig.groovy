@@ -30,11 +30,11 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
+import nextflow.script.LazyMap
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
 import nextflow.util.Duration
-import nextflow.util.LazyMap
 import nextflow.util.MemoryUnit
 /**
  * Task local configuration properties

@@ -21,9 +21,9 @@ import static test.TestParser.*
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.script.PathArityAware
 import nextflow.processor.TaskContext
-import nextflow.util.LazyVar
+import nextflow.script.LazyVar
+import nextflow.script.PathArityAware
 import nextflow.util.BlankSeparatedList
 import test.Dsl2Spec
 /**

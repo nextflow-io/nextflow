@@ -36,6 +36,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
+import nextflow.script.LazyHelper
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle

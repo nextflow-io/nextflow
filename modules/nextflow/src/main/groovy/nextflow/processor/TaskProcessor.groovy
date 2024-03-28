@@ -77,6 +77,7 @@ import nextflow.file.FileHolder
 import nextflow.file.FilePorter
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
+import nextflow.script.LazyHelper
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
@@ -86,7 +87,6 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
-import nextflow.util.LazyHelper
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly

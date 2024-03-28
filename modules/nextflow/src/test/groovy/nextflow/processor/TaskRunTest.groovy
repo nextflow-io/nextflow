@@ -27,9 +27,9 @@ import nextflow.container.resolver.ContainerInfo
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
+import nextflow.script.LazyVar
 import nextflow.script.ScriptBinding
 import nextflow.script.TaskClosure
-import nextflow.util.LazyVar
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam

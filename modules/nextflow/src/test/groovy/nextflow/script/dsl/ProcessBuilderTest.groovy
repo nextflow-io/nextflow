@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.BaseScript
+import nextflow.script.LazyVar
 import nextflow.script.ProcessConfig
-import nextflow.util.LazyVar
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**

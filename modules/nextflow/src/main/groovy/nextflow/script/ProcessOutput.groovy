@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.processor.TaskOutputCollector
 import nextflow.processor.TaskRun
 import nextflow.util.ConfigHelper
-import nextflow.util.LazyHelper
 /**
  * Models a process output.
  *

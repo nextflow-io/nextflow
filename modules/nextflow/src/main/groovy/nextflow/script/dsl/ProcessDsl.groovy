@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,9 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import nextflow.processor.TaskOutputCollector
 import nextflow.script.BaseScript
+import nextflow.script.LazyAware
+import nextflow.script.LazyList
+import nextflow.script.LazyVar
 import nextflow.script.ProcessDef
 import nextflow.script.ProcessFileInput
 import nextflow.script.ProcessFileOutput
@@ -33,9 +36,6 @@ import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdinCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
-import nextflow.util.LazyAware
-import nextflow.util.LazyList
-import nextflow.util.LazyVar
 
 /**
  * Implements the process DSL.

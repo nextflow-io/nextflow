@@ -26,6 +26,7 @@ import nextflow.NF
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
+import nextflow.script.LazyVar
 import nextflow.script.TaskClosure
 import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
@@ -35,7 +36,6 @@ import nextflow.script.TokenStdinCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenValRef
-import nextflow.util.LazyVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode

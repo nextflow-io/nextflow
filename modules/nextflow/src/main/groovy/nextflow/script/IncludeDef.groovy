@@ -32,7 +32,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
-import nextflow.util.LazyVar
 /**
  * Implements a script inclusion
  *
