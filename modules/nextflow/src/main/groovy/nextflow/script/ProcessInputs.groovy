@@ -55,16 +55,6 @@ class ProcessInputs implements List<ProcessInput>, Cloneable {
      */
     Object stdin
 
-    @Override
-    ProcessInputs clone() {
-        def result = (ProcessInputs)super.clone()
-        result.params = new ArrayList<>(params.size())
-        for( ProcessInput param : params ) {
-            result.params.add((ProcessInput)param.clone())
-        }
-        return result
-    }
-
     void addParam(String name) {
         add(new ProcessInput(name))
     }
@@ -99,6 +89,16 @@ class ProcessInputs implements List<ProcessInput>, Cloneable {
 
     List<ProcessFileInput> getFiles() {
         return files
+    }
+
+    @Override
+    ProcessInputs clone() {
+        def result = (ProcessInputs)super.clone()
+        result.params = new ArrayList<>(params.size())
+        for( ProcessInput param : params ) {
+            result.params.add(param.clone())
+        }
+        return result
     }
 
 }

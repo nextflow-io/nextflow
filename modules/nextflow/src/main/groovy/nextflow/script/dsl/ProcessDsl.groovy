@@ -27,6 +27,7 @@ import nextflow.script.ProcessInputs
 import nextflow.script.ProcessOutput
 import nextflow.script.ProcessOutputs
 import nextflow.script.TokenEnvCall
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdinCall
@@ -169,12 +170,30 @@ class ProcessDsl extends ProcessBuilder {
 
     /// OUTPUTS
 
-    void _out_env(Map opts=[:], LazyVar var) {
+    void _out_env(Map opts=[:], Object target) {
         if( opts.emit )
             opts.name = opts.remove('emit')
 
-        outputs.addEnv(var.name, var.name)
-        outputs.addParam(new LazyEnvCall(var.name), opts)
+        final name = _out_env0(target)
+        outputs.addEnv(name, name)
+        outputs.addParam(new LazyEnvCall(name), opts)
+    }
+
+    String _out_env0(Object target) {
+        if( target instanceof LazyVar )
+            return target.name
+        else if( target instanceof CharSequence )
+            return target.toString()
+        else
+            throw new IllegalArgumentException("Unexpected environment output definition - it should be either a string or a variable identifier - offending value: ${target?.getClass()?.getName()}")
+    }
+
+    void _out_eval(Map opts=[:], CharSequence cmd) {
+        if( opts.emit )
+            opts.name = opts.remove('emit')
+
+        final name = outputs.addEval(cmd)
+        outputs.addParam(new LazyEvalCall(name), opts)
     }
 
     void _out_file(Object target) {
@@ -240,10 +259,14 @@ class ProcessDsl extends ProcessBuilder {
             else if( item instanceof TokenValCall ) {
                 target << item.val
             }
-            else if( item instanceof TokenEnvCall && item.val instanceof LazyVar ) {
-                final var = (LazyVar)item.val
-                outputs.addEnv(var.name, var.name)
-                target << new LazyEnvCall(var.name)
+            else if( item instanceof TokenEnvCall ) {
+                final name = _out_env0(item.val)
+                outputs.addEnv(name, name)
+                target << new LazyEnvCall(name)
+            }
+            else if( item instanceof TokenEvalCall ) {
+                final name = outputs.addEval(item.val)
+                target << new LazyEvalCall(name)
             }
             else if( item instanceof TokenFileCall ) {
                 // file pattern can be a String or GString
@@ -318,6 +341,23 @@ class LazyEnvCall implements LazyAware {
             throw new IllegalStateException()
 
         ((TaskOutputCollector)binding).env(key)
+    }
+}
+
+@CompileStatic
+class LazyEvalCall implements LazyAware {
+    String name
+
+    LazyEvalCall(String name) {
+        this.name = name
+    }
+
+    @Override
+    Object resolve(Object binding) {
+        if( binding !instanceof TaskOutputCollector )
+            throw new IllegalStateException()
+
+        ((TaskOutputCollector)binding).eval(name)
     }
 }
 

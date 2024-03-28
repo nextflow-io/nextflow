@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,20 +46,18 @@ class Const {
      */
     static public final Path APP_HOME_DIR = getHomeDir(APP_NAME)
 
-    /**
-     * The application version
-     */
-    static public final String APP_VER = "23.11.0-edge"
-
-    /**
-     * The app build time as linux/unix timestamp
-     */
-    static public final long APP_TIMESTAMP = 1700857448507
-
+    static Path sysHome() {
+        def home = System.getProperty("user.home")
+        if( !home || home=='?' )
+            home = System.getenv('HOME')
+        if( !home )
+            throw new IllegalStateException("Unable to detect system home path - Make sure the variable HOME or NXF_HOME is defined in your environment")
+        return Path.of(home)
+    }
 
     private static Path getHomeDir(String appname) {
-        def home = System.getenv('NXF_HOME')
-        def result = home ? Paths.get(home) : Paths.get(System.getProperty("user.home")).resolve(".$appname")
+        final home = System.getenv('NXF_HOME')
+        final result = home ? Paths.get(home) : sysHome().resolve(".$appname")
 
         if( !result.exists() && !result.mkdir() ) {
             throw new IllegalStateException("Cannot create path '${result}' -- check file system access permission")
@@ -68,7 +66,9 @@ class Const {
         return result
     }
 
-    static public final String S3_UPLOADER_CLASS = 'nextflow.cloud.aws.nio'
+    static final Path getAppCacheDir() {
+        return Path.of(SysEnv.get('NXF_CACHE_DIR', '.nextflow'))
+    }
 
     static public final String ROLE_WORKER = 'worker'
 
@@ -82,7 +82,7 @@ class Const {
 
     static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
 
-    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : APP_HOME_DIR.resolve('assets').toFile()
 
     static public final String DEFAULT_BRANCH = 'master'
 

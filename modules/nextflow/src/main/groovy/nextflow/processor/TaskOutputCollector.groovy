@@ -18,6 +18,7 @@ package nextflow.processor
 
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -25,6 +26,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.script.ProcessOutputs
 import nextflow.script.ScriptType
+import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Implements the resolution of task outputs
  *
@@ -65,9 +67,24 @@ class TaskOutputCollector implements Map<String,?> {
         return result
     }
 
-    @Memoized
-    static private Map env0(Path workDir) {
-        new TaskEnvCollector(workDir).collect()
+    /**
+     * Get the result of an eval command from the task environment.
+     *
+     * @param varName
+     */
+    String eval(String varName) {
+        final evalCmds = task.getOutputEvals()
+        final result = env0(task.workDir, evalCmds).get(varName)
+
+        if( result == null && !optional )
+            throw new MissingValueException("Missing result of eval command: '${evalCmds.get(varName)}'")
+
+        return result
+    }
+
+    @Memoized(maxCacheSize = 10_000)
+    static private Map env0(Path workDir, Map<String,String> evalCmds=null) {
+        new TaskEnvCollector(workDir, evalCmds).collect()
     }
 
     /**
@@ -108,12 +125,13 @@ class TaskOutputCollector implements Map<String,?> {
      * @param name
      */
     @Override
+    @CompileDynamic
     Object get(Object name) {
         if( name == 'stdout' )
             return stdout()
 
         try {
-            return delegate.get(name)
+            return InvokerHelper.getProperty(delegate, name)
         }
         catch( MissingPropertyException e ) {
             throw new MissingValueException("Missing variable in process output: ${e.property}")

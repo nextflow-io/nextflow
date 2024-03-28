@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,8 +70,7 @@ class WaveContainerResolver implements ContainerResolver {
         final freeze = client().config().freezeMode()
         final config = task.getContainerConfig()
         final engine = getContainerEngine0(config)
-        final singularityOciMode = config.singularityOciMode()
-        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !singularityOciMode
+        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !config.canRunOciImage()
         if( !imageName ) {
             // when no image name is provided the module bundle should include a
             // Dockerfile or a Conda recipe or a Spack recipe to build

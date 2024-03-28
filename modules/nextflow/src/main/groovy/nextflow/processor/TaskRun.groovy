@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -505,6 +505,15 @@ class TaskRun implements Cloneable {
     List<String> getOutputEnvNames() {
         final declaredOutputs = processor.config.getOutputs()
         return new ArrayList(declaredOutputs.env.values())
+    }
+
+    Map<String,String> getOutputEvals() {
+        final declaredOutputs = processor.config.getOutputs()
+        final evalCmds = declaredOutputs.getEval()
+        final result = new LinkedHashMap(evalCmds.size())
+        for( String name : evalCmds.keySet() )
+            result.put(name, LazyHelper.resolve(context, evalCmds[name]))
+        return result
     }
 
     Path getCondaEnv() {

@@ -38,20 +38,19 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
     private Map<String,String> env = [:]
 
     /**
+     * Shell commands which will be executed in the task environment
+     * for each task and whose output will be made available
+     * to process outputs. The key corresponds to the environment
+     * variable to which the command output will be saved.
+     */
+    private Map<String,Object> eval = [:]
+
+    /**
      * Output files which will be unstaged from the task
      * directory for each task and made available to process
      * outputs.
      */
     private Map<String,ProcessFileOutput> files = [:]
-
-    @Override
-    ProcessOutputs clone() {
-        def result = (ProcessOutputs)super.clone()
-        result.params = new ArrayList<>(params.size())
-        for( ProcessOutput param : params )
-            result.add((ProcessOutput)param.clone())
-        return result
-    }
 
     void addParam(Object target, Map opts) {
         add(new ProcessOutput(this, target, opts))
@@ -63,8 +62,14 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
         params.add(param)
     }
 
-    void addEnv(String name, Object value) {
+    void addEnv(String name, String value) {
         env.put(name, value)
+    }
+
+    String addEval(Object value) {
+        final key = "nxf_out_eval_${eval.size()}"
+        eval.put(key, value)
+        return key
     }
 
     void addFile(String key, ProcessFileOutput file) {
@@ -83,8 +88,21 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
         return env
     }
 
+    Map<String,Object> getEval() {
+        return eval
+    }
+
     Map<String,ProcessFileOutput> getFiles() {
         return files
+    }
+
+    @Override
+    ProcessOutputs clone() {
+        def result = (ProcessOutputs)super.clone()
+        result.params = new ArrayList<>(params.size())
+        for( ProcessOutput param : params )
+            result.add(param.clone())
+        return result
     }
 
 }

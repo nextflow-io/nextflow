@@ -114,4 +114,9 @@ class ProcessOutput implements Cloneable {
         return LazyHelper.resolve(ctx, target)
     }
 
+    @Override
+    ProcessOutput clone() {
+        (ProcessOutput)super.clone()
+    }
+
 }

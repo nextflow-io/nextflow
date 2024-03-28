@@ -38,12 +38,14 @@ class BatchConfig {
     private MemoryUnit bootDiskSize
     private String cpuPlatform
     private int maxSpotAttempts
+    private boolean installGpuDrivers
     private boolean preemptible
     private boolean spot
     private boolean usePrivateAddress
     private String network
     private String subnetwork
     private String serviceAccountEmail
+    private BatchRetryConfig retryConfig
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
@@ -51,12 +53,14 @@ class BatchConfig {
     MemoryUnit getBootDiskSize() { bootDiskSize }
     String getCpuPlatform() { cpuPlatform }
     int getMaxSpotAttempts() { maxSpotAttempts }
+    boolean getInstallGpuDrivers() { installGpuDrivers }
     boolean getPreemptible() { preemptible }
     boolean getSpot() { spot }
     boolean getUsePrivateAddress() { usePrivateAddress }
     String getNetwork() { network }
     String getSubnetwork() { subnetwork }
     String getServiceAccountEmail() { serviceAccountEmail }
+    BatchRetryConfig getRetryConfig() { retryConfig }
 
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
@@ -66,12 +70,14 @@ class BatchConfig {
         result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
         result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
         result.maxSpotAttempts = session.config.navigate('google.batch.maxSpotAttempts',5) as int
+        result.installGpuDrivers = session.config.navigate('google.batch.installGpuDrivers',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)
         result.spot = session.config.navigate('google.batch.spot',false)
         result.usePrivateAddress = session.config.navigate('google.batch.usePrivateAddress',false)
         result.network = session.config.navigate('google.batch.network')
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
+        result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
         return result
     }
 

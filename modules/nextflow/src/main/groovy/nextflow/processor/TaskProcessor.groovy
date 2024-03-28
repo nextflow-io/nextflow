@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ import nextflow.exception.FailedGuardException
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
+import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
@@ -868,6 +869,10 @@ class TaskProcessor {
                     formatTaskError( message, error, task )
                     break
 
+                case ProcessEvalException:
+                    formatCommandError( message, error, task )
+                    break
+
                 case FailedGuardException:
                     formatGuardError( message, error as FailedGuardException, task )
                     break;
@@ -937,6 +942,35 @@ class TaskProcessor {
         }
 
         return action
+    }
+
+    final protected List<String> formatCommandError(List<String> message, ProcessEvalException error, TaskRun task) {
+        // compose a readable error message
+        message << formatErrorCause(error)
+
+        // - print the executed command
+        message << "Command executed:\n"
+        error.command.stripIndent(true)?.trim()?.eachLine {
+            message << "  ${it}"
+        }
+
+        // - the exit status
+        message << "\nCommand exit status:\n  ${error.status}"
+
+        // - the tail of the process stdout
+        message << "\nCommand output:"
+        def lines = error.output.readLines()
+        if( lines.size() == 0 ) {
+            message << "  (empty)"
+        }
+        for( String it : lines ) {
+            message << "  ${stripWorkDir(it, task.workDir)}"
+        }
+
+        if( task?.workDir )
+            message << "\nWork dir:\n  ${task.workDirStr}"
+
+        return message
     }
 
     final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {

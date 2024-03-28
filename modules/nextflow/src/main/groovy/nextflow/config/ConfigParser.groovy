@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,6 +106,8 @@ class ConfigParser {
 
     private boolean renderClosureAsString
 
+    private boolean stripSecrets
+
     private Grengine grengine
 
     ConfigParser() {
@@ -168,6 +170,8 @@ class ConfigParser {
         // set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
         def params = [:]
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)
@@ -183,6 +187,11 @@ class ConfigParser {
 
     ConfigParser setRenderClosureAsString(boolean value) {
         this.renderClosureAsString = value
+        return this
+    }
+
+    ConfigParser setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 
@@ -470,6 +479,7 @@ class ConfigParser {
         // disable include parsing when required
         script.setIgnoreIncludes(ignoreIncludes)
         script.setRenderClosureAsString(renderClosureAsString)
+        script.setStripSecrets(stripSecrets)
 
         // -- set the binding and run
         script.binding = binding

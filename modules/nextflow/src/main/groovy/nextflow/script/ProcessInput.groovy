@@ -105,4 +105,9 @@ class ProcessInput implements Cloneable {
         return iterator
     }
 
+    @Override
+    ProcessInput clone() {
+        (ProcessInput)super.clone()
+    }
+
 }

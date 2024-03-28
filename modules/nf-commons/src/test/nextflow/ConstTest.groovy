@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Sage-Bionetworks
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,30 @@
  *
  */
 
-package nextflow.secret
+package nextflow
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import java.nio.file.Path
+
+import spock.lang.Specification
 
 /**
- * Model a context to access secret values in nextflow config files
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@CompileStatic
-class SecretsContext {
+class ConstTest extends Specification {
 
-    SecretsContext() {}
-
-    @Override
-    Object getProperty(String name) {
-        if( metaClass.hasProperty(name) )
-            return metaClass.getProperty(this,name)
-        else {
-            return new SecretHolder(name)
-        }
+    def 'should get app default cache dir' () {
+        expect:
+        Const.appCacheDir == Path.of('.nextflow')
     }
+
+    def 'should get app custom cache dir' () {
+        given:
+        SysEnv.push(NXF_CACHE_DIR: '/some/path')
+        expect:
+        Const.appCacheDir == Path.of('/some/path')
+        cleanup:
+        SysEnv.pop()
+    }
+
 }

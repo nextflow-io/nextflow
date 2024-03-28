@@ -1,5 +1,20 @@
 nf-wave changelog
 ==================
+1.3.1 - 10 Mar 2024
+- Bump snakeyaml 2.2 [07480779]
+- Bump groovy 4.0.19 [854dc1f0]
+
+1.3.0 - 5 Feb 2024
+- Fix handling of  wave.s5cmdConfigUrl setting [ci fast] (#4707) [3a19386d]
+- Fix Wave container replicable checksum [da382ddf]
+- Bump Groovy 4 (#4443) [9d32503b]
+
+1.2.0 - 20 Dec 2023
+- Add support for Singularity/Apptainer auto pull mode for OCI containers [b7f1a192]
+- Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
+- Remove deprecated Wave observer [ci fast] [0e009ef7]
+- Bump wave-utils@0.8.1 and micromamba@1.5.5 [9cb50035]
+
 1.1.0 - 24 Nov 2023
 - Add Retry policy to Google Storage (#4524) [c271bb18]
 - Add support for Singularity OCI mode (#4440) [f5362a7b]

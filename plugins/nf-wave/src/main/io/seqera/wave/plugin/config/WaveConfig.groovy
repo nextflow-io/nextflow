@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,11 +49,13 @@ class WaveConfig {
     final private RetryOpts retryOpts
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
+    final private Boolean preserveFileTimestamp
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.freezeMode = opts.freeze as Boolean
+        this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
@@ -84,6 +86,8 @@ class WaveConfig {
     List<String> strategy() { this.strategy }
 
     boolean freezeMode() { return this.freezeMode }
+
+    boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
     boolean bundleProjectResources() { bundleProjectResources }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,16 @@
  */
 
 package nextflow.container
+
+
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 /**
  * Helper methods to handle Docker containers
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
@@ -28,15 +32,11 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean remove = true
 
-    private boolean userEmulation
-
     private String registry
 
     private String name
 
     private boolean tty
-
-    private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
 
     private String removeCommand
 
@@ -69,8 +69,8 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
-        if ( params.containsKey('userEmulation') )
-            this.userEmulation = params.userEmulation?.toString() == 'true'
+        if ( params.userEmulation?.toString() == 'true' )
+            log.warn1("Undocumented setting `docker.userEmulation` is not supported any more - please remove it from your config")
 
         if ( params.containsKey('remove') )
             this.remove = params.remove?.toString() == 'true'
@@ -149,9 +149,6 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( temp )
             result << "-v $temp:/tmp "
-
-        if( userEmulation )
-            result << USER_AND_HOME_EMULATION << ' '
 
         // mount the input folders
         result << makeVolumes(mounts)
