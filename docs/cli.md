@@ -1,6 +1,6 @@
 (cli-page)=
 
-# Command line interface (CLI)
+# Command line
 
 Nextflow provides a robust command line interface for the management and execution pipelines.
 

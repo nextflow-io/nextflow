@@ -1,10 +1,195 @@
 (process-reference)=
 
-# Process directives
+# Process reference
+
+This page lists the task properties, input/output methods, and directives available in {ref}`process <process-page>` definitions.
+
+## Task properties
+
+The following task properties are defined in the process body:
+
+`task.attempt`
+: The current task attempt.
+
+`task.hash`
+: *Available only in `exec:` blocks*
+: The task unique hash ID.
+
+`task.index`
+: The task index (corresponds to `task_id` in the {ref}`execution trace <trace-report>`).
+
+`task.name`
+: *Available only in `exec:` blocks*
+: The current task name.
+
+`task.process`
+: The current process name.
+
+`task.workDir`
+: *Available only in `exec:` blocks*
+: The task unique directory.
+
+Additionally, the directive values for the given task are also defined as `task.<directive>`.
+
+(process-reference-inputs)=
+
+## Inputs
+
+`val( identifier )`
+
+: Declare a variable input. The received value can be any type, and it will be made available to the process body (i.e. `script`, `shell`, `exec`) as a variable given by `identifier`.
+
+`file( identifier | stageName )`
+
+: :::{deprecated} 19.10.0
+  Use `path` instead.
+  :::
+
+: Declare a file input. The received value can be any type, and it will be staged into the task directory. If the received value is not a file or collection of files, it is implicitly converted to a string and written to a file.
+
+: The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
+
+`path( idenfitier | stageName )`
+
+: Declare a file input. The received value can be any type, and it will be staged into the task directory. If the received value is not a file or collection of files, it is implicitly converted to a string and written to a file.
+
+: The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
+
+: Available options:
+
+  `arity`
+  : :::{versionadded} 23.09.0-edge
+    :::
+  : Specify the number of expected files. Can be a number, e.g. `'1'`, or a range, e.g. `'1..*'`. If a task receives an invalid number of files for this `path` input, it will fail.
+
+  `name`
+  : Specify how the file should be named in the task work directory. Can be a name or a pattern.
+
+  `stageAs`
+  : Alias of `name`.
+
+`env( identifier )`
+
+: Declare an environment variable input. The received value should be a string, and it will be exported to the task environment as an environment variable given by `identifier`.
+
+`stdin`
+
+: Declare a `stdin` input. The received value should be a string, and it will be provided as the standard input (i.e. `stdin`) to the task script. It should be declared only once for a process.
+
+`tuple( arg1, arg2, ... )`
+
+: Declare a tuple input. Each argument should be an input declaration such as `val`, `path`, `env`, or `stdin`.
+
+: The received value should be a tuple with the same number of elements as the `tuple` declaration, and each received element should be compatible with the corresponding `tuple` argument. Each tuple element is treated the same way as if it were a standalone input.
+
+(process-reference-outputs)=
+
+## Outputs
+
+`val( value )`
+
+: Declare a variable output. The argument can be any value, and it can reference any output variables defined in the process body (i.e. variables declared without the `def` keyword).
+
+`file( pattern )`
+
+: :::{deprecated} 19.10.0
+  Use `path` instead.
+  :::
+
+: Declare a file output. It receives the output files from the task environment that match the given pattern.
+
+: Multiple patterns can be specified using the colon separator (`:`). The union of all files matched by each pattern will be collected.
+
+`path( pattern, [options] )`
+
+: Declare a file output. It receives the output files from the task environment that match the given pattern.
+
+: Available options:
+
+  `arity`
+  : :::{versionadded} 23.09.0-edge
+    :::
+  : Specify the number of expected files. Can be a number or a range. If a task produces an invalid number of files for this `path` output, it will fail.
+
+  : If the arity is `1`, a single file will be emitted. Otherwise, a list will always be emitted, even if only one file is produced.
+  
+  : :::{warning}
+    If the arity is not specified, a single file or list will be emitted based on whether a single file or multiple files are produced at runtime, resulting potentially in an output channel with a mixture of files and file collections.
+    :::
+
+  `followLinks`
+  : When `true`, target files are returned in place of any matching symlink (default: `true`).
+
+  `glob`
+  : When `true`, the specified name is interpreted as a glob pattern (default: `true`).
+
+  `hidden`
+  : When `true`, hidden files are included in the matching output files (default: `false`).
+
+  `includeInputs`
+  : When `true` and the output path is a glob pattern, any input files matching the pattern are also included in the output (default: `false`).
+
+  `maxDepth`
+  : Maximum number of directory levels to visit (default: no limit).
+
+  `type`
+  : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`)).
+
+`env( identifier )`
+
+: Declare an environment variable output. It receives the value of the environment variable (given by the identifier) from the task environment.
+
+: :::{versionchanged} 23.12.0-edge
+  Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
+  :::
+
+`stdout`
+
+: Declare a `stdout` output. It receives the standard output of the task script.
+
+`eval( command )`
+
+: :::{versionadded} 24.02.0-edge
+  :::
+
+: Declare an `eval` output. It receives the standard output of the given command, which is executed in the task environment after the task script.
+
+: If the command fails, the task will also fail.
+
+`tuple( arg1, arg2, ... )`
+
+: Declare a tuple output. Each argument should be an output declaration such as `val`, `path`, `env`, `stdin`, or `eval`. Each tuple element is treated the same way as if it were a standalone output.
+
+(process-additional-options)=
+
+### Generic options
+
+The following options are available for all process outputs:
+
+`emit: <name>`
+
+: Defines the name of the output channel.
+
+`optional: true | false`
+
+: When `true`, the task will not fail if the specified output is missing (default: `false`).
+
+`topic: <name>`
+
+: :::{versionadded} 23.11.0-edge
+  :::
+
+: *Experimental: may change in a future release.*
+
+: Defines the {ref}`channel topic <channel-topic>` to which the output will be sent.
+
+(process-reference-directives)=
+
+## Directives
 
 (process-accelerator)=
 
-## accelerator
+### accelerator
 
 :::{versionadded} 19.09.0-edge
 :::
@@ -39,7 +224,7 @@ The accelerator `type` option is not supported for AWS Batch. You can control th
 
 (process-afterscript)=
 
-## afterScript
+### afterScript
 
 The `afterScript` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run. This may be useful to clean up your staging area.
 
@@ -49,7 +234,7 @@ When combined with the {ref}`container directive <process-container>`, the `afte
 
 (process-arch)=
 
-## arch
+### arch
 
 The `arch` directive allows you to define the CPU architecture to build the software in use by the process' task. For example:
 
@@ -81,7 +266,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 (process-beforescript)=
 
-## beforeScript
+### beforeScript
 
 The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialise the underlying cluster environment or for other custom initialisation.
 
@@ -103,7 +288,7 @@ When combined with the {ref}`container directive <process-container>`, the `befo
 
 (process-cache)=
 
-## cache
+### cache
 
 The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any task executions that are already cached will be re-used. See the {ref}`cache-resume-page` page for more information about how the cache works.
 
@@ -135,7 +320,7 @@ The following options are available:
 
 (process-clusteroptions)=
 
-## clusterOptions
+### clusterOptions
 
 The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command. You can use it to request non-standard resources or use settings that are specific to your cluster and not supported out of the box by Nextflow.
 
@@ -149,7 +334,7 @@ While you can use the `clusterOptions` directive to specify options that are sup
 
 (process-conda)=
 
-## conda
+### conda
 
 The `conda` directive allows for the definition of the process dependencies using the [Conda](https://conda.io) package manager.
 
@@ -171,7 +356,7 @@ The `conda` directive also allows the specification of a Conda environment file 
 
 (process-container)=
 
-## container
+### container
 
 The `container` directive allows you to execute the process script in a [Docker](http://docker.io) container.
 
@@ -201,7 +386,7 @@ This directive is ignored for processes that are {ref}`executed natively <proces
 
 (process-containeroptions)=
 
-## containerOptions
+### containerOptions
 
 The `containerOptions` directive allows you to specify any container execution option supported by the underlying container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings only for a specific process e.g. mount a custom path:
 
@@ -225,7 +410,7 @@ This feature is not supported by the {ref}`k8s-executor` and {ref}`google-lifesc
 
 (process-cpus)=
 
-## cpus
+### cpus
 
 The `cpus` directive allows you to define the number of (logical) CPU required by the process' task. For example:
 
@@ -246,7 +431,7 @@ See also: [penv](#penv), [memory](#memory), [time](#time), [queue](#queue), [max
 
 (process-debug)=
 
-## debug
+### debug
 
 By default the `stdout` produced by the commands executed in all processes is ignored. By setting the `debug` directive to `true`, you can forward the process `stdout` to the current top running process `stdout` file, showing it in the shell terminal.
 
@@ -269,7 +454,7 @@ Without specifying `debug true`, you won't see the `Hello` string printed out wh
 
 (process-disk)=
 
-## disk
+### disk
 
 The `disk` directive allows you to define how much local disk storage the process is allowed to use. For example:
 
@@ -304,7 +489,7 @@ See also: [cpus](#cpus), [memory](#memory) [time](#time), [queue](#queue) and {r
 
 (process-echo)=
 
-## echo
+### echo
 
 :::{deprecated} 22.04.0
 Use `debug` instead
@@ -312,7 +497,7 @@ Use `debug` instead
 
 (process-error-strategy)=
 
-## errorStrategy
+### errorStrategy
 
 The `errorStrategy` directive allows you to define how an error condition is managed by the process. By default when an error status is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline to terminate.
 
@@ -368,7 +553,7 @@ See also: [maxErrors](#maxerrors), [maxRetries](#maxretries) and {ref}`dynamic-t
 
 (process-executor)=
 
-## executor
+### executor
 
 The `executor` defines the underlying system where processes are executed. By default a process uses the executor defined globally in the `nextflow.config` file.
 
@@ -412,7 +597,7 @@ Each executor supports additional directives and `executor` configuration option
 
 (process-ext)=
 
-## ext
+### ext
 
 The `ext` is a special directive used as *namespace* for user custom process directives. This can be useful for advanced configuration options. For example:
 
@@ -449,7 +634,7 @@ process.ext.args = '--foo --bar'
 
 (process-fair)=
 
-## fair
+### fair
 
 :::{versionadded} 22.12.0-edge
 :::
@@ -487,7 +672,7 @@ The above example produces:
 
 (process-label)=
 
-## label
+### label
 
 The `label` directive allows the annotation of processes with mnemonic identifier of your choice. For example:
 
@@ -513,7 +698,7 @@ See also: [resourceLabels](#resourcelabels)
 
 (process-machinetype)=
 
-## machineType
+### machineType
 
 :::{versionadded} 19.07.0
 :::
@@ -536,7 +721,7 @@ See also: [cpus](#cpus) and [memory](#memory).
 
 (process-maxsubmitawait)=
 
-## maxSubmitAwait
+### maxSubmitAwait
 
 The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
 Elapsed this time the task execution will fail.
@@ -563,7 +748,7 @@ queue named `on-demand-compute`.
 
 (process-maxerrors)=
 
-## maxErrors
+### maxErrors
 
 The `maxErrors` directive allows you to specify the maximum number of times a process can fail when using the `retry` error strategy. By default this directive is disabled, you can set it as shown in the example below:
 
@@ -586,7 +771,7 @@ See also: [errorStrategy](#errorstrategy) and [maxRetries](#maxretries).
 
 (process-maxforks)=
 
-## maxForks
+### maxForks
 
 The `maxForks` directive allows you to define the maximum number of process instances that can be executed in parallel. By default this value is equals to the number of CPU cores available minus 1.
 
@@ -604,7 +789,7 @@ process doNotParallelizeIt {
 
 (process-maxretries)=
 
-## maxRetries
+### maxRetries
 
 The `maxRetries` directive allows you to define the maximum number of times a process instance can be re-submitted in case of failure. This value is applied only when using the `retry` error strategy. By default only one retry is allowed, you can increase this value as shown below:
 
@@ -627,7 +812,7 @@ See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 
 (process-memory)=
 
-## memory
+### memory
 
 The `memory` directive allows you to define how much memory the process is allowed to use. For example:
 
@@ -658,7 +843,7 @@ See also: [cpus](#cpus), [time](#time), [queue](#queue) and {ref}`dynamic-task-r
 
 (process-module)=
 
-## module
+### module
 
 [Environment Modules](http://modules.sourceforge.net/) is a package manager that allows you to dynamically configure your execution environment and easily switch between multiple versions of the same software tool.
 
@@ -691,7 +876,7 @@ You can repeat the `module` directive for each module you need to load. Alternat
 
 (process-penv)=
 
-## penv
+### penv
 
 The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the {ref}`SGE <sge-executor>` resource manager. For example:
 
@@ -713,7 +898,7 @@ See also: [cpus](#cpus), [memory](#memory), [time](#time)
 
 (process-pod)=
 
-## pod
+### pod
 
 The `pod` directive allows the definition of pod specific settings, such as environment variables, secrets, and config maps, when using the {ref}`k8s-executor` executor.
 
@@ -909,7 +1094,7 @@ The following options are available:
 
 (process-publishdir)=
 
-## publishDir
+### publishDir
 
 The `publishDir` directive allows you to publish the process output files to a specified folder. For example:
 
@@ -1008,7 +1193,7 @@ Available options:
 
 (process-queue)=
 
-## queue
+### queue
 
 The `queue` directive allows you to set the `queue` where jobs are scheduled when using a grid based executor in your pipeline. For example:
 
@@ -1042,7 +1227,7 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 
 (process-resourcelabels)=
 
-## resourceLabels
+### resourceLabels
 
 :::{versionadded} 22.09.1-edge
 :::
@@ -1079,7 +1264,7 @@ See also: [label](#label)
 
 (process-scratch)=
 
-## scratch
+### scratch
 
 The `scratch` directive allows you to execute the process in a temporary folder that is local to the execution node.
 
@@ -1125,7 +1310,7 @@ The following values are supported:
 
 (process-directive-shell)=
 
-## shell
+### shell
 
 The `shell` directive allows you to define a custom shell command for process scripts. By default, script blocks are executed with `/bin/bash -ue`.
 
@@ -1147,7 +1332,7 @@ process.shell = ['/bin/bash', '-euo', 'pipefail']
 
 (process-spack)=
 
-## spack
+### spack
 
 The `spack` directive allows for the definition of the process dependencies using the [Spack](https://spack.io) package manager.
 
@@ -1169,7 +1354,7 @@ The `spack` directive also allows the specification of a Spack environment file 
 
 (process-stageinmode)=
 
-## stageInMode
+### stageInMode
 
 The `stageInMode` directive defines how input files are staged into the process work directory. The following values are allowed:
 
@@ -1187,7 +1372,7 @@ The `stageInMode` directive defines how input files are staged into the process 
 
 (process-stageoutmode)=
 
-## stageOutMode
+### stageOutMode
 
 The `stageOutMode` directive defines how output files are staged out from the scratch directory to the process work directory. The following values are allowed:
 
@@ -1214,7 +1399,7 @@ See also: [scratch](#scratch).
 
 (process-storedir)=
 
-## storeDir
+### storeDir
 
 The `storeDir` directive allows you to define a directory that is used as a *permanent* cache for your process results.
 
@@ -1253,7 +1438,7 @@ The use of AWS S3 paths is supported, however it requires the installation of th
 
 (process-tag)=
 
-## tag
+### tag
 
 The `tag` directive allows you to associate each process execution with a custom label, so that it will be easier to identify them in the log file or in the trace execution report. For example:
 
@@ -1286,7 +1471,7 @@ See also {ref}`Trace execution report <trace-report>`
 
 (process-time)=
 
-## time
+### time
 
 The `time` directive allows you to define how long a process is allowed to run. For example:
 

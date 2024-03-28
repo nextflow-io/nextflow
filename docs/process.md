@@ -332,14 +332,15 @@ When a process is invoked in a workflow block, it must be provided a channel for
 The following input qualifiers are available:
 
 - `val`: Access the input value by name in the process script.
-- `file`: (DEPRECATED) Handle the input value as a file, staging it properly in the execution context.
 - `path`: Handle the input value as a path, staging the file properly in the execution context.
 - `env`: Use the input value to set an environment variable in the process script.
 - `stdin`: Forward the input value to the process `stdin` special file.
 - `tuple`: Handle a group of input values having any of the above qualifiers.
 - `each`: Execute the process for each element in the input collection.
 
-### Input type `val`
+Refer to the {ref}`process reference <process-reference-inputs>` for the full list of available input methods and options.
+
+### Input variables (`val`)
 
 The `val` qualifier accepts any data type. It can be accessed in the process script by using the specified input name, as shown in the following example:
 
@@ -386,17 +387,9 @@ workflow {
 ```
 :::
 
-### Input type `file`
-
-:::{note}
-The `file` qualifier was the standard way to handle input files prior to Nextflow 19.10.0. In later versions of Nextflow, the `path` qualifier should be preferred over `file`.
-:::
-
-The `file` qualifier is identical to `path`, with one important difference. When a `file` input receives a value that is not a file, it automatically converts the value to a string and saves it to a temporary file. This behavior is useful in some cases, but tends to be confusing in general. The `path` qualifier instead interprets string values as the path location of the input file and automatically converts to a file object.
-
 (process-input-path)=
 
-### Input type `path`
+### Input files (`path`)
 
 The `path` qualifier allows you to provide input files to the process execution context. Nextflow will stage the files into the process execution directory, and they can be accessed in the script by using the specified input name. For example:
 
@@ -471,47 +464,27 @@ workflow {
 }
 ```
 
-Available options:
+:::{versionadded} 23.09.0-edge
+:::
 
-`arity`
-: :::{versionadded} 23.09.0-edge
-  :::
-: Specify the number of expected files. Can be a number or a range:
+By default, `path` inputs will accept any number of files and stage them accordingly. The `arity` option can be used to enforce the expected number of files, either as a number or a range.
 
-  ```groovy
-  input:
-      path('one.txt', arity: '1')         // exactly one file is expected
-      path('pair_*.txt', arity: '2')      // exactly two files are expected
-      path('many_*.txt', arity: '1..*')   // one or more files are expected
-  ```
+For example:
 
-  When a task is created, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
+```groovy
+input:
+    path('one.txt', arity: '1')         // exactly one file is expected
+    path('pair_*.txt', arity: '2')      // exactly two files are expected
+    path('many_*.txt', arity: '1..*')   // one or more files are expected
+```
 
-`stageAs`
-: Specify how the file should be named in the task work directory:
-
-  ```groovy
-  process foo {
-    input:
-    path x, stageAs: 'data.txt'
-
-    """
-    your_command --in data.txt
-    """
-  }
-
-  workflow {
-    foo('/some/data/file.txt')
-  }
-  ```
-
-  Can be a name or a pattern as described in the [Multiple input files](#multiple-input-files) section.
+When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
 
 :::{note}
 Process `path` inputs have nearly the same interface as described in {ref}`stdlib-classes-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
 ```groovy
-path x, stageAs: 'my-dir/*'
+path x, name: 'my-dir/*'
 ```
 
 In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
@@ -601,12 +574,10 @@ In the above example, the input file name is determined by the current value of 
 This approach allows input files to be staged in the task directory with a name that is coherent with the current execution context.
 
 :::{tip}
-In most cases, you won't need to use dynamic file names, because each task is executed in its own directory, and input files are automatically staged into this directory by Nextflow. This behavior guarantees that input files with the same name won't overwrite each other.
-
-An example of when you may have to deal with that is when you have many input files in a task, and some of these files may have the same filename. In this case, a solution would be to use the `stageAs` option.
+In most cases, you won't need to use dynamic file names, because each task is executed in its own directory, and input files are automatically staged into this directory by Nextflow. This behavior guarantees that input files with the same name won't overwrite each other. The above example is useful specifically when there are potential file name conflicts within a single task.
 :::
 
-### Input type `env`
+### Input environment variables (`env`)
 
 The `env` qualifier allows you to define an environment variable in the process execution context based on the input value. For example:
 
@@ -632,14 +603,14 @@ bonjour world!
 hola world!
 ```
 
-### Input type `stdin`
+### Standard input (`stdin`)
 
 The `stdin` qualifier allows you to forward the input value to the [standard input](http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29) of the process script. For example:
 
 ```groovy
 process printAll {
   input:
-  stdin str
+  stdin
 
   """
   cat -
@@ -664,7 +635,7 @@ hello
 
 (process-input-tuple)=
 
-### Input type `tuple`
+### Input tuples (`tuple`)
 
 The `tuple` qualifier allows you to group multiple values into a single input definition. It can be useful when a channel emits tuples of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
 
@@ -841,13 +812,14 @@ When a process is invoked, each process output is returned as a channel. The exa
 The following output qualifiers are available:
 
 - `val`: Emit the variable with the specified name.
-- `file`: (DEPRECATED) Emit a file produced by the process with the specified name.
 - `path`: Emit a file produced by the process with the specified name.
 - `env`: Emit the variable defined in the process environment with the specified name.
 - `stdout`: Emit the `stdout` of the executed process.
 - `tuple`: Emit multiple values.
 
-### Output type `val`
+Refer to the {ref}`process reference <process-reference-outputs>` for the full list of available output methods and options.
+
+### Output variables (`val`)
 
 The `val` qualifier allows you to output any Nextflow variable defined in the process. A common use case is to output a variable that was defined in the `input` block, as shown in the following example:
 
@@ -901,15 +873,7 @@ workflow {
 }
 ```
 
-### Output type `file`
-
-:::{note}
-The `file` qualifier was the standard way to handle input files prior to Nextflow 19.10.0. In later versions of Nextflow, the `path` qualifier should be preferred over `file`.
-:::
-
-The `file` qualifier is similar to `path`, but with some differences. The `file` qualifier interprets `:` as a path separator, therefore `file 'foo:bar'` captures two files named `foo` and `bar`, whereas `path 'foo:bar'` captures a single file named `foo:bar`. Additionally, `file` does not support all of the extra options provided by `path`.
-
-### Output type `path`
+### Output files (`path`)
 
 The `path` qualifier allows you to output one or more files produced by the process. For example:
 
@@ -931,41 +895,23 @@ workflow {
 
 In the above example, the `randomNum` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
 
-Available options:
+Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
 
-`arity`
-: :::{versionadded} 23.09.0-edge
-  :::
-: Specify the number of expected files. Can be a number or a range:
+:::{versionadded} 23.09.0-edge
+:::
 
-  ```groovy
-  output:
-      path('one.txt', arity: '1')         // exactly one file is expected
-      path('pair_*.txt', arity: '2')      // exactly two files are expected
-      path('many_*.txt', arity: '1..*')   // one or more files are expected
-  ```
+By default, `path` outputs will accept any number of matching files from the task directory. The `arity` option can be used to enforce the expected number of files, either as a number or a range.
 
-  When a task completes, Nextflow will check whether the produced files for each path output match the declared arity,
-  and fail if they do not. If the arity is `1`, a sole file object will be emitted. Otherwise, a list will always be emitted,
-  even if only one file is produced.
+For example:
 
-`followLinks`
-: When `true`, target files are returned in place of any matching symlink (default: `true`)
+```groovy
+output:
+path('one.txt', arity: '1')         // exactly one file is expected
+path('pair_*.txt', arity: '2')      // exactly two files are expected
+path('many_*.txt', arity: '1..*')   // one or more files are expected
+```
 
-`glob`
-: When `true`, the specified name is interpreted as a glob pattern (default: `true`)
-
-`hidden`
-: When `true`, hidden files are included in the matching output files (default: `false`)
-
-`includeInputs`
-: When `true` and the output path is a glob pattern, any input files matching the pattern are also included in the output (default: `false`)
-
-`maxDepth`
-: Maximum number of directory levels to visit (default: no limit).
-
-`type`
-: Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`))
+When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not.
 
 ### Multiple output files
 
@@ -1045,7 +991,7 @@ To sum up, the use of output files with static names over dynamic ones is prefer
 
 (process-env)=
 
-### Output type `env`
+### Output environment variables (`env`)
 
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
@@ -1053,13 +999,9 @@ The `env` qualifier allows you to output a variable defined in the process execu
 :language: groovy
 ```
 
-:::{versionchanged} 23.12.0-edge
-Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
-:::
-
 (process-stdout)=
 
-### Output type `stdout`
+### Standard output (`stdout`)
 
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
@@ -1069,7 +1011,7 @@ The `stdout` qualifier allows you to output the `stdout` of the executed process
 
 (process-out-eval)=
 
-### Output type `eval`
+### Eval output (`eval`)
 
 :::{versionadded} 24.02.0-edge
 :::
@@ -1086,7 +1028,7 @@ If the command fails, the task will also fail. In Bash, you can append `|| true`
 
 (process-out-tuple)=
 
-### Output type `tuple`
+### Output tuples (`tuple`)
 
 The `tuple` qualifier allows you to output multiple values in a single channel. It is useful when you need to associate outputs with metadata, for example:
 
@@ -1148,59 +1090,46 @@ process foo {
 ```
 :::
 
-(process-additional-options)=
+(process-naming-outputs)=
 
-### Additional options
+### Naming outputs
 
-The following options are available for all process outputs:
+The `emit` option can be used on a process output to define a name for the corresponding output channel, which can be used to access the channel by name from the process output. For example:
 
-`emit: <name>`
+```groovy
+process FOO {
+    output:
+    path 'hello.txt', emit: hello
+    path 'bye.txt', emit: bye
 
-: Defines the name of the output channel, which can be used to access the channel by name from the process output:
+    """
+    echo "hello" > hello.txt
+    echo "bye" > bye.txt
+    """
+}
 
-  ```groovy
-  process FOO {
-      output:
-      path 'hello.txt', emit: hello
-      path 'bye.txt', emit: bye
+workflow {
+    FOO()
+    FOO.out.hello.view()
+}
+```
 
-      """
-      echo "hello" > hello.txt
-      echo "bye" > bye.txt
-      """
-  }
+See {ref}`workflow-process-invocation` for more details.
 
-  workflow {
-      FOO()
-      FOO.out.hello.view()
-  }
-  ```
+### Optional outputs
 
-  See {ref}`workflow-process-invocation` for more details.
+Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the given output channel.
 
-`optional: true | false`
+```groovy
+output:
+path("output.txt"), optional: true
+```
 
-: Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the given output channel.
+In this example, the process is normally expected to produce an `output.txt` file, but in this case, if the file is missing, the task will not fail. The output channel will only contain values for those tasks that produced `output.txt`.
 
-  ```groovy
-  output:
-  path("output.txt"), optional: true
-  ```
-
-  In this example, the process is normally expected to produce an `output.txt` file, but in the cases where the file is missing, the task will not fail. The output channel will only contain values for those tasks that produced `output.txt`.
-
-: :::{note}
-  While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-type-tuple) output. The entire tuple must be optional or not optional.
-  :::
-
-`topic: <name>`
-
-: :::{versionadded} 23.11.0-edge
-  :::
-
-: *Experimental: may change in a future release.*
-
-: Defines the {ref}`channel topic <channel-topic>` to which the output will be sent.
+:::{note}
+While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-tuples-tuple) output. The entire tuple must be optional or not optional.
+:::
 
 ## When
 
@@ -1254,7 +1183,36 @@ By default, directives are evaluated when the process is defined. However, if th
 
 Some directives are only supported by specific executors. Refer to the {ref}`executor-page` page for more information about each executor.
 
-Refer to {ref}`process-reference` for the full list of process directives.
+Refer to the {ref}`process reference <process-reference-directives>` for the full list of process directives. If you are new to Nextflow, here are some commonly-used operators to learn first:
+
+General:
+- {ref}`process-error-strategy`: strategy for handling task failures
+- {ref}`process-executor`: the {ref}`executor <executor-page>` with which to execute tasks
+- {ref}`process-tag`: a semantic name used to differentiate between task executions of the same process
+
+Resource requirements:
+- {ref}`process-cpus`: the number of CPUs to request for each task
+- {ref}`process-memory`: the amount of memory to request for each task
+- {ref}`process-time`: the amount of walltime to request for each task
+
+Software dependencies:
+- {ref}`process-conda`: list of conda packages to provision for tasks
+- {ref}`process-container`: container image to use for tasks
+
+### Using task directive values
+
+The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
+
+```groovy
+process foo {
+  script:
+  """
+  some_tool --cpus $task.cpus --mem $task.memory
+  """
+}
+```
+
+In the above snippet, `task.cpus` and `task.memory` hold the values for the {ref}`cpus directive<process-cpus>` and {ref}`memory directive<process-memory>` directives, respectively, which were resolved for this task based on the process configuration.
 
 (dynamic-directives)=
 
@@ -1295,24 +1253,6 @@ queue "${ entries > 100 ? 'long' : 'short' }"
 ```
 
 Note, however, that the latter syntax can be used both for a directive's main argument (as in the above example) and for a directive's optional named attributes, whereas the closure syntax is only resolved dynamically for a directive's main argument.
-:::
-
-:::{tip}
-You can retrieve the current value of a dynamic directive in the process script by using the implicit variable `task`, which holds the directive values defined in the current task. For example:
-
-```groovy
-process foo {
-  queue { entries > 100 ? 'long' : 'short' }
-
-  input:
-  tuple val(entries), path('data.txt')
-
-  script:
-  """
-  echo Current queue: ${task.queue}
-  """
-}
-```
 :::
 
 (dynamic-task-resources)=
@@ -1360,41 +1300,3 @@ process foo {
 
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
 [what is a glob?]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-
-## Task properties
-
-Each task created by a process has a `task` object which contains the following properties:
-
-`task.attempt`
-: The current task attempt.
-
-`task.hash`
-: *Available only in `exec:` blocks*
-: The task unique hash ID.
-
-`task.index`
-: The task index (corresponds to `task_id` in the {ref}`execution trace <trace-report>`).
-
-`task.name`
-: *Available only in `exec:` blocks*
-: The current task name.
-
-`task.process`
-: The current process name.
-
-`task.workDir`
-: *Available only in `exec:` blocks*
-: The task unique directory.
-
-The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
-
-```groovy
-process foo {
-  script:
-  """
-  some_tool --cpus $task.cpus --mem $task.memory
-  """
-}
-```
-
-In the above snippet, `task.cpus` and `task.memory` hold the values for the {ref}`cpus directive<process-cpus>` and {ref}`memory directive<process-memory>` directives, respectively, which were resolved for this task based on the process configuration.

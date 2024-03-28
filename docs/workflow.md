@@ -144,7 +144,7 @@ workflow {
 }
 ```
 
-See {ref}`process outputs <process-additional-options>` for more details.
+See the section on {ref}`naming process outputs <process-naming-outputs>` for more details.
 
 ### Process named stdout
 

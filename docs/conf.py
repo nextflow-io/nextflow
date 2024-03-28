@@ -46,6 +46,7 @@ rediraffe_redirects = {
     'basic.md': 'overview.md',
     'tracing.md': 'reports.md',
     'mail.md': 'notifications.md',
+    'operator.md': 'reference/operator.md',
     'dsl2.md': 'dsl1.md'
 }
 

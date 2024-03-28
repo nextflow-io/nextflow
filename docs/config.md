@@ -91,7 +91,7 @@ beta {
 }
 ```
 
-See {ref}`config-scopes` for the full list of config scopes.
+See {ref}`config-options` for the full list of config settings.
 
 (config-params)=
 

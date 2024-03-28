@@ -2,6 +2,8 @@
 
 # CLI reference
 
+This page lists all of the available options and subcommands for the {ref}`Nextflow CLI <cli-page>`.
+
 (cli-options)=
 
 ## Options
