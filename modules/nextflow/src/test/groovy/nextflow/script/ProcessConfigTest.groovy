@@ -785,7 +785,7 @@ class ProcessConfigTest extends Specification {
 
         then:
         def e1 = thrown(IllegalArgumentException)
-        e1.message == "Unknown error strategy 'abort' ― Available strategies are: terminate,finish,ignore,retry"
+        e1.message == "Unknown error strategy 'abort' ― Available strategies are: terminate,finish,ignore,ignorethenfail,retry"
 
     }
 
