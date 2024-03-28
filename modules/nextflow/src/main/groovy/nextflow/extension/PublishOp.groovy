@@ -40,29 +40,17 @@ class PublishOp {
 
     private Path sourceDir
 
-    private volatile boolean complete
-
     private Session getSession() { Global.session as Session }
 
     PublishOp(DataflowReadChannel source, Map opts) {
         this.source = source
         this.opts = opts ? new LinkedHashMap(opts) : Collections.emptyMap()
-
-        // adapt `to`  option
-        if( this.opts.containsKey('to') ) {
-            this.opts.path = this.opts.to
-            this.opts.remove('to')
-        }
-
         this.publisher = PublishDir.create(this.opts)
     }
-
-    protected boolean getComplete() { complete }
 
     PublishOp apply() {
         final events = new HashMap(2)
         events.onNext = this.&publish0
-        events.onComplete = this.&done0
         DataflowHelper.subscribeImpl(source, events)
         return this
     }
@@ -74,11 +62,6 @@ class PublishOp {
         final result = new HashSet(10)
         collectFiles(entry, result)
         publisher.apply(result, sourceDir)
-    }
-
-    protected void done0(nope) {
-        log.debug "Publish operator complete"
-        this.complete = true
     }
 
     protected void collectFiles(entry, Collection<Path> result) {
@@ -103,16 +86,18 @@ class PublishOp {
      * @return
      */
     protected Path getTaskDir(Path path) {
-        if( path==null )
+        if( path == null )
             return null
-        def result = getTaskDir0(path, session.workDir)
+        def result = getTaskDir0(path, session.workDir.resolve('tmp'))
+        if( result == null )
+            result = getTaskDir0(path, session.workDir)
         if( result == null )
             result = getTaskDir0(path, session.bucketDir)
         return result
     }
 
     private Path getTaskDir0(Path file, Path base) {
-        if( base==null )
+        if( base == null )
             return null
         if( base.fileSystem != file.fileSystem )
             return null

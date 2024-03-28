@@ -16,14 +16,18 @@
 
 package nextflow.script
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
 import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.PublishOp
 /**
  * Models a script workflow component
  *
@@ -52,6 +56,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private WorkflowBinding binding
 
+    private Closure publisher
+
     WorkflowDef(BaseScript owner, Closure<BodyDef> rawBody, String name=null) {
         this.owner = owner
         this.name = name
@@ -69,6 +75,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     /* ONLY FOR TESTING PURPOSE */
     protected WorkflowDef() {}
+
+    void setPublisher(Closure publisher) {
+        this.publisher = publisher
+    }
 
     WorkflowDef clone() {
         final copy = (WorkflowDef)super.clone()
@@ -204,6 +214,14 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         closure.call()
         // collect the workflow outputs
         output = collectOutputs(declaredOutputs)
+        // publish the workflow outputs
+        if( publisher ) {
+            final dsl = new WorkflowPublishDsl(binding)
+            final cl = (Closure)publisher.clone()
+            cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+            cl.setDelegate(dsl)
+            cl.call()
+        }
         return output
     }
 
@@ -252,5 +270,71 @@ class WorkflowParamsResolver {
             opts.remove('saveAs')
         }
         return opts
+    }
+}
+
+/**
+ * Implements the DSL for publishing workflow outputs
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+@CompileStatic
+class WorkflowPublishDsl {
+
+    private Binding binding
+
+    WorkflowPublishDsl(Binding binding) {
+        this.binding = binding
+    }
+
+    @Override
+    Object getProperty(String name) {
+        try {
+            return binding.getProperty(name)
+        }
+        catch( MissingPropertyException e ){
+            return super.getProperty(name)
+        }
+    }
+
+    void path(Map opts=[:], String path, Closure closure) {
+        final dsl = new PathDsl(Path.of(path), opts)
+        final cl = (Closure)closure.clone()
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        cl.setDelegate(dsl)
+        cl.call()
+    }
+
+    class PathDsl {
+
+        private Path path
+        private Map defaults
+
+        PathDsl(Path path, Map defaults) {
+            this.path = path
+            this.defaults = defaults
+        }
+
+        void path(Map opts=[:], String subpath, Closure closure) {
+            final dsl = new PathDsl(path.resolve(subpath), defaults + opts)
+            final cl = (Closure)closure.clone()
+            cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+            cl.setDelegate(dsl)
+            cl.call()
+        }
+
+        void select(Map opts=[:], DataflowWriteChannel source) {
+            new PublishOp(CH.getReadChannel(source), defaults + opts + [path: path]).apply()
+        }
+
+        void select(Map opts=[:], ChannelOut out) {
+            if( out.size() != 1 )
+                throw new IllegalArgumentException("Cannot publish a multi-channel output")
+            select(opts, out[0])
+        }
+
+        void topic(Map opts=[:], String name) {
+            select(opts, Channel.topic(name))
+        }
     }
 }

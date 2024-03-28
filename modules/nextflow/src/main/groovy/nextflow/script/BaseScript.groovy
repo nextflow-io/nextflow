@@ -116,6 +116,15 @@ abstract class BaseScript extends Script implements ExecutionContext {
         meta.addDefinition(workflow)
     }
 
+    protected output(Closure closure) {
+        if( !entryFlow )
+            throw new IllegalStateException("Publish definition must be defined after the anonymous workflow")
+        if( ExecutionStack.withinWorkflow() )
+            throw new IllegalStateException("Publish definition is not allowed within a workflow")
+
+        entryFlow.publisher = closure
+    }
+
     protected IncludeDef include( IncludeDef include ) {
         if(ExecutionStack.withinWorkflow())
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
