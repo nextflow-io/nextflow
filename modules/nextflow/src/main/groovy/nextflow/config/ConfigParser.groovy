@@ -73,8 +73,8 @@ interface ConfigParser {
     ConfigParser setProfiles(List<String> profiles)
 
     /**
-     * Get the list of profiles that should be applied.
+     * Get the set of available profiles.
      */
-    List<String> getProfiles()
+    Set<String> getProfiles()
 
 }

@@ -123,7 +123,15 @@ class ConfigParserV1 implements ConfigParser {
     }
 
     ConfigParser registerConditionalBlock(String blockName, String blockValue) {
-        registerConditionalBlock(blockName, [blockValue])
+        if (blockName) {
+            if (!blockValue) {
+                conditionValues.remove(blockName)
+            }
+            else {
+                conditionValues[blockName] = [blockValue]
+            }
+        }
+        return this
     }
 
     ConfigParser registerConditionalBlock(String blockName, List<String> blockValues) {
@@ -144,8 +152,8 @@ class ConfigParserV1 implements ConfigParser {
     }
 
     @Override
-    List<String> getProfiles() {
-        conditionalNames as List<String>
+    Set<String> getProfiles() {
+        Collections.unmodifiableSet(conditionalNames)
     }
 
     private Grengine getGrengine() {
@@ -280,7 +288,7 @@ class ConfigParserV1 implements ConfigParser {
      */
     @Deprecated
     ConfigObject parse(Script script) {
-        return parse0(script, null)
+        return parse(script, null)
     }
 
     /**
@@ -291,7 +299,7 @@ class ConfigParserV1 implements ConfigParser {
      */
     @Deprecated
     ConfigObject parse(URL location) {
-        return parse0(loadScript(location.text), FileHelper.asPath(location.toURI()))
+        return parse(loadScript(location.text), FileHelper.asPath(location.toURI()))
     }
 
     @Override
@@ -301,7 +309,7 @@ class ConfigParserV1 implements ConfigParser {
 
     @Override
     ConfigObject parse(Path path) {
-        return parse0(loadScript(path.text), path)
+        return parse(loadScript(path.text), path)
     }
 
     /**
@@ -312,7 +320,7 @@ class ConfigParserV1 implements ConfigParser {
      * @param location The original location of the Script as a URL
      * @return The ConfigObject instance
      */
-    private ConfigObject parse0(Script _script, Path location) {
+    ConfigObject parse(Script _script, Path location) {
         final script = (ConfigBase)_script
         Stack<String> currentConditionalBlock = new Stack<String>()
         def config = location ? new ConfigObject(location.toUri().toURL()) : new ConfigObject()
@@ -509,3 +517,4 @@ class ConfigParserV1 implements ConfigParser {
         }
     }
 }
+

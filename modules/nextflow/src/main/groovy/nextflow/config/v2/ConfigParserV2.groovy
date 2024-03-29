@@ -48,19 +48,21 @@ class ConfigParserV2 implements ConfigParser {
 
     private boolean strict = true
 
-    private List<String> profiles
+    private List<String> appliedProfiles
+
+    private Set<String> parsedProfiles
 
     private Grengine grengine
 
     @Override
     ConfigParserV2 setProfiles(List<String> profiles) {
-        this.profiles = profiles
+        this.appliedProfiles = profiles
         return this
     }
 
     @Override
-    List<String> getProfiles() {
-        return profiles
+    Set<String> getProfiles() {
+        return parsedProfiles
     }
 
     private Grengine getGrengine() {
@@ -154,11 +156,12 @@ class ConfigParserV2 implements ConfigParser {
         dsl.run()
 
         final result = Bolts.toConfigObject(dsl.getTarget())
-
-        if( profiles ) {
-            for( def profile : profiles )
-                if( profile in result.profiles )
-                    result.merge(result.profiles[profile] as ConfigObject)
+        final profiles = result.profiles as ConfigObject
+        parsedProfiles = profiles.keySet()
+        if( appliedProfiles ) {
+            for( def profile : appliedProfiles )
+                if( profile in parsedProfiles )
+                    result.merge(profiles[profile] as ConfigObject)
             result.remove('profiles')
         }
 
