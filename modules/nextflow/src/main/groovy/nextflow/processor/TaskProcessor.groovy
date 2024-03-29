@@ -663,7 +663,7 @@ class TaskProcessor {
             task.cached = true
             session.notifyTaskCached(new StoredTaskHandler(task))
 
-            // -- now bind the results
+            // -- now emit the results
             finalizeTask0(task)
             return true
         }
@@ -748,7 +748,7 @@ class TaskProcessor {
             if( entry )
                 session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
 
-            // -- now bind the results
+            // -- now emit the results
             finalizeTask0(task)
             return true
         }
@@ -1162,49 +1162,48 @@ class TaskProcessor {
     }
 
     /**
-     * Bind the expected output files to the corresponding output channels
-     * @param processor
+     * Emit the expected outputs to the corresponding output channels
      */
-    synchronized protected void bindOutputs( TaskRun task ) {
+    synchronized protected void emitOutputs( TaskRun task ) {
 
-        // bind the output
+        // -- emit the output
         if( isFair0 ) {
-            fairBindOutputs0(task.outputs, task)
+            fairEmitOutputs0(task.outputs, task)
         }
         else {
-            bindOutputs0(task.outputs)
+            emitOutputs0(task.outputs)
         }
 
-        // -- finally prints out the task output when 'debug' is true
+        // -- finally print the task output when 'debug' is true
         if( task.config.debug ) {
             task.echoStdout(session)
         }
     }
 
-    protected void fairBindOutputs0(List emissions, TaskRun task) {
+    protected void fairEmitOutputs0(List emissions, TaskRun task) {
         synchronized (isFair0) {
             // decrement -1 because tasks are 1-based
             final index = task.index-1
-            // store the task emission values in a buffer
+            // store the task output values in a buffer
             fairBuffers[index-currentEmission] = emissions
-            // check if the current task index matches the expected next emission index
+            // check if the current task index matches the expected next output index
             if( currentEmission == index ) {
                 while( emissions!=null ) {
-                    // bind the emission values
-                    bindOutputs0(emissions)
+                    // emit the output values
+                    emitOutputs0(emissions)
                     // remove the head and try with the following
                     fairBuffers.remove(0)
-                    // increase the index of the next emission
+                    // increase the index of the next output
                     currentEmission++
-                    // take the next emissions 
+                    // take the next output
                     emissions = fairBuffers[0]
                 }
             }
         }
     }
 
-    protected void bindOutputs0(List outputs) {
-        // -- bind out the collected values
+    protected void emitOutputs0(List outputs) {
+        // -- emit the output values
         for( int i = 0; i < config.getOutputs().size(); i++ ) {
             final param = config.getOutputs()[i]
             final value = outputs[i]
@@ -1780,7 +1779,7 @@ class TaskProcessor {
 
     /**
      * Finalize the task execution, checking the exit status
-     * and binding output values accordingly
+     * and emitting output values accordingly
      *
      * @param task The {@code TaskRun} instance to finalize
      */
@@ -1832,17 +1831,16 @@ class TaskProcessor {
 
     /**
      * Finalize the task execution, checking the exit status
-     * and binding output values accordingly
+     * and emitting output values accordingly
      *
      * @param task The {@code TaskRun} instance to finalize
-     * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
         log.trace "Finalize process > ${safeTaskName(task)}"
 
-        // -- bind output (files)
+        // -- emit outputs
         if( task.canBind ) {
-            bindOutputs(task)
+            emitOutputs(task)
             publishOutputs(task)
         }
 

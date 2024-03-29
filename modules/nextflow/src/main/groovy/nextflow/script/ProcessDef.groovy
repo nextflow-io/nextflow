@@ -25,7 +25,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.CombineManyOp
+import nextflow.extension.MergeWithEachOp
 import nextflow.script.dsl.ProcessConfigBuilder
 
 /**
@@ -167,7 +167,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         }
 
         final iterators = (0..<declaredInputs.size()).findAll( i -> declaredInputs[i].isIterator() )
-        return CH.getReadChannel(new CombineManyOp(declaredInputs.getChannels(), iterators).apply())
+        return CH.getReadChannel(new MergeWithEachOp(declaredInputs.getChannels(), iterators).apply())
     }
 
     private void collectOutputs(boolean singleton) {

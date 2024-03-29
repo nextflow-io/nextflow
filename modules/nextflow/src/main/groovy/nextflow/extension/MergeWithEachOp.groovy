@@ -35,7 +35,7 @@ import nextflow.Channel
  */
 @Slf4j
 @CompileStatic
-class CombineManyOp {
+class MergeWithEachOp {
 
     private List<DataflowReadChannel> sources
 
@@ -65,7 +65,7 @@ class CombineManyOp {
 
     private transient List<List> combinations
 
-    CombineManyOp(List<DataflowReadChannel> sources, List<Integer> iterators) {
+    MergeWithEachOp(List<DataflowReadChannel> sources, List<Integer> iterators) {
         this.sources = sources
         this.iterators = iterators
         this.queues = sources.collect( ch -> [] )
