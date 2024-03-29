@@ -14,35 +14,28 @@
  * limitations under the License.
  */
 
-package nextflow.config
+package nextflow.config.v1
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 
 /**
- * Placeholder class that contains a closure and its string
- * representation, which can be unwrapped to one or the other
- * based on runtime conditions.
+ * Placeholder class that replacing closure definitions in the nextflow configuration
+ * file in order to print the closure content itself
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
 @EqualsAndHashCode
+@CompileStatic
 @PackageScope
-class ClosureWithSource {
-
-    private Closure target
+class ConfigClosurePlaceholder {
 
     private String str
 
-    ClosureWithSource(Closure target, String str) {
-        this.target = target
+    ConfigClosurePlaceholder(String str) {
         this.str = str
     }
 
-    Closure getTarget() { target }
-
-    @Override
-    String toString() { str }
+    @Override String toString() { str }
 }

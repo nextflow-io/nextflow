@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config
+package nextflow.config.v2
 
 import nextflow.exception.ConfigParseException
 import org.codehaus.groovy.ast.ModuleNode

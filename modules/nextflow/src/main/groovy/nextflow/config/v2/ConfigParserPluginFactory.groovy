@@ -13,26 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config
+package nextflow.config.v2
 
-import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.ParserPlugin
+import org.codehaus.groovy.control.ParserPluginFactory
 
-/**
- * Model a mini-dsl for plugins configuration
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-@CompileStatic
-class PluginsDsl {
+class ConfigParserPluginFactory extends ParserPluginFactory {
 
-    private Set<String> plugins = []
-
-    Set<String> getPlugins() { plugins }
-
-    void id( String plg ) {
-        if( !plg )
-            throw new IllegalArgumentException("Plugin id cannot be empty or null")
-        plugins << plg
+    @Override
+    ParserPlugin createParserPlugin() {
+        return new ConfigParserPlugin()
     }
-
 }

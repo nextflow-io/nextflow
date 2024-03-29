@@ -12,16 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
+
 package nextflow.config
 
-import org.codehaus.groovy.control.ParserPlugin
-import org.codehaus.groovy.control.ParserPluginFactory
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.SysEnv
+import nextflow.config.v1.ConfigParserV1
+import nextflow.config.v2.ConfigParserV2
 
-class ConfigParserPluginFactory extends ParserPluginFactory {
+/**
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class ConfigParserFactory {
 
-    @Override
-    ParserPlugin createParserPlugin() {
-        return new ConfigParserPlugin()
+    static ConfigParser create() {
+        return SysEnv.get('NXF_ENABLE_STRICT_CONFIG')=='true'
+            ? new ConfigParserV2()
+            : new ConfigParserV1()
     }
+
 }

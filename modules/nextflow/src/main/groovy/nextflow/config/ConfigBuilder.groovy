@@ -340,7 +340,7 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
-        final slurper = new ConfigParser()
+        final slurper = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
@@ -363,6 +363,7 @@ class ConfigBuilder {
 
             // merge of the provided configuration files
             for( def entry : configEntries ) {
+
                 try {
                     merge0(result, slurper, entry)
                 }
@@ -370,17 +371,15 @@ class ConfigBuilder {
                     throw e
                 }
                 catch( Exception e ) {
-                    final message = entry instanceof Path
-                        ? "Unable to parse config file: '$entry'".toString()
-                        : "Unable to parse configuration "
+                    def message = (entry instanceof Path ? "Unable to parse config file: '$entry'" : "Unable to parse configuration ")
                     throw new ConfigParseException(message,e)
                 }
             }
 
             if( validateProfile ) {
-                final profileNames = result.profiles.keySet() as List<String>
-                checkValidProfile(profileNames)
+                checkValidProfile(slurper.getProfiles())
             }
+
         }
 
         // guarantee top scopes
@@ -403,16 +402,19 @@ class ConfigBuilder {
         if( !entry )
             return
 
-        def config = parse0(slurper,entry)
-
-        if( !showAllProfiles ) {
-            log.debug "Applying config profiles: `${profile}`"
-            def allNames = profile.tokenize(',')
-            for( def profile : allNames )
-                config.merge(config.profiles[profile])
-            config.remove('profiles')
+        // select the profile
+        if( showAllProfiles ) {
+            def config = parse0(slurper,entry)
+            validate(config,entry)
+            result.merge(config)
+            return
         }
 
+        log.debug "Applying config profile: `${profile}`"
+        def allNames = profile.tokenize(',')
+        slurper.setProfiles(allNames)
+
+        def config = parse0(slurper,entry)
         validate(config,entry)
         result.merge(config)
     }

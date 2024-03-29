@@ -18,140 +18,63 @@ package nextflow.config
 
 import java.nio.file.Path
 
-import ch.artecat.grengine.Grengine
-import com.google.common.hash.Hashing
-import groovy.transform.CompileStatic
-import nextflow.ast.NextflowXform
-import nextflow.extension.Bolts
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import org.codehaus.groovy.control.customizers.ImportCustomizer
-
 /**
- * The parser for Nextflow config files.
+ * Interface for Nextflow config parsers.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class ConfigParser {
-
-    private Map bindingVars = [:]
-
-    private Map paramVars = [:]
-
-    private boolean ignoreIncludes = false
-
-    private boolean renderClosureAsString = false
-
-    private boolean strict = true
-
-    private Grengine grengine
+interface ConfigParser {
 
     /**
-     * Returns the profile names defined in the config file
+     * Toggle whether config include statements should be ignored.
      *
-     * @return The set of profile names.
+     * @param value
      */
-    Set<String> getProfileNames() { profileNames }
-
-    private Grengine getGrengine() {
-        if( grengine ) {
-            return grengine
-        }
-
-        // set the required base script
-        def config = new CompilerConfiguration()
-        config.scriptBaseClass = ConfigDsl.class.name
-        config.setPluginFactory(new ConfigParserPluginFactory())
-        config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
-        //  add implicit types
-        def importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( ClosureWithSource.name )
-        importCustomizer.addImports( Duration.name )
-        importCustomizer.addImports( MemoryUnit.name )
-        config.addCompilationCustomizers(importCustomizer)
-        return grengine = new Grengine(config)
-    }
+    ConfigParser setIgnoreIncludes(boolean value)
 
     /**
-     * Disable parsing of {@code includeConfig} directive
+     * Toggle whether to render the source code of closures.
      *
-     * @param value A boolean value, when {@code true} includes are disabled
-     * @return The {@link ConfigParser} object itself
+     * @param value
      */
-    ConfigParser setIgnoreIncludes(boolean value) {
-        this.ignoreIncludes = value
-        return this
-    }
-
-    ConfigParser setRenderClosureAsString(boolean value) {
-        this.renderClosureAsString = value
-        return this
-    }
-
-    ConfigParser setStrict(boolean value) {
-        this.strict = value
-        return this
-    }
-
-    ConfigParser setBinding(Map vars) {
-        this.bindingVars = vars
-        return this
-    }
-
-    ConfigParser setParams(Map vars) {
-        // deep clone the map to prevent side-effect
-        // see https://github.com/nextflow-io/nextflow/issues/1923
-        this.paramVars = Bolts.deepClone(vars)
-        return this
-    }
+    ConfigParser setRenderClosureAsString(boolean value)
 
     /**
-     * Creates a unique name for the config class in order to avoid collision
-     * with top level configuration scopes
+     * Toggle whether to raise an error if a missing property is accessed.
      *
-     * @param text
+     * @param value
      */
-    private String createUniqueName(String text) {
-        def hash = Hashing
-                .murmur3_32()
-                .newHasher()
-                .putUnencodedChars(text)
-                .hash()
-        return "_nf_config_$hash"
-    }
+    ConfigParser setStrict(boolean value)
 
     /**
-     * Parse the given script as a string and return the configuration object
+     * Define variables which will be made available to the config script.
      *
-     * @param text
-     * @param location
+     * @param vars
      */
-    ConfigObject parse(String text, Path location=null) {
-        final grengine = getGrengine()
-        final dsl = (ConfigDsl)grengine.load(text, createUniqueName(text)).newInstance()
-        dsl.setIgnoreIncludes(ignoreIncludes)
-        dsl.setRenderClosureAsString(renderClosureAsString)
-        dsl.setStrict(strict)
-        if( location )
-            dsl.setConfigPath(location)
+    ConfigParser setBinding(Map vars)
 
-        dsl.setBinding(new Binding(bindingVars))
-        dsl.setParams(paramVars)
-        dsl.run()
+    /**
+     * Define pipeline parameters which will be made available to the config script.
+     *
+     * @param vars
+     */
+    ConfigParser setParams(Map vars)
 
-        return Bolts.toConfigObject(dsl.getTarget())
-    }
+    /**
+     * Parse a config object from the given source.
+     */
+    ConfigObject parse(String text)
+    ConfigObject parse(File file)
+    ConfigObject parse(Path path)
 
-    ConfigObject parse(File file) {
-        return parse(file.toPath())
-    }
+    /**
+     * Set the profiles that should be applied.
+     */
+    ConfigParser setProfiles(List<String> profiles)
 
-    ConfigObject parse(Path path) {
-        return parse(path.text, path)
-    }
+    /**
+     * Get the list of profiles that should be applied.
+     */
+    List<String> getProfiles()
 
 }

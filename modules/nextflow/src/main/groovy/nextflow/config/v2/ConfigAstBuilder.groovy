@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config
+package nextflow.config.v2
 
 import groovy.transform.CompileStatic
 import nextflow.antlr.ConfigLexer
