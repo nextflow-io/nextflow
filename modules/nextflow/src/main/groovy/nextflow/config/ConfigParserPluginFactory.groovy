@@ -13,21 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package nextflow.config
 
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
+import org.codehaus.groovy.control.ParserPlugin
+import org.codehaus.groovy.control.ParserPluginFactory
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
-/**
- * Nextflow configuration file AST xform marker interface
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.METHOD)
-@GroovyASTTransformationClass(classes = [ConfigTransformImpl])
-@interface ConfigTransform {}
+class ConfigParserPluginFactory extends ParserPluginFactory {
+
+    @Override
+    ParserPlugin createParserPlugin() {
+        return new ConfigParserPlugin()
+    }
+}

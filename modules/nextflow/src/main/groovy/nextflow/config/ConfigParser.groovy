@@ -65,7 +65,7 @@ class ConfigParser {
         // set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigDsl.class.name
-        config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigTransform))
+        config.setPluginFactory(new ConfigParserPluginFactory())
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         //  add implicit types
         def importCustomizer = new ImportCustomizer()
@@ -132,8 +132,7 @@ class ConfigParser {
      */
     ConfigObject parse(String text, Path location=null) {
         final grengine = getGrengine()
-        final encoded = "'${text.bytes.encodeBase64().toString()}'"
-        final dsl = (ConfigDsl)grengine.load(encoded, createUniqueName(text)).newInstance()
+        final dsl = (ConfigDsl)grengine.load(text, createUniqueName(text)).newInstance()
         dsl.setIgnoreIncludes(ignoreIncludes)
         dsl.setRenderClosureAsString(renderClosureAsString)
         dsl.setStrict(strict)

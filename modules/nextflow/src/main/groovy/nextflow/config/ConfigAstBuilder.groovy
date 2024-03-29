@@ -25,9 +25,13 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.Token as ParserToken
+import org.antlr.v4.runtime.atn.PredictionMode
+import org.antlr.v4.runtime.misc.ParseCancellationException
 import org.antlr.v4.runtime.tree.Tree
+import org.apache.groovy.parser.antlr4.internal.atnmanager.AtnManager
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.ModuleNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
@@ -59,6 +63,11 @@ import org.codehaus.groovy.ast.stmt.EmptyStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.ast.tools.GeneralUtils
+import org.codehaus.groovy.control.CompilationFailedException
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 
@@ -75,66 +84,123 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 @CompileStatic
 class ConfigAstBuilder {
 
-    static ConfigUnit fromFileName(String filename) {
-        from(CharStreams.fromFileName(filename))
+    private SourceUnit sourceUnit
+    private ModuleNode moduleNode
+    private ConfigLexer lexer
+    private ConfigParser parser
+
+    ConfigAstBuilder(SourceUnit sourceUnit) {
+        sourceUnit = sourceUnit
+        moduleNode = new ModuleNode(sourceUnit)
+
+        final charStream = createCharStream(sourceUnit)
+        lexer = new ConfigLexer(charStream)
+        parser = new ConfigParser(new CommonTokenStream(lexer))
+        // parser.setErrorHandler(new DescriptiveErrorStrategy(charStream))
     }
 
-    static ConfigUnit fromString(String text) {
-        from(CharStreams.fromString(text))
+    private CharStream createCharStream(SourceUnit sourceUnit) {
+        try {
+            return CharStreams.fromReader(
+                    new BufferedReader(sourceUnit.getSource().getReader()),
+                    sourceUnit.getName())
+        } catch (IOException e) {
+            throw new RuntimeException("Error occurred when reading source code.", e)
+        }
     }
 
-    private static ConfigUnit from(CharStream inputStream) {
-        final lexer = new ConfigLexer(inputStream)
-        // remove the default console error listener
-        // lexer.removeErrorListeners()
-        final tokens = new CommonTokenStream(lexer)
-        final parser = new ConfigParser(tokens)
-        // remove the default console error listener
-        // parser.removeErrorListeners()
-        // throw an exception when a parsing error is encountered
-        // parser.setErrorHandler(new BailErrorStrategy())
-        parser.setBuildParseTree(true)
-        final parseTree = parser.config()
-        final ast = configUnit(parseTree)
-        return ast
+    private CompilationUnitContext buildCST() {
+        try {
+            // parsing must wait until clearing is complete
+            AtnManager.READ_LOCK.lock()
+            try {
+                final tokenStream = parser.getInputStream()
+                try {
+                    return buildCST(PredictionMode.SLL)
+                }
+                catch( Throwable t ) {
+                    // TODO: implement SyntaxErrorReportable ?
+                    // if some syntax error occurred in the lexer, no need to retry the powerful LL mode
+                    // if( t instanceof GroovySyntaxError && GroovySyntaxError.LEXER == ((GroovySyntaxError) t).getSource() )
+                    //     throw t
+
+                    tokenStream.seek(0)
+                    return buildCST(PredictionMode.LL)
+                }
+            }
+            finally {
+                AtnManager.READ_LOCK.unlock()
+            }
+        }
+        catch( Throwable t ) {
+            throw convertException(t)
+        }
+    }
+
+    private CompilationUnitContext buildCST(PredictionMode predictionMode) {
+        parser.getInterpreter().setPredictionMode(predictionMode)
+
+        if( predictionMode == PredictionMode.SLL )
+            removeErrorListeners()
+        else
+            addErrorListeners()
+
+        return parser.compilationUnit()
+    }
+
+    private CompilationFailedException convertException(Throwable t) {
+        if( t instanceof CompilationFailedException )
+            return t
+        else if( t instanceof ParseCancellationException )
+            return createParsingFailedException(t.getCause())
+        else
+            return createParsingFailedException(t)
+    }
+
+    ModuleNode buildAST(SourceUnit sourceUnit) {
+        try {
+            return compilationUnit(buildCST())
+        } catch (Throwable t) {
+            throw convertException(t)
+        }
     }
 
     /// CONFIG
 
-    static ConfigUnit configUnit(ConfigContext ctx) {
-        final config = new ConfigUnit()
+    private ModuleNode compilationUnit(CompilationUnitContext ctx) {
         for( final stmt : ctx.configStatement() )
-            configStatement(config, stmt)
-        return config
+            configStatement(stmt)
+        // TODO: configure script class node ?
+        return moduleNode
     }
 
-    private static void configStatement(ConfigUnit config, ConfigStatementContext ctx) {
+    private void configStatement(ConfigStatementContext ctx) {
         if( ctx instanceof ConfigIncludeStmtAltContext )
-            config.addStatement(configInclude(ctx.configInclude()))
+            moduleNode.addStatement(configInclude(ctx.configInclude()))
 
         else if( ctx instanceof ConfigAssignmentStmtAltContext )
-            config.addStatement(configAssignment(ctx.configAssignment()))
+            moduleNode.addStatement(configAssignment(ctx.configAssignment()))
 
         else if( ctx instanceof ConfigBlockStmtAltContext )
-            config.addStatement(configBlock(ctx.configBlock()))
+            moduleNode.addStatement(configBlock(ctx.configBlock()))
 
         else
             throw new IllegalStateException()
     }
 
-    private static Statement configInclude(ConfigIncludeContext ctx) {
+    private Statement configInclude(ConfigIncludeContext ctx) {
         final source = expression(ctx.expression())
         final include = callX(varX('this'), 'includeConfig', argsX(source))
         stmt(include)
     }
 
-    private static Statement configAssignment(ConfigAssignmentContext ctx) {
+    private Statement configAssignment(ConfigAssignmentContext ctx) {
         final names = new ListExpression( ctx.configPathExpression().identifier().collect( ctx1 -> (Expression)constX(ctx1.text) ) )
         final right = expression(ctx.expression())
         stmt(callX(varX('this'), constX('assign'), argsX([names, right])))
     }
 
-    private static Statement configBlock(ConfigBlockContext ctx) {
+    private Statement configBlock(ConfigBlockContext ctx) {
         final name = ctx.identifier()
             ? constX(ctx.identifier().text)
             : constX(unquote(ctx.stringLiteral().text))
@@ -143,7 +209,7 @@ class ConfigAstBuilder {
         stmt(callX(varX('this'), constX('block'), argsX([name, closure])))
     }
 
-    private static Statement configBlockStatement(ConfigBlockStatementContext ctx) {
+    private Statement configBlockStatement(ConfigBlockStatementContext ctx) {
         if( ctx instanceof ConfigIncludeBlockStmtAltContext )
             return configInclude(ctx.configInclude())
 
@@ -160,7 +226,7 @@ class ConfigAstBuilder {
             throw new IllegalStateException()
     }
 
-    private static Statement configSelector(ConfigSelectorContext ctx) {
+    private Statement configSelector(ConfigSelectorContext ctx) {
         final kind = constX(ctx.kind.text)
         final target = configSelectorTarget(ctx.target)
         final statements = ctx.configAssignment().collect( ctx1 -> configAssignment(ctx1) )
@@ -168,7 +234,7 @@ class ConfigAstBuilder {
         stmt(callX(varX('this'), kind, argsX([target, closure])))
     }
 
-    private static Expression configSelectorTarget(ConfigSelectorTargetContext ctx) {
+    private Expression configSelectorTarget(ConfigSelectorTargetContext ctx) {
         ctx.identifier()
             ? constX(ctx.identifier().text)
             : constX(unquote(ctx.stringLiteral().text))
@@ -176,11 +242,11 @@ class ConfigAstBuilder {
 
     /// STATEMENTS
 
-    private static List<Statement> statements(List<StatementContext> stmts) {
+    private List<Statement> statements(List<StatementContext> stmts) {
         stmts.collect( ctx -> statement(ctx) )
     }
 
-    static Statement statement(StatementContext ctx) {
+    private Statement statement(StatementContext ctx) {
         if( ctx instanceof BlockStmtAltContext )
             return block(ctx.block())
 
@@ -206,28 +272,28 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static BlockStatement block(BlockContext ctx) {
+    private BlockStatement block(BlockContext ctx) {
         block(ctx.blockStatements())
     }
 
-    private static BlockStatement block(BlockStatementsContext ctx) {
+    private BlockStatement block(BlockStatementsContext ctx) {
         final code = ctx
             ? statements(ctx.statement())
             : [ new EmptyStatement() as Statement ]
         new BlockStatement(code, new VariableScope())
     }
 
-    private static ReturnStatement returnStatement(ExpressionContext ctx) {
+    private ReturnStatement returnStatement(ExpressionContext ctx) {
         ctx ? new ReturnStatement(expression(ctx)) : null
     }
 
-    private static AssertStatement assertStatement(AssertStatementContext ctx) {
+    private AssertStatement assertStatement(AssertStatementContext ctx) {
         final condition = new BooleanExpression(expression(ctx.condition))
         final message = ctx.message ? expression(ctx.message) : null
         new AssertStatement(condition, message)
     }
 
-    private static Expression variableDeclaration(VariableDeclarationContext ctx) {
+    private Expression variableDeclaration(VariableDeclarationContext ctx) {
         if( ctx.typeNamePairs() ) {
             final variables = ctx.typeNamePairs().typeNamePair().collect { pair ->
                 final name = pair.identifier().text
@@ -254,19 +320,19 @@ class ConfigAstBuilder {
         }
     }
 
-    private static Expression variableInitializer(VariableInitializerContext ctx) {
+    private Expression variableInitializer(VariableInitializerContext ctx) {
         enhancedStatementExpression(ctx.enhancedStatementExpression())
     }
 
     /// EXPRESSIONS
 
-    static Expression expression(StatementExpressionContext ctx) {
+    private Expression expression(StatementExpressionContext ctx) {
         ctx.argumentList()
             ? methodCall(ctx.expression(), ctx.argumentList())
             : expression(ctx.expression())
     }
 
-    static Expression expression(ExpressionContext ctx) {
+    private Expression expression(ExpressionContext ctx) {
         if( ctx instanceof AddExprAltContext )
             return binary(ctx.left, ctx.op, ctx.right)
 
@@ -345,15 +411,15 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static BinaryExpression binary(ExpressionContext left, ParserToken op, ExpressionContext right) {
+    private BinaryExpression binary(ExpressionContext left, ParserToken op, ExpressionContext right) {
         new BinaryExpression(expression(left), token(op), expression(right))
     }
 
-    private static BinaryExpression binary(ExpressionContext left, ParserToken op, Expression right) {
+    private BinaryExpression binary(ExpressionContext left, ParserToken op, Expression right) {
         new BinaryExpression(expression(left), token(op), right)
     }
 
-    private static Expression castOperand(CastOperandExpressionContext ctx) {
+    private Expression castOperand(CastOperandExpressionContext ctx) {
         if( ctx instanceof CastCastExprAltContext ) {
             final type = type(ctx.castParExpression().type())
             final operand = castOperand(ctx.castOperandExpression())
@@ -375,7 +441,7 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static Expression closure(ClosureContext ctx) {
+    private Expression closure(ClosureContext ctx) {
         final params = parameters(ctx.formalParameterList())
         final code = block(ctx.blockStatements())
         final closure = closureX(params, code)
@@ -384,7 +450,7 @@ class ConfigAstBuilder {
         // source
     }
 
-    private static ConstantExpression constant(LiteralContext ctx) {
+    private ConstantExpression constant(LiteralContext ctx) {
         if( ctx instanceof IntegerLiteralAltContext )
             return constX( ctx.text.toLong() )
 
@@ -403,25 +469,25 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static Expression creator(CreatorContext ctx) {
+    private Expression creator(CreatorContext ctx) {
         final type = type(ctx.createdName())
         final arguments = methodArguments(ctx.arguments().enhancedArgumentList())
         ctorX(type, arguments)
     }
 
-    private static Expression enhancedStatementExpression(EnhancedStatementExpressionContext ctx) {
+    private Expression enhancedStatementExpression(EnhancedStatementExpressionContext ctx) {
         ctx.statementExpression()
             ? expression(ctx.statementExpression())
             : lambda(ctx.standardLambdaExpression())
     }
 
-    private static GStringExpression gstring(GstringContext ctx) {
+    private GStringExpression gstring(GstringContext ctx) {
         final strings = gstringParts(ctx)
         final values = ctx.gstringValue().collect( ctx1 -> expression(ctx1.expression()) )
         new GStringExpression(unquote(ctx.text), strings, values)
     }
 
-    private static List<ConstantExpression> gstringParts(GstringContext ctx) {
+    private List<ConstantExpression> gstringParts(GstringContext ctx) {
         final strings = []
 
         final begin = ctx.GStringBegin().text
@@ -436,13 +502,13 @@ class ConfigAstBuilder {
         return strings.collect( str -> constX(str) )
     }
 
-    private static LambdaExpression lambda(LambdaExpressionContext ctx) {
+    private LambdaExpression lambda(LambdaExpressionContext ctx) {
         final params = parameters(ctx.lambdaParameters().formalParameters())
         final code = lambdaBody(ctx.lambdaBody())
         new LambdaExpression(params, code)
     }
 
-    private static LambdaExpression lambda(StandardLambdaExpressionContext ctx) {
+    private LambdaExpression lambda(StandardLambdaExpressionContext ctx) {
         final ctx1 = ctx.standardLambdaParameters()
         final params = ctx1.formalParameters()
             ? parameters(ctx1.formalParameters())
@@ -451,7 +517,7 @@ class ConfigAstBuilder {
         new LambdaExpression(params, code)
     }
 
-    private static BlockStatement lambdaBody(LambdaBodyContext ctx) {
+    private BlockStatement lambdaBody(LambdaBodyContext ctx) {
         if( ctx.block() )
             return block(ctx.block())
 
@@ -459,7 +525,7 @@ class ConfigAstBuilder {
         new BlockStatement([ statement as Statement ], new VariableScope())
     }
 
-    private static ListExpression list(ListContext ctx) {
+    private ListExpression list(ListContext ctx) {
         if( !ctx.expressionList() )
             return new ListExpression()
         
@@ -467,14 +533,14 @@ class ConfigAstBuilder {
         new ListExpression(expressions)
     }
 
-    private static Expression listElement(ExpressionListElementContext ctx) {
+    private Expression listElement(ExpressionListElementContext ctx) {
         final element = expression(ctx.expression())
         ctx.MUL()
             ? new SpreadExpression(element)
             : element
     }
 
-    private static MapExpression map(MapContext ctx) {
+    private MapExpression map(MapContext ctx) {
         if( !ctx.mapEntryList() )
             return new MapExpression()
 
@@ -482,7 +548,7 @@ class ConfigAstBuilder {
         new MapExpression(entries)
     }
 
-    private static MapEntryExpression mapEntry(MapEntryContext ctx) {
+    private MapEntryExpression mapEntry(MapEntryContext ctx) {
         final value = expression(ctx.expression())
         final key = ctx.MUL()
             ? new SpreadMapExpression(value)
@@ -490,7 +556,7 @@ class ConfigAstBuilder {
         new MapEntryExpression(key, value)
     }
 
-    private static Expression mapEntryLabel(MapEntryLabelContext ctx) {
+    private Expression mapEntryLabel(MapEntryLabelContext ctx) {
         if( ctx.keywords() )
             return constX(ctx.text)
 
@@ -500,13 +566,13 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static MethodCallExpression methodCall(ExpressionContext method, ArgumentListContext args) {
+    private MethodCallExpression methodCall(ExpressionContext method, ArgumentListContext args) {
         final parts = methodObject(expression(method))
         final arguments = methodArguments(args)
         callX(parts[0], parts[1], arguments)
     }
 
-    private static List<Expression> methodObject(Expression expression) {
+    private List<Expression> methodObject(Expression expression) {
         if( expression instanceof PropertyExpression )
             return [expression.objectExpression, expression.property]
 
@@ -516,7 +582,7 @@ class ConfigAstBuilder {
         return [expression, constX('call')]
     }
 
-    private static Expression methodArguments(ArgumentListContext ctx) {
+    private Expression methodArguments(ArgumentListContext ctx) {
         if( !ctx )
             return new ArgumentListExpression()
 
@@ -540,7 +606,7 @@ class ConfigAstBuilder {
         return new ArgumentListExpression(args)
     }
 
-    private static Expression methodArguments(EnhancedArgumentListContext ctx) {
+    private Expression methodArguments(EnhancedArgumentListContext ctx) {
         if( !ctx )
             return new ArgumentListExpression()
 
@@ -567,7 +633,7 @@ class ConfigAstBuilder {
         return new ArgumentListExpression(args)
     }
 
-    private static MapEntryExpression namedArg(NamedArgContext ctx) {
+    private MapEntryExpression namedArg(NamedArgContext ctx) {
         final value = expression(ctx.expression())
         final key = ctx.MUL()
             ? new SpreadMapExpression(value)
@@ -575,7 +641,7 @@ class ConfigAstBuilder {
         new MapEntryExpression(key, value)
     }
 
-    private static Expression namedArgLabel(NamedArgLabelContext ctx) {
+    private Expression namedArgLabel(NamedArgLabelContext ctx) {
         if( ctx.keywords() || ctx.identifier() )
             return constX(ctx.text)
 
@@ -588,14 +654,14 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static Expression path(PathExpressionContext ctx) {
+    private Expression path(PathExpressionContext ctx) {
         def result = primary(ctx.primary())
         for( final el : ctx.pathElement() )
             result = pathElement(result, el)
         return result
     }
 
-    private static Expression pathElement(Expression expression, PathElementContext ctx) {
+    private Expression pathElement(Expression expression, PathElementContext ctx) {
         if( ctx instanceof PropertyPathExprAltContext ) {
             final prop =
                 ctx.keywords() ? ctx.keywords().text :
@@ -631,19 +697,19 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static PostfixExpression postfix(PathExpressionContext ctx, ParserToken op) {
+    private PostfixExpression postfix(PathExpressionContext ctx, ParserToken op) {
         new PostfixExpression(path(ctx), token(op))
     }
 
-    private static PrefixExpression prefix(ExpressionContext ctx, ParserToken op) {
+    private PrefixExpression prefix(ExpressionContext ctx, ParserToken op) {
         new PrefixExpression(token(op), expression(ctx))
     }
 
-    private static PrefixExpression prefix(CastOperandExpressionContext ctx, ParserToken op) {
+    private PrefixExpression prefix(CastOperandExpressionContext ctx, ParserToken op) {
         new PrefixExpression(token(op), castOperand(ctx))
     }
 
-    private static Expression primary(PrimaryContext ctx) {
+    private Expression primary(PrimaryContext ctx) {
         if( ctx instanceof IdentifierPrmrAltContext )
             return varX(ctx.identifier().text)
 
@@ -678,7 +744,7 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private static TernaryExpression ternary(ExpressionContext cond, ExpressionContext tb, ExpressionContext fb) {
+    private TernaryExpression ternary(ExpressionContext cond, ExpressionContext tb, ExpressionContext fb) {
         final condition = new BooleanExpression(expression(cond))
         final trueExpression = tb ? expression(tb) : null
         final falseExpression = expression(fb)
@@ -687,41 +753,41 @@ class ConfigAstBuilder {
 
     /// MISCELLANEOUS
 
-    private static Parameter[] parameters(FormalParametersContext ctx) {
+    private Parameter[] parameters(FormalParametersContext ctx) {
         parameters(ctx.formalParameterList())
     }
 
-    private static Parameter[] parameters(FormalParameterListContext ctx) {
+    private Parameter[] parameters(FormalParameterListContext ctx) {
         final result = ctx
             ? ctx.formalParameter().collect( this.&parameter )
             : []
         return result as Parameter[]
     }
 
-    private static Parameter parameter(FormalParameterContext ctx) {
+    private Parameter parameter(FormalParameterContext ctx) {
         final type = type(ctx.type())
         final name = ctx.identifier().text
         final defaultValue = ctx.expression() ? expression(ctx.expression()) : null
         new Parameter(type, name, defaultValue)
     }
 
-    private static Token token(ParserToken t) {
+    private Token token(ParserToken t) {
         new Token(Types.lookupSymbol(t.text), t.text, -1, -1)
     }
 
-    private static ClassNode type(ParserRuleContext ctx) {
+    private ClassNode type(ParserRuleContext ctx) {
         ctx
             ? type0(ctx.text)
             : ClassHelper.DYNAMIC_TYPE
     }
 
-    private static ClassNode type0(String text) {
+    private ClassNode type0(String text) {
         ClassHelper.makeWithoutCaching(text)
     }
 
     /// HELPERS
 
-    private static String unquote(String text) {
+    private String unquote(String text) {
         if( !text )
             return null
         else if( text.startsWith('"""') || text.startsWith("'''") )
@@ -730,17 +796,54 @@ class ConfigAstBuilder {
             return text[1..<-1]
     }
 
-}
+    private CompilationFailedException createParsingFailedException(Throwable t) {
+        if( t instanceof SyntaxException ) {
+            this.collectSyntaxError(t)
+        }
 
-@CompileStatic
-class ConfigUnit {
-    private List<Statement> statements = []
+        // TODO: implement SyntaxErrorReportable ?
+        // else if( t instanceof GroovySyntaxError ) {
+        //     GroovySyntaxError groovySyntaxError = (GroovySyntaxError) t
 
-    void addStatement(Statement stmt) {
-        statements.add(stmt)
+        //     this.collectSyntaxError(
+        //             new SyntaxException(
+        //                     groovySyntaxError.getMessage(),
+        //                     groovySyntaxError,
+        //                     groovySyntaxError.getLine(),
+        //                     groovySyntaxError.getColumn()))
+        // }
+
+        else if( t instanceof Exception ) {
+            this.collectException(t)
+        }
+
+        return new CompilationFailedException(
+                CompilePhase.PARSING.getPhaseNumber(),
+                this.sourceUnit,
+                t)
     }
 
-    List<Statement> getStatements() {
-        statements
+    private void collectSyntaxError(SyntaxException e) {
+        sourceUnit.getErrorCollector().addFatalError(new SyntaxErrorMessage(e, sourceUnit))
     }
+
+    private void collectException(Exception e) {
+        sourceUnit.getErrorCollector().addException(e, this.sourceUnit)
+    }
+
+    private void removeErrorListeners() {
+        lexer.removeErrorListeners()
+        parser.removeErrorListeners()
+    }
+
+    private void addErrorListeners() {
+        // TODO: missing ANTLRErrorListener::reportAmbiguity()
+
+        lexer.removeErrorListeners()
+        // lexer.addErrorListener(this.createANTLRErrorListener())
+
+        parser.removeErrorListeners()
+        // parser.addErrorListener(this.createANTLRErrorListener())
+    }
+
 }

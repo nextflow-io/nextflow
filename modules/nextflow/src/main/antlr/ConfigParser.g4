@@ -44,10 +44,7 @@ package nextflow.antlr;
 }
 
 
-//
-// config
-//
-config
+compilationUnit
     :   nls (configStatement (nls configStatement)* nls)? EOF
     ;
 
