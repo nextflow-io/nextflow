@@ -821,6 +821,96 @@ In general, multiple input channels should be used to process *combinations* of 
 
 See also: {ref}`channel-types`.
 
+(process-typed-inputs)=
+
+### Typed inputs
+
+:::{versionadded} 24.10.0
+:::
+
+Typed inputs are an alternative way to define process inputs with standard types. This approach has a number of benefits:
+
+- A typed input can validate the values that it receives at runtime and raise an error if there is a type mismatch.
+
+- Whereas a `path` input relies on a custom `arity` option in order to distinguish between a single file and a list of files, with typed inputs it is trivial: `Path` vs `List<Path>`.
+
+- Typed inputs enable the use of custom record types (i.e. defined using `@ValueObject` or `record`), which makes the code much easier to read and understand compared to `tuple` inputs.
+
+A typed input is simply a variable declaration, i.e. `<type> <name>`. Here are some examples:
+
+```groovy
+input:
+int my_int
+String my_string
+Path my_file
+List<Path> my_files
+```
+
+In the above example:
+
+- `my_int` and `my_string` are treated like `val` inputs; they are defined in the process body as variables
+
+- `my_file` and `my_files` are treated like `path` inputs; they are defined as variables and their files are staged into the task directory
+
+One of the most important capabilities enabled by typed inputs is the use of custom record types. Here is an example:
+
+```groovy
+@ValueObject
+class Sample {
+  String id
+  List<Path> reads
+}
+
+process foo {
+  input:
+  Sample my_sample
+
+  // ...
+}
+```
+
+In this example, `Sample` is a record type with two members `id` and `reads`. The `Sample` input in process `foo` will be provided as a variable to the process body, where its members can be accessed as `my_sample.id` and `my_sample.reads`. Additionally, because `my_sample.reads` is a collection of files (given by its type `List<Path>`), it will be staged into the task directory like a `path` input.
+
+Environment variables and standard input can be defined using the new `env` and `stdin` directives. Building from the previous example:
+
+```groovy
+process foo {
+  env('SAMPLE_ID') { my_sample.id }
+  env('FIRST_READ_FILE') { my_sample.reads[0]?.name }
+  stdin { my_sample.reads[0] }
+
+  input:
+  Sample my_sample
+
+  // ...
+}
+```
+
+In the above example:
+
+- The sample id will be exported to the `SAMPLE_ID` variable in the task environment
+- The name of the first sample read file will be exported to the `FIRST_READ_FILE` variable in the task environment
+- The contents of the first sample read file will be provided as standard input to the task
+
+By default, file inputs are automatically inferred from the types and staged into the task directory. Alternatively, the `stageAs` directive can be used to stage files under a different name, similar to using the `name` or `stageAs` option with a `path` input. For example:
+
+```groovy
+process foo {
+  stageAs('*.fastq') { my_sample.reads }
+
+  input:
+  Sample my_sample
+
+  // ...
+}
+```
+
+In this case, `my_sample.reads` will be staged as `*.fastq`, overriding the default behavior.
+
+:::{note}
+While the `env`, `stageAs`, and `stdin` directives are provided as a convenience, it is usually easier to simply rely on the default file staging behavior, and to use the input variables directly in the task script.
+:::
+
 (process-output)=
 
 ## Outputs
@@ -1201,6 +1291,79 @@ The following options are available for all process outputs:
 : *Experimental: may change in a future release.*
 
 : Defines the {ref}`channel topic <channel-topic>` to which the output will be sent.
+
+(process-typed-outputs)=
+
+### Typed outputs
+
+:::{versionadded} 24.10.0
+:::
+
+Typed outputs are an alternative way to define process outputs with standard types. This approach has a number of benefits:
+
+- A typed output clearly describes the expected structure of the output, which makes it easier to use the output in downstream operations.
+
+- Whereas a `path` output relies on a custom `arity` option in order to distinguish between a single file and a list of files, with typed outputs it is trivial: `Path` vs `List<Path>`.
+
+- Typed outputs enable the use of custom record types (i.e. defined using `@ValueObject` or `record`), which makes the code much easier to read and understand compared to `tuple` outputs.
+
+A typed output is simply a variable declaration with an optional assignment, i.e. `<type> <name> [= <value>]`. Here are some examples:
+
+```groovy
+output:
+int my_int
+String my_string = my_input
+Path my_file = path('file1.txt')
+List<Path> my_files = path('*.txt')
+```
+
+In the above example:
+
+- `my_int` and `my_string` are treated like `val` outputs; they are assigned to the variables `my_int` and `my_input`, which are expected to be defined in the process body
+
+- `my_file` and `my_files` are treated like `path` outputs; they are assigned to a file or list of files based on a matching pattern using the `path()` method
+
+- The output variable names correspond to the `emit` option for process outputs
+
+One of the most important capabilities enabled by typed outputs is the use of custom record types. Here is an example:
+
+```groovy
+@ValueObject
+class Sample {
+  String id
+  List<Path> reads
+}
+
+process foo {
+  input:
+  String id
+
+  output:
+  Sample my_sample = new Sample(id, path('*.fastq'))
+
+  // ...
+}
+```
+
+In this example, `Sample` is a record type with two members `id` and `reads`. The `Sample` output will be constructed from the `id` input variable and the collection of task output files matching the pattern `*.fastq`.
+
+In addition to the `path()` method, there are also the `env()`, `eval()`, and `stdout()` methods for extracting environment variables, eval commands, and standard output from the task environment. For example:
+
+```groovy
+process foo {
+  // ...
+
+  output:
+  String my_env = env('MY_VAR')
+  String my_eval = eval('bash --version')
+  String my_stdout = stdout()
+  List my_tuple = [ env('MY_VAR'), eval('bash --version'), stdout() ]
+
+  // ...
+}
+```
+
+As shown in the above examples, output values can be any expression, including lists, maps, records, and even function calls.
 
 ## When
 
