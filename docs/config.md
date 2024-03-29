@@ -1943,3 +1943,52 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 : *Experimental: may change in a future release.*
 
 : When `true`, enables {ref}`topic channels <channel-topic>` feature.
+
+## Strict config mode
+
+:::{versionadded} 24.10.0
+:::
+
+Strict config mode is an alternative implementation of the config parser in Nextflow which enforces a stricter syntax. Whereas the existing parser interprets config files as Groovy scripts, which makes it overly powerful and error-prone, the strict config mode allows only a strict subset of Groovy syntax which is relevant to configuration.
+
+Strict config mode can be enabled by setting `NXF_ENABLE_STRICT_CONFIG=true`.
+
+The following statements are allowed in strict config mode:
+
+- Assignment (e.g. `foo.bar = '3'`)
+- Block (e.g. `foo { bar { ... } }`)
+- Include (e.g. `includeConfig 'foo.config'`)
+
+When assigning a config option, the right-hand side can be any Groovy expression, including closures which may include Groovy statements. However, only a subset of Groovy is supported within this context.
+
+Notable syntax that is supported:
+
+- numbers
+- strings
+- lists
+- maps
+- function calls
+- closures
+- variables (within closures)
+- if-else statements (within closures)
+
+Notable syntax that is not supported:
+
+- function definitions
+- class definitions
+- try-catch statements
+- lambdas (use closures instead)
+
+Other syntax restrictions:
+
+- Curly braces are now required for values in dynamic strings:
+  ```groovy
+  foo.bar = "$params.foobar"    // incorrect
+  foo.bar = "${params.foobar}"  // correct
+  ```
+
+- The implicit `it` variable in closures is no longer supported:
+  ```groovy
+  foo.bar = ['foo', 'bar'].collect { "--$it" }.join(' ')        // incorrect
+  foo.bar = ['foo', 'bar'].collect { it -> "--$it" }.join(' ')  // correct
+  ```
