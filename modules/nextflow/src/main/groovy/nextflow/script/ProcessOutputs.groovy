@@ -65,16 +65,12 @@ class ProcessOutputs implements List<ProcessOutput>, Cloneable {
         env.add(name)
     }
 
-    String addEval(Object value) {
-        final key = "nxf_out_eval_${eval.size()}"
-        eval.put(key, value)
-        return key
+    void addEval(String name, Object value) {
+        eval.put(name, value)
     }
 
-    String addFile(ProcessFileOutput file) {
-        final key = "\$file${files.size()}"
+    void addFile(String key, ProcessFileOutput file) {
         files.put(key, file)
-        return key
     }
 
     List<String> getNames() {

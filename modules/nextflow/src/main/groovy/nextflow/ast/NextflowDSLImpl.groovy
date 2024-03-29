@@ -47,6 +47,7 @@ import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.expr.ListExpression
@@ -512,6 +513,7 @@ class NextflowDSLImpl implements ASTTransformation {
                  * - collect all the statement after the 'exec:' label
                  */
                 def source = new StringBuilder()
+                List<Statement> paramStatements = []
                 List<Statement> execStatements = []
 
                 List<Statement> whenStatements = []
@@ -535,7 +537,10 @@ class NextflowDSLImpl implements ASTTransformation {
                             if( stm instanceof ExpressionStatement ) {
                                 fixLazyGString( stm )
                                 fixStdinStdout( stm )
-                                convertInputMethod( stm.getExpression() )
+                                if( stm.expression instanceof DeclarationExpression )
+                                    convertInputDeclaration( stm )
+                                else if( stm.expression instanceof MethodCallExpression )
+                                    convertInputMethod( (MethodCallExpression)stm.expression )
                             }
                             break
 
@@ -543,7 +548,10 @@ class NextflowDSLImpl implements ASTTransformation {
                             if( stm instanceof ExpressionStatement ) {
                                 fixLazyGString( stm )
                                 fixStdinStdout( stm )
-                                convertOutputMethod( stm.getExpression() )
+                                if( stm.expression instanceof DeclarationExpression )
+                                    paramStatements.addAll( convertOutputDeclaration( stm ) )
+                                else if( stm.expression instanceof MethodCallExpression )
+                                    convertOutputMethod( (MethodCallExpression)stm.expression )
                             }
                             break
 
@@ -668,6 +676,10 @@ class NextflowDSLImpl implements ASTTransformation {
                     // apply command variables escape
                     stm.visit(new TaskCmdXformVisitor(unit))
                 }
+
+                // prepend additional param statements
+                paramStatements.addAll(block.statements)
+                block.statements = paramStatements
 
                 if (!done) {
                     log.trace "Invalid 'process' definition -- Process must terminate with string expression"
@@ -859,59 +871,44 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        /*
-         * handle *input* parameters
-         */
-        protected void convertInputMethod( Expression expression ) {
-            log.trace "convert > input expression: $expression"
+        protected void convertInputDeclaration( ExpressionStatement stmt ) {
+            // don't throw error if not method because it could be an implicit script statement
+            if( stmt.expression !instanceof DeclarationExpression )
+                return
 
-            if( expression instanceof MethodCallExpression ) {
-
-                def methodCall = expression as MethodCallExpression
-                def methodName = methodCall.getMethodAsString()
-                def nested = methodCall.objectExpression instanceof MethodCallExpression
-                log.trace "convert > input method: $methodName"
-
-                if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
-                    //this methods require a special prefix
-                    if( !nested )
-                        methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
-
-                    fixMethodCall(methodCall)
-                }
-
-                /*
-                 * Handles a GString a file name, like this:
-                 *
-                 *      input:
-                 *        file x name "$var_name" from q
-                 *
-                 */
-                else if( methodName == 'name' && isWithinMethod(expression, 'file') ) {
-                    varToConstX(methodCall.getArguments())
-                }
-
-                // invoke on the next method call
-                if( expression.objectExpression instanceof MethodCallExpression ) {
-                    convertInputMethod(methodCall.objectExpression)
-                }
+            final decl = (DeclarationExpression)stmt.expression
+            if( decl.isMultipleAssignmentDeclaration() ) {
+                syntaxError(decl, "Invalid process input statement, possible syntax error")
+                return
             }
 
-            else if( expression instanceof PropertyExpression ) {
-                // invoke on the next method call
-                if( expression.objectExpression instanceof MethodCallExpression ) {
-                    convertInputMethod(expression.objectExpression)
-                }
-            }
-
+            // NOTE: doint this in semantic analysis causes null pointer exception
+            final var = decl.variableExpression
+            stmt.expression = callThisX(
+                '_typed_in_param',
+                args(constX(var.name), classX(var.type))
+            )
         }
 
-        protected boolean isWithinMethod(MethodCallExpression method, String name) {
-            if( method.objectExpression instanceof MethodCallExpression ) {
-                return isWithinMethod(method.objectExpression as MethodCallExpression, name)
+        private static final VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
+
+        protected void convertInputMethod( MethodCallExpression methodCall ) {
+            final methodName = methodCall.getMethodAsString()
+            log.trace "convert > input method: $methodName"
+
+            final caller = methodCall.objectExpression
+            if( caller !instanceof VariableExpression || caller.getText() != 'this' ) {
+                syntaxError(methodCall, "Invalid process input statement, possible syntax error")
+                return
             }
 
-            return method.getMethodAsString() == name
+            if( methodName !in VALID_INPUT_METHODS ) {
+                syntaxError(methodCall, "Invalid process input method '${methodName}'")
+                return
+            }
+
+            methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
+            fixMethodCall(methodCall)
         }
 
         /**
@@ -944,34 +941,56 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        protected void convertOutputMethod( Expression expression ) {
-            log.trace "convert > output expression: $expression"
+        protected List<Statement> convertOutputDeclaration( ExpressionStatement stmt ) {
+            // don't throw error if not method because it could be an implicit script statement
+            if( stmt.expression !instanceof DeclarationExpression )
+                return
 
-            if( !(expression instanceof MethodCallExpression) ) {
+            final decl = (DeclarationExpression)stmt.expression
+            log.trace "convert > output declaration: $decl"
+
+            if( decl.isMultipleAssignmentDeclaration() ) {
+                syntaxError(decl, "Invalid process output statement, possible syntax error")
                 return
             }
 
-            def methodCall = expression as MethodCallExpression
-            def methodName = methodCall.getMethodAsString()
-            def nested = methodCall.objectExpression instanceof MethodCallExpression
+            final var = decl.variableExpression
+            final rhs = decl.rightExpression ?: var
+            stmt.expression = callThisX(
+                '_typed_out_param',
+                new ArgumentListExpression(
+                    constX(var.name),
+                    classX(var.type),
+                    closureX(new ExpressionStatement(rhs))
+                )
+            )
+
+            // infer unstaging directives from AST
+            final visitor = new ProcessOutputVisitor(unit)
+            rhs.visit(visitor)
+            return visitor.statements
+        }
+
+        private static final VALID_OUTPUT_METHODS = ['val','env','eval','file','path','stdout','tuple']
+
+        protected void convertOutputMethod( MethodCallExpression methodCall ) {
+            final methodName = methodCall.getMethodAsString()
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','eval','file','set','stdout','path','tuple'] && !nested ) {
-                // prefix the method name with the string '_out_'
-                methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
-                fixMethodCall(methodCall)
-                fixOutEmitAndTopicOptions(methodCall)
+            final caller = methodCall.objectExpression
+            if( caller !instanceof VariableExpression || caller.getText() != 'this' ) {
+                syntaxError(methodCall, "Invalid process output statement, possible syntax error")
+                return
             }
 
-            else if( methodName in ['into','mode'] ) {
-                fixMethodCall(methodCall)
+            if( methodName !in VALID_OUTPUT_METHODS ) {
+                syntaxError(methodCall, "Invalid process output method '${methodName}'")
+                return
             }
 
-            // continue to traverse
-            if( methodCall.objectExpression instanceof MethodCallExpression ) {
-                convertOutputMethod(methodCall.objectExpression)
-            }
-
+            methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
+            fixMethodCall(methodCall)
+            fixOutEmitAndTopicOptions(methodCall)
         }
 
         private boolean withinTupleMethod

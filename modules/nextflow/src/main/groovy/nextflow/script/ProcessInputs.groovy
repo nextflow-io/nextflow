@@ -55,8 +55,8 @@ class ProcessInputs implements List<ProcessInput>, Cloneable {
      */
     Object stdin
 
-    void addParam(String name) {
-        add(new ProcessInput(name))
+    void addParam(String name, Class type=null) {
+        add(new ProcessInput(name, type))
     }
 
     void addVariable(String name, Object value) {

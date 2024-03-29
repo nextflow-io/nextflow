@@ -54,6 +54,49 @@ class ProcessDsl extends ProcessBuilder {
         super(ownerScript, processName)
     }
 
+    /// TYPED INPUTS / OUTPUTS
+
+    void env(String name, Object source) {
+        inputs.addEnv(name, source)
+    }
+
+    void stageAs(Object source) {
+        inputs.addFile(new ProcessFileInput(source, null, true, [:]))
+    }
+
+    void stageAs(String stageAs, Object source) {
+        inputs.addFile(new ProcessFileInput(source, null, true, [stageAs: stageAs]))
+    }
+
+    void stdin(Object source) {
+        inputs.stdin = source
+    }
+
+    void _typed_in_param(String name, Class type) {
+        inputs.addParam(name, type)
+    }
+
+    void _typed_out_env(String name) {
+        outputs.addEnv(name)
+    }
+
+    void _typed_out_eval(String name, CharSequence cmd) {
+        outputs.addEval(name, cmd)
+    }
+
+    void _typed_out_path(Map opts=[:], String key, Object target) {
+        outputs.addFile(key, new ProcessFileOutput(target, true, opts))
+    }
+
+    void _typed_out_param(String name, Class type, Object target) {
+        final opts = [
+            name: name,
+            optional: type != null && Optional.isAssignableFrom(type),
+            type: type
+        ]
+        outputs.addParam(target, opts)
+    }
+
     /// INPUTS
 
     void _in_each(LazyVar var) {
@@ -192,8 +235,14 @@ class ProcessDsl extends ProcessBuilder {
         if( opts.emit )
             opts.name = opts.remove('emit')
 
-        final name = outputs.addEval(cmd)
+        final name = _out_eval0(cmd)
         outputs.addParam(new LazyEvalCall(name), opts)
+    }
+
+    private String _out_eval0(CharSequence cmd) {
+        final name = "nxf_out_eval_${outputs.eval.size()}"
+        outputs.addEval(name, cmd)
+        return name
     }
 
     void _out_file(Object target) {
@@ -226,7 +275,9 @@ class ProcessDsl extends ProcessBuilder {
     }
 
     private String _out_path0(Object target, boolean pathQualifier, Map opts) {
-        outputs.addFile(new ProcessFileOutput(target, pathQualifier, opts))
+        final key = "\$file${outputs.files.size()}"
+        outputs.addFile(key, new ProcessFileOutput(target, pathQualifier, opts))
+        return key
     }
 
     void _out_stdout(Map opts=[:]) {
@@ -263,7 +314,7 @@ class ProcessDsl extends ProcessBuilder {
                 target << new LazyEnvCall(name)
             }
             else if( item instanceof TokenEvalCall ) {
-                final name = outputs.addEval(item.val)
+                final name = _out_eval0(item.val)
                 target << new LazyEvalCall(name)
             }
             else if( item instanceof TokenFileCall ) {

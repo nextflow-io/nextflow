@@ -26,6 +26,7 @@ import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
 import nextflow.ast.OpXform
+import nextflow.ast.ProcessInputPathXform
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -124,6 +125,7 @@ class ScriptParser {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(ProcessInputPathXform))
 
         if( session?.debug )
             config.debug = true

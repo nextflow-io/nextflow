@@ -51,6 +51,12 @@ class ProcessOutput implements Cloneable {
     private String name
 
     /**
+     * Optional parameter type which is used to validate
+     * task outputs
+     */
+    private Class type
+
+    /**
      * Optional channel topic which this output channel will
      * be sent to.
      */

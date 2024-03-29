@@ -39,6 +39,11 @@ class ProcessInput implements Cloneable {
     private String name
 
     /**
+     * Parameter type which is used to validate task inputs
+     */
+    private Class type
+
+    /**
      * Input channel which is created when the process is invoked
      * in a workflow.
      */
@@ -49,12 +54,17 @@ class ProcessInput implements Cloneable {
      */
     private boolean iterator
 
-    ProcessInput(String name) {
+    ProcessInput(String name, Class type) {
         this.name = name
+        this.type = type
     }
 
     String getName() {
         return name
+    }
+
+    Class getType() {
+        return type
     }
 
     void bind(Object value) {

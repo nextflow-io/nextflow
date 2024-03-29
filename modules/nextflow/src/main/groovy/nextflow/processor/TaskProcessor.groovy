@@ -1530,8 +1530,13 @@ class TaskProcessor {
         final ctx = task.context
 
         // -- add input params to task context
-        for( int i = 0; i < inputs.size(); i++ )
+        for( int i = 0; i < inputs.size(); i++ ) {
+            final expectedType = inputs[i].type
+            final actualType = values[i].class
+            if( expectedType != null && !expectedType.isAssignableFrom(actualType) )
+                log.warn "[${safeTaskName(task)}] invalid argument type at index ${i} -- expected a ${expectedType.simpleName} but got a ${actualType.simpleName}"
             ctx.put(inputs[i].getName(), values[i])
+        }
 
         // -- resolve local variables
         for( def entry : inputs.getVariables() )
