@@ -890,7 +890,7 @@ class NextflowDSLImpl implements ASTTransformation {
             )
         }
 
-        private static final VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
+        private static final List<String> VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
 
         protected void convertInputMethod( MethodCallExpression methodCall ) {
             final methodName = methodCall.getMethodAsString()
@@ -971,7 +971,7 @@ class NextflowDSLImpl implements ASTTransformation {
             return visitor.statements
         }
 
-        private static final VALID_OUTPUT_METHODS = ['val','env','eval','file','path','stdout','tuple']
+        private static final List<String> VALID_OUTPUT_METHODS = ['val','env','eval','file','path','stdout','tuple']
 
         protected void convertOutputMethod( MethodCallExpression methodCall ) {
             final methodName = methodCall.getMethodAsString()
