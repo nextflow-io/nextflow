@@ -28,10 +28,10 @@
  */
 
 /**
- * Grammar specification for the Nextflow scripting language.
+ * Grammar specification for the Nextflow configuration language.
  *
  * Based on the official grammar for Groovy:
- * https://github.com/apache/groovy/blob/GROOVY_3_0_X/src/antlr/GroovyLexer.g4
+ * https://github.com/apache/groovy/blob/GROOVY_4_0_X/src/antlr/GroovyLexer.g4
  */
 lexer grammar ConfigLexer;
 
@@ -225,9 +225,11 @@ fragment SlashyStringCharacter
 
 // character in the dollar slashy string. e.g. $/a/$
 // fragment DollarSlashyStringCharacter
-//     :   DollarSlashEscape | DollarDollarEscape
+//     :   DollarDollarEscape
+//     |   DollarSlashDollarEscape { _input.LA(-4) != '$' }?
+//     |   DollarSlashEscape { _input.LA(1) != '$' }?
 //     |   Slash { _input.LA(1) != '$' }?
-//     |   Dollar /* { !isFollowedByJavaLetterInGString(_input) }? */
+//     |   Dollar { !isFollowedByJavaLetterInGString(_input) }?
 //     |   ~[/$\u0000]
 //     ;
 
@@ -263,6 +265,7 @@ fragment
 BOOLEAN       : 'boolean';
 
 // BREAK         : 'break';
+// YIELD         : 'yield';
 
 fragment
 BYTE          : 'byte';
@@ -308,11 +311,15 @@ LONG          : 'long';
 
 // NATIVE        : 'native';
 NEW           : 'new';
+// NON_SEALED    : 'non-sealed';
 // PACKAGE       : 'package';
+// PERMITS       : 'permits';
 // PRIVATE       : 'private';
 // PROTECTED     : 'protected';
 // PUBLIC        : 'public';
+// RECORD        : 'record';
 RETURN        : 'return';
+// SEALED        : 'sealed';
 
 fragment
 SHORT         : 'short';
@@ -343,10 +350,11 @@ IntegerLiteral
         |   HexIntegerLiteral
         |   OctalIntegerLiteral
         |   BinaryIntegerLiteral
-        ) (Underscore /* { require(errorIgnored, "Number ending with underscores is invalid", -1, true); } */)?
+        )
+        // (Underscore { require(errorIgnored, "Number ending with underscores is invalid", -1, true); })?
 
     // !!! Error Alternative !!!
-    |   Zero ([0-9] /* { invalidDigitCount++; } */)+ /* { require(errorIgnored, "Invalid octal number", -(invalidDigitCount + 1), true); } */ IntegerTypeSuffix?
+    // |   Zero ([0-9] { invalidDigitCount++; })+ { require(errorIgnored, "Invalid octal number", -(invalidDigitCount + 1), true); } IntegerTypeSuffix?
     ;
 
 fragment
@@ -487,7 +495,8 @@ BinaryDigitOrUnderscore
 FloatingPointLiteral
     :   (   DecimalFloatingPointLiteral
         |   HexadecimalFloatingPointLiteral
-        ) (Underscore /* { require(errorIgnored, "Number ending with underscores is invalid", -1, true); } */)?
+        )
+        // (Underscore { require(errorIgnored, "Number ending with underscores is invalid", -1, true); })?
     ;
 
 fragment
@@ -643,25 +652,33 @@ TsqStringQuotationMark
     :   '\'\'\''
     ;
 
-fragment
-DollarSlashyGStringQuotationMarkBegin
-    :   '$/'
-    ;
+// fragment
+// DollarSlashyGStringQuotationMarkBegin
+//     :   '$/'
+//     ;
 
-fragment
-DollarSlashyGStringQuotationMarkEnd
-    :   '/$'
-    ;
+// fragment
+// DollarSlashyGStringQuotationMarkEnd
+//     :   '/$'
+//     ;
 
-fragment
-DollarSlashEscape
-    :   '$/'
-    ;
+// escaped forward slash
+// fragment
+// DollarSlashEscape
+//     :   '$/'
+//     ;
 
-fragment
-DollarDollarEscape
-    :   '$$'
-    ;
+// escaped dollar sign
+// fragment
+// DollarDollarEscape
+//     :   '$$'
+//     ;
+
+// escaped dollar slashy string delimiter
+// fragment
+// DollarSlashDollarEscape
+//     :   '$/$'
+//     ;
 
 
 //
@@ -674,21 +691,24 @@ NullLiteral
 //
 // Groovy Operators
 //
-RANGE_INCLUSIVE     : '..';
-RANGE_EXCLUSIVE     : '..<';
-SPREAD_DOT          : '*.';
-SAFE_DOT            : '?.';
-// SAFE_CHAIN_DOT      : '??.';
-ELVIS               : '?:';
-// METHOD_POINTER      : '.&';
-// METHOD_REFERENCE    : '::';
-REGEX_FIND          : '=~';
-REGEX_MATCH         : '==~';
-POWER               : '**';
-SPACESHIP           : '<=>';
-IDENTICAL           : '===';
-NOT_IDENTICAL       : '!==';
-ARROW               : '->';
+RANGE_INCLUSIVE         : '..';
+// RANGE_EXCLUSIVE_LEFT    : '<..';
+RANGE_EXCLUSIVE_RIGHT   : '..<';
+// RANGE_EXCLUSIVE_FULL    : '<..<';
+SPREAD_DOT              : '*.';
+SAFE_DOT                : '?.';
+// SAFE_INDEX              : '?[' { this.enterParen();     } -> pushMode(DEFAULT_MODE);
+// SAFE_CHAIN_DOT          : '??.';
+ELVIS                   : '?:';
+// METHOD_POINTER          : '.&';
+// METHOD_REFERENCE        : '::';
+REGEX_FIND              : '=~';
+REGEX_MATCH             : '==~';
+POWER                   : '**';
+SPACESHIP               : '<=>';
+// IDENTICAL               : '===';
+// NOT_IDENTICAL           : '!==';
+ARROW                   : '->';
 
 // !internalPromise will be parsed as !in ternalPromise, so semantic predicates are necessary
 // NOT_INSTANCEOF      : '!instanceof' { isFollowedBy(_input, ' ', '\t', '\r', '\n') }?;
@@ -802,8 +822,13 @@ JavaLetterOrDigitInGString
     :   JavaLetterOrDigit { _input.LA(-1) != '$' }?
     ;
 
+// fragment
+// ShCommand
+//     :   ~[\r\n\uFFFF]*
+//     ;
+
 // Additional symbols not defined in the lexical specification
-AT : '@';
+// AT : '@';
 ELLIPSIS : '...';
 
 // Whitespace, line escape and comments
@@ -824,7 +849,13 @@ SL_COMMENT
     :   '//' ~[\r\n\uFFFF]* /* { this.ignoreTokenInsideParens(); } */             -> type(NL)
     ;
 
+// Script-header comments.
+// The very first characters of the file may be "#!".  If so, ignore the first line.
+// SH_COMMENT
+//     :   '#!' { require(errorIgnored || 0 == this.tokenIndex, "Shebang comment should appear at the first line", -2, true); } ShCommand (LineTerminator '#!' ShCommand)* -> skip
+//     ;
+
 // Unexpected characters will be handled by groovy parser later.
 // UNEXPECTED_CHAR
-//     :   . /* { require(errorIgnored, "Unexpected character: '" + getText().replace("'", "\\'") + "'", -1, false); } */
+//     :   . { require(errorIgnored, "Unexpected character: '" + getText().replace("'", "\\'") + "'", -1, false); }
 //     ;

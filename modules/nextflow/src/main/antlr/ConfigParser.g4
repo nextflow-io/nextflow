@@ -217,7 +217,7 @@ expression
         |   dgOp=GT GT
         )
         |(  riOp=RANGE_INCLUSIVE
-        |   reOp=RANGE_EXCLUSIVE
+        |   reOp=RANGE_EXCLUSIVE_RIGHT
         )) nls
         right=expression                                                                    #shiftExprAlt
 
@@ -227,9 +227,7 @@ expression
 
     // equality/inequality (==/!=) (level 8)
     |   left=expression nls
-        op=(IDENTICAL
-        |   NOT_IDENTICAL
-        |   EQUAL
+        op=(EQUAL
         |   NOTEQUAL
         |   SPACESHIP
         ) nls
@@ -287,7 +285,7 @@ expression
         |   POWER_ASSIGN
         |   ELVIS_ASSIGN
         ) nls
-        enhancedStatementExpression                                                         #assignmentExprAlt
+        right=enhancedStatementExpression                                                   #assignmentExprAlt
     ;
 
 castParExpression
@@ -340,7 +338,7 @@ pathElement
         |   SPREAD_DOT          // spread operator:         x*.y === x?.collect { it.y }
         |   SAFE_DOT            // optional-null operator:  x?.y === (x!=null) ? x.y : null
         )
-        nls AT?
+        nls
         (   keywords
         |   identifier
         |   stringLiteral
@@ -380,7 +378,7 @@ gstring
 gstringValue
     :   LBRACE expression RBRACE
     // |   closure
-    // TODO: gstring with multiple path values doesn't work, likely missing semantic predicates
+    // TODO: gstring with multiple path values doesn't work, likely missing rollback behavior
     // |   gstringPath
     ;
 
@@ -461,7 +459,7 @@ list
     ;
 
 expressionList
-    :   expressionListElement (COMMA expressionListElement)*
+    :   expressionListElement (COMMA nls expressionListElement)*
     ;
 
 expressionListElement

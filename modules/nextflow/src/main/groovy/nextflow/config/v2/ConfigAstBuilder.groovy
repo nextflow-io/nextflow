@@ -90,12 +90,12 @@ class ConfigAstBuilder {
     private ConfigParser parser
 
     ConfigAstBuilder(SourceUnit sourceUnit) {
-        sourceUnit = sourceUnit
-        moduleNode = new ModuleNode(sourceUnit)
+        this.sourceUnit = sourceUnit
+        this.moduleNode = new ModuleNode(sourceUnit)
 
         final charStream = createCharStream(sourceUnit)
-        lexer = new ConfigLexer(charStream)
-        parser = new ConfigParser(new CommonTokenStream(lexer))
+        this.lexer = new ConfigLexer(charStream)
+        this.parser = new ConfigParser(new CommonTokenStream(lexer))
         // parser.setErrorHandler(new DescriptiveErrorStrategy(charStream))
     }
 
@@ -284,13 +284,16 @@ class ConfigAstBuilder {
     }
 
     private ReturnStatement returnStatement(ExpressionContext ctx) {
-        ctx ? new ReturnStatement(expression(ctx)) : null
+        ctx
+            ? new ReturnStatement(expression(ctx))
+            : ReturnStatement.RETURN_NULL_OR_VOID
     }
 
     private AssertStatement assertStatement(AssertStatementContext ctx) {
         final condition = new BooleanExpression(expression(ctx.condition))
-        final message = ctx.message ? expression(ctx.message) : null
-        new AssertStatement(condition, message)
+        ctx.message
+            ? new AssertStatement(condition, expression(ctx.message))
+            : new AssertStatement(condition)
     }
 
     private Expression variableDeclaration(VariableDeclarationContext ctx) {
@@ -340,7 +343,7 @@ class ConfigAstBuilder {
             return binary(ctx.left, ctx.op, ctx.right)
 
         if( ctx instanceof AssignmentExprAltContext ) {
-            final right = enhancedStatementExpression(ctx.enhancedStatementExpression())
+            final right = enhancedStatementExpression(ctx.right)
             return binary(ctx.left, ctx.op, right)
         }
 
@@ -483,7 +486,7 @@ class ConfigAstBuilder {
 
     private GStringExpression gstring(GstringContext ctx) {
         final strings = gstringParts(ctx)
-        final values = ctx.gstringValue().collect( ctx1 -> expression(ctx1.expression()) )
+        final values = ctx.gstringValue().collect( this.&gstringValue )
         new GStringExpression(unquote(ctx.text), strings, values)
     }
 
@@ -500,6 +503,10 @@ class ConfigAstBuilder {
         strings.add(begin.startsWith('"""') ? end[0..<-3] : end[0..<-1])
 
         return strings.collect( str -> constX(str) )
+    }
+
+    private Expression gstringValue(GstringValueContext ctx) {
+        expression(ctx.expression())
     }
 
     private LambdaExpression lambda(LambdaExpressionContext ctx) {
@@ -668,9 +675,7 @@ class ConfigAstBuilder {
                 ctx.identifier() ? ctx.identifier().text :
                 /* ctx.stringLiteral() */ unquote(ctx.stringLiteral().text)
             final safe = ctx.SAFE_DOT() != null || ctx.SPREAD_DOT() != null
-            final result = ctx.AT()
-                ? new AttributeExpression(expression, constX(prop), safe)
-                : new PropertyExpression(expression, constX(prop), safe)
+            final result = new PropertyExpression(expression, constX(prop), safe)
             if( ctx.SPREAD_DOT() )
                 result.setSpreadSafe(true)
             return result
@@ -684,7 +689,7 @@ class ConfigAstBuilder {
 
         if( ctx instanceof ListElementPathExprAltContext ) {
             final op = new Token(Types.LEFT_SQUARE_BRACKET, '[', -1, -1)
-            final elements = ctx.expressionList().collect( this.&expression )
+            final elements = ctx.expressionList().expressionListElement().collect( this.&listElement )
             final arg = elements.size() > 1
                 ? new ListExpression(elements)
                 : elements.first()
