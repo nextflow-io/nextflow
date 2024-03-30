@@ -483,13 +483,21 @@ process bar {
 }
 ```
 
-See also: the `topic` option for {ref}`process outputs <process-additional-options>`.
-
-Additionally, the `topic` operator can be used to send any channel to a topic:
+Additionally, the `topic:` section of a workflow definition can be used to send channels defined in a workflow to a topic:
 
 ```groovy
-ch_foo | topic('my_topic')
-ch_bar | topic('my_topic')
+workflow foobar {
+    main:
+    foo()
+    bar()
+
+    topic:
+    foo.out >> 'my_topic'
+    bar.out >> 'my_topic'
+
+    emit:
+    bar.out
+}
 ```
 
 Finally, the `Channel.topic()` factory can be used to consume the resulting channel for a given topic name, which can be used like any other channel:
@@ -503,20 +511,10 @@ The same topic can be consumed using `Channel.topic()` any number of times, simi
 This approach is a convenient way to collect related items from many different sources without all of the logic that is required to connect them, e.g. using the `mix` operator.
 
 :::{warning}
-Avoid creating a circular dependency within a topic, as it will cause the pipeline to run forever. For example:
-
-```groovy
-Channel.topic('circular')
-  | /* ... */
-  | topic('circular')
-```
+Avoid creating a circular dependency within a topic (e.g. a process that consumes a channel topic and sends outputs to that same topic), as it will cause the pipeline to run forever.
 :::
 
-:::{warning}
-Any process that consumes a channel topic should not send any outputs to that topic, or else the pipeline will hang forever.
-:::
-
-See also: {ref}`process-additional-options` for process outputs.
+See also: {ref}`process-additional-options` for process outputs and the {ref}`workflow topic section <workflow-topics>`.
 
 (channel-value)=
 

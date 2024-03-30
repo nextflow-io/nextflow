@@ -17,18 +17,18 @@
 package nextflow.script
 
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Channel
-import nextflow.Global
-import nextflow.Session
+import nextflow.NF
 import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.IntoTopicOp
 import nextflow.extension.PublishOp
 /**
  * Models a script workflow component
@@ -65,7 +65,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         this.name = name
         // invoke the body resolving in/out params
         final copy = (Closure<BodyDef>)rawBody.clone()
-        final resolver = new WorkflowParamsResolver()
+        final resolver = new WorkflowParamsDsl()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(resolver)
         this.body = copy.call()
@@ -211,17 +211,16 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         collectInputs(binding, args)
         // invoke the workflow execution
         final closure = body.closure
-        closure.delegate = binding
+        closure.setDelegate(new WorkflowDsl(binding))
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         closure.call()
         // collect the workflow outputs
         output = collectOutputs(declaredOutputs)
         // publish the workflow outputs
         if( publisher ) {
-            final dsl = new WorkflowPublishDsl(binding)
             final cl = (Closure)publisher.clone()
+            cl.setDelegate(new WorkflowPublishDsl(binding))
             cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-            cl.setDelegate(dsl)
             cl.call()
         }
         return output
@@ -230,11 +229,11 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 }
 
 /**
- * Hold workflow parameters
+ * Implements the DSL for defining workflow takes and emits
  */
 @Slf4j
 @CompileStatic
-class WorkflowParamsResolver {
+class WorkflowParamsDsl {
 
     static final private String TAKE_PREFIX = '_take_'
     static final private String EMIT_PREFIX = '_emit_'
@@ -254,25 +253,62 @@ class WorkflowParamsResolver {
         else
             throw new MissingMethodException(name, WorkflowDef, args)
     }
+}
 
-    private Map argsToMap(Object args) {
-        if( args && args.getClass().isArray() ) {
-            if( ((Object[])args)[0] instanceof Map ) {
-                def map = (Map)((Object[])args)[0]
-                return new HashMap(map)
-            }
-        }
-        Collections.emptyMap()
+/**
+ * Implements the DSL for executing the workflow
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class WorkflowDsl {
+
+    private Binding binding
+
+    WorkflowDsl(Binding binding) {
+        this.binding = binding
     }
 
-    private Map argToPublishOpts(Object args) {
-        final opts = argsToMap(args)
-        if( opts.containsKey('saveAs')) {
-            log.warn "Workflow publish does not support `saveAs` option"
-            opts.remove('saveAs')
+    @Override
+    Object getProperty(String name) {
+        try {
+            return binding.getProperty(name)
         }
-        return opts
+        catch( MissingPropertyException e ){
+            return super.getProperty(name)
+        }
     }
+
+    @Override
+    Object invokeMethod(String name, Object args) {
+        if( name == '_into_topic' ) {
+            final args0 = args as Object[]
+            if( args0[0] instanceof DataflowWriteChannel )
+                _into_topic(args0[0] as DataflowWriteChannel, args0[1] as String)
+            else if( args0[0] instanceof ChannelOut )
+                _into_topic(args0[0] as ChannelOut, args0[1] as String)
+            else
+                throw new IllegalArgumentException("Workflow topic source should be a channel")
+        }
+        else
+            binding.invokeMethod(name, args)
+    }
+
+    void _into_topic(DataflowWriteChannel source, String name) {
+        if( !NF.topicChannelEnabled )
+            throw new ScriptRuntimeException("Workflow `topic:` section requires the `nextflow.preview.topic` feature flag")
+        new IntoTopicOp(CH.getReadChannel(source), name).apply()
+    }
+
+    void _into_topic(ChannelOut out, String name) {
+        if( !NF.topicChannelEnabled )
+            throw new ScriptRuntimeException("Workflow `topic:` section requires the `nextflow.preview.topic` feature flag")
+        if( out.size() != 1 )
+            throw new IllegalArgumentException("Cannot send a multi-channel output into a topic")
+        _into_topic(out[0], name)
+    }
+
 }
 
 /**
@@ -286,18 +322,17 @@ class WorkflowPublishDsl {
     private static final List<String> PUBLISH_OPTIONS = List.of(
         'contentType',
         'enabled',
-        'failOnError',
+        'ignoreErrors',
         'mode',
         'overwrite',
         'pattern',
-        'saveAs',
         'storageClass',
         'tags'
     )
 
     private Binding binding
 
-    private Path directory = (Global.session as Session).outputDir
+    private Path directory = Paths.get('.').complete()
 
     private Map defaults = [:]
 
@@ -362,31 +397,30 @@ class WorkflowPublishDsl {
             cl.call()
         }
 
-        void select(Map opts=[:], DataflowWriteChannel source) {
+        void from(Map opts=[:], DataflowWriteChannel source) {
             validatePublishOptions(opts)
+            if( opts.ignoreErrors )
+                opts.failOnError = !opts.remove('ignoreErrors')
             new PublishOp(CH.getReadChannel(source), defaults + opts + [path: path]).apply()
         }
 
-        void select(Map opts=[:], ChannelOut out) {
+        void from(Map opts=[:], ChannelOut out) {
             if( out.size() != 1 )
                 throw new IllegalArgumentException("Cannot publish a multi-channel output")
-            select(opts, out[0])
+            from(opts, out[0])
         }
 
-        void topic(Map opts=[:], String name) {
-            select(opts, Channel.topic(name))
+        void from(Map opts=[:], String name) {
+            if( !NF.topicChannelEnabled ) throw new ScriptRuntimeException("Topic selector in workflow output definition requires the `nextflow.preview.topic` feature flag")
+            from(opts, CH.topic(name))
         }
 
         private void validatePublishOptions(Map opts) {
-            for( final name : opts.keySet() ) {
-                if( name !in PUBLISH_OPTIONS ) {
-                    final msg = name == 'path'
-                        ? "Publish option 'path' is not allowed in the workflow output definition, use path definitions instead"
-                        : "Unrecognized publish option '${name}' in the workflow output definition".toString()
-                    throw new IllegalArgumentException(msg)
-                }
-            }
+            for( final name : opts.keySet() )
+                if( name !in PUBLISH_OPTIONS )
+                    throw new IllegalArgumentException("Unrecognized publish option '${name}' in the workflow output definition")
         }
 
     }
+
 }

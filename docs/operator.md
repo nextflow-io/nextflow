@@ -1593,31 +1593,6 @@ collect(flat: false, sort: true).ifEmpty([])
 
 See also: [collect](#collect)
 
-(operator-topic)=
-
-## topic
-
-:::{versionadded} 24.04.0
-:::
-
-:::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
-:::
-
-*Returns: the source channel*
-
-The `topic` operator sends each value from a source channel to a given {ref}`channel topic <channel-topic>`.
-
-For example:
-
-```{literalinclude} snippets/topic.nf
-:language: groovy
-```
-
-```{literalinclude} snippets/topic.out
-:language: console
-```
-
 ## transpose
 
 *Returns: queue channel*

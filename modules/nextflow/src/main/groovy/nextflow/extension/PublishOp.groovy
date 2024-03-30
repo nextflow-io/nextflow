@@ -40,6 +40,8 @@ class PublishOp {
 
     private Path sourceDir
 
+    private volatile boolean complete
+
     private Session getSession() { Global.session as Session }
 
     PublishOp(DataflowReadChannel source, Map opts) {
@@ -48,20 +50,28 @@ class PublishOp {
         this.publisher = PublishDir.create(this.opts)
     }
 
+    protected boolean getComplete() { complete }
+
     PublishOp apply() {
         final events = new HashMap(2)
         events.onNext = this.&publish0
+        events.onComplete = this.&done0
         DataflowHelper.subscribeImpl(source, events)
         return this
     }
 
     protected void publish0(entry) {
-        log.debug "Publish operator got: $entry"
+        log.trace "Publish operator got: $entry"
         sourceDir = null
         // use a set to avoid duplicates
         final result = new HashSet(10)
         collectFiles(entry, result)
         publisher.apply(result, sourceDir)
+    }
+
+    protected void done0(nope) {
+        log.trace "Publish operator complete"
+        this.complete = true
     }
 
     protected void collectFiles(entry, Collection<Path> result) {

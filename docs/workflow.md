@@ -51,7 +51,7 @@ Implicit workflow definitions are ignored when a script is included as a module.
 
 ## Named workflows
 
-A named workflow is a "subworkflow" that can be invoked from other workflows. For example:
+A named workflow is a workflow that can be invoked from other workflows. For example:
 
 ```groovy
 workflow my_pipeline {
@@ -82,7 +82,7 @@ workflow {
 ```
 
 :::{tip}
-The use of global variables and params in subworkflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the implicit workflow.
+The use of global variables and params in named workflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the implicit workflow.
 :::
 
 ## Workflow inputs (`take`)
@@ -146,6 +146,35 @@ workflow my_pipeline {
 ```
 
 The result of the above workflow can be accessed using `my_pipeline.out.my_data`.
+
+(workflow-topics)=
+
+## Workflow topics (`topic`)
+
+:::{versionadded} 24.04.0
+:::
+
+:::{note}
+This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+:::
+
+The `topic` section can be used to send channels defined in a workflow, including process and sub-workflow outputs, into a topic. For example:
+
+```groovy
+workflow my_pipeline {
+    main:
+    foo(data)
+    bar(foo.out)
+
+    topic:
+    foo.out >> 'foo'
+
+    emit:
+    bar.out
+}
+```
+
+In the above example, the channel `foo.out` (assumed to be a single channel) is sent to topic `foo`, without being emitted as a workflow output.
 
 (workflow-process-invocation)=
 
@@ -278,7 +307,7 @@ workflow {
 }
 ```
 
-## Invoking subworkflows
+## Invoking workflows
 
 Named workflows can be invoked and composed just like any other process or function.
 
@@ -361,11 +390,9 @@ output {
 
 It is optional, and it defaults to the launch directory (`workflow.launchDir`).
 
-The output directory can also be defined using the `-output-dir` {ref}`command line option <cli-run>` or the `outputDir` {ref}`config option <config-miscellaneous>`.
-
 ### Path definitions
 
-Path definitions are used to definte the directory structure of the published outputs. A path definition is a path name followed by a block which defines the outputs to be published within that path. Like directories, path definitions can be nested.
+Path definitions are used to define the directory structure of the published outputs. A path definition is a path name followed by a block which defines the outputs to be published within that path. Like directories, path definitions can be nested.
 
 The path name defines a subdirectory within the output directory, or the parent path if the path definition is nested.
 
@@ -425,22 +452,22 @@ output {
 }
 ```
 
-### Channel selectors
+### Selecting channels
 
-The `select` statement is used to select channels to publish:
+The `from` statement is used to select channels to publish:
 
 ```groovy
 output {
     'foo' {
-        select foo.out
+        from foo.out
     }
 }
 ```
 
-Any channel defined in the implicit workflow can be referenced in a channel selector, including process and subworkflow outputs.
+Any channel defined in the implicit workflow can be selected, including process and workflow outputs.
 
 :::{note}
-A process/subworkflow output (e.g. `foo.out`) can only be selected directly if it contains a single output channel. Multi-channel outputs must be selected by index or name, e.g. `foo.out[0]` or `foo.out.samples`.
+A process/workflow output (e.g. `foo.out`) can only be selected directly if it contains a single output channel. Multi-channel outputs must be selected by index or name, e.g. `foo.out[0]` or `foo.out.samples`.
 :::
 
 By default, all files emitted by the channel will be published into the specified directory. If a list value emitted by the channel contains any files, including files within nested lists, they will also be published. For example:
@@ -455,47 +482,45 @@ workflow {
 output {
     'samples' {
         // sample1.txt will be published
-        select ch_samples
+        from ch_samples
     }
 }
 ```
 
 The publishing behavior can be customized further by using [publish options](#publish-options). See that section for more details.
 
-### Topic selectors
+### Selecting topics
 
 :::{note}
 This feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-The `topic` statement can be used to select a channel topic for publishing:
+The `from` statement can also be used to select a topic by name:
 
 ```groovy
 output {
     'samples' {
-        topic 'samples'
+        from 'samples'
 
         // equivalent to:
-        select Channel.topic('samples')
+        from Channel.topic('samples')
     }
 }
 ```
 
-Topic selectors are a useful way to select channels which are deeply nested within subworkflows, without needing to propagate them to the top-level workflow. You can use the {ref}`operator-topic` operator or the `topic` option for {ref}`process outputs <process-additional-options>` to send a channel to a given topic.
-
-Like a channel selector, a topic selector publishes every file that it receives by default, and it can specify [publish options](#publish-options).
+Topics are a useful way to publish channels which are deeply nested within workflows, without needing to propagate them to the top-level workflow. You can use the `topic:` workflow section, or the `topic` option for {ref}`process outputs <process-additional-options>`, to send a channel to a given topic.
 
 ### Publish options
 
-The publishing behavior can be configured using the same options available in the {ref}`process-publishdir` directive.
+The publishing behavior can be configured using a set of options similar to those for the {ref}`process-publishdir` directive.
 
 There are several ways to define publish options:
 
 - The `directory` statement
 
-- The `defaults` statement, which defines publish options for a path defintion
+- The `defaults` statement, which defines publish options for a path definition
 
-- Channel and topic selectors
+- The `from` statement, which defines publish options for an individual selector
 
 Publish options are resolved in a cascading manner, in which more specific settings take priority.
 
@@ -506,12 +531,12 @@ output {
     directory 'results', mode: 'copy'
 
     'samples' {
-        select ch_samples, pattern: '*.txt', mode: 'link'
+        from ch_samples, pattern: '*.txt', mode: 'link'
 
         'md5' {
             defaults mode: 'link'
             // ...
-            topic 'md5', mode: 'copy'
+            from 'md5', mode: 'copy'
         }
     }
 }
@@ -521,15 +546,53 @@ In this example, the following rules are applied:
 
 - All files will be copied by default
 
-- The channel selector `select ch_samples` will publish via hard link, overriding the output directory default. Additionally, only files matching the pattern `*.txt` will be published.
+- The channel selector `from ch_samples` will publish via hard link, overriding the output directory default. Additionally, only files matching the pattern `*.txt` will be published.
 
 - All files published to `samples/md5` will be hard-linked by default, overriding the output directory default.
 
-- The topic selector `topic 'md5'` will publish via copy, overriding the default from `samples/md5`.
+- The topic selector `from 'md5'` will publish via copy, overriding the default from `samples/md5`.
 
-:::{note}
-The only option from `publishDir` that is not allowed is `path`, because the publish path is defined using path definitions.
-:::
+Available options:
+
+`contentType`
+: :::{versionadded} 22.10.0
+  :::
+: *Experimental: currently only supported for S3.*
+: Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (default: `false`).
+
+`enabled`
+: Enable or disable publishing (default: `true`).
+
+`ignoreErrors`
+: When `true`, the pipeline will not fail if a file can't be published for any reason (default: `false`).
+
+`mode`
+: The file publishing method. Can be one of the following values:
+
+  - `'copy'`: Copies the output files into the publish directory.
+  - `'copyNoFollow'`: Copies the output files into the publish directory without following symlinks ie. copies the links themselves.
+  - `'link'`: Creates a hard link in the publish directory for each output file.
+  - `'move'`: Moves the output files into the publish directory. **Note**: this is only supposed to be used for a *terminal* process i.e. a process whose output is not consumed by any other downstream process.
+  - `'rellink'`: Creates a relative symbolic link in the publish directory for each output file.
+  - `'symlink'`: Creates an absolute symbolic link in the publish directory for each output file (default).
+
+`overwrite`
+: When `true` any existing file in the specified folder will be overwritten (default: `false` if the task was cached on a resumed run, `true` otherwise).
+
+`pattern`
+: Specifies a [glob][http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob] file pattern that selects which files to publish from the source channel.
+
+`storageClass`
+: :::{versionadded} 22.12.0-edge
+  :::
+: *Experimental: currently only supported for S3.*
+: Allow specifying the storage class to be used for the published file.
+
+`tags`
+: :::{versionadded} 21.12.0-edge
+  :::
+: *Experimental: currently only supported for S3.*
+: Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
 
 ## Special operators
 

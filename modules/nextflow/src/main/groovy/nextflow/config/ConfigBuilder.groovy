@@ -545,10 +545,6 @@ class ConfigBuilder {
         if( cmdRun.stubRun )
             config.stubRun = cmdRun.stubRun
 
-        // -- set the output directory
-        if( cmdRun.outputDir )
-            config.outputDir = cmdRun.outputDir
-
         // -- sets the working directory
         if( cmdRun.workDir )
             config.workDir = cmdRun.workDir

@@ -140,11 +140,6 @@ class WorkflowMetadata {
     Path launchDir
 
     /**
-     * Workflow output directory
-     */
-    Path outputDir
-
-    /**
      * Workflow working directory
      */
     Path workDir
@@ -239,7 +234,6 @@ class WorkflowMetadata {
         this.container = session.fetchContainers()
         this.commandLine = session.commandLine
         this.nextflow = NextflowMeta.instance
-        this.outputDir = session.outputDir
         this.workDir = session.workDir
         this.launchDir = Paths.get('.').complete()
         this.profile = session.profile ?: ConfigBuilder.DEFAULT_PROFILE

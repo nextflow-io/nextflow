@@ -65,21 +65,24 @@ workflow {
   my_combine( bam, bai )
   my_combine.out.view{ it.text }
 
-  foo | topic('foo')
+  foo()
+
+  topic:
+  foo.out >> 'foo'
 }
 
 output {
   directory 'results'
 
   'data' {
-    select align.out[0], mode: 'copy'
-    select align.out[1], mode: 'copy'
-    select my_combine.out
-    topic 'foo', mode: 'link'
+    from align.out[0], mode: 'copy'
+    from align.out[1], mode: 'copy'
+    from my_combine.out
+    from 'foo', mode: 'link'
   }
 
   'data/more' {
     defaults mode: 'copy'
-    select my_combine.out
+    from my_combine.out
   }
 }

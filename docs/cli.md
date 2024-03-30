@@ -1193,11 +1193,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-offline`
 : Do not check for remote project updates.
 
-`-o, -output-dir`
-: :::{versionadded} 24.04.0
-  :::
-: Directory where workflow outputs are published.
-
 `-params-file`
 : Load script parameters from a JSON/YAML file.
 

@@ -67,11 +67,6 @@ The following table lists the properties that can be accessed on the `workflow` 
 `workflow.manifest`
 : Entries of the workflow manifest.
 
-`workflow.outputDir`
-: :::{versionadded} 24.04.0
-  :::
-: Directory where workflow outputs are published.
-
 `workflow.profile`
 : Used configuration profile.
 

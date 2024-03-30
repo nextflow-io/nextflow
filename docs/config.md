@@ -1704,11 +1704,6 @@ There are additional variables that can be defined within a configuration file t
 `dumpHashes`
 : If `true`, dump task hash keys in the log file, for debugging purposes. Equivalent to the `-dump-hashes` option of the `run` command.
 
-`outputDir`
-: :::{versionadded} 24.04.0
-  :::
-: Defines the pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
-
 `resume`
 : If `true`, enable the use of previously cached task executions. Equivalent to the `-resume` option of the `run` command.
 

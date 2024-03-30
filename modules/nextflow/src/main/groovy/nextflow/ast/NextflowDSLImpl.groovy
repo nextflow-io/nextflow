@@ -82,7 +82,8 @@ class NextflowDSLImpl implements ASTTransformation {
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
-    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
+    final static private String WORKFLOW_TOPIC = 'topic'
+    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN, WORKFLOW_TOPIC]
 
     final static public String PROCESS_WHEN = 'when'
     final static public String PROCESS_STUB = 'stub'
@@ -429,6 +430,26 @@ class NextflowDSLImpl implements ASTTransformation {
             return result
         }
 
+        protected Statement normWorkflowTopic(ExpressionStatement stm) {
+            if( stm.expression !instanceof BinaryExpression ) {
+                syntaxError(stm, "Workflow malformed topic statement")
+                return stm
+            }
+
+            final binaryX = (BinaryExpression)stm.expression
+            if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
+                syntaxError(stm, "Workflow malformed topic statement")
+                return stm
+            }
+
+            if( binaryX.rightExpression !instanceof ConstantExpression ) {
+                syntaxError(stm, "Workflow malformed topic statement")
+                return stm
+            }
+
+            return stmt( callThisX('_into_topic', new ArgumentListExpression(binaryX.leftExpression, binaryX.rightExpression)) )
+        }
+
         protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
 
             final codeBlock = (BlockStatement) closure.code
@@ -466,6 +487,14 @@ class NextflowDSLImpl implements ASTTransformation {
 
                     case WORKFLOW_MAIN:
                         body.add(stm)
+                        break
+
+                    case WORKFLOW_TOPIC:
+                        if( !(stm instanceof ExpressionStatement) ) {
+                            syntaxError(stm, "Workflow malformed topic statement")
+                            break
+                        }
+                        body.add(normWorkflowTopic(stm as ExpressionStatement))
                         break
 
                     default:

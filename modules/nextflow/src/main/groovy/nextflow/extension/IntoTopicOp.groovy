@@ -29,7 +29,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.DataflowHelper
 /**
- * Implements the {@link OperatorImpl#topic} operator
+ * Operator that sends a channel to a topic
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
