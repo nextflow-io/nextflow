@@ -281,6 +281,11 @@ class WorkflowDsl {
     }
 
     @Override
+    void setProperty(String name, Object value) {
+        binding.setProperty(name, value)
+    }
+
+    @Override
     Object invokeMethod(String name, Object args) {
         if( name == '_into_topic' ) {
             final args0 = args as Object[]
