@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,24 +61,34 @@ class ContainerConfigTest extends Specification {
 
     }
 
-
-    def 'should validate oci mode' () {
+    @Unroll
+    def 'should validate oci mode and direct mode' () {
 
         when:
         def cfg = new ContainerConfig(OPTS)
         then:
-        cfg.singularityOciMode() == EXPECTED
+        cfg.isSingularityOciMode() == OCI_MODE
+        cfg.canRunOciImage() == AUTO_PULL
 
         where:
-        OPTS                                | EXPECTED
-        [:]                                 | false
-        [oci:false]                         | false
-        [oci:true]                          | false
-        [engine:'apptainer', oci:true]      | false
-        [engine:'docker', oci:true]         | false
-        [engine:'singularity']              | false
-        [engine:'singularity', oci:false]   | false
-        [engine:'singularity', oci:true]    | true
+        OPTS                                        | OCI_MODE  | AUTO_PULL
+        [:]                                         | false     | false
+        [oci:true]                                  | false     | false
+        [oci:false]                                 | false     | false
+        [ociMode:true]                              | false     | false
+        and:
+        [engine:'docker', oci:true]                 | false     | false
+        [engine:'singularity']                      | false     | false
+        [engine:'singularity', oci:false]           | false     | false
+        [engine:'singularity', ociAutoPull:false]   | false     | false
+        and:
+        [engine:'singularity', oci:true]            | true      | true
+        [engine:'singularity', ociMode:true]        | true      | true
+        [engine:'apptainer', oci:true]              | false     | false
+        [engine:'apptainer', ociMode:true]          | false     | false
+        and:
+        [engine:'singularity', ociAutoPull:true]    | false         | true
+        [engine:'apptainer', ociAutoPull:true]      | false         | true
 
     }
 
@@ -96,7 +106,9 @@ class ContainerConfigTest extends Specification {
         [engine:'podman']                               | '--rm --privileged'
         and:
         [engine: 'singularity']                         | null
-        [engine: 'singularity', oci:true]               | '-B /dev/fuse'
+        [engine: 'singularity', ociMode:true]           | '-B /dev/fuse'
+        [engine: 'singularity', ociAutoPull: true]      | null
+        [engine: 'apptainer', oci:true]                 | null
         and:
         [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
         [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -256,7 +257,7 @@ class WorkflowNotifierTest extends Specification {
         when:
         workflow.success = false
         workflow.runName = 'bar'
-        mail = notifier.createMail([to:'alpha@dot.com', from:'beta@dot.com', template: ['/some/file.txt', '/other/file.html'], binding: [one:1, two:2]])
+        mail = notifier.createMail([to:'alpha@dot.com', from:'beta@dot.com', template: ['/some/file.txt', '/other/file.html'], attributes: [one:1, two:2]])
         then:
         1 * notifier.loadMailTemplate(new File('/some/file.txt'), [one:1, two:2]) >> 'TEXT template'
         1 * notifier.loadMailTemplate(new File('/other/file.html'), [one:1, two:2]) >> 'HTML template'
@@ -266,6 +267,40 @@ class WorkflowNotifierTest extends Specification {
         mail.body == 'HTML template'
         mail.text == 'TEXT template'
 
+    }
+
+    def 'should create notification mail with custom template' () {
+        given:
+        def folder  = Files.createTempDirectory('test')
+        def template = folder.resolve('template.txt').toFile(); template.text = 'Hello world!'
+
+        and:
+        Mail mail
+        def workflow = new WorkflowMetadata()
+        def notifier = Spy(WorkflowNotifier)
+        notifier.@workflow = workflow
+
+        /*
+         * create success completion  *default* notification email
+         */
+        when:
+        workflow.success = true
+        workflow.runName = 'foo'
+        mail = notifier.createMail([to:'paolo@yo.com', from:'bot@nextflow.com', template: template])
+        then:
+        0 * notifier.loadDefaultTextTemplate()
+        0 * notifier.loadDefaultHtmlTemplate()
+        1 * notifier.loadMailTemplate(template, [:])
+        and:
+        mail.to == 'paolo@yo.com'
+        mail.from == 'bot@nextflow.com'
+        mail.subject == 'Workflow completion [foo] - SUCCEED'
+        mail.text == 'Hello world!'
+        !mail.body 
+        !mail.attachments
+
+        cleanup:
+        folder?.deleteDir()
     }
 
 

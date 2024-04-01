@@ -1417,48 +1417,4 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucket1)
     }
 
-    @Ignore // takes too long to test via CI server
-    def 'should restore from glacier' () {
-        given:
-        def TEXT = randomText(10_000)
-        def folder = Files.createTempDirectory('test')
-        def sourceFile = Files.write(folder.resolve('foo.data'), TEXT.bytes)
-        def downloadFile = folder.resolve('copy.data')
-        and:
-        def bucket1 = createBucket()
-
-        // upload a file to a remote bucket
-        when:
-        def target = s3path("s3://$bucket1/foo.data")
-        and:
-        target.setStorageClass('GLACIER')
-        def client = target.getFileSystem().getClient()
-        and:
-        FileHelper.copyPath(sourceFile, target)
-        // the file exist
-        then:
-        Files.exists(target)
-        and:
-        client
-                .getObjectMetadata(target.getBucket(), target.getKey())
-                .getStorageClass() == 'GLACIER'
-
-        when:
-        FileHelper.copyPath(target, downloadFile)
-        then:
-        thrown(AmazonS3Exception)
-
-        when:
-        client.setGlacierAutoRetrieval(true)
-        and:
-        FileHelper.copyPath(target, downloadFile)
-        then:
-        Files.exists(downloadFile)
-
-        cleanup:
-        client?.setGlacierAutoRetrieval(false)
-        folder?.delete()
-        deleteBucket(bucket1)
-    }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -788,7 +789,7 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        private static final VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
+        private static final List<String> VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
 
         protected void convertInputMethod( Expression expression ) {
             // don't throw error if not method because it could be an implicit script statement
@@ -845,7 +846,7 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        private static final VALID_OUTPUT_METHODS = ['val','env','file','path','stdout','tuple']
+        private static final List<String> VALID_OUTPUT_METHODS = ['val','env','eval','file','path','stdout','tuple']
 
         protected void convertOutputMethod( Expression expression ) {
             // don't throw error if not method because it could be an implicit script statement
@@ -1017,6 +1018,11 @@ class NextflowDSLImpl implements ASTTransformation {
                 if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStrX(methodCall.arguments)
                     return createX( TokenEnvCall, args )
+                }
+
+                if( methodCall.methodAsString == 'eval' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenEvalCall, args )
                 }
 
                 /*

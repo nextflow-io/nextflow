@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -242,6 +242,7 @@ class AssetManager {
      * @param name A project name or URL e.g. {@code cbcrg/foo} or {@code https://github.com/cbcrg/foo.git}
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
+    @PackageScope
     String resolveName( String name ) {
         assert name
 
@@ -359,11 +360,6 @@ class AssetManager {
 
     AssetManager setLocalPath(File path) {
         this.localPath = path
-        return this
-    }
-
-    AssetManager setForce( boolean value ) {
-        this.force = value
         return this
     }
 
@@ -980,11 +976,11 @@ class AssetManager {
             return
 
         List<String> filter = []
-        if( modules instanceof List ) {
-            filter.addAll(modules as List)
+        if( modules instanceof List<String> ) {
+            filter.addAll(modules)
         }
         else if( modules instanceof String ) {
-            filter.addAll( (modules as String).tokenize(', ') )
+            filter.addAll( modules.tokenize(', ') )
         }
 
         final init = git.submoduleInit()
