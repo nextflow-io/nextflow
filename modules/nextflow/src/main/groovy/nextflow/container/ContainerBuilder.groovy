@@ -74,10 +74,6 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     protected Path workDir
 
     protected boolean readOnlyInputs
-    
-    protected boolean useSquash
-
-    protected boolean writeFake
 
     @Deprecated
     protected String entryPoint

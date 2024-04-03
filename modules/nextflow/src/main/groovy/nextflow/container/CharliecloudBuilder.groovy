@@ -31,7 +31,11 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 @Slf4j
 class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
+    
+    protected boolean useSquash
 
+    protected boolean writeFake
+    
     CharliecloudBuilder(String name) {
         this.image = name
     }
