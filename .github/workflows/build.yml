@@ -77,7 +77,7 @@ jobs:
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
             # configure test env
-            if [ -v GOOGLE_SECRET ]; then
+            if [[ "$GOOGLE_SECRET" ]]; then
             echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
             export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
             fi
