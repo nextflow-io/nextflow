@@ -16,7 +16,7 @@ The following functionalities are provided via plugin components, and they make 
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
 - `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
 - `nf-google`: Support for Google Cloud.
-- `nf-tower`: Support for [Seqera Platform](https://tower.nf) (formerly Tower Cloud).
+- `nf-tower`: Support for [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 - `nf-wave`: Support for [Wave containers](https://seqera.io/wave/) service.
 
 
@@ -175,7 +175,7 @@ import nextflow.Session
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.PluginExtensionPoint
 
-class MyExtension implements PluginExtensionPoint {
+class MyExtension extends PluginExtensionPoint {
 
     @Override
     void init(Session session) {}
@@ -219,7 +219,7 @@ import nextflow.plugin.extension.Factory
 import nextflow.plugin.extension.Operator
 import nextflow.plugin.extension.PluginExtensionPoint
 
-class MyExtension implements PluginExtensionPoint {
+class MyExtension extends PluginExtensionPoint {
 
     @Override
     void init(Session session) {}
