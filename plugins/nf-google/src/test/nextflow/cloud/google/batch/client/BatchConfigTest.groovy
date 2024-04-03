@@ -26,6 +26,7 @@ import spock.lang.Specification
  */
 class BatchConfigTest extends Specification {
 
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config' () {
         given:
         def CONFIG = [google: [
