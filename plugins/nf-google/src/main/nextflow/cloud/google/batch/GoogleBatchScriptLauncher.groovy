@@ -53,14 +53,8 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     /* ONLY FOR TESTING - DO NOT USE */
     protected GoogleBatchScriptLauncher() {}
 
-    protected setConfig(BatchConfig config) {
-        this.config = config
-    }
-
-    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir, BatchConfig config) {
+    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
         super(bean)
-        this.config = config
-
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
@@ -136,7 +130,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         final result = new ArrayList(10)
         for( String it : buckets ) {
             final mountOptions = ['-o rw', '-implicit-dirs']
-            if( config.googleOpts.enableRequesterPaysBuckets )
+            if( config && config.googleOpts.enableRequesterPaysBuckets )
                 mountOptions << "--billing-project ${config.googleOpts.projectId}".toString()
 
             result.add(
@@ -170,6 +164,11 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     @Override
     protected Path targetInputFile() {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
+    }
+
+    GoogleBatchScriptLauncher withConfig(BatchConfig config) {
+        this.config = config
+        return this
     }
 
 }
