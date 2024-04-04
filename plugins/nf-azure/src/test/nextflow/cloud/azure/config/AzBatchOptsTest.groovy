@@ -84,8 +84,8 @@ class AzBatchOptsTest extends Specification {
         CopyToolInstallMode.task    | [allowPoolCreation: true, copyToolInstallMode: 'task']    | false
         CopyToolInstallMode.task    | [copyToolInstallMode: 'task']                             | false
         CopyToolInstallMode.node    | [copyToolInstallMode: 'node']                             | false
-        CopyToolInstallMode.none    | [copyToolInstallMode: 'none']                             | false
-        CopyToolInstallMode.none    | [:]                                                       | true
+        CopyToolInstallMode.off     | [copyToolInstallMode: 'off']                              | false
+        CopyToolInstallMode.off     | [:]                                                       | true
 
     }
 }

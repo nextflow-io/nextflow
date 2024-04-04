@@ -24,5 +24,5 @@ package nextflow.cloud.azure.config
 enum CopyToolInstallMode {
     node,
     task,
-    none
+    off
 }

@@ -144,7 +144,7 @@ class AzBatchOpts implements CloudTransferOptions {
         if( copyToolInstallMode )
             return copyToolInstallMode
         if( FusionHelper.isFusionEnabled((Session) Global.session) )
-            return CopyToolInstallMode.none
+            return CopyToolInstallMode.off
         canCreatePool() ? CopyToolInstallMode.node : CopyToolInstallMode.task
     }
 }
