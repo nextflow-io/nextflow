@@ -101,6 +101,11 @@ class TaskPollingMonitor implements TaskMonitor {
     private Queue<TaskHandler> runningQueue
 
     /**
+     * Bounded buffer that holds all completed {@code TaskHandler}s that are waiting to be finalized
+     */
+    private Queue<TaskHandler> finalizingQueue
+
+    /**
      * The capacity of the {@code pollingQueue} ie. the max number of tasks can be executed at
      * the same time.
      */
@@ -137,6 +142,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         this.pendingQueue = new LinkedBlockingQueue<TaskHandler>()
         this.runningQueue = new LinkedBlockingQueue<TaskHandler>()
+        this.finalizingQueue = new LinkedBlockingQueue<TaskHandler>()
     }
 
     static TaskPollingMonitor create( Session session, String name, int defQueueSize, Duration defPollInterval ) {
@@ -301,8 +307,11 @@ class TaskPollingMonitor implements TaskMonitor {
             }
         }
 
-        // launch daemon that submits tasks for execution
+        // launch thread that submits tasks for execution
         Threads.start('Task submitter', this.&submitLoop)
+
+        // launch thread that finalizes completed tasks
+        Threads.start('Task finalizer', this.&finalizeLoop)
 
         return this
     }
@@ -432,6 +441,35 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
+    /**
+     * Wait for completed tasks and finalize them
+     */
+    protected void finalizeLoop() {
+        int iteration=0
+        while( true ) {
+            final time = System.currentTimeMillis()
+            final tasks = new ArrayList(finalizingQueue)
+            log.trace "Finalizer queue size: ${tasks.size()} (iteration: ${++iteration})"
+
+            // finalize all completed tasks
+            finalizeAllTasks(tasks)
+
+            final shouldBreak
+                    =  (session.isTerminated() && finalizingQueue.size()==0 && pendingQueue.size()==0)
+                    || (session.isCancelled() && finalizingQueue.size()==0)
+                    || session.isAborted()
+            if( shouldBreak ) {
+                break
+            }
+
+            await(time)
+
+            if( session.isAborted() ) {
+                break
+            }
+        }
+    }
+
     protected void dumpRunningQueue() {
 
         try {
@@ -540,7 +578,22 @@ class TaskPollingMonitor implements TaskMonitor {
                 handleException(handler, error)
             }
         }
+    }
 
+    /**
+     * Finalize all completed tasks
+     */
+    protected void finalizeAllTasks(List<TaskHandler> queue) {
+
+        for( int i=0; i<queue.size(); i++ ) {
+            final handler = queue.get(i)
+            try {
+                finalizeTask(handler)
+            }
+            catch (Throwable error) {
+                handleException(handler, error)
+            }
+        }
     }
 
     /**
@@ -594,7 +647,6 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
-
     /**
      * Check the status of the given task
      *
@@ -627,18 +679,27 @@ class TaskPollingMonitor implements TaskMonitor {
                 handler.task.error = new ProcessSubmitTimeoutException("Task '${handler.task.lazyName()}' could not be submitted within specified 'maxAwait' time: ${handler.task.config.getMaxSubmitAwait()}")
             }
 
-            // finalize the tasks execution
-            final fault = handler.task.processor.finalizeTask(handler.task)
-
-            // notify task completion
-            session.notifyTaskComplete(handler)
-
-            // abort the execution in case of task failure
-            if (fault instanceof TaskFault) {
-                session.fault(fault, handler)
-            }
+            // enqueue the task for finalization
+            finalizingQueue << handler
         }
+    }
 
+    protected void finalizeTask( TaskHandler handler ) {
+        assert handler
+
+        // remove the task from the queue
+        finalizingQueue.remove(handler)
+
+        // finalize the task execution
+        final fault = handler.task.processor.finalizeTask(handler.task)
+
+        // notify task completion
+        session.notifyTaskComplete(handler)
+
+        // abort the execution in case of task failure
+        if( fault instanceof TaskFault ) {
+            session.fault(fault, handler)
+        }
     }
 
     /**
