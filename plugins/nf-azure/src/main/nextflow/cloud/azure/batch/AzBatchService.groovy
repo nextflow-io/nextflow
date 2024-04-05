@@ -684,32 +684,38 @@ class AzBatchService implements Closeable {
 
     protected StartTask createStartTask(AzPoolOpts opts) {
 
-        def startCmd = []
-        final resourceFiles = new ArrayList(10)
-
+        def startCmd = [] as ArrayList
+        final resourceFiles = [] as ArrayList
 
         // Get any custom start task command
-        log.debug "Adding custom start task to command: ${opts.startTask}"
         if ( opts.startTask ) {
-            log.debug "Adding custom start task to command: ${opts.startTask}"
             startCmd << opts.startTask
+            log.debug "Adding custom start task to command: ${opts.startTask}"
         }
 
 
         // If enabled, append azcopy installer to start task command
-        if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node )
+        if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
             startCmd << 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
             resourceFiles << new ResourceFile()
                 .withHttpUrl(AZCOPY_URL)
                 .withFilePath('azcopy')
             log.debug "Adding azcopy installer to start task"
+        }
 
         final startTaskCmd = "bash -c \"${startCmd.join('; ')}\""
-        log.debug "Start task command:\n$startTaskCmd"
+        log.debug "Start task final command: $startTaskCmd"
 
-        return new StartTask()
-            .withCommandLine(startTaskCmd)
-            .withResourceFiles(resourceFiles)
+
+        // If there is no start task contents we return a null to indicate no start task
+        if ( startCmd.isEmpty() && resourceFiles.isEmpty() ) {
+            return null
+        } else {
+        // else return a StartTask object with the start task command and resource files
+            return new StartTask()
+                .withCommandLine(startTaskCmd)
+                .withResourceFiles(resourceFiles)
+        }
     }
 
     protected void createPool(AzVmPoolSpec spec) {
