@@ -225,6 +225,71 @@ class AzBatchServiceTest extends Specification {
     }
 
 
+    def 'should configure default startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzPoolOpts() )
+        then:
+        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+    }
+
+    def 'should configure custom startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTask: 'echo hello-world') )
+        then:
+        configuredStartTask.commandLine == 'bash -c "echo hello-world; chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.resourceFiles == [
+            [filePath: 'azcopy', blobSource: 'https://aka.ms/downloadazcopy-v10-linux']
+        ]
+    }
+
+    def 'should configure not install AzCopy because copyToolInstallMode is off' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'off']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTask: 'echo hello-world') )
+        then:
+        configuredStartTask.commandLine == 'bash -c "echo hello-world"'
+        configuredStartTask.resourceFiles == []
+    }
+
+    def 'should configure not install AzCopy because copyToolInstallMode is task' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'task']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTask: 'echo hello-world') )
+        then:
+        configuredStartTask.commandLine == 'bash -c "echo hello-world"'
+        configuredStartTask.resourceFiles == []
+    }
+
+    def 'should create null startTask because no options are enabled' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'off']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzPoolOpts() )
+        then:
+        configuredStartTask == null
+    }
+
     def 'should check scaling formula' () {
         given:
         def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
