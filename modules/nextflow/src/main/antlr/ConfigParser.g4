@@ -194,8 +194,11 @@ expression
     // math power operator (**) (level 2)
     |   left=expression op=POWER nls right=expression                                       #powerExprAlt
 
-    // ++(prefix)/--(prefix)/+(unary)/-(unary) (level 3)
-    |   op=(INC | DEC | ADD | SUB) expression                                               #unaryAddExprAlt
+    // prefix (++/--) (level 3)
+    |   op=(INC | DEC) expression                                                           #prefixExprAlt
+
+    // unary (+/-) (level 3)
+    |   op=(ADD | SUB) expression                                                           #unaryAddExprAlt
 
     // multiplication/division/modulo (level 4)
     |   left=expression nls op=(MUL | DIV | MOD) nls right=expression                       #multDivExprAlt
@@ -294,8 +297,11 @@ castOperandExpression
     // ~(BNOT)/!(LNOT)
     |   op=(BITNOT | NOT) nls castOperandExpression         #unaryNotCastExprAlt
 
-    // ++(prefix)/--(prefix)/+(unary)/-(unary)
-    |   op=(INC | DEC | ADD | SUB) castOperandExpression    #unaryAddCastExprAlt
+    // prefix (++/--)
+    |   op=(INC | DEC) castOperandExpression                #prefixCastExprAlt
+
+    // unary (+/-)
+    |   op=(ADD | SUB) castOperandExpression                #unaryAddCastExprAlt
     ;
 
 variableNames
@@ -352,7 +358,7 @@ identifier
 // -- primitive literals
 literal
     :   IntegerLiteral          #integerLiteralAlt
-    |   FloatingPointLiteral    #floatLiteralAlt
+    |   FloatingPointLiteral    #floatingPointLiteralAlt
     |   stringLiteral           #stringLiteralAlt
     |   BooleanLiteral          #booleanLiteralAlt
     |   NullLiteral             #nullLiteralAlt
