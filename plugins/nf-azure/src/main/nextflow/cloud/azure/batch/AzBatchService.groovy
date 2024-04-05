@@ -681,18 +681,57 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    protected StartTask createStartTask() {
-        if( config.batch().getCopyToolInstallMode() != CopyToolInstallMode.node )
-            return null
+    // protected String startTaskCmd(AzPoolOpts opts) {
 
+    //     def startCmd = []
+
+    //     // If enabled, append azcopy installer to start task command
+    //     // TODO If statement here to handle if this is disabled.
+    //     if( config.batch().getCopyToolInstallMode() != CopyToolInstallMode.node )
+    //         startCmd << 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
+
+    //     // Get any custom start task command
+    //     if ( opts.startTask ) {
+    //         startCmd << opts.startTask
+    //     }
+
+    //     final startTaskCmd = "bash -c \"${startCmd.join(';')}\""
+    //     log.debug "Start task command:\n$startTaskCmd"
+
+    //     return startTaskCmd
+    // }
+
+    protected StartTask createStartTask(AzPoolOpts opts) {
+
+        def startCmd = []
         final resourceFiles = new ArrayList(10)
-        resourceFiles << new ResourceFile()
-            .withHttpUrl(AZCOPY_URL)
-            .withFilePath('azcopy')
 
-        def poolStartTask = new StartTask()
-                .withCommandLine(startTaskCmd(spec.opts))
-                .withResourceFiles(resourceFiles)
+
+        // Get any custom start task command
+        log.debug "Adding custom start task to command: ${opts.startTask}"
+        if ( opts.startTask ) {
+            log.debug "Adding custom start task to command: ${opts.startTask}"
+            startCmd << opts.startTask
+        }
+
+
+        // If enabled, append azcopy installer to start task command
+        if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node )
+            startCmd << 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
+            resourceFiles << new ResourceFile()
+                .withHttpUrl(AZCOPY_URL)
+                .withFilePath('azcopy')
+            log.debug "Adding azcopy installer to start task"
+
+        final startTaskCmd = "bash -c \"${startCmd.join('; ')}\""
+        log.debug "Start task command:\n$startTaskCmd"
+
+        return new StartTask()
+            .withCommandLine(startTaskCmd)
+            .withResourceFiles(resourceFiles)
+    }
+
+    protected void createPool(AzVmPoolSpec spec) {
 
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
@@ -703,7 +742,7 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
 
-        final startTask = createStartTask()
+        final startTask = createStartTask(spec.opts)
         if( startTask ) {
             poolParams .withStartTask(startTask)
         }
@@ -769,13 +808,6 @@ class AzBatchService implements Closeable {
         }
 
         apply(() -> client.poolOperations().createPool(poolParams))
-    }
-
-    protected String startTaskCmd(AzPoolOpts opts) {
-        final DEFAULT_START_TASK = 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
-        final startTask = opts.startTask ?: DEFAULT_START_TASK
-        log.debug "Start task command:\n$startTask"
-        return startTask
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
