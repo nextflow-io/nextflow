@@ -681,25 +681,6 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    // protected String startTaskCmd(AzPoolOpts opts) {
-
-    //     def startCmd = []
-
-    //     // If enabled, append azcopy installer to start task command
-    //     // TODO If statement here to handle if this is disabled.
-    //     if( config.batch().getCopyToolInstallMode() != CopyToolInstallMode.node )
-    //         startCmd << 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
-
-    //     // Get any custom start task command
-    //     if ( opts.startTask ) {
-    //         startCmd << opts.startTask
-    //     }
-
-    //     final startTaskCmd = "bash -c \"${startCmd.join(';')}\""
-    //     log.debug "Start task command:\n$startTaskCmd"
-
-    //     return startTaskCmd
-    // }
 
     protected StartTask createStartTask(AzPoolOpts opts) {
 
