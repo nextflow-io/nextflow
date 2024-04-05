@@ -797,7 +797,7 @@ class AssetManager {
         result.current = current    // current branch name
         result.master = master      // master branch name
         result.branches = branches  // collection of branches
-        result.tags = tags          // collect of tags 
+        result.tags = tags          // collect of tags
         return result
     }
 
@@ -909,7 +909,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stickied on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
             }
         }
         if( !revision || revision == current ) {
@@ -1082,7 +1082,7 @@ class AssetManager {
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath
-        
+
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {
