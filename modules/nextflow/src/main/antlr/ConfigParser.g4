@@ -130,21 +130,11 @@ configSelectorTarget
 // statements
 //
 statement
-    :   block                       #blockStmtAlt
-    |   RETURN expression?          #returnStmtAlt
+    :   RETURN expression?          #returnStmtAlt
     |   assertStatement             #assertStmtAlt
     |   variableDeclaration         #variableDeclarationStmtAlt
     |   expressionStatement         #expressionStmtAlt
     |   SEMI                        #emptyStmtAlt
-    ;
-
-// -- block statement
-block
-    :   LBRACE nls blockStatements? RBRACE
-    ;
-
-blockStatements
-    :   statement (sep statement)* nls
     ;
 
 // -- assert statement
@@ -154,8 +144,8 @@ assertStatement
 
 // -- variable declaration
 variableDeclaration
-    :   DEF nls type? variableDeclarator
-    |   DEF nls typeNamePairs nls ASSIGN nls initializer=expression
+    :   DEF type? variableDeclarator
+    |   DEF typeNamePairs nls ASSIGN nls initializer=expression
     |   type variableDeclarator
     ;
 
@@ -226,8 +216,9 @@ expression
         right=expression                                                                    #shiftExprAlt
 
     // boolean relational expressions (level 7)
-    |   left=expression nls op=(AS | INSTANCEOF) nls type                                   #relationalExprAlt
-    |   left=expression nls op=(LE | GE | GT | LT | IN)  nls right=expression               #relationalExprAlt
+    |   left=expression nls op=AS nls type                                                  #relationalCastExprAlt
+    |   left=expression nls op=INSTANCEOF nls type                                          #relationalTypeExprAlt
+    |   left=expression nls op=(LE | GE | GT | LT | IN) nls right=expression                #relationalExprAlt
 
     // equality/inequality (==/!=) (level 8)
     |   left=expression nls
@@ -340,20 +331,26 @@ pathElement
         |   SPREAD_DOT          // spread operator:         x*.y === x?.collect { it.y }
         |   SAFE_DOT            // optional-null operator:  x?.y === (x!=null) ? x.y : null
         )
-        nls
-        (   identifier
-        |   stringLiteral
-        |   keywords
-        )                                           #propertyPathExprAlt
+        nls namePart                                    #propertyPathExprAlt
 
     // method call expression (with closure)
-    |   closure                                     #closurePathExprAlt
+    |   closure                                         #closurePathExprAlt
 
     // method call expression
-    |   arguments                                   #argumentsPathExprAlt
+    |   arguments                                       #argumentsPathExprAlt
 
-    // list element expression
-    |   QUESTION? LBRACK expressionList RBRACK      #listElementPathExprAlt
+    // index expression
+    |   indexPropertyArgs                               #indexPathExprAlt
+    ;
+
+namePart
+    :   identifier
+    |   stringLiteral
+    |   keywords
+    ;
+
+indexPropertyArgs
+    :   LBRACK expressionList RBRACK
     ;
 
 // -- variable, type identifiers
@@ -407,7 +404,7 @@ parExpression
 
 // -- closure expression
 closure
-    :   LBRACE (nls (formalParameterList nls)? ARROW)? nls blockStatements? RBRACE
+    :   LBRACE (nls (formalParameterList nls)? ARROW)? nls closureStatements? RBRACE
     ;
 
 formalParameterList
@@ -416,6 +413,10 @@ formalParameterList
 
 formalParameter
     :   DEF? type? ELLIPSIS? identifier (nls ASSIGN nls expression)?
+    ;
+
+closureStatements
+    :   statement (sep statement)* nls
     ;
 
 // -- list expression
@@ -493,26 +494,16 @@ namedArgLabel
 // types
 //
 type
-    :   (   primitiveType
-        |   generalClassOrInterfaceType
-        )
-        emptyDims?
+    :   primitiveType
+    |   qualifiedClassName typeArguments?
     ;
 
 primitiveType
     :   BuiltInPrimitiveType
     ;
 
-generalClassOrInterfaceType
-    :   qualifiedClassName typeArguments?
-    ;
-
 qualifiedClassName
-    :   qualifiedNameElements identifier
-    ;
-
-qualifiedStandardClassName
-    :   qualifiedNameElements className (DOT className)*
+    :   qualifiedNameElements className
     ;
 
 qualifiedNameElements
@@ -532,10 +523,6 @@ className
 
 typeArguments
     :   LT nls type (COMMA nls type)* nls GT
-    ;
-
-emptyDims
-    :   (LBRACK RBRACK)+
     ;
 
 

@@ -191,9 +191,9 @@ mode GSTRING_TYPE_SELECTOR_MODE;
 GStringLBrace
     :   '{' /* { this.enterParen(); } */ -> type(LBRACE), popMode, pushMode(DEFAULT_MODE)
     ;
-GStringIdentifier
-    :   IdentifierInGString -> type(Identifier), popMode, pushMode(GSTRING_PATH_MODE)
-    ;
+// GStringIdentifier
+//     :   IdentifierInGString -> type(Identifier), popMode, pushMode(GSTRING_PATH_MODE)
+//     ;
 
 mode GSTRING_PATH_MODE;
 GStringPathPart
