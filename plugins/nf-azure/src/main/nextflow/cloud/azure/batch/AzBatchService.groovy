@@ -681,13 +681,14 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    protected void createPool(AzVmPoolSpec spec) {
+    protected StartTask createStartTask() {
+        if( config.batch().getCopyToolInstallMode() != CopyToolInstallMode.node )
+            return null
 
-        def resourceFiles = new ArrayList(10)
-
+        final resourceFiles = new ArrayList(10)
         resourceFiles << new ResourceFile()
-                .withHttpUrl(AZCOPY_URL)
-                .withFilePath('azcopy')
+            .withHttpUrl(AZCOPY_URL)
+            .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()
                 .withCommandLine(startTaskCmd(spec.opts))
@@ -701,7 +702,11 @@ class AzBatchService implements Closeable {
                 // same as the num ofd cores
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
-                .withStartTask(poolStartTask)
+
+        final startTask = createStartTask()
+        if( startTask ) {
+            poolParams .withStartTask(startTask)
+        }
 
         // resource labels
         if( spec.metadata ) {

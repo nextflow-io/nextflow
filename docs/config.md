@@ -341,7 +341,7 @@ The following settings are available:
 : Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
 
 `azure.batch.copyToolInstallMode`
-: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
+: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution. Finally when `off` is specified, the `azcopy` tool is not installed (default: `node`).
 
 `azure.batch.deleteJobsOnCompletion`
 : Delete all jobs when the workflow completes (default: `false`).
