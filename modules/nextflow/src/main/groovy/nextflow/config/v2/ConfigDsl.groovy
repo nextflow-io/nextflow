@@ -152,6 +152,7 @@ class ConfigDsl extends Script {
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
                 .setStrict(strict)
+                .setBinding(binding.getVariables())
                 .parse(configText, includePath)
 
         Bolts.deepMerge(target, config)
@@ -194,11 +195,23 @@ class ConfigDsl extends Script {
         }
 
         void withLabel(String label, Closure closure) {
+            if( !isWithinProcessScope() )
+                throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
             dsl.block(scope + ["withLabel:${label}".toString()], closure)
         }
 
         void withName(String selector, Closure closure) {
+            if( !isWithinProcessScope() )
+                throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
             dsl.block(scope + ["withName:${selector}".toString()], closure)
+        }
+
+        private boolean isWithinProcessScope() {
+            if( scope.size() == 1 )
+                return scope.first() == 'process'
+            if( scope.size() == 3 )
+                return scope.first() == 'profiles' && scope.last() == 'process'
+            return false
         }
 
         void includeConfig(String includeFile) {

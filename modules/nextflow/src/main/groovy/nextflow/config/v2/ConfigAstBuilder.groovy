@@ -171,23 +171,23 @@ class ConfigAstBuilder {
 
     private ModuleNode compilationUnit(CompilationUnitContext ctx) {
         for( final stmt : ctx.configStatement() )
-            configStatement(stmt)
+            moduleNode.addStatement(configStatement(stmt))
         // TODO: configure script class node ?
+        // TODO: check number format error
         return moduleNode
     }
 
-    private void configStatement(ConfigStatementContext ctx) {
+    private Statement configStatement(ConfigStatementContext ctx) {
         if( ctx instanceof ConfigIncludeStmtAltContext )
-            moduleNode.addStatement(configInclude(ctx.configInclude()))
+            return configInclude(ctx.configInclude())
 
-        else if( ctx instanceof ConfigAssignmentStmtAltContext )
-            moduleNode.addStatement(configAssignment(ctx.configAssignment()))
+        if( ctx instanceof ConfigAssignmentStmtAltContext )
+            return configAssignment(ctx.configAssignment())
 
-        else if( ctx instanceof ConfigBlockStmtAltContext )
-            moduleNode.addStatement(configBlock(ctx.configBlock()))
+        if( ctx instanceof ConfigBlockStmtAltContext )
+            return configBlock(ctx.configBlock())
 
-        else
-            throw new IllegalStateException()
+        throw createParsingFailedException("Invalid config statement: ${ctx.text}", ctx)
     }
 
     private Statement configInclude(ConfigIncludeContext ctx) {
@@ -215,17 +215,16 @@ class ConfigAstBuilder {
         if( ctx instanceof ConfigIncludeBlockStmtAltContext )
             return configInclude(ctx.configInclude())
 
-        else if( ctx instanceof ConfigAssignmentBlockStmtAltContext )
+        if( ctx instanceof ConfigAssignmentBlockStmtAltContext )
             return configAssignment(ctx.configAssignment())
 
-        else if( ctx instanceof ConfigBlockBlockStmtAltContext )
+        if( ctx instanceof ConfigBlockBlockStmtAltContext )
             return configBlock(ctx.configBlock())
 
-        else if( ctx instanceof ConfigSelectorBlockStmtAltContext )
+        if( ctx instanceof ConfigSelectorBlockStmtAltContext )
             return configSelector(ctx.configSelector())
 
-        else
-            throw new IllegalStateException()
+        throw createParsingFailedException("Invalid statement in config block: ${ctx.text}", ctx)
     }
 
     private Statement configSelector(ConfigSelectorContext ctx) {
@@ -267,7 +266,7 @@ class ConfigAstBuilder {
         if( ctx instanceof EmptyStmtAltContext )
             return new EmptyStatement()
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy statement: ${ctx.text}", ctx)
     }
 
     private BlockStatement block(BlockContext ctx) {
@@ -405,7 +404,7 @@ class ConfigAstBuilder {
         if( ctx instanceof UnaryNotExprAltContext )
             return unaryNot(expression(ctx.expression()), ctx.op, ctx)
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
     private BinaryExpression binary(ExpressionContext left, ParserToken op, ExpressionContext right) {
@@ -438,7 +437,7 @@ class ConfigAstBuilder {
         if( ctx instanceof UnaryNotCastExprAltContext )
             return unaryNot(castOperand(ctx.castOperandExpression()), ctx.op, ctx)
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
     private PostfixExpression postfix(PathExpressionContext ctx, ParserToken op) {
@@ -467,7 +466,7 @@ class ConfigAstBuilder {
                 ? constX(((ConstantExpression)expression).value, true)
                 : new UnaryMinusExpression(expression)
 
-        throw createParsingFailedException("Unsupported unary operation: ${ctx.text}", ctx)
+        throw createParsingFailedException("Unsupported unary expression: ${ctx.text}", ctx)
     }
 
     private boolean isNonStringConstantOutsideParentheses(Expression expression) {
@@ -494,10 +493,12 @@ class ConfigAstBuilder {
     /// -- PATH EXPRESSIONS
 
     private Expression path(PathExpressionContext ctx) {
-        def result = primary(ctx.primary())
-        for( final el : ctx.pathElement() )
-            result = pathElement(result, el)
-        return result
+        try {
+            return ctx.pathElement().inject(primary(ctx.primary()), (acc, el) -> pathElement(acc, el))
+        }
+        catch( IllegalStateException e ) {
+            throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
+        }
     }
 
     private Expression pathElement(Expression expression, PathElementContext ctx) {
@@ -531,7 +532,7 @@ class ConfigAstBuilder {
 
         if( ctx instanceof ArgumentsPathExprAltContext ) {
             final parts = methodObject(expression)
-            final arguments = methodArguments(ctx.arguments().argumentList())
+            final arguments = argumentList(ctx.arguments().argumentList())
             return callX(parts.first, parts.second, arguments)
         }
 
@@ -580,7 +581,7 @@ class ConfigAstBuilder {
         if( ctx instanceof BuiltInTypePrmrAltContext )
             return new ClassExpression(type(ctx.builtInType()))
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
     private String identifier(IdentifierContext ctx) {
@@ -603,7 +604,7 @@ class ConfigAstBuilder {
         if( ctx instanceof NullLiteralAltContext )
             return constX( null )
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
     private ConstantExpression integerLiteral(IntegerLiteralAltContext ctx) {
@@ -659,7 +660,7 @@ class ConfigAstBuilder {
 
     private Expression creator(CreatorContext ctx) {
         final type = type(ctx.createdName())
-        final arguments = methodArguments(ctx.arguments().argumentList())
+        final arguments = argumentList(ctx.arguments().argumentList())
         ctorX(type, arguments)
     }
 
@@ -721,7 +722,7 @@ class ConfigAstBuilder {
 
     private MethodCallExpression methodCall(ExpressionContext method, ArgumentListContext args) {
         final parts = methodObject(expression(method))
-        final arguments = methodArguments(args)
+        final arguments = argumentList(args)
         callX(parts.first, parts.second, arguments)
     }
 
@@ -735,7 +736,7 @@ class ConfigAstBuilder {
         return new Tuple2(expression, constX('call'))
     }
 
-    private Expression methodArguments(ArgumentListContext ctx) {
+    private Expression argumentList(ArgumentListContext ctx) {
         if( !ctx )
             return new ArgumentListExpression()
 
@@ -750,7 +751,7 @@ class ConfigAstBuilder {
                 opts << namedArg(ctx1.namedArg())
 
             else
-                throw new IllegalStateException()
+                throw createParsingFailedException("Invalid Groovy method argument: ${ctx.text}", ctx)
         }
 
         if( opts )
@@ -777,7 +778,7 @@ class ConfigAstBuilder {
         if( ctx.gstring() )
             return gstring(ctx.gstring())
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy method named argument: ${ctx.text}", ctx)
     }
 
     /// MISCELLANEOUS

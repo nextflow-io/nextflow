@@ -3,7 +3,7 @@ apply plugin: 'application'
 apply plugin: 'antlr'
 
 sourceSets {
-    main.java.srcDirs = ['build/generated-src/antlr/main']
+    main.java.srcDirs = ['build/generated-src/antlr/main', 'src/main/antlr']
     main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
     main.resources.srcDirs = ['src/main/resources']
     test.java.srcDirs = []
