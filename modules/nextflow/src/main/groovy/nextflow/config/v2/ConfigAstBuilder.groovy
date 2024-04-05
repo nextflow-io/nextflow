@@ -74,6 +74,7 @@ import org.codehaus.groovy.syntax.Types
 import static nextflow.antlr.ConfigParser.*
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args as argsX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX
@@ -190,14 +191,14 @@ class ConfigAstBuilder {
 
     private Statement configInclude(ConfigIncludeContext ctx) {
         final source = expression(ctx.expression())
-        final include = callX(varX('this'), 'includeConfig', argsX(source))
+        final include = callThisX('includeConfig', argsX(source))
         stmt(include)
     }
 
     private Statement configAssignment(ConfigAssignmentContext ctx) {
         final names = new ListExpression( ctx.configPathExpression().identifier().collect( ctx1 -> (Expression)constX(ctx1.text) ) )
         final right = expression(ctx.expression())
-        stmt(callX(varX('this'), constX('assign'), argsX([names, right])))
+        stmt(callThisX('assign', argsX([names, right])))
     }
 
     private Statement configBlock(ConfigBlockContext ctx) {
@@ -206,7 +207,7 @@ class ConfigAstBuilder {
             : constX(unquote(ctx.stringLiteral().text))
         final statements = ctx.configBlockStatement().collect( ctx1 -> configBlockStatement(ctx1) )
         final closure = closureX(new BlockStatement(statements, new VariableScope()))
-        stmt(callX(varX('this'), constX('block'), argsX([name, closure])))
+        stmt(callThisX('block', argsX([name, closure])))
     }
 
     private Statement configBlockStatement(ConfigBlockStatementContext ctx) {
@@ -227,11 +228,11 @@ class ConfigAstBuilder {
     }
 
     private Statement configSelector(ConfigSelectorContext ctx) {
-        final kind = constX(ctx.kind.text)
+        final kind = ctx.kind.text
         final target = configSelectorTarget(ctx.target)
         final statements = ctx.configAssignment().collect( ctx1 -> configAssignment(ctx1) )
         final closure = closureX(new BlockStatement(statements, new VariableScope()))
-        stmt(callX(varX('this'), kind, argsX([target, closure])))
+        stmt(callThisX(kind, argsX([target, closure])))
     }
 
     private Expression configSelectorTarget(ConfigSelectorTargetContext ctx) {
@@ -256,15 +257,11 @@ class ConfigAstBuilder {
         if( ctx instanceof AssertStmtAltContext )
             return assertStatement(ctx.assertStatement())
 
-        if( ctx instanceof VariableDeclarationStmtAltContext ) {
-            final expression = variableDeclaration(ctx.variableDeclaration())
-            return stmt(expression)
-        }
+        if( ctx instanceof VariableDeclarationStmtAltContext )
+            return variableDeclaration(ctx.variableDeclaration())
 
-        if( ctx instanceof ExpressionStmtAltContext ) {
-            final expression = expression(ctx.statementExpression())
-            return stmt(expression)
-        }
+        if( ctx instanceof ExpressionStmtAltContext )
+            return expressionStatement(ctx.expressionStatement())
 
         if( ctx instanceof EmptyStmtAltContext )
             return new EmptyStatement()
@@ -284,9 +281,10 @@ class ConfigAstBuilder {
     }
 
     private ReturnStatement returnStatement(ExpressionContext ctx) {
-        ctx
-            ? new ReturnStatement(expression(ctx))
-            : ReturnStatement.RETURN_NULL_OR_VOID
+        final result = ctx
+            ? expression(ctx)
+            : ConstantExpression.EMPTY_EXPRESSION
+        new ReturnStatement(result)
     }
 
     private AssertStatement assertStatement(AssertStatementContext ctx) {
@@ -296,8 +294,9 @@ class ConfigAstBuilder {
             : new AssertStatement(condition)
     }
 
-    private Expression variableDeclaration(VariableDeclarationContext ctx) {
+    private Statement variableDeclaration(VariableDeclarationContext ctx) {
         if( ctx.typeNamePairs() ) {
+            // multiple assignment
             final variables = ctx.typeNamePairs().typeNamePair().collect { pair ->
                 final name = pair.identifier().text
                 final type = type(pair.type())
@@ -306,34 +305,27 @@ class ConfigAstBuilder {
             final target = variables.size() > 1
                 ? new ArgumentListExpression(variables as List<Expression>)
                 : variables.first()
-            final init = variableInitializer(ctx.variableInitializer())
-            return declX(target, init)
+            final initializer = expression(ctx.initializer)
+            return stmt(declX(target, initializer))
         }
         else {
+            // single assignment
             final type = type(ctx.type())
-            final declarations = ctx.variableDeclarators().variableDeclarator().collect { decl ->
-                final name = decl.identifier().text
-                final target = varX(name, type)
-                final init = variableInitializer(decl.variableInitializer())
-                declX(target, init)
-            }
-            return declarations.size() > 1
-                ? new ArgumentListExpression(declarations as List<Expression>)
-                : declarations.first()
+            final decl = ctx.variableDeclarator()
+            final name = decl.identifier().text
+            final target = varX(name, type)
+            final initializer = expression(decl.initializer)
+            return stmt(declX(target, initializer))
         }
     }
 
-    private Expression variableInitializer(VariableInitializerContext ctx) {
-        enhancedStatementExpression(ctx.enhancedStatementExpression())
+    private Statement expressionStatement(ExpressionStatementContext ctx) {
+        ctx.argumentList()
+            ? stmt(methodCall(ctx.expression(), ctx.argumentList()))
+            : stmt(expression(ctx.expression()))
     }
 
     /// EXPRESSIONS
-
-    private Expression expression(StatementExpressionContext ctx) {
-        ctx.argumentList()
-            ? methodCall(ctx.expression(), ctx.argumentList())
-            : expression(ctx.expression())
-    }
 
     private Expression expression(ExpressionContext ctx) {
         if( ctx instanceof AddExprAltContext )
@@ -342,10 +334,8 @@ class ConfigAstBuilder {
         if( ctx instanceof AndExprAltContext )
             return binary(ctx.left, ctx.op, ctx.right)
 
-        if( ctx instanceof AssignmentExprAltContext ) {
-            final right = enhancedStatementExpression(ctx.right)
-            return binary(ctx.left, ctx.op, right)
-        }
+        if( ctx instanceof AssignmentExprAltContext )
+            return binary(ctx.left, ctx.op, ctx.right)
 
         if( ctx instanceof CastExprAltContext ) {
             final type = type(ctx.castParExpression().type())
@@ -474,14 +464,8 @@ class ConfigAstBuilder {
 
     private Expression creator(CreatorContext ctx) {
         final type = type(ctx.createdName())
-        final arguments = methodArguments(ctx.arguments().enhancedArgumentList())
+        final arguments = methodArguments(ctx.arguments().argumentList())
         ctorX(type, arguments)
-    }
-
-    private Expression enhancedStatementExpression(EnhancedStatementExpressionContext ctx) {
-        ctx.statementExpression()
-            ? expression(ctx.statementExpression())
-            : lambda(ctx.standardLambdaExpression())
     }
 
     private GStringExpression gstring(GstringContext ctx) {
@@ -507,29 +491,6 @@ class ConfigAstBuilder {
 
     private Expression gstringValue(GstringValueContext ctx) {
         expression(ctx.expression())
-    }
-
-    private LambdaExpression lambda(LambdaExpressionContext ctx) {
-        final params = parameters(ctx.lambdaParameters().formalParameters())
-        final code = lambdaBody(ctx.lambdaBody())
-        new LambdaExpression(params, code)
-    }
-
-    private LambdaExpression lambda(StandardLambdaExpressionContext ctx) {
-        final ctx1 = ctx.standardLambdaParameters()
-        final params = ctx1.formalParameters()
-            ? parameters(ctx1.formalParameters())
-            : [ new Parameter(type(null), ctx1.identifier().text) ] as Parameter[]
-        final code = lambdaBody(ctx.lambdaBody())
-        new LambdaExpression(params, code)
-    }
-
-    private BlockStatement lambdaBody(LambdaBodyContext ctx) {
-        if( ctx.block() )
-            return block(ctx.block())
-
-        final statement = new ReturnStatement(expression(ctx.statementExpression()))
-        new BlockStatement([ statement as Statement ], new VariableScope())
     }
 
     private ListExpression list(ListContext ctx) {
@@ -576,17 +537,17 @@ class ConfigAstBuilder {
     private MethodCallExpression methodCall(ExpressionContext method, ArgumentListContext args) {
         final parts = methodObject(expression(method))
         final arguments = methodArguments(args)
-        callX(parts[0], parts[1], arguments)
+        callX(parts.first, parts.second, arguments)
     }
 
-    private List<Expression> methodObject(Expression expression) {
+    private Tuple2<Expression,Expression> methodObject(Expression expression) {
         if( expression instanceof PropertyExpression )
-            return [expression.objectExpression, expression.property]
+            return new Tuple2(expression.objectExpression, expression.property)
 
         if( expression instanceof VariableExpression )
-            return [varX('this'), constX(expression.text)]
+            return new Tuple2(varX('this'), constX(expression.text))
 
-        return [expression, constX('call')]
+        return new Tuple2(expression, constX('call'))
     }
 
     private Expression methodArguments(ArgumentListContext ctx) {
@@ -599,33 +560,6 @@ class ConfigAstBuilder {
         for( final ctx1 : ctx.argumentListElement() ) {
             if( ctx1.expressionListElement() )
                 args << listElement(ctx1.expressionListElement())
-
-            else if( ctx1.namedArg() )
-                opts << namedArg(ctx1.namedArg())
-
-            else
-                throw new IllegalStateException()
-        }
-
-        if( opts )
-            args.push(new MapExpression(opts))
-
-        return new ArgumentListExpression(args)
-    }
-
-    private Expression methodArguments(EnhancedArgumentListContext ctx) {
-        if( !ctx )
-            return new ArgumentListExpression()
-
-        final List<Expression> args = []
-        final List<MapEntryExpression> opts = []
-
-        for( final ctx1 : ctx.enhancedArgumentListElement() ) {
-            if( ctx1.expressionListElement() )
-                args << listElement(ctx1.expressionListElement())
-
-            else if( ctx1.standardLambdaExpression() )
-                args << lambda(ctx1.standardLambdaExpression())
 
             else if( ctx1.namedArg() )
                 opts << namedArg(ctx1.namedArg())
@@ -681,10 +615,26 @@ class ConfigAstBuilder {
             return result
         }
 
-        if( ctx instanceof MethodCallPathExprAltContext ) {
+        if( ctx instanceof ClosurePathExprAltContext ) {
+            if( expression instanceof MethodCallExpression ) {
+                // append closure to method call arguments
+                final methodCall = (MethodCallExpression)expression
+                final arguments = (ArgumentListExpression)methodCall.arguments
+                arguments.addExpression( closure(ctx.closure()) )
+                return methodCall
+            }
+            else {
+                // create method call with single closure argument
+                final parts = methodObject(expression)
+                final closure = closure(ctx.closure())
+                return callX(parts.first, parts.second, argsX(closure))
+            }
+        }
+
+        if( ctx instanceof ArgumentsPathExprAltContext ) {
             final parts = methodObject(expression)
-            final arguments = methodArguments(ctx.arguments().enhancedArgumentList())
-            return callX(parts[0], parts[1], arguments)
+            final arguments = methodArguments(ctx.arguments().argumentList())
+            return callX(parts.first, parts.second, arguments)
         }
 
         if( ctx instanceof ListElementPathExprAltContext ) {
@@ -728,14 +678,10 @@ class ConfigAstBuilder {
             return creator(ctx.creator())
 
         if( ctx instanceof ParenPrmrAltContext )
-            return enhancedStatementExpression(ctx.parExpression().enhancedStatementExpression())
+            return expression(ctx.parExpression().expression())
 
-        if( ctx instanceof ClosureOrLambdaPrmrAltContext ) {
-            final ctx1 = ctx.closureOrLambdaExpression()
-            return ctx1.closure()
-                ? closure(ctx1.closure())
-                : lambda(ctx1.lambdaExpression())
-        }
+        if( ctx instanceof ClosurePrmrAltContext )
+            return closure(ctx.closure())
 
         if( ctx instanceof ListPrmrAltContext )
             return list(ctx.list())
@@ -757,10 +703,6 @@ class ConfigAstBuilder {
     }
 
     /// MISCELLANEOUS
-
-    private Parameter[] parameters(FormalParametersContext ctx) {
-        parameters(ctx.formalParameterList())
-    }
 
     private Parameter[] parameters(FormalParameterListContext ctx) {
         final result = ctx

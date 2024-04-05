@@ -39,6 +39,8 @@ lexer grammar ConfigLexer;
 package nextflow.antlr;
 
 import java.util.*;
+import java.util.regex.Pattern;
+import org.antlr.v4.runtime.CharStream;
 }
 
 @members {
@@ -88,7 +90,45 @@ import java.util.*;
         return Character.isJavaIdentifierPart(codePoint) && !Character.isIdentifierIgnorable(codePoint);
     }
 
-    // TODO: implement other @members from GroovyLexer ?
+    private static final Pattern LETTER_AND_LEFTCURLY_PATTERN = Pattern.compile("[a-zA-Z_{]");
+    private static final Pattern NONSURROGATE_PATTERN = Pattern.compile("[^\u0000-\u007F\uD800-\uDBFF]");
+    private static final Pattern SURROGATE_PAIR1_PATTERN = Pattern.compile("[\uD800-\uDBFF]");
+    private static final Pattern SURROGATE_PAIR2_PATTERN = Pattern.compile("[\uDC00-\uDFFF]");
+
+    public static boolean isFollowedByJavaLetterInGString(CharStream cs) {
+        int c1 = cs.LA(1);
+
+        if ('$' == c1) { // single $ is not a valid identifier
+            return false;
+        }
+
+        String str1 = String.valueOf((char) c1);
+
+        if (matches(str1, LETTER_AND_LEFTCURLY_PATTERN)) {
+            return true;
+        }
+
+        if (matches(str1, NONSURROGATE_PATTERN)
+                && Character.isJavaIdentifierPart(c1)) {
+            return true;
+        }
+
+        int c2 = cs.LA(2);
+        String str2 = String.valueOf((char) c2);
+
+        if (matches(str1, SURROGATE_PAIR1_PATTERN)
+                && matches(str2, SURROGATE_PAIR2_PATTERN)
+                && Character.isJavaIdentifierPart(Character.toCodePoint((char) c1, (char) c2))) {
+
+            return true;
+        }
+
+        return false;
+    }
+
+	public static boolean matches(String text, Pattern pattern) {
+		return pattern.matcher(text).matches();
+	}
 
 }
 
@@ -219,7 +259,7 @@ fragment TsqStringCharacter
 // character in the slashy string. e.g. /a/
 fragment SlashyStringCharacter
     :   SlashEscape
-    |   Dollar /* { !isFollowedByJavaLetterInGString(_input) }? */
+    |   Dollar { !isFollowedByJavaLetterInGString(_input) }?
     |   ~[/$\u0000]
     ;
 

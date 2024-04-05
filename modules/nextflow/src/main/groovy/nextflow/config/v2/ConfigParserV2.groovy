@@ -156,7 +156,7 @@ class ConfigParserV2 implements ConfigParser {
         dsl.run()
 
         final result = Bolts.toConfigObject(dsl.getTarget())
-        final profiles = result.profiles as ConfigObject
+        final profiles = (result.profiles ?: [:]) as ConfigObject
         parsedProfiles = profiles.keySet()
         if( appliedProfiles ) {
             for( def profile : appliedProfiles )

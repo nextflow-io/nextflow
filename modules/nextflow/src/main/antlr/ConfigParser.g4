@@ -41,11 +41,36 @@ options {
 
 @header {
 package nextflow.antlr;
+
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.codehaus.groovy.GroovyBugError;
+}
+
+@members {
+
+    /**
+     * Check whether following a method name of command expression.
+     * Method name should not end with "2: arguments" or "3: closure"
+     *
+     * @param context the preceding expression
+     */
+    public static boolean isFollowingArgumentsOrClosure(ExpressionContext context) {
+        if (context instanceof PathExprAltContext)
+            return false;
+
+        try {
+            var pathExpression = (PathExprAltContext) context;
+            var pathElement = pathExpression.children.get(0);
+            return pathElement instanceof ClosurePathExprAltContext || pathElement instanceof ArgumentsPathExprAltContext;
+        } catch (IndexOutOfBoundsException | ClassCastException e) {
+            throw new GroovyBugError("Unexpected structure of expression context: " + context, e);
+        }
+    }
 }
 
 
 compilationUnit
-    :   nls (configStatement (nls configStatement)* nls)? EOF
+    :   nls (configStatement (sep configStatement)* sep?)? EOF
     ;
 
 //
@@ -101,17 +126,17 @@ statement
     |   RETURN expression?          #returnStmtAlt
     |   assertStatement             #assertStmtAlt
     |   variableDeclaration         #variableDeclarationStmtAlt
-    |   statementExpression         #expressionStmtAlt
+    |   expressionStatement         #expressionStmtAlt
     |   SEMI                        #emptyStmtAlt
     ;
 
 // -- block statement
 block
-    :   LBRACE sep? blockStatements? RBRACE
+    :   LBRACE nls blockStatements? RBRACE
     ;
 
 blockStatements
-    :   statement (sep statement)* sep?
+    :   statement (sep statement)* nls
     ;
 
 // -- assert statement
@@ -121,21 +146,13 @@ assertStatement
 
 // -- variable declaration
 variableDeclaration
-    :   DEF nls type? variableDeclarators
-    |   DEF nls typeNamePairs nls ASSIGN nls variableInitializer
-    |   type variableDeclarators
-    ;
-
-variableDeclarators
-    :   variableDeclarator (COMMA nls variableDeclarator)*
+    :   DEF nls type? variableDeclarator
+    |   DEF nls typeNamePairs nls ASSIGN nls initializer=expression
+    |   type variableDeclarator
     ;
 
 variableDeclarator
-    :   identifier (nls ASSIGN nls variableInitializer)?
-    ;
-
-variableInitializer
-    :   enhancedStatementExpression
+    :   identifier (nls ASSIGN nls initializer=expression)?
     ;
 
 typeNamePairs
@@ -147,38 +164,14 @@ typeNamePair
     ;
 
 // -- expression statement
-statementExpression
+expressionStatement
     :   expression
         (
-            // { !SemanticPredicates.isFollowingArgumentsOrClosure($expression.ctx) }?
+            { !isFollowingArgumentsOrClosure($expression.ctx) }?
             argumentList
         |
-            /* if pathExpression is a method call, no need to have any more arguments */
+            /* if expression is a method call, no need to have any more arguments */
         )
-    ;
-
-argumentList
-    :   argumentListElement
-        (   COMMA nls
-            argumentListElement
-        )*
-    ;
-
-argumentListElement
-    :   expressionListElement
-    |   namedArg
-    ;
-
-namedArg
-    :   namedArgLabel COLON nls expression
-    |   MUL COLON nls expression
-    ;
-
-namedArgLabel
-    :   keywords
-    |   identifier
-    |   literal
-    |   gstring
     ;
 
 
@@ -266,7 +259,7 @@ expression
     |   <assoc=right>
         left=variableNames nls
         op=ASSIGN nls
-        right=statementExpression                                                           #multipleAssignmentExprAlt
+        right=expression                                                                    #multipleAssignmentExprAlt
 
     |   <assoc=right>
         left=expression nls
@@ -285,7 +278,7 @@ expression
         |   POWER_ASSIGN
         |   ELVIS_ASSIGN
         ) nls
-        right=enhancedStatementExpression                                                   #assignmentExprAlt
+        right=expression                                                                    #assignmentExprAlt
     ;
 
 castParExpression
@@ -309,11 +302,6 @@ variableNames
     :   LPAREN identifier (COMMA identifier)+ rparen
     ;
 
-enhancedStatementExpression
-    :   statementExpression
-    |   standardLambdaExpression
-    ;
-
 // -- path expression
 pathExpression
     :   primary pathElement*
@@ -325,7 +313,7 @@ primary
     |   gstring                     #gstringPrmrAlt
     |   NEW nls creator             #newPrmrAlt
     |   parExpression               #parenPrmrAlt
-    |   closureOrLambdaExpression   #closureOrLambdaPrmrAlt
+    |   closure                     #closurePrmrAlt
     |   list                        #listPrmrAlt
     |   map                         #mapPrmrAlt
     |   builtInType                 #builtInTypePrmrAlt
@@ -339,13 +327,16 @@ pathElement
         |   SAFE_DOT            // optional-null operator:  x?.y === (x!=null) ? x.y : null
         )
         nls
-        (   keywords
-        |   identifier
+        (   identifier
         |   stringLiteral
+        |   keywords
         )                                           #propertyPathExprAlt
 
+    // method call expression (with closure)
+    |   closure                                     #closurePathExprAlt
+
     // method call expression
-    |   arguments                                   #methodCallPathExprAlt
+    |   arguments                                   #argumentsPathExprAlt
 
     // list element expression
     |   QUESTION? LBRACK expressionList RBRACK      #listElementPathExprAlt
@@ -371,20 +362,14 @@ stringLiteral
     :   StringLiteral
     ;
 
+// -- gstring expression
 gstring
     :   GStringBegin gstringValue (GStringPart gstringValue)* GStringEnd
     ;
 
 gstringValue
     :   LBRACE expression RBRACE
-    // |   closure
-    // TODO: gstring with multiple path values doesn't work, likely missing rollback behavior
-    // |   gstringPath
     ;
-
-// gstringPath
-//     :   identifier GStringPathPart*
-//     ;
 
 // -- constructor method call
 creator
@@ -403,41 +388,12 @@ typeArgumentsOrDiamond
 
 // -- parenthetical expression
 parExpression
-    :   LPAREN enhancedStatementExpression rparen
+    :   LPAREN expression rparen
     ;
 
-// -- closure and lambda expressions
-closureOrLambdaExpression
-    :   closure
-    |   lambdaExpression
-    ;
-
+// -- closure expression
 closure
-    :   LBRACE (nls (formalParameterList nls)? ARROW)? sep? blockStatements? RBRACE
-    ;
-
-lambdaExpression
-    :   lambdaParameters nls ARROW nls lambdaBody
-    ;
-
-standardLambdaExpression
-    :   standardLambdaParameters nls ARROW nls lambdaBody
-    ;
-
-lambdaParameters
-    :   formalParameters
-    // { a -> a * 2 } can be parsed as a lambda expression in a block, but we expect a closure.
-    // So it is better to put parameters in the parentheses and the following single parameter without parentheses is limited
-    // |   variableDeclaratorId
-    ;
-
-standardLambdaParameters
-    :   formalParameters
-    |   identifier
-    ;
-
-formalParameters
-    :   LPAREN formalParameterList? rparen
+    :   LBRACE (nls (formalParameterList nls)? ARROW)? nls blockStatements? RBRACE
     ;
 
 formalParameterList
@@ -446,11 +402,6 @@ formalParameterList
 
 formalParameter
     :   DEF? type? ELLIPSIS? identifier (nls ASSIGN nls expression)?
-    ;
-
-lambdaBody
-    :   block
-    |   statementExpression
     ;
 
 // -- list expression
@@ -494,24 +445,35 @@ builtInType
     :   BuiltInPrimitiveType
     ;
 
-// -- argument list (with named params)
+// -- argument list
 arguments
-    :   LPAREN enhancedArgumentList? COMMA? rparen
+    :   LPAREN argumentList? COMMA? rparen
     ;
 
-enhancedArgumentList
-    :   enhancedArgumentListElement
+
+argumentList
+    :   argumentListElement
         (   COMMA nls
-            enhancedArgumentListElement
+            argumentListElement
         )*
     ;
 
-enhancedArgumentListElement
+argumentListElement
     :   expressionListElement
-    |   standardLambdaExpression
     |   namedArg
     ;
 
+namedArg
+    :   namedArgLabel COLON nls expression
+    |   MUL COLON nls expression
+    ;
+
+namedArgLabel
+    :   keywords
+    |   identifier
+    |   literal
+    |   gstring
+    ;
 
 //
 // types
