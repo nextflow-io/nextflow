@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.antlr.ConfigLexer
 import nextflow.antlr.ConfigParser
-import org.antlr.v4.runtime.BailErrorStrategy
+import nextflow.antlr.DescriptiveErrorStrategy
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -29,7 +29,7 @@ import org.antlr.v4.runtime.Token as ParserToken
 import org.antlr.v4.runtime.atn.PredictionMode
 import org.antlr.v4.runtime.misc.ParseCancellationException
 import org.antlr.v4.runtime.tree.TerminalNode
-import org.apache.groovy.parser.antlr4.internal.atnmanager.AtnManager
+import org.apache.groovy.parser.antlr4.GroovySyntaxError
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -105,7 +105,7 @@ class ConfigAstBuilder {
         final charStream = createCharStream(sourceUnit)
         this.lexer = new ConfigLexer(charStream)
         this.parser = new ConfigParser(new CommonTokenStream(lexer))
-        // parser.setErrorHandler(new DescriptiveErrorStrategy(charStream))
+        parser.setErrorHandler(new DescriptiveErrorStrategy(charStream))
     }
 
     private CharStream createCharStream(SourceUnit sourceUnit) {
@@ -120,26 +120,18 @@ class ConfigAstBuilder {
 
     private CompilationUnitContext buildCST() {
         try {
-            // parsing must wait until clearing is complete
-            AtnManager.READ_LOCK.lock()
+            final tokenStream = parser.getInputStream()
             try {
-                final tokenStream = parser.getInputStream()
-                try {
-                    return buildCST(PredictionMode.SLL)
-                }
-                catch( Throwable t ) {
-                    // TODO: implement SyntaxErrorReportable ?
-                    // if some syntax error occurred in the lexer, no need to retry the powerful LL mode
-                    // if( t instanceof GroovySyntaxError && GroovySyntaxError.LEXER == ((GroovySyntaxError) t).getSource() )
-                    //     throw t
-
-                    log.trace "Parsing mode SLL failed, falling back to LL"
-                    tokenStream.seek(0)
-                    return buildCST(PredictionMode.LL)
-                }
+                return buildCST(PredictionMode.SLL)
             }
-            finally {
-                AtnManager.READ_LOCK.unlock()
+            catch( Throwable t ) {
+                // if some syntax error occurred in the lexer, no need to retry the powerful LL mode
+                if( t instanceof GroovySyntaxError && t.getSource() == GroovySyntaxError.LEXER )
+                    throw t
+
+                log.trace "Parsing mode SLL failed, falling back to LL"
+                tokenStream.seek(0)
+                return buildCST(PredictionMode.LL)
             }
         }
         catch( Throwable t ) {
@@ -870,25 +862,19 @@ class ConfigAstBuilder {
     }
 
     private CompilationFailedException createParsingFailedException(Throwable t) {
-        if( t instanceof SyntaxException ) {
+        if( t instanceof SyntaxException )
             this.collectSyntaxError(t)
-        }
 
-        // TODO: implement SyntaxErrorReportable ?
-        // else if( t instanceof GroovySyntaxError ) {
-        //     GroovySyntaxError groovySyntaxError = (GroovySyntaxError) t
+        else if( t instanceof GroovySyntaxError )
+            this.collectSyntaxError(
+                    new SyntaxException(
+                            t.getMessage(),
+                            t,
+                            t.getLine(),
+                            t.getColumn()))
 
-        //     this.collectSyntaxError(
-        //             new SyntaxException(
-        //                     groovySyntaxError.getMessage(),
-        //                     groovySyntaxError,
-        //                     groovySyntaxError.getLine(),
-        //                     groovySyntaxError.getColumn()))
-        // }
-
-        else if( t instanceof Exception ) {
+        else if( t instanceof Exception )
             this.collectException(t)
-        }
 
         return new CompilationFailedException(
                 CompilePhase.PARSING.getPhaseNumber(),
@@ -912,10 +898,10 @@ class ConfigAstBuilder {
     private void addErrorListeners() {
         // TODO: missing ANTLRErrorListener::reportAmbiguity()
 
-        lexer.removeErrorListeners()
+        // lexer.removeErrorListeners()
         // lexer.addErrorListener(this.createANTLRErrorListener())
 
-        parser.removeErrorListeners()
+        // parser.removeErrorListeners()
         // parser.addErrorListener(this.createANTLRErrorListener())
     }
 

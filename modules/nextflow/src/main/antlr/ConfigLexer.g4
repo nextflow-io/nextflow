@@ -35,16 +35,25 @@
  */
 lexer grammar ConfigLexer;
 
+options {
+    superClass = AbstractLexer;
+}
+
 @header {
 package nextflow.antlr;
 
 import java.util.*;
 import java.util.regex.Pattern;
 import org.antlr.v4.runtime.CharStream;
+import org.apache.groovy.parser.antlr4.GroovySyntaxError;
+
+import static nextflow.antlr.SemanticPredicates.*;
 }
 
 @members {
+    private boolean errorIgnored;
     private int  lastTokenType;
+    private int  invalidDigitCount;
 
     /**
      * Record the index and token type of the current token while emitting tokens.
@@ -82,6 +91,21 @@ import org.antlr.v4.runtime.CharStream;
         return (Arrays.binarySearch(REGEX_CHECK_ARRAY, this.lastTokenType) < 0);
     }
 
+    @Override
+    public int getSyntaxErrorSource() {
+        return GroovySyntaxError.LEXER;
+    }
+
+    @Override
+    public int getErrorLine() {
+        return getLine();
+    }
+
+    @Override
+    public int getErrorColumn() {
+        return getCharPositionInLine() + 1;
+    }
+
     private static boolean isJavaIdentifierStartAndNotIdentifierIgnorable(int codePoint) {
         return Character.isJavaIdentifierStart(codePoint) && !Character.isIdentifierIgnorable(codePoint);
     }
@@ -89,46 +113,6 @@ import org.antlr.v4.runtime.CharStream;
     private static boolean isJavaIdentifierPartAndNotIdentifierIgnorable(int codePoint) {
         return Character.isJavaIdentifierPart(codePoint) && !Character.isIdentifierIgnorable(codePoint);
     }
-
-    private static final Pattern LETTER_AND_LEFTCURLY_PATTERN = Pattern.compile("[a-zA-Z_{]");
-    private static final Pattern NONSURROGATE_PATTERN = Pattern.compile("[^\u0000-\u007F\uD800-\uDBFF]");
-    private static final Pattern SURROGATE_PAIR1_PATTERN = Pattern.compile("[\uD800-\uDBFF]");
-    private static final Pattern SURROGATE_PAIR2_PATTERN = Pattern.compile("[\uDC00-\uDFFF]");
-
-    public static boolean isFollowedByJavaLetterInGString(CharStream cs) {
-        int c1 = cs.LA(1);
-
-        if ('$' == c1) { // single $ is not a valid identifier
-            return false;
-        }
-
-        String str1 = String.valueOf((char) c1);
-
-        if (matches(str1, LETTER_AND_LEFTCURLY_PATTERN)) {
-            return true;
-        }
-
-        if (matches(str1, NONSURROGATE_PATTERN)
-                && Character.isJavaIdentifierPart(c1)) {
-            return true;
-        }
-
-        int c2 = cs.LA(2);
-        String str2 = String.valueOf((char) c2);
-
-        if (matches(str1, SURROGATE_PAIR1_PATTERN)
-                && matches(str2, SURROGATE_PAIR2_PATTERN)
-                && Character.isJavaIdentifierPart(Character.toCodePoint((char) c1, (char) c2))) {
-
-            return true;
-        }
-
-        return false;
-    }
-
-	public static boolean matches(String text, Pattern pattern) {
-		return pattern.matcher(text).matches();
-	}
 
 }
 
@@ -391,10 +375,10 @@ IntegerLiteral
         |   OctalIntegerLiteral
         |   BinaryIntegerLiteral
         )
-        // (Underscore { require(errorIgnored, "Number ending with underscores is invalid", -1, true); })?
+        (Underscore { require(errorIgnored, "Number ending with underscores is invalid", -1, true); })?
 
     // !!! Error Alternative !!!
-    // |   Zero ([0-9] { invalidDigitCount++; })+ { require(errorIgnored, "Invalid octal number", -(invalidDigitCount + 1), true); } IntegerTypeSuffix?
+    |   Zero ([0-9] { invalidDigitCount++; })+ { require(errorIgnored, "Invalid octal number", -(invalidDigitCount + 1), true); } IntegerTypeSuffix?
     ;
 
 fragment
@@ -536,7 +520,7 @@ FloatingPointLiteral
     :   (   DecimalFloatingPointLiteral
         |   HexadecimalFloatingPointLiteral
         )
-        // (Underscore { require(errorIgnored, "Number ending with underscores is invalid", -1, true); })?
+        (Underscore { require(errorIgnored, "Number ending with underscores is invalid", -1, true); })?
     ;
 
 fragment
@@ -896,6 +880,6 @@ SL_COMMENT
 //     ;
 
 // Unexpected characters will be handled by groovy parser later.
-// UNEXPECTED_CHAR
-//     :   . { require(errorIgnored, "Unexpected character: '" + getText().replace("'", "\\'") + "'", -1, false); }
-//     ;
+UNEXPECTED_CHAR
+    :   . { require(errorIgnored, "Unexpected character: '" + getText().replace("'", "\\'") + "'", -1, false); }
+    ;

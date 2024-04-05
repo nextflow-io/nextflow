@@ -31,40 +31,48 @@
  * Grammar specification for the Nextflow scripting language.
  *
  * Based on the official grammar for Groovy:
- * https://github.com/apache/groovy/blob/GROOVY_3_0_X/src/antlr/GroovyParser.g4
+ * https://github.com/apache/groovy/blob/GROOVY_4_0_X/src/antlr/GroovyParser.g4
  */
 parser grammar ConfigParser;
 
 options {
+    superClass = AbstractParser;
     tokenVocab = ConfigLexer;
 }
 
 @header {
 package nextflow.antlr;
 
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.codehaus.groovy.GroovyBugError;
+import org.apache.groovy.parser.antlr4.GroovySyntaxError;
 }
 
 @members {
 
-    /**
-     * Check whether following a method name of command expression.
-     * Method name should not end with "2: arguments" or "3: closure"
-     *
-     * @param context the preceding expression
-     */
-    public static boolean isFollowingArgumentsOrClosure(ExpressionContext context) {
-        if (context instanceof PathExprAltContext)
-            return false;
+    @Override
+    public int getSyntaxErrorSource() {
+        return GroovySyntaxError.PARSER;
+    }
 
-        try {
-            var pathExpression = (PathExprAltContext) context;
-            var pathElement = pathExpression.children.get(0);
-            return pathElement instanceof ClosurePathExprAltContext || pathElement instanceof ArgumentsPathExprAltContext;
-        } catch (IndexOutOfBoundsException | ClassCastException e) {
-            throw new GroovyBugError("Unexpected structure of expression context: " + context, e);
+    @Override
+    public int getErrorLine() {
+        Token token = _input.LT(-1);
+
+        if (null == token) {
+            return -1;
         }
+
+        return token.getLine();
+    }
+
+    @Override
+    public int getErrorColumn() {
+        Token token = _input.LT(-1);
+
+        if (null == token) {
+            return -1;
+        }
+
+        return token.getCharPositionInLine() + 1 + token.getText().length();
     }
 }
 
@@ -167,7 +175,7 @@ typeNamePair
 expressionStatement
     :   expression
         (
-            { !isFollowingArgumentsOrClosure($expression.ctx) }?
+            { !SemanticPredicates.isFollowingArgumentsOrClosure($expression.ctx) }?
             argumentList
         |
             /* if expression is a method call, no need to have any more arguments */
