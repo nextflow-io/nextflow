@@ -227,7 +227,7 @@ class ConfigAstBuilder {
             ? constX(identifier(ctx.identifier()))
             : constX(stringLiteral(ctx.stringLiteral()))
         final statements = ctx.configBlockStatement().collect( this.&configBlockStatement )
-        final closure = closureX(new BlockStatement(statements, new VariableScope()))
+        final closure = closureX(block(new VariableScope(), statements))
         stmt(ast( callThisX('block', args(name, closure)), ctx ))
     }
 
@@ -251,7 +251,7 @@ class ConfigAstBuilder {
         final kind = ctx.kind.text
         final target = configSelectorTarget(ctx.target)
         final statements = ctx.configAssignment().collect( this.&configAssignment )
-        final closure = closureX(new BlockStatement(statements, new VariableScope()))
+        final closure = closureX(block(new VariableScope(), statements))
         stmt(ast( callThisX(kind, args(target, closure)), ctx ))
     }
 
@@ -264,6 +264,9 @@ class ConfigAstBuilder {
     /// GROOVY STATEMENTS
 
     private Statement statement(StatementContext ctx) {
+        if( ctx instanceof IfElseStmtAltContext )
+            return ast( ifElseStatement(ctx.ifElseStatement()), ctx )
+
         if( ctx instanceof ReturnStmtAltContext )
             return ast( returnStatement(ctx.expression()), ctx )
 
@@ -283,9 +286,32 @@ class ConfigAstBuilder {
             return ast( expressionStatement(ctx.expressionStatement()), ctx )
 
         if( ctx instanceof EmptyStmtAltContext )
-            return new EmptyStatement()
+            return EmptyStatement.INSTANCE
 
         throw createParsingFailedException("Invalid Groovy statement: ${ctx.text}", ctx)
+    }
+
+    private Statement ifElseStatement(IfElseStatementContext ctx) {
+        final expression = ast( parExpression(ctx.parExpression()), ctx.parExpression() )
+        final condition = ast( boolX(expression), expression )
+        final thenStmt = ifElseBranch(ctx.tb)
+        final elseStmt = ctx.ELSE()
+            ? ifElseBranch(ctx.fb)
+            : EmptyStatement.INSTANCE
+        ifElseS(condition, thenStmt, elseStmt)
+    }
+
+    private Statement ifElseBranch(IfElseBranchContext ctx) {
+        return ctx.statement()
+            ? statement(ctx.statement())
+            : blockStatements(ctx.blockStatements())
+    }
+
+    private BlockStatement blockStatements(BlockStatementsContext ctx) {
+        final List<Statement> code = ctx
+            ? ctx.statement().collect( this.&statement )
+            : List<Statement>.of()
+        ast( block(new VariableScope(), code), ctx )
     }
 
     private Statement returnStatement(ExpressionContext ctx) {
@@ -296,7 +322,7 @@ class ConfigAstBuilder {
     }
 
     private Statement assertStatement(AssertStatementContext ctx) {
-        final condition = ast( new BooleanExpression(expression(ctx.condition)), ctx.condition )
+        final condition = ast( boolX(expression(ctx.condition)), ctx.condition )
         ctx.message
             ? new AssertStatement(condition, expression(ctx.message))
             : new AssertStatement(condition)
@@ -838,15 +864,8 @@ class ConfigAstBuilder {
 
     private Expression closure(ClosureContext ctx) {
         final params = parameters(ctx.formalParameterList())
-        final code = closureStatements(ctx.closureStatements())
+        final code = blockStatements(ctx.blockStatements())
         closureX(params, code)
-    }
-
-    private BlockStatement closureStatements(ClosureStatementsContext ctx) {
-        final List<Statement> code = ctx
-            ? ctx.statement().collect( this.&statement )
-            : List<Statement>.of()
-        ast( new BlockStatement(code, new VariableScope()), ctx )
     }
 
     private Expression list(ListContext ctx) {

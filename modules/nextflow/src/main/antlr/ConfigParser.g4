@@ -130,13 +130,28 @@ configSelectorTarget
 // statements
 //
 statement
-    :   RETURN expression?          #returnStmtAlt
+    :   ifElseStatement             #ifElseStmtAlt
+    |   RETURN expression?          #returnStmtAlt
     |   assertStatement             #assertStmtAlt
     |   variableDeclaration         #variableDeclarationStmtAlt
     |   multipleAssignmentStatement #multipleAssignmentStmtAlt
     |   assignmentStatement         #assignmentStmtAlt
     |   expressionStatement         #expressionStmtAlt
     |   SEMI                        #emptyStmtAlt
+    ;
+
+// -- if/else statement
+ifElseStatement
+    :   IF parExpression nls tb=ifElseBranch (nls ELSE nls fb=ifElseBranch)?
+    ;
+
+ifElseBranch
+    :   LBRACE nls blockStatements? RBRACE
+    |   statement
+    ;
+
+blockStatements
+    :   statement (sep statement)* nls
     ;
 
 // -- assert statement
@@ -404,7 +419,7 @@ parExpression
 
 // -- closure expression
 closure
-    :   LBRACE (nls (formalParameterList nls)? ARROW)? nls closureStatements? RBRACE
+    :   LBRACE (nls (formalParameterList nls)? ARROW)? nls blockStatements? RBRACE
     ;
 
 formalParameterList
@@ -413,10 +428,6 @@ formalParameterList
 
 formalParameter
     :   DEF? type? ELLIPSIS? identifier (nls ASSIGN nls expression)?
-    ;
-
-closureStatements
-    :   statement (sep statement)* nls
     ;
 
 // -- list expression

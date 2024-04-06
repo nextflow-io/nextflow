@@ -309,7 +309,7 @@ CHAR          : 'char';
 fragment
 DOUBLE        : 'double';
 
-// ELSE          : 'else';
+ELSE          : 'else';
 // ENUM          : 'enum';
 // EXTENDS       : 'extends';
 // FINAL         : 'final';
@@ -319,7 +319,7 @@ fragment
 FLOAT         : 'float';
 
 // FOR           : 'for';
-// IF            : 'if';
+IF            : 'if';
 // GOTO          : 'goto';
 // IMPLEMENTS    : 'implements';
 // IMPORT        : 'import';
