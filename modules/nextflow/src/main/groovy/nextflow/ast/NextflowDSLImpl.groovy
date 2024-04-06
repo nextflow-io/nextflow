@@ -578,12 +578,12 @@ class NextflowDSLImpl implements ASTTransformation {
                 if( args.size() != 1 || args[0] !instanceof ClosureExpression )
                     continue
 
-                final pathName = methodCall.getMethodAsString()
+                final pathName = methodCall.getMethod()
                 final pathBody = (ClosureExpression)args[0]
                 final pathCall = new MethodCallExpression(
                     new VariableExpression('this'),
                     'path',
-                    new ArgumentListExpression(constX(pathName), pathBody)
+                    new ArgumentListExpression(pathName, pathBody)
                 )
                 stmtExpr.setExpression(pathCall)
 
