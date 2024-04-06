@@ -81,16 +81,22 @@ azure {
 }
 ```
 
-The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount. 
+The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount.
 
 :::{warning}
-Azure File shares do not support authentication and management with Active Directory. The storage account key must be 
+Azure File shares do not support authentication and management with Active Directory. The storage account key must be
 set in the configuration if a share is mounted.
 :::
 
 (azure-batch)=
 
 ## Azure Batch
+
+:::{tip}
+This section describes how to manually set up and use Nextflow with Azure Batch.
+You may be interested in using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/azure-batch#compute-environment) in [Seqera Platform](https://seqera.io/platform/),
+which automatically creates the required Azure infrastructure for you with minimal intervention.
+:::
 
 [Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) is a managed computing service that allows the execution of containerised workloads in the Azure cloud infrastructure.
 
@@ -346,7 +352,7 @@ When using containers hosted in a private registry, the registry name must also 
 :::{versionadded} 23.03.0-edge
 :::
 
-Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the 
+Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the
 `virtualNetwork` option can be added to the pool settings as follows:
 
 ```groovy
