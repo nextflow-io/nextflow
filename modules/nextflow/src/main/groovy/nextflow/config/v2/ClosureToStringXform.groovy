@@ -14,28 +14,17 @@
  * limitations under the License.
  */
 
-package nextflow.config.v1
+package nextflow.config.v2
 
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.PackageScope
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-/**
- * Placeholder class that replacing closure definitions in the nextflow configuration
- * file in order to print the closure content itself
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-@EqualsAndHashCode
-@CompileStatic
-@PackageScope
-class ConfigClosurePlaceholder {
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
-    private String str
-
-    ConfigClosurePlaceholder(String str) {
-        this.str = str
-    }
-
-    @Override String toString() { str }
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [ClosureToStringXformImpl])
+@interface ClosureToStringXform {
 }

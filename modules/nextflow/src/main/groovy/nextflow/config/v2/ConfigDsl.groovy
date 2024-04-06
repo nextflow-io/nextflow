@@ -93,14 +93,7 @@ class ConfigDsl extends Script {
             if( name !in ctx ) ctx[name] = [:]
             ctx = ctx[name]
         }
-        ctx[names.last()] = unwrap0(right)
-    }
-
-    protected unwrap0(Object value) {
-        if( value instanceof ClosureWithSource )
-            return renderClosureAsString ? value.toString() : value.getTarget()
-        else
-            return value
+        ctx[names.last()] = right
     }
 
     void block(String name, Closure closure) {

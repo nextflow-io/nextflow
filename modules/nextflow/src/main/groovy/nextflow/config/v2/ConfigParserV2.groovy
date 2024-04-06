@@ -74,10 +74,11 @@ class ConfigParserV2 implements ConfigParser {
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigDsl.class.name
         config.setPluginFactory(new ConfigParserPluginFactory())
+        if( renderClosureAsString )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(ClosureToStringXform))
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         //  add implicit types
         def importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( ClosureWithSource.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
         config.addCompilationCustomizers(importCustomizer)

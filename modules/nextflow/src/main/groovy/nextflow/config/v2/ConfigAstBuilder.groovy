@@ -839,10 +839,7 @@ class ConfigAstBuilder {
     private Expression closure(ClosureContext ctx) {
         final params = parameters(ctx.formalParameterList())
         final code = closureStatements(ctx.closureStatements())
-        final closure = closureX(params, code)
-        // TODO: use v1 ast transform to get source text
-        final source = constX(ctx.text)
-        createX(ClosureWithSource, closure, source)
+        closureX(params, code)
     }
 
     private BlockStatement closureStatements(ClosureStatementsContext ctx) {
