@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.antlr.ConfigLexer
 import nextflow.antlr.ConfigParser
 import nextflow.antlr.DescriptiveErrorStrategy
-import nextflow.antlr.TreeUtils
 import org.antlr.v4.runtime.ANTLRErrorListener
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
@@ -150,9 +149,7 @@ class ConfigAstBuilder {
         else
             addErrorListeners()
 
-        final result = parser.compilationUnit()
-        println TreeUtils.toPrettyTree(result, Arrays.asList(parser.getRuleNames()))
-        return result
+        return parser.compilationUnit()
     }
 
     private CompilationFailedException convertException(Throwable t) {
@@ -273,6 +270,12 @@ class ConfigAstBuilder {
         if( ctx instanceof VariableDeclarationStmtAltContext )
             return variableDeclaration(ctx.variableDeclaration())
 
+        if( ctx instanceof MultipleAssignmentStmtAltContext )
+            return assignment(ctx.multipleAssignmentStatement())
+
+        if( ctx instanceof AssignmentStmtAltContext )
+            return assignment(ctx.assignmentStatement())
+
         if( ctx instanceof ExpressionStmtAltContext )
             return expressionStatement(ctx.expressionStatement())
 
@@ -323,6 +326,27 @@ class ConfigAstBuilder {
         }
     }
 
+    private Statement assignment(MultipleAssignmentStatementContext ctx) {
+        final vars = ctx.variableNames().identifier().collect( ctx1 -> varX(identifier(ctx1)) )
+        final right = expression(ctx.right)
+        return stmt(assignX(new TupleExpression(vars as List<Expression>), right))
+    }
+
+    private Statement assignment(AssignmentStatementContext ctx) {
+        final left = expression(ctx.left)
+        if( left instanceof VariableExpression && isInsideParentheses(left) ) {
+            if( left.<Number>getNodeMetaData(INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
+                throw createParsingFailedException("Nested parenthesis is not allowed in multiple assignment, e.g. ((a)) = b", ctx)
+
+            return stmt(assignX(new TupleExpression(left), expression(ctx.right)))
+        }
+
+        if ( isAssignmentLhsValid(left) )
+            return stmt(assignX(left, expression(ctx.right)))
+
+        throw createParsingFailedException("The left-hand side of an assignment should be a variable or a property expression", ctx)
+    }
+
     private Statement expressionStatement(ExpressionStatementContext ctx) {
         final base = expression(ctx.expression())
         final expression = ctx.argumentList()
@@ -334,15 +358,11 @@ class ConfigAstBuilder {
     /// GROOVY EXPRESSIONS
 
     private Expression expression(ExpressionContext ctx) {
-        if( ctx instanceof AddExprAltContext )
+        if( ctx instanceof AddSubExprAltContext )
             return binary(ctx.left, ctx.op, ctx.right)
 
         if( ctx instanceof AndExprAltContext )
             return binary(ctx.left, ctx.op, ctx.right)
-
-        // TODO: make assignment a statement
-        if( ctx instanceof AssignmentExprAltContext )
-            return assignment(ctx)
 
         if( ctx instanceof CastExprAltContext ) {
             final type = type(ctx.castParExpression().type())
@@ -370,12 +390,6 @@ class ConfigAstBuilder {
 
         if( ctx instanceof MultDivExprAltContext )
             return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof MultipleAssignmentExprAltContext ) {
-            final vars = ctx.variableNames().identifier().collect( ctx1 -> varX(identifier(ctx1)) )
-            final right = expression(ctx.right)
-            return assignX(new TupleExpression(vars as List<Expression>), right)
-        }
 
         if( ctx instanceof PathExprAltContext )
             return path(ctx.pathExpression())
@@ -418,21 +432,6 @@ class ConfigAstBuilder {
             return unaryNot(expression(ctx.expression()), ctx.op, ctx)
 
         throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
-    }
-
-    private Expression assignment(AssignmentExprAltContext ctx) {
-        final left = expression(ctx.left)
-        if( left instanceof VariableExpression && isInsideParentheses(left) ) {
-            if( left.<Number>getNodeMetaData(INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
-                throw createParsingFailedException("Nested parenthesis is not allowed in multiple assignment, e.g. ((a)) = b", ctx)
-
-            return assignX(new TupleExpression(left), expression(ctx.right))
-        }
-
-        if ( isAssignmentLhsValid(left) )
-            return assignX(left, expression(ctx.right))
-
-        throw createParsingFailedException("The left-hand side of an assignment should be a variable or a property expression", ctx)
     }
 
     private boolean isAssignmentLhsValid(Expression left) {

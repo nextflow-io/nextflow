@@ -133,6 +133,8 @@ statement
     :   RETURN expression?          #returnStmtAlt
     |   assertStatement             #assertStmtAlt
     |   variableDeclaration         #variableDeclarationStmtAlt
+    |   multipleAssignmentStatement #multipleAssignmentStmtAlt
+    |   assignmentStatement         #assignmentStmtAlt
     |   expressionStatement         #expressionStmtAlt
     |   SEMI                        #emptyStmtAlt
     ;
@@ -159,6 +161,36 @@ typeNamePairs
 
 typeNamePair
     :   type? identifier
+    ;
+
+// -- assignment statement
+// "(a) = [1]" is a special case of multipleAssignmentStatement, it will be handled by assignmentStatement
+multipleAssignmentStatement
+    :   <assoc=right>
+        left=variableNames nls
+        op=ASSIGN nls
+        right=expression
+    ;
+
+assignmentStatement
+    :   <assoc=right>
+        left=expression nls
+        op=(ASSIGN
+        |   ADD_ASSIGN
+        |   SUB_ASSIGN
+        |   MUL_ASSIGN
+        |   DIV_ASSIGN
+        |   AND_ASSIGN
+        |   OR_ASSIGN
+        |   XOR_ASSIGN
+        |   RSHIFT_ASSIGN
+        |   URSHIFT_ASSIGN
+        |   LSHIFT_ASSIGN
+        |   MOD_ASSIGN
+        |   POWER_ASSIGN
+        |   ELVIS_ASSIGN
+        ) nls
+        right=expression
     ;
 
 // -- expression statement
@@ -202,7 +234,7 @@ expression
     |   left=expression nls op=(MUL | DIV | MOD) nls right=expression                       #multDivExprAlt
 
     // binary addition/subtraction (level 5)
-    |   left=expression op=(ADD | SUB) nls right=expression                                 #addExprAlt
+    |   left=expression op=(ADD | SUB) nls right=expression                                 #addSubExprAlt
 
     // bit shift expressions (level 6)
     |   left=expression nls
@@ -255,32 +287,6 @@ expression
         |   ELVIS nls
         )
         fb=expression                                                                       #conditionalExprAlt
-
-    // assignment expression (level 15)
-    // "(a) = [1]" is a special case of multipleAssignmentExprAlt, it will be handled by assignmentExprAlt
-    |   <assoc=right>
-        left=variableNames nls
-        op=ASSIGN nls
-        right=expression                                                                    #multipleAssignmentExprAlt
-
-    |   <assoc=right>
-        left=expression nls
-        op=(ASSIGN
-        |   ADD_ASSIGN
-        |   SUB_ASSIGN
-        |   MUL_ASSIGN
-        |   DIV_ASSIGN
-        |   AND_ASSIGN
-        |   OR_ASSIGN
-        |   XOR_ASSIGN
-        |   RSHIFT_ASSIGN
-        |   URSHIFT_ASSIGN
-        |   LSHIFT_ASSIGN
-        |   MOD_ASSIGN
-        |   POWER_ASSIGN
-        |   ELVIS_ASSIGN
-        ) nls
-        right=expression                                                                    #assignmentExprAlt
     ;
 
 castParExpression
