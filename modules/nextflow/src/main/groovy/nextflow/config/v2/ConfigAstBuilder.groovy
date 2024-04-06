@@ -56,7 +56,6 @@ import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.EmptyExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
-import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
@@ -64,9 +63,9 @@ import org.codehaus.groovy.ast.expr.NotExpression
 import org.codehaus.groovy.ast.expr.PostfixExpression
 import org.codehaus.groovy.ast.expr.PrefixExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
+import org.codehaus.groovy.ast.expr.RangeExpression
 import org.codehaus.groovy.ast.expr.SpreadExpression
 import org.codehaus.groovy.ast.expr.SpreadMapExpression
-import org.codehaus.groovy.ast.expr.TernaryExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.expr.UnaryMinusExpression
@@ -86,6 +85,7 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 
 import static nextflow.antlr.ConfigParser.*
+import static nextflow.antlr.PositionConfigureUtils.configureAST as ast
 import static nextflow.ast.ASTHelpers.*
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 
@@ -196,50 +196,53 @@ class ConfigAstBuilder {
 
     private Statement configStatement(ConfigStatementContext ctx) {
         if( ctx instanceof ConfigIncludeStmtAltContext )
-            return configInclude(ctx.configInclude())
+            return ast( configInclude(ctx.configInclude()), ctx )
 
         if( ctx instanceof ConfigAssignmentStmtAltContext )
-            return configAssignment(ctx.configAssignment())
+            return ast( configAssignment(ctx.configAssignment()), ctx )
 
         if( ctx instanceof ConfigBlockStmtAltContext )
-            return configBlock(ctx.configBlock())
+            return ast( configBlock(ctx.configBlock()), ctx )
 
         throw createParsingFailedException("Invalid config statement: ${ctx.text}", ctx)
     }
 
     private Statement configInclude(ConfigIncludeContext ctx) {
         final source = expression(ctx.expression())
-        final include = callThisX('includeConfig', args(source))
-        stmt(include)
+        stmt(ast( callThisX('includeConfig', args(source)), ctx ))
     }
 
     private Statement configAssignment(ConfigAssignmentContext ctx) {
-        final names = listX( ctx.configPathExpression().identifier().collect( ctx1 -> (Expression)constX(identifier(ctx1)) ) )
+        final names = listX( ctx.configPathExpression().identifier().collect( this.&configPathElement ) )
         final right = expression(ctx.expression())
-        stmt(callThisX('assign', args([names, right])))
+        stmt(ast( callThisX('assign', args(names, right)), ctx ))
+    }
+
+    private Expression configPathElement(IdentifierContext ctx) {
+        ast( constX(identifier(ctx)), ctx )
     }
 
     private Statement configBlock(ConfigBlockContext ctx) {
         final name = ctx.identifier()
             ? constX(identifier(ctx.identifier()))
             : constX(stringLiteral(ctx.stringLiteral()))
-        final statements = ctx.configBlockStatement().collect( ctx1 -> configBlockStatement(ctx1) )
+        final statements = ctx.configBlockStatement().collect( this.&configBlockStatement )
         final closure = closureX(new BlockStatement(statements, new VariableScope()))
-        stmt(callThisX('block', args([name, closure])))
+        stmt(ast( callThisX('block', args(name, closure)), ctx ))
     }
 
     private Statement configBlockStatement(ConfigBlockStatementContext ctx) {
         if( ctx instanceof ConfigIncludeBlockStmtAltContext )
-            return configInclude(ctx.configInclude())
+            return ast( configInclude(ctx.configInclude()), ctx )
 
         if( ctx instanceof ConfigAssignmentBlockStmtAltContext )
-            return configAssignment(ctx.configAssignment())
+            return ast( configAssignment(ctx.configAssignment()), ctx )
 
         if( ctx instanceof ConfigBlockBlockStmtAltContext )
-            return configBlock(ctx.configBlock())
+            return ast( configBlock(ctx.configBlock()), ctx )
 
         if( ctx instanceof ConfigSelectorBlockStmtAltContext )
-            return configSelector(ctx.configSelector())
+            return ast( configSelector(ctx.configSelector()), ctx )
 
         throw createParsingFailedException("Invalid statement in config block: ${ctx.text}", ctx)
     }
@@ -247,9 +250,9 @@ class ConfigAstBuilder {
     private Statement configSelector(ConfigSelectorContext ctx) {
         final kind = ctx.kind.text
         final target = configSelectorTarget(ctx.target)
-        final statements = ctx.configAssignment().collect( ctx1 -> configAssignment(ctx1) )
+        final statements = ctx.configAssignment().collect( this.&configAssignment )
         final closure = closureX(new BlockStatement(statements, new VariableScope()))
-        stmt(callThisX(kind, args([target, closure])))
+        stmt(ast( callThisX(kind, args(target, closure)), ctx ))
     }
 
     private Expression configSelectorTarget(ConfigSelectorTargetContext ctx) {
@@ -262,22 +265,22 @@ class ConfigAstBuilder {
 
     private Statement statement(StatementContext ctx) {
         if( ctx instanceof ReturnStmtAltContext )
-            return returnStatement(ctx.expression())
+            return ast( returnStatement(ctx.expression()), ctx )
 
         if( ctx instanceof AssertStmtAltContext )
-            return assertStatement(ctx.assertStatement())
+            return ast( assertStatement(ctx.assertStatement()), ctx )
 
         if( ctx instanceof VariableDeclarationStmtAltContext )
-            return variableDeclaration(ctx.variableDeclaration())
+            return ast( variableDeclaration(ctx.variableDeclaration()), ctx )
 
         if( ctx instanceof MultipleAssignmentStmtAltContext )
-            return assignment(ctx.multipleAssignmentStatement())
+            return ast( assignment(ctx.multipleAssignmentStatement()), ctx )
 
         if( ctx instanceof AssignmentStmtAltContext )
-            return assignment(ctx.assignmentStatement())
+            return ast( assignment(ctx.assignmentStatement()), ctx )
 
         if( ctx instanceof ExpressionStmtAltContext )
-            return expressionStatement(ctx.expressionStatement())
+            return ast( expressionStatement(ctx.expressionStatement()), ctx )
 
         if( ctx instanceof EmptyStmtAltContext )
             return new EmptyStatement()
@@ -292,8 +295,8 @@ class ConfigAstBuilder {
         returnS(result)
     }
 
-    private AssertStatement assertStatement(AssertStatementContext ctx) {
-        final condition = new BooleanExpression(expression(ctx.condition))
+    private Statement assertStatement(AssertStatementContext ctx) {
+        final condition = ast( new BooleanExpression(expression(ctx.condition)), ctx.condition )
         ctx.message
             ? new AssertStatement(condition, expression(ctx.message))
             : new AssertStatement(condition)
@@ -305,31 +308,36 @@ class ConfigAstBuilder {
             final variables = ctx.typeNamePairs().typeNamePair().collect { pair ->
                 final name = identifier(pair.identifier())
                 final type = type(pair.type())
-                varX(name, type)
+                ast( varX(name, type), pair )
             }
             final target = variables.size() > 1
                 ? new ArgumentListExpression(variables as List<Expression>)
                 : variables.first()
             final initializer = expression(ctx.initializer)
-            return stmt(declX(target, initializer))
+            return stmt(ast( declX(target, initializer), ctx ))
         }
         else {
             // single assignment
             final type = type(ctx.type())
             final decl = ctx.variableDeclarator()
             final name = identifier(decl.identifier())
-            final target = varX(name, type)
+            final target = ast( varX(name, type), ctx )
             final initializer = decl.initializer
                 ? expression(decl.initializer)
                 : EmptyExpression.INSTANCE
-            return stmt(declX(target, initializer))
+            return stmt(ast( declX(target, initializer), ctx ))
         }
     }
 
     private Statement assignment(MultipleAssignmentStatementContext ctx) {
-        final vars = ctx.variableNames().identifier().collect( ctx1 -> varX(identifier(ctx1)) )
+        final vars = ctx.variableNames().identifier().collect( this.&variableName )
+        final left = ast( new TupleExpression(vars), ctx.variableNames() )
         final right = expression(ctx.right)
-        return stmt(assignX(new TupleExpression(vars as List<Expression>), right))
+        return stmt(assignX(left, right))
+    }
+
+    private Expression variableName(IdentifierContext ctx) {
+        return ast( varX(identifier(ctx)), ctx )
     }
 
     private Statement assignment(AssignmentStatementContext ctx) {
@@ -338,100 +346,14 @@ class ConfigAstBuilder {
             if( left.<Number>getNodeMetaData(INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
                 throw createParsingFailedException("Nested parenthesis is not allowed in multiple assignment, e.g. ((a)) = b", ctx)
 
-            return stmt(assignX(new TupleExpression(left), expression(ctx.right)))
+            final tuple = ast( new TupleExpression(left), ctx.left )
+            return stmt(assignX(tuple, expression(ctx.right)))
         }
 
         if ( isAssignmentLhsValid(left) )
             return stmt(assignX(left, expression(ctx.right)))
 
         throw createParsingFailedException("The left-hand side of an assignment should be a variable or a property expression", ctx)
-    }
-
-    private Statement expressionStatement(ExpressionStatementContext ctx) {
-        final base = expression(ctx.expression())
-        final expression = ctx.argumentList()
-            ? methodCall(base, argumentList(ctx.argumentList()))
-            : base
-        return stmt(expression)
-    }
-
-    /// GROOVY EXPRESSIONS
-
-    private Expression expression(ExpressionContext ctx) {
-        if( ctx instanceof AddSubExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof AndExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof CastExprAltContext ) {
-            final type = type(ctx.castParExpression().type())
-            final operand = castOperand(ctx.castOperandExpression())
-            return castX(type, operand)
-        }
-
-        if( ctx instanceof ConditionalExprAltContext )
-            return ternary(ctx)
-
-        if( ctx instanceof EqualityExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof ExclusiveOrExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof InclusiveOrExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof LogicalAndExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof LogicalOrExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof MultDivExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof PathExprAltContext )
-            return path(ctx.pathExpression())
-
-        if( ctx instanceof PostfixExprAltContext )
-            return postfix(ctx.pathExpression(), ctx.op)
-
-        if( ctx instanceof PowerExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof PrefixExprAltContext )
-            return prefix(expression(ctx.expression()), ctx.op)
-
-        if( ctx instanceof RegexExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof RelationalExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof RelationalCastExprAltContext ) {
-            final operand = expression(ctx.expression())
-            final type = type(ctx.type())
-            return asX(type, operand)
-        }
-
-        if( ctx instanceof RelationalTypeExprAltContext ) {
-            final right = new ClassExpression(type(ctx.type(), false))
-            return binary(ctx.left, ctx.op, right)
-        }
-
-        if( ctx instanceof ShiftExprAltContext ) {
-            final op = ctx.dlOp ?: ctx.tgOp ?: ctx.dgOp ?: ctx.riOp ?: ctx.reOp
-            return binary(ctx.left, op, ctx.right)
-        }
-
-        if( ctx instanceof UnaryAddExprAltContext )
-            return unaryAdd(expression(ctx.expression()), ctx.op, ctx)
-
-        if( ctx instanceof UnaryNotExprAltContext )
-            return unaryNot(expression(ctx.expression()), ctx.op, ctx)
-
-        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
     private boolean isAssignmentLhsValid(Expression left) {
@@ -447,54 +369,161 @@ class ConfigAstBuilder {
         return false
     }
 
-    private BinaryExpression binary(ExpressionContext left, ParserToken op, ExpressionContext right) {
+    private Statement expressionStatement(ExpressionStatementContext ctx) {
+        final base = expression(ctx.expression())
+        final expression = ctx.argumentList()
+            ? methodCall(base, argumentList(ctx.argumentList()))
+            : base
+        return ast( stmt(expression), ctx )
+    }
+
+    /// GROOVY EXPRESSIONS
+
+    private Expression expression(ExpressionContext ctx) {
+        if( ctx instanceof AddSubExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof BitwiseAndExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof BitwiseOrExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof CastExprAltContext ) {
+            final type = type(ctx.type())
+            final operand = castOperand(ctx.castOperandExpression())
+            return ast( castX(type, operand), ctx )
+        }
+
+        if( ctx instanceof ConditionalExprAltContext )
+            return ast( ternary(ctx), ctx )
+
+        if( ctx instanceof EqualityExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof ExclusiveOrExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof LogicalAndExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof LogicalOrExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof MultDivExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof PathExprAltContext )
+            return path(ctx.pathExpression())
+
+        if( ctx instanceof PostfixExprAltContext )
+            return ast( postfix(ctx.pathExpression(), ctx.op), ctx )
+
+        if( ctx instanceof PowerExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof PrefixExprAltContext )
+            return ast( prefix(expression(ctx.expression()), ctx.op), ctx )
+
+        if( ctx instanceof RegexExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof RelationalExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof RelationalCastExprAltContext ) {
+            final operand = expression(ctx.expression())
+            final type = type(ctx.type())
+            return ast( asX(type, operand), ctx )
+        }
+
+        if( ctx instanceof RelationalTypeExprAltContext ) {
+            final right = ast( new ClassExpression(type(ctx.type(), false)), ctx.type() )
+            return ast( binary(ctx.left, ctx.op, right), ctx )
+        }
+
+        if( ctx instanceof ShiftExprAltContext )
+            return ast( shift(ctx), ctx )
+
+        if( ctx instanceof UnaryAddExprAltContext )
+            return ast( unaryAdd(expression(ctx.expression()), ctx.op), ctx )
+
+        if( ctx instanceof UnaryNotExprAltContext )
+            return ast( unaryNot(expression(ctx.expression()), ctx.op), ctx )
+
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
+    }
+
+    private Expression binary(ExpressionContext left, ParserToken op, ExpressionContext right) {
         binX(expression(left), token(op), expression(right))
     }
 
-    private BinaryExpression binary(ExpressionContext left, ParserToken op, Expression right) {
+    private Expression binary(ExpressionContext left, ParserToken op, Expression right) {
         binX(expression(left), token(op), right)
     }
 
     private Expression castOperand(CastOperandExpressionContext ctx) {
         if( ctx instanceof CastCastExprAltContext ) {
-            final type = type(ctx.castParExpression().type())
+            final type = type(ctx.type())
             final operand = castOperand(ctx.castOperandExpression())
-            return castX(type, operand)
+            return ast( castX(type, operand), ctx )
         }
 
         if( ctx instanceof PathCastExprAltContext )
             return path(ctx.pathExpression())
 
         if( ctx instanceof PostfixCastExprAltContext )
-            return postfix(ctx.pathExpression(), ctx.op)
+            return ast( postfix(ctx.pathExpression(), ctx.op), ctx )
 
         if( ctx instanceof PrefixCastExprAltContext )
-            return prefix(castOperand(ctx.castOperandExpression()), ctx.op)
+            return ast( prefix(castOperand(ctx.castOperandExpression()), ctx.op), ctx )
 
         if( ctx instanceof UnaryAddCastExprAltContext )
-            return unaryAdd(castOperand(ctx.castOperandExpression()), ctx.op, ctx)
+            return ast( unaryAdd(castOperand(ctx.castOperandExpression()), ctx.op), ctx )
 
         if( ctx instanceof UnaryNotCastExprAltContext )
-            return unaryNot(castOperand(ctx.castOperandExpression()), ctx.op, ctx)
+            return ast( unaryNot(castOperand(ctx.castOperandExpression()), ctx.op), ctx )
 
         throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
-    private PostfixExpression postfix(PathExpressionContext ctx, ParserToken op) {
+    private Expression postfix(PathExpressionContext ctx, ParserToken op) {
         new PostfixExpression(path(ctx), token(op))
     }
 
-    private PrefixExpression prefix(Expression expression, ParserToken op) {
+    private Expression prefix(Expression expression, ParserToken op) {
         new PrefixExpression(token(op), expression)
     }
 
-    private TernaryExpression ternary(ConditionalExprAltContext ctx) {
-        return ctx.ELVIS()
-            ? elvisX(boolX(expression(ctx.condition)), expression(ctx.fb))
-            : ternaryX(expression(ctx.condition), expression(ctx.tb), expression(ctx.fb))
+    private Expression shift(ShiftExprAltContext ctx) {
+        final left = expression(ctx.left)
+        final right = expression(ctx.right)
+
+        if( ctx.riOp )
+            return new RangeExpression(left, right, true)
+        if( ctx.reOp )
+            return new RangeExpression(left, right, false, true)
+
+        def op
+        if( ctx.dlOp )
+            op = token(ctx.dlOp, 2)
+        if( ctx.dgOp )
+            op = token(ctx.dgOp, 2)
+        if( ctx.tgOp )
+            op = token(ctx.tgOp, 3)
+
+        return binX(left, op, right)
     }
 
-    private Expression unaryAdd(Expression expression, ParserToken op, ParserRuleContext ctx) {
+    private Expression ternary(ConditionalExprAltContext ctx) {
+        if( ctx.ELVIS() )
+            return elvisX(expression(ctx.condition), expression(ctx.fb))
+
+        final condition = ast( boolX(expression(ctx.condition)), ctx.condition )
+        return ternaryX(condition, expression(ctx.tb), expression(ctx.fb))
+    }
+
+    private Expression unaryAdd(Expression expression, ParserToken op) {
         if( op.type == ConfigParser.ADD )
             return new UnaryPlusExpression(expression)
 
@@ -504,7 +533,7 @@ class ConfigAstBuilder {
         throw new IllegalStateException()
     }
 
-    private Expression unaryNot(Expression expression, ParserToken op, ParserRuleContext ctx) {
+    private Expression unaryNot(Expression expression, ParserToken op) {
         if( op.type == ConfigParser.NOT )
             return new NotExpression(expression)
 
@@ -518,7 +547,8 @@ class ConfigAstBuilder {
 
     private Expression path(PathExpressionContext ctx) {
         try {
-            return ctx.pathElement().inject(primary(ctx.primary()), (acc, el) -> pathElement(acc, el))
+            final primary = primary(ctx.primary())
+            return ctx.pathElement().inject(primary, (acc, el) -> pathElement(acc, el))
         }
         catch( IllegalStateException e ) {
             throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
@@ -527,24 +557,24 @@ class ConfigAstBuilder {
 
     private Expression pathElement(Expression expression, PathElementContext ctx) {
         if( ctx instanceof PropertyPathExprAltContext )
-            return pathPropertyElement(expression, ctx)
+            return ast( pathPropertyElement(expression, ctx), ctx )
 
         if( ctx instanceof ClosurePathExprAltContext )
-            return pathClosureElement(expression, ctx.closure())
+            return ast( pathClosureElement(expression, ctx.closure()), ctx )
 
         if( ctx instanceof ArgumentsPathExprAltContext )
-            return pathArgumentsElement(expression, ctx.arguments().argumentList())
+            return ast( pathArgumentsElement(expression, ctx.arguments().argumentList()), ctx )
 
         if( ctx instanceof IndexPathExprAltContext )
-            return pathIndexElement(expression, ctx.indexPropertyArgs())
+            return ast( pathIndexElement(expression, ctx.indexPropertyArgs()), ctx )
 
         throw new IllegalStateException()
     }
 
     private Expression pathPropertyElement(Expression expression, PropertyPathExprAltContext ctx) {
-        final property = namePart(ctx.namePart())
+        final property = ast( constX(namePart(ctx.namePart())), ctx.namePart() )
         final safe = ctx.SAFE_DOT() != null || ctx.SPREAD_DOT() != null
-        final result = new PropertyExpression(expression, constX(property), safe)
+        final result = new PropertyExpression(expression, property, safe)
         if( ctx.SPREAD_DOT() )
             result.setSpreadSafe(true)
         return result
@@ -564,7 +594,7 @@ class ConfigAstBuilder {
     }
 
     private Expression pathClosureElement(Expression expression, ClosureContext ctx) {
-        final closure = closure(ctx)
+        final closure = ast( closure(ctx), ctx )
 
         if( expression instanceof MethodCallExpression ) {
             // append closure to method call arguments
@@ -590,16 +620,18 @@ class ConfigAstBuilder {
             // }
         }
 
+        final arguments = ast( args(closure), closure )
+
         // e.g. obj.m { }
         if( expression instanceof PropertyExpression )
-            return propMethodCall( expression, args(closure) )
+            return propMethodCall(expression, arguments)
 
         // e.g. m { }, "$m" { }, "m" { }
         if( expression instanceof VariableExpression || expression instanceof GStringExpression || (expression instanceof ConstantExpression && expression.value instanceof String) )
-            return thisMethodCall( expression, args(closure) )
+            return thisMethodCall(expression, arguments)
 
         // e.g. 1 { }, 1.1 { }, (1 / 2) { }, m() { }, { -> ... } { }
-        return callMethodCall( expression, args(closure) )
+        return callMethodCall(expression, arguments)
     }
 
     private Expression pathArgumentsElement(Expression caller, ArgumentListContext ctx) {
@@ -626,40 +658,44 @@ class ConfigAstBuilder {
             index = elements.first()
         }
 
-        return indexX(expression, index)
+        return indexX(expression, ast(index, ctx))
     }
 
     /// -- PRIMARY EXPRESSIONS
 
     private Expression primary(PrimaryContext ctx) {
         if( ctx instanceof IdentifierPrmrAltContext )
-            return varX(identifier(ctx.identifier()))
+            return ast( varX(identifier(ctx.identifier())), ctx )
 
         if( ctx instanceof LiteralPrmrAltContext )
-            return constant(ctx.literal())
+            return ast( literal(ctx.literal()), ctx )
 
         if( ctx instanceof GstringPrmrAltContext )
-            return gstring(ctx.gstring())
+            return ast( gstring(ctx.gstring()), ctx )
 
         if( ctx instanceof NewPrmrAltContext )
-            return creator(ctx.creator())
+            return ast( creator(ctx.creator()), ctx )
 
         if( ctx instanceof ParenPrmrAltContext )
-            return parExpression(ctx.parExpression())
+            return ast( parExpression(ctx.parExpression()), ctx )
 
         if( ctx instanceof ClosurePrmrAltContext )
-            return closure(ctx.closure())
+            return ast( closure(ctx.closure()), ctx )
 
         if( ctx instanceof ListPrmrAltContext )
-            return list(ctx.list())
+            return ast( list(ctx.list()), ctx )
 
         if( ctx instanceof MapPrmrAltContext )
-            return map(ctx.map())
+            return ast( map(ctx.map()), ctx )
 
         if( ctx instanceof BuiltInTypePrmrAltContext )
-            return varX(ctx.builtInType().text)
+            return ast( builtInType(ctx.builtInType()), ctx )
 
         throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
+    }
+
+    private Expression builtInType(BuiltInTypeContext ctx) {
+        varX(ctx.text)
     }
 
     private String identifier(IdentifierContext ctx) {
@@ -670,7 +706,7 @@ class ConfigAstBuilder {
         ctx.text
     }
 
-    private ConstantExpression constant(LiteralContext ctx) {
+    private Expression literal(LiteralContext ctx) {
         if( ctx instanceof IntegerLiteralAltContext )
             return integerLiteral( ctx )
 
@@ -689,7 +725,7 @@ class ConfigAstBuilder {
         throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
-    private ConstantExpression integerLiteral(IntegerLiteralAltContext ctx) {
+    private Expression integerLiteral(IntegerLiteralAltContext ctx) {
         Number num
         try {
             num = Numbers.parseInteger(ctx.text)
@@ -700,7 +736,7 @@ class ConfigAstBuilder {
         constX(num, true)
     }
 
-    private ConstantExpression floatingPointLiteral(FloatingPointLiteralAltContext ctx) {
+    private Expression floatingPointLiteral(FloatingPointLiteralAltContext ctx) {
         Number num
         try {
             num = Numbers.parseDecimal(ctx.text)
@@ -736,44 +772,52 @@ class ConfigAstBuilder {
         return StringUtils.replaceEscapes(text, slashyType)
     }
 
-    private GStringExpression gstring(GstringContext ctx) {
-        final begin = ctx.GStringBegin().text
-        final quote =
-            begin.startsWith(TDQ_STR) ? TDQ_STR
-            : begin.startsWith(DQ_STR) ? DQ_STR
-            : begin.startsWith(SLASH_STR) ? SLASH_STR
-            : String.valueOf(begin.charAt(0))
+    private Expression gstring(GstringContext ctx) {
+        final quote = gstringQuote(ctx.GStringBegin().text)
+        final size = ctx.GStringPart().size() + 2
 
-        def strings = []
+        final List<ConstantExpression> strings = new ArrayList(size)
         strings << gstringBegin(ctx.GStringBegin(), quote)
         for( final part : ctx.GStringPart() )
             strings << gstringPart(part, quote)
         strings << gstringEnd(ctx.GStringEnd(), quote)
-        strings = strings.collect( str -> constX(str) )
 
         final verbatimText = stringLiteral(ctx.text)
         final values = ctx.gstringValue().collect( this.&gstringValue )
         new GStringExpression(verbatimText, strings, values)
     }
 
-    private String gstringBegin(TerminalNode e, String quote) {
+    private String gstringQuote(String text) {
+        if( text.startsWith(TDQ_STR) )
+            return TDQ_STR
+
+        if( text.startsWith(DQ_STR) )
+            return DQ_STR
+
+        if( text.startsWith(SLASH_STR) )
+            return SLASH_STR
+
+        return String.valueOf(text.charAt(0))
+    }
+
+    private ConstantExpression gstringBegin(TerminalNode e, String quote) {
         final text = new StringBuilder(e.text)
         text.deleteCharAt(text.length() - 1)  // remove the trailing $
         text.append(quote)
-        return stringLiteral(text.toString())
+        return ast( constX(stringLiteral(text.toString())), e )
     }
 
-    private String gstringPart(TerminalNode e, String quote) {
+    private ConstantExpression gstringPart(TerminalNode e, String quote) {
         final text = new StringBuilder(e.text)
         text.deleteCharAt(text.length() - 1)  // remove the trailing $
         text.insert(0, quote).append(quote)
-        return stringLiteral(text.toString())
+        return ast( constX(stringLiteral(text.toString())), e )
     }
 
-    private String gstringEnd(TerminalNode e, String quote) {
+    private ConstantExpression gstringEnd(TerminalNode e, String quote) {
         final text = new StringBuilder(e.text)
         text.insert(0, quote)
-        return stringLiteral(text.toString())
+        return ast( constX(stringLiteral(text.toString())), e )
     }
 
     private Expression gstringValue(GstringValueContext ctx) {
@@ -796,19 +840,19 @@ class ConfigAstBuilder {
         final params = parameters(ctx.formalParameterList())
         final code = closureStatements(ctx.closureStatements())
         final closure = closureX(params, code)
-        // TODO: get source text from SourceUnit
+        // TODO: use v1 ast transform to get source text
         final source = constX(ctx.text)
         createX(ClosureWithSource, closure, source)
     }
 
     private BlockStatement closureStatements(ClosureStatementsContext ctx) {
-        final code = ctx
+        final List<Statement> code = ctx
             ? ctx.statement().collect( this.&statement )
-            : List.of()
-        new BlockStatement(code as List<Statement>, new VariableScope())
+            : List<Statement>.of()
+        ast( new BlockStatement(code, new VariableScope()), ctx )
     }
 
-    private ListExpression list(ListContext ctx) {
+    private Expression list(ListContext ctx) {
         if( ctx.COMMA() && !ctx.expressionList() )
             throw createParsingFailedException("Empty list literal should not contain any comma(,)", ctx.COMMA())
 
@@ -825,11 +869,11 @@ class ConfigAstBuilder {
     private Expression listElement(ExpressionListElementContext ctx) {
         final element = expression(ctx.expression())
         ctx.MUL()
-            ? new SpreadExpression(element)
-            : element
+            ? ast( new SpreadExpression(element), ctx )
+            : ast( element, ctx )
     }
 
-    private MapExpression map(MapContext ctx) {
+    private Expression map(MapContext ctx) {
         if( !ctx.mapEntryList() )
             return new MapExpression()
 
@@ -840,26 +884,26 @@ class ConfigAstBuilder {
     private MapEntryExpression mapEntry(MapEntryContext ctx) {
         final value = expression(ctx.expression())
         final key = ctx.MUL()
-            ? new SpreadMapExpression(value)
+            ? ast( new SpreadMapExpression(value), ctx )
             : mapEntryLabel(ctx.mapEntryLabel())
-        entryX(key, value)
+        ast( entryX(key, value), ctx )
     }
 
     private Expression mapEntryLabel(MapEntryLabelContext ctx) {
         if( ctx.keywords() )
-            return constX(keywords(ctx.keywords()))
+            return ast( constX(keywords(ctx.keywords())), ctx )
 
         if( ctx.primary() ) {
             final expression = primary(ctx.primary())
             return expression instanceof VariableExpression && !isInsideParentheses(expression)
-                ? constX(((VariableExpression)expression).name)
-                : expression
+                ? ast( constX(((VariableExpression)expression).name), expression )
+                : ast( expression, ctx )
         }
 
         throw createParsingFailedException("Unsupported map entry label: ${ctx.text}", ctx)
     }
 
-    private MethodCallExpression methodCall(Expression caller, Expression arguments) {
+    private Expression methodCall(Expression caller, Expression arguments) {
         // e.g. (obj.x)(), (obj.@x)()
         if( isInsideParentheses(caller) )
             return callMethodCall(caller, arguments)
@@ -876,7 +920,7 @@ class ConfigAstBuilder {
         return callMethodCall(caller, arguments)
     }
 
-    private MethodCallExpression propMethodCall(PropertyExpression caller, Expression arguments) {
+    private Expression propMethodCall(PropertyExpression caller, Expression arguments) {
         final result = callX( caller.objectExpression, caller.property, arguments )
         result.setImplicitThis(false)
         result.setSafe(caller.isSafe())
@@ -890,7 +934,7 @@ class ConfigAstBuilder {
         return result
     }
 
-    private MethodCallExpression thisMethodCall(Expression caller, Expression arguments) {
+    private Expression thisMethodCall(Expression caller, Expression arguments) {
         final object = varX('this')
         object.setColumnNumber(caller.getColumnNumber())
         object.setLineNumber(caller.getLineNumber())
@@ -902,7 +946,7 @@ class ConfigAstBuilder {
         return callX( object, name, arguments )
     }
 
-    private MethodCallExpression callMethodCall(Expression caller, Expression arguments) {
+    private Expression callMethodCall(Expression caller, Expression arguments) {
         final call = callX(caller, CALL_STR, arguments)
         call.setImplicitThis(false)
         return call
@@ -929,9 +973,9 @@ class ConfigAstBuilder {
         // TODO: validate duplicate named arguments ?
         // TODO: only named arguments -> TupleExpression ?
         if( opts )
-            arguments.push(mapX(opts))
+            arguments.push( ast(mapX(opts), ctx) )
 
-        return new ArgumentListExpression(arguments)
+        return ast( args(arguments), ctx )
     }
 
     private MapEntryExpression namedArg(NamedArgContext ctx) {
@@ -950,7 +994,7 @@ class ConfigAstBuilder {
             return constX(identifier(ctx.identifier()))
 
         if( ctx.literal() )
-            return constant(ctx.literal())
+            return literal(ctx.literal())
 
         if( ctx.gstring() )
             return gstring(ctx.gstring())
@@ -986,18 +1030,25 @@ class ConfigAstBuilder {
     }
 
     private Parameter parameter(FormalParameterContext ctx) {
-        final type = ctx.ELLIPSIS()
-            ? type(ctx.type()).makeArray()
-            : type(ctx.type())
+        ClassNode type = type(ctx.type())
+        if( ctx.ELLIPSIS() ) {
+            type = type.makeArray()
+            type = ctx.type()
+                ? ast( type, ctx.type(), ast(constX('...'), ctx.ELLIPSIS()) )
+                : ast( type, ctx.ELLIPSIS() )
+        }
+
         final name = identifier(ctx.identifier())
         final defaultValue = ctx.expression()
             ? expression(ctx.expression())
             : null
-        param(type, name, defaultValue)
+        ast( param(type, name, defaultValue), ctx )
     }
 
-    private Token token(ParserToken token) {
-        final text = token.text
+    private Token token(ParserToken token, int cardinality = 1) {
+        final text = cardinality == 1
+            ? token.text
+            : token.text * cardinality
         final type = token.type == RANGE_EXCLUSIVE_RIGHT || token.type == RANGE_INCLUSIVE
             ? Types.RANGE_OPERATOR
             : Types.lookup(text, Types.ANY)
@@ -1009,11 +1060,11 @@ class ConfigAstBuilder {
             final classNode = type(ctx.qualifiedClassName())
             if( ctx.typeArgumentsOrDiamond() )
                 classNode.setGenericsTypes( typeArguments(ctx.typeArgumentsOrDiamond()) )
-            return classNode
+            return ast( classNode, ctx )
         }
 
         if( ctx.primitiveType() )
-            return type(ctx.primitiveType())
+            return ast( type(ctx.primitiveType()), ctx )
 
         throw createParsingFailedException("Unrecognized created name: ${ctx.text}", ctx)
     }
@@ -1042,11 +1093,11 @@ class ConfigAstBuilder {
             final classNode = type(ctx.qualifiedClassName(), allowProxy)
             if( ctx.typeArguments() )
                 classNode.setGenericsTypes( typeArguments(ctx.typeArguments()) )
-            return classNode
+            return ast( classNode, ctx )
         }
 
         if( ctx.primitiveType() )
-            return type(ctx.primitiveType())
+            return ast( type(ctx.primitiveType()), ctx )
 
         throw createParsingFailedException("Unrecognized type: ${ctx.text}", ctx)
     }
@@ -1058,7 +1109,11 @@ class ConfigAstBuilder {
     }
 
     private GenericsType[] typeArguments(TypeArgumentsContext ctx) {
-        ctx.type().collect( ctx1 -> new GenericsType(type(ctx1)) ) as GenericsType[]
+        ctx.type().collect( this.&genericsType ) as GenericsType[]
+    }
+
+    private GenericsType genericsType(TypeContext ctx) {
+        ast( new GenericsType(type(ctx)), ctx )
     }
 
     /// HELPERS

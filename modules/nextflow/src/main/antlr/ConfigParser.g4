@@ -210,15 +210,15 @@ expressionStatement
 //
 expression
     // must come before postfix expression to resolve the ambiguities between casting and call on parentheses expression, e.g. (int)(1 / 2)
-    :   castParExpression castOperandExpression                                             #castExprAlt
+    :   LPAREN type rparen castOperandExpression                                            #castExprAlt
 
-    // postfix expression (inc/dec)
+    // postfix (++/--)
     |   pathExpression op=(INC | DEC)                                                       #postfixExprAlt
 
     // qualified name, list/map element, method invocation
     |   pathExpression                                                                      #pathExprAlt
 
-    // ~(BNOT)/!(LNOT) (level 1)
+    // bitwise not (~) / logical not (!) (level 1)
     |   op=(BITNOT | NOT) nls expression                                                    #unaryNotExprAlt
 
     // math power operator (**) (level 2)
@@ -236,7 +236,7 @@ expression
     // binary addition/subtraction (level 5)
     |   left=expression op=(ADD | SUB) nls right=expression                                 #addSubExprAlt
 
-    // bit shift expressions (level 6)
+    // bit shift, range (level 6)
     |   left=expression nls
         ((  dlOp=LT LT
         |   tgOp=GT GT GT
@@ -261,18 +261,16 @@ expression
         right=expression                                                                    #equalityExprAlt
 
     // regex find and match (=~ and ==~) (level 8.5)
-    // jez: moved =~ closer to precedence of == etc, as...
-    // 'if (foo =~ "a.c")' is very close in intent to 'if (foo == "abc")'
     |   left=expression nls op=(REGEX_FIND | REGEX_MATCH) nls right=expression              #regexExprAlt
 
-    // bitwise or non-short-circuiting and (&)  (level 9)
-    |   left=expression nls op=BITAND nls right=expression                                  #andExprAlt
+    // bitwise and (&)  (level 9)
+    |   left=expression nls op=BITAND nls right=expression                                  #bitwiseAndExprAlt
 
     // exclusive or (^)  (level 10)
     |   left=expression nls op=XOR nls right=expression                                     #exclusiveOrExprAlt
 
-    // bitwise or non-short-circuiting or (|)  (level 11)
-    |   left=expression nls op=BITOR nls right=expression                                   #inclusiveOrExprAlt
+    // bitwise or (|)  (level 11)
+    |   left=expression nls op=BITOR nls right=expression                                   #bitwiseOrExprAlt
 
     // logical and (&&)  (level 12)
     |   left=expression nls op=AND nls right=expression                                     #logicalAndExprAlt
@@ -280,7 +278,7 @@ expression
     // logical or (||)  (level 13)
     |   left=expression nls op=OR nls right=expression                                      #logicalOrExprAlt
 
-    // conditional test (level 14)
+    // ternary, elvis (level 14)
     |   <assoc=right>
         condition=expression nls
         (   QUESTION nls tb=expression nls COLON nls
@@ -289,17 +287,13 @@ expression
         fb=expression                                                                       #conditionalExprAlt
     ;
 
-castParExpression
-    :   LPAREN type rparen
-    ;
-
 castOperandExpression
-    :   castParExpression castOperandExpression             #castCastExprAlt
+    :   LPAREN type rparen castOperandExpression            #castCastExprAlt
 
     |   pathExpression op=(INC | DEC)                       #postfixCastExprAlt
     |   pathExpression                                      #pathCastExprAlt
 
-    // ~(BNOT)/!(LNOT)
+    // bitwise not (~) / logical not (!)
     |   op=(BITNOT | NOT) nls castOperandExpression         #unaryNotCastExprAlt
 
     // prefix (++/--)
