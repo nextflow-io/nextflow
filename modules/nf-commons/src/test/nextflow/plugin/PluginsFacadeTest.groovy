@@ -25,13 +25,33 @@ class PluginsFacadeTest extends Specification {
         plugins.indexUrl = 'http://localhost:9900/plugins.json'
 
         when:
-        plugins.setup([plugins: [ 'nf-console@1.0.0' ]])
+        plugins.init()
+        plugins.load([plugins: [ 'nf-console@1.0.0' ]])
         then:
         folder.resolve('nf-console-1.0.0').exists()
 
         cleanup:
         folder?.deleteDir()
         server?.stop(0)
+    }
+
+    def 'should create plugin manager' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def plugins = new PluginsFacade(folder,MODE)
+        expect:
+        plugins.createManager(folder,EMBEDDED).class == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        MODE    | EMBEDDED      | EXPECTED
+        'dev'   | false         | DevPluginManager
+        'dev'   | true          | DevPluginManager
+        and:
+        'prod'  | false         | LocalPluginManager
+        'prod'  | true          | EmbeddedPluginManager
     }
 
 

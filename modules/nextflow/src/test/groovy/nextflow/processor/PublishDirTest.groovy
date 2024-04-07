@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,10 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PublishDirTest extends Specification {
+
+    def setup() {
+        Global.session = Mock(Session) { getConfig()>>[:] }
+    }
 
     def 'should create a publish dir obj'() {
 
@@ -116,8 +120,6 @@ class PublishDirTest extends Specification {
 
     def 'should create symlinks for output files' () {
         given:
-        Global.session = Mock(Session) { getConfig()>>[:] }
-        and:
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()
         folder.resolve('work-dir/file1.txt').text = 'aaa'

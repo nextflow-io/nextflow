@@ -35,10 +35,10 @@ dependencies {
     api 'org.apache.commons:commons-compress:1.21'
     api 'org.apache.commons:commons-lang3:3.12.0'
     api 'com.google.code.gson:gson:2.10.1'
-    api 'org.yaml:snakeyaml:2.0'
+    api 'org.yaml:snakeyaml:2.2'
     api 'io.seqera:wave-utils:0.8.1'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.19"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.19"
+    testImplementation "org.apache.groovy:groovy:4.0.20"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.20"
 }

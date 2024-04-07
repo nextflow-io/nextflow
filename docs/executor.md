@@ -270,7 +270,7 @@ Nextflow manages each process as a separate job that is submitted to the cluster
 
 The pipeline must be launched from a node where the `hq` command is available, which is typically the cluster login node.
 
-To enable the HTCondor executor, set `process.executor = 'hyperqueue'` in the `nextflow.config` file.
+To enable the HyperQueue executor, set `process.executor = 'hq'` in the `nextflow.config` file.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -279,30 +279,6 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-time`
-
-(ignite-executor)=
-
-## Ignite
-
-:::{warning}
-This feature is no longer maintained.
-:::
-
-:::{versionchanged} 22.01.0-edge
-The `ignite` executor must be enabled via the `nf-ignite` plugin.
-:::
-
-The `ignite` executor allows you to run a pipeline on an [Apache Ignite](https://ignite.apache.org/) cluster.
-
-To enable this executor, set `process.executor = 'ignite'` in the `nextflow.config` file.
-
-Resource requests and other job characteristics can be controlled via the following process directives:
-
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-memory`
-
-See the {ref}`ignite-page` page to learn how to configure Nextflow to deploy and run an Ignite cluster in your infrastructure.
 
 (k8s-executor)=
 

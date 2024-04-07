@@ -16,10 +16,13 @@
 
 package nextflow.cloud.azure.batch
 
+import static com.microsoft.azure.batch.protocol.models.ContainerType.DOCKER_COMPATIBLE
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
@@ -657,7 +660,7 @@ class AzBatchService implements Closeable {
          *
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
-        final containerConfig = new ContainerConfiguration();
+        final containerConfig = new ContainerConfiguration().withType(DOCKER_COMPATIBLE);
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
@@ -666,7 +669,7 @@ class AzBatchService implements Closeable {
                     .withRegistryServer(registryOpts.server)
                     .withUserName(registryOpts.userName)
                     .withPassword(registryOpts.password)
-            containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
+            containerConfig.withContainerRegistries(containerRegistries)
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
@@ -678,17 +681,21 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    protected void createPool(AzVmPoolSpec spec) {
+    protected StartTask createStartTask() {
+        if( config.batch().getCopyToolInstallMode() != CopyToolInstallMode.node )
+            return null
 
-        def resourceFiles = new ArrayList(10)
-
+        final resourceFiles = new ArrayList(10)
         resourceFiles << new ResourceFile()
-                .withHttpUrl(AZCOPY_URL)
-                .withFilePath('azcopy')
+            .withHttpUrl(AZCOPY_URL)
+            .withFilePath('azcopy')
 
-        def poolStartTask = new StartTask()
-                .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
-                .withResourceFiles(resourceFiles)
+        return new StartTask()
+            .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
+            .withResourceFiles(resourceFiles)
+    }
+
+    protected void createPool(AzVmPoolSpec spec) {
 
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
@@ -698,7 +705,11 @@ class AzBatchService implements Closeable {
                 // same as the num ofd cores
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
-                .withStartTask(poolStartTask)
+
+        final startTask = createStartTask()
+        if( startTask ) {
+            poolParams .withStartTask(startTask)
+        }
 
         // resource labels
         if( spec.metadata ) {
@@ -912,8 +923,22 @@ class AzBatchService implements Closeable {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof BatchErrorException && e.body().code() in RETRY_CODES)  as Predicate<? extends Throwable>
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if( t instanceof BatchErrorException && t.body().code() in RETRY_CODES )
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
         final policy = retryPolicy(cond)
+        // apply the action with
         return Failsafe.with(policy).get(action)
     }
 }

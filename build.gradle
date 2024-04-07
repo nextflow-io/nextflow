@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ if (groovyVer) {
 
         configurations.all {
             resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.codehaus.groovy') {
+                if (details.requested.group == 'org.apache.groovy') {
                     if( groovyVer.contains(':') )
                         details.useTarget(groovyVer)
                     else
@@ -95,8 +95,8 @@ allprojects {
 
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-cli-picocli'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-cli-picocli'
         // groovydoc libs
         groovyDoc.extendsFrom runtime
     }
@@ -108,15 +108,15 @@ allprojects {
         }
 
         // Documentation required libraries
-        groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.19"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.19"
+        groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.20"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.20"
     }
 
     test {
         useJUnitPlatform()
     }
-    
+
     // this is required due to this IDEA bug
     // https://youtrack.jetbrains.com/issue/IDEA-129282
     sourceSets {
@@ -213,19 +213,11 @@ task buildInfo { doLast {
     timestamp=${System.currentTimeMillis()}
     commitId=${project.property('commitId')}
     """.stripIndent()
-    
+
     // -- update 'nextflow' wrapper
     file0 = file('nextflow')
     src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
-    file0.text = src
-
-    // -- update sphynx
-    def major = version.split(/\./)[0..1].join('.')
-    file0 = file('docs/conf.py')
-    src = file0.text
-    src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
-    src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
     file0.text = src
 
     // -- update dockerfile
