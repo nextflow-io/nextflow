@@ -390,11 +390,20 @@ stringLiteral
 
 // -- gstring expression
 gstring
-    :   GStringBegin gstringValue (GStringPart gstringValue)* GStringEnd
+    :   GStringBegin gstringDqPart* GStringEnd
+    |   TdqGStringBegin gstringTdqPart* TdqGStringEnd
     ;
 
-gstringValue
-    :   LBRACE expression RBRACE
+gstringDqPart
+    :   GStringText                         #gstringDqTextAlt
+    |   GStringPath                         #gstringDqPathAlt
+    |   GStringExprStart expression RBRACE  #gstringDqExprAlt
+    ;
+
+gstringTdqPart
+    :   TdqGStringText                          #gstringTdqTextAlt
+    |   TdqGStringPath                          #gstringTdqPathAlt
+    |   TdqGStringExprStart expression RBRACE   #gstringTdqExprAlt
     ;
 
 // -- constructor method call

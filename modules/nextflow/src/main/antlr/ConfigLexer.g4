@@ -76,6 +76,7 @@ import static nextflow.antlr.SemanticPredicates.*;
         RBRACK,
         RPAREN,
         GStringEnd,
+        TdqGStringEnd,
         NullLiteral,
         StringLiteral,
         BooleanLiteral,
@@ -121,94 +122,53 @@ import static nextflow.antlr.SemanticPredicates.*;
 // §3.10.5 String Literals
 //
 StringLiteral
-    :   GStringQuotationMark  DqStringCharacter*  GStringQuotationMark
+    :   DqStringQuotationMark  DqStringCharacter*  DqStringQuotationMark
     |   SqStringQuotationMark  SqStringCharacter*  SqStringQuotationMark
     |   Slash { this.isRegexAllowed() && _input.LA(1) != '*' }?  SlashyStringCharacter+  Slash
 
     |   TdqStringQuotationMark  TdqStringCharacter*  TdqStringQuotationMark
     |   TsqStringQuotationMark  TsqStringCharacter*  TsqStringQuotationMark
-    // |   DollarSlashyGStringQuotationMarkBegin  DollarSlashyStringCharacter+  DollarSlashyGStringQuotationMarkEnd
     ;
 
 GStringBegin
-    :   GStringQuotationMark DqStringCharacter* Dollar -> pushMode(DQ_GSTRING_MODE), pushMode(GSTRING_TYPE_SELECTOR_MODE)
+    :   DqStringQuotationMark -> pushMode(DQ_GSTRING_MODE)
     ;
 TdqGStringBegin
-    :   TdqStringQuotationMark   TdqStringCharacter* Dollar -> type(GStringBegin), pushMode(TDQ_GSTRING_MODE), pushMode(GSTRING_TYPE_SELECTOR_MODE)
+    :   TdqStringQuotationMark -> pushMode(TDQ_GSTRING_MODE)
     ;
-// SlashyGStringBegin
-//     :   Slash { this.isRegexAllowed() && _input.LA(1) != '*' }? SlashyStringCharacter* Dollar { isFollowedByJavaLetterInGString(_input) }? -> type(GStringBegin), pushMode(SLASHY_GSTRING_MODE), pushMode(GSTRING_TYPE_SELECTOR_MODE)
-//     ;
-// DollarSlashyGStringBegin
-//     :   DollarSlashyGStringQuotationMarkBegin DollarSlashyStringCharacter* Dollar { isFollowedByJavaLetterInGString(_input) }? -> type(GStringBegin), pushMode(DOLLAR_SLASHY_GSTRING_MODE), pushMode(GSTRING_TYPE_SELECTOR_MODE)
-//     ;
 
 mode DQ_GSTRING_MODE;
 GStringEnd
-    :   GStringQuotationMark -> popMode
+    :   DqStringQuotationMark -> popMode
     ;
-GStringPart
-    :   Dollar -> pushMode(GSTRING_TYPE_SELECTOR_MODE)
+
+GStringPath
+    :   Dollar IdentifierInGString (Dot IdentifierInGString)*
     ;
-GStringCharacter
-    :   DqStringCharacter -> more
+
+GStringText
+    :   DqStringCharacter+
+    ;
+
+GStringExprStart
+    :   '${' -> pushMode(DEFAULT_MODE)
     ;
 
 mode TDQ_GSTRING_MODE;
 TdqGStringEnd
-    :   TdqStringQuotationMark -> type(GStringEnd), popMode
-    ;
-TdqGStringPart
-    :   Dollar -> type(GStringPart), pushMode(GSTRING_TYPE_SELECTOR_MODE)
-    ;
-TdqGStringCharacter
-    :   TdqStringCharacter -> more
+    :   TdqStringQuotationMark -> popMode
     ;
 
-// mode SLASHY_GSTRING_MODE;
-// SlashyGStringEnd
-//     :   Dollar? Slash  -> type(GStringEnd), popMode
-//     ;
-// SlashyGStringPart
-//     :   Dollar { isFollowedByJavaLetterInGString(_input) }?   -> type(GStringPart), pushMode(GSTRING_TYPE_SELECTOR_MODE)
-//     ;
-// SlashyGStringCharacter
-//     :   SlashyStringCharacter -> more
-//     ;
-
-// mode DOLLAR_SLASHY_GSTRING_MODE;
-// DollarSlashyGStringEnd
-//     :   DollarSlashyGStringQuotationMarkEnd      -> type(GStringEnd), popMode
-//     ;
-// DollarSlashyGStringPart
-//     :   Dollar { isFollowedByJavaLetterInGString(_input) }?   -> type(GStringPart), pushMode(GSTRING_TYPE_SELECTOR_MODE)
-//     ;
-// DollarSlashyGStringCharacter
-//     :   DollarSlashyStringCharacter -> more
-//     ;
-
-mode GSTRING_TYPE_SELECTOR_MODE;
-GStringLBrace
-    :   '{' /* { this.enterParen(); } */ -> type(LBRACE), popMode, pushMode(DEFAULT_MODE)
+TdqGStringPath
+    :   Dollar IdentifierInGString (Dot IdentifierInGString)*
     ;
-// GStringIdentifier
-//     :   IdentifierInGString -> type(Identifier), popMode, pushMode(GSTRING_PATH_MODE)
-//     ;
 
-mode GSTRING_PATH_MODE;
-GStringPathPart
-    :   Dot IdentifierInGString
+TdqGStringText
+    :   TdqStringCharacter+
     ;
-RollBackOne
-    :   . {
-            // a trick to handle GStrings followed by EOF properly
-            int readChar = _input.LA(-1);
-            if (EOF == _input.LA(1) && ('"' == readChar || '/' == readChar)) {
-                setType(GStringEnd);
-            } else {
-                setChannel(HIDDEN);
-            }
-        } -> popMode
+
+TdqGStringExprStart
+    :   '${' -> pushMode(DEFAULT_MODE)
     ;
 
 mode DEFAULT_MODE;
@@ -227,35 +187,28 @@ SqStringCharacter
     ;
 
 // character in the triple double quotation string. e.g. """a"""
-fragment TdqStringCharacter
+fragment
+TdqStringCharacter
     :   ~["\\$]
-    |   GStringQuotationMark { _input.LA(1) != '"' || _input.LA(2) != '"' || _input.LA(3) == '"' && (_input.LA(4) != '"' || _input.LA(5) != '"') }?
+    |   DqStringQuotationMark { _input.LA(1) != '"' || _input.LA(2) != '"' || _input.LA(3) == '"' && (_input.LA(4) != '"' || _input.LA(5) != '"') }?
     |   EscapeSequence
     ;
 
 // character in the triple single quotation string. e.g. '''a'''
-fragment TsqStringCharacter
+fragment
+TsqStringCharacter
     :   ~['\\]
     |   SqStringQuotationMark { _input.LA(1) != '\'' || _input.LA(2) != '\'' || _input.LA(3) == '\'' && (_input.LA(4) != '\'' || _input.LA(5) != '\'') }?
     |   EscapeSequence
     ;
 
 // character in the slashy string. e.g. /a/
-fragment SlashyStringCharacter
+fragment
+SlashyStringCharacter
     :   SlashEscape
     |   Dollar { !isFollowedByJavaLetterInGString(_input) }?
     |   ~[/$\u0000]
     ;
-
-// character in the dollar slashy string. e.g. $/a/$
-// fragment DollarSlashyStringCharacter
-//     :   DollarDollarEscape
-//     |   DollarSlashDollarEscape { _input.LA(-4) != '$' }?
-//     |   DollarSlashEscape { _input.LA(1) != '$' }?
-//     |   Slash { _input.LA(1) != '$' }?
-//     |   Dollar { !isFollowedByJavaLetterInGString(_input) }?
-//     |   ~[/$\u0000]
-//     ;
 
 
 // Groovy keywords
@@ -657,7 +610,7 @@ Dollar
     ;
 
 fragment
-GStringQuotationMark
+DqStringQuotationMark
     :   '"'
     ;
 
@@ -675,34 +628,6 @@ fragment
 TsqStringQuotationMark
     :   '\'\'\''
     ;
-
-// fragment
-// DollarSlashyGStringQuotationMarkBegin
-//     :   '$/'
-//     ;
-
-// fragment
-// DollarSlashyGStringQuotationMarkEnd
-//     :   '/$'
-//     ;
-
-// escaped forward slash
-// fragment
-// DollarSlashEscape
-//     :   '$/'
-//     ;
-
-// escaped dollar sign
-// fragment
-// DollarDollarEscape
-//     :   '$$'
-//     ;
-
-// escaped dollar slashy string delimiter
-// fragment
-// DollarSlashDollarEscape
-//     :   '$/$'
-//     ;
 
 
 //

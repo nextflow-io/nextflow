@@ -1981,10 +1981,10 @@ Notable syntax that is not supported:
 
 Other syntax restrictions:
 
-- Curly braces are now required for values in dynamic strings:
+- The implicit use of environment variables is no longer supported:
   ```groovy
-  foo.bar = "$params.foobar"    // incorrect
-  foo.bar = "${params.foobar}"  // correct
+  env.MY_VAR = "$MY_VAR"                // incorrect
+  env.MY_VAR = System.getenv('MY_VAR')  // correct
   ```
 
 - The implicit `it` variable in closures is no longer supported:

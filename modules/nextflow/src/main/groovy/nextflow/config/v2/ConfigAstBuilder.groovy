@@ -799,55 +799,39 @@ class ConfigAstBuilder {
     }
 
     private Expression gstring(GstringContext ctx) {
-        final quote = gstringQuote(ctx.GStringBegin().text)
-        final size = ctx.GStringPart().size() + 2
-
-        final List<ConstantExpression> strings = new ArrayList(size)
-        strings << gstringBegin(ctx.GStringBegin(), quote)
-        for( final part : ctx.GStringPart() )
-            strings << gstringPart(part, quote)
-        strings << gstringEnd(ctx.GStringEnd(), quote)
-
         final verbatimText = stringLiteral(ctx.text)
-        final values = ctx.gstringValue().collect( this.&gstringValue )
+        final List<ConstantExpression> strings = []
+        final List<Expression> values = []
+
+        for( final part : ctx.gstringDqPart() ) {
+            if( part instanceof GstringDqTextAltContext )
+                strings << ast( constX(part.text), part )
+
+            if( part instanceof GstringDqPathAltContext )
+                values << ast( gstringPath(part.text), part )
+
+            if( part instanceof GstringDqExprAltContext )
+                values << expression(part.expression())
+        }
+
+        for( final part : ctx.gstringTdqPart() ) {
+            if( part instanceof GstringTdqTextAltContext )
+                strings << ast( constX(part.text), part )
+
+            if( part instanceof GstringTdqPathAltContext )
+                values << ast( gstringPath(part.text), part )
+
+            if( part instanceof GstringTdqExprAltContext )
+                values << expression(part.expression())
+        }
+
         new GStringExpression(verbatimText, strings, values)
     }
 
-    private String gstringQuote(String text) {
-        if( text.startsWith(TDQ_STR) )
-            return TDQ_STR
-
-        if( text.startsWith(DQ_STR) )
-            return DQ_STR
-
-        if( text.startsWith(SLASH_STR) )
-            return SLASH_STR
-
-        return String.valueOf(text.charAt(0))
-    }
-
-    private ConstantExpression gstringBegin(TerminalNode e, String quote) {
-        final text = new StringBuilder(e.text)
-        text.deleteCharAt(text.length() - 1)  // remove the trailing $
-        text.append(quote)
-        return ast( constX(stringLiteral(text.toString())), e )
-    }
-
-    private ConstantExpression gstringPart(TerminalNode e, String quote) {
-        final text = new StringBuilder(e.text)
-        text.deleteCharAt(text.length() - 1)  // remove the trailing $
-        text.insert(0, quote).append(quote)
-        return ast( constX(stringLiteral(text.toString())), e )
-    }
-
-    private ConstantExpression gstringEnd(TerminalNode e, String quote) {
-        final text = new StringBuilder(e.text)
-        text.insert(0, quote)
-        return ast( constX(stringLiteral(text.toString())), e )
-    }
-
-    private Expression gstringValue(GstringValueContext ctx) {
-        expression(ctx.expression())
+    private Expression gstringPath(String text) {
+        final names = text.tokenize('.')
+        final primary = varX(names.head())
+        return names.tail().inject(primary, (acc, name) -> propX(acc, constX(name)) )
     }
 
     private Expression creator(CreatorContext ctx) {
