@@ -268,24 +268,20 @@ class AzBatchService implements Closeable {
     }
 
 
-    protected createBatchCredentialsWithKey() {
+    protected BatchCredentials createBatchCredentialsWithKey() {
         log.debug "[AZURE BATCH] Creating Azure Batch client using shared key creddentials"
 
-        if (config.batch().endpoint || config.batch().accountKey || config.batch().accountName) {
-            // Create batch client
-            if (!config.batch().endpoint)
-                throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
-            if (!config.batch().accountName)
-                throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
-            if (!config.batch().accountKey)
-                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
+        if( !config.batch().endpoint )
+            throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
+        if( !config.batch().accountName )
+            throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
+        if( !config.batch().accountKey )
+            throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
 
-            return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
-
-        }
+        return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
     }
 
-    protected createBatchCredentialsWithServicePrincipal() {
+    protected BatchCredentials createBatchCredentialsWithServicePrincipal() {
         log.debug "[AZURE BATCH] Creating Azure Batch client using Service Principal credentials"
 
         final batchEndpoint = "https://batch.core.windows.net/";
@@ -306,12 +302,15 @@ class AzBatchService implements Closeable {
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
 
-        def cred = config.activeDirectory().isConfigured()
-                ? createBatchCredentialsWithServicePrincipal()
-                : createBatchCredentialsWithKey()
+        BatchCredentials cred
+
+        if( config.activeDirectory().isConfigured() )
+            cred = createBatchCredentialsWithServicePrincipal()
+        else if( config.batch().endpoint || config.batch().accountKey || config.batch().accountName )
+            cred = createBatchCredentialsWithKey()
 
         // Create batch client
-        def client = BatchClient.open(cred as BatchCredentials)
+        def client = BatchClient.open(cred)
 
         Global.onCleanup((it)->client.protocolLayer().restClient().close())
 

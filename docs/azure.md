@@ -418,6 +418,29 @@ azure {
 }
 ```
 
+(azure-managed-identities)=
+
+## Managed identities
+
+:::{versionadded} 24.03.0-edge
+:::
+
+An Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) can be used to authenticate with Azure Blob storage without using secrets such as a storage account key.
+
+The managed identity can be specified as follows:
+
+```groovy
+azure {
+    managedIdentity {
+        clientId = '<YOUR MANAGED IDENTITY>'
+    }
+
+    storage {
+        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+    }
+}
+```
+
 ## Advanced configuration
 
 Read the {ref}`Azure configuration<config-azure>` section to learn more about advanced configuration options.
