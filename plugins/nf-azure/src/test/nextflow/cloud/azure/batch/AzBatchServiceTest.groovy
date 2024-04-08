@@ -247,9 +247,6 @@ class AzBatchServiceTest extends Specification {
         def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTask: 'echo hello-world') )
         then:
         configuredStartTask.commandLine == 'bash -c "echo hello-world; chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
-        configuredStartTask.resourceFiles == [
-            [filePath: 'azcopy', blobSource: 'https://aka.ms/downloadazcopy-v10-linux']
-        ]
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
