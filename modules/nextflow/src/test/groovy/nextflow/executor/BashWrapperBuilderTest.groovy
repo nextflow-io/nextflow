@@ -1155,7 +1155,7 @@ class BashWrapperBuilderTest extends Specification {
         def builder = new BashWrapperBuilder()
 
         when:
-        def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other --cmd'])
+        def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other "quoted" --cmd'])
         then:
         str == '''
             # capture process environment
@@ -1186,7 +1186,7 @@ class BashWrapperBuilderTest extends Specification {
               echo /THIS/=exit:$status >> .command.env
             fi
             #
-            nxf_eval_cmd STDOUT STDERR bash -c "other --cmd"
+            nxf_eval_cmd STDOUT STDERR bash -c "other \\"quoted\\" --cmd"
             status=$?
             if [ $status -eq 0 ]; then
               echo THAT="$STDOUT" >> .command.env
