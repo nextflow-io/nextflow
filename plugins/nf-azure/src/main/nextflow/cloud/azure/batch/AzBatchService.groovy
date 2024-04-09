@@ -430,7 +430,7 @@ class AzBatchService implements Closeable {
 
         return new TaskAddParameter()
                 .withId(taskId)
-                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
+                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .withContainerSettings(containerOpts)
                 .withCommandLine(cmd)
                 .withResourceFiles(resourceFileUrls(task,sas))
@@ -713,7 +713,7 @@ class AzBatchService implements Closeable {
             return new StartTask()
                 .withCommandLine(startTaskCmd)
                 .withResourceFiles(resourceFiles)
-                .withUserIdentity(userIdentity(opts.startTaskPrivileged, null))
+                .withUserIdentity(userIdentity(opts.startTaskPrivileged, null, AutoUserScope.POOL))
         }
     }
 
@@ -882,14 +882,14 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected UserIdentity userIdentity(boolean  privileged, String runAs) {
+    protected UserIdentity userIdentity(boolean  privileged, String runAs, AutoUserScope scope) {
         UserIdentity identity = new UserIdentity()
         if (runAs) {
             identity.withUserName(runAs)
         } else  {
             identity.withAutoUser(new AutoUserSpecification()
                     .withElevationLevel(privileged ? ElevationLevel.ADMIN : ElevationLevel.NON_ADMIN)
-                    .withScope(AutoUserScope.TASK))
+                    .withScope(scope))
         }
         return identity
     }
