@@ -418,6 +418,9 @@ The following settings are available:
 : *New in `nf-azure` version `1.5.2`*
 : Specify the startTask that is executed as the node joins the Azure Batch node pool (default: `bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"`).
 
+`azure.batch.pools.<name>.startTaskPrivileged`
+: Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
+
 `azure.batch.pools.<name>.virtualNetwork`
 : :::{versionadded} 23.03.0-edge
   :::

@@ -61,6 +61,7 @@ class AzPoolOpts implements CacheFunnel {
     Integer maxVmCount
 
     String startTask
+    boolean startTaskPrivileged
 
     String schedulePolicy // spread | pack
     String registry
@@ -89,6 +90,7 @@ class AzPoolOpts implements CacheFunnel {
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
         this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
         this.startTask = opts.startTask
+        this.startTaskPrivileged = opts.startTaskPrivileged ?: false
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
@@ -115,6 +117,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
         hasher.putUnencodedChars(startTask ?: '')
+        hasher.putBoolean(startTaskPrivileged)
         return hasher
     }
 

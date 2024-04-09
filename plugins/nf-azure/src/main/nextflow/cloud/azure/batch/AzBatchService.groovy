@@ -693,7 +693,6 @@ class AzBatchService implements Closeable {
             log.debug "Adding custom start task to command: ${opts.startTask}"
         }
 
-
         // If enabled, append azcopy installer to start task command
         if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
             startCmd << 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
@@ -706,7 +705,6 @@ class AzBatchService implements Closeable {
         final startTaskCmd = "bash -c \"${startCmd.join('; ')}\""
         log.debug "Start task final command: $startTaskCmd"
 
-
         // If there is no start task contents we return a null to indicate no start task
         if ( startCmd.isEmpty() && resourceFiles.isEmpty() ) {
             return null
@@ -715,6 +713,7 @@ class AzBatchService implements Closeable {
             return new StartTask()
                 .withCommandLine(startTaskCmd)
                 .withResourceFiles(resourceFiles)
+                .withUserIdentity(userIdentity(opts.startTaskPrivileged, null))
         }
     }
 

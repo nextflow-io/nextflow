@@ -287,6 +287,19 @@ class AzBatchServiceTest extends Specification {
         configuredStartTask == null
     }
 
+    def 'should configure privileged startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+        and:
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTaskPrivileged: true) )
+        then:
+        configuredStartTask.userIdentity().autoUser().elevationLevel().value == 'admin'
+    }
+
     def 'should check scaling formula' () {
         given:
         def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
@@ -421,7 +434,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-6e9cf97d3d846621464131d3842265ce-Standard_X1'
+        spec.poolId == 'nf-pool-289d374ac1622e709cf863bce2570cab-Standard_X1'
         spec.metadata == [foo: 'bar']
 
     }
