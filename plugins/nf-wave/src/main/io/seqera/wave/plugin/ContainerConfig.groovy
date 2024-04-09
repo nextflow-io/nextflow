@@ -39,6 +39,8 @@ class ContainerConfig {
 
     List<ContainerLayer> layers
 
+    List<String> labels
+
     ContainerConfig appendLayer(ContainerLayer it)  {
         if( layers==null && it!=null )
             layers = new ArrayList<>(10)
@@ -59,7 +61,8 @@ class ContainerConfig {
                 cmd: that.cmd ?: this.cmd,
                 env: mergeEnv(this.env, that.env),
                 workingDir: that.workingDir ?: this.workingDir,
-                layers: mergeLayers(this.layers, that.layers) )
+                layers: mergeLayers(this.layers, that.layers),
+                labels: mergeLabels(this.labels, that.labels))
     }
 
     protected List<String> mergeEnv(List<String> left, List<String> right) {
@@ -107,5 +110,28 @@ class ContainerConfig {
                 allMeta.add(it.fingerprint())
         }
         return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+    List<String> mergeLabels(List<String> left, List<String> right){
+        if( left==null && right==null )
+            return null
+        final result = new ArrayList<String>(10)
+        if( left )
+            result.addAll(left)
+        if( !right )
+            return result
+        // add the 'right' env to the result
+        for(String it : right) {
+            final pair = it.tokenize('=')
+            // remove existing var because the right list has priority
+            final p = result.findIndexOf { it.startsWith(pair[0]+'=')}
+            if( p!=-1 ) {
+                result.remove(p)
+                result.add(p, it)
+            }
+            else
+                result.add(it)
+        }
+        return result
     }
 }
