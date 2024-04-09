@@ -71,9 +71,7 @@ class GStringToLazyVisitor extends ClassCodeVisitorSupport {
 
     @Override
     void visitGStringExpression(GStringExpression expression) {
-        // channels values are not supposed to be lazy evaluated
-        // therefore stop visiting when reaching `from` keyword
-        if( !withinClosure && names.last()!='from' ) {
+        if( !withinClosure ) {
             xformToLazy(expression)
         }
     }

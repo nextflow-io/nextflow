@@ -88,8 +88,8 @@ class EnvOutParamTest extends Dsl2Spec {
         def text = '''
             process hola {
               output:
-              env FOO optional false
-              env BAR optional true
+              env FOO, optional: false
+              env BAR, optional: true
 
               /echo command/
             }
