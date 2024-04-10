@@ -857,6 +857,9 @@ The following settings are available for Google Cloud Batch:
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
 
+  Note that the `google.batch.serviceAccountEmail` service account will only be used for spawned jobs, not for the Nextflow process itself. 
+  See the [Google Cloud](https://www.nextflow.io/docs/latest/google.html#credentials) documentation for more information on credentials.
+
 `google.batch.spot`
 : When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
 
