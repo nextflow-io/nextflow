@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.ast
+package nextflow.script.v2
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -33,7 +33,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @Slf4j
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
-class NextflowParserImpl implements ASTTransformation {
+class NextflowDSLImpl implements ASTTransformation {
 
     static private Set<String> RESERVED_NAMES
 

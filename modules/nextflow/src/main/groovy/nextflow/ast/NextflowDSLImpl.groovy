@@ -789,7 +789,7 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        private static final VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
+        private static final List<String> VALID_INPUT_METHODS = ['val','env','file','path','stdin','each','tuple']
 
         protected void convertInputMethod( Expression expression ) {
             // don't throw error if not method because it could be an implicit script statement
@@ -846,7 +846,7 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        private static final VALID_OUTPUT_METHODS = ['val','env','eval','file','path','stdout','tuple']
+        private static final List<String> VALID_OUTPUT_METHODS = ['val','env','eval','file','path','stdout','tuple']
 
         protected void convertOutputMethod( Expression expression ) {
             // don't throw error if not method because it could be an implicit script statement

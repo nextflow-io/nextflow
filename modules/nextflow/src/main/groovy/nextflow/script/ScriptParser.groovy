@@ -18,33 +18,16 @@ package nextflow.script
 
 import java.nio.file.Path
 
-import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
-import nextflow.Channel
-import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowParser
-import nextflow.ast.NextflowXform
-import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
-import nextflow.extension.FilesEx
-import nextflow.file.FileHelper
-import nextflow.io.ValueObject
-import nextflow.script.v2.ScriptParserPluginFactory
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
-import org.apache.commons.lang.StringUtils
-import org.codehaus.groovy.control.CompilationFailedException
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
- * Parse a nextflow script class applied the required AST transformations
+ * Interface for parsing and executing a Nextflow script.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class ScriptParser {
+abstract class ScriptParser {
 
     private ClassLoader classLoader
 
@@ -52,28 +35,22 @@ class ScriptParser {
 
     private boolean module
 
+    private String entryName
+
+    private ScriptBinding binding
+
     private Path scriptPath
 
     private BaseScript script
 
     private Object result
 
-    private ScriptBinding binding
-
-    private CompilerConfiguration config
-
-    private String entryName
-
     ScriptParser(Session session) {
         this.session = session
         this.classLoader = session.classLoader
     }
 
-    ScriptParser(ClassLoader loader) {
-        this.classLoader = loader
-    }
-
-    ScriptParser setSession( Session session ) {
+    ScriptParser setSession(Session session) {
         this.session = session
         this.classLoader = session.classLoader
         return this
@@ -98,120 +75,38 @@ class ScriptParser {
 
     protected Session getSession() { session }
 
+    protected boolean isModule() { module }
+
     ScriptBinding getBinding() { binding }
 
     Object getResult() { result }
 
     BaseScript getScript() { script }
 
-    CompilerConfiguration getConfig() {
-        if( config )
-            return config
-
-        // define the imports
-        def importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
-        importCustomizer.addImports( Path.name )
-        importCustomizer.addImports( Channel.name )
-        importCustomizer.addImports( Duration.name )
-        importCustomizer.addImports( MemoryUnit.name )
-        importCustomizer.addImports( ValueObject.name )
-        importCustomizer.addImport( 'channel', Channel.name )
-        importCustomizer.addStaticStars( Nextflow.name )
-
-        config = new CompilerConfiguration()
-        config.addCompilationCustomizers( importCustomizer )
-        config.scriptBaseClass = BaseScript.class.name
-        config.setPluginFactory(new ScriptParserPluginFactory())
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowParser))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
-
-        if( session?.debug )
-            config.debug = true
-
-        if( session?.classesDir )
-            config.setTargetDirectory(session.classesDir.toFile())
-
-        return config
+    ScriptParser parse(String scriptText) {
+        return parse(scriptText, null)
     }
 
-    /**
-     * Creates a unique name for the main script class in order to avoid collision
-     * with the implicit and user variables
-     */
-    protected String computeClassName(script) {
-        final PREFIX = 'Script_'
-
-        if( script instanceof Path ) {
-            return FileHelper.getIdentifier(script,PREFIX)
-        }
-
-        if( script instanceof CharSequence ) {
-            final hash = Hashing
-                    .sipHash24()
-                    .newHasher()
-                    .putUnencodedChars(script.toString())
-                    .hash()
-            return PREFIX + hash.toString()
-        }
-
-        throw new IllegalArgumentException("Unknown script type: ${script?.getClass()?.getName()}")
+    ScriptParser parse(Path scriptPath) {
+        return parse(scriptPath.text, scriptPath)
     }
 
-    private GroovyShell getInterpreter() {
-        if( !binding && session )
-            binding = session.binding
-        if( !binding )
-            throw new IllegalArgumentException("Missing Script binding object")
-
-        return new GroovyShell(classLoader, binding, getConfig())
-    }
-
-    private ScriptParser parse0(String scriptText, Path scriptPath, GroovyShell interpreter) {
-        this.scriptPath = scriptPath
-        final String className = computeClassName(scriptText)
+    protected ScriptParser parse(String scriptText, Path scriptPath) {
         try {
-            final parsed = scriptPath && session.debug
-                    ? interpreter.parse(scriptPath.toFile())
-                    : interpreter.parse(scriptText, className)
-            if( parsed !instanceof BaseScript ){
-               throw new CompilationFailedException(0, null)
-            }
-            script = (BaseScript)parsed
+            this.scriptPath = scriptPath
+            this.script = parse0(scriptText, scriptPath)
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
             meta.validate()
-            return this
-        }
-        catch (CompilationFailedException e) {
-            String type = module ? "Module" : "Script"
-            String header = "$type compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
-            String msg = e.message ?: header
-            msg = msg != 'startup failed' ? msg : header
-            msg = msg.replaceAll(/startup failed:\n/,'')
-            msg = msg.replaceAll(~/$className(: \d+:\b*)?/, header+'\n- cause:')
-            if( msg.contains "Unexpected input: '{'" ) {
-                msg += "\nNOTE: If this is the beginning of a process or workflow, there may be a syntax error in the body, such as a missing or extra comma, for which a more specific error message could not be produced."
-            }
-            throw new ScriptCompilationException(msg, e)
-        }
-    }
-
-    ScriptParser parse(String scriptText) {
-        return parse0(scriptText, null, getInterpreter())
-    }
-
-    ScriptParser parse(Path scriptPath) {
-        try {
-            parse0(scriptPath.text, scriptPath, getInterpreter())
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
         }
         return this
     }
+
+    abstract protected BaseScript parse0(String scriptText, Path scriptPath)
 
     ScriptParser runScript(String scriptText) {
         parse(scriptText)

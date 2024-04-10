@@ -131,7 +131,7 @@ class IncludeDef {
         final binding = new ScriptBinding() .setParams(params)
 
         // the execution of a library file has as side effect the registration of declared processes
-        new ScriptParser(session)
+        ScriptParserFactory.create(session)
                 .setModule(true)
                 .setBinding(binding)
                 .runScript(path)
