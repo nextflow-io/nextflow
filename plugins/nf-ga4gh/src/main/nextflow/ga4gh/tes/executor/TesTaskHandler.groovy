@@ -39,6 +39,7 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 /**
  * Handle execution phases for a task executed by a TES executor
@@ -169,6 +170,8 @@ class TesTaskHandler extends TaskHandler {
 
     protected TesBashBuilder newTesBashBuilder(TaskRun task, String remoteBinDir) {
         return new TesBashBuilder(task, remoteBinDir)
+        builder.headerScript = "NXF_CHDIR=${Escape.path(task.workDir)}"
+        return builder
     }
 
     protected TesTask newTesTask() {
@@ -192,6 +195,7 @@ class TesTaskHandler extends TaskHandler {
 
         Path remoteBinDir = executor.getRemoteBinDir()
         if (remoteBinDir) {
+            
             body.addInputsItem(inItem(remoteBinDir, null, true))
         }
 
