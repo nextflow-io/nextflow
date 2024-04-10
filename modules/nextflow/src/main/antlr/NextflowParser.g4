@@ -31,45 +31,64 @@
  * Grammar specification for the Nextflow scripting language.
  *
  * Based on the official grammar for Groovy:
- * https://github.com/apache/groovy/blob/GROOVY_3_0_X/src/antlr/GroovyParser.g4
+ * https://github.com/apache/groovy/blob/GROOVY_4_0_X/src/antlr/GroovyParser.g4
  */
 parser grammar NextflowParser;
 
 options {
+    superClass = AbstractParser;
     tokenVocab = NextflowLexer;
 }
 
 @header {
 package nextflow.antlr;
+
+import org.apache.groovy.parser.antlr4.GroovySyntaxError;
+}
+
+@members {
+
+    @Override
+    public int getSyntaxErrorSource() {
+        return GroovySyntaxError.PARSER;
+    }
+
+    @Override
+    public int getErrorLine() {
+        Token token = _input.LT(-1);
+
+        if (null == token) {
+            return -1;
+        }
+
+        return token.getLine();
+    }
+
+    @Override
+    public int getErrorColumn() {
+        Token token = _input.LT(-1);
+
+        if (null == token) {
+            return -1;
+        }
+
+        return token.getCharPositionInLine() + 1 + token.getText().length();
+    }
 }
 
 
-//
-// module
-//
-module
-    :   nls (moduleStatement (sep moduleStatement)* sep?)? EOF
+compilationUnit
+    :   nls (scriptStatement (sep scriptStatement)* sep?)? EOF
     ;
 
-moduleStatement
+//
+// top-level statements
+//
+scriptStatement
     :   includeStatement            #includeStmtAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
     |   functionDef                 #functionDefAlt
-    |   statement                   #statementAlt
-    ;
-
-
-//
-// statements
-//
-statement
-    :   block                       #blockStmtAlt
-    |   RETURN expression?          #returnStmtAlt
-    |   assertStatement             #assertStmtAlt
-    |   variableDeclaration         #variableDeclarationStmtAlt
-    |   statementExpression         #expressionStmtAlt
-    |   SEMI                        #emptyStmtAlt
     ;
 
 // -- include statement
@@ -99,7 +118,7 @@ processDef
     ;
 
 processDirective
-    :   identifier enhancedArgumentList?
+    :   identifier argumentList?
     ;
 
 processInputs
@@ -166,32 +185,40 @@ workflowEmits:
     (sep identifier)+
     ;
 
-// -- function declaration
+// -- function definition
 functionDef
-    :   (DEF | standardType | DEF standardType) nls
-        identifier formalParameters nls
-        block
+    :   (DEF | type | DEF type) nls
+        identifier LPAREN formalParameterList? rparen nls
+        LBRACE nls blockStatements? RBRACE
     ;
 
-formalParameters
-    :   LPAREN formalParameterList? rparen
+
+//
+// statements
+//
+statement
+    :   ifElseStatement             #ifElseStmtAlt
+    |   RETURN expression?          #returnStmtAlt
+    |   assertStatement             #assertStmtAlt
+    |   variableDeclaration         #variableDeclarationStmtAlt
+    |   multipleAssignmentStatement #multipleAssignmentStmtAlt
+    |   assignmentStatement         #assignmentStmtAlt
+    |   expressionStatement         #expressionStmtAlt
+    |   SEMI                        #emptyStmtAlt
     ;
 
-formalParameterList
-    :   formalParameter (COMMA nls formalParameter)*
+// -- if/else statement
+ifElseStatement
+    :   IF parExpression nls tb=ifElseBranch (nls ELSE nls fb=ifElseBranch)?
     ;
 
-formalParameter
-    :   DEF? type? ELLIPSIS? identifier (nls ASSIGN nls expression)?
-    ;
-
-// -- block statement
-block
-    :   LBRACE sep? blockStatements? RBRACE
+ifElseBranch
+    :   LBRACE nls blockStatements? RBRACE
+    |   statement
     ;
 
 blockStatements
-    :   statement (sep statement)* sep?
+    :   statement (sep statement)* nls
     ;
 
 // -- assert statement
@@ -201,21 +228,13 @@ assertStatement
 
 // -- variable declaration
 variableDeclaration
-    :   DEF nls type? variableDeclarators
-    |   DEF nls typeNamePairs nls ASSIGN nls variableInitializer
-    |   type variableDeclarators
-    ;
-
-variableDeclarators
-    :   variableDeclarator (COMMA nls variableDeclarator)*
+    :   DEF type? variableDeclarator
+    |   DEF typeNamePairs nls ASSIGN nls initializer=expression
+    |   type variableDeclarator
     ;
 
 variableDeclarator
-    :   identifier (nls ASSIGN nls variableInitializer)?
-    ;
-
-variableInitializer
-    :   enhancedStatementExpression
+    :   identifier (nls ASSIGN nls initializer=expression)?
     ;
 
 typeNamePairs
@@ -226,135 +245,17 @@ typeNamePair
     :   type? identifier
     ;
 
-// -- expression statement
-statementExpression
-    :   expression
-        (
-            // { !SemanticPredicates.isFollowingArgumentsOrClosure($expression.ctx) }?
-            argumentList
-        |
-            /* if pathExpression is a method call, no need to have any more arguments */
-        )
-    ;
-
-argumentList
-// options { baseContext = enhancedArgumentList; }
-    :   argumentListElement
-        (   COMMA nls
-            argumentListElement
-        )*
-    ;
-
-argumentListElement
-// options { baseContext = enhancedArgumentListElement; }
-    :   expressionListElement
-    |   namedArg
-    ;
-
-namedArg
-// options { baseContext = mapEntry; }
-    :   namedArgLabel COLON nls expression
-    |   MUL COLON nls expression
-    ;
-
-namedArgLabel
-// options { baseContext = mapEntryLabel; }
-    :   keywords
-    |   identifier
-    |   literal
-    |   gstring
-    ;
-
-
-//
-// expressions
-//
-expression
-    // must come before postfix expression to resolve the ambiguities between casting and call on parentheses expression, e.g. (int)(1 / 2)
-    :   castParExpression castOperandExpression                                             #castExprAlt
-
-    // postfix expression (inc/dec)
-    |   pathExpression op=(INC | DEC)                                                       #postfixExprAlt
-
-    // qualified name, list/map element, method invocation
-    |   pathExpression                                                                      #pathExprAlt
-
-    // ~(BNOT)/!(LNOT) (level 1)
-    |   op=(BITNOT | NOT) nls expression                                                    #unaryNotExprAlt
-
-    // math power operator (**) (level 2)
-    |   left=expression op=POWER nls right=expression                                       #powerExprAlt
-
-    // ++(prefix)/--(prefix)/+(unary)/-(unary) (level 3)
-    |   op=(INC | DEC | ADD | SUB) expression                                               #unaryAddExprAlt
-
-    // multiplication/division/modulo (level 4)
-    |   left=expression nls op=(MUL | DIV | MOD) nls right=expression                       #multDivExprAlt
-
-    // binary addition/subtraction (level 5)
-    |   left=expression op=(ADD | SUB) nls right=expression                                 #addExprAlt
-
-    // bit shift expressions (level 6)
-    |   left=expression nls
-        ((  dlOp=LT LT
-        |   tgOp=GT GT GT
-        |   dgOp=GT GT
-        )
-        |(  riOp=RANGE_INCLUSIVE
-        |   reOp=RANGE_EXCLUSIVE
-        )) nls
-        right=expression                                                                    #shiftExprAlt
-
-    // boolean relational expressions (level 7)
-    |   left=expression nls op=(AS | INSTANCEOF) nls type                                   #relationalExprAlt
-    |   left=expression nls op=(LE | GE | GT | LT | IN)  nls right=expression               #relationalExprAlt
-
-    // equality/inequality (==/!=) (level 8)
-    |   left=expression nls
-        op=(IDENTICAL
-        |   NOT_IDENTICAL
-        |   EQUAL
-        |   NOTEQUAL
-        |   SPACESHIP
-        ) nls
-        right=expression                                                                    #equalityExprAlt
-
-    // regex find and match (=~ and ==~) (level 8.5)
-    // jez: moved =~ closer to precedence of == etc, as...
-    // 'if (foo =~ "a.c")' is very close in intent to 'if (foo == "abc")'
-    |   left=expression nls op=(REGEX_FIND | REGEX_MATCH) nls right=expression              #regexExprAlt
-
-    // bitwise or non-short-circuiting and (&)  (level 9)
-    |   left=expression nls op=BITAND nls right=expression                                  #andExprAlt
-
-    // exclusive or (^)  (level 10)
-    |   left=expression nls op=XOR nls right=expression                                     #exclusiveOrExprAlt
-
-    // bitwise or non-short-circuiting or (|)  (level 11)
-    |   left=expression nls op=BITOR nls right=expression                                   #inclusiveOrExprAlt
-
-    // logical and (&&)  (level 12)
-    |   left=expression nls op=AND nls right=expression                                     #logicalAndExprAlt
-
-    // logical or (||)  (level 13)
-    |   left=expression nls op=OR nls right=expression                                      #logicalOrExprAlt
-
-    // conditional test (level 14)
-    |   <assoc=right>
-        condition=expression nls
-        (   QUESTION nls tb=expression nls COLON nls
-        |   ELVIS nls
-        )
-        fb=expression                                                                       #conditionalExprAlt
-
-    // assignment expression (level 15)
-    // "(a) = [1]" is a special case of multipleAssignmentExprAlt, it will be handled by assignmentExprAlt
-    |   <assoc=right>
+// -- assignment statement
+// "(a) = [1]" is a special case of multipleAssignmentStatement, it will be handled by assignmentStatement
+multipleAssignmentStatement
+    :   <assoc=right>
         left=variableNames nls
         op=ASSIGN nls
-        right=statementExpression                                                           #multipleAssignmentExprAlt
+        right=expression
+    ;
 
-    |   <assoc=right>
+assignmentStatement
+    :   <assoc=right>
         left=expression nls
         op=(ASSIGN
         |   ADD_ASSIGN
@@ -371,34 +272,121 @@ expression
         |   POWER_ASSIGN
         |   ELVIS_ASSIGN
         ) nls
-        enhancedStatementExpression                                                         #assignmentExprAlt
+        right=expression
     ;
 
-castParExpression
-    :   LPAREN type rparen
+// -- expression statement
+expressionStatement
+    :   expression
+        (
+            { !SemanticPredicates.isFollowingArgumentsOrClosure($expression.ctx) }?
+            argumentList
+        |
+            /* if expression is a method call, no need to have any more arguments */
+        )
+    ;
+
+
+//
+// expressions
+//
+expression
+    // must come before postfix expression to resolve the ambiguities between casting and call on parentheses expression, e.g. (int)(1 / 2)
+    :   LPAREN type rparen castOperandExpression                                            #castExprAlt
+
+    // postfix (++/--)
+    |   pathExpression op=(INC | DEC)                                                       #postfixExprAlt
+
+    // qualified name, list/map element, method invocation
+    |   pathExpression                                                                      #pathExprAlt
+
+    // bitwise not (~) / logical not (!) (level 1)
+    |   op=(BITNOT | NOT) nls expression                                                    #unaryNotExprAlt
+
+    // math power operator (**) (level 2)
+    |   left=expression op=POWER nls right=expression                                       #powerExprAlt
+
+    // prefix (++/--) (level 3)
+    |   op=(INC | DEC) expression                                                           #prefixExprAlt
+
+    // unary (+/-) (level 3)
+    |   op=(ADD | SUB) expression                                                           #unaryAddExprAlt
+
+    // multiplication/division/modulo (level 4)
+    |   left=expression nls op=(MUL | DIV | MOD) nls right=expression                       #multDivExprAlt
+
+    // binary addition/subtraction (level 5)
+    |   left=expression op=(ADD | SUB) nls right=expression                                 #addSubExprAlt
+
+    // bit shift, range (level 6)
+    |   left=expression nls
+        ((  dlOp=LT LT
+        |   tgOp=GT GT GT
+        |   dgOp=GT GT
+        )
+        |(  riOp=RANGE_INCLUSIVE
+        |   reOp=RANGE_EXCLUSIVE_RIGHT
+        )) nls
+        right=expression                                                                    #shiftExprAlt
+
+    // boolean relational expressions (level 7)
+    |   left=expression nls op=AS nls type                                                  #relationalCastExprAlt
+    |   left=expression nls op=INSTANCEOF nls type                                          #relationalTypeExprAlt
+    |   left=expression nls op=(LE | GE | GT | LT | IN) nls right=expression                #relationalExprAlt
+
+    // equality/inequality (==/!=) (level 8)
+    |   left=expression nls
+        op=(EQUAL
+        |   NOTEQUAL
+        |   SPACESHIP
+        ) nls
+        right=expression                                                                    #equalityExprAlt
+
+    // regex find and match (=~ and ==~) (level 8.5)
+    |   left=expression nls op=(REGEX_FIND | REGEX_MATCH) nls right=expression              #regexExprAlt
+
+    // bitwise and (&)  (level 9)
+    |   left=expression nls op=BITAND nls right=expression                                  #bitwiseAndExprAlt
+
+    // exclusive or (^)  (level 10)
+    |   left=expression nls op=XOR nls right=expression                                     #exclusiveOrExprAlt
+
+    // bitwise or (|)  (level 11)
+    |   left=expression nls op=BITOR nls right=expression                                   #bitwiseOrExprAlt
+
+    // logical and (&&)  (level 12)
+    |   left=expression nls op=AND nls right=expression                                     #logicalAndExprAlt
+
+    // logical or (||)  (level 13)
+    |   left=expression nls op=OR nls right=expression                                      #logicalOrExprAlt
+
+    // ternary, elvis (level 14)
+    |   <assoc=right>
+        condition=expression nls
+        (   QUESTION nls tb=expression nls COLON nls
+        |   ELVIS nls
+        )
+        fb=expression                                                                       #conditionalExprAlt
     ;
 
 castOperandExpression
-// options { baseContext = expression; }
-    :   castParExpression castOperandExpression             #castCastExprAlt
+    :   LPAREN type rparen castOperandExpression            #castCastExprAlt
 
     |   pathExpression op=(INC | DEC)                       #postfixCastExprAlt
     |   pathExpression                                      #pathCastExprAlt
 
-    // ~(BNOT)/!(LNOT)
+    // bitwise not (~) / logical not (!)
     |   op=(BITNOT | NOT) nls castOperandExpression         #unaryNotCastExprAlt
 
-    // ++(prefix)/--(prefix)/+(unary)/-(unary)
-    |   op=(INC | DEC | ADD | SUB) castOperandExpression    #unaryAddCastExprAlt
+    // prefix (++/--)
+    |   op=(INC | DEC) castOperandExpression                #prefixCastExprAlt
+
+    // unary (+/-)
+    |   op=(ADD | SUB) castOperandExpression                #unaryAddCastExprAlt
     ;
 
 variableNames
     :   LPAREN identifier (COMMA identifier)+ rparen
-    ;
-
-enhancedStatementExpression
-    :   statementExpression
-    |   standardLambdaExpression
     ;
 
 // -- path expression
@@ -412,7 +400,7 @@ primary
     |   gstring                     #gstringPrmrAlt
     |   NEW nls creator             #newPrmrAlt
     |   parExpression               #parenPrmrAlt
-    |   closureOrLambdaExpression   #closureOrLambdaPrmrAlt
+    |   closure                     #closurePrmrAlt
     |   list                        #listPrmrAlt
     |   map                         #mapPrmrAlt
     |   builtInType                 #builtInTypePrmrAlt
@@ -425,17 +413,26 @@ pathElement
         |   SPREAD_DOT          // spread operator:         x*.y === x?.collect { it.y }
         |   SAFE_DOT            // optional-null operator:  x?.y === (x!=null) ? x.y : null
         )
-        nls AT?
-        (   keywords
-        |   identifier
-        |   stringLiteral
-        )                                           #propertyPathExprAlt
+        nls namePart                                    #propertyPathExprAlt
+
+    // method call expression (with closure)
+    |   closure                                         #closurePathExprAlt
 
     // method call expression
-    |   arguments                                   #methodCallPathExprAlt
+    |   arguments                                       #argumentsPathExprAlt
 
-    // list element expression
-    |   QUESTION? LBRACK expressionList RBRACK      #listElementPathExprAlt
+    // index expression
+    |   indexPropertyArgs                               #indexPathExprAlt
+    ;
+
+namePart
+    :   identifier
+    |   stringLiteral
+    |   keywords
+    ;
+
+indexPropertyArgs
+    :   LBRACK expressionList RBRACK
     ;
 
 // -- variable, type identifiers
@@ -448,7 +445,7 @@ identifier
 // -- primitive literals
 literal
     :   IntegerLiteral          #integerLiteralAlt
-    |   FloatingPointLiteral    #floatLiteralAlt
+    |   FloatingPointLiteral    #floatingPointLiteralAlt
     |   stringLiteral           #stringLiteralAlt
     |   BooleanLiteral          #booleanLiteralAlt
     |   NullLiteral             #nullLiteralAlt
@@ -458,20 +455,23 @@ stringLiteral
     :   StringLiteral
     ;
 
+// -- gstring expression
 gstring
-    :   GStringBegin gstringValue (GStringPart gstringValue)* GStringEnd
+    :   GStringBegin gstringDqPart* GStringEnd
+    |   TdqGStringBegin gstringTdqPart* TdqGStringEnd
     ;
 
-gstringValue
-    :   LBRACE expression RBRACE
-    // |   closure
-    // TODO: gstring with multiple path values doesn't work, likely missing semantic predicates
-    // |   gstringPath
+gstringDqPart
+    :   GStringText                         #gstringDqTextAlt
+    |   GStringPath                         #gstringDqPathAlt
+    |   GStringExprStart expression RBRACE  #gstringDqExprAlt
     ;
 
-// gstringPath
-//     :   identifier GStringPathPart*
-//     ;
+gstringTdqPart
+    :   TdqGStringText                          #gstringTdqTextAlt
+    |   TdqGStringPath                          #gstringTdqPathAlt
+    |   TdqGStringExprStart expression RBRACE   #gstringTdqExprAlt
+    ;
 
 // -- constructor method call
 creator
@@ -490,44 +490,20 @@ typeArgumentsOrDiamond
 
 // -- parenthetical expression
 parExpression
-    :   LPAREN enhancedStatementExpression rparen
+    :   LPAREN expression rparen
     ;
 
-// -- closure and lambda expressions
-closureOrLambdaExpression
-    :   closure
-    |   lambdaExpression
-    ;
-
+// -- closure expression
 closure
-    :   LBRACE (nls (formalParameterList nls)? ARROW)? sep? blockStatements? RBRACE
+    :   LBRACE (nls (formalParameterList nls)? ARROW)? nls blockStatements? RBRACE
     ;
 
-lambdaExpression
-// options { baseContext = standardLambdaExpression; }
-    :   lambdaParameters nls ARROW nls lambdaBody
+formalParameterList
+    :   formalParameter (COMMA nls formalParameter)*
     ;
 
-standardLambdaExpression
-    :   standardLambdaParameters nls ARROW nls lambdaBody
-    ;
-
-lambdaParameters
-// options { baseContext = standardLambdaParameters; }
-    :   formalParameters
-    // { a -> a * 2 } can be parsed as a lambda expression in a block, but we expect a closure.
-    // So it is better to put parameters in the parentheses and the following single parameter without parentheses is limited
-    // |   variableDeclaratorId
-    ;
-
-standardLambdaParameters
-    :   formalParameters
-    |   identifier
-    ;
-
-lambdaBody
-    :   block
-    |   statementExpression
+formalParameter
+    :   DEF? type? ELLIPSIS? identifier (nls ASSIGN nls expression)?
     ;
 
 // -- list expression
@@ -536,7 +512,7 @@ list
     ;
 
 expressionList
-    :   expressionListElement (COMMA expressionListElement)*
+    :   expressionListElement (COMMA nls expressionListElement)*
     ;
 
 expressionListElement
@@ -571,69 +547,50 @@ builtInType
     :   BuiltInPrimitiveType
     ;
 
-// -- argument list (with named params)
+// -- argument list
 arguments
-    :   LPAREN enhancedArgumentList? COMMA? rparen
+    :   LPAREN argumentList? COMMA? rparen
     ;
 
-enhancedArgumentList
-    :   enhancedArgumentListElement
+
+argumentList
+    :   argumentListElement
         (   COMMA nls
-            enhancedArgumentListElement
+            argumentListElement
         )*
     ;
 
-enhancedArgumentListElement
+argumentListElement
     :   expressionListElement
-    |   standardLambdaExpression
     |   namedArg
     ;
 
+namedArg
+    :   namedArgLabel COLON nls expression
+    |   MUL COLON nls expression
+    ;
+
+namedArgLabel
+    :   keywords
+    |   identifier
+    |   literal
+    |   gstring
+    ;
 
 //
 // types
 //
-standardType
-// options { baseContext = type; }
-    :   (   primitiveType
-        |   standardClassOrInterfaceType
-        )
-        emptyDims?
-    ;
-
 type
-    :   (   primitiveType
-        |   generalClassOrInterfaceType
-        )
-        emptyDims?
+    :   primitiveType
+    |   qualifiedClassName typeArguments?
     ;
 
 primitiveType
     :   BuiltInPrimitiveType
     ;
 
-generalClassOrInterfaceType
-// options { baseContext = classOrInterfaceType; }
-    :   qualifiedClassName typeArguments?
-    ;
-
-standardClassOrInterfaceType
-// options { baseContext = classOrInterfaceType; }
-    :   qualifiedStandardClassName typeArguments?
-    ;
-
-// classOrInterfaceType
-//     :   (   qualifiedClassName
-//         |   qualifiedStandardClassName
-//         ) typeArguments?
-//     ;
-
 qualifiedClassName
-    :   qualifiedNameElements identifier
-    ;
-
-qualifiedStandardClassName
-    :   qualifiedNameElements className (DOT className)*
+    :   qualifiedNameElements className
     ;
 
 qualifiedNameElements
@@ -654,10 +611,6 @@ className
 
 typeArguments
     :   LT nls type (COMMA nls type)* nls GT
-    ;
-
-emptyDims
-    :   (LBRACK RBRACK)+
     ;
 
 

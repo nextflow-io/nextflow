@@ -16,20 +16,14 @@
 
 package nextflow.ast
 
-import java.nio.charset.StandardCharsets
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.antlr.AstBuilder
 import nextflow.script.BaseScript
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
-import org.codehaus.groovy.ast.expr.ConstantExpression
-import org.codehaus.groovy.ast.stmt.BlockStatement
-import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
@@ -81,26 +75,6 @@ class NextflowParserImpl implements ASTTransformation {
                     functionNames.add(method.name)
             }
 
-            if( method.name != 'run' )
-                return
-
-            // get embedded source code
-            final block = (BlockStatement)method.code
-            final stmt = (ExpressionStatement)block.statements.first()
-            final strX = (ConstantExpression)stmt.expression
-            final sourceBytes = ((String)strX.value).decodeBase64()
-            final source = new String(sourceBytes, StandardCharsets.UTF_8)
-
-            // build ast of embedded source using Nextflow parser
-            final module = AstBuilder.fromString(source)
-
-            // insert ast
-            method.code = new BlockStatement(
-                module.statements,
-                block.variableScope
-            )
-
-            // TODO: add function definitions
             // TODO: fix lazy gstring
             // TODO: fix output emit/topic options
             // TODO: wrap output property expression in closure

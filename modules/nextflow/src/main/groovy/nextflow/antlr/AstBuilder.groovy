@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.antlr
+
+package nextflow.script.v2
+
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.antlr.NextflowLexer
+import nextflow.antlr.NextflowParser
+import nextflow.antlr.DescriptiveErrorStrategy
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
@@ -27,203 +34,277 @@ import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenValRef
 import nextflow.script.TokenVar
-import org.antlr.v4.runtime.BailErrorStrategy
+import org.antlr.v4.runtime.ANTLRErrorListener
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.Parser
 import org.antlr.v4.runtime.ParserRuleContext
+import org.antlr.v4.runtime.RecognitionException
+import org.antlr.v4.runtime.Recognizer
 import org.antlr.v4.runtime.Token as ParserToken
+import org.antlr.v4.runtime.atn.ATNConfigSet
+import org.antlr.v4.runtime.atn.PredictionMode
+import org.antlr.v4.runtime.dfa.DFA
+import org.antlr.v4.runtime.misc.ParseCancellationException
+import org.antlr.v4.runtime.tree.TerminalNode
+import org.apache.groovy.parser.antlr4.GroovySyntaxError
+import org.apache.groovy.parser.antlr4.util.StringUtils
+import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.GenericsType
 import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.ModuleNode
+import org.codehaus.groovy.ast.NodeMetaDataHandler
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
-import org.codehaus.groovy.ast.expr.AttributeExpression
 import org.codehaus.groovy.ast.expr.BinaryExpression
+import org.codehaus.groovy.ast.expr.BitwiseNegationExpression
 import org.codehaus.groovy.ast.expr.BooleanExpression
-import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
-import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
-import org.codehaus.groovy.ast.expr.ConstructorCallExpression
-import org.codehaus.groovy.ast.expr.DeclarationExpression
+import org.codehaus.groovy.ast.expr.EmptyExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
-import org.codehaus.groovy.ast.expr.LambdaExpression
 import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.NotExpression
 import org.codehaus.groovy.ast.expr.PostfixExpression
 import org.codehaus.groovy.ast.expr.PrefixExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
+import org.codehaus.groovy.ast.expr.RangeExpression
 import org.codehaus.groovy.ast.expr.SpreadExpression
 import org.codehaus.groovy.ast.expr.SpreadMapExpression
-import org.codehaus.groovy.ast.expr.TernaryExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
+import org.codehaus.groovy.ast.expr.UnaryMinusExpression
+import org.codehaus.groovy.ast.expr.UnaryPlusExpression
 import org.codehaus.groovy.ast.stmt.AssertStatement
-import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.EmptyStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.ast.tools.GeneralUtils
+import org.codehaus.groovy.control.CompilationFailedException
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+import org.codehaus.groovy.syntax.Numbers
+import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 
 import static nextflow.antlr.NextflowParser.*
-import static nextflow.ast.ASTHelpers.createX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.args as argsX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.declX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
-import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static nextflow.antlr.PositionConfigureUtils.configureAST as ast
+import static nextflow.ast.ASTHelpers.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 
 /**
- * Implements the construction of a Groovy AST from a
- * Nextflow parse tree.
+ * Transform a Nextflow parse tree into a Groovy AST.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AstBuilder {
 
-    static Module fromFileName(String filename) {
-        from(CharStreams.fromFileName(filename))
+    private SourceUnit sourceUnit
+    private ModuleNode moduleNode
+    private NextflowLexer lexer
+    private NextflowParser parser
+
+    private Tuple2<ParserRuleContext,Exception> numberFormatError
+
+    AstBuilder(SourceUnit sourceUnit) {
+        this.sourceUnit = sourceUnit
+        this.moduleNode = new ModuleNode(sourceUnit)
+
+        final charStream = createCharStream(sourceUnit)
+        this.lexer = new NextflowLexer(charStream)
+        this.parser = new NextflowParser(new CommonTokenStream(lexer))
+        parser.setErrorHandler(new DescriptiveErrorStrategy(charStream))
     }
 
-    static Module fromString(String text) {
-        from(CharStreams.fromString(text))
+    private CharStream createCharStream(SourceUnit sourceUnit) {
+        try {
+            return CharStreams.fromReader(
+                    new BufferedReader(sourceUnit.getSource().getReader()),
+                    sourceUnit.getName())
+        } catch (IOException e) {
+            throw new RuntimeException("Error occurred when reading source code.", e)
+        }
     }
 
-    private static Module from(CharStream inputStream) {
-        final lexer = new NextflowLexer(inputStream)
-        // remove the default console error listener
-        // lexer.removeErrorListeners()
-        final tokens = new CommonTokenStream(lexer)
-        final parser = new NextflowParser(tokens)
-        // remove the default console error listener
-        // parser.removeErrorListeners()
-        // throw an exception when a parsing error is encountered
-        // parser.setErrorHandler(new BailErrorStrategy())
-        // parser.setBuildParseTree(true)
-        final parseTree = parser.module()
+    private CompilationUnitContext buildCST() {
+        try {
+            final tokenStream = parser.getInputStream()
+            try {
+                return buildCST(PredictionMode.SLL)
+            }
+            catch( Throwable t ) {
+                // if some syntax error occurred in the lexer, no need to retry the powerful LL mode
+                if( t instanceof GroovySyntaxError && t.getSource() == GroovySyntaxError.LEXER )
+                    throw t
 
-        return AstBuilder.module(parseTree)
+                log.trace "Parsing mode SLL failed, falling back to LL"
+                tokenStream.seek(0)
+                return buildCST(PredictionMode.LL)
+            }
+        }
+        catch( Throwable t ) {
+            throw convertException(t)
+        }
     }
 
-    /// MODULE
+    private CompilationUnitContext buildCST(PredictionMode predictionMode) {
+        parser.getInterpreter().setPredictionMode(predictionMode)
 
-    static Module module(ModuleContext ctx) {
-        final module = new Module()
-        for( final stmt : ctx.moduleStatement() )
-            moduleStatement(module, stmt)
-        return module
+        if( predictionMode == PredictionMode.SLL )
+            removeErrorListeners()
+        else
+            addErrorListeners()
+
+        return parser.compilationUnit()
     }
 
-    private static void moduleStatement(Module module, ModuleStatementContext ctx) {
+    private CompilationFailedException convertException(Throwable t) {
+        if( t instanceof CompilationFailedException )
+            return t
+        else if( t instanceof ParseCancellationException )
+            return createParsingFailedException(t.getCause())
+        else
+            return createParsingFailedException(t)
+    }
+
+    ModuleNode buildAST(SourceUnit sourceUnit) {
+        try {
+            return compilationUnit(buildCST())
+        } catch (Throwable t) {
+            throw convertException(t)
+        }
+    }
+
+    /// SCRIPT STATEMENTS
+
+    private ModuleNode compilationUnit(CompilationUnitContext ctx) {
+        for( final stmt : ctx.scriptStatement() )
+            scriptStatement(stmt)
+
+        if( moduleNode.isEmpty() )
+            moduleNode.addStatement(ReturnStatement.RETURN_NULL_OR_VOID)
+
+        final scriptClassNode = moduleNode.getScriptClassDummy()
+        final statements = moduleNode.getStatementBlock().getStatements()
+        if( scriptClassNode && !statements.isEmpty() ) {
+            final first = statements.first()
+            final last = statements.last()
+            scriptClassNode.setSourcePosition(first)
+            scriptClassNode.setLastColumnNumber(last.getLastColumnNumber())
+            scriptClassNode.setLastLineNumber(last.getLastLineNumber())
+        }
+
+        if( numberFormatError != null )
+            throw createParsingFailedException(numberFormatError.getV2().getMessage(), numberFormatError.getV1())
+
+        return moduleNode
+    }
+
+    private Statement scriptStatement(ScriptStatementContext ctx) {
         if( ctx instanceof FunctionDefAltContext )
-            module.addMethod(method(ctx.functionDef()))
+            moduleNode.addMethod(functionDef(ctx.functionDef()))
 
         else if( ctx instanceof IncludeStmtAltContext )
-            module.addStatement(includeStatement(ctx.includeStatement()))
+            moduleNode.addStatement(includeStatement(ctx.includeStatement()))
 
         else if( ctx instanceof ProcessDefAltContext )
-            module.addStatement(processDef(ctx.processDef()))
+            moduleNode.addStatement(processDef(ctx.processDef()))
 
         else if( ctx instanceof WorkflowDefAltContext )
-            module.addStatement(workflowDef(ctx.workflowDef()))
-
-        else if( ctx instanceof StatementAltContext )
-            module.addStatement(statement(ctx.statement()))
+            moduleNode.addStatement(workflowDef(ctx.workflowDef()))
 
         else
-            throw new IllegalStateException()
+            throw createParsingFailedException("Invalid script statement: ${ctx.text}", ctx)
     }
 
-    private static Statement includeStatement(IncludeStatementContext ctx) {
-        final source = unquote(ctx.stringLiteral().text)
+    private Statement includeStatement(IncludeStatementContext ctx) {
+        final source = stringLiteral(ctx.stringLiteral())
         final modules = ctx.includeNames().includeName().collect { it ->
             final name = constX(it.name.text)
-            final arguments = it.alias
+            it.alias
                 ? createX(IncludeDef.Module, name, constX(it.alias.text))
                 : createX(IncludeDef.Module, name)
-            
         } as List<Expression>
-        final include = callX(varX('this'), 'include', argsX(createX(IncludeDef, argsX(modules))))
-        final from = callX(include, 'from', argsX(constX(source)))
-        final load = callX(from, 'load0', argsX(varX('params')))
-        stmt(load)
+        final include = callThisX('include', args(createX(IncludeDef, args(modules))))
+        final from = callX(include, 'from', args(constX(source)))
+        final load = callX(from, 'load0', args(varX('params')))
+        ast( stmt(load), ctx )
     }
 
-    private static Statement processDef(ProcessDefContext ctx) {
+    private Statement processDef(ProcessDefContext ctx) {
         final directives = ctx.processDirective().collect(this.&processDirective)
         final inputs = ctx.processInputs()
             ? ctx.processInputs().processDirective().collect(this.&processInput)
-            : []
+            : List.of()
         final outputs = ctx.processOutputs()
             ? ctx.processOutputs().processDirective().collect(this.&processOutput)
-            : []
+            : List.of()
         final when = ctx.processWhen()
-            ? [ callX(varX('this'), 'when', expression(ctx.processWhen().expression())) ]
-            : []
+            ? List.of(callThisX('when', expression(ctx.processWhen().expression())))
+            : List.of()
         final type = processType(ctx.processExec())
-        final exec = closureX(block(ctx.processExec().blockStatements()))
+        final exec = closureX(blockStatements(ctx.processExec().blockStatements()))
         final stub = ctx.processExec().processStub()
-            ? [ callX(varX('this'), 'stub', closureX(block(ctx.processExec().processStub().blockStatements()))) ]
-            : []
+            ? List.of(callThisX('stub', closureX(blockStatements(ctx.processExec().processStub().blockStatements()))))
+            : List.of()
         final bodyDef = createX(
             BodyDef,
-            argsX([
+            args(
                 exec,
                 constX(ctx.processExec().blockStatements().text), // TODO: source code formatting
                 constX(type),
                 new ListExpression() // TODO: variable references (see VariableVisitor)
-            ])
+            )
         )
+        final name = constX(ctx.name.text)
         final statements = [*directives, *inputs, *outputs, *when, *stub, bodyDef].collect(GeneralUtils.&stmt)
-        final closure = closureX(new BlockStatement(statements, new VariableScope()))
-        final arguments = [constX(ctx.name.text), closure]
-
-        stmt(callX(varX('this'), 'process', argsX(arguments as List<Expression>)))
+        final closure = closureX(block(new VariableScope(), statements))
+        ast( stmt(ast( callThisX('process', args(name, closure)), ctx )), ctx )
     }
 
-    private static MethodCallExpression processDirective(ProcessDirectiveContext ctx) {
-        processMethodCall(ctx, '')
+    private Expression processDirective(ProcessDirectiveContext ctx) {
+        ast( processMethodCall(ctx, ''), ctx )
     }
 
-    private static MethodCallExpression processInput(ProcessDirectiveContext ctx) {
+    private Expression processInput(ProcessDirectiveContext ctx) {
         final result = processMethodCall(ctx, '_in_')
         fixProcessInputOutputs(result)
-        return result
+        return ast( result, ctx )
     }
 
-    private static MethodCallExpression processOutput(ProcessDirectiveContext ctx) {
+    private Expression processOutput(ProcessDirectiveContext ctx) {
         final result = processMethodCall(ctx, '_out_')
         fixProcessInputOutputs(result)
-        return result
+        return ast( result, ctx )
     }
 
-    private static MethodCallExpression processMethodCall(ProcessDirectiveContext ctx, String prefix) {
-        final object = varX('this')
-        final method = prefix + ctx.identifier().text
-        final arguments = methodArguments(ctx.enhancedArgumentList())
-        callX(object, method, arguments)
+    private MethodCallExpression processMethodCall(ProcessDirectiveContext ctx, String prefix) {
+        final name = prefix + identifier(ctx.identifier())
+        final arguments = argumentList(ctx.argumentList())
+        return ast( callThisX(name, arguments), ctx )
     }
 
-    private static void fixProcessInputOutputs(MethodCallExpression methodCall) {
+    private void fixProcessInputOutputs(MethodCallExpression methodCall) {
         final name = methodCall.methodAsString
         final withinTuple = name == '_in_tuple' || name == '_out_tuple'
         final withinEach = name == '_in_each'
-
-        varToConstX(methodCall.getArguments(), withinTuple, withinEach)
+        varToConstX(methodCall.arguments, withinTuple, withinEach)
     }
 
-    private static Expression varToConstX(Expression expr, boolean withinTuple, boolean withinEach) {
+    private Expression varToConstX(Expression expr, boolean withinTuple, boolean withinEach) {
         if( expr instanceof VariableExpression ) {
             final name = ((VariableExpression) expr).getName()
 
@@ -233,56 +314,56 @@ class AstBuilder {
             if ( name == 'stdout' && withinTuple )
                 return createX( TokenStdoutCall )
 
-            return createX( TokenVar, new ConstantExpression(name) )
+            return createX( TokenVar, constX(name) )
         }
 
         if( expr instanceof MethodCallExpression ) {
             final methodCall = (MethodCallExpression)expr
             final name = methodCall.methodAsString
-            final args = methodCall.arguments
+            final arguments = methodCall.arguments
 
             if( name == 'env' && withinTuple )
-                return createX( TokenEnvCall, (TupleExpression) varToStrX(args) )
+                return createX( TokenEnvCall, (TupleExpression) varToStrX(arguments) )
 
             if( name == 'file' && (withinTuple || withinEach) )
-                return createX( TokenFileCall, (TupleExpression) varToConstX(args, withinTuple, withinEach) )
+                return createX( TokenFileCall, (TupleExpression) varToConstX(arguments, withinTuple, withinEach) )
 
             if( name == 'path' && (withinTuple || withinEach) )
-                return createX( TokenPathCall, (TupleExpression) varToConstX(args, withinTuple, withinEach) )
+                return createX( TokenPathCall, (TupleExpression) varToConstX(arguments, withinTuple, withinEach) )
 
             if( name == 'val' && withinTuple )
-                return createX( TokenValCall, (TupleExpression) varToStrX(args) )
+                return createX( TokenValCall, (TupleExpression) varToStrX(arguments) )
         }
 
         if( expr instanceof TupleExpression ) {
-            final args = expr.getExpressions()
+            final arguments = expr.getExpressions()
             int i = 0
-            for( Expression item : args )
-                args[i++] = varToConstX(item, withinTuple, withinEach)
+            for( Expression item : arguments )
+                arguments[i++] = varToConstX(item, withinTuple, withinEach)
             return expr
         }
 
         return expr
     }
 
-    private static Expression varToStrX(Expression expr) {
+    private Expression varToStrX(Expression expr) {
         if( expr instanceof VariableExpression ) {
             final name = ((VariableExpression) expr).getName()
-            return createX( TokenVar, new ConstantExpression(name) )
+            return createX( TokenVar, constX(name) )
         }
 
         if( expr instanceof TupleExpression ) {
-            final args = expr.getExpressions()
+            final arguments = expr.getExpressions()
             int i = 0
-            for( Expression item : args )
-                args[i++] = varToStrX(item)
+            for( Expression item : arguments )
+                arguments[i++] = varToStrX(item)
             return expr
         }
 
         return expr
     }
 
-    private static String processType(ProcessExecContext ctx) {
+    private String processType(ProcessExecContext ctx) {
         ctx.PROCESS_EXEC()
             ? 'exec'
             : ctx.PROCESS_SHELL()
@@ -290,438 +371,765 @@ class AstBuilder {
             : 'script'
     }
 
-    private static Statement workflowDef(WorkflowDefContext ctx) {
+    private Statement workflowDef(WorkflowDefContext ctx) {
         final body = ctx.workflowBody()
         final takes = body.workflowTakes()
             ? body.workflowTakes().identifier().collect( take ->
-                callX(varX('this'), "_take_${take.text}", argsX([]))
+                callThisX("_take_${take.text}", new ArgumentListExpression())
             )
-            : []
+            : List.of()
         final emits = body.workflowEmits()
             ? body.workflowEmits().identifier().collect( emit ->
-                callX(varX('this'), "_emit_${emit.text}", argsX([]))
+                callThisX("_emit_${emit.text}", new ArgumentListExpression())
             )
-            : []
-        final code = block(body.workflowMain().blockStatements())
+            : List.of()
+        final code = blockStatements(body.workflowMain().blockStatements())
         final bodyDef = createX(
             BodyDef,
-            argsX([
+            args(
                 closureX(code),
                 constX(ctx.text), // TODO: source code formatting
                 constX('workflow'),
                 new ListExpression() // TODO: variable references (see VariableVisitor)
-            ])
+            )
         )
         final statements = [*takes, *emits, bodyDef].collect(GeneralUtils.&stmt)
-        final closure = closureX(new BlockStatement(statements, new VariableScope()))
+        final closure = closureX(block(new VariableScope(), statements))
         final arguments = ctx.name
-            ? [constX(ctx.name.text), closure]
-            : [closure]
+            ? args(constX(ctx.name.text), closure)
+            : args(closure)
 
-        stmt(callX(varX('this'), 'workflow', argsX(arguments as List<Expression>)))
+        ast( stmt(callThisX('workflow', arguments)), ctx )
     }
 
-    private static MethodNode method(FunctionDefContext ctx) {
-        final name = ctx.identifier().text
+    private MethodNode functionDef(FunctionDefContext ctx) {
+        final name = identifier(ctx.identifier())
         final modifiers = 0
-        final returnType = type(ctx.standardType())
-        final params = parameters(ctx.formalParameters())
+        final returnType = type(ctx.type())
+        final params = parameters(ctx.formalParameterList())
         final exceptions = [] as ClassNode[]
-        final code = block(ctx.block())
-        new MethodNode(name, modifiers, returnType, params, exceptions, code)
+        final code = blockStatements(ctx.blockStatements())
+        ast( new MethodNode(name, modifiers, returnType, params, exceptions, code), ctx )
     }
 
-    /// STATEMENTS
+    /// GROOVY STATEMENTS
 
-    private static List<Statement> statements(List<StatementContext> stmts) {
-        stmts.collect( ctx -> statement(ctx) )
-    }
-
-    static Statement statement(StatementContext ctx) {
-        if( ctx instanceof BlockStmtAltContext )
-            return block(ctx.block())
+    private Statement statement(StatementContext ctx) {
+        if( ctx instanceof IfElseStmtAltContext )
+            return ast( ifElseStatement(ctx.ifElseStatement()), ctx )
 
         if( ctx instanceof ReturnStmtAltContext )
-            return returnStatement(ctx.expression())
+            return ast( returnStatement(ctx.expression()), ctx )
 
         if( ctx instanceof AssertStmtAltContext )
-            return assertStatement(ctx.assertStatement())
+            return ast( assertStatement(ctx.assertStatement()), ctx )
 
-        if( ctx instanceof VariableDeclarationStmtAltContext ) {
-            final expression = variableDeclaration(ctx.variableDeclaration())
-            return stmt(expression)
-        }
+        if( ctx instanceof VariableDeclarationStmtAltContext )
+            return ast( variableDeclaration(ctx.variableDeclaration()), ctx )
 
-        if( ctx instanceof ExpressionStmtAltContext ) {
-            final expression = expression(ctx.statementExpression())
-            return stmt(expression)
-        }
+        if( ctx instanceof MultipleAssignmentStmtAltContext )
+            return ast( assignment(ctx.multipleAssignmentStatement()), ctx )
+
+        if( ctx instanceof AssignmentStmtAltContext )
+            return ast( assignment(ctx.assignmentStatement()), ctx )
+
+        if( ctx instanceof ExpressionStmtAltContext )
+            return ast( expressionStatement(ctx.expressionStatement()), ctx )
 
         if( ctx instanceof EmptyStmtAltContext )
-            return new EmptyStatement()
+            return EmptyStatement.INSTANCE
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy statement: ${ctx.text}", ctx)
     }
 
-    private static BlockStatement block(BlockContext ctx) {
-        block(ctx.blockStatements())
+    private Statement ifElseStatement(IfElseStatementContext ctx) {
+        final expression = ast( parExpression(ctx.parExpression()), ctx.parExpression() )
+        final condition = ast( boolX(expression), expression )
+        final thenStmt = ifElseBranch(ctx.tb)
+        final elseStmt = ctx.ELSE()
+            ? ifElseBranch(ctx.fb)
+            : EmptyStatement.INSTANCE
+        ifElseS(condition, thenStmt, elseStmt)
     }
 
-    private static BlockStatement block(BlockStatementsContext ctx) {
-        final code = ctx
-            ? statements(ctx.statement())
-            : [ new EmptyStatement() as Statement ]
-        new BlockStatement(code, new VariableScope())
+    private Statement ifElseBranch(IfElseBranchContext ctx) {
+        return ctx.statement()
+            ? statement(ctx.statement())
+            : blockStatements(ctx.blockStatements())
     }
 
-    private static ReturnStatement returnStatement(ExpressionContext ctx) {
-        ctx ? new ReturnStatement(expression(ctx)) : null
+    private BlockStatement blockStatements(BlockStatementsContext ctx) {
+        final List<Statement> code = ctx
+            ? ctx.statement().collect( this.&statement )
+            : List<Statement>.of()
+        ast( block(new VariableScope(), code), ctx )
     }
 
-    private static AssertStatement assertStatement(AssertStatementContext ctx) {
-        final condition = new BooleanExpression(expression(ctx.condition))
-        final message = ctx.message ? expression(ctx.message) : null
-        new AssertStatement(condition, message)
+    private Statement returnStatement(ExpressionContext ctx) {
+        final result = ctx
+            ? expression(ctx)
+            : ConstantExpression.EMPTY_EXPRESSION
+        returnS(result)
     }
 
-    private static Expression variableDeclaration(VariableDeclarationContext ctx) {
+    private Statement assertStatement(AssertStatementContext ctx) {
+        final condition = ast( boolX(expression(ctx.condition)), ctx.condition )
+        ctx.message
+            ? new AssertStatement(condition, expression(ctx.message))
+            : new AssertStatement(condition)
+    }
+
+    private Statement variableDeclaration(VariableDeclarationContext ctx) {
         if( ctx.typeNamePairs() ) {
+            // multiple assignment
             final variables = ctx.typeNamePairs().typeNamePair().collect { pair ->
-                final name = pair.identifier().text
+                final name = identifier(pair.identifier())
                 final type = type(pair.type())
-                varX(name, type)
+                ast( varX(name, type), pair )
             }
             final target = variables.size() > 1
                 ? new ArgumentListExpression(variables as List<Expression>)
                 : variables.first()
-            final init = variableInitializer(ctx.variableInitializer())
-            return declX(target, init)
+            final initializer = expression(ctx.initializer)
+            return stmt(ast( declX(target, initializer), ctx ))
         }
         else {
+            // single assignment
             final type = type(ctx.type())
-            final declarations = ctx.variableDeclarators().variableDeclarator().collect { decl ->
-                final name = decl.identifier().text
-                final target = varX(name, type)
-                final init = variableInitializer(decl.variableInitializer())
-                declX(target, init)
-            }
-            return declarations.size() > 1
-                ? new ArgumentListExpression(declarations as List<Expression>)
-                : declarations.first()
+            final decl = ctx.variableDeclarator()
+            final name = identifier(decl.identifier())
+            final target = ast( varX(name, type), ctx )
+            final initializer = decl.initializer
+                ? expression(decl.initializer)
+                : EmptyExpression.INSTANCE
+            return stmt(ast( declX(target, initializer), ctx ))
         }
     }
 
-    private static Expression variableInitializer(VariableInitializerContext ctx) {
-        enhancedStatementExpression(ctx.enhancedStatementExpression())
+    private Statement assignment(MultipleAssignmentStatementContext ctx) {
+        final vars = ctx.variableNames().identifier().collect( this.&variableName )
+        final left = ast( new TupleExpression(vars), ctx.variableNames() )
+        final right = expression(ctx.right)
+        return stmt(assignX(left, right))
     }
 
-    /// EXPRESSIONS
-
-    static Expression expression(StatementExpressionContext ctx) {
-        ctx.argumentList()
-            ? methodCall(ctx.expression(), ctx.argumentList())
-            : expression(ctx.expression())
+    private Expression variableName(IdentifierContext ctx) {
+        return ast( varX(identifier(ctx)), ctx )
     }
 
-    static Expression expression(ExpressionContext ctx) {
-        if( ctx instanceof AddExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
+    private Statement assignment(AssignmentStatementContext ctx) {
+        final left = expression(ctx.left)
+        if( left instanceof VariableExpression && isInsideParentheses(left) ) {
+            if( left.<Number>getNodeMetaData(INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
+                throw createParsingFailedException("Nested parenthesis is not allowed in multiple assignment, e.g. ((a)) = b", ctx)
 
-        if( ctx instanceof AndExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof AssignmentExprAltContext ) {
-            final right = enhancedStatementExpression(ctx.enhancedStatementExpression())
-            return binary(ctx.left, ctx.op, right)
+            final tuple = ast( new TupleExpression(left), ctx.left )
+            return stmt(assignX(tuple, expression(ctx.right)))
         }
+
+        if ( isAssignmentLhsValid(left) )
+            return stmt(assignX(left, expression(ctx.right)))
+
+        throw createParsingFailedException("The left-hand side of an assignment should be a variable or a property expression", ctx)
+    }
+
+    private boolean isAssignmentLhsValid(Expression left) {
+        // e.g. p = 123
+        if( left instanceof VariableExpression && !isInsideParentheses(left) )
+            return true
+        // e.g. obj.p = 123
+        if( left instanceof PropertyExpression )
+            return true
+        // e.g. map[a] = 123 OR map['a'] = 123 OR map["$a"] = 123
+        if( left instanceof BinaryExpression && left.operation.type == Types.LEFT_SQUARE_BRACKET )
+            return true
+        return false
+    }
+
+    private Statement expressionStatement(ExpressionStatementContext ctx) {
+        final base = expression(ctx.expression())
+        final expression = ctx.argumentList()
+            ? methodCall(base, argumentList(ctx.argumentList()))
+            : base
+        return ast( stmt(expression), ctx )
+    }
+
+    /// GROOVY EXPRESSIONS
+
+    private Expression expression(ExpressionContext ctx) {
+        if( ctx instanceof AddSubExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof BitwiseAndExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof BitwiseOrExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
 
         if( ctx instanceof CastExprAltContext ) {
-            final type = type(ctx.castParExpression().type())
+            final type = type(ctx.type())
             final operand = castOperand(ctx.castOperandExpression())
-            return new CastExpression(type, operand)
+            return ast( castX(type, operand), ctx )
         }
 
         if( ctx instanceof ConditionalExprAltContext )
-            return ternary(ctx.condition, ctx.tb, ctx.fb)
+            return ast( ternary(ctx), ctx )
 
         if( ctx instanceof EqualityExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
 
         if( ctx instanceof ExclusiveOrExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof InclusiveOrExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
 
         if( ctx instanceof LogicalAndExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
 
         if( ctx instanceof LogicalOrExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
 
         if( ctx instanceof MultDivExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
-
-        if( ctx instanceof MultipleAssignmentExprAltContext ) {
-            final vars = ctx.variableNames().identifier().collect( ctx1 -> varX(ctx1.text) )
-            final left = new TupleExpression(vars as List<Expression>)
-            final right = expression(ctx.right)
-            return new BinaryExpression(left, token(ctx.op), right)
-        }
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
 
         if( ctx instanceof PathExprAltContext )
             return path(ctx.pathExpression())
 
         if( ctx instanceof PostfixExprAltContext )
-            return postfix(ctx.pathExpression(), ctx.op)
+            return ast( postfix(ctx.pathExpression(), ctx.op), ctx )
 
         if( ctx instanceof PowerExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof PrefixExprAltContext )
+            return ast( prefix(expression(ctx.expression()), ctx.op), ctx )
 
         if( ctx instanceof RegexExprAltContext )
-            return binary(ctx.left, ctx.op, ctx.right)
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
 
-        if( ctx instanceof RelationalExprAltContext ) {
-            final right = ctx.type()
-                ? new ClassExpression(type(ctx.type()))
-                : expression(ctx.right)
-            return binary(ctx.left, ctx.op, right)
+        if( ctx instanceof RelationalExprAltContext )
+            return ast( binary(ctx.left, ctx.op, ctx.right), ctx )
+
+        if( ctx instanceof RelationalCastExprAltContext ) {
+            final operand = expression(ctx.expression())
+            final type = type(ctx.type())
+            return ast( asX(type, operand), ctx )
         }
 
-        if( ctx instanceof ShiftExprAltContext ) {
-            final op = ctx.dlOp ?: ctx.tgOp ?: ctx.dgOp ?: ctx.riOp ?: ctx.reOp
-            return binary(ctx.left, op, ctx.right)
+        if( ctx instanceof RelationalTypeExprAltContext ) {
+            final right = ast( new ClassExpression(type(ctx.type(), false)), ctx.type() )
+            return ast( binary(ctx.left, ctx.op, right), ctx )
         }
+
+        if( ctx instanceof ShiftExprAltContext )
+            return ast( shift(ctx), ctx )
 
         if( ctx instanceof UnaryAddExprAltContext )
-            return prefix(ctx.expression(), ctx.op)
+            return ast( unaryAdd(expression(ctx.expression()), ctx.op), ctx )
 
         if( ctx instanceof UnaryNotExprAltContext )
-            return prefix(ctx.expression(), ctx.op)
+            return ast( unaryNot(expression(ctx.expression()), ctx.op), ctx )
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
-    private static BinaryExpression binary(ExpressionContext left, ParserToken op, ExpressionContext right) {
-        new BinaryExpression(expression(left), token(op), expression(right))
+    private Expression binary(ExpressionContext left, ParserToken op, ExpressionContext right) {
+        binX(expression(left), token(op), expression(right))
     }
 
-    private static BinaryExpression binary(ExpressionContext left, ParserToken op, Expression right) {
-        new BinaryExpression(expression(left), token(op), right)
+    private Expression binary(ExpressionContext left, ParserToken op, Expression right) {
+        binX(expression(left), token(op), right)
     }
 
-    private static Expression castOperand(CastOperandExpressionContext ctx) {
+    private Expression castOperand(CastOperandExpressionContext ctx) {
         if( ctx instanceof CastCastExprAltContext ) {
-            final type = type(ctx.castParExpression().type())
+            final type = type(ctx.type())
             final operand = castOperand(ctx.castOperandExpression())
-            return new CastExpression(type, operand)
+            return ast( castX(type, operand), ctx )
         }
 
         if( ctx instanceof PathCastExprAltContext )
             return path(ctx.pathExpression())
 
         if( ctx instanceof PostfixCastExprAltContext )
-            return postfix(ctx.pathExpression(), ctx.op)
+            return ast( postfix(ctx.pathExpression(), ctx.op), ctx )
+
+        if( ctx instanceof PrefixCastExprAltContext )
+            return ast( prefix(castOperand(ctx.castOperandExpression()), ctx.op), ctx )
 
         if( ctx instanceof UnaryAddCastExprAltContext )
-            return prefix(ctx.castOperandExpression(), ctx.op)
+            return ast( unaryAdd(castOperand(ctx.castOperandExpression()), ctx.op), ctx )
 
         if( ctx instanceof UnaryNotCastExprAltContext )
-            return prefix(ctx.castOperandExpression(), ctx.op)
+            return ast( unaryNot(castOperand(ctx.castOperandExpression()), ctx.op), ctx )
+
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
+    }
+
+    private Expression postfix(PathExpressionContext ctx, ParserToken op) {
+        new PostfixExpression(path(ctx), token(op))
+    }
+
+    private Expression prefix(Expression expression, ParserToken op) {
+        new PrefixExpression(token(op), expression)
+    }
+
+    private Expression shift(ShiftExprAltContext ctx) {
+        final left = expression(ctx.left)
+        final right = expression(ctx.right)
+
+        if( ctx.riOp )
+            return new RangeExpression(left, right, true)
+        if( ctx.reOp )
+            return new RangeExpression(left, right, false, true)
+
+        def op
+        if( ctx.dlOp )
+            op = token(ctx.dlOp, 2)
+        if( ctx.dgOp )
+            op = token(ctx.dgOp, 2)
+        if( ctx.tgOp )
+            op = token(ctx.tgOp, 3)
+
+        return binX(left, op, right)
+    }
+
+    private Expression ternary(ConditionalExprAltContext ctx) {
+        if( ctx.ELVIS() )
+            return elvisX(expression(ctx.condition), expression(ctx.fb))
+
+        final condition = ast( boolX(expression(ctx.condition)), ctx.condition )
+        return ternaryX(condition, expression(ctx.tb), expression(ctx.fb))
+    }
+
+    private Expression unaryAdd(Expression expression, ParserToken op) {
+        if( op.type == NextflowParser.ADD )
+            return new UnaryPlusExpression(expression)
+
+        if( op.type == NextflowParser.SUB )
+            return new UnaryMinusExpression(expression)
 
         throw new IllegalStateException()
     }
 
-    private static ClosureExpression closure(ClosureContext ctx) {
-        final params = parameters(ctx.formalParameterList())
-        final code = block(ctx.blockStatements())
-        closureX(params, code)
+    private Expression unaryNot(Expression expression, ParserToken op) {
+        if( op.type == NextflowParser.NOT )
+            return new NotExpression(expression)
+
+        if( op.type == NextflowParser.BITNOT )
+            return new BitwiseNegationExpression(expression)
+
+        throw new IllegalStateException()
     }
 
-    private static ConstantExpression constant(LiteralContext ctx) {
-        if( ctx instanceof IntegerLiteralAltContext )
-            return constX( ctx.text.toLong() )
+    /// -- PATH EXPRESSIONS
 
-        if( ctx instanceof FloatLiteralAltContext )
-            return constX( ctx.text.toDouble() )
+    private Expression path(PathExpressionContext ctx) {
+        try {
+            final primary = primary(ctx.primary())
+            return ctx.pathElement().inject(primary, (acc, el) -> pathElement(acc, el))
+        }
+        catch( IllegalStateException e ) {
+            throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
+        }
+    }
+
+    private Expression pathElement(Expression expression, PathElementContext ctx) {
+        if( ctx instanceof PropertyPathExprAltContext )
+            return ast( pathPropertyElement(expression, ctx), ctx )
+
+        if( ctx instanceof ClosurePathExprAltContext )
+            return ast( pathClosureElement(expression, ctx.closure()), ctx )
+
+        if( ctx instanceof ArgumentsPathExprAltContext )
+            return ast( pathArgumentsElement(expression, ctx.arguments().argumentList()), ctx )
+
+        if( ctx instanceof IndexPathExprAltContext )
+            return ast( pathIndexElement(expression, ctx.indexPropertyArgs()), ctx )
+
+        throw new IllegalStateException()
+    }
+
+    private Expression pathPropertyElement(Expression expression, PropertyPathExprAltContext ctx) {
+        final property = ast( constX(namePart(ctx.namePart())), ctx.namePart() )
+        final safe = ctx.SAFE_DOT() != null || ctx.SPREAD_DOT() != null
+        final result = new PropertyExpression(expression, property, safe)
+        if( ctx.SPREAD_DOT() )
+            result.setSpreadSafe(true)
+        return result
+    }
+
+    private String namePart(NamePartContext ctx) {
+        if( ctx.keywords() )
+            return keywords(ctx.keywords())
+
+        if( ctx.identifier() )
+            return identifier(ctx.identifier())
+
+        if( ctx.stringLiteral() )
+            return stringLiteral(ctx.stringLiteral())
+
+        throw new IllegalStateException()
+    }
+
+    private Expression pathClosureElement(Expression expression, ClosureContext ctx) {
+        final closure = ast( closure(ctx), ctx )
+
+        if( expression instanceof MethodCallExpression ) {
+            // append closure to method call arguments
+            final call = (MethodCallExpression)expression
+
+            // normal arguments, e.g. 1, 2
+            if ( call.arguments !instanceof ArgumentListExpression )
+                throw new IllegalStateException()
+
+            final arguments = (ArgumentListExpression)call.arguments
+            arguments.addExpression(closure)
+            return call
+
+            // TODO: only needed if namedArgs uses TupleExpression
+            // named arguments, e.g. x: 1, y: 2
+            // if ( arguments instanceof TupleExpression ) {
+            //     final tuple = (TupleExpression) arguments
+            //     if( !tuple.expressions )
+            //         throw new IllegalStateException()
+            //     final namedArguments = (NamedArgumentListExpression) tuple.getExpression(0)
+            //     call.arguments = args( mapX(namedArguments.mapEntryExpressions), closure )
+            //     return call
+            // }
+        }
+
+        final arguments = ast( args(closure), closure )
+
+        // e.g. obj.m { }
+        if( expression instanceof PropertyExpression )
+            return propMethodCall(expression, arguments)
+
+        // e.g. m { }, "$m" { }, "m" { }
+        if( expression instanceof VariableExpression || expression instanceof GStringExpression || (expression instanceof ConstantExpression && expression.value instanceof String) )
+            return thisMethodCall(expression, arguments)
+
+        // e.g. 1 { }, 1.1 { }, (1 / 2) { }, m() { }, { -> ... } { }
+        return callMethodCall(expression, arguments)
+    }
+
+    private Expression pathArgumentsElement(Expression caller, ArgumentListContext ctx) {
+        final arguments = argumentList(ctx)
+        return methodCall(caller, arguments)
+    }
+
+    private Expression pathIndexElement(Expression expression, IndexPropertyArgsContext ctx) {
+        final elements = expressionList(ctx.expressionList())
+
+        Expression index
+        if( elements.size() > 1 ) {
+            // e.g. a[1, 2]
+            index = listX(elements)
+            index.setWrapped(true)
+        }
+        else if( elements.first() instanceof SpreadExpression ) {
+            // e.g. a[*[1, 2]]
+            index = listX(elements)
+            index.setWrapped(false)
+        }
+        else {
+            // e.g. a[1]
+            index = elements.first()
+        }
+
+        return indexX(expression, ast(index, ctx))
+    }
+
+    /// -- PRIMARY EXPRESSIONS
+
+    private Expression primary(PrimaryContext ctx) {
+        if( ctx instanceof IdentifierPrmrAltContext )
+            return ast( varX(identifier(ctx.identifier())), ctx )
+
+        if( ctx instanceof LiteralPrmrAltContext )
+            return ast( literal(ctx.literal()), ctx )
+
+        if( ctx instanceof GstringPrmrAltContext )
+            return ast( gstring(ctx.gstring()), ctx )
+
+        if( ctx instanceof NewPrmrAltContext )
+            return ast( creator(ctx.creator()), ctx )
+
+        if( ctx instanceof ParenPrmrAltContext )
+            return ast( parExpression(ctx.parExpression()), ctx )
+
+        if( ctx instanceof ClosurePrmrAltContext )
+            return ast( closure(ctx.closure()), ctx )
+
+        if( ctx instanceof ListPrmrAltContext )
+            return ast( list(ctx.list()), ctx )
+
+        if( ctx instanceof MapPrmrAltContext )
+            return ast( map(ctx.map()), ctx )
+
+        if( ctx instanceof BuiltInTypePrmrAltContext )
+            return ast( builtInType(ctx.builtInType()), ctx )
+
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
+    }
+
+    private Expression builtInType(BuiltInTypeContext ctx) {
+        varX(ctx.text)
+    }
+
+    private String identifier(IdentifierContext ctx) {
+        ctx.text
+    }
+
+    private String keywords(KeywordsContext ctx) {
+        ctx.text
+    }
+
+    private Expression literal(LiteralContext ctx) {
+        if( ctx instanceof IntegerLiteralAltContext )
+            return integerLiteral( ctx )
+
+        if( ctx instanceof FloatingPointLiteralAltContext )
+            return floatingPointLiteral( ctx )
 
         if( ctx instanceof StringLiteralAltContext )
-            return constX( unquote(ctx.text) )
+            return constX( stringLiteral(ctx.stringLiteral()) )
 
         if( ctx instanceof BooleanLiteralAltContext )
-            return constX( ctx.text=='true' ? true : false )
+            return constX( ctx.text=='true' )
 
         if( ctx instanceof NullLiteralAltContext )
             return constX( null )
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Invalid Groovy expression: ${ctx.text}", ctx)
     }
 
-    private static Expression creator(CreatorContext ctx) {
+    private Expression integerLiteral(IntegerLiteralAltContext ctx) {
+        Number num
+        try {
+            num = Numbers.parseInteger(ctx.text)
+        } catch (Exception e) {
+            numberFormatError = new Tuple2(ctx, e)
+        }
+
+        constX(num, true)
+    }
+
+    private Expression floatingPointLiteral(FloatingPointLiteralAltContext ctx) {
+        Number num
+        try {
+            num = Numbers.parseDecimal(ctx.text)
+        } catch (Exception e) {
+            numberFormatError = new Tuple2(ctx, e)
+        }
+
+        constX(num, true)
+    }
+
+    private String stringLiteral(StringLiteralContext ctx) {
+        stringLiteral(ctx.text)
+    }
+
+    private String stringLiteral(String text) {
+        final startsWithSlash = text.startsWith(SLASH_STR)
+
+        if( text.startsWith(TSQ_STR) || text.startsWith(TDQ_STR) ) {
+            text = StringUtils.removeCR(text)
+            text = StringUtils.trimQuotations(text, 3)
+        }
+        else if( text.startsWith(SQ_STR) || text.startsWith(DQ_STR) || startsWithSlash ) {
+            // the slashy string can span rows, so we have to remove CR for it
+            if( startsWithSlash )
+                text = StringUtils.removeCR(text)
+            text = StringUtils.trimQuotations(text, 1)
+        }
+
+        final slashyType = startsWithSlash
+            ? StringUtils.SLASHY
+            : StringUtils.NONE_SLASHY
+
+        return StringUtils.replaceEscapes(text, slashyType)
+    }
+
+    private Expression gstring(GstringContext ctx) {
+        final verbatimText = stringLiteral(ctx.text)
+        final List<ConstantExpression> strings = []
+        final List<Expression> values = []
+
+        for( final part : ctx.gstringDqPart() ) {
+            if( part instanceof GstringDqTextAltContext )
+                strings << ast( constX(part.text), part )
+
+            if( part instanceof GstringDqPathAltContext )
+                values << ast( gstringPath(part.text), part )
+
+            if( part instanceof GstringDqExprAltContext )
+                values << expression(part.expression())
+        }
+
+        for( final part : ctx.gstringTdqPart() ) {
+            if( part instanceof GstringTdqTextAltContext )
+                strings << ast( constX(part.text), part )
+
+            if( part instanceof GstringTdqPathAltContext )
+                values << ast( gstringPath(part.text), part )
+
+            if( part instanceof GstringTdqExprAltContext )
+                values << expression(part.expression())
+        }
+
+        new GStringExpression(verbatimText, strings, values)
+    }
+
+    private Expression gstringPath(String text) {
+        final names = text.tokenize('.')
+        final primary = varX(names.head().substring(1))
+        return names.tail().inject(primary, (acc, name) -> propX(acc, constX(name)) )
+    }
+
+    private Expression creator(CreatorContext ctx) {
         final type = type(ctx.createdName())
-        final arguments = methodArguments(ctx.arguments().enhancedArgumentList())
-        new ConstructorCallExpression(type, arguments)
+        final arguments = argumentList(ctx.arguments().argumentList())
+        ctorX(type, arguments)
     }
 
-    private static Expression enhancedStatementExpression(EnhancedStatementExpressionContext ctx) {
-        ctx.statementExpression()
-            ? expression(ctx.statementExpression())
-            : lambda(ctx.standardLambdaExpression())
+    private Expression parExpression(ParExpressionContext ctx) {
+        final expression = expression(ctx.expression())
+        expression.getNodeMetaData(INSIDE_PARENTHESES_LEVEL, k -> new AtomicInteger()).getAndAdd(1)
+        return expression
     }
 
-    private static GStringExpression gstring(GstringContext ctx) {
-        final strings = gstringParts(ctx)
-        final values = ctx.gstringValue().collect( ctx1 -> expression(ctx1.expression()) )
-        new GStringExpression(unquote(ctx.text), strings, values)
+    private Expression closure(ClosureContext ctx) {
+        final params = parameters(ctx.formalParameterList())
+        final code = blockStatements(ctx.blockStatements())
+        closureX(params, code)
     }
 
-    private static List<ConstantExpression> gstringParts(GstringContext ctx) {
-        final strings = []
+    private Expression list(ListContext ctx) {
+        if( ctx.COMMA() && !ctx.expressionList() )
+            throw createParsingFailedException("Empty list literal should not contain any comma(,)", ctx.COMMA())
 
-        final begin = ctx.GStringBegin().text
-        strings.add(begin.startsWith('"""') ? begin[3..<-1] : begin[1..<-1])
-
-        for( final part : ctx.GStringPart() )
-            strings.add(part.text[0..<-1])
-
-        final end = ctx.GStringEnd().text
-        strings.add(begin.startsWith('"""') ? end[0..<-3] : end[0..<-1])
-
-        return strings.collect( str -> constX(str) )
+        listX(expressionList(ctx.expressionList()))
     }
 
-    private static LambdaExpression lambda(LambdaExpressionContext ctx) {
-        final params = parameters(ctx.lambdaParameters().formalParameters())
-        final code = lambdaBody(ctx.lambdaBody())
-        new LambdaExpression(params, code)
-    }
-
-    private static LambdaExpression lambda(StandardLambdaExpressionContext ctx) {
-        final ctx1 = ctx.standardLambdaParameters()
-        final params = ctx1.formalParameters()
-            ? parameters(ctx1.formalParameters())
-            : [ new Parameter(type(null), ctx1.identifier().text) ] as Parameter[]
-        final code = lambdaBody(ctx.lambdaBody())
-        new LambdaExpression(params, code)
-    }
-
-    private static BlockStatement lambdaBody(LambdaBodyContext ctx) {
-        if( ctx.block() )
-            return block(ctx.block())
-
-        final statement = new ReturnStatement(expression(ctx.statementExpression()))
-        new BlockStatement([ statement as Statement ], new VariableScope())
-    }
-
-    private static ListExpression list(ListContext ctx) {
-        if( !ctx.expressionList() )
-            return new ListExpression()
+    private List<Expression> expressionList(ExpressionListContext ctx) {
+        if( !ctx )
+            return Collections.emptyList()
         
-        final expressions = ctx.expressionList().expressionListElement().collect( this.&listElement )
-        new ListExpression(expressions)
+        ctx.expressionListElement().collect( this.&listElement )
     }
 
-    private static Expression listElement(ExpressionListElementContext ctx) {
+    private Expression listElement(ExpressionListElementContext ctx) {
         final element = expression(ctx.expression())
         ctx.MUL()
-            ? new SpreadExpression(element)
-            : element
+            ? ast( new SpreadExpression(element), ctx )
+            : ast( element, ctx )
     }
 
-    private static MapExpression map(MapContext ctx) {
+    private Expression map(MapContext ctx) {
         if( !ctx.mapEntryList() )
             return new MapExpression()
 
         final entries = ctx.mapEntryList().mapEntry().collect( this.&mapEntry )
-        new MapExpression(entries)
+        mapX(entries)
     }
 
-    private static MapEntryExpression mapEntry(MapEntryContext ctx) {
+    private MapEntryExpression mapEntry(MapEntryContext ctx) {
         final value = expression(ctx.expression())
         final key = ctx.MUL()
-            ? new SpreadMapExpression(value)
+            ? ast( new SpreadMapExpression(value), ctx )
             : mapEntryLabel(ctx.mapEntryLabel())
-        new MapEntryExpression(key, value)
+        ast( entryX(key, value), ctx )
     }
 
-    private static Expression mapEntryLabel(MapEntryLabelContext ctx) {
+    private Expression mapEntryLabel(MapEntryLabelContext ctx) {
         if( ctx.keywords() )
-            return constX(ctx.text)
+            return ast( constX(keywords(ctx.keywords())), ctx )
 
-        if( ctx.primary() )
-            return primary(ctx.primary())
+        if( ctx.primary() ) {
+            final expression = primary(ctx.primary())
+            return expression instanceof VariableExpression && !isInsideParentheses(expression)
+                ? ast( constX(((VariableExpression)expression).name), expression )
+                : ast( expression, ctx )
+        }
 
-        throw new IllegalStateException()
+        throw createParsingFailedException("Unsupported map entry label: ${ctx.text}", ctx)
     }
 
-    private static MethodCallExpression methodCall(ExpressionContext method, ArgumentListContext args) {
-        final parts = methodObject(expression(method))
-        final arguments = methodArguments(args)
-        callX(parts[0], parts[1], arguments)
+    private Expression methodCall(Expression caller, Expression arguments) {
+        // e.g. (obj.x)(), (obj.@x)()
+        if( isInsideParentheses(caller) )
+            return callMethodCall(caller, arguments)
+
+        // e.g. obj.a(1, 2)
+        if( caller instanceof PropertyExpression )
+            return propMethodCall(caller, arguments)
+
+        // e.g. m(), "$m"(), "m"()
+        if( caller instanceof VariableExpression || caller instanceof GStringExpression || (caller instanceof ConstantExpression && caller.value instanceof String) )
+            return thisMethodCall(caller, arguments)
+
+        // e.g. 1(), 1.1(), ((int) 1 / 2)(1, 2), {a, b -> a + b }(1, 2), m()()
+        return callMethodCall(caller, arguments)
     }
 
-    private static List<Expression> methodObject(Expression expression) {
-        if( expression instanceof PropertyExpression )
-            return [expression.objectExpression, expression.property]
+    private Expression propMethodCall(PropertyExpression caller, Expression arguments) {
+        final result = callX( caller.objectExpression, caller.property, arguments )
+        result.setImplicitThis(false)
+        result.setSafe(caller.isSafe())
+        result.setSpreadSafe(caller.isSpreadSafe())
 
-        if( expression instanceof VariableExpression )
-            return [varX('this'), constX(expression.text)]
+        // method call obj*.m() -> safe=false and spreadSafe=true
+        // property access obj*.p -> safe=true and spreadSafe=true
+        if( caller.isSpreadSafe() )
+            result.setSafe(false)
 
-        return [expression, constX('call')]
+        return result
     }
 
-    private static Expression methodArguments(ArgumentListContext ctx) {
+    private Expression thisMethodCall(Expression caller, Expression arguments) {
+        final object = varX('this')
+        object.setColumnNumber(caller.getColumnNumber())
+        object.setLineNumber(caller.getLineNumber())
+
+        final name = caller instanceof VariableExpression
+            ? constX(caller.text)
+            : caller
+
+        return callX( object, name, arguments )
+    }
+
+    private Expression callMethodCall(Expression caller, Expression arguments) {
+        final call = callX(caller, CALL_STR, arguments)
+        call.setImplicitThis(false)
+        return call
+    }
+
+    private Expression argumentList(ArgumentListContext ctx) {
         if( !ctx )
             return new ArgumentListExpression()
 
-        final List<Expression> args = []
+        final List<Expression> arguments = []
         final List<MapEntryExpression> opts = []
 
         for( final ctx1 : ctx.argumentListElement() ) {
             if( ctx1.expressionListElement() )
-                args << listElement(ctx1.expressionListElement())
+                arguments << listElement(ctx1.expressionListElement())
 
             else if( ctx1.namedArg() )
                 opts << namedArg(ctx1.namedArg())
 
             else
-                throw new IllegalStateException()
+                throw createParsingFailedException("Invalid Groovy method argument: ${ctx.text}", ctx)
         }
 
+        // TODO: validate duplicate named arguments ?
+        // TODO: only named arguments -> TupleExpression ?
         if( opts )
-            args.push(new MapExpression(opts))
+            arguments.push( ast(mapX(opts), ctx) )
 
-        return new ArgumentListExpression(args)
+        return ast( args(arguments), ctx )
     }
 
-    private static Expression methodArguments(EnhancedArgumentListContext ctx) {
-        if( !ctx )
-            return new ArgumentListExpression()
-
-        final List<Expression> args = []
-        final List<MapEntryExpression> opts = []
-
-        for( final ctx1 : ctx.enhancedArgumentListElement() ) {
-            if( ctx1.expressionListElement() )
-                args << listElement(ctx1.expressionListElement())
-
-            else if( ctx1.standardLambdaExpression() )
-                args << lambda(ctx1.standardLambdaExpression())
-
-            else if( ctx1.namedArg() )
-                opts << namedArg(ctx1.namedArg())
-
-            else
-                throw new IllegalStateException()
-        }
-
-        if( opts )
-            args.push(new MapExpression(opts))
-
-        return new ArgumentListExpression(args)
-    }
-
-    private static MapEntryExpression namedArg(NamedArgContext ctx) {
+    private MapEntryExpression namedArg(NamedArgContext ctx) {
         final value = expression(ctx.expression())
         final key = ctx.MUL()
             ? new SpreadMapExpression(value)
@@ -729,159 +1137,250 @@ class AstBuilder {
         new MapEntryExpression(key, value)
     }
 
-    private static Expression namedArgLabel(NamedArgLabelContext ctx) {
-        if( ctx.keywords() || ctx.identifier() )
-            return constX(ctx.text)
+    private Expression namedArgLabel(NamedArgLabelContext ctx) {
+        if( ctx.keywords() )
+            return constX(keywords(ctx.keywords()))
+
+        if( ctx.identifier() )
+            return constX(identifier(ctx.identifier()))
 
         if( ctx.literal() )
-            return constant(ctx.literal())
+            return literal(ctx.literal())
 
         if( ctx.gstring() )
             return gstring(ctx.gstring())
 
-        throw new IllegalStateException()
-    }
-
-    private static Expression path(PathExpressionContext ctx) {
-        def result = primary(ctx.primary())
-        for( final el : ctx.pathElement() )
-            result = pathElement(result, el)
-        return result
-    }
-
-    private static Expression pathElement(Expression expression, PathElementContext ctx) {
-        if( ctx instanceof PropertyPathExprAltContext ) {
-            final prop =
-                ctx.keywords() ? ctx.keywords().text :
-                ctx.identifier() ? ctx.identifier().text :
-                /* ctx.stringLiteral() */ unquote(ctx.stringLiteral().text)
-            final safe = ctx.SAFE_DOT() != null || ctx.SPREAD_DOT() != null
-            final result = ctx.AT()
-                ? new AttributeExpression(expression, constX(prop), safe)
-                : new PropertyExpression(expression, constX(prop), safe)
-            if( ctx.SPREAD_DOT() )
-                result.setSpreadSafe(true)
-            return result
-        }
-
-        if( ctx instanceof MethodCallPathExprAltContext ) {
-            final parts = methodObject(expression)
-            final arguments = methodArguments(ctx.arguments().enhancedArgumentList())
-            return callX(parts[0], parts[1], arguments)
-        }
-
-        if( ctx instanceof ListElementPathExprAltContext ) {
-            final op = new Token(Types.LEFT_SQUARE_BRACKET, '[', -1, -1)
-            final elements = ctx.expressionList().collect( this.&expression )
-            final arg = elements.size() > 1
-                ? new ListExpression(elements)
-                : elements.first()
-            final result = new BinaryExpression(expression, op, arg)
-            if( ctx.QUESTION() )
-                result.setSafe(true)
-            return result
-        }
-
-        throw new IllegalStateException()
-    }
-
-    private static PostfixExpression postfix(PathExpressionContext ctx, ParserToken op) {
-        new PostfixExpression(path(ctx), token(op))
-    }
-
-    private static PrefixExpression prefix(ExpressionContext ctx, ParserToken op) {
-        new PrefixExpression(token(op), expression(ctx))
-    }
-
-    private static PrefixExpression prefix(CastOperandExpressionContext ctx, ParserToken op) {
-        new PrefixExpression(token(op), castOperand(ctx))
-    }
-
-    private static Expression primary(PrimaryContext ctx) {
-        if( ctx instanceof IdentifierPrmrAltContext )
-            return varX(ctx.identifier().text)
-
-        if( ctx instanceof LiteralPrmrAltContext )
-            return constant(ctx.literal())
-
-        if( ctx instanceof GstringPrmrAltContext )
-            return gstring(ctx.gstring())
-
-        if( ctx instanceof NewPrmrAltContext )
-            return creator(ctx.creator())
-
-        if( ctx instanceof ParenPrmrAltContext )
-            return enhancedStatementExpression(ctx.parExpression().enhancedStatementExpression())
-
-        if( ctx instanceof ClosureOrLambdaPrmrAltContext ) {
-            final ctx1 = ctx.closureOrLambdaExpression()
-            return ctx1.closure()
-                ? closure(ctx1.closure())
-                : lambda(ctx1.lambdaExpression())
-        }
-
-        if( ctx instanceof ListPrmrAltContext )
-            return list(ctx.list())
-
-        if( ctx instanceof MapPrmrAltContext )
-            return map(ctx.map())
-
-        if( ctx instanceof BuiltInTypePrmrAltContext )
-            return new ClassExpression(type(ctx.builtInType()))
-
-        throw new IllegalStateException()
-    }
-
-    private static TernaryExpression ternary(ExpressionContext cond, ExpressionContext tb, ExpressionContext fb) {
-        final condition = new BooleanExpression(expression(cond))
-        final trueExpression = tb ? expression(tb) : null
-        final falseExpression = expression(fb)
-        new TernaryExpression(condition, trueExpression, falseExpression)
+        throw createParsingFailedException("Invalid Groovy method named argument: ${ctx.text}", ctx)
     }
 
     /// MISCELLANEOUS
 
-    private static Parameter[] parameters(FormalParametersContext ctx) {
-        parameters(ctx.formalParameterList())
+    private Parameter[] parameters(FormalParameterListContext ctx) {
+        // NOTE: implicit `it` is not allowed
+        if( !ctx )
+            return null
+
+        for( int i = 0, n = ctx.formalParameter().size(); i < n - 1; i += 1 ) {
+            final ctx1 = ctx.formalParameter(i)
+            if( ctx1.ELLIPSIS() )
+                throw createParsingFailedException("The var-arg parameter must be the last parameter", ctx1)
+        }
+
+        final params = ctx.formalParameter().collect( this.&parameter )
+        for( int n = params.size(), i = n - 1; i >= 0; i -= 1 ) {
+            final param = params[i]
+            for( final other : params ) {
+                if( other == param )
+                    continue
+                if( other.name == param.name )
+                    throw createParsingFailedException("Duplicated parameter '${param.name}' found", param)
+            }
+        }
+
+        return params as Parameter[]
     }
 
-    private static Parameter[] parameters(FormalParameterListContext ctx) {
-        final result = ctx
-            ? ctx.formalParameter().collect( this.&parameter )
-            : []
-        return result as Parameter[]
+    private Parameter parameter(FormalParameterContext ctx) {
+        ClassNode type = type(ctx.type())
+        if( ctx.ELLIPSIS() ) {
+            type = type.makeArray()
+            type = ctx.type()
+                ? ast( type, ctx.type(), ast(constX('...'), ctx.ELLIPSIS()) )
+                : ast( type, ctx.ELLIPSIS() )
+        }
+
+        final name = identifier(ctx.identifier())
+        final defaultValue = ctx.expression()
+            ? expression(ctx.expression())
+            : null
+        ast( param(type, name, defaultValue), ctx )
     }
 
-    private static Parameter parameter(FormalParameterContext ctx) {
-        final type = type(ctx.type())
-        final name = ctx.identifier().text
-        final defaultValue = ctx.expression() ? expression(ctx.expression()) : null
-        new Parameter(type, name, defaultValue)
+    private Token token(ParserToken token, int cardinality = 1) {
+        final text = cardinality == 1
+            ? token.text
+            : token.text * cardinality
+        final type = token.type == RANGE_EXCLUSIVE_RIGHT || token.type == RANGE_INCLUSIVE
+            ? Types.RANGE_OPERATOR
+            : Types.lookup(text, Types.ANY)
+        new Token( type, text, token.getLine(), token.getCharPositionInLine() + 1 )
     }
 
-    private static Token token(ParserToken t) {
-        new Token(Types.lookupSymbol(t.text), t.text, -1, -1)
+    private ClassNode type(CreatedNameContext ctx) {
+        if( ctx.qualifiedClassName() ) {
+            final classNode = type(ctx.qualifiedClassName())
+            if( ctx.typeArgumentsOrDiamond() )
+                classNode.setGenericsTypes( typeArguments(ctx.typeArgumentsOrDiamond()) )
+            return ast( classNode, ctx )
+        }
+
+        if( ctx.primitiveType() )
+            return ast( type(ctx.primitiveType()), ctx )
+
+        throw createParsingFailedException("Unrecognized created name: ${ctx.text}", ctx)
     }
 
-    private static ClassNode type(ParserRuleContext ctx) {
-        ctx
-            ? type0(ctx.text)
-            : ClassHelper.DYNAMIC_TYPE
+    private ClassNode type(PrimitiveTypeContext ctx) {
+        ClassHelper.make(ctx.text).getPlainNodeReference(false)
     }
 
-    private static ClassNode type0(String text) {
-        ClassHelper.makeWithoutCaching(text)
+    private ClassNode type(QualifiedClassNameContext ctx, boolean allowProxy=true) {
+        final classNode = ClassHelper.make(ctx.text)
+
+        if( classNode.isUsingGenerics() && allowProxy ) {
+            final proxy = ClassHelper.makeWithoutCaching(classNode.name)
+            proxy.setRedirect(classNode)
+            return proxy
+        }
+
+        return classNode
+    }
+
+    private ClassNode type(TypeContext ctx, boolean allowProxy=true) {
+        if( !ctx )
+            return ClassHelper.dynamicType()
+
+        if( ctx.qualifiedClassName() ) {
+            final classNode = type(ctx.qualifiedClassName(), allowProxy)
+            if( ctx.typeArguments() )
+                classNode.setGenericsTypes( typeArguments(ctx.typeArguments()) )
+            return ast( classNode, ctx )
+        }
+
+        if( ctx.primitiveType() )
+            return ast( type(ctx.primitiveType()), ctx )
+
+        throw createParsingFailedException("Unrecognized type: ${ctx.text}", ctx)
+    }
+
+    private GenericsType[] typeArguments(TypeArgumentsOrDiamondContext ctx) {
+        ctx.typeArguments()
+            ? typeArguments(ctx.typeArguments())
+            : GenericsType.EMPTY_ARRAY
+    }
+
+    private GenericsType[] typeArguments(TypeArgumentsContext ctx) {
+        ctx.type().collect( this.&genericsType ) as GenericsType[]
+    }
+
+    private GenericsType genericsType(TypeContext ctx) {
+        ast( new GenericsType(type(ctx)), ctx )
     }
 
     /// HELPERS
 
-    private static String unquote(String text) {
-        if( !text )
-            return null
-        else if( text.startsWith('"""') || text.startsWith("'''") )
-            return text[3..<-3]
-        else
-            return text[1..<-1]
+    private boolean isInsideParentheses(NodeMetaDataHandler nodeMetaDataHandler) {
+        Number insideParenLevel = nodeMetaDataHandler.getNodeMetaData(INSIDE_PARENTHESES_LEVEL)
+        return insideParenLevel != null && insideParenLevel.intValue() > 0
     }
+
+    private CompilationFailedException createParsingFailedException(String msg, ParserRuleContext ctx) {
+        return createParsingFailedException(
+            new SyntaxException(msg,
+                ctx.start.getLine(),
+                ctx.start.getCharPositionInLine() + 1,
+                ctx.stop.getLine(),
+                ctx.stop.getCharPositionInLine() + 1 + ctx.stop.getText().length()))
+    }
+
+    private CompilationFailedException createParsingFailedException(String msg, Tuple2<Integer,Integer> start, Tuple2<Integer,Integer> end) {
+        return createParsingFailedException(
+            new SyntaxException(msg,
+                start.getV1(),
+                start.getV2(),
+                end.getV1(),
+                end.getV2()))
+    }
+
+    private CompilationFailedException createParsingFailedException(String msg, ASTNode node) {
+        return createParsingFailedException(
+            new SyntaxException(msg,
+                node.getLineNumber(),
+                node.getColumnNumber(),
+                node.getLastLineNumber(),
+                node.getLastColumnNumber()))
+    }
+
+    private CompilationFailedException createParsingFailedException(String msg, TerminalNode node) {
+        return createParsingFailedException(msg, node.getSymbol())
+    }
+
+    private CompilationFailedException createParsingFailedException(String msg, ParserToken token) {
+        return createParsingFailedException(
+            new SyntaxException(msg,
+                token.getLine(),
+                token.getCharPositionInLine() + 1,
+                token.getLine(),
+                token.getCharPositionInLine() + 1 + token.getText().length()))
+    }
+
+    private CompilationFailedException createParsingFailedException(Throwable t) {
+        if( t instanceof SyntaxException )
+            this.collectSyntaxError(t)
+
+        else if( t instanceof GroovySyntaxError )
+            this.collectSyntaxError(
+                    new SyntaxException(
+                            t.getMessage(),
+                            t,
+                            t.getLine(),
+                            t.getColumn()))
+
+        else if( t instanceof Exception )
+            this.collectException(t)
+
+        return new CompilationFailedException(
+                CompilePhase.PARSING.getPhaseNumber(),
+                this.sourceUnit,
+                t)
+    }
+
+    private void collectSyntaxError(SyntaxException e) {
+        sourceUnit.getErrorCollector().addFatalError(new SyntaxErrorMessage(e, sourceUnit))
+    }
+
+    private void collectException(Exception e) {
+        sourceUnit.getErrorCollector().addException(e, this.sourceUnit)
+    }
+
+    private void removeErrorListeners() {
+        lexer.removeErrorListeners()
+        parser.removeErrorListeners()
+    }
+
+    private void addErrorListeners() {
+        lexer.removeErrorListeners()
+        lexer.addErrorListener(createANTLRErrorListener())
+
+        parser.removeErrorListeners()
+        parser.addErrorListener(createANTLRErrorListener())
+    }
+
+    private ANTLRErrorListener createANTLRErrorListener() {
+        return new ANTLRErrorListener() {
+            @Override
+            void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
+                collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1))
+            }
+
+            @Override
+            void reportAmbiguity(Parser recognizer, DFA dfa, int startIndex, int stopIndex, boolean exact, BitSet ambigAlts, ATNConfigSet configs) {}
+
+            @Override
+            void reportAttemptingFullContext(Parser recognizer, DFA dfa, int startIndex, int stopIndex, BitSet conflictingAlts, ATNConfigSet configs) {}
+
+            @Override
+            void reportContextSensitivity(Parser recognizer, DFA dfa, int startIndex, int stopIndex, int prediction, ATNConfigSet configs) {}
+        }
+    }
+
+    private static final String CALL_STR = 'call'
+    private static final String SLASH_STR = '/'
+    private static final String TDQ_STR = '"""'
+    private static final String TSQ_STR = "'''"
+    private static final String SQ_STR = "'"
+    private static final String DQ_STR = '"'
+
+    private static final String INSIDE_PARENTHESES_LEVEL = "_INSIDE_PARENTHESES_LEVEL"
 
 }

@@ -30,6 +30,7 @@ import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.io.ValueObject
+import nextflow.script.v2.ScriptParserPluginFactory
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
@@ -121,6 +122,7 @@ class ScriptParser {
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
+        config.setPluginFactory(new ScriptParserPluginFactory())
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowParser))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
@@ -170,8 +172,9 @@ class ScriptParser {
         this.scriptPath = scriptPath
         final String className = computeClassName(scriptText)
         try {
-            final source = scriptPath ? scriptPath.text : scriptText
-            final parsed = interpreter.parse("'${source.bytes.encodeBase64().toString()}'", className)
+            final parsed = scriptPath && session.debug
+                    ? interpreter.parse(scriptPath.toFile())
+                    : interpreter.parse(scriptText, className)
             if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
