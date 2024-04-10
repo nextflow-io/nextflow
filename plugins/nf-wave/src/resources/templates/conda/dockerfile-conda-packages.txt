@@ -1,6 +1,0 @@
-FROM {{base_image}}
-RUN \
-    micromamba install -y -n base {{channel_opts}} \
-    {{target}} \
-    {{base_packages}}
-    && micromamba clean -a -y

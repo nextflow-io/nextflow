@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ class CharliecloudCache {
 
     private Duration pullTimeout = Duration.of('20min')
 
+    private String registry
+
     /** Only for debugging purpose - do not use */
     @PackageScope
     CharliecloudCache() {}
@@ -77,8 +79,13 @@ class CharliecloudCache {
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
+
+        // add registry
+        if( registry )
+            name = registry + name
+        
         name = name.replace(':','+').replace('/','%')
-        return name
+        return name 
     }
 
     /**
@@ -168,20 +175,21 @@ class CharliecloudCache {
             return localPath
         }
 
-        // final file = new File("${localPath.parent.parent.parent}/.${localPath.name}.lock")
-        final file = new File("${localPath.parent.parent.parent}/.ch-pulling.lock")
-        final wait = "Another Nextflow instance is pulling the image $imageUrl with Charliecloud -- please wait until the download completes"
-        final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
-
-        final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
-        try {
-            mutex .lock { downloadCharliecloudImage0(imageUrl, localPath) }
-        }
-        finally {
-            file.delete()
-        }
-
+        int count = 0;
+        int maxTries = 5;
+        boolean imagePulled = false
+        while(!imagePulled) {
+            try {
+                downloadCharliecloudImage0(imageUrl, localPath)
+                imagePulled = true
+            } catch (e) {
+                if (++count == maxTries) throw e
+                log.info "Another image is currently pulled. Attempting again in 30 seconds [$count/$maxTries]"
+                Thread.sleep(30000)
+            }
+        }   
         return localPath
+
     }
 
 

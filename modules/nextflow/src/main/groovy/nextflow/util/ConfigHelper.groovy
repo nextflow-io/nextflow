@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.secret.SecretHolder
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Helper method to handle configuration object
@@ -42,7 +41,7 @@ class ConfigHelper {
             result = config['$'+execName][propName]
         }
 
-        if( result==null && config instanceof Map && config[propName] ) {
+        if( result==null && config instanceof Map && config[propName] != null ) {
             result = config[propName]
         }
 
@@ -84,7 +83,7 @@ class ConfigHelper {
     }
 
     /**
-     * Given a list of paths looks for the files ending withe the extension '.jar' and return
+     * Given a list of paths looks for the files ending with the extension '.jar' and return
      * a list containing the original directories, plus the JARs paths
      *
      * @param dirs
@@ -240,9 +239,7 @@ class ConfigHelper {
             return render0(val)
         if( val instanceof Map )
             return render0(val)
-        if( val instanceof SecretHolder )
-            return val.call()
-        
+
         InvokerHelper.inspect(val)
     }
 

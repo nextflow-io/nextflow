@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -288,15 +288,6 @@ class PluginExtensionProvider implements ExtensionProvider {
             def factory = (ChannelFactoryInstance)reference.target
             return factory.invokeExtensionMethod(reference.method, args)
         }
-    }
-
-    @Deprecated
-    static void reloadExtensionPoints() {
-        if( !instance )
-            return
-        instance.channelExtensionPoints=null
-        instance.operatorExtensions.clear()
-        instance.install()
     }
 
 }

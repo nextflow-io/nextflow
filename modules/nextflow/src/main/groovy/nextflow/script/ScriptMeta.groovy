@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,8 +97,6 @@ class ScriptMeta {
     /** The module components included in the script */
     private Map<String,ComponentDef> imports = new HashMap<>(10)
 
-    private List<String> dsl1ProcessNames
-
     /** Whenever it's a module script or the main script */
     private boolean module
 
@@ -150,40 +148,16 @@ class ScriptMeta {
     }
 
     void checkComponentName(ComponentDef component, String name) {
-        if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+        if( component !instanceof WorkflowDef && component !instanceof ProcessDef && component !instanceof FunctionDef ) {
             return
         }
-        if (functionsCount.get(name)) {
-            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        if( functionsCount.get(name) ) {
+            throw new DuplicateModuleFunctionException("A function named '$name' is already defined or included in script: $scriptPath")
         }
-        if (imports.get(name)) {
-            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
+        final existing = imports.get(name)
+        if( existing != null ) {
+            throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined or included in script: $scriptPath")
         }
-    }
-
-    /*
-     * This method invocation is made by the NF AST transformer to pass
-     * the process names declared in the workflow script. This is only required
-     * for DSL1 script.
-     *
-     * When using DSL2 process names can be discovered during
-     * the script execution since, the process declaration is de-coupled by the
-     * process invocations.
-     */
-    @PackageScope
-    void setDsl1ProcessNames(List<String> names) {
-        this.dsl1ProcessNames = names
-    }
-
-    @PackageScope
-    List<String> getDsl1ProcessNames() {
-        dsl1ProcessNames ?: Collections.<String>emptyList()
     }
 
     @PackageScope
@@ -282,9 +256,6 @@ class ScriptMeta {
     }
 
     Set<String> getProcessNames() {
-        if( NF.dsl1 )
-            return new HashSet<String>(getDsl1ProcessNames())
-
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
@@ -300,9 +271,6 @@ class ScriptMeta {
     }
 
     Set<String> getLocalProcessNames() {
-        if( NF.dsl1 )
-            return new HashSet<String>(getDsl1ProcessNames())
-
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {

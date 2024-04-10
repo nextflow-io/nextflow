@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -230,7 +230,7 @@ public class CacheHelper {
      *
      * @param hasher The current {@code Hasher} object
      * @param file The {@code File} object to hash
-     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object
@@ -244,7 +244,7 @@ public class CacheHelper {
      *
      * @param hasher The current {@code Hasher} object
      * @param path The {@code Path} object to hash
-     * @param mode When {@code mode} is equals to the string {@code deep} is used teh file content
+     * @param mode When {@code mode} is equals to the string {@code deep} is used the file content
      *   in order to create the hash key for this file, otherwise just the file metadata information
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object

@@ -63,7 +63,7 @@ azure {
 }
 ```
 
-The files in the File share are available to the task in the directory: `<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>`.
+The files in the File share are available to the task in the directory: `<YOUR MOUNT DESTINATION>`.
 
 For instance, given the following configuration:
 
@@ -73,25 +73,36 @@ azure {
         // ...
 
         fileShares {
-            dir1 {
-                mountPath = "/mnt/mydata/"
+          rnaseqResources {
+                mountPath = "/mnt/mydata/myresources"
             }
         }
     }
 }
 ```
 
-The task can access the File share in `/mnt/mydata/dir1`.
+The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount.
+
+:::{warning}
+Azure File shares do not support authentication and management with Active Directory. The storage account key must be
+set in the configuration if a share is mounted.
+:::
 
 (azure-batch)=
 
 ## Azure Batch
 
+:::{tip}
+This section describes how to manually set up and use Nextflow with Azure Batch.
+You may be interested in using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/azure-batch#compute-environment) in [Seqera Platform](https://seqera.io/platform/),
+which automatically creates the required Azure infrastructure for you with minimal intervention.
+:::
+
 [Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) is a managed computing service that allows the execution of containerised workloads in the Azure cloud infrastructure.
 
 Nextflow provides built-in support for Azure Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`Azore Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
+Read the {ref}`Azure Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
 
 ### Get started
 
@@ -216,7 +227,7 @@ The pool name can only contain alphanumeric, hyphen and underscore characters.
 :::
 
 :::{warning}
-If the pool name includes a hyphen, make sure to wrap it with single quotes. For example::
+If the pool name includes a hyphen, make sure to wrap it with single quotes. For example:
 
 ```groovy
 azure {
@@ -341,7 +352,7 @@ When using containers hosted in a private registry, the registry name must also 
 :::{versionadded} 23.03.0-edge
 :::
 
-Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the 
+Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the
 `virtualNetwork` option can be added to the pool settings as follows:
 
 ```groovy
@@ -369,7 +380,7 @@ The value of the setting must be the identifier of a subnet available in the vir
 Batch Authentication with Shared Keys does not allow to link external resources (like Virtual Networks) to the pool. Therefore, Active Directory Authentication must be used in conjunction with the `virtualNetwork` setting.
 :::
 
-## Active Directory Authentication
+## Microsoft Entra (formerly Active Directory Authentication)
 
 :::{versionadded} 22.11.0-edge
 :::
