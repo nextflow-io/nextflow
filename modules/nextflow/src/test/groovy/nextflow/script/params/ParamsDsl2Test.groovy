@@ -35,8 +35,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified input file declaration has been deprecated - replace `tuple 'x',..` with `tuple path('x'),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified input file declaration is not allowed - replace `tuple 'x',..` with `tuple path('x'),..`"
     }
 
     def 'should not allow unqualified input val' () {
@@ -57,8 +57,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified input value declaration has been deprecated - replace `tuple X,..` with `tuple val(X),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified input value declaration is not allowed - replace `tuple X,..` with `tuple val(X),..`"
     }
 
 
@@ -80,8 +80,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified output path declaration has been deprecated - replace `tuple 'x',..` with `tuple path('x'),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified output path declaration is not allowed - replace `tuple 'x',..` with `tuple path('x'),..`"
     }
 
     def 'should not allow unqualified output value' () {
@@ -102,8 +102,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified output value declaration has been deprecated - replace `tuple X,..` with `tuple val(X),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified output value declaration is not allowed - replace `tuple X,..` with `tuple val(X),..`"
     }
 
 

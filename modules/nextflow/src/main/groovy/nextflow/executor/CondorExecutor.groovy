@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ class CondorExecutor extends AbstractGridExecutor {
         if( task.config.clusterOptions ) {
             def opts = task.config.clusterOptions
             if( opts instanceof Collection ) {
-                result.addAll(opts)
+                result.addAll(opts as Collection)
             }
             else {
                 result.addAll( opts.toString().tokenize(';\n').collect{ it.trim() })

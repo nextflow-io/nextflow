@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,10 +198,10 @@ public class TesExecutor {
   }
 
    /**
-   * Enviromental variables to set within the container. Example: &#x60;&#x60;&#x60; {   \&quot;env\&quot; : {     \&quot;ENV_CONFIG_PATH\&quot; : \&quot;/data/config.file\&quot;,     \&quot;BLASTDB\&quot; : \&quot;/data/GRC38\&quot;,     \&quot;HMMERDB\&quot; : \&quot;/data/hmmer\&quot;   } } &#x60;&#x60;&#x60;
+   * Environmental variables to set within the container. Example: &#x60;&#x60;&#x60; {   \&quot;env\&quot; : {     \&quot;ENV_CONFIG_PATH\&quot; : \&quot;/data/config.file\&quot;,     \&quot;BLASTDB\&quot; : \&quot;/data/GRC38\&quot;,     \&quot;HMMERDB\&quot; : \&quot;/data/hmmer\&quot;   } } &#x60;&#x60;&#x60;
    * @return env
   **/
-  @Schema(example = "{\"BLASTDB\":\"/data/GRC38\",\"HMMERDB\":\"/data/hmmer\"}", description = "Enviromental variables to set within the container. Example: ``` {   \"env\" : {     \"ENV_CONFIG_PATH\" : \"/data/config.file\",     \"BLASTDB\" : \"/data/GRC38\",     \"HMMERDB\" : \"/data/hmmer\"   } } ```")
+  @Schema(example = "{\"BLASTDB\":\"/data/GRC38\",\"HMMERDB\":\"/data/hmmer\"}", description = "Environmental variables to set within the container. Example: ``` {   \"env\" : {     \"ENV_CONFIG_PATH\" : \"/data/config.file\",     \"BLASTDB\" : \"/data/GRC38\",     \"HMMERDB\" : \"/data/hmmer\"   } } ```")
   public Map<String, String> getEnv() {
     return env;
   }

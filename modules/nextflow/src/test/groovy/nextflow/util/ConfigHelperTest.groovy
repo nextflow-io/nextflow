@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,21 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ConfigHelperTest extends Specification {
+
+    @Unroll
+    def "get config property" () {
+
+        expect:
+        ConfigHelper.getConfigProperty(config, execName, 'foo') == value
+
+        where:
+        config               | execName | value
+        [foo: 0]             | null     | 0
+        [foo: 100]           | null     | 100
+        [foo: 'bar']         | null     | 'bar'
+        [$sge: [foo: 'bar']] | 'sge'    | 'bar'
+
+    }
 
     @Unroll
     def "should parse string value: #str" () {

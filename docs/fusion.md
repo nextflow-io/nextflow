@@ -179,28 +179,4 @@ process.scratch = false
 
 ## Advanced settings
 
-The following configuration options are available:
-
-`fusion.enabled`
-: Enable/disable the use of Fusion file system.
-
-`fusion.exportStorageCredentials`
-: :::{versionadded} 23.05.0-edge
-  This option was previously named `fusion.exportAwsAccessKeys`.
-  :::
-: When `true` the access credentials required by the underlying object storage are exported the pipeline jobs execution environment.
-
-`fusion.containerConfigUrl`
-: The URL from where the container layer provisioning the Fusion client is downloaded. 
-
-`fusion.logLevel`
-: The level of logging emitted by the Fusion client.
-
-`fusion.logOutput`
-: Where the logging output is written. 
-
-`fusion.tagsEnabled`
-: Enable/disable the tagging of files created in the underlying object storage via the Fusion client (default: `true`).
-
-`fusion.tagsPattern`
-: The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`)
+Fusion advanced configuration settings are described in the {ref}`Fusion <config-fusion>` section on the Nextflow configuration page.

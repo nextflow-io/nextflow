@@ -322,7 +322,7 @@ sub gnuplot_sld {
     print GP "set grid\n";
     print GP "set data style lines\n";
 
-        # if an outpout has been specified output to it 
+        # if an output has been specified output to it 
     if( $graph_file ne "" ) { 
         print GP "set terminal png large enhanced  size 800 600\n";
         print GP "set output '$graph_file' \n";

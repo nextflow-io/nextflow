@@ -167,9 +167,8 @@ nxf_fs_fcp() {
 
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
-    printf $exit_status > {{folder}}/.exitcode
+    printf -- $exit_status > {{folder}}/.exitcode
     set +u
-    {{sync_cmd}}
     exit $exit_status
 }
 
@@ -210,6 +209,7 @@ nxf_main() {
     set +u
     set -u
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
 
     set +e
     (set -o pipefail; (nxf_launch | tee .command.out) 3>&1 1>&2 2>&3 | tee .command.err) &
