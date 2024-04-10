@@ -21,6 +21,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.executor.BashWrapperBuilder
 import nextflow.extension.FilesEx
 import nextflow.ga4gh.tes.client.ApiClient
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
@@ -33,6 +34,7 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
 
@@ -157,6 +159,14 @@ class TesExecutor extends Executor implements ExtensionPoint {
         assert task.workDir
         log.debug "[TES] Launching process > ${task.name} -- work folder: ${task.workDir}"
         new TesTaskHandler(task, this)
+    }
+
+    protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
+        // creates the wrapper script
+        final builder = new BashWrapperBuilder(task)
+        // job directives headers
+        builder.headerScript = "NXF_CHDIR=${Escape.path(task.workDir)}"
+        return builder
     }
 }
 
