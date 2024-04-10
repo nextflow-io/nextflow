@@ -109,8 +109,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.20"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.20"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.21"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.21"
     }
 
     test {
@@ -145,28 +145,27 @@ allprojects {
     }
 
     // Required to run tests on Java 9 and higher in compatibility mode
-    if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
-        tasks.withType(Test) {
-            jvmArgs ([
-                    '--enable-preview',
-                    '--add-opens=java.base/java.lang=ALL-UNNAMED',
-                    '--add-opens=java.base/java.io=ALL-UNNAMED',
-                    '--add-opens=java.base/java.nio=ALL-UNNAMED',
-                    '--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED',
-                    '--add-opens=java.base/java.net=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
-                    '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
-                    '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
-            ])
-        }
+    tasks.withType(Test) {
+        jvmArgs ([
+            '-Dorg.spockframework.mock.ignoreByteBuddy=true',
+            '--enable-preview',
+            '--add-opens=java.base/java.lang=ALL-UNNAMED',
+            '--add-opens=java.base/java.io=ALL-UNNAMED',
+            '--add-opens=java.base/java.nio=ALL-UNNAMED',
+            '--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED',
+            '--add-opens=java.base/java.net=ALL-UNNAMED',
+            '--add-opens=java.base/java.util=ALL-UNNAMED',
+            '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
+            '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
+            '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+            '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
+            '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+            '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
+        ])
     }
 
     /**

@@ -39,6 +39,6 @@ dependencies {
     api 'io.seqera:wave-utils:0.8.1'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.20"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.20"
+    testImplementation "org.apache.groovy:groovy:4.0.21"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.21"
 }
