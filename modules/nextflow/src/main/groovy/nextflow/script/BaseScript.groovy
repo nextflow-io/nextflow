@@ -41,6 +41,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private WorkflowDef entryFlow
 
+    private OutputDef publisher
+
     @Lazy InputStream stdin = { System.in }()
 
     BaseScript() {
@@ -55,6 +57,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
     @Override
     ScriptBinding getBinding() {
         (ScriptBinding)super.getBinding()
+    }
+
+    Session getSession() {
+        session
     }
 
     /**
@@ -118,11 +124,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected output(Closure closure) {
         if( !entryFlow )
-            throw new IllegalStateException("Publish definition must be defined after the anonymous workflow")
+            throw new IllegalStateException("Workflow output definition must be defined after the anonymous workflow")
         if( ExecutionStack.withinWorkflow() )
-            throw new IllegalStateException("Publish definition is not allowed within a workflow")
+            throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
-        entryFlow.publisher = closure
+        publisher = new OutputDef(closure)
     }
 
     protected IncludeDef include( IncludeDef include ) {
@@ -187,6 +193,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
+        publisher.run(session.publishRules)
         session.notifyAfterWorkflowExecution()
         return ret
     }

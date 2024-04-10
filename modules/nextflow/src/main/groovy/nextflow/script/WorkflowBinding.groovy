@@ -19,6 +19,7 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.exception.IllegalInvocationException
 import nextflow.extension.OpCall
@@ -153,6 +154,18 @@ class WorkflowBinding extends Binding  {
 
             throw e
         }
+    }
+
+    void _into_publish(DataflowWriteChannel source, String name) {
+        // TODO: add rules to "default" mapping for component
+        //       then add to workflow publisher only when component is invoked
+        owner.session.publishRules[source] = name
+    }
+
+    void _into_publish(ChannelOut out, String name) {
+        if( out.size() != 1 )
+            throw new IllegalArgumentException("Cannot send a multi-channel output into a topic")
+        _into_publish(out[0], name)
     }
 
 }

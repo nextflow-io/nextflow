@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.preview.topic = true
+
 
 process align {
   input:
@@ -67,22 +67,21 @@ workflow {
 
   foo()
 
-  topic:
-  foo.out >> 'foo'
+  publish:
+  align.out[0]    >> 'data'
+  align.out[1]    >> 'data'
+  my_combine.out  >> 'more/data'
+  foo.out         >> 'data'
 }
 
 output {
   directory 'results'
 
   'data' {
-    from align.out[0], mode: 'copy'
-    from align.out[1], mode: 'copy'
-    from my_combine.out
-    from 'foo', mode: 'link'
+    mode 'link'
   }
 
-  'data/more' {
-    defaults mode: 'copy'
-    from my_combine.out
+  'more/data' {
+    mode 'copy'
   }
 }

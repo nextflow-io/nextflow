@@ -82,8 +82,8 @@ class NextflowDSLImpl implements ASTTransformation {
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
-    final static private String WORKFLOW_TOPIC = 'topic'
-    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN, WORKFLOW_TOPIC]
+    final static private String WORKFLOW_PUBLISH = 'publish'
+    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN, WORKFLOW_PUBLISH]
 
     final static public String PROCESS_WHEN = 'when'
     final static public String PROCESS_STUB = 'stub'
@@ -430,24 +430,19 @@ class NextflowDSLImpl implements ASTTransformation {
             return result
         }
 
-        protected Statement normWorkflowTopic(ExpressionStatement stm) {
+        protected Statement normWorkflowPublish(ExpressionStatement stm) {
             if( stm.expression !instanceof BinaryExpression ) {
-                syntaxError(stm, "Workflow malformed topic statement")
+                syntaxError(stm, "Workflow malformed publish statement")
                 return stm
             }
 
             final binaryX = (BinaryExpression)stm.expression
             if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
-                syntaxError(stm, "Workflow malformed topic statement")
+                syntaxError(stm, "Workflow malformed publish statement")
                 return stm
             }
 
-            if( binaryX.rightExpression !instanceof ConstantExpression ) {
-                syntaxError(stm, "Workflow malformed topic statement")
-                return stm
-            }
-
-            return stmt( callThisX('_into_topic', new ArgumentListExpression(binaryX.leftExpression, binaryX.rightExpression)) )
+            return stmt( callThisX('_into_publish', args(binaryX.leftExpression, binaryX.rightExpression)) )
         }
 
         protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
@@ -489,12 +484,12 @@ class NextflowDSLImpl implements ASTTransformation {
                         body.add(stm)
                         break
 
-                    case WORKFLOW_TOPIC:
+                    case WORKFLOW_PUBLISH:
                         if( !(stm instanceof ExpressionStatement) ) {
-                            syntaxError(stm, "Workflow malformed topic statement")
+                            syntaxError(stm, "Workflow malformed publish statement")
                             break
                         }
-                        body.add(normWorkflowTopic(stm as ExpressionStatement))
+                        body.add(normWorkflowPublish(stm as ExpressionStatement))
                         break
 
                     default:
@@ -524,7 +519,17 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         /**
-         * Apply syntax transformations to the output DSL
+         * Transform rules in the workflow output definition:
+         *
+         *   output {
+         *     'foo' { ... }
+         *   }
+         *
+         * becomes:
+         *
+         *   output {
+         *     rule('foo') { ... }
+         *   }
          *
          * @param methodCall
          * @param unit
@@ -533,62 +538,39 @@ class NextflowDSLImpl implements ASTTransformation {
             log.trace "Convert 'output' ${methodCall.arguments}"
 
             assert methodCall.arguments instanceof ArgumentListExpression
-            final args = (ArgumentListExpression)methodCall.arguments
+            final arguments = (ArgumentListExpression)methodCall.arguments
 
-            if( args.size() != 1 || args[0] !instanceof ClosureExpression ) {
+            if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
                 syntaxError(methodCall, "Invalid output definition")
-                return                
+                return
             }
 
-            fixOutputPath( (ClosureExpression)args[0] )
-        }
-
-        /**
-         * Fix path declaration in output DSL:
-         *
-         *   output {
-         *     'results' { ... }
-         *   }
-         *
-         * becomes:
-         *
-         *   output {
-         *     path('results') { ... }
-         *   }
-         *
-         * @param body
-         */
-        protected void fixOutputPath(ClosureExpression body) {
-            final block = (BlockStatement)body.code
+            final closure = (ClosureExpression)arguments[0]
+            final block = (BlockStatement)closure.code
             for( Statement stmt : block.statements ) {
-                if( stmt !instanceof ExpressionStatement )
-                    continue
+                if( stmt !instanceof ExpressionStatement ) {
+                    syntaxError(stmt, "Invalid output rule definition")
+                    return     
+                }
 
                 final stmtExpr = (ExpressionStatement)stmt
-                if( stmtExpr.expression !instanceof MethodCallExpression )
-                    continue
+                if( stmtExpr.expression !instanceof MethodCallExpression ) {
+                    syntaxError(stmt, "Invalid output rule definition")
+                    return     
+                }
 
-                final methodCall = (MethodCallExpression)stmtExpr.expression
-                if( methodCall.arguments !instanceof ArgumentListExpression )
-                    continue
+                final call = (MethodCallExpression)stmtExpr.expression
+                assert call.arguments instanceof ArgumentListExpression
 
-                // HACK: detect implicit path() call as method call with single closure argument
+                // HACK: rule definition is a method call with single closure argument
                 //       custom parser will be able to detect more elegantly
-                final args = (ArgumentListExpression)methodCall.arguments
-                if( args.size() != 1 || args[0] !instanceof ClosureExpression )
+                final ruleArgs = (ArgumentListExpression)call.arguments
+                if( ruleArgs.size() != 1 || ruleArgs[0] !instanceof ClosureExpression )
                     continue
 
-                final pathName = methodCall.getMethod()
-                final pathBody = (ClosureExpression)args[0]
-                final pathCall = new MethodCallExpression(
-                    new VariableExpression('this'),
-                    'path',
-                    new ArgumentListExpression(pathName, pathBody)
-                )
-                stmtExpr.setExpression(pathCall)
-
-                // recursively check nested path calls
-                fixOutputPath(pathBody)
+                final ruleName = call.method
+                final ruleBody = (ClosureExpression)ruleArgs[0]
+                stmtExpr.expression = callThisX('rule', args(ruleName, ruleBody))
             }
         }
 

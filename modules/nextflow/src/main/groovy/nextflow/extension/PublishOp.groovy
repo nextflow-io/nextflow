@@ -61,7 +61,7 @@ class PublishOp {
     }
 
     protected void publish0(entry) {
-        log.trace "Publish operator got: $entry"
+        log.trace "Publish operator received: $entry"
         sourceDir = null
         // use a set to avoid duplicates
         final result = new HashSet(10)
