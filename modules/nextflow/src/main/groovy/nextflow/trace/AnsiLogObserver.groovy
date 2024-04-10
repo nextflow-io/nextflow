@@ -419,7 +419,7 @@ class AnsiLogObserver implements TraceObserver {
         final labelSpaces = tagMatch ? tagMatch.group(2) : ''
         final labelNoTag = LBL_REPLACE.matcher(label).replaceFirst("")
         final labelFinalProcess = labelNoTag.tokenize(':')[-1]
-        final labelNoFinalProcess = labelFinalProcess.length() > 0 ? labelNoTag - labelFinalProcess : labelNoTag
+        final labelNoFinalProcess = labelNoTag.dropRight(labelFinalProcess.length())
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
