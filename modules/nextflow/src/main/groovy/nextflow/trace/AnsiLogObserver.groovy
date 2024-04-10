@@ -120,7 +120,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendInfo(String message) {
-        if( message==null )
+        if( message==null || message.isEmpty() )
             return
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
