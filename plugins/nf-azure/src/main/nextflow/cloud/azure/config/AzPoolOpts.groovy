@@ -89,7 +89,7 @@ class AzPoolOpts implements CacheFunnel {
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
         this.maxVmCount = opts.maxVmCount as Integer ?: vmCount * 3
-        this.startTask = getStartTask( (Map)opts.startTask ?: Collections.emptyMap() )
+        this.startTask = getStartTask( opts.startTask as Map )
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
@@ -130,6 +130,6 @@ class AzPoolOpts implements CacheFunnel {
 	}
 
     static AzStartTaskOpts getStartTask(Map opts) {
-        new AzStartTaskOpts( opts )
+        return new AzStartTaskOpts( opts )
     }
 }
