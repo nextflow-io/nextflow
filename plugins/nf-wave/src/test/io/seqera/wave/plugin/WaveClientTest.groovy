@@ -31,6 +31,8 @@ import com.sun.net.httpserver.HttpServer
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.PackagesSpec
+import io.seqera.wave.config.CondaOpts
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
@@ -45,6 +47,9 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static test.TestHelper.decodeBase64
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -291,14 +296,13 @@ class WaveClientTest extends Specification {
         def wave = new WaveClient(session)
         and:
         def assets = new WaveAssets(null,
-                'linux/amd64',
-                null,
-                null,
-                SINGULARITY_FILE,
-                null,
-                null,
-                null,
-                true)
+                'linux/amd64',   // platform
+                null,            // ResourcesBundle
+                null,             // ContainerConfig
+                SINGULARITY_FILE,               // containerFile
+                null,              // packagesSpec
+                null,            // projectResources
+                true)                 // singularity
         when:
         def req = wave.makeRequest(assets)
         then:
@@ -333,41 +337,22 @@ class WaveClientTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         and:
-        def DOCKERFILE = 'from foo:latest'
-        def CONDAFILE = folder.resolve('conda.yml'); CONDAFILE.text = 'some conda recipe here'
+        def SPEC = new PackagesSpec()
+            .withType(PackagesSpec.Type.CONDA)
+            .withEnvironment('some conda recipe here')
         and:
         def session = Mock(Session) { getConfig() >> [:]}
         def wave = new WaveClient(session)
 
         when:
-        def req = wave.makeRequest(new WaveAssets(null, null, null, null, DOCKERFILE, CONDAFILE))
+        def req = wave.makeRequest(new WaveAssets(null, null, null, null, null, SPEC))
         then:
         !req.containerImage
-        new String(req.containerFile.decodeBase64()) == DOCKERFILE
-        new String(req.condaFile.decodeBase64()) == CONDAFILE.text
+        !req.containerFile
+        !req.condaFile
         !req.containerConfig.layers
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should create request object with spack file' () {
-        given:
-        def folder = Files.createTempDirectory('test')
         and:
-        def DOCKERFILE = 'from foo:latest'
-        def SPACKFILE = folder.resolve('spack.yaml'); SPACKFILE.text = 'some spack recipe here'
-        and:
-        def session = Mock(Session) { getConfig() >> [:]}
-        def wave = new WaveClient(session)
-
-        when:
-        def req = wave.makeRequest(new WaveAssets(null, null, null, null, DOCKERFILE, null, SPACKFILE))
-        then:
-        !req.containerImage
-        new String(req.containerFile.decodeBase64()) == DOCKERFILE
-        new String(req.spackFile.decodeBase64()) == SPACKFILE.text
-        !req.containerConfig.layers
+        req.packages == SPEC
 
         cleanup:
         folder?.deleteDir()
@@ -405,7 +390,7 @@ class WaveClientTest extends Specification {
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = new WaveAssets('my:image', null, MODULE_RES, null, null, null, null, PROJECT_RES)
+        def assets = new WaveAssets('my:image', null, MODULE_RES, null, null, null, PROJECT_RES)
         def req = wave.makeRequest(assets)
         then:
         1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
@@ -433,8 +418,7 @@ class WaveClientTest extends Specification {
         !assets.moduleResources
         !assets.containerFile
         !assets.containerConfig
-        !assets.condaFile
-        !assets.spackFile
+        !assets.packagesSpec
         !assets.projectResources
         assets.containerPlatform == 'linux/amd64'
     }
@@ -456,8 +440,7 @@ class WaveClientTest extends Specification {
         !assets.moduleResources
         !assets.containerFile
         !assets.containerConfig
-        !assets.condaFile
-        !assets.spackFile
+        !assets.packagesSpec
         !assets.projectResources
     }
 
@@ -478,8 +461,7 @@ class WaveClientTest extends Specification {
         assets.moduleResources == BUNDLE
         !assets.containerFile
         !assets.containerConfig
-        !assets.condaFile
-        !assets.spackFile
+        !assets.packagesSpec
         !assets.projectResources
     }
 
@@ -505,8 +487,7 @@ class WaveClientTest extends Specification {
         assets.containerConfig == CONTAINER_CONFIG
         and:
         !assets.containerFile
-        !assets.condaFile
-        !assets.spackFile
+        !assets.packagesSpec
         !assets.projectResources
     }
 
@@ -531,8 +512,7 @@ class WaveClientTest extends Specification {
         assets.moduleResources == BUNDLE
         !assets.containerImage
         !assets.containerConfig
-        !assets.condaFile
-        !assets.spackFile
+        !assets.packagesSpec
         !assets.projectResources
 
         cleanup:
@@ -543,39 +523,23 @@ class WaveClientTest extends Specification {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
         and:
-        def task = Mock(TaskRun) {getConfig() >> [conda:"bioconda::rseqc=3.0.1 'conda-forge::r-base>=3.5'"] }
+            def task = Mock(TaskRun) {getConfig() >> [conda:"bioconda::rseqc=3.0.1 'conda-forge::r-base>=3.5'"] }
         and:
         def client = new WaveClient(session)
 
         when:
         def assets = client.resolveAssets(task, null, false)
         then:
-        assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.5
-                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-                RUN micromamba install -y -n base -f /tmp/conda.yml \\
-                    && micromamba install -y -n base conda-forge::procps-ng \\
-                    && micromamba clean -a -y
-                USER root
-                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
-                    '''.stripIndent()
-        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.spackFile
         !assets.projectResources
         and:
-        assets.condaFile.text == '''\
-                channels:
-                - seqera
-                - conda-forge
-                - bioconda
-                - defaults
-                dependencies:
-                - bioconda::rseqc=3.0.1
-                - conda-forge::r-base>=3.5
-                '''.stripIndent(true)
+        assets.packagesSpec.type == PackagesSpec.Type.CONDA
+        assets.packagesSpec.entries == ['bioconda::rseqc=3.0.1', 'conda-forge::r-base>=3.5'] as List
+        assets.packagesSpec.condaOpts == new CondaOpts(mambaImage: CondaOpts.DEFAULT_MAMBA_IMAGE, basePackages: CondaOpts.DEFAULT_PACKAGES)
+        assets.packagesSpec.channels == WaveClient.DEFAULT_CONDA_CHANNELS
     }
 
     def 'should create asset with conda lock file' () {
@@ -589,22 +553,15 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, false)
         then:
-        assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.5
-                RUN \\
-                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/conda-lock.yml \\
-                    && micromamba install -y -n base conda-forge::procps-ng \\
-                    && micromamba clean -a -y
-                USER root
-                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
-                    '''.stripIndent()
-        and:
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.condaFile
-        !assets.spackFile
         !assets.projectResources
+        and:
+        assets.packagesSpec.type == PackagesSpec.Type.CONDA
+        assets.packagesSpec.entries == ['https://host.com/conda-lock.yml'] as List
+        assets.packagesSpec.condaOpts == new CondaOpts(mambaImage: CondaOpts.DEFAULT_MAMBA_IMAGE, basePackages: CondaOpts.DEFAULT_PACKAGES)
+        assets.packagesSpec.channels == WaveClient.DEFAULT_CONDA_CHANNELS
     }
 
     def 'should create asset with spack recipe' () {
@@ -618,34 +575,16 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, false)
         then:
-        assets.containerFile == '''\
-                # Runner image
-                FROM {{spack_runner_image}}
-                
-                COPY --from=builder /opt/spack-env /opt/spack-env
-                COPY --from=builder /opt/software /opt/software
-                COPY --from=builder /opt/._view /opt/._view
-                
-                # Entrypoint for Singularity
-                RUN mkdir -p /.singularity.d/env && \\
-                    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-                # Entrypoint for Docker
-                RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-                    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-                
-                
-                ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-                CMD [ "/bin/bash" ]
-                '''.stripIndent()
-
-        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.condaFile
         !assets.projectResources
         and:
-        assets.spackFile.text == '''\
+        assets.packagesSpec.type == PackagesSpec.Type.SPACK
+        assets.packagesSpec.entries == null
+        and:
+        new String(assets.packagesSpec.environment.decodeBase64()) == '''\
                 spack:
                   specs: [rseqc@3.0.1, rbase@3.5]
                   concretizer: {unify: true, reuse: false}
@@ -665,23 +604,15 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, false)
         then:
-        assets.containerFile == '''\
-                FROM mambaorg/micromamba:1.5.5
-                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-                RUN micromamba install -y -n base -f /tmp/conda.yml \\
-                    && micromamba install -y -n base conda-forge::procps-ng \\
-                    && micromamba clean -a -y
-                USER root
-                ENV PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
-                    '''.stripIndent()
-        and:
-        assets.condaFile == condaFile
-        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.spackFile
         !assets.projectResources
+        and:
+        assets.packagesSpec.type == PackagesSpec.Type.CONDA
+        new String(assets.packagesSpec.environment.decodeBase64()) == 'the-conda-recipe-here'
+        assets.packagesSpec.entries == null
 
         cleanup:
         folder?.deleteDir()
@@ -700,33 +631,15 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, false)
         then:
-        assets.containerFile == '''\
-                # Runner image
-                FROM {{spack_runner_image}}
-                
-                COPY --from=builder /opt/spack-env /opt/spack-env
-                COPY --from=builder /opt/software /opt/software
-                COPY --from=builder /opt/._view /opt/._view
-                
-                # Entrypoint for Singularity
-                RUN mkdir -p /.singularity.d/env && \\
-                    cp -p /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-                # Entrypoint for Docker
-                RUN echo "#!/usr/bin/env bash\\n\\nset -ef -o pipefail\\nsource /opt/spack-env/z10_spack_environment.sh\\nexec \\"\\\$@\\"" \\
-                    >/opt/spack-env/spack_docker_entrypoint.sh && chmod a+x /opt/spack-env/spack_docker_entrypoint.sh
-                
-                
-                ENTRYPOINT [ "/opt/spack-env/spack_docker_entrypoint.sh" ]
-                CMD [ "/bin/bash" ]
-                '''.stripIndent()
-        and:
-        assets.spackFile == spackFile
-        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.condaFile
         !assets.projectResources
+        and:
+        assets.packagesSpec.type == PackagesSpec.Type.SPACK
+        new String(assets.packagesSpec.environment.decodeBase64()) == 'the-spack-recipe-here'
+        !assets.packagesSpec.entries
 
         cleanup:
         folder?.deleteDir()
@@ -745,36 +658,16 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, true)
         then:
-        assets.containerFile == '''\
-                BootStrap: docker
-                From: mambaorg/micromamba:1.5.5
-                %files
-                    {{wave_context_dir}}/conda.yml /scratch/conda.yml
-                %post
-                    micromamba install -y -n base -f /scratch/conda.yml
-                    micromamba install -y -n base conda-forge::procps-ng
-                    micromamba clean -a -y
-                %environment
-                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
-                    '''.stripIndent()
-        and:
         assets.singularity
         and:
+        assets.packagesSpec.type == PackagesSpec.Type.CONDA
+        assets.packagesSpec.entries == ['salmon=1.2.3']
+        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.spackFile
         !assets.projectResources
-        and:
-        assets.condaFile.text == '''\
-                channels:
-                - seqera
-                - conda-forge
-                - bioconda
-                - defaults
-                dependencies:
-                - salmon=1.2.3
-                '''.stripIndent(true)
     }
 
     def 'should create asset with conda remote lock file and singularity native build' () {
@@ -788,24 +681,15 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, true)
         then:
-        assets.containerFile == '''\
-                BootStrap: docker
-                From: mambaorg/micromamba:1.5.5
-                %post
-                    micromamba install -y -n base -c seqera -c conda-forge -c bioconda -c defaults -f https://host.com/lock-file.yaml
-                    micromamba install -y -n base conda-forge::procps-ng
-                    micromamba clean -a -y
-                %environment
-                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"
-                    '''.stripIndent()
-        and:
         assets.singularity
         and:
+        assets.packagesSpec.type == PackagesSpec.Type.CONDA
+        assets.packagesSpec.entries == ['https://host.com/lock-file.yaml']
+        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.condaFile
-        !assets.spackFile
         !assets.projectResources
     }
 
@@ -822,26 +706,16 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, true)
         then:
-        assets.containerFile == '''\
-                BootStrap: docker
-                From: mambaorg/micromamba:1.5.5
-                %files
-                    {{wave_context_dir}}/conda.yml /scratch/conda.yml
-                %post
-                    micromamba install -y -n base -f /scratch/conda.yml
-                    micromamba install -y -n base conda-forge::procps-ng
-                    micromamba clean -a -y
-                %environment
-                    export PATH="$MAMBA_ROOT_PREFIX/bin:$PATH"                    
-                '''.stripIndent()
-        and:
-        assets.condaFile == condaFile
         assets.singularity
         and:
+        assets.packagesSpec.type == PackagesSpec.Type.CONDA
+        assets.packagesSpec.entries == null
+        new String(assets.packagesSpec.environment.decodeBase64()) == 'the-conda-recipe-here'
+        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.spackFile
         !assets.projectResources
 
         cleanup:
@@ -859,30 +733,16 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, true)
         then:
-        assets.containerFile == '''\
-                Bootstrap: docker
-                From: {{spack_runner_image}}
-                stage: final
-                 
-                %files from build
-                    /opt/spack-env /opt/spack-env
-                    /opt/software /opt/software
-                    /opt/._view /opt/._view
-                    /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-                 
-                %post
-                    cmd-foo
-                    cmd-bar
-                '''.stripIndent()
-
-        and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
-        !assets.condaFile
         !assets.projectResources
         and:
-        assets.spackFile.text == '''\
+        assets.packagesSpec.type == PackagesSpec.Type.SPACK
+        assets.packagesSpec.entries == null
+        assets.packagesSpec.spackOpts.commands == ['cmd-foo','cmd-bar']
+        decodeBase64(assets.packagesSpec.environment) == '''\
                 spack:
                   specs: [rseqc@3.0.1, rbase@3.5]
                   concretizer: {unify: true, reuse: false}
@@ -907,27 +767,17 @@ class WaveClientTest extends Specification {
         when:
         def assets = client.resolveAssets(task, null, true)
         then:
-        assets.containerFile == '''\
-                    Bootstrap: docker
-                    From: {{spack_runner_image}}
-                    stage: final
-                     
-                    %files from build
-                        /opt/spack-env /opt/spack-env
-                        /opt/software /opt/software
-                        /opt/._view /opt/._view
-                        /opt/spack-env/z10_spack_environment.sh /.singularity.d/env/91-environment.sh
-                     
-                    %post
-                    '''.stripIndent()
+        assets.singularity
         and:
+        !assets.containerFile
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
         !assets.projectResources
-        !assets.condaFile
         and:
-        assets.spackFile.text == '''\
+        assets.packagesSpec.type == PackagesSpec.Type.SPACK
+        assets.packagesSpec.spackOpts.basePackages == 'nano@1.2.3'
+        decodeBase64(assets.packagesSpec.environment) == '''\
                 spack:
                   specs: [rseqc@3.0.1, rbase@3.5, nano@1.2.3]
                   concretizer: {unify: true, reuse: false}
@@ -1324,6 +1174,5 @@ class WaveClientTest extends Specification {
         server?.stop(0)
 
     }
-
 
 }

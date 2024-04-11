@@ -86,7 +86,7 @@ class WaveClient {
                         'Accept','application/vnd.docker.distribution.manifest.v2+json',
                         'Accept','application/vnd.docker.distribution.manifest.list.v2+json' }
 
-    private static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
+    public static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
 
     private static final String DEFAULT_SPACK_ARCH = 'x86_64'
 
@@ -178,17 +178,24 @@ class WaveClient {
             containerConfig.prependLayer(makeLayer(assets.projectResources))
         }
 
-        if( !assets.containerImage && !assets.containerFile )
-            throw new IllegalArgumentException("Wave container request requires at least a image or container file to build")
+        if( !assets.containerImage && !assets.containerFile && !assets.packagesSpec )
+            throw new IllegalArgumentException("Wave container request requires at least a image or container file or packages spec to build")
 
         if( assets.containerImage && assets.containerFile )
             throw new IllegalArgumentException("Wave container image and container file cannot be specified in the same request")
 
+        if( assets.containerImage && assets.packagesSpec )
+            throw new IllegalArgumentException("Wave container image and packages spec cannot be specified in the same request")
+
+        if( assets.containerFile && assets.packagesSpec )
+            throw new IllegalArgumentException("Wave containerFile file and packages spec cannot be specified in the same request")
+        
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
                 containerPlatform: assets.containerPlatform,
                 containerConfig: containerConfig,
                 containerFile: assets.dockerFileEncoded(),
+                packages: assets.packagesSpec,
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
@@ -472,7 +479,7 @@ class WaveClient {
                         .withType(PackagesSpec.Type.CONDA)
                         .withChannels(condaChannels)
                         .withCondaOpts(config.condaOpts())
-                        .withEntries(attrs.conda.tokenize(' '))
+                        .withEntries(condaPackagesToList(attrs.conda))
                 }
 
             }
@@ -487,18 +494,21 @@ class WaveClient {
                 throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
 
             if( isSpackFile(attrs.spack) ) {
-                // parse the attribute as a spack file path *and* append the base packages if any
+                // create a minimal spack file with package spec from user input
+                final spackFile = Path.of(attrs.spack)
+                final spackEnv = addPackagesToSpackYaml(spackFile.text, config.spackOpts())
                 packagesSpec = new PackagesSpec()
                     .withType(PackagesSpec.Type.SPACK)
                     .withSpackOpts(config.spackOpts())
-                    .withEntries(List.of(attrs.spack))
+                    .withEnvironment(spackEnv.bytes.encodeBase64().toString())
             }
             else {
                 // create a minimal spack file with package spec from user input
-                final spackFile = spackPackagesToSpackFile(attrs.spack, config.spackOpts())
+                final spackEnv = spackPackagesToSpackYaml(attrs.spack, config.spackOpts())
                 packagesSpec = new PackagesSpec()
                     .withType(PackagesSpec.Type.SPACK)
-                    .withEnvironment(spackFile.bytes.encodeBase64().toString())
+                    .withSpackOpts(config.spackOpts())
+                    .withEnvironment(spackEnv.bytes.encodeBase64().toString())
             }
         }
 
