@@ -320,9 +320,8 @@ class AzPath implements Path {
 
 
     String toUriString() {
-        final accountName = AzConfig.getConfig().storage().accountName
         if( path.isAbsolute() ) {
-            return "/${accountName}${path.toString()}"
+            return "${AzFileSystemProvider.SCHEME}:/${path.toString()}"
         }
         else {
             return "${AzFileSystemProvider.SCHEME}:${path.toString()}"

@@ -86,6 +86,7 @@ class TesTaskHandler extends TaskHandler {
         this.executor = executor
         this.client = executor.getClient()
 
+
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
@@ -240,22 +241,41 @@ class TesTaskHandler extends TaskHandler {
 
     private TesInput inItem(Path realPath, String fileName = null) {
         final result = new TesInput()
+        String azure_account = executor.getAzureStorageAccount()
+        String tes_end_point = executor.getEndpoint()
+        final azure_path = "/${azure_account}/"
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
+
+        if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
+            result.url = realPath.toUriString().replaceAll('az://', "$azure_path")
+        }
+
         log.trace "[TES] Adding INPUT file: $result"
         return result
     }
 
     private TesInput inItemFromBin(Path realPath) {
         final result = new TesInput()
+        String azure_account = executor.getAzureStorageAccount()
+        String tes_end_point = executor.getEndpoint()
+        final azure_path = "/${azure_account}/"
         result.url = realPath.toUriString()
         result.path = realPath.toString()
+
+        if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
+            result.url = realPath.toUriString().replaceAll('az://', "$azure_path")
+        }
+        
         log.trace "[TES] Adding INPUT file: $result"
         return result
     }
 
     private TesOutput outItem( String fileName ) {
         final result = new TesOutput()
+        String azure_account = executor.getAzureStorageAccount()
+        String tes_end_point = executor.getEndpoint()
+        final azure_path = "/${azure_account}/"
         if( fileName.contains('*') || fileName.contains('?') ) {
             result.path = "$WORK_DIR/$fileName"
             result.pathPrefix = WORK_DIR
@@ -265,6 +285,11 @@ class TesTaskHandler extends TaskHandler {
             result.path = "$WORK_DIR/$fileName"
             result.url = task.workDir.resolve(fileName).toUriString()
         }
+
+        if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
+            result.url = result.url.replaceAll('az://', "$azure_path")
+        }
+
         log.trace "[TES] Adding OUTPUT file: $result"
         return result
     }

@@ -103,6 +103,12 @@ class TesExecutor extends Executor implements ExtensionPoint {
         return result
     }
 
+    protected String getAzureStorageAccount() {
+        final account = session.config.navigate('azure.storage.accountName')
+        log.debug "[TES] Azure storage account = ${account}"
+        return account
+    }
+
     protected Map<String, Authentication> getAuthentications() {
         final Map<String, Authentication> result = [:]
 
