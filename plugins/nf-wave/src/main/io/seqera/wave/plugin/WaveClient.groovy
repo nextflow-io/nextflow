@@ -43,6 +43,7 @@ import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.wave.api.BuildStatusResponse
@@ -280,17 +281,23 @@ class WaveClient {
         }
     }
 
-    private BuildStatusResponse jsonToBuildStatusResponse(String body) {
-        final type = new TypeToken<BuildStatusResponse>(){}.getType()
-        return new Gson().fromJson(body, type)
+    protected BuildStatusResponse jsonToBuildStatusResponse(String body) {
+        final obj = new JsonSlurper().parseText(body) as Map
+        new BuildStatusResponse(
+            obj.id as String,
+            obj.status as BuildStatusResponse.Status,
+            obj.startTime ? Instant.parse(obj.startTime as String) : null,
+            obj.duration ? Duration.parse(obj.duration as String) : null,
+            obj.succeeded as Boolean
+        )
     }
 
-    private SubmitContainerTokenResponse jsonToSubmitResponse(String body) {
+    protected SubmitContainerTokenResponse jsonToSubmitResponse(String body) {
         final type = new TypeToken<SubmitContainerTokenResponse>(){}.getType()
         return new Gson().fromJson(body, type)
     }
 
-    private ContainerConfig jsonToContainerConfig(String json) {
+    protected ContainerConfig jsonToContainerConfig(String json) {
         final type = new TypeToken<ContainerConfig>(){}.getType()
         return new Gson().fromJson(json, type)
     }

@@ -18,12 +18,15 @@
 package io.seqera.wave.plugin
 
 import static java.nio.file.StandardOpenOption.*
+import static test.TestHelper.*
 
 import java.net.http.HttpRequest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
+import java.time.Duration
+import java.time.Instant
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -31,6 +34,7 @@ import com.sun.net.httpserver.HttpServer
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.PackagesSpec
 import io.seqera.wave.config.CondaOpts
 import nextflow.Session
@@ -47,9 +51,6 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import static test.TestHelper.decodeBase64
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1173,6 +1174,24 @@ class WaveClientTest extends Specification {
         cleanup:
         server?.stop(0)
 
+    }
+
+    def 'should deserialize build status' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        and:
+        def JSON = '{"id":"3449a9d02831c406_1","status":"PENDING","startTime":"2024-04-11T20:42:56.917524490Z","duration":"PT10S", "succeeded": "true"}'
+        when:
+        def ret = wave.jsonToBuildStatusResponse(JSON)
+        then:
+        ret == new BuildStatusResponse(
+            '3449a9d02831c406_1',
+            BuildStatusResponse.Status.PENDING,
+            Instant.parse("2024-04-11T20:42:56.917524490Z"),
+            Duration.ofSeconds(10),
+            true)
     }
 
 }
