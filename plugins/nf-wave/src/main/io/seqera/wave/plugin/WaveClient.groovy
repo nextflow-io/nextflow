@@ -287,7 +287,7 @@ class WaveClient {
             obj.id as String,
             obj.status as BuildStatusResponse.Status,
             obj.startTime ? Instant.parse(obj.startTime as String) : null,
-            obj.duration ? Duration.parse(obj.duration as String) : null,
+            obj.duration ? Duration.ofMillis(obj.duration as double * 1_000 as long) : null,
             obj.succeeded as Boolean
         )
     }

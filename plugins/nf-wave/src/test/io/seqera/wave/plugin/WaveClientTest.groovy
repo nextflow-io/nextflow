@@ -1182,15 +1182,22 @@ class WaveClientTest extends Specification {
         and:
         def wave = Spy(new WaveClient(sess))
         and:
-        def JSON = '{"id":"3449a9d02831c406_1","status":"PENDING","startTime":"2024-04-11T20:42:56.917524490Z","duration":"PT10S", "succeeded": "true"}'
-        when:
-        def ret = wave.jsonToBuildStatusResponse(JSON)
-        then:
-        ret == new BuildStatusResponse(
+        def b1 = '{"id":"3449a9d02831c406_1","status":"PENDING","startTime":"2024-04-11T20:42:56.917524490Z"}'
+        def b2 = '{"id":"f76b765d2a9cec8b_1","status":"COMPLETED","startTime":"2024-04-11T21:46:55.960337916Z","duration":51.092386813,"succeeded":true}'
+
+        expect:
+        wave.jsonToBuildStatusResponse(b1) == new BuildStatusResponse(
             '3449a9d02831c406_1',
             BuildStatusResponse.Status.PENDING,
             Instant.parse("2024-04-11T20:42:56.917524490Z"),
-            Duration.ofSeconds(10),
+            null,
+            null)
+        and:
+        wave.jsonToBuildStatusResponse(b2) == new BuildStatusResponse(
+            'f76b765d2a9cec8b_1',
+            BuildStatusResponse.Status.COMPLETED,
+            Instant.parse("2024-04-11T21:46:55.960337916Z"),
+            Duration.ofMillis(51.092386813 * 1_000 as long),
             true)
     }
 
