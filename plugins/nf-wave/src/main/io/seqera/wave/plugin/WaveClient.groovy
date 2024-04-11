@@ -562,6 +562,7 @@ class WaveClient {
         try {
             // compute a unique hash for this request assets
             final key = assets.fingerprint()
+            log.trace "Wave fingerprint: $key; assets: $assets"
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             if( config.freezeMode() )  {

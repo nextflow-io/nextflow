@@ -63,12 +63,25 @@ class WaveAssets {
         allMeta.add( this.moduleResources?.fingerprint() )
         allMeta.add( this.containerConfig?.fingerprint() )
         allMeta.add( this.containerFile )
-        allMeta.add( this.packagesSpec )
+        allMeta.add( this.packagesSpec ? fingerprint(this.packagesSpec) : null )
         allMeta.add( this.projectResources?.fingerprint() )
         allMeta.add( this.containerPlatform )
         return CacheHelper.hasher(allMeta).hash().toString()
     }
 
+    protected String fingerprint(PackagesSpec spec) {
+        final allMeta = new ArrayList(10)
+        allMeta.add( spec.type.toString() )
+        allMeta.add( spec.environment )
+        allMeta.add( spec.entries )
+        allMeta.add( spec.condaOpts?.mambaImage )
+        allMeta.add( spec.condaOpts?.commands )
+        allMeta.add( spec.condaOpts?.basePackages )
+        allMeta.add( spec.spackOpts?.commands )
+        allMeta.add( spec.spackOpts?.basePackages )
+        allMeta.add( spec.channels )
+        return CacheHelper.hasher(allMeta).hash().toString()
+    }
 
     static void validateContainerName(String name) {
         if( !name )
