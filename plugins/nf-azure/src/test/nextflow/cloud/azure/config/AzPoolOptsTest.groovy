@@ -93,8 +93,8 @@ class AzPoolOptsTest extends Specification {
         opts.password == 'some-pwd'
         opts.virtualNetwork == 'some-vnet'
         opts.lowPriority
-        // opts.startTask == 'echo hello-world'
-        // opts.startTaskPrivileged
+        opts.startTask.script == 'echo hello-world'
+        opts.startTask.privileged
     }
 
 }

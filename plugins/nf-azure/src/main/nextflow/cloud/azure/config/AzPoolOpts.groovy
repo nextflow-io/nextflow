@@ -22,6 +22,7 @@ import com.microsoft.azure.batch.protocol.models.VerificationType
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -61,8 +62,6 @@ class AzPoolOpts implements CacheFunnel {
     Integer maxVmCount
 
     AzStartTaskOpts startTask
-    // String startTask
-    // boolean startTaskPrivileged
 
     String schedulePolicy // spread | pack
     String registry
@@ -89,9 +88,8 @@ class AzPoolOpts implements CacheFunnel {
         this.scaleFormula = opts.scaleFormula
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
-        this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
-        this.startTask = parseStartTask(opts.startTask instanceof Map ? opts.startTask as Map<String,Map> : Collections.<String,Map>emptyMap())
-        // this.startTask = new AzStartTaskOpts( (Map)opts.startTask ?: Collections.emptyMap() )
+        this.maxVmCount = opts.maxVmCount as Integer ?: vmCount * 3
+        this.startTask = getStartTask( (Map)opts.startTask ?: Collections.emptyMap() )
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
@@ -117,7 +115,8 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
-        // hasher.putMap?(startTask)
+        hasher.putUnencodedChars(startTask.script ?: '')
+        hasher.putBoolean(startTask.privileged)
         return hasher
     }
 
@@ -130,10 +129,7 @@ class AzPoolOpts implements CacheFunnel {
             return ''
 	}
 
-    static AzStartTaskOpts parseStartTask(Map startTaskOpts) {
-        final newStartTaskOpts       = new AzStartTaskOpts()
-        newStartTaskOpts.script     = startTaskOpts.script     ?: ''
-        newStartTaskOpts.privileged = startTaskOpts.privileged ?: false
-        return newStartTaskOpts
+    static AzStartTaskOpts getStartTask(Map opts) {
+        new AzStartTaskOpts( (Map)opts )
     }
 }

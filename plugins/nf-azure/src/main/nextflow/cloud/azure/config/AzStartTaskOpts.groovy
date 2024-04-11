@@ -28,7 +28,7 @@ class AzStartTaskOpts {
     }
 
     AzStartTaskOpts(Map config) {
-        this.script     = config.script     ?: ''
+        this.script     = config.script     ?: null
         this.privileged = config.privileged ?: false
     }
 }
