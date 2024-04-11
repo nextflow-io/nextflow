@@ -130,6 +130,6 @@ class AzPoolOpts implements CacheFunnel {
 	}
 
     static AzStartTaskOpts getStartTask(Map opts) {
-        new AzStartTaskOpts( (Map)opts )
+        new AzStartTaskOpts( opts )
     }
 }
