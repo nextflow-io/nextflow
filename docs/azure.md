@@ -382,7 +382,7 @@ Batch Authentication with Shared Keys does not allow to link external resources 
 
 ### Start Task
 
-Nextflow uses azcopy to stage files in and out of the worker nodes. To do this, it installs azcopy to a shared directory by running a start task. If you have additional requirements for the worker nodes, you can modify this start task by setting the property `startTask`. This is the default shell script:
+Nextflow uses azcopy to stage files in and out of the worker nodes. To do this, it installs azcopy to a shared directory by running a start task. If you have additional requirements for the worker nodes, you can modify this start task by changing the parameters in the Azure Batch pool configuration scope `startTask`.  This is the default shell script:
 
 ```shell
 bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"
