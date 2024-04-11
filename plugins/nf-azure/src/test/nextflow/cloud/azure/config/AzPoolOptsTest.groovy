@@ -71,8 +71,10 @@ class AzPoolOptsTest extends Specification {
             password: 'some-pwd',
             virtualNetwork: 'some-vnet',
             lowPriority: true,
-            startTask: 'echo hello-world',
-            startTaskPrivileged: true
+            startTask: [
+                script: 'echo hello-world',
+                privileged: true
+            ]
         ])
         then:
         opts.runAs == 'foo'

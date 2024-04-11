@@ -106,19 +106,24 @@ class AzureConfigTest extends Specification {
                                              deleteJobsOnCompletion: true,
                                              deletePoolsOnCompletion: true,
                                              deleteTasksOnCompletion: false,
-                                             pools: [ myPool: [
-                                                     vmType: 'Foo_A1',
-                                                     autoScale: true,
-                                                     vmCount: 5,
-                                                     maxVmCount: 50,
-                                                     fileShareRootPath: '/somewhere/over/the/rainbow',
-                                                     privileged: true,
-                                                     runAs: 'root',
-                                                     scaleFormula: 'x + y + z',
-                                                     scaleInterval:  '15 min',
-                                                     schedulePolicy: 'pack',
-                                                     startTask: 'echo hello-world']]
-                                     ]] ]
+                                             pools: [ 
+                                                myPool: [
+                                                    vmType: 'Foo_A1',
+                                                    autoScale: true,
+                                                    vmCount: 5,
+                                                    maxVmCount: 50,
+                                                    fileShareRootPath: '/somewhere/over/the/rainbow',
+                                                    privileged: true,
+                                                    runAs: 'root',
+                                                    scaleFormula: 'x + y + z',
+                                                    scaleInterval:  '15 min',
+                                                    schedulePolicy: 'pack',
+                                                    startTask: [ script: 'echo hello-world', privileged: true ]
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
         }
 
         when:
@@ -146,7 +151,8 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
         cfg.batch().pool('myPool').privileged == true
         cfg.batch().pool('myPool').runAs == 'root'
-        cfg.batch().pool('myPool').startTask == 'echo hello-world'
+        cfg.batch().pool('myPool').startTask.script == 'echo hello-world'
+        cfg.batch().pool('myPool').startTask.privileged == true
     }
 
     def 'should get azure batch endpoint from account and location' () {

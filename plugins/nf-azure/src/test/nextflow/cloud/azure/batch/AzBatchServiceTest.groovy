@@ -10,6 +10,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -232,7 +233,7 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
 
         when:
-        def configuredStartTask = svc.createStartTask( new AzPoolOpts() )
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
         configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
     }
@@ -244,7 +245,7 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
 
         when:
-        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTask: 'echo hello-world') )
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
         configuredStartTask.commandLine == 'bash -c "echo hello-world; chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
     }
@@ -256,7 +257,7 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
 
         when:
-        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTask: 'echo hello-world') )
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
         configuredStartTask.commandLine == 'bash -c "echo hello-world"'
         configuredStartTask.resourceFiles == []
@@ -269,7 +270,7 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
 
         when:
-        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTask: 'echo hello-world') )
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
         configuredStartTask.commandLine == 'bash -c "echo hello-world"'
         configuredStartTask.resourceFiles == []
@@ -282,7 +283,7 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
 
         when:
-        def configuredStartTask = svc.createStartTask( new AzPoolOpts() )
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
         configuredStartTask == null
     }
@@ -295,7 +296,7 @@ class AzBatchServiceTest extends Specification {
         and:
 
         when:
-        def configuredStartTask = svc.createStartTask( new AzPoolOpts(startTaskPrivileged: true) )
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(privileged: true) )
         then:
         configuredStartTask.userIdentity().autoUser().elevationLevel().value == 'admin'
     }
