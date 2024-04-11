@@ -60,8 +60,9 @@ class AzPoolOpts implements CacheFunnel {
     Duration scaleInterval
     Integer maxVmCount
 
-    String startTask
-    boolean startTaskPrivileged
+    AzStartTaskOpts startTask
+    // String startTask
+    // boolean startTaskPrivileged
 
     String schedulePolicy // spread | pack
     String registry
@@ -89,8 +90,8 @@ class AzPoolOpts implements CacheFunnel {
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
         this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
-        this.startTask = opts.startTask
-        this.startTaskPrivileged = opts.startTaskPrivileged ?: false
+        this.startTask = parseStartTask(opts.startTask instanceof Map ? opts.startTask as Map<String,Map> : Collections.<String,Map>emptyMap())
+        // this.startTask = new AzStartTaskOpts( (Map)opts.startTask ?: Collections.emptyMap() )
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
@@ -116,8 +117,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
-        hasher.putUnencodedChars(startTask ?: '')
-        hasher.putBoolean(startTaskPrivileged)
+        // hasher.putMap?(startTask)
         return hasher
     }
 
@@ -129,4 +129,11 @@ class AzPoolOpts implements CacheFunnel {
         else
             return ''
 	}
+
+    static AzStartTaskOpts parseStartTask(Map startTaskOpts) {
+        final newStartTaskOpts       = new AzStartTaskOpts()
+        newStartTaskOpts.script     = startTaskOpts.script     ?: ''
+        newStartTaskOpts.privileged = startTaskOpts.privileged ?: false
+        return newStartTaskOpts
+    }
 }

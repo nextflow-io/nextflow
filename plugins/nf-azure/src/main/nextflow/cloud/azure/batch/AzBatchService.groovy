@@ -76,6 +76,7 @@ import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
@@ -682,15 +683,17 @@ class AzBatchService implements Closeable {
     }
 
 
-    protected StartTask createStartTask(AzPoolOpts opts) {
+    protected StartTask createStartTask(AzStartTaskOpts opts) {
 
         def startCmd = [] as ArrayList
         final resourceFiles = [] as ArrayList
 
+        log.debug "AzStartTaskOpts: ${opts}"
+
         // Get any custom start task command
-        if ( opts.startTask ) {
-            startCmd << opts.startTask
-            log.debug "Adding custom start task to command: ${opts.startTask}"
+        if ( opts.script ) {
+            startCmd << opts.script
+            log.debug "Adding custom start task to command: ${opts.script}"
         }
 
         // If enabled, append azcopy installer to start task command
@@ -713,7 +716,7 @@ class AzBatchService implements Closeable {
             return new StartTask()
                 .withCommandLine(startTaskCmd)
                 .withResourceFiles(resourceFiles)
-                .withUserIdentity(userIdentity(opts.startTaskPrivileged, null, AutoUserScope.POOL))
+                .withUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
         }
     }
 
@@ -728,7 +731,7 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
 
-        final startTask = createStartTask(spec.opts)
+        final startTask = createStartTask(spec.opts.startTask)
         if( startTask ) {
             poolParams .withStartTask(startTask)
         }
