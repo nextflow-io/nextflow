@@ -86,4 +86,9 @@ class TestHelper {
         file.text
     }
 
+    static String decodeBase64(String encoded) {
+        byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+        // Convert the decoded bytes into a string
+        return new String(decodedBytes);
+    }
 }

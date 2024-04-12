@@ -50,4 +50,14 @@ class SubmitContainerTokenResponse {
      */
     String buildId
 
+    /**
+     * Whenever it's a cached build image. Only supported by API version v1alpha2
+     */
+    Boolean cached
+
+    /**
+     * When the result is a freeze container. Version v1alpha2 as later.
+     */
+    Boolean freeze;
+
 }
