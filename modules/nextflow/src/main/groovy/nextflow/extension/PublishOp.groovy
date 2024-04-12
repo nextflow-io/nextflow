@@ -34,11 +34,7 @@ class PublishOp {
 
     private DataflowReadChannel source
 
-    private Map opts
-
     private PublishDir publisher
-
-    private Path sourceDir
 
     private volatile boolean complete
 
@@ -46,45 +42,46 @@ class PublishOp {
 
     PublishOp(DataflowReadChannel source, Map opts) {
         this.source = source
-        this.opts = opts ? new LinkedHashMap(opts) : Collections.emptyMap()
-        this.publisher = PublishDir.create(this.opts)
+        this.publisher = PublishDir.create(opts)
     }
 
-    protected boolean getComplete() { complete }
+    boolean getComplete() { complete }
 
     PublishOp apply() {
         final events = new HashMap(2)
-        events.onNext = this.&publish0
-        events.onComplete = this.&done0
+        events.onNext = this.&onNext
+        events.onComplete = this.&onComplete
         DataflowHelper.subscribeImpl(source, events)
         return this
     }
 
-    protected void publish0(entry) {
-        log.trace "Publish operator received: $entry"
-        sourceDir = null
-        // use a set to avoid duplicates
-        final result = new HashSet(10)
-        collectFiles(entry, result)
-        publisher.apply(result, sourceDir)
+    protected void onNext(value) {
+        log.trace "Publish operator received: $value"
+        final result = collectFiles([:], value)
+        for( final entry : result ) {
+            final sourceDir = entry.key
+            final files = entry.value
+            publisher.apply(files, sourceDir)
+        }
     }
 
-    protected void done0(nope) {
+    protected void onComplete(nope) {
         log.trace "Publish operator complete"
         this.complete = true
     }
 
-    protected void collectFiles(entry, Collection<Path> result) {
-        if( entry instanceof Path ) {
-            result.add(entry)
-            if( sourceDir == null )
-                sourceDir = getTaskDir(entry)
+    protected Map<Path,Set<Path>> collectFiles(Map<Path,Set<Path>> result, value) {
+        if( value instanceof Path ) {
+            final sourceDir = getTaskDir(value)
+            if( sourceDir !in result )
+                result[sourceDir] = new HashSet(10)
+            result[sourceDir] << value
         }
-        else if( entry instanceof List ) {
-            for( def x : entry ) {
-                collectFiles(x, result)
-            }
+        else if( value instanceof Collection ) {
+            for( final el : value )
+                collectFiles(result, el)
         }
+        return result
     }
 
     /**
@@ -93,17 +90,13 @@ class PublishOp {
      * two sub-directories eg work-dir/xx/yyyyyy/etc
      *
      * @param path
-     * @return
      */
     protected Path getTaskDir(Path path) {
         if( path == null )
             return null
-        def result = getTaskDir0(path, session.workDir.resolve('tmp'))
-        if( result == null )
-            result = getTaskDir0(path, session.workDir)
-        if( result == null )
-            result = getTaskDir0(path, session.bucketDir)
-        return result
+        return getTaskDir0(path, session.workDir.resolve('tmp'))
+            ?: getTaskDir0(path, session.workDir)
+            ?: getTaskDir0(path, session.bucketDir)
     }
 
     private Path getTaskDir0(Path file, Path base) {
@@ -112,7 +105,7 @@ class PublishOp {
         if( base.fileSystem != file.fileSystem )
             return null
         final len = base.nameCount
-        if( file.startsWith(base) && file.getNameCount()>len+2 )
+        if( file.startsWith(base) && file.getNameCount() > len+2 )
             return base.resolve(file.subpath(len,len+2))
         return null
     }
