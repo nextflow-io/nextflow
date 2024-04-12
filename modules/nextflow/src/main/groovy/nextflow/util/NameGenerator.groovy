@@ -90,6 +90,7 @@ class NameGenerator {
             "lethal",
             "lonely",
             "loving",
+            "loquacious",
             "mad",
             "magical",
             "maniac",
@@ -786,6 +787,9 @@ class NameGenerator {
             // James Watson - American molecular biologist, geneticist and zoologist, best known as one of the co-discoverers of the structure of DNA. https://en.wikipedia.org/wiki/James_Watson
             "watson",
 
+            // Alfred Wegener - German climatologist, geologist, geophysicist, meteorologist, and polar researcher. Best known for proposing the theory of continental drift, the precursor to plate tectonics. https://en.wikipedia.org/wiki/Alfred_Wegener
+            "wegener",
+        
             // Marlyn Wescoff - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Marlyn_Meltzer
             "wescoff",
 

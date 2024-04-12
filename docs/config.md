@@ -341,7 +341,7 @@ The following settings are available:
 : Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
 
 `azure.batch.copyToolInstallMode`
-: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
+: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution. Finally when `off` is specified, the `azcopy` tool is not installed (default: `node`).
 
 `azure.batch.deleteJobsOnCompletion`
 : Delete all jobs when the workflow completes (default: `false`).
@@ -857,6 +857,9 @@ The following settings are available for Google Cloud Batch:
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
 
+  Note that the `google.batch.serviceAccountEmail` service account will only be used for spawned jobs, not for the Nextflow process itself. 
+  See the [Google Cloud](https://www.nextflow.io/docs/latest/google.html#credentials) documentation for more information on credentials.
+
 `google.batch.spot`
 : When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
 
@@ -1224,6 +1227,32 @@ manifest {
 
 Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHub, BitBucket or GitLab.
 
+(config-nextflow)=
+
+### Scope `nextflow`
+
+The `nextflow` scope provides configuration options for the Nextflow runtime.
+
+`nextflow.publish.retryPolicy.delay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Delay when retrying a failed publish operation (default: `350ms`).
+
+`nextflow.publish.retryPolicy.jitter`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Jitter value when retrying a failed publish operation (default: `0.25`).
+
+`nextflow.publish.retryPolicy.maxAttempt`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max attempts when retrying a failed publish operation (default: `5`).
+
+`nextflow.publish.retryPolicy.maxDelay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max delay when retrying a failed publish operation (default: `90s`).
+
 (config-notification)=
 
 ### Scope `notification`
@@ -1554,20 +1583,20 @@ The following settings are available:
 
 ### Scope `tower`
 
-The `tower` scope controls the settings for the [Seqera Platform](https://tower.nf) (formerly Tower Cloud).
+The `tower` scope controls the settings for the [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 
 The following settings are available:
 
 `tower.accessToken`
 : The unique access token specific to your account on an instance of Seqera Platform.
 
-  Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://tower.nf/tokens).
+  Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
 
 `tower.enabled`
 : When `true` Nextflow sends the workflow tracing and execution metrics to Seqera Platform (default: `false`).
 
 `tower.endpoint`
-: The endpoint of your Seqera Platform instance (default: `https://tower.nf`).
+: The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqera.io`).
 
 `tower.workspaceId`
 : The ID of the Seqera Platform workspace where the run should be added (default: the launching user personal workspace).
