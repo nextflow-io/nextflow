@@ -162,6 +162,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     private outputs = new OutputsList()
 
+    private Map<String,String> publishRules = [:]
+
     /**
      * Initialize the taskConfig object with the defaults values
      *
@@ -512,6 +514,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         outputs
     }
 
+    Map<String,String> getPublishRules() {
+        publishRules
+    }
+
     /**
      * Implements the process {@code debug} directive.
      */
@@ -647,6 +653,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             result.into(obj)
         }
         result
+    }
+
+    void _into_publish(String emit, String name) {
+        final emitNames = outputs.collect { param -> param.channelEmitName }
+        if( emit !in emitNames )
+            throw new IllegalArgumentException("Invalid emit name '${emit}' in publish statement, valid emits are: ${emitNames.join(', ')}")
+        publishRules[emit] = name
     }
 
     /**
