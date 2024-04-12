@@ -73,15 +73,36 @@ class OutputDsl {
         this.directory = (directory as Path).complete()
     }
 
-    // TODO: other publish options
-    // - contentType
-    // - ignoreErrors
-    // - overwrite
-    // - storageClass
-    // - tags
+    void contentType(String value) {
+        setDefault('contentType', value)
+    }
 
-    void mode(String mode) {
-        setDefault('mode', mode)
+    void contentType(boolean value) {
+        setDefault('contentType', value)
+    }
+
+    void enabled(boolean value) {
+        setDefault('enabled', value)
+    }
+
+    void ignoreErrors(boolean value) {
+        setDefault('ignoreErrors', value)
+    }
+
+    void mode(String value) {
+        setDefault('mode', value)
+    }
+
+    void overwrite(boolean value) {
+        setDefault('overwrite', value)
+    }
+
+    void storageClass(String value) {
+        setDefault('storageClass', value)
+    }
+
+    void tags(Map value) {
+        setDefault('tags', value)
     }
 
     private void setDefault(String name, Object value) {
@@ -126,32 +147,42 @@ class OutputDsl {
 
     static class RuleDsl {
 
-        // TODO:
-        // - contentType
-        // - pattern (?)
-        // - storageClass
-        // - tags
-
         private Map opts = [:]
 
-        void enabled(boolean enabled) {
-            setOption('enabled', enabled)
+        void contentType(String value) {
+            setOption('contentType', value)
         }
 
-        void ignoreErrors(boolean ignoreErrors) {
-            setOption('ignoreErrors', ignoreErrors)
+        void contentType(boolean value) {
+            setOption('contentType', value)
         }
 
-        void mode(String mode) {
-            setOption('mode', mode)
+        void enabled(boolean value) {
+            setOption('enabled', value)
         }
 
-        void overwrite(boolean overwrite) {
-            setOption('overwrite', overwrite)
+        void ignoreErrors(boolean value) {
+            setOption('ignoreErrors', value)
         }
 
-        void path(String path) {
-            setOption('path', path)
+        void mode(String value) {
+            setOption('mode', value)
+        }
+
+        void overwrite(boolean value) {
+            setOption('overwrite', value)
+        }
+
+        void path(String value) {
+            setOption('path', value)
+        }
+
+        void storageClass(String value) {
+            setOption('storageClass', value)
+        }
+
+        void tags(Map value) {
+            setOption('tags', value)
         }
 
         private void setOption(String name, Object value) {
