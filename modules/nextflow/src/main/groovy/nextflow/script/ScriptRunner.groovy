@@ -223,7 +223,7 @@ class ScriptRunner {
     }
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
-        scriptParser = new ScriptParser(session)
+        scriptParser = ScriptParserFactory.create(session)
                             .setEntryName(entryName)
                             .parse(scriptFile.main)
         session.script = scriptParser.script

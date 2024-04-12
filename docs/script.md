@@ -498,6 +498,49 @@ If the last argument is a closure, the closure can be written outside of the par
 In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
 :::
 
+## Strict DSL mode
+
+:::{versionadded} 24.10.0
+:::
+
+Strict DSL mode is an alternative implementation of the Nextflow script parser which enforces a stricter syntax. Whereas the existing parser interprets scripts as Groovy scripts, which makes it overly powerful and error-prone, the strict DSL mode allows only a strict subset of Groovy syntax which is relevant to Nextflow pipelines.
+
+Strict DSL mode can be enabled by setting `NXF_ENABLE_STRICT_DSL=true`.
+
+The following statements are allowed in strict DSL mode:
+
+- Process definition (`process foo { ... }`)
+- Workflow definition (`workflow foo { ... }`)
+- Function definition (`def foo(a, b, c) { ... }`)
+- Include statement (`include { foo ; bar } from 'foobar.nf'`)
+
+The body of a process, workflow, or function may contain Groovy statements. However, only a subset of Groovy is supported within this context.
+
+Notable syntax that is supported:
+
+- numbers
+- strings
+- lists
+- maps
+- function calls
+- closures
+- variables
+- if-else statements
+
+Notable syntax that is not supported:
+
+- class definitions
+- try-catch statements
+- lambdas (use closures instead)
+
+Other syntax restrictions:
+
+- The implicit `it` variable in closures is no longer supported:
+  ```groovy
+  foo.bar = ['foo', 'bar'].collect { "--$it" }.join(' ')        // incorrect
+  foo.bar = ['foo', 'bar'].collect { it -> "--$it" }.join(' ')  // correct
+  ```
+
 (implicit-variables)=
 
 ## Implicit variables

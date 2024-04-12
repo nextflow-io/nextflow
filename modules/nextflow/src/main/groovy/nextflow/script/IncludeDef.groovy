@@ -58,13 +58,7 @@ class IncludeDef {
 
     IncludeDef(TokenVar token, String alias=null) {
         def component = token.name; if(alias) component += " as $alias"
-        def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
-
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(token.name, alias)
+        throw new DeprecationException("Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`")
     }
 
     protected IncludeDef(List<Module> modules) {
@@ -137,7 +131,7 @@ class IncludeDef {
         final binding = new ScriptBinding() .setParams(params)
 
         // the execution of a library file has as side effect the registration of declared processes
-        new ScriptParser(session)
+        ScriptParserFactory.create(session)
                 .setModule(true)
                 .setBinding(binding)
                 .runScript(path)
