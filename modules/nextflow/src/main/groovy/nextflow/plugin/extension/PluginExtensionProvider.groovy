@@ -65,8 +65,6 @@ class PluginExtensionProvider implements ExtensionProvider {
      */
     final private Map<String,PluginExtensionMethod> factoryExtensions = new HashMap<>()
 
-    private List<PluginExtensionPoint> channelExtensionPoints
-
     private Set<String> OPERATOR_NAMES
 
     static PluginExtensionProvider INSTANCE() {
