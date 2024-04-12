@@ -332,6 +332,9 @@ class NameGenerator {
             // Douglas Engelbart gave the mother of all demos: https://en.wikipedia.org/wiki/Douglas_Engelbart
             "engelbart",
 
+            // Maurits Cornelis Escher - Dutch graphic artist who made woodcuts, lithographs, and mezzotints, many of which were inspired by mathematics. His work features mathematical objects and operations including impossible objects, explorations of infinity, reflection, symmetry, perspective, truncated and stellated polyhedra, hyperbolic geometry, and tessellations. https://en.wikipedia.org/wiki/M._C._Escher
+            "escher",
+
             // Euclid invented geometry. https://en.wikipedia.org/wiki/Euclid
             "euclid",
 
@@ -396,6 +399,9 @@ class NameGenerator {
 
             // Margaret Hamilton - Director of the Software Engineering Division of the MIT Instrumentation Laboratory, which developed on-board flight software for the Apollo space program. https://en.wikipedia.org/wiki/Margaret_Hamilton_(scientist)
             "hamilton",
+
+            // Victoria "Vi" Hart - American mathematician and YouTuber. Recreational mathemusician, well-known for creating mathematical videos and popularizing mathematics. Hart founded the virtual reality research group eleVR and has co-authored several research papers on computational geometry and the mathematics of paper folding. https://en.wikipedia.org/wiki/Vi_Hart
+            "hart",
 
             // Stephen Hawking pioneered the field of cosmology by combining general relativity and quantum mechanics. https://en.wikipedia.org/wiki/Stephen_Hawking
             "hawking",
