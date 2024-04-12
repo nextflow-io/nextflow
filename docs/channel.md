@@ -467,9 +467,17 @@ See also: [channel.fromList](#fromlist) factory method.
 This feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-A *topic channel*, similar to a *queue channel*, is a non-blocking unidirectional FIFO queue, with the ability to implicitly receive values from multiple sources based on a *topic name*.
+A *topic* is a channel type introduced as of Nextflow 23.11.0-edge along with {ref}`channel-type-value` and
+{ref}`channel-type-queue`.
 
-A process output can be sent to a topic using the `topic` option, for example:
+A *topic channel*, similarly to a *queue channel*, is non-blocking unidirectional FIFO queue, however it connects
+multiple *producer* processes with multiple *consumer* processes or operators.
+
+:::{tip}
+You can think about it as a channel that is shared across many different process using the same *topic name*.
+:::
+
+A process output can be assigned to a topic using the `topic` option on an output, for example:
 
 ```groovy
 process foo {
@@ -483,38 +491,21 @@ process bar {
 }
 ```
 
-Additionally, the `topic:` section of a workflow definition can be used to send channels defined in a workflow to a topic:
-
-```groovy
-workflow foobar {
-    main:
-    foo()
-    bar()
-
-    topic:
-    foo.out >> 'my_topic'
-    bar.out >> 'my_topic'
-
-    emit:
-    bar.out
-}
-```
-
-Finally, the `Channel.topic()` factory can be used to consume the resulting channel for a given topic name, which can be used like any other channel:
+The `channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
+input or operator composition as any other Nextflow channel:
 
 ```groovy
 channel.topic('my-topic').view()
 ```
 
-The same topic can be consumed using `Channel.topic()` any number of times, similar to referencing a channel multiple times.
-
-This approach is a convenient way to collect related items from many different sources without all of the logic that is required to connect them, e.g. using the `mix` operator.
+This approach is a convenient way to collect related items from many different sources without explicitly defining
+the logic connecting many different queue channels altogether, commonly using the `mix` operator.
 
 :::{warning}
-Avoid creating a circular dependency within a topic (e.g. a process that consumes a channel topic and sends outputs to that same topic), as it will cause the pipeline to run forever.
+Any process that consumes a channel topic should not send any outputs to that topic, or else the pipeline will hang forever.
 :::
 
-See also: {ref}`process-additional-options` for process outputs and the {ref}`workflow topic section <workflow-topics>`.
+See also: {ref}`process-additional-options` for process outputs.
 
 (channel-value)=
 

@@ -147,35 +147,6 @@ workflow my_pipeline {
 
 The result of the above workflow can be accessed using `my_pipeline.out.my_data`.
 
-(workflow-topics)=
-
-## Workflow topics (`topic`)
-
-:::{versionadded} 24.04.0
-:::
-
-:::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
-:::
-
-The `topic` section can be used to send channels defined in a workflow, including process and sub-workflow outputs, into a topic. For example:
-
-```groovy
-workflow my_pipeline {
-    main:
-    foo(data)
-    bar(foo.out)
-
-    topic:
-    foo.out >> 'foo'
-
-    emit:
-    bar.out
-}
-```
-
-In the above example, the channel `foo.out` (assumed to be a single channel) is sent to topic `foo`, without being emitted as a workflow output.
-
 (workflow-process-invocation)=
 
 ## Invoking processes
@@ -362,19 +333,63 @@ workflow {
 
 output {
     directory 'results'
-
-    'foo' {
-        select foo.out
-    }
-
-    'bar' {
-        defaults mode: 'copy', pattern: '*.txt'
-        select bar.out
-    }
 }
 ```
 
 The output block must be defined after the implicit workflow.
+
+### Publishing channels
+
+Processes and workflows can each define a `publish` section which maps channels to publish rules. For example:
+
+```groovy
+process foo {
+    // ...
+
+    output:
+    path 'result.txt', emit: results
+
+    publish:
+    results >> 'foo/'
+
+    // ...
+}
+
+workflow foobar {
+    main:
+    foo(data)
+    bar(foo.out)
+
+    publish:
+    foo.out >> 'foobar/foo/'
+
+    emit:
+    bar.out
+}
+```
+
+In the above example, the output `results` of process `foo` is published to the rule `foo/` by default. However, when the workflow `foobar` invokes process `foo`, it publishes `foo.out` (i.e. `foo.out.results`) to the rule `foobar/foo/`, overriding the default rule defined by `foo`.
+
+In a process, any output with an `emit` name can be published. In a workflow, any channel defined in the workflow, including process and subworkflow outputs, can be published.
+
+:::{note}
+A process/workflow output (e.g. `foo.out`) can only be published directly if it contains a single output channel. Multi-channel outputs must be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
+:::
+
+As shown in the example, workflows can override the publish rules of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
+
+By default, all files emitted by the channel will be published into the specified directory. If a channel emits list values, any files in the list (including nested lists) will also be published. For example:
+
+```groovy
+workflow {
+    ch_samples = Channel.of(
+        [ [id: 'sample1'], file('sample1.txt') ]
+    )
+
+    publish:
+    ch_samples >> 'samples/' // sample1.txt will be published
+}
+```
 
 ### Output directory
 
@@ -388,211 +403,103 @@ output {
 }
 ```
 
-It is optional, and it defaults to the launch directory (`workflow.launchDir`).
+It is optional, and it defaults to the launch directory (`workflow.launchDir`). Published files will be published into this directory.
 
-### Path definitions
+### Publish rules
 
-Path definitions are used to define the directory structure of the published outputs. A path definition is a path name followed by a block which defines the outputs to be published within that path. Like directories, path definitions can be nested.
-
-The path name defines a subdirectory within the output directory, or the parent path if the path definition is nested.
+A publish rule is a specific publish configuration identified by a name. By default, when a channel is published to a rule in the `publish:` section of a process or workflow, the rule name is used as the publish path.
 
 For example, given the following output block:
 
 ```groovy
+workflow {
+    ch_foo = foo()
+    ch_bar = bar(ch_foo)
+
+    publish:
+    ch_foo >> 'foo/'
+    ch_bar >> 'bar/'
+}
+
 output {
     directory 'results'
-
-    'foo' {
-        // ...
-    }
-
-    'bar' {
-        // ...
-
-        'baz' {
-            // ...
-        }
-    }
 }
 ```
 
-The following directory structure will be created by the workflow:
+The following directory structure will be created:
 
 ```
 results/
 └── foo/
     └── ...
 └── bar/
-    └── baz/
-        └── ...
     └── ...
 ```
 
-The path name may also contain multiple subdirectories separated by a slash `/`:
-
-```groovy
-output {
-    'foo/bar/baz' {
-        // ...
-    }
-}
-```
-
-It is a shorthand for the following:
-
-```groovy
-output {
-    'foo' {
-        'bar' {
-            'baz' {
-                // ...
-            }
-        }
-    }
-}
-```
-
-### Selecting channels
-
-The `from` statement is used to select channels to publish:
-
-```groovy
-output {
-    'foo' {
-        from foo.out
-    }
-}
-```
-
-Any channel defined in the implicit workflow can be selected, including process and workflow outputs.
-
-:::{note}
-A process/workflow output (e.g. `foo.out`) can only be selected directly if it contains a single output channel. Multi-channel outputs must be selected by index or name, e.g. `foo.out[0]` or `foo.out.samples`.
+:::{tip}
+The trailing slash in the rule name is not required; it is only used to denote that the rule name is intended to be used as the publish path. In general, the rule name can be any string, but it should be a valid path name when using the default publishing behavior. 
 :::
 
-By default, all files emitted by the channel will be published into the specified directory. If a list value emitted by the channel contains any files, including files within nested lists, they will also be published. For example:
+Publish rules can also be customized in the `output` block using a set of options similar to the {ref}`process-publishdir` directive.
+
+For example:
 
 ```groovy
-workflow {
-    ch_samples = Channel.of(
-        [ [id: 'sample1'], file('sample1.txt') ]
-    )
-}
-
 output {
-    'samples' {
-        // sample1.txt will be published
-        from ch_samples
+    directory 'results'
+    mode 'copy'
+
+    'foo/' {
+        enabled params.save_foo
+        mode 'link'
     }
 }
 ```
 
-The publishing behavior can be customized further by using [publish options](#publish-options). See that section for more details.
-
-### Selecting topics
-
-:::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
-:::
-
-The `from` statement can also be used to select a topic by name:
-
-```groovy
-output {
-    'samples' {
-        from 'samples'
-
-        // equivalent to:
-        from Channel.topic('samples')
-    }
-}
-```
-
-Topics are a useful way to publish channels which are deeply nested within workflows, without needing to propagate them to the top-level workflow. You can use the `topic:` workflow section, or the `topic` option for {ref}`process outputs <process-additional-options>`, to send a channel to a given topic.
-
-### Publish options
-
-The publishing behavior can be configured using a set of options similar to those for the {ref}`process-publishdir` directive.
-
-There are several ways to define publish options:
-
-- The `directory` statement
-
-- The `defaults` statement, which defines publish options for a path definition
-
-- The `from` statement, which defines publish options for an individual selector
-
-Publish options are resolved in a cascading manner, in which more specific settings take priority.
-
-Consider the following example:
-
-```groovy
-output {
-    directory 'results', mode: 'copy'
-
-    'samples' {
-        from ch_samples, pattern: '*.txt', mode: 'link'
-
-        'md5' {
-            defaults mode: 'link'
-            // ...
-            from 'md5', mode: 'copy'
-        }
-    }
-}
-```
-
-In this example, the following rules are applied:
+In this example, the following publish options are applied:
 
 - All files will be copied by default
 
-- The channel selector `from ch_samples` will publish via hard link, overriding the output directory default. Additionally, only files matching the pattern `*.txt` will be published.
-
-- All files published to `samples/md5` will be hard-linked by default, overriding the output directory default.
-
-- The topic selector `from 'md5'` will publish via copy, overriding the default from `samples/md5`.
+- Files published to `foo/` will be hard-linked, overriding the default option. Additionally, these files will be published only if `params.save_foo` is true.
 
 Available options:
 
 `contentType`
-: :::{versionadded} 22.10.0
-  :::
-: *Experimental: currently only supported for S3.*
-: Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (default: `false`).
+: *Currently only supported for S3.*
+: Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
 
 `enabled`
 : Enable or disable publishing (default: `true`).
 
 `ignoreErrors`
-: When `true`, the pipeline will not fail if a file can't be published for any reason (default: `false`).
+: When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
 
 `mode`
-: The file publishing method. Can be one of the following values:
+: The file publishing method (default: `'symlink'`). Can be one of the following values:
 
-  - `'copy'`: Copies the output files into the publish directory.
-  - `'copyNoFollow'`: Copies the output files into the publish directory without following symlinks ie. copies the links themselves.
-  - `'link'`: Creates a hard link in the publish directory for each output file.
-  - `'move'`: Moves the output files into the publish directory. **Note**: this is only supposed to be used for a *terminal* process i.e. a process whose output is not consumed by any other downstream process.
-  - `'rellink'`: Creates a relative symbolic link in the publish directory for each output file.
-  - `'symlink'`: Creates an absolute symbolic link in the publish directory for each output file (default).
+  - `'copy'`: Copy each file into the output directory.
+  - `'copyNoFollow'`: Copy each file into the output directory without following symlinks, i.e. only the link is copied.
+  - `'link'`: Create a hard link in the output directory for each file.
+  - `'move'`: Move each file into the output directory. **Note**: should only be used for files which are not used by downstream processes in the workflow.
+  - `'rellink'`: Create a relative symbolic link in the output directory for each file.
+  - `'symlink'`: Create an absolute symbolic link in the output directory for each output file.
 
 `overwrite`
-: When `true` any existing file in the specified folder will be overwritten (default: `false` if the task was cached on a resumed run, `true` otherwise).
+: When `true` any existing file in the specified folder will be overwritten (default: `true`).
 
-`pattern`
-: Specifies a [glob][http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob] file pattern that selects which files to publish from the source channel.
+`path`
+: Specify the publish path relative to the output directory (default: the rule name). Can only be specified within a rule.
 
 `storageClass`
-: :::{versionadded} 22.12.0-edge
-  :::
-: *Experimental: currently only supported for S3.*
-: Allow specifying the storage class to be used for the published file.
+: *Currently only supported for S3.*
+: Specify the storage class for published files.
 
 `tags`
-: :::{versionadded} 21.12.0-edge
-  :::
-: *Experimental: currently only supported for S3.*
-: Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
+: *Currently only supported for S3.*
+: Specify arbitrary tags for published files. For example:
+  ```groovy
+  tags FOO: 'hello', BAR: 'world'
+  ```
 
 ## Special operators
 

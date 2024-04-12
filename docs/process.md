@@ -2164,7 +2164,7 @@ The following options are available:
 ### publishDir
 
 :::{deprecated} 24.04.0
-The `publishDir` directive has been deprecated in favor of the new {ref}`workflow output definition <workflow-output-dsl>`.
+The `publishDir` directive has been deprecated in favor of the {ref}`workflow output definition <workflow-output-dsl>`.
 :::
 
 The `publishDir` directive allows you to publish the process output files to a specified folder. For example:
