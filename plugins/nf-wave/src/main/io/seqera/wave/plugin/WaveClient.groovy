@@ -586,26 +586,21 @@ class WaveClient {
         }
     }
 
-    protected URI imageToManifestUri(String image) {
-        final p = image.indexOf('/')
-        if( p==-1 ) throw new IllegalArgumentException("Invalid container name: $image")
-        final result = 'https://' + image.substring(0,p) + '/v2' + image.substring(p).replace(':','/manifests/')
-        return new URI(result)
-    }
-
     void awaitCompletion(String buildId) {
         final long maxAwait = Duration.ofMinutes(15).toMillis();
         final long startTime = Instant.now().toEpochMilli();
-        final random = new Random()
-        while( true ) {
-            if( isComplete(buildId) ) {
-                return;
-            }
+        while( !isComplete(buildId) ) {
             if( System.currentTimeMillis()-startTime > maxAwait ) {
-                break;
+                break
             }
-            Thread.sleep((random.nextInt(5) + 9) * 1_000)
+            Thread.sleep(randomRange(10,15) * 1_000)
         }
+    }
+
+    protected static int randomRange(int min, int max) {
+        assert min<max
+        Random rand = new Random();
+        return rand.nextInt((max - min) + 1) + min;
     }
 
     protected boolean isComplete(String buildId) {
@@ -617,13 +612,13 @@ class WaveClient {
             .build();
 
         final HttpResponse<String> resp = httpSend(req);
-        log.debug("Wave response: statusCode={}; body={}", resp.statusCode(), resp.body());
+        log.debug("Wave build status response: statusCode={}; body={}", resp.statusCode(), resp.body())
         if( resp.statusCode()==200 ) {
             final result = jsonToBuildStatusResponse(resp.body())
-            return result.status == BuildStatusResponse.Status.COMPLETED;
+            return result.status == BuildStatusResponse.Status.COMPLETED
         }
         else {
-            String msg = String.format("Wave invalid response: [%s] %s", resp.statusCode(), resp.body());
+            String msg = String.format("Wave invalid response: GET %s [%s] %s", statusEndpoint, resp.statusCode(), resp.body());
             throw new BadResponseException(msg)
         }
     }

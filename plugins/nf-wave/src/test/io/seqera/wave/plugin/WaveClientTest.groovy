@@ -1201,4 +1201,12 @@ class WaveClientTest extends Specification {
             true)
     }
 
+    def 'should test range' () {
+        expect:
+        100 .times { assert WaveClient.randomRange(10, 20) >= 10 }
+        100 .times { assert WaveClient.randomRange(10, 20) <= 20 }
+        100 .times { assert WaveClient.randomRange(0, 10) <= 10 }
+        100 .times { assert WaveClient.randomRange(0, 10) >= 0 }
+    }
+
 }
