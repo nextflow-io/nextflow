@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.extension.FilesEx
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
 import nextflow.ga4gh.tes.client.model.TesExecutor as TesExecutorModel
 import nextflow.ga4gh.tes.client.model.TesInput
@@ -191,11 +192,16 @@ class TesTaskHandler extends TaskHandler {
         body.addInputsItem(inItem(wrapperFile))
 
         final remoteBinDir = executor.getRemoteBinDir()
-        if( remoteBinDir )
-            body.addInputsItem(inItemFromBin(remoteBinDir))
+        def remoteBinFiles = executor.fileList()
+        
+        if( remoteBinDir ){
+            remoteBinFiles.each { Path path ->
+                body.addInputsItem(inItemFromBin(path))
+            }
+        }
 
         // add task input files
-        if( inputFile.exists() )
+        if( inputFile.exists() ) 
             body.addInputsItem(inItem(inputFile))
 
         task.getInputFilesMap().each { String name, Path path ->

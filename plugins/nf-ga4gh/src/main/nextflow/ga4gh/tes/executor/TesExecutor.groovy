@@ -16,6 +16,7 @@
 
 package nextflow.ga4gh.tes.executor
 
+import groovy.io.FileType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -37,6 +38,7 @@ import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
 
 import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * Experimental TES executor
@@ -89,8 +91,24 @@ class TesExecutor extends Executor implements ExtensionPoint {
             final tempBin = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${tempBin.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, tempBin)
+
         }
     }
+
+    List<Path> fileList() {
+        List<Path> fileList = []
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
+            final tempBin = getTempDir()
+
+            session.binDir.eachFileRecurse(FileType.FILES) { file ->
+                file = file.toUriString().replaceAll("${session.binDir}",  "${tempBin.toUriString()}/bin")
+                log.info  "adding file ${file}"
+                fileList.add(Paths.get(new URI(file)))
+            }
+        }
+            log.info  "filelist  ${fileList}"
+            return fileList
+        }
 
     protected String getEndpoint() {
         def result = session.getConfigAttribute('executor.tes.endpoint', null)
