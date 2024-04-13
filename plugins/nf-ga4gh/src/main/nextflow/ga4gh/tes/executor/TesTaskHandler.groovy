@@ -172,7 +172,7 @@ class TesTaskHandler extends TaskHandler {
 
     protected TesBashBuilder newTesBashBuilder(TaskRun task, String remoteBinDir) {
         final builder = new TesBashBuilder(task, remoteBinDir)
-        builder.headerScript = "NXF_CHDIR=${Escape.path(task.workDir)}"
+        builder.headerScript = "NXF_CHDIR=${Escape.path(WORK_DIR)}"
         return builder
     }
 

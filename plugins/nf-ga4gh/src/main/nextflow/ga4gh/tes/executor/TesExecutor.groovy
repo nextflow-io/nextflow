@@ -98,11 +98,11 @@ class TesExecutor extends Executor implements ExtensionPoint {
     List<Path> fileList() {
         List<Path> fileList = []
         if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
-            final tempBin = getTempDir()
+            final tempBin = getRemoteBinDir()
 
             session.binDir.eachFileRecurse(FileType.FILES) { file ->
-                file = file.toUriString().replaceAll("${session.binDir}",  "${tempBin.toUriString()}/bin")
-                log.info  "adding file ${file}"
+                file = file.toUriString().replaceAll("${session.binDir}",  "${tempBin.toUriString()}")
+                log.info  "Adding file ${file}"
                 fileList.add(Paths.get(new URI(file)))
             }
         }
