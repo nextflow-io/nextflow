@@ -126,7 +126,7 @@ class TesTaskHandler extends TaskHandler {
         if( response.state in COMPLETE_STATUSES ) {
             // finalize the task
             log.trace "[TES] Task completed > $task.name"
-            task.exitStatus = readExitFile()
+            task.exitStatus = readExitStatus()
             task.stdout = outputFile
             task.stderr = errorFile
             status = COMPLETED
@@ -135,10 +135,14 @@ class TesTaskHandler extends TaskHandler {
 
         return false
     }
+    
 
-    private int readExitFile() {
+    private int readExitStatus() {
+        final response = client.getTask(requestId, "FULL")
+
         try {
-            exitFile.text as Integer
+            def logs = response.logs[0].logs
+            def exitCode = logs[0].exitCode as Integer
         }
         catch( Exception e ) {
             log.trace "[TES] Cannot read exitstatus for task: `$task.name` | ${e.message}"
