@@ -76,6 +76,7 @@ import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
@@ -430,7 +431,7 @@ class AzBatchService implements Closeable {
 
         return new TaskAddParameter()
                 .withId(taskId)
-                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
+                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .withContainerSettings(containerOpts)
                 .withCommandLine(cmd)
                 .withResourceFiles(resourceFileUrls(task,sas))
@@ -660,7 +661,7 @@ class AzBatchService implements Closeable {
          *
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
-        final containerConfig = new ContainerConfiguration().withType(DOCKER_COMPATIBLE);
+        final containerConfig = new ContainerConfiguration().withType(DOCKER_COMPATIBLE)
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
@@ -681,18 +682,35 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    protected StartTask createStartTask() {
-        if( config.batch().getCopyToolInstallMode() != CopyToolInstallMode.node )
+
+    protected StartTask createStartTask(AzStartTaskOpts opts) {
+        log.trace "AzStartTaskOpts: ${opts}"
+        final startCmd = new ArrayList<String>(5)
+        final resourceFiles = new ArrayList<ResourceFile>()
+
+        // If enabled, append azcopy installer to start task command
+        if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
+            startCmd << 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+            resourceFiles << new ResourceFile()
+                .withHttpUrl(AZCOPY_URL)
+                .withFilePath('azcopy')
+        }
+
+        // Get any custom start task command
+        if ( opts.script ) {
+            startCmd << "bash -c '${opts.script.replace(/'/,/''/)}'".toString()
+        }
+
+        // If there is no start task contents we return a null to indicate no start task
+        if( !startCmd ) {
             return null
+        }
 
-        final resourceFiles = new ArrayList(10)
-        resourceFiles << new ResourceFile()
-            .withHttpUrl(AZCOPY_URL)
-            .withFilePath('azcopy')
-
+        // otherwise return a StartTask object with the start task command and resource files
         return new StartTask()
-            .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
+            .withCommandLine(startCmd.join('; '))
             .withResourceFiles(resourceFiles)
+            .withUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
     }
 
     protected void createPool(AzVmPoolSpec spec) {
@@ -706,7 +724,7 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
 
-        final startTask = createStartTask()
+        final startTask = createStartTask(spec.opts.startTask)
         if( startTask ) {
             poolParams .withStartTask(startTask)
         }
@@ -860,14 +878,14 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected UserIdentity userIdentity(boolean  privileged, String runAs) {
+    protected UserIdentity userIdentity(boolean  privileged, String runAs, AutoUserScope scope) {
         UserIdentity identity = new UserIdentity()
         if (runAs) {
             identity.withUserName(runAs)
         } else  {
             identity.withAutoUser(new AutoUserSpecification()
                     .withElevationLevel(privileged ? ElevationLevel.ADMIN : ElevationLevel.NON_ADMIN)
-                    .withScope(AutoUserScope.TASK))
+                    .withScope(scope))
         }
         return identity
     }
