@@ -415,12 +415,14 @@ The following settings are available:
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
 `azure.batch.pools.<name>.startTask.script`
-: *New in `nf-azure` version `1.5.2`*
-: Specify the startTask that is executed as the node joins the Azure Batch node pool (default: `bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"`).
+: :::{versionadded} 24.03.0-edge
+  :::
+: Specify the `startTask` that is executed as the node joins the Azure Batch node pool.
 
 `azure.batch.pools.<name>.startTask.privileged`
-: *New in `nf-azure` version `1.5.2`*
-: Enable the task to run with elevated access (default: `false`).
+: :::{versionadded} 24.03.0-edge
+  :::
+: Enable the `startTask` to run with elevated access (default: `false`).
 
 `azure.batch.pools.<name>.virtualNetwork`
 : :::{versionadded} 23.03.0-edge

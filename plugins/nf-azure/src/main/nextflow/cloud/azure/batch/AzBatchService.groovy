@@ -684,40 +684,33 @@ class AzBatchService implements Closeable {
 
 
     protected StartTask createStartTask(AzStartTaskOpts opts) {
-
-        def startCmd = [] as ArrayList
-        final resourceFiles = [] as ArrayList
-
-        log.debug "AzStartTaskOpts: ${opts}"
-
-        // Get any custom start task command
-        if ( opts.script ) {
-            startCmd << opts.script
-            log.debug "Adding custom start task to command: ${opts.script}"
-        }
+        log.trace "AzStartTaskOpts: ${opts}"
+        final startCmd = new ArrayList<String>(5)
+        final resourceFiles = new ArrayList<ResourceFile>()
 
         // If enabled, append azcopy installer to start task command
         if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
-            startCmd << 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
+            startCmd << 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
             resourceFiles << new ResourceFile()
                 .withHttpUrl(AZCOPY_URL)
                 .withFilePath('azcopy')
-            log.debug "Adding azcopy installer to start task"
         }
 
-        final startTaskCmd = "bash -c \"${startCmd.join('; ')}\""
-        log.debug "Start task final command: $startTaskCmd"
+        // Get any custom start task command
+        if ( opts.script ) {
+            startCmd << "bash -c '${opts.script.replaceAll(/'/,/''/)}'".toString()
+        }
 
         // If there is no start task contents we return a null to indicate no start task
-        if ( startCmd.isEmpty() && resourceFiles.isEmpty() ) {
+        if( !startCmd ) {
             return null
-        } else {
-        // else return a StartTask object with the start task command and resource files
-            return new StartTask()
-                .withCommandLine(startTaskCmd)
-                .withResourceFiles(resourceFiles)
-                .withUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
         }
+
+        // otherwise return a StartTask object with the start task command and resource files
+        return new StartTask()
+            .withCommandLine(startCmd.join('; '))
+            .withResourceFiles(resourceFiles)
+            .withUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
     }
 
     protected void createPool(AzVmPoolSpec spec) {

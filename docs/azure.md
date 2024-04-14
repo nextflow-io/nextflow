@@ -380,19 +380,6 @@ The value of the setting must be the identifier of a subnet available in the vir
 Batch Authentication with Shared Keys does not allow to link external resources (like Virtual Networks) to the pool. Therefore, Active Directory Authentication must be used in conjunction with the `virtualNetwork` setting.
 :::
 
-### Start Task
-
-Nextflow uses azcopy to stage files in and out of the worker nodes. To do this, it installs azcopy to a shared directory by running a start task. If you have additional requirements for the worker nodes, you can modify this start task by changing the parameters in the Azure Batch pool configuration scope `startTask`.  This is the default shell script:
-
-```shell
-bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"
-```
-
-:::{warning}
-If you modify the `startTask` causing azcopy to be unavailable on the worker machine your tasks be unable to correctly stage files in and out and they may fail.
-:::
-
-
 ## Microsoft Entra (formerly Active Directory Authentication)
 
 :::{versionadded} 22.11.0-edge

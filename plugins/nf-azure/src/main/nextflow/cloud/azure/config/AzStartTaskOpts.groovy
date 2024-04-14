@@ -17,6 +17,9 @@ package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
 
+/**
+ * Model Azure pool start task options
+ */
 @CompileStatic
 class AzStartTaskOpts {
 
@@ -28,7 +31,7 @@ class AzStartTaskOpts {
     }
 
     AzStartTaskOpts(Map config) {
-        this.script     = config.script     ?: null
-        this.privileged = config.privileged ?: false
+        this.script     = config.script
+        this.privileged = Boolean.parseBoolean(config.privileged as String)
     }
 }
