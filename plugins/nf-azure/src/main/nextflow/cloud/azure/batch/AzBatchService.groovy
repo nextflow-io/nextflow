@@ -698,7 +698,7 @@ class AzBatchService implements Closeable {
 
         // Get any custom start task command
         if ( opts.script ) {
-            startCmd << "bash -c '${opts.script.replaceAll(/'/,/''/)}'".toString()
+            startCmd << "bash -c '${opts.script.replace(/'/,/''/)}'".toString()
         }
 
         // If there is no start task contents we return a null to indicate no start task

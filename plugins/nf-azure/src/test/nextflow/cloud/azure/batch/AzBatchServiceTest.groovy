@@ -236,6 +236,8 @@ class AzBatchServiceTest extends Specification {
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
         configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.resourceFiles().size()==1
+        configuredStartTask.resourceFiles().first().filePath() == 'azcopy'
     }
 
     def 'should configure custom startTask' () {
@@ -247,7 +249,10 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"; bash -c \'echo hello-world\''
+        configuredStartTask.commandLine() == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"; bash -c \'echo hello-world\''
+        and:
+        configuredStartTask.resourceFiles().size()==1
+        configuredStartTask.resourceFiles().first().filePath() == 'azcopy'
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
@@ -259,21 +264,21 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == "bash -c 'echo hello-world'"
-        configuredStartTask.resourceFiles == []
+        configuredStartTask.commandLine() == "bash -c 'echo hello-world'"
+        configuredStartTask.resourceFiles() == []
     }
 
-    def 'should configure not install AzCopy because copyToolInstallMode is task' () {
+    def 'should configure not install AzCopy because copyToolInstallMode is task and quote command' () {
         given:
         def CONFIG = [batch:[copyToolInstallMode: 'task']]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         def svc = new AzBatchService(exec)
 
         when:
-        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
         then:
-        configuredStartTask.commandLine == "bash -c 'echo hello-world'"
-        configuredStartTask.resourceFiles == []
+        configuredStartTask.commandLine() == "bash -c 'echo ''hello-world'''"
+        configuredStartTask.resourceFiles() == []
     }
 
     def 'should create null startTask because no options are enabled' () {
