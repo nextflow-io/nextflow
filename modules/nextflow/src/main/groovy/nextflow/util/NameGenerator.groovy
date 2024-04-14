@@ -332,6 +332,9 @@ class NameGenerator {
             // Douglas Engelbart gave the mother of all demos: https://en.wikipedia.org/wiki/Douglas_Engelbart
             "engelbart",
 
+            // Maurits Cornelis Escher - Dutch graphic artist who made woodcuts, lithographs, and mezzotints, many of which were inspired by mathematics. His work features mathematical objects and operations including impossible objects, explorations of infinity, reflection, symmetry, perspective, truncated and stellated polyhedra, hyperbolic geometry, and tessellations. https://en.wikipedia.org/wiki/M._C._Escher
+            "escher",
+
             // Euclid invented geometry. https://en.wikipedia.org/wiki/Euclid
             "euclid",
 
