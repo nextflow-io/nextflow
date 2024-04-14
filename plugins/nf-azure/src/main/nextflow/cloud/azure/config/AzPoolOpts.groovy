@@ -22,6 +22,7 @@ import com.microsoft.azure.batch.protocol.models.VerificationType
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -60,6 +61,8 @@ class AzPoolOpts implements CacheFunnel {
     Duration scaleInterval
     Integer maxVmCount
 
+    AzStartTaskOpts startTask
+
     String schedulePolicy // spread | pack
     String registry
     String userName
@@ -85,7 +88,8 @@ class AzPoolOpts implements CacheFunnel {
         this.scaleFormula = opts.scaleFormula
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
-        this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
+        this.maxVmCount = opts.maxVmCount as Integer ?: vmCount * 3
+        this.startTask = new AzStartTaskOpts( opts.startTask ? opts.startTask as Map : Map.of() )
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
@@ -111,6 +115,8 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
+        hasher.putUnencodedChars(startTask.script ?: '')
+        hasher.putBoolean(startTask.privileged)
         return hasher
     }
 
