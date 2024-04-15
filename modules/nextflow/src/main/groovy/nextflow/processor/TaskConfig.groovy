@@ -29,7 +29,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
-import nextflow.executor.res.CpuResource
 import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
@@ -303,17 +302,9 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('cpus') != null
     }
 
-    CpuResource getCpusResource() {
-        final value = get('cpus')
-        if( value instanceof Map )
-            return new CpuResource(value as Map)
-        if( value != null )
-            return new CpuResource(value as int)
-        return new CpuResource(1)  // note: always return at least 1 cpus
-    }
-
     int getCpus() {
-        getCpusResource().getRequest()
+        final value = get('cpus')
+        value ? value as int : 1  // note: always return at least 1 cpus
     }
 
     int getMaxRetries() {

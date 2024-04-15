@@ -23,7 +23,6 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
-import nextflow.executor.res.CpuResource
 import nextflow.util.MemoryUnit
 import groovy.util.logging.Slf4j
 
@@ -75,7 +74,9 @@ class PodSpecBuilder {
 
     String workDir
 
-    CpuResource cpus
+    Integer cpus
+
+    boolean cpuLimits = false
 
     String memory
 
@@ -179,8 +180,13 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withCpus( CpuResource cpus ) {
+    PodSpecBuilder withCpus( Integer cpus ) {
         this.cpus = cpus
+        return this
+    }
+
+    PodSpecBuilder withCpuLimits(boolean cpuLimits) {
+        this.cpuLimits = cpuLimits
         return this
     }
 
@@ -494,38 +500,25 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        final res = [
-            requests: new LinkedHashMap(10),
-            limits: new LinkedHashMap(10)
-        ] as Map
-
         if( this.cpus ) {
-            if( this.cpus.request ) res.requests['cpu'] = this.cpus.request
-            if( this.cpus.limit ) res.limits['cpu'] = this.cpus.limit
+            container.resources = addCpuResources(this.cpus, container.resources as Map)
         }
 
         if( this.memory ) {
-            res.requests['memory'] = this.memory
-            res.limits['memory'] = this.memory
+            container.resources = addMemoryResources(this.memory, container.resources as Map)
         }
 
         if( this.accelerator ) {
-            final type = getAcceleratorType(this.accelerator)
-            if( this.accelerator.request ) res.requests[type] = this.accelerator.request
-            if( this.accelerator.limit ) res.limits[type] = this.accelerator.limit
+            container.resources = addAcceleratorResources(this.accelerator, container.resources as Map)
         }
 
         if( this.disk ) {
-            res.requests['ephemeral-storage'] = this.disk
-            res.limits['ephemeral-storage'] = this.disk
+            container.resources = addDiskResources(this.disk, container.resources as Map)
         }
 
-        if( !res.requests )
-            res.remove('requests')
-        if( !res.limits )
-            res.remove('limits')
-        if( res )
-            container.resources = res
+        if( this.resourcesLimits ) {
+            container.resources = addResourcesLimits(this.resourcesLimits, container.resources as Map)
+        }
 
         // add storage definitions ie. volumes and mounts
         final List<Map> mounts = []
@@ -615,7 +608,69 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    static String getAcceleratorType(AcceleratorResource accelerator) {
+    Map addResourcesLimits(Map limits, Map result) {
+        if( result == null )
+            result = new LinkedHashMap(2)
+
+        final limits0 = result.limits as Map ?: new LinkedHashMap(10)
+        limits0.putAll( limits )
+        result.limits = limits0
+
+        return result
+    }
+
+    @PackageScope
+    Map addCpuResources(Integer cpus, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(2)
+
+        final requests0 = res.requests as Map ?: new LinkedHashMap<>(10)
+        requests0.cpu = cpus
+        res.requests = requests0
+
+        if( cpuLimits ) {
+            final limits0 = res.limits as Map ?: new LinkedHashMap(10)
+            limits0.cpu = cpus
+            res.limits = limits0
+        }
+
+        return res
+    }
+
+    @PackageScope
+    Map addMemoryResources(String memory, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(2)
+
+        final req = res.requests as Map ?: new LinkedHashMap(10)
+        req.memory = memory
+        res.requests = req
+
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
+        lim.memory = memory
+        res.limits = lim
+
+        return res
+    }
+
+    @PackageScope
+    Map addDiskResources(String diskRequest, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(2)
+
+        final req = res.requests as Map ?: new LinkedHashMap(10)
+        req.'ephemeral-storage' = diskRequest
+        res.requests = req
+
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
+        lim.'ephemeral-storage' = diskRequest
+        res.limits = lim
+
+        return res
+    }
+
+    @PackageScope
+    String getAcceleratorType(AcceleratorResource accelerator) {
 
         def type = accelerator.type ?: 'nvidia.com'
 
@@ -628,6 +683,29 @@ class PodSpecBuilder {
         type += '/gpu'
 
         return type
+    }
+
+
+    @PackageScope
+    Map addAcceleratorResources(AcceleratorResource accelerator, Map res) {
+
+        if( res == null )
+            res = new LinkedHashMap(2)
+
+        def type = getAcceleratorType(accelerator)
+
+        if( accelerator.request ) {
+            final req = res.requests as Map ?: new LinkedHashMap<>(2)
+            req.put(type, accelerator.request)
+            res.requests = req
+        }
+        if( accelerator.limit ) {
+            final lim = res.limits as Map ?: new LinkedHashMap<>(2)
+            lim.put(type, accelerator.limit)
+            res.limits = lim
+        }
+
+        return res
     }
 
     @PackageScope

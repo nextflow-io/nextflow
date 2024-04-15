@@ -923,18 +923,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     }
 
-    /**
-     * Allow user to specify `accelerator` directive as a value with a list of params, eg:
-     *
-     *     accelerator 2, type: 'nvidia.com'
-     *
-     * @param params
-     *      A map representing the accelerator params
-     * @param value
-     *      The default accelerator value
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
     ProcessConfig accelerator( Map params, value )  {
         if( value instanceof Number ) {
             if( params.limit==null )
@@ -948,21 +936,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
-    /**
-     * Allow user to specify `accelerator` directive as a value or a list of params, eg:
-     *
-     *     accelerator 2
-     *     accelerator request: 1, limit: 4
-     *
-     * @param value
-     *      The default accelerator value or map of params
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
     ProcessConfig accelerator( value ) {
         if( value instanceof Number )
             configProperties.put('accelerator', [limit: value])
-        else if( value instanceof Map || value instanceof Closure )
+        else if( value instanceof Map )
             configProperties.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
@@ -1023,52 +1000,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('arch', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
-        return this
-    }
-
-    /**
-     * Allow user to specify `cpus` directive as a value with a list of params, eg:
-     *
-     *     cpus 2, limit: 4
-     *
-     * @param params
-     *      A map representing the cpus params
-     * @param value
-     *      The default cpus value
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig cpus( Map params, value )  {
-        if( value instanceof Number ) {
-            if( params.limit == null )
-                params.limit = value
-            else if( params.request == null )
-                params.request = value
-        }
-        else if( value != null )
-            throw new IllegalArgumentException("Not a valid `cpus` directive value: $value [${value.getClass().getName()}]")
-        cpus(params)
-        return this
-    }
-
-    /**
-     * Allow user to specify `cpus` directive as a value or a list of params, eg:
-     *
-     *     cpus 2
-     *     cpus request: 1, limit: 4
-     *
-     * @param value
-     *      The default cpus value or map of params
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig cpus( value ) {
-        if( value instanceof Number )
-            configProperties.put('cpus', [request: value])
-        else if( value instanceof Map || value instanceof Closure )
-            configProperties.put('cpus', value)
-        else if( value != null )
-            throw new IllegalArgumentException("Not a valid `cpus` directive value: $value [${value.getClass().getName()}]")
         return this
     }
 

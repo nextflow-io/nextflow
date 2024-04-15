@@ -23,8 +23,6 @@ import java.nio.file.Paths
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.NodeTerminationException
-import nextflow.executor.res.CpuResource
-import nextflow.fusion.FusionScriptLauncher
 import nextflow.file.http.XPath
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionScriptLauncher
@@ -80,7 +78,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpusResource() >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         and:
@@ -116,7 +114,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpusResource() >> new CpuResource(1)
+        1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         and:
@@ -140,7 +138,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'user/alpine:1.0'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpusResource() >> new CpuResource(4)
+        1 * config.getCpus() >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         and:
@@ -177,7 +175,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpusResource() >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         and:
@@ -295,7 +293,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpusResource() >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> [
@@ -326,7 +324,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpusResource() >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         and:
@@ -923,7 +921,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         and:
-        1 * config.getCpusResource() >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         and:

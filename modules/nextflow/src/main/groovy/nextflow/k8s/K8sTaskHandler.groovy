@@ -206,6 +206,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             .withLabels(getLabels(task))
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
+            .withCpuLimits(k8sConfig.isCpuLimitsEnabled())
 
         // when `entrypointOverride` is false the launcher is run via `args` instead of `command`
         // to not override the container entrypoint
@@ -225,7 +226,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
         
         // add computing resources
-        final cpus = taskCfg.getCpusResource()
+        final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
         final disk = taskCfg.getDisk()
         final acc = taskCfg.getAccelerator()

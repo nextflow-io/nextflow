@@ -1494,8 +1494,6 @@ process big_job {
 
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
 
-Since Nextflow version `23.05.0-edge`, the `cpus` directive supports explicit `request` and `limit` options. By default, a single number corresponds to a request with no limit. Therefore, the `limit` option is useful for defining an explicit limit. Currently only used by the {ref}`k8s-executor` executor.
-
 See also: [penv](#penv), [memory](#memory), [time](#time), [queue](#queue), [maxForks](#maxforks)
 
 (process-debug)=

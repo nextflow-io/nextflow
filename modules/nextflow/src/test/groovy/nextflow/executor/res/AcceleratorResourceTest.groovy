@@ -24,11 +24,12 @@ import spock.lang.Specification
  */
 class AcceleratorResourceTest extends Specification {
 
-    def 'should create an accelerator resource' () {
+    def 'should create a gpu resource' () {
 
         when:
         def acc = new AcceleratorResource(VALUE)
         then:
+        acc.type == TYPE
         acc.request == REQ
         acc.limit == LIM
         acc.type == TYPE
@@ -37,11 +38,12 @@ class AcceleratorResourceTest extends Specification {
         where:
         VALUE                       | REQ   | LIM   | TYPE  | RUNTIME
         1                           | 1     | 1     | null  | null
+        5                           | 5     | 5     | null  | null
         [request: 2]                | 2     | null  | null  | null
         [limit: 4]                  | 4     | 4     | null  | null
+        [request: 2, limit: 4]      | 2     | 4     | null  | null
         [request: 2, limit: 4]      | 2     | 4     | null  | null
         [limit: 3, type: 'nvidia']  | 3     | 3     | 'nvidia' | null
         [limit: 3, runtime: 'foo']  | 3     | 3     | null  | 'foo'
     }
-
 }
