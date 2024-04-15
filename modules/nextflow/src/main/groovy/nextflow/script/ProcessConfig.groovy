@@ -162,7 +162,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     private outputs = new OutputsList()
 
-    private Map<String,String> publishRules = [:]
+    /**
+     * Map of default publish targets
+     */
+    private Map<String,String> publishTargets = [:]
 
     /**
      * Initialize the taskConfig object with the defaults values
@@ -514,8 +517,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         outputs
     }
 
-    Map<String,String> getPublishRules() {
-        publishRules
+    /**
+     * Typed shortcut to {@code #publishTargets}
+     */
+    Map<String,String> getPublishTargets() {
+        publishTargets
     }
 
     /**
@@ -655,11 +661,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         result
     }
 
-    void _into_publish(String emit, String name) {
+    void _publish_target(String emit, String name) {
         final emitNames = outputs.collect { param -> param.channelEmitName }
         if( emit !in emitNames )
             throw new IllegalArgumentException("Invalid emit name '${emit}' in publish statement, valid emits are: ${emitNames.join(', ')}")
-        publishRules[emit] = name
+        publishTargets[emit] = name
     }
 
     /**

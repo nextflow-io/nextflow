@@ -74,7 +74,7 @@ workflow {
   foo.out         >> 'data'
 }
 
-output {
+publish {
   directory 'results'
 
   'data' {

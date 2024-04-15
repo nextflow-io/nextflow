@@ -317,30 +317,30 @@ Each workflow invocation has its own scope. As a result, the same process can be
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
-(workflow-output-dsl)=
+(workflow-publish-def)=
 
 ## Publishing outputs
 
 :::{versionadded} 24.04.0
 :::
 
-A script may define the set of outputs that should be published by the implicit workflow, known as the workflow output definition or "output block":
+A script may define the set of outputs that should be published by the implicit workflow, known as the workflow publish definition:
 
 ```groovy
 workflow {
     foo(bar())
 }
 
-output {
+publish {
     directory 'results'
 }
 ```
 
-The output block must be defined after the implicit workflow.
+The publish definition must be defined after the implicit workflow.
 
 ### Publishing channels
 
-Processes and workflows can each define a `publish` section which maps channels to publish rules. For example:
+Processes and workflows can each define a `publish` section which maps channels to publish targets. For example:
 
 ```groovy
 process foo {
@@ -368,7 +368,7 @@ workflow foobar {
 }
 ```
 
-In the above example, the output `results` of process `foo` is published to the rule `foo/` by default. However, when the workflow `foobar` invokes process `foo`, it publishes `foo.out` (i.e. `foo.out.results`) to the rule `foobar/foo/`, overriding the default rule defined by `foo`.
+In the above example, the output `results` of process `foo` is published to the target `foo/` by default. However, when the workflow `foobar` invokes process `foo`, it publishes `foo.out` (i.e. `foo.out.results`) to the target `foobar/foo/`, overriding the default target defined by `foo`.
 
 In a process, any output with an `emit` name can be published. In a workflow, any channel defined in the workflow, including process and subworkflow outputs, can be published.
 
@@ -376,7 +376,7 @@ In a process, any output with an `emit` name can be published. In a workflow, an
 A process/workflow output (e.g. `foo.out`) can only be published directly if it contains a single output channel. Multi-channel outputs must be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
 :::
 
-As shown in the example, workflows can override the publish rules of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
+As shown in the example, workflows can override the publish targets of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
 
 By default, all files emitted by the channel will be published into the specified directory. If a channel emits list values, any files in the list (including nested lists) will also be published. For example:
 
@@ -391,25 +391,25 @@ workflow {
 }
 ```
 
-### Output directory
+### Publish directory
 
-The `directory` statement is used to set the top-level output directory of the workflow:
+The `directory` statement is used to set the top-level publish directory of the workflow:
 
 ```groovy
-output {
+publish {
     directory 'results'
 
     // ...
 }
 ```
 
-It is optional, and it defaults to the launch directory (`workflow.launchDir`). Published files will be published into this directory.
+It is optional, and it defaults to the launch directory (`workflow.launchDir`). Published files will be saved within this directory.
 
-### Publish rules
+### Publish targets
 
-A publish rule is a specific publish configuration identified by a name. By default, when a channel is published to a rule in the `publish:` section of a process or workflow, the rule name is used as the publish path.
+A publish target is a name with a specific publish configuration. By default, when a channel is published to a target in the `publish:` section of a process or workflow, the target name is used as the publish path.
 
-For example, given the following output block:
+For example, given the following publish definition:
 
 ```groovy
 workflow {
@@ -421,7 +421,7 @@ workflow {
     ch_bar >> 'bar/'
 }
 
-output {
+publish {
     directory 'results'
 }
 ```
@@ -436,16 +436,16 @@ results/
     └── ...
 ```
 
-:::{tip}
-The trailing slash in the rule name is not required; it is only used to denote that the rule name is intended to be used as the publish path. In general, the rule name can be any string, but it should be a valid path name when using the default publishing behavior. 
+:::{note}
+The trailing slash in the target name is not required; it is only used to denote that the target name is intended to be used as the publish path. In general, the target name can be any string, but it should be a valid path name when using the default publishing behavior. 
 :::
 
-Publish rules can also be customized in the `output` block using a set of options similar to the {ref}`process-publishdir` directive.
+Publish targets can also be customized in the publish definition using a set of options similar to the {ref}`process-publishdir` directive.
 
 For example:
 
 ```groovy
-output {
+publish {
     directory 'results'
     mode 'copy'
 
@@ -488,7 +488,7 @@ Available options:
 : When `true` any existing file in the specified folder will be overwritten (default: `true`).
 
 `path`
-: Specify the publish path relative to the output directory (default: the rule name). Can only be specified within a rule.
+: Specify the publish path relative to the output directory (default: the target name). Can only be specified within a target definition.
 
 `storageClass`
 : *Currently only supported for S3.*

@@ -26,28 +26,28 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.PublishOp
 /**
- * Models a workflow output definition
+ * Models the workflow publish definition
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class OutputDef {
+class PublishDef {
 
     private Closure closure
 
-    OutputDef(Closure closure) {
+    PublishDef(Closure closure) {
         this.closure = closure
     }
 
-    void run(Map<DataflowWriteChannel,String> sources) {
-        final dsl = new OutputDsl()
+    void run(Map<DataflowWriteChannel,String> targets) {
+        final dsl = new PublishDsl()
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.call()
 
-        dsl.build(sources)
+        dsl.build(targets)
     }
 
 }
@@ -59,9 +59,9 @@ class OutputDef {
  */
 @Slf4j
 @CompileStatic
-class OutputDsl {
+class PublishDsl {
 
-    private Map<String,Map> rules = [:]
+    private Map<String,Map> targetConfigs = [:]
 
     private Path directory
 
@@ -69,7 +69,7 @@ class OutputDsl {
 
     void directory(String directory) {
         if( this.directory )
-            throw new ScriptRuntimeException("Output directory cannot be defined more than once in the workflow outputs")
+            throw new ScriptRuntimeException("Publish directory cannot be defined more than once in the workflow publish definition")
         this.directory = (directory as Path).complete()
     }
 
@@ -107,28 +107,28 @@ class OutputDsl {
 
     private void setDefault(String name, Object value) {
         if( defaults.containsKey(name) )
-            throw new ScriptRuntimeException("Default `${name}` option cannot be defined more than once in the workflow outputs")
+            throw new ScriptRuntimeException("Default `${name}` option cannot be defined more than once in the workflow publish definition")
         defaults[name] = value
     }
 
-    void rule(String name, Closure closure) {
-        if( rules.containsKey(name) )
-            throw new ScriptRuntimeException("Publish rule '${name}' is defined more than once in the workflow outputs")
+    void target(String name, Closure closure) {
+        if( targetConfigs.containsKey(name) )
+            throw new ScriptRuntimeException("Target '${name}' is defined more than once in the workflow publish definition")
 
-        final dsl = new RuleDsl()
+        final dsl = new TargetDsl()
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
 
-        rules[name] = dsl.getOptions()
+        targetConfigs[name] = dsl.getOptions()
     }
 
-    void build(Map<DataflowWriteChannel,String> sources) {
-        for( final entry : sources ) {
+    void build(Map<DataflowWriteChannel,String> targets) {
+        for( final entry : targets ) {
             final source = entry.key
             final name = entry.value
-            final opts = publishOptions(name, rules[name] ?: [:])
+            final opts = publishOptions(name, targetConfigs[name] ?: [:])
 
             new PublishOp(CH.getReadChannel(source), opts).apply()
         }
@@ -145,7 +145,7 @@ class OutputDsl {
         return opts
     }
 
-    static class RuleDsl {
+    static class TargetDsl {
 
         private Map opts = [:]
 
@@ -187,7 +187,7 @@ class OutputDsl {
 
         private void setOption(String name, Object value) {
             if( opts.containsKey(name) )
-                throw new ScriptRuntimeException("Publish option `${name}` cannot be defined more than once in a given rule")
+                throw new ScriptRuntimeException("Publish option `${name}` cannot be defined more than once for a given target")
             opts[name] = value
         }
 

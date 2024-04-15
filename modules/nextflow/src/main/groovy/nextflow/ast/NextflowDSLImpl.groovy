@@ -179,8 +179,8 @@ class NextflowDSLImpl implements ASTTransformation {
                 super.visitMethodCallExpression(methodCall)
             }
 
-            else if( methodName == 'output' && preCondition ) {
-                convertOutputDef(methodCall,sourceUnit)
+            else if( methodName == 'publish' && preCondition ) {
+                convertPublishDef(methodCall,sourceUnit)
                 super.visitMethodCallExpression(methodCall)
             }
 
@@ -432,17 +432,17 @@ class NextflowDSLImpl implements ASTTransformation {
 
         protected Statement normWorkflowPublish(ExpressionStatement stm) {
             if( stm.expression !instanceof BinaryExpression ) {
-                syntaxError(stm, "Workflow malformed publish statement")
+                syntaxError(stm, "Invalid workflow publish statement")
                 return stm
             }
 
             final binaryX = (BinaryExpression)stm.expression
             if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
-                syntaxError(stm, "Workflow malformed publish statement")
+                syntaxError(stm, "Invalid workflow publish statement")
                 return stm
             }
 
-            return stmt( callThisX('_into_publish', args(binaryX.leftExpression, binaryX.rightExpression)) )
+            return stmt( callThisX('_publish_target', args(binaryX.leftExpression, binaryX.rightExpression)) )
         }
 
         protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
@@ -486,7 +486,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                     case WORKFLOW_PUBLISH:
                         if( !(stm instanceof ExpressionStatement) ) {
-                            syntaxError(stm, "Workflow malformed publish statement")
+                            syntaxError(stm, "Invalid workflow publish statement")
                             break
                         }
                         body.add(normWorkflowPublish(stm as ExpressionStatement))
@@ -519,29 +519,29 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         /**
-         * Transform rules in the workflow output definition:
+         * Transform targets in the workflow publish definition:
          *
-         *   output {
+         *   publish {
          *     'foo' { ... }
          *   }
          *
          * becomes:
          *
-         *   output {
-         *     rule('foo') { ... }
+         *   publish {
+         *     target('foo') { ... }
          *   }
          *
          * @param methodCall
          * @param unit
          */
-        protected void convertOutputDef(MethodCallExpression methodCall, SourceUnit unit) {
-            log.trace "Convert 'output' ${methodCall.arguments}"
+        protected void convertPublishDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'publish' ${methodCall.arguments}"
 
             assert methodCall.arguments instanceof ArgumentListExpression
             final arguments = (ArgumentListExpression)methodCall.arguments
 
             if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
-                syntaxError(methodCall, "Invalid output definition")
+                syntaxError(methodCall, "Invalid publish definition")
                 return
             }
 
@@ -549,28 +549,28 @@ class NextflowDSLImpl implements ASTTransformation {
             final block = (BlockStatement)closure.code
             for( Statement stmt : block.statements ) {
                 if( stmt !instanceof ExpressionStatement ) {
-                    syntaxError(stmt, "Invalid output rule definition")
+                    syntaxError(stmt, "Invalid publish target definition")
                     return     
                 }
 
                 final stmtExpr = (ExpressionStatement)stmt
                 if( stmtExpr.expression !instanceof MethodCallExpression ) {
-                    syntaxError(stmt, "Invalid output rule definition")
+                    syntaxError(stmt, "Invalid publish target definition")
                     return     
                 }
 
                 final call = (MethodCallExpression)stmtExpr.expression
                 assert call.arguments instanceof ArgumentListExpression
 
-                // HACK: rule definition is a method call with single closure argument
+                // HACK: target definition is a method call with single closure argument
                 //       custom parser will be able to detect more elegantly
-                final ruleArgs = (ArgumentListExpression)call.arguments
-                if( ruleArgs.size() != 1 || ruleArgs[0] !instanceof ClosureExpression )
+                final targetArgs = (ArgumentListExpression)call.arguments
+                if( targetArgs.size() != 1 || targetArgs[0] !instanceof ClosureExpression )
                     continue
 
-                final ruleName = call.method
-                final ruleBody = (ClosureExpression)ruleArgs[0]
-                stmtExpr.expression = callThisX('rule', args(ruleName, ruleBody))
+                final targetName = call.method
+                final targetBody = (ClosureExpression)targetArgs[0]
+                stmtExpr.expression = callThisX('target', args(targetName, targetBody))
             }
         }
 
@@ -1301,7 +1301,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 return
             }
 
-            stmt.expression = callThisX('_into_publish', args(constX(((VariableExpression)left).name), binaryX.rightExpression))
+            stmt.expression = callThisX('_publish_target', args(constX(((VariableExpression)left).name), binaryX.rightExpression))
         }
 
         protected boolean isIllegalName(String name, ASTNode node) {

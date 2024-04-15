@@ -209,12 +209,12 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // make a copy of the output list because execution can change it
         output = new ChannelOut(declaredOutputs.clone())
 
-        // register process publish rules
-        for( final entry : processConfig.getPublishRules() ) {
+        // register process publish targets
+        for( final entry : processConfig.getPublishTargets() ) {
             final emit = entry.key
             final name = entry.value
             final source = (DataflowWriteChannel)output.getProperty(emit)
-            session.publishRules[source] = name
+            session.publishTargets[source] = name
         }
 
         // create the executor

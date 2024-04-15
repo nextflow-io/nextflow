@@ -41,7 +41,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private WorkflowDef entryFlow
 
-    private OutputDef publisher
+    private PublishDef publisher
 
     @Lazy InputStream stdin = { System.in }()
 
@@ -122,13 +122,13 @@ abstract class BaseScript extends Script implements ExecutionContext {
         meta.addDefinition(workflow)
     }
 
-    protected output(Closure closure) {
+    protected publish(Closure closure) {
         if( !entryFlow )
-            throw new IllegalStateException("Workflow output definition must be defined after the anonymous workflow")
+            throw new IllegalStateException("Workflow publish definition must be defined after the anonymous workflow")
         if( ExecutionStack.withinWorkflow() )
-            throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
+            throw new IllegalStateException("Workflow publish definition is not allowed within a workflow")
 
-        publisher = new OutputDef(closure)
+        publisher = new PublishDef(closure)
     }
 
     protected IncludeDef include( IncludeDef include ) {
@@ -194,7 +194,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         session.notifyBeforeWorkflowExecution()
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         if( publisher )
-            publisher.run(session.publishRules)
+            publisher.run(session.publishTargets)
         session.notifyAfterWorkflowExecution()
         return ret
     }

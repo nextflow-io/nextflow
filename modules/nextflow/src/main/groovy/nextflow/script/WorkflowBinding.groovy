@@ -156,16 +156,14 @@ class WorkflowBinding extends Binding  {
         }
     }
 
-    void _into_publish(DataflowWriteChannel source, String name) {
-        // TODO: add rules to "default" mapping for component
-        //       then add to workflow publisher only when component is invoked
-        owner.session.publishRules[source] = name
+    void _publish_target(DataflowWriteChannel source, String name) {
+        owner.session.publishTargets[source] = name
     }
 
-    void _into_publish(ChannelOut out, String name) {
+    void _publish_target(ChannelOut out, String name) {
         if( out.size() != 1 )
-            throw new IllegalArgumentException("Cannot send a multi-channel output into a topic")
-        _into_publish(out[0], name)
+            throw new IllegalArgumentException("Cannot publish a multi-channel output")
+        _publish_target(out[0], name)
     }
 
 }
