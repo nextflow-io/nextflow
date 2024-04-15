@@ -436,7 +436,7 @@ class CmdRun extends CmdBase implements HubOptions {
             log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
 
             def fmt = ansi()
-            fmt.a(" ┃ Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
+            fmt.a("Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
             fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
             fmt.bold().fg(Color.CYAN).a(runName).reset()
             fmt.a(Attribute.INTENSITY_FAINT).a("]")

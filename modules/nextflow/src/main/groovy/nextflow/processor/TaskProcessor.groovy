@@ -78,6 +78,8 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.plugin.Plugins
+import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -366,6 +368,14 @@ class TaskProcessor {
     int getMaxForks() { maxForks }
 
     boolean hasErrors() { errorCount>0 }
+
+    @Memoized
+    protected TaskTipProvider getTipProvider() {
+        final provider = Plugins.getPriorityExtensions(TaskTipProvider).find(it-> it.enabled())
+        if( !provider )
+            throw new IllegalStateException("Unable to find any tip provider")
+        return provider
+    }
 
     /**
      * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
@@ -1265,33 +1275,25 @@ class TaskProcessor {
         if( task?.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}"
 
-        message << "\nTip: ${getRndTip()}"
+        message << suggestTip(message)
 
         return message
+    }
+
+    private String suggestTip(List<String> message) {
+        try {
+            return "\nTip: ${getTipProvider().suggestTip(message)}"
+        }
+        catch (Exception e) {
+            log.debug "Unable to get tip for task message: $message", e
+            return ''
+        }
     }
 
     private static String stripWorkDir(String line, Path workDir) {
         if( workDir==null ) return line
         if( workDir.fileSystem != FileSystems.default ) return line
         return workDir ? line.replace(workDir.toString()+'/','') : line
-    }
-
-    static List tips = [
-            'when you have fixed the problem you can continue the execution adding the option `-resume` to the run command line',
-            "you can try to figure out what's wrong by changing to the process work dir and showing the script file named `${TaskRun.CMD_SCRIPT}`",
-            "view the complete command output by changing to the process work dir and entering the command `cat ${TaskRun.CMD_OUTFILE}`",
-            "you can replicate the issue by changing to the process work dir and entering the command `bash ${TaskRun.CMD_RUN}`"
-    ]
-
-    static Random RND = Random.newInstance()
-
-    /**
-     * Display a random tip at the bottom of the error report
-     *
-     * @return The tip string to display
-     */
-    protected String getRndTip() {
-        tips[ RND.nextInt( tips.size() ) ]
     }
 
 

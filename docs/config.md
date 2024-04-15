@@ -408,6 +408,16 @@ The following settings are available:
 `azure.batch.pools.<name>.sku`
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
+`azure.batch.pools.<name>.startTask.script`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Specify the `startTask` that is executed as the node joins the Azure Batch node pool.
+
+`azure.batch.pools.<name>.startTask.privileged`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Enable the `startTask` to run with elevated access (default: `false`).
+
 `azure.batch.pools.<name>.virtualNetwork`
 : :::{versionadded} 23.03.0-edge
   :::
@@ -850,6 +860,9 @@ The following settings are available for Google Cloud Batch:
 
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+
+  Note that the `google.batch.serviceAccountEmail` service account will only be used for spawned jobs, not for the Nextflow process itself. 
+  See the [Google Cloud](https://www.nextflow.io/docs/latest/google.html#credentials) documentation for more information on credentials.
 
 `google.batch.spot`
 : When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
