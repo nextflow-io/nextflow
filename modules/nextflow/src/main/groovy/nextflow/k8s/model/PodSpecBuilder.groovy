@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,6 +117,12 @@ class PodSpecBuilder {
 
     List<String> devices
 
+    Map<String,?> resourcesLimits
+
+    String schedulerName
+
+    Integer ttlSecondsAfterFinished
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -162,14 +168,14 @@ class PodSpecBuilder {
     PodSpecBuilder withCommand( cmd ) {
         if( cmd==null ) return this
         assert cmd instanceof List || cmd instanceof CharSequence, "Missing or invalid K8s command parameter: $cmd"
-        this.command = cmd instanceof List ? cmd : ['/bin/bash','-c', cmd.toString()]
+        this.command = cmd instanceof List ? cmd as List<String> : ['/bin/bash','-c', cmd.toString()]
         return this
     }
 
     PodSpecBuilder withArgs( args ) {
         if( args==null ) return this
         assert args instanceof List || args instanceof CharSequence, "Missing or invalid K8s args parameter: $args"
-        this.args = args instanceof List ? args : ['/bin/bash','-c', args.toString()]
+        this.args = args instanceof List ? args as List<String> : ['/bin/bash','-c', args.toString()]
         return this
     }
 
@@ -307,13 +313,13 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withDevices(List<String> dev) {
-        this.devices = dev
+    PodSpecBuilder withActiveDeadline(int seconds) {
+        this.activeDeadlineSeconds = seconds
         return this
     }
 
-    PodSpecBuilder withActiveDeadline(int seconds) {
-        this.activeDeadlineSeconds = seconds
+    PodSpecBuilder withResourcesLimits(Map<String,?> limits) {
+        this.resourcesLimits = limits
         return this
     }
 
@@ -335,6 +341,9 @@ class PodSpecBuilder {
         // -- emptyDirs
         if( opts.getMountEmptyDirs() )
             emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- host paths
+        if( opts.getMountHostPaths() )
+            hostMounts.addAll( opts.getMountHostPaths() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
@@ -370,6 +379,11 @@ class PodSpecBuilder {
             tolerations.addAll(opts.tolerations)
         // -- privileged
         privileged = opts.privileged
+        // -- scheduler name
+        schedulerName = opts.schedulerName
+        // -- ttl seconds after finished (job)
+        if( opts.ttlSecondsAfterFinished != null )
+            ttlSecondsAfterFinished = opts.ttlSecondsAfterFinished
 
         return this
     }
@@ -411,9 +425,6 @@ class PodSpecBuilder {
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
 
-        if( devices )
-            container.devices = devices
-
         final secContext = new LinkedHashMap(10)
         if( privileged ) {
             // note: privileged flag needs to be defined in the *container* securityContext
@@ -434,6 +445,9 @@ class PodSpecBuilder {
 
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
+
+        if( schedulerName )
+            spec.schedulerName = schedulerName
 
         if( affinity )
             spec.affinity = affinity
@@ -581,31 +595,23 @@ class PodSpecBuilder {
 
     Map buildAsJob() {
         final pod = build()
+        final spec = [
+            backoffLimit: 0,
+            template: [
+                metadata: pod.metadata,
+                spec: pod.spec
+            ]
+        ]
 
-        // job metadata
-        final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
-        metadata.namespace = this.namespace ?: 'default'
+        if( ttlSecondsAfterFinished != null )
+            spec.ttlSecondsAfterFinished = ttlSecondsAfterFinished
 
-        // job spec
-        final spec = new LinkedHashMap<String,Object>()
-        spec.backoffLimit = 0
-        spec.template = [spec: pod.spec]
-
-        if( labels )
-            metadata.labels = sanitize(labels, MetaType.LABEL)
-
-        if( annotations )
-            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
-
-        final result = [
-                apiVersion: 'batch/v1',
-                kind: 'Job',
-                metadata: metadata,
-                spec: spec ]
-
-        return result
-
+        return [
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: pod.metadata,
+            spec: spec
+        ]
     }
 
     @PackageScope

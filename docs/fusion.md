@@ -2,6 +2,13 @@
 
 # Fusion file system
 
+:::{versionadded} 22.10.0
+:::
+
+:::{versionadded} 23.02.0-edge
+Support for Google Cloud Storage.
+:::
+
 ## Introduction
 
 Fusion is a distributed virtual file system for cloud-native data pipeline and optimised for Nextflow workloads.
@@ -12,9 +19,7 @@ It bridges the gap between cloud-native storage and data analysis workflow by im
 
 ### Requirements
 
-Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container engine such as Docker or a container native platform for the execution of your pipeline e.g. AWS Batch or Kubernetes.
-
-It also requires the use of {ref}`Wave containers<wave-page>` and Nextflow version `22.10.0` or later. The support for Google Cloud Storage requires Nextflow `23.02.0-edge` or later.
+Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container engine such as Docker or a container native platform for the execution of your pipeline e.g. AWS Batch or Kubernetes. It also requires the use of {ref}`Wave containers<wave-page>`.
 
 ### AWS S3 configuration
 
@@ -66,7 +71,7 @@ docker {
 
 fusion {
     enabled = true
-    exportAwsAccessKeys = true
+    exportStorageCredentials = true
 }
 
 wave {
@@ -159,7 +164,7 @@ nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
 
 ## NVMe storage
 
-The Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files in parallel to and from object storage into a container-local temporary folder. This means that the performance of the temporary folder inside the container (`/tmp` in a default setup) is key to acheiving maximum performance.
+The Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files in parallel to and from object storage into a container-local temporary folder. This means that the performance of the temporary folder inside the container (`/tmp` in a default setup) is key to achieving maximum performance.
 
 The temporary folder is used only as a temporary cache, so the size of the volume can be much lower than the actual needs of your pipeline processes. Fusion has a built-in garbage collector that constantly monitors remaining disk space on the temporary folder and immediately evicts old cached entries when necessary.
 
@@ -172,6 +177,6 @@ aws.batch.volumes = '/path/to/ec2/nvme:/tmp'
 process.scratch = false
 ```
 
-## More examples
+## Advanced settings
 
-Check out the [Wave showcase repository](https://github.com/seqeralabs/wave-showcase) for more examples on how to use Fusion file system.
+Fusion advanced configuration settings are described in the {ref}`Fusion <config-fusion>` section on the Nextflow configuration page.

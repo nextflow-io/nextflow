@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,12 @@
 
 package nextflow.executor
 
+import groovy.xml.XmlSlurper
+
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -28,6 +32,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class MoabExecutor extends AbstractGridExecutor {
 
     /**
@@ -51,20 +56,20 @@ class MoabExecutor extends AbstractGridExecutor {
             result << '-q'  << (String)task.config.queue
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+        if( task.config.getCpus() > 1 ) {
+            result << '-l' << "nodes=1:ppn=${task.config.getCpus()}".toString()
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final duration = task.config.getTime()
-            result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
+            result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
-        if( task.config.memory ) {
+        if( task.config.getMemory() ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
-            result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+            result << "-l" << "mem=${task.config.getMemory().toString().replaceAll(/[\s]/,'').toLowerCase()}".toString()
         }
 
         // -- at the end append the command script wrapped file name
@@ -99,6 +104,7 @@ class MoabExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     @Override
+    @CompileDynamic
     def parseJobId( String text ) {
         String result
         try {
@@ -142,6 +148,7 @@ class MoabExecutor extends AbstractGridExecutor {
     }
 
     @Override
+    @CompileDynamic
     protected Map<String, QueueStatus> parseQueueStatus(String xmlStatus) {
         // parse XML string and and decode job states
         final result = new LinkedHashMap()
@@ -166,6 +173,7 @@ class MoabExecutor extends AbstractGridExecutor {
         return result
     }
 
+    @CompileDynamic
     protected void parseQueueJobNodes(queueNode, Map result, QueueStatus state=null) {
         for( def entry : queueNode.job ) {
             final value = state ?: decode(entry.@State?.toString())

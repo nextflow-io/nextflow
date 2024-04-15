@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.CpuResource
+import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
@@ -43,7 +44,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static public final EXIT_ZERO = 0
+    static public final int EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -253,25 +254,24 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
-    MemoryUnit getDisk() {
+    DiskResource getDiskResource() {
         def value = get('disk')
 
-        if( !value )
-            return null
+        if( value instanceof Map )
+            return new DiskResource((Map)value)
 
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
+        if( value != null )
+            return new DiskResource(value)
 
-        try {
-            new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
-        }
+        return null
     }
 
-    Duration getTime() {
-        def value = get('time')
+    MemoryUnit getDisk() {
+        getDiskResource()?.getRequest()
+    }
+
+    private Duration getDuration0(String key) {
+        def value = get(key)
 
         if( !value )
             return null
@@ -286,8 +286,17 @@ class TaskConfig extends LazyMap implements Cloneable {
             new Duration(value.toString().trim())
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+            throw new AbortOperationException("Not a valid `$key` value in process definition: $value")
         }
+
+    }
+
+    Duration getTime() {
+        return getDuration0('time')
+    }
+
+    Duration getMaxSubmitAwait() {
+        return getDuration0('maxSubmitAwait')
     }
 
     boolean hasCpus() {
@@ -382,6 +391,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    String getClusterOptions() {
+        return get('clusterOptions')
+    }
+    
     def getContainer() {
         return get('container')
     }
@@ -413,6 +426,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         else {
             return CmdLineHelper.splitter( opts.toString() )
         }
+    }
+
+    Integer getSubmitAttempt() {
+        get('submitAttempt') as Integer ?: 1
     }
 
     Integer getAttempt() {

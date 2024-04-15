@@ -16,10 +16,13 @@
 
 package nextflow.cloud.azure.batch
 
+import static com.microsoft.azure.batch.protocol.models.ContainerType.DOCKER_COMPATIBLE
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
@@ -38,8 +41,11 @@ import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
+import com.microsoft.azure.batch.protocol.models.JobUpdateParameter
+import com.microsoft.azure.batch.protocol.models.MetadataItem
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
+import com.microsoft.azure.batch.protocol.models.OnAllTasksComplete
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -70,6 +76,7 @@ import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
@@ -272,7 +279,7 @@ class AzBatchService implements Closeable {
             if (!config.batch().accountName)
                 throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
             if (!config.batch().accountKey)
-                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
 
             return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
 
@@ -424,7 +431,7 @@ class AzBatchService implements Closeable {
 
         return new TaskAddParameter()
                 .withId(taskId)
-                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
+                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .withContainerSettings(containerOpts)
                 .withCommandLine(cmd)
                 .withResourceFiles(resourceFileUrls(task,sas))
@@ -561,9 +568,10 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        final key = CacheHelper.hasher([vmType.name, opts]).hash().toString()
+        final metadata = task.config.getResourceLabels()
+        final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
-        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts)
+        return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
     protected void checkPool(CloudPool pool, AzVmPoolSpec spec) {
@@ -653,7 +661,7 @@ class AzBatchService implements Closeable {
          *
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
-        final containerConfig = new ContainerConfiguration();
+        final containerConfig = new ContainerConfiguration().withType(DOCKER_COMPATIBLE)
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
@@ -662,7 +670,7 @@ class AzBatchService implements Closeable {
                     .withRegistryServer(registryOpts.server)
                     .withUserName(registryOpts.userName)
                     .withPassword(registryOpts.password)
-            containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
+            containerConfig.withContainerRegistries(containerRegistries)
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
@@ -674,17 +682,38 @@ class AzBatchService implements Closeable {
                 .withContainerConfiguration(containerConfig)
     }
 
-    protected void createPool(AzVmPoolSpec spec) {
 
-        def resourceFiles = new ArrayList(10)
+    protected StartTask createStartTask(AzStartTaskOpts opts) {
+        log.trace "AzStartTaskOpts: ${opts}"
+        final startCmd = new ArrayList<String>(5)
+        final resourceFiles = new ArrayList<ResourceFile>()
 
-        resourceFiles << new ResourceFile()
+        // If enabled, append azcopy installer to start task command
+        if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
+            startCmd << 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+            resourceFiles << new ResourceFile()
                 .withHttpUrl(AZCOPY_URL)
                 .withFilePath('azcopy')
+        }
 
-        def poolStartTask = new StartTask()
-                .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
-                .withResourceFiles(resourceFiles)
+        // Get any custom start task command
+        if ( opts.script ) {
+            startCmd << "bash -c '${opts.script.replace(/'/,/''/)}'".toString()
+        }
+
+        // If there is no start task contents we return a null to indicate no start task
+        if( !startCmd ) {
+            return null
+        }
+
+        // otherwise return a StartTask object with the start task command and resource files
+        return new StartTask()
+            .withCommandLine(startCmd.join('; '))
+            .withResourceFiles(resourceFiles)
+            .withUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
+    }
+
+    protected void createPool(AzVmPoolSpec spec) {
 
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
@@ -694,7 +723,21 @@ class AzBatchService implements Closeable {
                 // same as the num ofd cores
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
-                .withStartTask(poolStartTask)
+
+        final startTask = createStartTask(spec.opts.startTask)
+        if( startTask ) {
+            poolParams .withStartTask(startTask)
+        }
+
+        // resource labels
+        if( spec.metadata ) {
+            final metadata = spec.metadata.collect { name, value ->
+                new MetadataItem()
+                    .withName(name)
+                    .withValue(value)
+            }
+            poolParams.withMetadata(metadata)
+        }
 
         // virtual network
         if( spec.opts.virtualNetwork )
@@ -735,7 +778,12 @@ class AzBatchService implements Closeable {
                     .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) )
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
-        else {
+        else if( spec.opts.lowPriority ) {
+            log.debug "Creating low-priority pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
+            poolParams
+                .withTargetLowPriorityNodes(spec.opts.vmCount)
+        }
+        else  {
             log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
             poolParams
                     .withTargetDedicatedNodes(spec.opts.vmCount)
@@ -745,23 +793,24 @@ class AzBatchService implements Closeable {
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
+        final target = opts.lowPriority ? 'TargetLowPriorityNodes' : 'TargetDedicatedNodes'
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
-        def DEFAULT_FORMULA = '''
+        final DEFAULT_FORMULA = """
             // Get pool lifetime since creation.
             lifespan = time() - time("{{poolCreationTime}}");
             interval = TimeInterval_Minute * {{scaleInterval}};
             
             // Compute the target nodes based on pending tasks.
-            // $PendingTasks == The sum of $ActiveTasks and $RunningTasks
-            $samples = $PendingTasks.GetSamplePercent(interval);
-            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(interval)));
-            $targetVMs = $tasks > 0 ? $tasks : max(0, $TargetDedicatedNodes/2);
-            targetPoolSize = max(0, min($targetVMs, {{maxVmCount}}));
+            // \$PendingTasks == The sum of \$ActiveTasks and \$RunningTasks
+            \$samples = \$PendingTasks.GetSamplePercent(interval);
+            \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(interval)));
+            \$targetVMs = \$tasks > 0 ? \$tasks : max(0, \$TargetDedicatedNodes/2);
+            targetPoolSize = max(0, min(\$targetVMs, {{maxVmCount}}));
             
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
-            $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
-            $NodeDeallocationOption = taskcompletion;
-            '''.stripIndent(true)
+            \$${target} = lifespan < interval ? {{vmCount}} : targetPoolSize;
+            \$NodeDeallocationOption = taskcompletion;
+            """.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
         final vars = poolCreationBindings(opts, Instant.now())
@@ -783,15 +832,31 @@ class AzBatchService implements Closeable {
         apply(() -> client.taskOperations().deleteTask(key.jobId, key.taskId))
     }
 
-    protected void cleanupJobs() {
-        for( Map.Entry<TaskProcessor,String> entry : allJobIds ) {
-            final proc = entry.key
-            final jobId = entry.value
-            if( proc.hasErrors() ) {
-                log.debug "Preserving Azure job with error: ${jobId}"
-                continue
-            }
+    /**
+     * Set all jobs to terminate on completion.
+     */
+    protected void terminateJobs() {
+        for( String jobId : allJobIds.values() ) {
+            try {
+                log.trace "Setting Azure job ${jobId} to terminate on completion"
 
+                CloudJob job = apply(() -> client.jobOperations().getJob(jobId))
+                final poolInfo = job.poolInfo()
+
+                JobUpdateParameter jobParameter = new JobUpdateParameter()
+                        .withOnAllTasksComplete(OnAllTasksComplete.TERMINATE_JOB)
+                        .withPoolInfo(poolInfo)
+
+                apply(() -> client.jobOperations().updateJob(jobId, jobParameter))
+            }
+            catch (Exception e) {
+                log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+            }
+        }
+    }
+
+    protected void cleanupJobs() {
+        for( String jobId : allJobIds.values() ) {
             try {
                 log.trace "Deleting Azure job ${jobId}"
                 apply(() -> client.jobOperations().deleteJob(jobId))
@@ -803,7 +868,7 @@ class AzBatchService implements Closeable {
     }
 
     protected void cleanupPools() {
-        for( String poolId : allPools.keySet()) {
+        for( String poolId : allPools.keySet() ) {
             try {
                 apply(() -> client.poolOperations().deletePool(poolId))
             }
@@ -813,23 +878,31 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected UserIdentity userIdentity(boolean  privileged, String runAs) {
+    protected UserIdentity userIdentity(boolean  privileged, String runAs, AutoUserScope scope) {
         UserIdentity identity = new UserIdentity()
         if (runAs) {
             identity.withUserName(runAs)
         } else  {
             identity.withAutoUser(new AutoUserSpecification()
                     .withElevationLevel(privileged ? ElevationLevel.ADMIN : ElevationLevel.NON_ADMIN)
-                    .withScope(AutoUserScope.TASK))
+                    .withScope(scope))
         }
         return identity
     }
+
     @Override
     void close() {
-        // cleanup app successful jobs
-        if( config.batch().deleteJobsOnCompletion!=Boolean.FALSE ) {
+        // terminate all jobs to prevent them from occupying quota
+        if( config.batch().terminateJobsOnCompletion ) {
+            terminateJobs()
+        }
+
+        // delete all jobs
+        if( config.batch().deleteJobsOnCompletion ) {
             cleanupJobs()
         }
+
+        // delete all autopools
         if( config.batch().canCreatePool() && config.batch().deletePoolsOnCompletion ) {
             cleanupPools()
         }
@@ -846,7 +919,7 @@ class AzBatchService implements Closeable {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}", event.lastFailure)
+                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
             }
         }
         return RetryPolicy.<T>builder()
@@ -868,8 +941,22 @@ class AzBatchService implements Closeable {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof BatchErrorException && e.body().code() in RETRY_CODES)  as Predicate<? extends Throwable>
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if( t instanceof BatchErrorException && t.body().code() in RETRY_CODES )
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
         final policy = retryPolicy(cond)
+        // apply the action with
         return Failsafe.with(policy).get(action)
     }
 }

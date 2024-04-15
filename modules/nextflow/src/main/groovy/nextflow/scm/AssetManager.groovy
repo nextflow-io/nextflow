@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -242,6 +242,7 @@ class AssetManager {
      * @param name A project name or URL e.g. {@code cbcrg/foo} or {@code https://github.com/cbcrg/foo.git}
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
+    @PackageScope
     String resolveName( String name ) {
         assert name
 
@@ -359,11 +360,6 @@ class AssetManager {
 
     AssetManager setLocalPath(File path) {
         this.localPath = path
-        return this
-    }
-
-    AssetManager setForce( boolean value ) {
-        this.force = value
         return this
     }
 
@@ -628,8 +624,11 @@ class AssetManager {
              * Try to checkout it from a remote branch and return
              */
             catch ( RefNotFoundException e ) {
-                def ref = checkoutRemoteBranch(revision)
-                return "checkout-out at ${ref.getObjectId().name()}"
+                final ref = checkoutRemoteBranch(revision)
+                final commitId = ref?.getObjectId()
+                return commitId
+                    ? "checked out at ${commitId.name()}"
+                    : "checked out revision ${revision}"
             }
         }
 
@@ -798,7 +797,7 @@ class AssetManager {
         result.current = current    // current branch name
         result.master = master      // master branch name
         result.branches = branches  // collection of branches
-        result.tags = tags          // collect of tags 
+        result.tags = tags          // collect of tags
         return result
     }
 
@@ -910,7 +909,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stickied on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
             }
         }
         if( !revision || revision == current ) {
@@ -943,12 +942,18 @@ class AssetManager {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
             }
             fetch.call()
-            git.checkout()
-                    .setCreateBranch(true)
-                    .setName(revision)
-                    .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
-                    .setStartPoint("origin/" + revision)
-                    .call()
+
+            try {
+                return git.checkout()
+                        .setCreateBranch(true)
+                        .setName(revision)
+                        .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
+                        .setStartPoint("origin/" + revision)
+                        .call()
+            }
+            catch (RefNotFoundException e) {
+                return git.checkout() .setName(revision) .call()
+            }
         }
         catch (RefNotFoundException e) {
             throw new AbortOperationException("Cannot find revision `$revision` -- Make sure that it exists in the remote repository `$repositoryUrl`", e)
@@ -971,11 +976,11 @@ class AssetManager {
             return
 
         List<String> filter = []
-        if( modules instanceof List ) {
-            filter.addAll(modules as List)
+        if( modules instanceof List<String> ) {
+            filter.addAll(modules)
         }
         else if( modules instanceof String ) {
-            filter.addAll( (modules as String).tokenize(', ') )
+            filter.addAll( modules.tokenize(', ') )
         }
 
         final init = git.submoduleInit()
@@ -1077,7 +1082,7 @@ class AssetManager {
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath
-        
+
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {

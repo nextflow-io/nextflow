@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.secret.SecretHolder
 import org.apache.commons.lang.StringUtils
 /**
  * Defines the script execution context. By default provided the following variables
@@ -72,8 +71,8 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
-            args.addAll((List)vars.args)
+            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
         
@@ -186,9 +185,7 @@ class ScriptBinding extends WorkflowBinding {
     @Override
     void setVariable( String name, Object value ) {
         if( name == 'channel' ) {
-            final msg = 'The use of the identifier `channel` as variable name is discouraged and will be deprecated in a future version'
-            if( NF.isDsl2() ) throw new DeprecationException(msg)
-            log.warn(msg)
+            throw new IllegalAccessException("The use of the identifier `$name` as variable name is not allowed")
         }
         if( name != 'args' && name != 'params' )
             super.setVariable(name, value)
@@ -241,7 +238,11 @@ class ScriptBinding extends WorkflowBinding {
         }
 
         private ParamsMap allowNames(Set names) {
-            readOnlyNames.removeAll(names)
+            for( String name : names ) {
+                final name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
+                readOnlyNames.remove(name)
+                readOnlyNames.remove(name2)
+            }
             return this
         }
 
@@ -275,11 +276,7 @@ class ScriptBinding extends WorkflowBinding {
         }
 
         private String put0(String name, Object value) {
-            if( value instanceof SecretHolder ) {
-                log.warn "`params.$name` cannot be assigned to a secret value -- Assignment is ignored"
-                return null
-            }
-            
+
             // keep track of the real name
             realNames << name
 

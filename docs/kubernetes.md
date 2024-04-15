@@ -16,7 +16,7 @@ Kubernetes abstracts also the storage provisioning through the definition of one
 
 When using the `k8s` executor Nextflow deploys the workflow execution as a Kubernetes pod. This pod orchestrates the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow application.
 
-```{image} /images/nextflow-k8s-min.png
+```{image} _static/nextflow-k8s-min.png
 ```
 
 ## Requirements
@@ -79,6 +79,9 @@ The pod is automatically destroyed once the shell session terminates. Do not use
 
 ### Launch with Fusion
 
+:::{versionadded} 22.10.0
+:::
+
 The use of {ref}`fusion-page` allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
 
 This also makes unnecessary the use of the special `kuberun` command for the pipeline execution.
@@ -116,6 +119,23 @@ Then the pipeline execution can be launched using the usual run command and spec
 ```bash
 nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR-BUCKET>/scratch
 ```
+
+:::{note}
+When using Fusion, pods will run as *privileged* by default.
+:::
+
+To use Fusion with without the need for escalating privileges, it is required to install in the Kubernetes cluster the
+Nextflow [FUSE device plugin](https://github.com/nextflow-io/k8s-fuse-plugin) and add in your Nextflow configuration the following
+setting:
+
+```
+fusion {
+  privileged = false
+}
+```
+
+To use a custom FUSE device plugin, specify it via the setting `k8s.fuseDevicePlugin`. See
+the {ref}`Kubernetes configuration section<config-k8s>` for details.
 
 ### Running in a pod
 

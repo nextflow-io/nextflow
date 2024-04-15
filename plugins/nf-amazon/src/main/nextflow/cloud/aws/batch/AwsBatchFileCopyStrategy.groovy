@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
         final result = new StringBuilder()
-        final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
+        final copy = environment ? new LinkedHashMap<String,String>(environment) : Collections.<String,String>emptyMap()
         final path = copy.containsKey('PATH')
         // remove any external PATH
         if( path )

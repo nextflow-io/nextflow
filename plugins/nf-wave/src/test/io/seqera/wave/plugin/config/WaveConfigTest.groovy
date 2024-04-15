@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin.config
 
-
+import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -56,15 +56,6 @@ class WaveConfigTest extends Specification {
         opts.endpoint() == 'http://localhost'
     }
 
-    def 'should config containerPlatform' () {
-        when:
-        // config options have priority over sys env
-        def opts = new WaveConfig([enabled:true, containerPlatform: 'linux/arm64'], [:])
-        then:
-        opts.enabled()
-        opts.containerPlatform() == 'linux/arm64'
-    }
-
     def 'should remove ending slash' () {
         when:
         def opts = new WaveConfig([enabled:true, endpoint: 'http://localhost/v1//'])
@@ -95,7 +86,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.1'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.5.8-lunar'
         opts.condaOpts().commands == null
 
         when:
@@ -103,6 +94,21 @@ class WaveConfigTest extends Specification {
         then:
         opts.condaOpts().mambaImage == 'mambaorg/foo:1'
         opts.condaOpts().commands == ['USER hola']
+        
+    }
+
+    def 'should get spack config' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.spackOpts().basePackages == null
+        opts.spackOpts().commands == null
+
+        when:
+        opts = new WaveConfig([build:[spack:[ basePackages: 'foo bar', commands:['USER hola'] ]]])
+        then:
+        opts.spackOpts().basePackages == 'foo bar'
+        opts.spackOpts().commands == ['USER hola']
         
     }
 
@@ -125,7 +131,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == ['container','dockerfile','conda']
+        opts.strategy() == ['container','dockerfile','conda','spack']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -134,12 +140,13 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | ['container','dockerfile','conda']
+        null                    | ['container','dockerfile','conda','spack']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']
         ['conda','container']   | ['conda','container']
         [' conda',' container'] | ['conda','container']
+        'spack'                 | ['spack']
     }
 
     def 'should fail to set strategy' () {
@@ -149,4 +156,88 @@ class WaveConfigTest extends Specification {
         def e = thrown(IllegalArgumentException)
         e.message == "Invalid value for 'wave.strategy' configuration attribute - offending value: foo"
     }
+
+    def 'should get retry policy' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.retryOpts().delay == Duration.of('450ms')
+        opts.retryOpts().maxAttempts == 10
+        opts.retryOpts().maxDelay == Duration.of('90s')
+
+        when:
+        opts = new WaveConfig([retryPolicy:[ maxAttempts: 20, jitter: 1.0, delay: '1s', maxDelay: '10s' ]])
+        then:
+        opts.retryOpts().maxAttempts == 20
+        opts.retryOpts().jitter == 1.0d
+        opts.retryOpts().delay == Duration.of('1s')
+        opts.retryOpts().maxDelay == Duration.of('10s')
+
+        // legacy
+        when:
+        opts = new WaveConfig([retry:[ maxAttempts: 10, jitter: 2.0, delay: '3s', maxDelay: '40s' ]])
+        then:
+        opts.retryOpts().maxAttempts == 10
+        opts.retryOpts().jitter == 2.0d
+        opts.retryOpts().delay == Duration.of('3s')
+        opts.retryOpts().maxDelay == Duration.of('40s')
+    }
+
+    def 'should get http config options' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
+
+        when:
+        opts = new WaveConfig([httpClient: [connectTimeout: '90s']])
+        then:
+        opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(90)
+    }
+
+    def 'should dump config' () {
+        given:
+        def config = new WaveConfig([enabled: true])
+        expect:
+        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.8-lunar; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null)'
+    }
+
+    def 'should not allow invalid settinga' () {
+        when:
+        new WaveConfig(endpoint: 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: 'foo'"
+
+        when:
+        new WaveConfig(endpoint: 'ftp://foo.com')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: 'ftp://foo.com'"
+
+        when:
+        new WaveConfig(build: [repository: 'http://foo.com'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Config setting 'wave.build.repository' should not include any protocol prefix - offending value: 'http://foo.com'"
+
+        when:
+        new WaveConfig(build: [cacheRepository: 'http://foo.com'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: 'http://foo.com'"
+    }
+
+    def 'should set preserve timestamp' () {
+        when:
+        def config = new WaveConfig([:])
+        then:
+        !config.preserveFileTimestamp()
+
+        when:
+        config = new WaveConfig(preserveFileTimestamp: true)
+        then:
+        config.preserveFileTimestamp()
+    }
+
 }

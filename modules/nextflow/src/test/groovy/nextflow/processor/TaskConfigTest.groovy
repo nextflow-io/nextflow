@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,6 +233,24 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def 'test max submit await'() {
+
+        when:
+        def config = new TaskConfig()
+        config.maxSubmitAwait = value
+
+        then:
+        config.maxSubmitAwait == expected
+        config.getMaxSubmitAwait() == expected
+
+        where:
+        expected            || value
+        null                || null
+        new Duration('1s')  || 1000
+        new Duration('2h')  || '2h'
+
+    }
+
     def testGetMemory() {
 
         when:
@@ -261,6 +279,7 @@ class TaskConfigTest extends Specification {
         then:
         config.disk == expected
         config.getDisk() == expected
+        config.getDiskResource()?.getRequest() == expected
 
         where:
         expected                || value

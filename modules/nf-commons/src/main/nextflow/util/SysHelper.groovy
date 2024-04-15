@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -173,5 +173,9 @@ class SysHelper {
         System.getenv('HOSTNAME') ?: InetAddress.getLocalHost().getHostName()
     }
 
+    static String getArch() {
+        final os = (java.lang.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
+        return os.getArch()
+    }
 
 }

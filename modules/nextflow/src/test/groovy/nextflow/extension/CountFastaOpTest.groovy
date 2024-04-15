@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class CountFastaOpTest extends Specification {
                 .stripIndent()
 
         when:
-        def result = Channel.from( str, str2 ).countFasta()
+        def result = Channel.of( str, str2 ).countFasta()
         then:
         result.val == 8
 
@@ -111,7 +111,7 @@ class CountFastaOpTest extends Specification {
                 .stripIndent()
 
         when:
-        def result = Channel.from( file1, file2 ).countFasta()
+        def result = Channel.of( file1, file2 ).countFasta()
         then:
         result.val == 10
 

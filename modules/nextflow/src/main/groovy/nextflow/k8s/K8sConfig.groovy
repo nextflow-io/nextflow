@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
@@ -32,7 +32,6 @@ import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
 import nextflow.util.Duration
-
 /**
  * Model Kubernetes specific settings defined in the nextflow
  * configuration file
@@ -42,6 +41,8 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class K8sConfig implements Map<String,Object> {
+
+    static final private Map<String,?> DEFAULT_FUSE_PLUGIN = Map.of('nextflow.io/fuse', 1)
 
     @Delegate
     private Map<String,Object> target
@@ -117,6 +118,15 @@ class K8sConfig implements Map<String,Object> {
         target.storageSubPath
     }
 
+    Map<String,?> fuseDevicePlugin() {
+        final result = target.fuseDevicePlugin
+        if( result instanceof Map && result.size()==1 )
+            return result as Map<String,?>
+        if( result )
+            log.warn1 "Setting 'fuseDevicePlugin' should be a map object providing exactly one entry - offending value: $result"
+        return DEFAULT_FUSE_PLUGIN
+    }
+
     /**
      * Whenever the pod should honour the entrypoint defined by the image (default: false)
      *
@@ -166,7 +176,7 @@ class K8sConfig implements Map<String,Object> {
     String getServiceAccount() { target.serviceAccount }
 
     String getNextflowImageName() {
-        final defImage = "nextflow/nextflow:${Const.APP_VER}"
+        final defImage = "nextflow/nextflow:${BuildInfo.version}"
         return target.navigate('nextflow.image', defImage)
     }
 

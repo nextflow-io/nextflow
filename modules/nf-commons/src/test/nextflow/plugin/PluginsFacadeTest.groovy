@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import com.sun.net.httpserver.HttpServer
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -24,13 +25,33 @@ class PluginsFacadeTest extends Specification {
         plugins.indexUrl = 'http://localhost:9900/plugins.json'
 
         when:
-        plugins.setup([plugins: [ 'nf-console@1.0.0' ]])
+        plugins.init()
+        plugins.load([plugins: [ 'nf-console@1.0.0' ]])
         then:
         folder.resolve('nf-console-1.0.0').exists()
 
         cleanup:
         folder?.deleteDir()
         server?.stop(0)
+    }
+
+    def 'should create plugin manager' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def plugins = new PluginsFacade(folder,MODE)
+        expect:
+        plugins.createManager(folder,EMBEDDED).class == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        MODE    | EMBEDDED      | EXPECTED
+        'dev'   | false         | DevPluginManager
+        'dev'   | true          | DevPluginManager
+        and:
+        'prod'  | false         | LocalPluginManager
+        'prod'  | true          | EmbeddedPluginManager
     }
 
 
@@ -66,6 +87,7 @@ class PluginsFacadeTest extends Specification {
         given:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
+                'nf-cloudcache': new PluginSpec('nf-cloudcache', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0'),
                 'nf-wave': new PluginSpec('nf-wave', '0.1.0')
@@ -138,10 +160,18 @@ class PluginsFacadeTest extends Specification {
         then:
         result == [ new PluginSpec('nf-google','2.0.0') ]
 
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([cloudcache:[enabled:true]])
+        then:
+        result == [ new PluginSpec('nf-cloudcache', '0.1.0') ]
+
     }
 
     def 'should return default plugins given config' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
@@ -180,10 +210,14 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return default plugins given workdir' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
@@ -221,10 +255,14 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return default plugins given bucket dir' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
@@ -262,6 +300,8 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should get plugins list from env' () {
@@ -281,7 +321,7 @@ class PluginsFacadeTest extends Specification {
         plugins.size()==4
         plugins.find { it.id == 'nf-amazon' && it.version=='0.1.0' }    // <-- version from default
         plugins.find { it.id == 'nf-tower' && it.version=='1.0.1' }     // <-- version from the env var
-        plugins.find { it.id == 'nf-foo' && it.version=='2.2.0' }       // <-- version from tne env var
+        plugins.find { it.id == 'nf-foo' && it.version=='2.2.0' }       // <-- version from the env var
         plugins.find { it.id == 'nf-bar' && it.version==null }          // <-- no version 
     }
 

@@ -20,7 +20,7 @@ See the [Application Default Credentials](https://github.com/googleapis/google-a
 
 Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify location of the Google credentials file.
 
-If you don't have it, the credentials file can be download from the Google Cloud Console following these steps:
+If you don't have it, the credentials file can be downloaded from the Google Cloud Console following these steps:
 
 - Open the [Google Cloud Console](https://console.cloud.google.com)
 - Go to APIs & Services → Credentials
@@ -35,32 +35,21 @@ Then, define the following variable replacing the path in the example with the o
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 ```
 
+See [Get started with Nextflow on Google Cloud Batch](https://www.nextflow.io/blog/2023/nextflow-with-gbatch.html) for more information on how to use Google Cloud Batch, 
+including how to set the required roles for your service account.
+
 (google-batch)=
 
 ## Cloud Batch
+
+:::{versionadded} 22.07.1-edge
+:::
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
 Nextflow provides built-in support for Google Cloud Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded to the Cloud Batch service.
 
 Read the {ref}`Google Cloud Batch executor <google-batch-executor>` section to learn more about the `google-batch` executor in Nextflow.
-
-### Requirements
-
-The support for Google Batch requires Nextflow version `22.07.1-edge` or later. If you have already Nextflow installed make sure to update to the latest edge release using these commands:
-
-```bash
-export NXF_EDGE=1
-nextflow self-update
-```
-
-If you don't have Nextflow, install it with command below:
-
-```bash
-curl get.nextflow.io | bash
-```
-
-when done, make sure to use the latest edge release running the snippet in the previous paragraph.
 
 (google-batch-config)=
 
@@ -100,43 +89,98 @@ Notes:
 
 Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
 
+(google-batch-process)=
+
 ### Process definition
 
-Processes can be defined as usual and by default the `cpus` and `memory` directives are used to find the cheapest machine type available at current location that fits the requested resources. If `memory` is not specified, 1GB of memory is allocated per cpu.
+By default, the `cpus` and `memory` directives are used to find the cheapest machine type that is available at the current
+location and that fits the requested resources. If `memory` is not specified, 1 GB of memory is allocated per CPU.
 
-As of version `23.02.0-edge`, the process `machineType` directive can be a list of patterns separated by comma. The pattern can contain a `*` to match any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
-
-Alternatively it can also be used to define a specific predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or a custom machine type.
-
-Examples:
+The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute
+Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
 ```groovy
-process automatic_resources_task {
+process myTask {
     cpus 8
     memory '40 GB'
 
     """
-    <Your script here>
+    your_command --here
     """
 }
 
-process allowing_some_series {
+process anotherTask {
+    machineType 'n1-highmem-8'
+
+    """
+    your_command --here
+    """
+}
+```
+
+:::{versionadded} 23.02.0-edge
+:::
+
+The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
+number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
+
+```groovy
+process myTask {
     cpus 8
     memory '20 GB'
     machineType 'n2-*,c2-*,m3-*'
 
     """
-    <Your script here>
+    your_command --here
     """
 }
+```
 
-process predefined_resources_task {
-    machineType 'n1-highmem-8'
+:::{versionadded} 23.12.0-edge
+:::
+
+The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
+specified as `template://<instance-template>`. For example:
+
+```groovy
+process myTask {
+    cpus 8
+    memory '20 GB'
+    machineType 'template://my-template'
 
     """
-    <Your script here>
+    your_command --here
     """
 }
+```
+
+:::{note}
+Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
+config options: `cpuPlatform`, `preemptible`, and `spot`.
+:::
+
+To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
+
+To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB.
+See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
+
+
+:::{versionadded} 23.06.0-edge
+:::
+
+The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
+
+Examples:
+
+```groovy
+// set the boot disk size
+disk 100.GB
+
+// mount a persistent disk at '/tmp'
+disk 100.GB, type: 'pd-standard'
+
+// mount a local SSD disk at '/tmp' (should be a multiple of 375 GB)
+disk 375.GB, type: 'local-ssd'
 ```
 
 ### Pipeline execution
@@ -167,20 +211,24 @@ google {
 }
 ```
 
+:::{versionadded} 23.11.0-edge
+:::
+
 Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
 
 ```groovy
 process {
-    errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+    errorStrategy = { task.exitStatus==50001 ? 'retry' : 'terminate' }
     maxRetries = 5
 }
 ```
 
 ### Fusion file system
 
-As of version `23.02.0-edge`, the Google Batch executor supports the use of {ref}`fusion-page`.
+:::{versionadded} 23.02.0-edge
+:::
 
-Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
+The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
 
 To enable the use of Fusion file system in your pipeline, add the following snippet to your Nextflow configuration file:
 
@@ -191,15 +239,18 @@ process.scratch = false
 tower.accessToken = '<YOUR ACCESS TOKEN>'
 ```
 
-The [Tower](https://cloud.tower.nf) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
+The [Seqera Platform](https://seqera.io) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
 
-:::{tip}
-When Fusion is enabled, by default, only machine types that can attach local SSD disks will be used. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
+By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
+
+:::{versionadded} 23.06.0-edge
 :::
+
+The `disk` directive can be used to override the disk requested by Fusion. See the {ref}`Process definition <google-batch-process>` section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
 
 ### Supported directives
 
-The integration with Google Batch is a developer preview feature. Currently the following Nextflow directives are supported:
+The integration with Google Batch is a developer preview feature. Currently, the following Nextflow directives are supported:
 
 - {ref}`process-accelerator`
 - {ref}`process-container`
@@ -215,9 +266,8 @@ The integration with Google Batch is a developer preview feature. Currently the 
 
 ## Cloud Life Sciences
 
-### Requirements
-
-The support for Google Cloud requires Nextflow version `20.01.0-edge` or later.
+:::{versionadded} 20.01.0-edge
+:::
 
 :::{note}
 In versions of Nextflow prior to `21.04.0`, the following variables must be defined in your system environment:
@@ -235,7 +285,7 @@ Nextflow provides built-in support for Cloud Life Sciences, allowing the seamles
 Read the {ref}`Google Life Sciences executor <google-lifesciences-executor>` page to learn about the `google-lifesciences` executor in Nextflow.
 
 :::{warning}
-This API works well for coarse-grained workloads (i.e. long running jobs). It's not suggested the use this feature for pipelines spawning many short lived tasks.
+This API works well for coarse-grained workloads (i.e. long-running jobs). It's not suggested the use this feature for pipelines spawning many short lived tasks.
 :::
 
 (google-lifesciences-config)=
@@ -380,7 +430,7 @@ The Google Storage path needs to contain at least one sub-directory (e.g. `gs://
 
 - Compute resources in Google Cloud are subject to [resource quotas](https://cloud.google.com/compute/quotas), which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. You can initially request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
 
-- Currently it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
+- Currently, it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
 
 ### Troubleshooting
 

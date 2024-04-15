@@ -72,4 +72,20 @@ class S3PathTest extends Specification {
         's3:///foo/'        | 'foo'
         's3:///foo/bar'     | 'foo'
     }
+
+    @Unroll
+    def 'should normalise path' () {
+        expect:
+        FileHelper.asPath(PATH).normalize() == FileHelper.asPath(EXPECTED)
+
+        where:
+        PATH                        | EXPECTED
+        's3://foo'                  | 's3://foo'
+        's3://foo/x/y/z.txt'        | 's3://foo/x/y/z.txt'
+        's3://foo/x/y/./z.txt'      | 's3://foo/x/y/z.txt'
+        's3://foo/x/y/../z.txt'     | 's3://foo/x/z.txt'
+        's3://foo/x/y/../../z.txt'  | 's3://foo/z.txt'
+        's3://foo/x/y//z.txt'       | 's3://foo/x/y/z.txt'
+        's3://foo/./z.txt'          | 's3://foo/z.txt'
+    }
 }

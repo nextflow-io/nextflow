@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
     static FusionScriptLauncher create(TaskBean bean, String scheme) {
 
-        final buckets = new HashSet(10)
         final remoteWorkDir = bean.workDir
 
         // map bean work and target dirs to container mount
@@ -63,12 +62,12 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
         if( bean.scratch==null )
-            bean.scratch = true
+            bean.scratch = false
 
-        return new FusionScriptLauncher(bean, scheme, remoteWorkDir, buckets)
+        return new FusionScriptLauncher(bean, scheme, remoteWorkDir)
     }
 
-    FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir, Set<String> buckets) {
+    FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir) {
         super(bean)
         // keep track the google storage work dir
         this.scheme = scheme
@@ -109,6 +108,11 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     @Override
     protected Path targetInputFile() {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
+    }
+
+    @Override
+    protected Path targetStageFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_STAGE)
     }
 
     List<String> fusionSubmitCli(TaskRun task) {

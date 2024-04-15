@@ -70,8 +70,10 @@ class AzureConfigTest extends Specification {
 
         and:
         cfg.batch().endpoint == null
+        cfg.batch().terminateJobsOnCompletion == true
         cfg.batch().deleteJobsOnCompletion == null
         cfg.batch().deletePoolsOnCompletion == null
+        cfg.batch().deleteTasksOnCompletion == null
         cfg.batch().location == null
         cfg.batch().autoPoolMode == null
         cfg.batch().allowPoolCreation == null
@@ -99,20 +101,29 @@ class AzureConfigTest extends Specification {
                                              endpoint: ENDPOINT,
                                              location: LOCATION,
                                              autoPoolMode: true,
-                                             allowPoolCreation: true,                                            deleteJobsOnCompletion: false,
+                                             allowPoolCreation: true,
+                                             terminateJobsOnCompletion: false,
+                                             deleteJobsOnCompletion: true,
                                              deletePoolsOnCompletion: true,
-                                             pools: [ myPool: [
-                                                     vmType: 'Foo_A1',
-                                                     autoScale: true,
-                                                     vmCount: 5,
-                                                     maxVmCount: 50,
-                                                     fileShareRootPath: '/somewhere/over/the/rainbow',
-                                                     privileged: true,
-                                                     runAs: 'root',
-                                                     scaleFormula: 'x + y + z',
-                                                     scaleInterval:  '15 min',
-                                                     schedulePolicy: 'pack' ]]
-                                     ]] ]
+                                             deleteTasksOnCompletion: false,
+                                             pools: [ 
+                                                myPool: [
+                                                    vmType: 'Foo_A1',
+                                                    autoScale: true,
+                                                    vmCount: 5,
+                                                    maxVmCount: 50,
+                                                    fileShareRootPath: '/somewhere/over/the/rainbow',
+                                                    privileged: true,
+                                                    runAs: 'root',
+                                                    scaleFormula: 'x + y + z',
+                                                    scaleInterval:  '15 min',
+                                                    schedulePolicy: 'pack',
+                                                    startTask: [ script: 'echo hello-world', privileged: true ]
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
         }
 
         when:
@@ -124,8 +135,10 @@ class AzureConfigTest extends Specification {
         cfg.batch().location == LOCATION
         cfg.batch().autoPoolMode == true
         cfg.batch().allowPoolCreation == true
-        cfg.batch().deleteJobsOnCompletion == false
+        cfg.batch().terminateJobsOnCompletion == false
+        cfg.batch().deleteJobsOnCompletion == true
         cfg.batch().deletePoolsOnCompletion == true
+        cfg.batch().deleteTasksOnCompletion == false
         cfg.batch().canCreatePool()
         and:
         cfg.batch().pool('myPool').vmType == 'Foo_A1'
@@ -138,6 +151,8 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
         cfg.batch().pool('myPool').privileged == true
         cfg.batch().pool('myPool').runAs == 'root'
+        cfg.batch().pool('myPool').startTask.script == 'echo hello-world'
+        cfg.batch().pool('myPool').startTask.privileged == true
     }
 
     def 'should get azure batch endpoint from account and location' () {
@@ -164,7 +179,7 @@ class AzureConfigTest extends Specification {
         cfg.batch().location == LOCATION
     }
 
-	def 'should get azure batch file share root point' () {
+    def 'should get azure batch file share root point' () {
 
         given:
         def KEY = 'xyz1343'
@@ -181,12 +196,12 @@ class AzureConfigTest extends Specification {
                                      endpoint: ENDPOINT,
                                      location: LOCATION,
                                      pools: [
-            		                     myPool1: [ fileShareRootPath: '/somewhere/over/the/rainbow' ],
-            		                     myPool2: [ sku:'batch.node.centos 8' ],
-            		                     myPool3: [ sku:'batch.node.ubuntu 20.04' ],
-            		                     myPool4: [ sku:'batch.node.debian 10', fileShareRootPath: '/mounting/here' ],
-            		                     myPool5: [ : ]]
-            	                 ]] ]
+                                         myPool1: [ fileShareRootPath: '/somewhere/over/the/rainbow' ],
+                                         myPool2: [ sku:'batch.node.centos 8' ],
+                                         myPool3: [ sku:'batch.node.ubuntu 20.04' ],
+                                         myPool4: [ sku:'batch.node.debian 10', fileShareRootPath: '/mounting/here' ],
+                                         myPool5: [ : ]]
+                                 ]] ]
         }
         def cfg = AzConfig.getConfig(session)
         then:

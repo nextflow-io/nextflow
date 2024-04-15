@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,18 +84,6 @@ class ChannelEx {
     }
 
     /**
-     * Close a dataflow queue channel binding a {@link Channel#STOP} item
-     *
-     * @param source The source dataflow channel to be closed.
-     */
-    @Deprecated
-    static DataflowWriteChannel close(DataflowWriteChannel source) {
-        if( NF.isDsl2() )
-            throw new DeprecationException("Channel `close` method is not supported anymore")
-        return CH.close0(source)
-    }
-
-    /**
      * INTERNAL ONLY API
      * <p>
      * Add the {@code update} method to an {@code Agent} so that it call implicitly
@@ -113,9 +101,6 @@ class ChannelEx {
     }
 
     static private void checkContext(String method, Object operand) {
-        if( !NF.isDsl2() )
-            throw new MissingMethodException(method, operand.getClass())
-
         if( operand instanceof ComponentDef && !ExecutionStack.withinWorkflow() )
             throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
     }

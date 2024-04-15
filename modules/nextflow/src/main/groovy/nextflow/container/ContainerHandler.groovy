@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -66,8 +67,11 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
+                return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
@@ -75,8 +79,11 @@ class ContainerHandler {
             final normalizedImageName = normalizeApptainerImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
+                return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createApptainerCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
@@ -84,6 +91,8 @@ class ContainerHandler {
             // if the imagename starts with '/' it's an absolute path
             // otherwise we assume it's in a remote registry and pull it from there
             final requiresCaching = !imageName.startsWith('/')
+            if( ContainerInspectMode.active() && requiresCaching )
+                return imageName
             final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
             return Escape.path(result)
         }
@@ -187,7 +196,7 @@ class ContainerHandler {
     }
 
 
-    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:\. ]+:\/\/(.*)/
+    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:. ]+:\/\/(.*)/
 
     /**
      * Normalize Singularity image name resolving the absolute path or

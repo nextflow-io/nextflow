@@ -17,6 +17,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.common.StorageSharedKeyCredential
+import nextflow.Global
+import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.trace.TraceHelper
 import spock.lang.IgnoreIf
@@ -43,8 +45,13 @@ class AzNioTest extends Specification implements AzBaseSpec {
         def credential = new StorageSharedKeyCredential(accountName, accountKey);
         def  endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
         storageClient = new BlobServiceClientBuilder().endpoint(endpoint).credential(credential).buildClient();
+        and:
+        Global.session = Mock(Session) { getConfig()>>Map.of() }
     }
 
+    def cleanupSpec() {
+        Global.session = null
+    }
 
     def 'should create a blob' () {
         given:

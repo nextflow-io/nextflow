@@ -1,8 +1,8 @@
 (amazons3-page)=
 
-# Amazon S3 storage
+# AWS S3 storage
 
-Nextflow includes support for Amazon S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
+Nextflow includes support for AWS S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
 
 ## S3 path
 
@@ -24,10 +24,10 @@ See the {ref}`script-file-io` section to learn more about available file operati
 
 ## Security credentials
 
-Amazon access credentials can be provided in two ways:
+AWS access credentials can be provided in two ways:
 
 1. Using AWS access and secret keys in your pipeline configuration.
-2. Using IAM roles to grant access to S3 storage on Amazon EC2 instances.
+2. Using IAM roles to grant access to S3 storage on AWS EC2 instances.
 
 ### AWS access and secret keys
 
@@ -52,23 +52,45 @@ If the access credentials are not found in the above file, Nextflow looks for AW
 
 More information regarding [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html) are available in the AWS documentation.
 
-### IAM roles with Amazon EC2 instances
+### IAM roles with AWS EC2 instances
 
 When running your pipeline in an EC2 instance, IAM roles can be used to grant access to AWS resources.
 
 In this scenario, you only need to launch the EC2 instance with an IAM role which includes the `AmazonS3FullAccess` policy. Nextflow will detect and automatically acquire the permission to access S3 storage, without any further configuration.
 
-Learn more about [Using IAM Roles to Delegate Permissions to Applications that Run on Amazon EC2](http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-usingrole-ec2instance.html) in the Amazon documentation.
+Learn more about [Using IAM Roles to Delegate Permissions to Applications that Run on AWS EC2](http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-usingrole-ec2instance.html) in the AWS documentation.
 
 ## China regions
 
 To use an AWS China region, make sure to specify the corresponding AWS API S3 endpoint in the Nextflow configuration file as shown below:
 
 ```groovy
-aws.client.endpoint = "https://s3.cn-north-1.amazonaws.com.cn"
+aws { 
+    client {
+        endpoint = "https://s3.cn-north-1.amazonaws.com.cn"        
+    }
+}
 ```
 
 Read more about AWS API endpoints in the [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/s3.html)
+
+## S3-compatible storage
+
+To use S3-compatible object storage such as [Ceph](https://ceph.io) or [Minio](https://min.io) specify the endpoint of 
+your storage provider and enable the [S3 path style access](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access) 
+in your Nextflow configuration as shown below:
+
+
+```groovy
+aws {
+    accessKey = '<Your access key>'
+    secretKey = '<Your secret key>'
+    client {
+        endpoint = '<Your storage endpoint URL>'
+        s3PathStyleAccess = true
+    }
+}
+```
 
 ## Advanced configuration
 

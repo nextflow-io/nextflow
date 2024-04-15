@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
 
         when:
         channel = dsl_eval("""
-            Channel.from([['sample_id', file("$file1"), file("$file2")]]).splitFastq(by:1, pe:true)
+            Channel.of(['sample_id', file("$file1"), file("$file2")]).splitFastq(by:1, pe:true)
         """)
 
         result = channel.val
