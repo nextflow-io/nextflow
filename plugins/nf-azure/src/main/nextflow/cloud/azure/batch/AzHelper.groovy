@@ -155,7 +155,7 @@ class AzHelper {
     }
 
     static String generateAccountSas(BlobServiceClient client, Duration duration) {
-        final expiryTime = OffsetDateTime.now().plusSeconds(duration.toSeconds());
+        final expiryTime = OffsetDateTime.now().plusSeconds(duration.toSeconds())
         final signature = new AccountSasSignatureValues(
                 expiryTime,
                 ACCOUNT_PERMS,
@@ -174,8 +174,8 @@ class AzHelper {
     static synchronized BlobServiceClient getOrCreateBlobServiceWithKey(String accountName, String accountKey) {
         log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
 
-        final credential = new StorageSharedKeyCredential(accountName, accountKey);
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+        final credential = new StorageSharedKeyCredential(accountName, accountKey)
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
@@ -192,7 +192,7 @@ class AzHelper {
 
         log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
 
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
@@ -204,16 +204,16 @@ class AzHelper {
     static synchronized BlobServiceClient getOrCreateBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
         log.debug "Creating Azure Blob storage client using Service Principal credentials"
 
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
-        final servicePrincipalBasedCred = new ClientSecretCredentialBuilder()
+        final credential = new ClientSecretCredentialBuilder()
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .tenantId(tenantId)
                 .build()
 
         return new BlobServiceClientBuilder()
-                .credential(servicePrincipalBasedCred)
+                .credential(credential)
                 .endpoint(endpoint)
                 .buildClient()
     }
