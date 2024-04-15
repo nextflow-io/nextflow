@@ -1,5 +1,13 @@
 nf-google changelog
 ===================
+1.12.0 - 15 Apr 2024
+- Add custom jobName for Google Batch [df40d55f]
+- Add retry policy to Google Batch client [c4981dcc]
+- Improve error message when Google creds file is corrupted [ci fast] [a550e52f]
+- Fix support for GCS requester pays bucket option [d9d61cff]
+- Fix failing CI tests (#4861) [1c0e648e]
+- Bump groovy 4.0.21 [9e08390b]
+
 1.11.0 - 5 Feb 2024
 - Bump Groovy 4 (#4443) [9d32503b]
 
