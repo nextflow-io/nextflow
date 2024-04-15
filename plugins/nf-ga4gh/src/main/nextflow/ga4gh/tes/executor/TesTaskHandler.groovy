@@ -185,7 +185,18 @@ class TesTaskHandler extends TaskHandler {
             throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
 
         final exec = new TesExecutorModel()
-        exec.command = List.of('/bin/bash', '-c', "${BashWrapperBuilder.BASH} ${wrapperFile.getName()} &> ${TaskRun.CMD_LOG}".toString())
+        String tes_end_point = executor.getEndpoint()
+        if ( tes_end_point.contains('azure.com') ) {
+            String azure_work = WORK_DIR.replace("/", "")
+            final result = new ArrayList(BashWrapperBuilder.BASH)
+            String bashAsString = result.join(' ')
+            exec.command = List.of('/bin/bash', '-c', "${bashAsString} ${azure_work}/${wrapperFile.getName()} &> ${azure_work}/${TaskRun.CMD_LOG}".toString())
+
+        }
+        else 
+            exec.command = List.of('/bin/bash', '-c', "${BashWrapperBuilder.BASH} ${wrapperFile.getName()} &> ${TaskRun.CMD_LOG}".toString())
+
+
         exec.image = task.container
         exec.workdir = WORK_DIR
 
