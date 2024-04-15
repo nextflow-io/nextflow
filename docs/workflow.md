@@ -377,7 +377,7 @@ In the above example, the output `results` of process `foo` is published to the 
 In a process, any output with an `emit` name can be published. In a workflow, any channel defined in the workflow, including process and subworkflow outputs, can be published.
 
 :::{note}
-A process/workflow output (e.g. `foo.out`) can only be published directly if it contains a single output channel. Multi-channel outputs must be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
+If a process/workflow output (e.g. `foo.out`) contains multiple channels, each channel will be published. Individual output channels can also be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
 :::
 
 As shown in the example, workflows can override the publish targets of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.

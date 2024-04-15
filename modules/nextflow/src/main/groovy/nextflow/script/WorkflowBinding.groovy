@@ -161,9 +161,8 @@ class WorkflowBinding extends Binding  {
     }
 
     void _publish_target(ChannelOut out, String name) {
-        if( out.size() != 1 )
-            throw new IllegalArgumentException("Cannot publish a multi-channel output")
-        _publish_target(out[0], name)
+        for( final ch : out )
+            _publish_target(ch, name)
     }
 
 }

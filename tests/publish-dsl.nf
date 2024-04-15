@@ -68,8 +68,7 @@ workflow {
   foo()
 
   publish:
-  align.out[0]    >> 'data'
-  align.out[1]    >> 'data'
+  align.out       >> 'data'
   my_combine.out  >> 'more/data'
   foo.out         >> 'data'
 }
