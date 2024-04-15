@@ -437,7 +437,11 @@ results/
 ```
 
 :::{note}
-The trailing slash in the target name is not required; it is only used to denote that the target name is intended to be used as the publish path. In general, the target name can be any string, but it should be a valid path name when using the default publishing behavior. 
+The trailing slash in the target name is not required; it is only used to denote that the target name is intended to be used as the publish path.
+:::
+
+:::{warning}
+The target name must not begin with a slash (`/`), it should be a relative path name.
 :::
 
 Publish targets can also be customized in the publish definition using a set of options similar to the {ref}`process-publishdir` directive.

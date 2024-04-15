@@ -141,7 +141,11 @@ class PublishDsl {
         final opts = defaults + overrides
         if( opts.containsKey('ignoreErrors') )
             opts.failOnError = !opts.remove('ignoreErrors')
-        opts.path = directory.resolve(opts.path as String ?: name)
+
+        final path = opts.path as String ?: name
+        if( path.startsWith('/') )
+            throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should be a relative path")
+        opts.path = directory.resolve(path)
         return opts
     }
 
