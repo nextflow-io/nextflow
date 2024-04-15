@@ -324,6 +324,10 @@ The fully qualified process name can be used as a {ref}`process selector <config
 :::{versionadded} 24.04.0
 :::
 
+:::{note}
+This feature requires the `nextflow.preview.publish` feature flag to be enabled.
+:::
+
 A script may define the set of outputs that should be published by the implicit workflow, known as the workflow publish definition:
 
 ```groovy

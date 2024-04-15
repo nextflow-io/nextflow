@@ -20,6 +20,7 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
@@ -123,6 +124,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected publish(Closure closure) {
+        if( !NF.publishDefinitionEnabled )
+            throw new IllegalStateException("Workflow publish definition requires the `nextflow.preview.publish` feature flag")
         if( !entryFlow )
             throw new IllegalStateException("Workflow publish definition must be defined after the anonymous workflow")
         if( ExecutionStack.withinWorkflow() )

@@ -2072,6 +2072,15 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
   - Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
 
+`nextflow.preview.publish`
+
+: :::{versionadded} 24.04.0
+  :::
+
+: *Experimental: may change in a future release.*
+
+: When `true`, enables the use of the {ref}`workflow publish definition <workflow-publish-def>`.
+
 `nextflow.preview.recursion`
 
 : :::{versionadded} 21.11.0-edge
