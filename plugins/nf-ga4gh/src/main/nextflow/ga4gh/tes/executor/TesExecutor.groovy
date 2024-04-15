@@ -102,11 +102,11 @@ class TesExecutor extends Executor implements ExtensionPoint {
 
             session.binDir.eachFileRecurse(FileType.FILES) { file ->
                 file = file.toUriString().replaceAll("${session.binDir}",  "${tempBin.toUriString()}")
-                log.info  "Adding file ${file}"
+                log.debug  "Adding file ${file}"
                 fileList.add(Paths.get(new URI(file)))
             }
         }
-            log.info  "filelist  ${fileList}"
+            log.debug  "filelist  ${fileList}"
             return fileList
         }
 
