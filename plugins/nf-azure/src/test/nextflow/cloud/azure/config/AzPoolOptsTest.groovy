@@ -47,8 +47,8 @@ class AzPoolOptsTest extends Specification {
         !opts.password
         !opts.virtualNetwork
         !opts.lowPriority
-        // !opts.startTask
-        // !opts.startTaskPrivileged
+        !opts.startTask.script
+        !opts.startTask.privileged
     }
 
     def 'should create pool with custom options' () {
