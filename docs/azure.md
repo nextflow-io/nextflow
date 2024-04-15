@@ -438,6 +438,11 @@ azure {
     storage {
         accountName = '<YOUR STORAGE ACCOUNT NAME>'
     }
+
+    batch {
+        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        location = '<YOUR BATCH ACCOUNT LOCATION>'
+    }
 }
 ```
 
