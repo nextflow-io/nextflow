@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+2.4.2 - 15 Apr 2024
+- Improve retry logic for AWS Batch executor [62926c28]
+- Bump groovy 4.0.21 [9e08390b]
+
 2.4.1 - 10 Mar 2024
 - Fix Error while publishing S3 file with blanks [b74c0227]
 - Update copyright info [e3089f0e]
