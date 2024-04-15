@@ -193,7 +193,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
-        publisher.run(session.publishRules)
+        if( publisher )
+            publisher.run(session.publishRules)
         session.notifyAfterWorkflowExecution()
         return ret
     }
