@@ -94,11 +94,11 @@ public class CacheHelper {
 
     private static final Logger log = LoggerFactory.getLogger(CacheHelper.class);
 
-    private static HashFunction DEFAULT_HASHING = Hashing.murmur3_128();
+    private static final HashFunction DEFAULT_HASHING = Hashing.murmur3_128();
 
-    private static int HASH_BITS = DEFAULT_HASHING.bits();
+    private static final int HASH_BITS = DEFAULT_HASHING.bits();
 
-    private static int HASH_BYTES = HASH_BITS / 8;
+    private static final int HASH_BYTES = HASH_BITS / 8;
 
     private static final Map<String,Object> FIRST_ONLY;
 
@@ -124,6 +124,10 @@ public class CacheHelper {
     }
 
     public static Hasher hasher( Hasher hasher, Object value, HashMode mode ) {
+        return hasher( hasher, value, mode, null );
+    }
+
+    public static Hasher hasher( Hasher hasher, Object value, HashMode mode, Path basePath ) {
 
         if( value == null )
             return hasher;
@@ -195,10 +199,10 @@ public class CacheHelper {
             return CacheHelper.hasher(hasher, ((FileHolder) value).getSourceObj(), mode );
 
         if( value instanceof Path )
-            return hashFile(hasher, (Path)value, mode);
+            return hashFile(hasher, (Path)value, mode, basePath);
 
         if( value instanceof java.io.File )
-            return hashFile(hasher, (java.io.File)value, mode);
+            return hashFile(hasher, (java.io.File)value, mode, basePath);
 
         if( value instanceof UUID ) {
             UUID uuid = (UUID)value;
@@ -235,8 +239,8 @@ public class CacheHelper {
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object
      */
-    static private Hasher hashFile( Hasher hasher, java.io.File file, HashMode mode ) {
-        return hashFile(hasher, file.toPath(), mode);
+    static private Hasher hashFile( Hasher hasher, java.io.File file, HashMode mode, Path basePath ) {
+        return hashFile(hasher, file.toPath(), mode, basePath);
     }
 
     /**
@@ -249,7 +253,7 @@ public class CacheHelper {
      *   (full name, size and last update timestamp)
      * @return The updated {@code Hasher} object
      */
-    static private Hasher hashFile( Hasher hasher, Path path, HashMode mode ) {
+    static private Hasher hashFile( Hasher hasher, Path path, HashMode mode, Path basePath ) {
         BasicFileAttributes attrs=null;
         try {
             attrs = Files.readAttributes(path, BasicFileAttributes.class);
@@ -290,7 +294,7 @@ public class CacheHelper {
         if( mode==HashMode.SHA256 && attrs!=null && attrs.isRegularFile() )
             return hashFileSha256(hasher, path, null);
         // default
-        return hashFileMetadata(hasher, path, attrs, mode);
+        return hashFileMetadata(hasher, path, attrs, mode, basePath);
     }
 
 
@@ -379,9 +383,13 @@ public class CacheHelper {
      * @param file file The {@code Path} object to hash
      * @return The updated {@code Hasher} object
      */
-    static private Hasher hashFileMetadata( Hasher hasher, Path file, BasicFileAttributes attrs, HashMode mode ) {
+    static private Hasher hashFileMetadata( Hasher hasher, Path file, BasicFileAttributes attrs, HashMode mode, Path basePath ) {
 
-        hasher = hasher.putUnencodedChars( file.toAbsolutePath().toString() );
+        String filename = basePath != null && file.startsWith(basePath)
+                ? basePath.relativize(file).toString()
+                : file.toAbsolutePath().toString();
+
+        hasher = hasher.putUnencodedChars( filename );
         if( attrs != null ) {
             hasher = hasher.putLong(attrs.size());
             if( attrs.lastModifiedTime() != null && mode != HashMode.LENIENT ) {

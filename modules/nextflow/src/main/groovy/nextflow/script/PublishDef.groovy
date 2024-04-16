@@ -97,6 +97,10 @@ class PublishDsl {
         setDefault('overwrite', value)
     }
 
+    void overwrite(String value) {
+        setDefault('overwrite', value)
+    }
+
     void storageClass(String value) {
         setDefault('storageClass', value)
     }
@@ -174,6 +178,10 @@ class PublishDsl {
         }
 
         void overwrite(boolean value) {
+            setOption('overwrite', value)
+        }
+
+        void overwrite(String value) {
             setOption('overwrite', value)
         }
 

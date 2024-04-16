@@ -483,17 +483,44 @@ Available options:
 : When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
 
 `mode`
-: The file publishing method (default: `'symlink'`). Can be one of the following values:
+: The file publishing method (default: `'symlink'`). The following options are available:
 
-  - `'copy'`: Copy each file into the output directory.
-  - `'copyNoFollow'`: Copy each file into the output directory without following symlinks, i.e. only the link is copied.
-  - `'link'`: Create a hard link in the output directory for each file.
-  - `'move'`: Move each file into the output directory. **Note**: should only be used for files which are not used by downstream processes in the workflow.
-  - `'rellink'`: Create a relative symbolic link in the output directory for each file.
-  - `'symlink'`: Create an absolute symbolic link in the output directory for each output file.
+  `'copy'`
+  : Copy each file into the output directory.
+
+  `'copyNoFollow'`
+  : Copy each file into the output directory without following symlinks, i.e. only the link is copied.
+
+  `'link'`
+  : Create a hard link in the output directory for each file.
+
+  `'move'`
+  : Move each file into the output directory.
+  : Should only be used for files which are not used by downstream processes in the workflow.
+
+  `'rellink'`
+  : Create a relative symbolic link in the output directory for each file.
+
+  `'symlink'`
+  : Create an absolute symbolic link in the output directory for each output file.
 
 `overwrite`
-: When `true` any existing file in the specified folder will be overwritten (default: `true`).
+: When `true` any existing file in the specified folder will be overwritten (default: `'standard'`). The following options are available:
+
+  `false`
+  : Never overwrite existing files.
+
+  `true`
+  : Always overwrite existing files.
+
+  `'deep'`
+  : Overwrite existing files when the file content is different.
+
+  `'lenient'`
+  : Overwrite existing files when the file size is different.
+
+  `'standard'`
+  : Overwrite existing files when the file size or last modified timestamp is different.
 
 `path`
 : Specify the publish path relative to the output directory (default: the target name). Can only be specified within a target definition.
