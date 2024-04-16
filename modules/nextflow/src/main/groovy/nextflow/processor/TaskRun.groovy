@@ -214,8 +214,6 @@ class TaskRun implements Cloneable {
      * @return The actual number of dumped lines into {@code message} buffer
      */
     List<String> dumpStdout(int n = 50) {
-        if( !workDir || workDir.fileSystem!=FileSystems.default )
-            return Collections.<String>emptyList()
 
         try {
             return dumpObject(stdout,n)
@@ -227,8 +225,6 @@ class TaskRun implements Cloneable {
     }
 
     List<String> dumpStderr(int n = 50) {
-        if( !workDir || workDir.fileSystem!=FileSystems.default )
-            return Collections.<String>emptyList()
 
         try {
             return dumpObject(stderr,n)
