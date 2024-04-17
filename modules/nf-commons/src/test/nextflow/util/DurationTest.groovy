@@ -196,18 +196,5 @@ class DurationTest extends Specification {
         Duration.between(start, end) == Duration.of('1sec')
     }
 
-    @Unroll
-    def 'should validate of method' () {
-        expect:
-        Duration.of(STR) == EXPECTED
-        and:
-        Duration.of((Object)STR) == EXPECTED
-
-        where:
-        STR             | EXPECTED
-        '5s'            | new Duration(5 * 1000)
-        '5m'            | new Duration(5 * 60 * 1000)
-        '5h'            | new Duration(5 * 60 * 60 * 1000)
-    }
 
 }

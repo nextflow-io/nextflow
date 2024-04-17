@@ -211,20 +211,6 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         }
     }
 
-    static Duration of( value ) {
-        if( !value )
-            return null
-
-        if( value instanceof Duration )
-            return value
-        if( value instanceof Number )
-            return new Duration(value.toLong())
-        if( value instanceof CharSequence )
-            return new Duration(value.toString().trim())
-
-        throw new IllegalArgumentException("Not a valid duration value: $value")
-    }
-
     static Duration between( Temporal start, Temporal end ) {
         new Duration(java.time.Duration.between(start, end).toMillis())
     }

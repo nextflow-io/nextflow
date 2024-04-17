@@ -166,8 +166,6 @@ class MemoryUnitTest extends Specification {
     def 'should validate to unit method' () {
         expect:
         MemoryUnit.of(STR).toUnit(UNIT) == EXPECT
-        and:
-        MemoryUnit.of((Object)STR).toUnit(UNIT) == EXPECT
         
         where:
         STR         | UNIT  | EXPECT

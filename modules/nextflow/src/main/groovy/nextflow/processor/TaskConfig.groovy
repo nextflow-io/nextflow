@@ -240,42 +240,45 @@ class TaskConfig extends LazyMap implements Cloneable {
         return limits?.get(directive)
     }
 
-    private MemoryUnit getMemoryUnit0(String key) {
-        getMemoryUnit0(get(key), key)
-    }
+    private MemoryUnit getMemory0() {
+        def value = get('memory')
 
-    private MemoryUnit getMemoryUnit0(Object value, String key) {
+        if( !value )
+            return null
+
+        if( value instanceof MemoryUnit )
+            return (MemoryUnit)value
+
         try {
-            return MemoryUnit.of(value)
+            new MemoryUnit(value.toString().trim())
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `$key` value in process definition: $value")
+            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
         }
     }
 
     MemoryUnit getMemory() {
-        def value = getMemoryUnit0('memory')
-        def limit = getMemoryUnit0(getResourceLimit('memory'), 'resourceLimits.memory')
+        final val = getMemory0()
+        final lim = getResourceLimit('memory') as MemoryUnit
+        return val && lim && val > lim ? lim : val
+    }
 
-        if ( value && limit && value > limit )
-            value = limit
+    private DiskResource getDiskResource0() {
+        def value = get('disk')
 
-        return value
+        if( value instanceof Map )
+            return new DiskResource((Map)value)
+
+        if( value != null )
+            return new DiskResource(value)
+
+        return null
     }
 
     DiskResource getDiskResource() {
-        def disk0 = get('disk')
-        if( !disk0 )
-            return null
-
-        def disk = (disk0 instanceof Map) ? disk0 : [request: disk0]
-
-        def value = getMemoryUnit0(disk.request, 'disk')
-        def limit = getMemoryUnit0(getResourceLimit('disk'), 'resourceLimits.disk')
-        if ( value && limit && value > limit )
-            value = limit
-
-        return new DiskResource(request: value, type: disk.type)
+        final val = getDiskResource0()
+        final lim = getResourceLimit('disk') as MemoryUnit
+        return val && lim && val.request > lim ? val.withRequest(lim) : val
     }
 
     MemoryUnit getDisk() {
@@ -283,26 +286,34 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     private Duration getDuration0(String key) {
-        getDuration0(get(key), key)
-    }
+        def value = get(key)
 
-    private Duration getDuration0(Object value, String key) {
+        if( !value )
+            return null
+
+        if( value instanceof Duration )
+            return (Duration)value
+
+        if( value instanceof Number )
+            return new Duration(value as long)
+
         try {
-            return Duration.of(value)
+            new Duration(value.toString().trim())
         }
         catch( Exception e ) {
             throw new AbortOperationException("Not a valid `$key` value in process definition: $value")
         }
+
+    }
+
+    private Duration getTime0() {
+        return getDuration0('time')
     }
 
     Duration getTime() {
-        def value = getDuration0('time')
-        def limit = getDuration0(getResourceLimit('time'), 'resourceLimits.time')
-
-        if ( value && limit && value > limit )
-            value = limit
-
-        return value
+        final val = getTime0()
+        final lim = getResourceLimit('time') as Duration
+        return val && lim && val > lim ? lim : val
     }
 
     Duration getMaxSubmitAwait() {
@@ -313,15 +324,15 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('cpus') != null
     }
 
+    private int getCpus0() {
+        final value = get('cpus')
+        value ? value as int : 1  // note: always return at least 1 cpus
+    }
+
     int getCpus() {
-        def value = get('cpus') as Integer
-        def limit = getResourceLimit('cpus') as Integer
-
-        if ( value && limit && value > limit )
-            value = limit
-
-        // always return at least 1 cpus
-        return value ?: 1
+        final val = getCpus0()
+        final lim = getResourceLimit('cpus') as Integer
+        return val && lim && val > lim ? lim : val
     }
 
     int getMaxRetries() {
