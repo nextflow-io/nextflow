@@ -175,10 +175,12 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
     static MemoryUnit of( value ) {
         if( !value )
             return null
+        if( value instanceof MemoryUnit )
+            return value
+        if( value instanceof CharSequence )
+            return new MemoryUnit(value.toString().trim())
 
-        return value instanceof MemoryUnit
-            ? value
-            : new MemoryUnit(value.toString().trim())
+        throw new IllegalArgumentException("Not a valid memory value: $value")
     }
 
     boolean asBoolean() {

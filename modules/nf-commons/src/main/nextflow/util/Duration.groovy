@@ -217,10 +217,12 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
 
         if( value instanceof Duration )
             return value
+        if( value instanceof Number )
+            return new Duration(value.toLong())
+        if( value instanceof CharSequence )
+            return new Duration(value.toString().trim())
 
-        return value instanceof Number
-            ? new Duration(value as long)
-            : new Duration(value.toString().trim())
+        throw new IllegalArgumentException("Not a valid duration value: $value")
     }
 
     static Duration between( Temporal start, Temporal end ) {
