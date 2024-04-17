@@ -667,6 +667,7 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             // shutdown publish dir executor
+            finalizePoolManager.shutdown(aborted)
             publishPoolManager.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
