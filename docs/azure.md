@@ -248,6 +248,7 @@ When Nextflow is configured to use a pool already available in the Batch account
 
 1. The pool must be declared as `dockerCompatible` (`Container Type` property).
 2. The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow will return an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
+3. Unless you are using [Fusion](./fusion.md), all tasks must have [AzCopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10) available in the path. If `azure.batch.copyToolInstallMode = 'node'` this will require every node to have the azcopy binary located at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
 
 ### Pool autoscaling
 
