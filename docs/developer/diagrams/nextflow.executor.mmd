@@ -2,19 +2,16 @@ classDiagram
     %%
     %% nextflow.executor
     %%
-    ProcessDef --> Executor : run
-    %% ExecutorFactory --> Executor : getExecutor
+    ExecutorFactory --> Executor : getExecutor
 
-    TaskProcessor --* Executor
+    class Executor {
+        name : String
+        monitor : TaskMonitor
+    }
+    Executor --* TaskMonitor
+    Executor --> TaskHandler : submit
 
-    %% class Executor {
-    %%     name : String
-    %%     monitor : TaskMonitor
-    %% }
-    %% Executor --* TaskMonitor
-    %% Executor --> TaskHandler : submit
-
-    %% TaskMonitor <|-- TaskPollingMonitor
+    TaskMonitor <|-- TaskPollingMonitor
 
     class TaskPollingMonitor {
         capacity : int
@@ -23,16 +20,12 @@ classDiagram
         dumpInterval : Duration
     }
 
-    %% TaskPollingMonitor <|-- LocalPollingMonitor
+    TaskPollingMonitor <|-- LocalPollingMonitor
 
     class LocalPollingMonitor {
         maxCpus : int
         maxMemory : long
     }
-
-    %% class TaskHandler {
-    %%     task : TaskRun
-    %% }
 
     Executor <|-- AbstractGridExecutor
     Executor <|-- LocalExecutor
@@ -49,19 +42,10 @@ classDiagram
     %% PbsExecutor <|-- PbsProExecutor
     %% SgeExecutor <|-- CrgExecutor
 
-    LocalExecutor --> LocalPollingMonitor : init
-    LocalExecutor --> LocalTaskHandler : submit
-    LocalExecutor --> NativeTaskHandler : submit
-    LocalTaskHandler --> BashWrapperBuilder : submit
-
-    AbstractGridExecutor --> TaskPollingMonitor : init
-    AbstractGridExecutor --> GridTaskHandler : submit
-    GridTaskHandler --> BashWrapperBuilder : submit
-
     %% TaskHandler <|-- CachedTaskHandler
-    %% TaskHandler <|-- GridTaskHandler
-    %% TaskHandler <|-- LocalTaskHandler
-    %% TaskHandler <|-- NativeTaskHandler
+    TaskHandler <|-- GridTaskHandler
+    TaskHandler <|-- LocalTaskHandler
+    TaskHandler <|-- NativeTaskHandler
     %% TaskHandler <|-- NopeTaskHandler
     %% TaskHandler <|-- StoredTaskHandler
 

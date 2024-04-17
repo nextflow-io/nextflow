@@ -4,7 +4,7 @@ process myTask {
 
     script:
     '''
-    FOO=$(ls -a)
+    FOO=$(ls -a1)
     '''
 }
 

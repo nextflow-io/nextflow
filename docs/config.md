@@ -414,6 +414,16 @@ The following settings are available:
 : *New in `nf-azure` version `0.11.0`*
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
+`azure.batch.pools.<name>.startTask.script`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Specify the `startTask` that is executed as the node joins the Azure Batch node pool.
+
+`azure.batch.pools.<name>.startTask.privileged`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Enable the `startTask` to run with elevated access (default: `false`).
+
 `azure.batch.pools.<name>.virtualNetwork`
 : :::{versionadded} 23.03.0-edge
   :::
