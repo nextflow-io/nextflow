@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,22 @@ class WaveFactoryTest extends Specification {
         [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]] | 1
     }
 
+    @Unroll
+    def 'should check s5cmd is enabled' () {
+        given:
+        def factory = new WaveFactory()
+
+        expect:
+        factory.isAwsBatchFargateMode(CONFIG) == EXPECTED
+        
+        where:
+        CONFIG                                  | EXPECTED
+        [:]                                     | false
+        [aws:[batch:[platformType:'foo']]]       | false
+        [aws:[batch:[platformType:'fargate']]]   | true
+        [aws:[batch:[platformType:'Fargate']]]   | true
+
+    }
     def 'should fail when wave is disabled' () {
         given:
         def CONFIG = [wave:[:], fusion:[enabled:true]]
@@ -64,7 +80,7 @@ class WaveFactoryTest extends Specification {
 
     def 'should not fail when wave is disabled' () {
         given:
-        SysEnv.push(NXF_DISABLE_WAVE_REQUIREMENT: 'true')
+        SysEnv.push(NXF_DISABLE_WAVE_SERVICE: 'true')
         def CONFIG = [wave:[:], fusion:[enabled:true]]
         def session = Mock(Session) { getConfig() >> CONFIG }
         def factory = new WaveFactory()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AnonymousAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-
 /**
  * AWS credentials provider that delegates the credentials to the
  * specified provider class and fallback to the {@link AnonymousAWSCredentials}
@@ -39,18 +38,22 @@ class S3CredentialsProvider implements AWSCredentialsProvider {
 
     private AWSCredentialsProvider target
 
+    private volatile AWSCredentials anonymous
+
     S3CredentialsProvider(AWSCredentialsProvider target) {
         this.target = target
     }
 
     @Override
     AWSCredentials getCredentials() {
+        if( anonymous!=null )
+            return anonymous
         try {
             return target.getCredentials();
         } catch (AmazonClientException e) {
             log.debug("No AWS credentials available - falling back to anonymous access");
         }
-        return new AnonymousAWSCredentials()
+        return anonymous=new AnonymousAWSCredentials()
     }
 
     @Override

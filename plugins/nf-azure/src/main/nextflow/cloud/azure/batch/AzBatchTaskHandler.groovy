@@ -130,7 +130,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     private Boolean shouldDelete() {
-        executor.config.batch().deleteJobsOnCompletion
+        executor.config.batch().deleteTasksOnCompletion
     }
 
     protected void deleteTask(AzTaskKey taskKey, TaskRun task) {
@@ -138,7 +138,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             return
 
         if( !task.isSuccess() && shouldDelete()==null ) {
-            // do not delete successfully executed pods for debugging purpose
+            // preserve failed tasks for debugging purposes, unless deletion is explicitly enabled
             return
         }
 

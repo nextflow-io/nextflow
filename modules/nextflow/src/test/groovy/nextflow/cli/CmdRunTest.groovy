@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,9 +49,13 @@ class CmdRunTest extends Specification {
         'false'     | false
         'foo'       | 'foo'
         '10'        | 10i
+        '-10'       | -10i
         '20.00'     | 20i
+        '-20.00'    | -20i
         '3000000000'| 3000000000l
         '20.33'     | 20.33d
+        '-20.33'    | -20.33d
+        '-foo'      | '-foo'
         '--foo'     | '--foo'
         '20x0'      | '20x0'
         '20.d'      | '20.d'
@@ -168,7 +172,7 @@ class CmdRunTest extends Specification {
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Specified params file does not exists: /missing/path.yml'
+        e.message == 'Specified params file does not exist: /missing/path.yml'
 
         cleanup:
         folder?.delete()

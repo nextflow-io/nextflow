@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -578,6 +578,27 @@ class AssetManagerTest extends Specification {
         and:
         manager.getMainScriptName() == 'workflow.nf'
 
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should download tag specified'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+
+        when:
+        manager.download("v0.1")
+        then:
+        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
     }
 
 }

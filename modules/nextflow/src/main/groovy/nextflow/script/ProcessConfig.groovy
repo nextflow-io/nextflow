@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package nextflow.script
 
+import static nextflow.util.CacheHelper.*
+
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.NF
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.ConfigParseException
 import nextflow.exception.IllegalConfigException
@@ -30,8 +31,24 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
-import static nextflow.util.CacheHelper.HashMode
-import nextflow.script.params.*
+import nextflow.script.params.CmdEvalParam
+import nextflow.script.params.DefaultInParam
+import nextflow.script.params.DefaultOutParam
+import nextflow.script.params.EachInParam
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.FileOutParam
+import nextflow.script.params.InParam
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutParam
+import nextflow.script.params.OutputsList
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.TupleOutParam
+import nextflow.script.params.ValueInParam
+import nextflow.script.params.ValueOutParam
 
 /**
  * Holds the process configuration properties
@@ -64,6 +81,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'fair',
             'label',
             'machineType',
+            'maxSubmitAwait',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -86,7 +104,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'time',
             // input-output qualifiers
             'file',
-            'set',
             'val',
             'each',
             'env',
@@ -536,12 +553,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new EachInParam(this).bind(obj)
     }
 
-    InParam _in_set( Object... obj ) {
-        final msg = "Input of type `set` is deprecated -- Use `tuple` instead"
-        if( NF.isDsl2() ) throw new DeprecationException(msg)
-        new TupleInParam(this).bind(obj)
-    }
-
     InParam _in_tuple( Object... obj ) {
         new TupleInParam(this).bind(obj)
     }
@@ -579,6 +590,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                 .bind(obj)
     }
 
+    OutParam _out_eval(Object obj ) {
+        new CmdEvalParam(this).bind(obj)
+    }
+
+    OutParam _out_eval(Map opts, Object obj ) {
+        new CmdEvalParam(this)
+            .setOptions(opts)
+            .bind(obj)
+    }
 
     OutParam _out_file( Object obj ) {
         // note: check that is a String type to avoid to force
@@ -604,12 +624,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                     .setOptions(opts)
                     .bind(obj)
         }
-    }
-
-    OutParam _out_set( Object... obj ) {
-        final msg = "Output of type `set` is deprecated -- Use `tuple` instead"
-        if( NF.isDsl2() ) throw new DeprecationException(msg)
-        new TupleOutParam(this) .bind(obj)
     }
 
     OutParam _out_tuple( Object... obj ) {

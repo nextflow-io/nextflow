@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -240,58 +240,73 @@ class TaskConfig extends LazyMap implements Cloneable {
         return limits?.get(directive)
     }
 
-    MemoryUnit getMemory() {
+    private MemoryUnit getMemoryUnit0(String key) {
+        getMemoryUnit0(get(key), key)
+    }
+
+    private MemoryUnit getMemoryUnit0(Object value, String key) {
         try {
-            def value = MemoryUnit.of(get('memory'))
-            def limit = MemoryUnit.of(getResourceLimit('memory'))
-
-            if ( value && limit && value > limit )
-                value = limit
-
-            return value
+            return MemoryUnit.of(value)
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
+            throw new AbortOperationException("Not a valid `$key` value in process definition: $value")
         }
     }
 
+    MemoryUnit getMemory() {
+        def value = getMemoryUnit0('memory')
+        def limit = getMemoryUnit0(getResourceLimit('memory'), 'resourceLimits.memory')
+
+        if ( value && limit && value > limit )
+            value = limit
+
+        return value
+    }
+
     DiskResource getDiskResource() {
-        try {
-            def disk0 = get('disk')
-            if( !disk0 )
-                return null
+        def disk0 = get('disk')
+        if( !disk0 )
+            return null
 
-            def disk = (disk0 instanceof Map) ? disk0 : [request: disk0]
+        def disk = (disk0 instanceof Map) ? disk0 : [request: disk0]
 
-            def value = MemoryUnit.of(disk.request)
-            def limit = MemoryUnit.of(getResourceLimit('disk'))
-            if ( value && limit && value > limit )
-                value = limit
+        def value = getMemoryUnit0(disk.request, 'disk')
+        def limit = getMemoryUnit0(getResourceLimit('disk'), 'resourceLimits.disk')
+        if ( value && limit && value > limit )
+            value = limit
 
-            return new DiskResource(request: value, type: disk.type)
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
-        }
+        return new DiskResource(request: value, type: disk.type)
     }
 
     MemoryUnit getDisk() {
         getDiskResource()?.getRequest()
     }
 
-    Duration getTime() {
+    private Duration getDuration0(String key) {
+        getDuration0(get(key), key)
+    }
+
+    private Duration getDuration0(Object value, String key) {
         try {
-            def value = Duration.of(get('time'))
-            def limit = Duration.of(getResourceLimit('time'))
-
-            if ( value && limit && value > limit )
-                value = limit
-
-            return value
+            return Duration.of(value)
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+            throw new AbortOperationException("Not a valid `$key` value in process definition: $value")
         }
+    }
+
+    Duration getTime() {
+        def value = getDuration0('time')
+        def limit = getDuration0(getResourceLimit('time'), 'resourceLimits.time')
+
+        if ( value && limit && value > limit )
+            value = limit
+
+        return value
+    }
+
+    Duration getMaxSubmitAwait() {
+        return getDuration0('maxSubmitAwait')
     }
 
     boolean hasCpus() {
@@ -384,6 +399,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    String getClusterOptions() {
+        return get('clusterOptions')
+    }
+    
     def getContainer() {
         return get('container')
     }
@@ -415,6 +434,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         else {
             return CmdLineHelper.splitter( opts.toString() )
         }
+    }
+
+    Integer getSubmitAttempt() {
+        get('submitAttempt') as Integer ?: 1
     }
 
     Integer getAttempt() {

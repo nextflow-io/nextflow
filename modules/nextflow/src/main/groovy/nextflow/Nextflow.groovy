@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow
 
 import static nextflow.file.FileHelper.*
 
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -60,7 +61,8 @@ class Nextflow {
     static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
 
         final scheme = splitter.scheme
-        final folder = toCanonicalPath(splitter.parent)
+        final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
+        final folder = toCanonicalPath(target)
         final pattern = splitter.fileName
 
         if( opts == null ) opts = [:]
@@ -405,6 +407,4 @@ class Nextflow {
      */
     static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
 
-    @Deprecated
-    static Closure<TokenMultiMapDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,6 +90,7 @@ class NameGenerator {
             "lethal",
             "lonely",
             "loving",
+            "loquacious",
             "mad",
             "magical",
             "maniac",
@@ -331,6 +332,9 @@ class NameGenerator {
             // Douglas Engelbart gave the mother of all demos: https://en.wikipedia.org/wiki/Douglas_Engelbart
             "engelbart",
 
+            // Maurits Cornelis Escher - Dutch graphic artist who made woodcuts, lithographs, and mezzotints, many of which were inspired by mathematics. His work features mathematical objects and operations including impossible objects, explorations of infinity, reflection, symmetry, perspective, truncated and stellated polyhedra, hyperbolic geometry, and tessellations. https://en.wikipedia.org/wiki/M._C._Escher
+            "escher",
+
             // Euclid invented geometry. https://en.wikipedia.org/wiki/Euclid
             "euclid",
 
@@ -441,7 +445,7 @@ class NameGenerator {
             // A. P. J. Abdul Kalam - is an Indian scientist aka Missile Man of India for his work on the development of ballistic missile and launch vehicle technology. https://en.wikipedia.org/wiki/A._P._J._Abdul_Kalam
             "kalam",
 
-            // Rudolf E. Kálmán, American engineer and mathematican of Hungarian origin. One of the inventors of the smoother/predictor commonly known as "Kalman Filter". https://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n
+            // Rudolf E. Kálmán, American engineer and mathematician of Hungarian origin. One of the inventors of the smoother/predictor commonly known as "Kalman Filter". https://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n
             "kalman",
 
             // Susan Kare, created the icons and many of the interface elements for the original Apple Macintosh in the 1980s, and was an original employee of NeXT, working as the Creative Director. https://en.wikipedia.org/wiki/Susan_Kare
@@ -654,7 +658,7 @@ class NameGenerator {
             // Max Karl Ernst Ludwig Planck was a German theoretical physicist, best known for the discovery of energy quenta and Planck's constant. https://en.wikipedia.org/wiki/Max_Planck
             "planck",
 
-            // Joseph Plateau - Belgian physisist known for being one of the first persons to demonstrate the illusion of moving image. https://en.wikipedia.org/wiki/Joseph_Plateau
+            // Joseph Plateau - Belgian physicist known for being one of the first persons to demonstrate the illusion of moving image. https://en.wikipedia.org/wiki/Joseph_Plateau
             "plateau",
 
             // Henri Poincaré made fundamental contributions in several fields of mathematics. https://en.wikipedia.org/wiki/Henri_Poincar%C3%A9
@@ -786,6 +790,9 @@ class NameGenerator {
             // James Watson - American molecular biologist, geneticist and zoologist, best known as one of the co-discoverers of the structure of DNA. https://en.wikipedia.org/wiki/James_Watson
             "watson",
 
+            // Alfred Wegener - German climatologist, geologist, geophysicist, meteorologist, and polar researcher. Best known for proposing the theory of continental drift, the precursor to plate tectonics. https://en.wikipedia.org/wiki/Alfred_Wegener
+            "wegener",
+        
             // Marlyn Wescoff - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Marlyn_Meltzer
             "wescoff",
 

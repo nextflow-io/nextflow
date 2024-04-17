@@ -25,7 +25,6 @@ import groovy.transform.ToString
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
-
 /**
  * Model the settings of a VM pool
  *
@@ -66,7 +65,9 @@ class AzPoolOpts implements CacheFunnel {
     String password
 
     String virtualNetwork
-
+    boolean lowPriority
+    AzStartTaskOpts startTask
+    
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
@@ -85,10 +86,12 @@ class AzPoolOpts implements CacheFunnel {
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
         this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
+        this.startTask = new AzStartTaskOpts( opts.startTask ? opts.startTask as Map : Map.of() )
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
         this.virtualNetwork = opts.virtualNetwork
+        this.lowPriority = opts.lowPriority as boolean
     }
 
     @Override
@@ -108,6 +111,9 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(scaleFormula ?: '')
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
+        hasher.putBoolean(lowPriority)
+        hasher.putUnencodedChars(startTask.script ?: '')
+        hasher.putBoolean(startTask.privileged)
         return hasher
     }
 

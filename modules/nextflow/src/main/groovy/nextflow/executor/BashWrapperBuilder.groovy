@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package nextflow.executor
+
+import static java.nio.file.StandardOpenOption.*
 
 import java.nio.file.FileSystemException
 import java.nio.file.FileSystems
@@ -35,11 +37,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
-
-import static java.nio.file.StandardOpenOption.*
-
 import nextflow.util.MemoryUnit
-
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -75,9 +73,8 @@ class BashWrapperBuilder {
         /*
          * Env variable `NXF_DEBUG` is used to control debug options in executed BASH scripts
          * - 0: no debug
-         * - 1: dump current environment in the `.command.log` file
-         * - 2: trace the execution of user script adding the `set -x` flag
-         * - 3: trace the execution of wrapper scripts
+         * - 1: dump current environment in the `.command.log` file and trace the execution of user script
+         * - 2: trace the execution of wrapper scripts
          */
         def str = System.getenv('NXF_DEBUG')
         try {
@@ -178,19 +175,76 @@ class BashWrapperBuilder {
         }
     }
 
-    protected String getOutputEnvCaptureSnippet(List<String> names) {
-        def result = new StringBuilder()
-        result.append('\n')
-        result.append('# capture process environment\n')
-        result.append('set +u\n')
-        for( int i=0; i<names.size(); i++) {
-            final key = names[i]
-            result.append "echo $key=\${$key[@]} "
-            result.append( i==0 ? '> ' : '>> ' )
-            result.append(TaskRun.CMD_ENV)
-            result.append('\n')
+    /**
+     * Generate a Bash script to be appended to the task command script
+     * that takes care of capturing the process output environment variables
+     * and evaluation commands
+     *
+     * @param outEnvs
+     *      The list of environment variables names whose value need to be captured
+     * @param outEvals
+     *      The set of commands to be evaluated to determine the output value to be captured
+     * @return
+     *      The Bash script to capture the output environment and eval commands
+     */
+    protected String getOutputEnvCaptureSnippet(List<String> outEnvs, Map<String,String> outEvals) {
+        // load the env template
+        final template = BashWrapperBuilder.class
+            .getResourceAsStream('command-env.txt')
+            .newReader()
+        final binding = Map.of('env_file', TaskRun.CMD_ENV)
+        final result = new StringBuilder()
+        result.append( engine.render(template, binding) )
+        appendOutEnv(result, outEnvs)
+        appendOutEval(result, outEvals)
+        return result.toString()
+    }
+
+    /**
+     * Render a Bash script to capture the one or more env variables
+     *
+     * @param result A {@link StringBuilder} instance to which append the result Bash script
+     * @param outEnvs The environment variables to be captured
+     */
+    protected void appendOutEnv(StringBuilder result, List<String> outEnvs) {
+        if( outEnvs==null )
+            outEnvs = List.<String>of()
+        // out env
+        for( String key : outEnvs ) {
+            result << "#\n"
+            result << "echo $key=\"\${$key[@]}\" >> ${TaskRun.CMD_ENV}\n"
+            result << "echo /$key/ >> ${TaskRun.CMD_ENV}\n"
         }
-        result.toString()
+    }
+
+    /**
+     * Render a Bash script to capture the result of one or more commands
+     * evaluated in the task script context
+     *
+     * @param result
+     *      A {@link StringBuilder} instance to which append the result Bash script
+     * @param outEvals
+     *      A {@link Map} of key-value pairs modeling the commands to be evaluated;
+     *      where the key represents the environment variable (name) holding the
+     *      resulting output, and the pair value represent the Bash command to be
+     *      evaluated.
+     */
+    protected void appendOutEval(StringBuilder result, Map<String,String> outEvals) {
+        if( outEvals==null )
+            outEvals = Map.<String,String>of()
+        // out eval
+        for( Map.Entry<String,String> eval : outEvals ) {
+            result << "#\n"
+            result <<"nxf_eval_cmd STDOUT STDERR bash -c \"${eval.value.replace('"','\\\"')}\"\n"
+            result << 'status=$?\n'
+            result << 'if [ $status -eq 0 ]; then\n'
+            result << "  echo $eval.key=\"\$STDOUT\" >> ${TaskRun.CMD_ENV}\n"
+            result << "  echo /$eval.key/=exit:0 >> ${TaskRun.CMD_ENV}\n"
+            result << 'else\n'
+            result << "  echo $eval.key=\"\$STDERR\" >> ${TaskRun.CMD_ENV}\n"
+            result << "  echo /$eval.key/=exit:\$status >> ${TaskRun.CMD_ENV}\n"
+            result << 'fi\n'
+        }
     }
 
     protected String stageCommand(String stagingScript) {
@@ -198,7 +252,9 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
+        // see https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
@@ -237,9 +293,16 @@ class BashWrapperBuilder {
          */
         final interpreter = TaskProcessor.fetchInterpreter(script)
 
-        if( outputEnvNames ) {
-            if( !isBash(interpreter) ) throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
-            script += getOutputEnvCaptureSnippet(outputEnvNames)
+        /*
+         * append to the command script a prolog to capture the declared
+         * output environment (variable) and evaluation commands
+         */
+        if( outputEnvNames || outputEvals ) {
+            if( !isBash(interpreter) && outputEnvNames )
+                throw new IllegalArgumentException("Process output of type 'env' is only allowed with Bash process scripts -- Current interpreter: $interpreter")
+            if( !isBash(interpreter) && outputEvals )
+                throw new IllegalArgumentException("Process output of type 'eval' is only allowed with Bash process scripts -- Current interpreter: $interpreter")
+            script += getOutputEnvCaptureSnippet(outputEnvNames, outputEvals)
         }
 
         final binding = new HashMap<String,String>(20)
@@ -248,7 +311,7 @@ class BashWrapperBuilder {
         binding.helpers_script = getHelpersScript()
 
         if( runWithContainer ) {
-            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"'
+            binding.container_boxid = 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A | tr -d \'\\r\\n\')"'
             binding.container_helpers = containerBuilder.getScriptHelpers()
             binding.kill_cmd = containerBuilder.getKillCommand()
         }
@@ -319,7 +382,7 @@ class BashWrapperBuilder {
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
 
         // patch root ownership problem on files created with docker
-        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true" : null
+        binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
@@ -478,9 +541,13 @@ class BashWrapperBuilder {
          */
         if( containerBuilder ) {
             String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
-            if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder )
-                    cmd = 'cd $PWD; ' + cmd
+            // wrap the command with an extra bash invocation either :
+            // - to propagate the container environment or
+            // - to change in the task work directory as required by singularity
+            final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
+            if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
+                if( needChangeTaskWorkDir )
+                    cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
@@ -525,7 +592,7 @@ class BashWrapperBuilder {
     }
 
     String getSyncCmd() {
-        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+        if ( SysEnv.get( 'NXF_ENABLE_FS_SYNC' ) == "true" ) {
             return 'sync || true'
         }
         return null
@@ -582,6 +649,8 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        // export task work directory
+        builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
         if( isTraceRequired() )
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
@@ -589,10 +658,6 @@ class BashWrapperBuilder {
         // add the user owner variable in order to patch root owned files problem
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
-
-        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
-            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
-        }
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)

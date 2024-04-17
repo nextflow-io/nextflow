@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 package nextflow.fusion
 
-
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -85,6 +85,21 @@ class FusionConfigTest extends Specification {
         [logOutput: 'stdout']           | null      | 'stdout'
     }
 
+    def 'should configure cache size' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.cacheSize() == SIZE
+
+        where:
+        OPTS                            | SIZE
+        [:]                             | null
+        [cacheSize: 100]                | MemoryUnit.of(100)
+        [cacheSize: '100']              | MemoryUnit.of(100)
+        [cacheSize: '100.MB']           | MemoryUnit.of('100.MB')
+    }
+
+
     @Unroll
     def 'should configure tags' () {
         given:
@@ -100,5 +115,18 @@ class FusionConfigTest extends Specification {
         [tags:false]            | false     | null
         [tags:'[*.txt](x=1)']   | true      | '[*.txt](x=1)'
 
+    }
+
+    def 'should check privileged flag' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.privileged() == EXPECTED
+
+        where:
+        OPTS                    | EXPECTED
+        [:]                     | true
+        [privileged:true]       | true
+        [privileged:false]      | false
     }
 }

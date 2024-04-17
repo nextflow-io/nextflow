@@ -12,6 +12,7 @@ on:
       - 'master'
       - 'test*'
       - 'dev*'
+      - 'STABLE-*'
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
@@ -24,23 +25,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 17, 19]
+        java_version: [11, 17, 21]
 
     steps:
       - name: Environment
         run: env | sort
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v43
         with:
-          files_ignore: docs
+          files_ignore: docs/**
+
+      - name: List all changed files
+        env:
+            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+            for file in ${ALL_CHANGED_FILES}; do
+                echo "$file was changed"
+            done
 
       - name: Setup env
         if: steps.changed-files.outputs.any_changed == 'true'
@@ -53,7 +62,7 @@ jobs:
 
       - name: Setup Java ${{ matrix.java_version }}
         if: steps.changed-files.outputs.any_changed == 'true'
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{matrix.java_version}}
           distribution: 'temurin'
@@ -66,7 +75,14 @@ jobs:
 
       - name: Test
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: make test
+        run: |
+            # configure test env
+            if [[ "$GOOGLE_SECRET" ]]; then
+            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+            fi
+            # run tests
+            make test
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -81,7 +97,7 @@ jobs:
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
       - name: Publish tests report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: steps.changed-files.outputs.any_changed == 'true' && always()
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
@@ -92,17 +108,17 @@ jobs:
       any_changed: ${{ steps.changed-files.outputs.any_changed }}
 
   test:
-    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
     needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 19]
-        test_mode: ["test_integration", "test_aws", "test_azure", "test_google", "test_wave"]
+        java_version: [11, 21]
+        test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
@@ -116,7 +132,7 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{matrix.java_version}}
           distribution: 'temurin'
@@ -151,7 +167,7 @@ jobs:
         run: tar -cvf integration-tests.tar tests/checks
 
       - name: Publish tests report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}

@@ -6,16 +6,7 @@ get_abs_filename() {
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
-#
-# setup credentials:
-#  1. decrypt credentials file
-#  2. export required env var
-# Note: file was encrypted with the command:
-#  gpg --symmetric --cipher-algo AES256 --output ./google_credentials.gpg $GOOGLE_APPLICATION_CREDENTIALS
-#
-# More details https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets
-#   
-gpg --quiet --batch --yes --decrypt --passphrase=$GOOGLE_SECRET --output google_credentials.json ./google_credentials.gpg
+echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
 export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
 
 [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
