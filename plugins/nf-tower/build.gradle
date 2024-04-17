@@ -31,12 +31,12 @@ configurations {
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.7'
-    compileOnly 'org.pf4j:pf4j:3.4.1'
+    compileOnly 'org.pf4j:pf4j:3.10.0'
 
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.0"
     api "com.fasterxml.jackson.core:jackson-databind:2.12.7.1"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.19"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.19"
+    testImplementation "org.apache.groovy:groovy:4.0.21"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.21"
 }

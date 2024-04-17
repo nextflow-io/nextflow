@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
+import nextflow.cloud.google.config.GoogleStorageOpts
 import nextflow.exception.AbortOperationException
 import nextflow.util.Duration
 /**
@@ -38,7 +40,7 @@ class GoogleOpts {
 
     static final public String DEFAULT_LOCATION = 'us-central1'
 
-    static Map<String,String> env = System.getenv()
+    static Map<String,String> env = SysEnv.get()
 
     private String projectId
     private String location
@@ -46,6 +48,7 @@ class GoogleOpts {
     private boolean enableRequesterPaysBuckets
     private Duration httpConnectTimeout
     private Duration httpReadTimeout
+    private GoogleStorageOpts storageOpts
 
     String getProjectId() { projectId }
     File getCredsFile() { credsFile }
@@ -53,6 +56,16 @@ class GoogleOpts {
     boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
     Duration getHttpConnectTimeout() { httpConnectTimeout }
     Duration getHttpReadTimeout() { httpReadTimeout }
+    GoogleStorageOpts getStorageOpts() { storageOpts }
+
+    GoogleOpts(Map opts) {
+        projectId = opts.project as String
+        location = opts.location as String
+        enableRequesterPaysBuckets = opts.enableRequesterPaysBuckets as boolean
+        httpConnectTimeout = opts.httpConnectTimeout ? opts.httpConnectTimeout as Duration : Duration.of('60s')
+        httpReadTimeout = opts.httpReadTimeout ? opts.httpReadTimeout as Duration : Duration.of('60s')
+        storageOpts = new GoogleStorageOpts( opts.storage as Map ?: Map.of() )
+    }
 
     @Memoized
     static GoogleOpts fromSession(Session session) {
@@ -66,12 +79,7 @@ class GoogleOpts {
     }
 
     protected static GoogleOpts fromSession0(Map config) {
-        final result = new GoogleOpts()
-        result.projectId = config.navigate("google.project") as String
-        result.location = config.navigate("google.location") as String
-        result.enableRequesterPaysBuckets = config.navigate('google.enableRequesterPaysBuckets') as boolean
-        result.httpConnectTimeout = config.navigate('google.httpConnectTimeout', '60s') as Duration
-        result.httpReadTimeout = config.navigate('google.httpReadTimeout', '60s') as Duration
+        final result = new GoogleOpts( config.google as Map ?: Map.of() )
 
         if( result.enableRequesterPaysBuckets && !result.projectId )
             throw new IllegalArgumentException("Config option 'google.enableRequesterPaysBuckets' cannot be honoured because the Google project Id has not been specified - Provide it by adding the option 'google.project' in the nextflow.config file")
@@ -93,6 +101,9 @@ class GoogleOpts {
         }
         catch(FileNotFoundException e) {
             throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
+        }
+        catch (Exception e) {
+            throw new AbortOperationException("Invalid or corrupted Gogole credentials file: $credsFilePath", e)
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.4.9'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.5.8-lunar'
         opts.condaOpts().commands == null
 
         when:
@@ -194,4 +194,50 @@ class WaveConfigTest extends Specification {
         then:
         opts.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(90)
     }
+
+    def 'should dump config' () {
+        given:
+        def config = new WaveConfig([enabled: true])
+        expect:
+        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.8-lunar; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null)'
+    }
+
+    def 'should not allow invalid settinga' () {
+        when:
+        new WaveConfig(endpoint: 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: 'foo'"
+
+        when:
+        new WaveConfig(endpoint: 'ftp://foo.com')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: 'ftp://foo.com'"
+
+        when:
+        new WaveConfig(build: [repository: 'http://foo.com'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Config setting 'wave.build.repository' should not include any protocol prefix - offending value: 'http://foo.com'"
+
+        when:
+        new WaveConfig(build: [cacheRepository: 'http://foo.com'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: 'http://foo.com'"
+    }
+
+    def 'should set preserve timestamp' () {
+        when:
+        def config = new WaveConfig([:])
+        then:
+        !config.preserveFileTimestamp()
+
+        when:
+        config = new WaveConfig(preserveFileTimestamp: true)
+        then:
+        config.preserveFileTimestamp()
+    }
+
 }

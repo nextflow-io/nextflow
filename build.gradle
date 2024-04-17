@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ plugins {
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
 if (groovyVer) {
     def repo = groovyVer.startsWith('com.github.apache:') ? 'https://jitpack.io' : 'https://oss.jfrog.org/oss-snapshot-local/'
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer - repository: $repo"
+    logger.lifecycle "Overridden Groovy dependency to use $groovyVer - repository: $repo"
     allprojects {
         repositories {
             maven { url repo }
@@ -32,7 +32,7 @@ if (groovyVer) {
 
         configurations.all {
             resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.codehaus.groovy') {
+                if (details.requested.group == 'org.apache.groovy') {
                     if( groovyVer.contains(':') )
                         details.useTarget(groovyVer)
                     else
@@ -48,8 +48,15 @@ def projects(String...args) {
     args.collect {project(it)}
 }
 
+String gitVersion() {
+    def p = new ProcessBuilder() .command('sh','-c','git rev-parse --short HEAD') .start()
+    def r = p.waitFor()
+    return r==0 ? p.text.trim() : '(unknown)'
+}
+
 group = 'io.nextflow'
 version = rootProject.file('VERSION').text.trim()
+ext.commitId = gitVersion()
 
 allprojects {
     apply plugin: 'java'
@@ -88,8 +95,8 @@ allprojects {
 
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-cli-picocli'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-cli-picocli'
         // groovydoc libs
         groovyDoc.extendsFrom runtime
     }
@@ -101,15 +108,15 @@ allprojects {
         }
 
         // Documentation required libraries
-        groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.19"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.19"
+        groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.21"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.21"
     }
 
     test {
         useJUnitPlatform()
     }
-    
+
     // this is required due to this IDEA bug
     // https://youtrack.jetbrains.com/issue/IDEA-129282
     sourceSets {
@@ -138,28 +145,27 @@ allprojects {
     }
 
     // Required to run tests on Java 9 and higher in compatibility mode
-    if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
-        tasks.withType(Test) {
-            jvmArgs ([
-                    '--enable-preview',
-                    '--add-opens=java.base/java.lang=ALL-UNNAMED',
-                    '--add-opens=java.base/java.io=ALL-UNNAMED',
-                    '--add-opens=java.base/java.nio=ALL-UNNAMED',
-                    '--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED',
-                    '--add-opens=java.base/java.net=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
-                    '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
-                    '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
-            ])
-        }
+    tasks.withType(Test) {
+        jvmArgs ([
+            '-Dorg.spockframework.mock.ignoreByteBuddy=true',
+            '--enable-preview',
+            '--add-opens=java.base/java.lang=ALL-UNNAMED',
+            '--add-opens=java.base/java.io=ALL-UNNAMED',
+            '--add-opens=java.base/java.nio=ALL-UNNAMED',
+            '--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED',
+            '--add-opens=java.base/java.net=ALL-UNNAMED',
+            '--add-opens=java.base/java.util=ALL-UNNAMED',
+            '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
+            '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
+            '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+            '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
+            '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+            '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
+        ])
     }
 
     /**
@@ -190,32 +196,27 @@ jar.enabled = false
  */
 task buildInfo { doLast {
 
-    def file0 = file('./modules/nf-commons/src/main/nextflow/Const.groovy')
+    def file0 = file('modules/nextflow/src/main/resources/META-INF/build-info.properties')
     def buildNum = 0
     def src = file0.text
-    src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
-    src = src.replaceAll('APP_VER *= *"[0-9a-zA-Z_\\-\\.]+"', "APP_VER = \"${version}\"" as String)
-    src = src.replaceAll('APP_TIMESTAMP *= *[0-9]*', "APP_TIMESTAMP = ${System.currentTimeMillis()}" as String)
-    if( buildNum ) {
-        src = src.replaceAll('APP_BUILDNUM *= *[0-9]*', "APP_BUILDNUM = ${buildNum}" as String)
-    }
-    else {
+    src.find(/build *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
+    if( !buildNum ) {
         println "WARN: Unable to find current build number"
     }
     file0.text = src
+
+    // -- update build-info file
+    file0.text = """\
+    build=${buildNum}
+    version=${version}
+    timestamp=${System.currentTimeMillis()}
+    commitId=${project.property('commitId')}
+    """.stripIndent()
 
     // -- update 'nextflow' wrapper
     file0 = file('nextflow')
     src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
-    file0.text = src
-
-    // -- update sphynx
-    def major = version.split(/\./)[0..1].join('.')
-    file0 = file('docs/conf.py')
-    src = file0.text
-    src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
-    src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
     file0.text = src
 
     // -- update dockerfile
@@ -238,7 +239,6 @@ task buildInfo { doLast {
  * Compile sources and copies all libs to target directory
  */
 task compile {
-    dependsOn buildInfo
     dependsOn allprojects.classes
 }
 
@@ -299,12 +299,12 @@ configure(coreProjects) {
     apply plugin: 'signing'
 
     task javadocJar(type: Jar) {
-        classifier = 'javadoc'
+        archiveClassifier = 'javadoc'
         from configurations.groovyDoc
     }
 
     task sourcesJar(type: Jar) {
-        classifier = 'sources'
+        archiveClassifier = 'sources'
         from sourceSets.main.allSource
     }
 

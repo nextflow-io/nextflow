@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -227,5 +227,26 @@ class TaskHandlerTest extends Specification {
         then:
         timeout
 
+    }
+
+    @Unroll
+    def 'should validate status' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = STATUS
+
+        expect:
+        handler.isNew() == EXPECT_NEW
+        handler.isRunning() == EXPECT_RUNNING
+        handler.isSubmitted() == EXPECT_SUBMITTED
+        handler.isActive() == EXPECTED_ACTIVE
+        handler.isCompleted() == EXPECT_COMPLETE
+        
+        where:
+        STATUS              | EXPECT_NEW  | EXPECT_SUBMITTED | EXPECT_RUNNING | EXPECTED_ACTIVE | EXPECT_COMPLETE
+        TaskStatus.NEW      | true        | false            | false          | false           | false
+        TaskStatus.SUBMITTED| false       | true             | false          | true            | false
+        TaskStatus.RUNNING  | false       | false            | true           | true            | false
+        TaskStatus.COMPLETED| false       | false            | false          | false           | true
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Global
 import nextflow.Session
 import spock.lang.Specification
 import test.TestHelper
@@ -28,6 +29,10 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PublishDirTest extends Specification {
+
+    def setup() {
+        Global.session = Mock(Session) { getConfig()>>[:] }
+    }
 
     def 'should create a publish dir obj'() {
 
@@ -114,7 +119,6 @@ class PublishDirTest extends Specification {
     }
 
     def 'should create symlinks for output files' () {
-
         given:
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,6 +116,27 @@ class GithubRepositoryProviderTest extends Specification {
         expect:
         provider.getUser() == 'this'
         provider.getPassword() == 'that'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should auth using github token' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def provider = Spy(new GithubRepositoryProvider('foo',Mock(ProviderConfig)))
+        and:
+        def conn = Mock(HttpURLConnection)
+
+        when:
+        provider.auth(conn)
+        then:
+        _ * provider.getUser() 
+        _ * provider.getPassword()
+        1 * provider.hasCredentials()
+        and:
+        1 * conn.setRequestProperty('Authorization', "Basic ${'1234567890:x-oauth-basic'.bytes.encodeBase64()}".toString())
 
         cleanup:
         SysEnv.pop()

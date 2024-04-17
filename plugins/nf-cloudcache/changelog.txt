@@ -1,5 +1,19 @@
 nf-cloudcache changelog
 =======================
+0.4.1 - 10 Mar 2024
+- Fix typo in error message [ci fast] [a7f23305]
+- minor cli docstring fix (#4759) [ci skip] [ee4b4a25]
+- Bump groovy 4.0.19 [854dc1f0]
+
+0.4.0 - 5 Feb 2024
+- Bump Groovy 4 (#4443) [9d32503b]
+
+0.3.1 - 24 Nov 2023
+- Fix security vulnerabilities (#4513) [a310c777]
+
+0.3.0 - 10 Oct 2023
+- Add -cloudcache CLI option (#4385) [73fda582]
+
 0.2.0 - 17 Aug 2023
 - Remove lock file from cloudcache (#4167) [6e6ea579]
 - Enable cloud cache based on environment variable (#4160) [a66b0e63]

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,78 +36,102 @@ class CharliecloudBuilderTest extends Specification {
         def path2 = Paths.get('/bar/data/file2')
 
         expect:
-        new CharliecloudBuilder('busybox')
+        new CharliecloudBuilder('/cacheDir/img/busybox')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b "$PWD" busybox --'
+                .runCommand == 'ch-convert -i ch-image --storage /cacheDir busybox "$NXF_TASK_WORKDIR"/container_busybox && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_busybox --'
 
-        new CharliecloudBuilder('busybox')
+        new CharliecloudBuilder('/cacheDir/img/busybox')
                 .params(runOptions: '-j --no-home')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b "$PWD" -j --no-home busybox --'
+                .runCommand == 'ch-convert -i ch-image --storage /cacheDir busybox "$NXF_TASK_WORKDIR"/container_busybox && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" -j --no-home "$NXF_TASK_WORKDIR"/container_busybox --'
         
-        new CharliecloudBuilder('busybox')
+        new CharliecloudBuilder('/cacheDir/img/busybox')
                 .params(temp: '/foo')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b /foo:/tmp -b "$PWD" busybox --'
+                .runCommand == 'ch-convert -i ch-image --storage /cacheDir busybox "$NXF_TASK_WORKDIR"/container_busybox && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b /foo:/tmp -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_busybox --'
 
-        new CharliecloudBuilder('busybox')
+        new CharliecloudBuilder('/cacheDir/img/busybox')
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --set-env -w --set-env=X=1 --set-env=ALPHA=aaa --set-env=BETA=bbb -b "$PWD" busybox --'
+                .runCommand == 'ch-convert -i ch-image --storage /cacheDir busybox "$NXF_TASK_WORKDIR"/container_busybox && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w --set-env=X=1 --set-env=ALPHA=aaa --set-env=BETA=bbb -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_busybox --'
 
-        new CharliecloudBuilder('ubuntu')
+        new CharliecloudBuilder('/cacheDir/img/ubuntu')
                 .addMount(path1)
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b /foo/data/file1 -b "$PWD" ubuntu --'
+                .runCommand == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b /foo/data/file1 -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu --'
 
-        new CharliecloudBuilder('ubuntu')
+        new CharliecloudBuilder('/cacheDir/img/ubuntu')
                 .addMount(path1)
                 .addMount(path2)
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b /foo/data/file1 -b /bar/data/file2 -b "$PWD" ubuntu --'
+                .runCommand == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b /foo/data/file1 -b /bar/data/file2 -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu --'
     }
 
     def db_file = Paths.get('/home/db')
     def 'should get run command' () {
 
         when:
-        def cmd = new CharliecloudBuilder('ubuntu').build().getRunCommand()
+        def cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
+            .build()
+            .getRunCommand()
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b "$PWD" ubuntu --'
+        cmd == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu --'
 
         when:
-        cmd = new CharliecloudBuilder('ubuntu').build().getRunCommand('bwa --this --that file.fastq')
+        cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
+            .params(useSquash: 'true')
+            .build()
+            .getRunCommand()
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b "$PWD" ubuntu -- bwa --this --that file.fastq'
+        cmd == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu.squashfs && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu.squashfs --'
 
         when:
-        cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
+        cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
+            .params(writeFake: 'true')
+            .build()
+            .getRunCommand()
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+        cmd == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -w -b "$NXF_TASK_WORKDIR" ubuntu --'
 
         when:
-        cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').params(readOnlyInputs: 'true').build().getRunCommand('bwa --this --that file.fastq')
+        cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
+            .params(entry:'/bin/sh')
+            .build()
+            .getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --set-env -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+        cmd == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
 
         when:
-        cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').params(readOnlyInputs: 'false').build().getRunCommand('bwa --this --that file.fastq')
+        cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
+            .params(entry:'/bin/sh')
+            .params(readOnlyInputs: 'true')
+            .build()
+            .getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+        cmd == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
 
         when:
-        cmd = new CharliecloudBuilder('ubuntu')
+        cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
+            .params(entry:'/bin/sh')
+            .params(readOnlyInputs: 'false')
+            .build()
+            .getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+
+        when:
+        cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
             .params(entry:'/bin/sh')
             .addMount(db_file)
             .addMount(db_file)
             .params(readOnlyInputs: 'true')
             .build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --set-env -b /home -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+        cmd == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -b /home -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
 
         when:
-        cmd = new CharliecloudBuilder('ubuntu')
+        cmd = new CharliecloudBuilder('/cacheDir/img/ubuntu')
             .params(entry:'/bin/sh')
             .addMount(db_file)
             .addMount(db_file)
@@ -115,7 +139,7 @@ class CharliecloudBuilderTest extends Specification {
             .build()
             .getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --set-env -w -b /home/db -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+        cmd == 'ch-convert -i ch-image --storage /cacheDir ubuntu "$NXF_TASK_WORKDIR"/container_ubuntu && ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b /home/db -b "$NXF_TASK_WORKDIR" "$NXF_TASK_WORKDIR"/container_ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
     }
 
     @Unroll

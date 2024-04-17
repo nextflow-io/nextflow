@@ -1,6 +1,31 @@
 nf-tower changelog
 ===================
-1.6.1 -17 Aug 2023
+1.9.0 - 15 Apr 2025
+- Update Platform API endpoint (#4855) [4842423a]
+- Publish built-in reports as Tower reports (#4760) [b710d923]
+- Bump groovy 4.0.21 [9e08390b]
+
+1.8.1 - 10 Mar 2024
+- Add NXF_CACHE_DIR environment var (#4655) [4b00170a]
+- Rename Tower -> Seqera Platform in docs and log messages (#4727) [7caffef9]
+- Bump groovy 4.0.19 [854dc1f0]
+
+1.8.0 - 5 Feb 2024
+- Truncate max size exceeded error message (#4644) [36090b70]
+- Bump Groovy 4 (#4443) [9d32503b]
+
+1.7.0 - 24 Nov 2023
+- Fix security vulnerabilities (#4513) [a310c777]
+- Remove deprecated TowerArchiver feature [ff8e06a3]
+
+1.6.3 - 10 Oct 2023
+- Add -cloudcache CLI option (#4385) [73fda582]
+
+1.6.2 - 28 Sep 2023
+- Disable Tower container field for multiple images [ci fast] [b53936b0]
+- Bump Apache 2.0 license to tower client [e4a878b6]
+
+1.6.1 - 17 Aug 2023
 - Fix checkpoint thread termination (#4166) [2b449daa]
 - Fix typos in source code comments (#4173) [ci fast] [e78bc37e]
 

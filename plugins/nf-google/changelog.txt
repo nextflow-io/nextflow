@@ -1,5 +1,37 @@
 nf-google changelog
 ===================
+1.12.0 - 15 Apr 2024
+- Add custom jobName for Google Batch [df40d55f]
+- Add retry policy to Google Batch client [c4981dcc]
+- Improve error message when Google creds file is corrupted [ci fast] [a550e52f]
+- Fix support for GCS requester pays bucket option [d9d61cff]
+- Fix failing CI tests (#4861) [1c0e648e]
+- Bump groovy 4.0.21 [9e08390b]
+
+1.11.0 - 5 Feb 2024
+- Bump Groovy 4 (#4443) [9d32503b]
+
+1.10.0 - 20 Dec 2023
+- Add ability to disable Cloudinfo service (#4606) [f7251895]
+- Add support for Instance template to Google Batch [df7ed294]
+- Improve GLS tests [ci fast] [58590b1c]
+
+1.9.0 - 24 Nov 2023
+- Add labels field in Job request for Google Batch (#4538) [627c595e]
+- Add Google Batch native retry on spot termination (#4500) [ea1c1b70]
+- Add ability detect Google Batch spot interruption (#4462) [d49f02ae]
+- Add Retry policy to Google Storage (#4524) [c271bb18]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix Bypass Google Batch Price query if task cpus and memory are defined (#4521) [7f8f20d3]
+- Update logging filter for Google Batch provider. (#4488) [66a3ed19]
+
+1.8.3 - 10 Oct 2023
+- Add setting to enable the use of sync command [f0d5cc5c]
+- Fix Google Batch do not stop running jobs (#4381) [3d6b7358]
+
+1.8.2 - 28 Sep 2023
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [9b3741e3]
+
 1.8.1 - 22 Jul 2023
 - Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
 - Bump Groovy 3.0.18 [207eb535]

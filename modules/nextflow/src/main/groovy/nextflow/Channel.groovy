@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,6 +105,7 @@ class Channel  {
     static private String nth(int i) {
         if( i==1 ) return '1-st'
         if( i==2 ) return '2-nd'
+        if( i==3 ) return '3-rd'
         return "$i-th"
     }
 
@@ -118,6 +119,11 @@ class Channel  {
         if( NF.isDsl2() )
             throw new DeprecationException("Channel `create` method is not supported any more")
         return CH.queue()
+    }
+
+    static DataflowWriteChannel topic(String name) {
+        if( !NF.topicChannelEnabled ) throw new MissingMethodException('topic', Channel.class, InvokerHelper.EMPTY_ARGS)
+        return CH.topic(name)
     }
 
     /**

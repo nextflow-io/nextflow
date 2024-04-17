@@ -110,7 +110,7 @@ The `pull` command allows you to download a project from a GitHub repository or 
 nextflow pull nextflow-io/examples
 ```
 
-Altenatively, you can use the repository URL as the name of the project to pull:
+Alternatively, you can use the repository URL as the name of the project to pull:
 
 ```bash
 nextflow pull https://github.com/nextflow-io/examples
@@ -461,6 +461,8 @@ This mix of technologies makes it possible to write self-contained and truly rep
 
 [^id2]: BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.
 
+(bundling-executables)=
+
 ### Bundling executables in the workflow
 
 In most cases, software dependencies should be provided by the execution environment ([container](./container.md), [conda](./conda.md)/[spack](./spack.md) environment, or host-native [modules](./process.md#module)). 
@@ -486,6 +488,10 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 ### Using bundled executables in the workflow 
 
 Nextflow will automatically add the `bin/` directory to the `PATH` environment variable, and the scripts will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
+
+### Utility code
+
+Any Groovy scripts or JAR files in the `lib` directory will be automatically loaded and made available to your pipeline scripts. The `lib` directory is a useful way to provide utility code or external libraries without cluttering the pipeline scripts.
 
 ### System environment
 

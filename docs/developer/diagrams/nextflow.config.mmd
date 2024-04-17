@@ -1,0 +1,7 @@
+classDiagram
+    %%
+    %% nextflow.config
+    %%
+    Session --* ConfigMap
+    CmdRun --> ConfigBuilder : run
+    ConfigBuilder --> ConfigMap : build

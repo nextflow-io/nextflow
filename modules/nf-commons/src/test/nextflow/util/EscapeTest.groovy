@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,12 +108,12 @@ class EscapeTest extends Specification {
         'foo:bar'   | 'foo:bar'
         'foo!bar'   | 'foo!bar'
         'foo[!x]bar'| 'foo[!x]bar'
+        'foo|bar'   | 'foo|bar'
+        'foo`bar'   | 'foo`bar'
+        'foo&bar'   | 'foo&bar'
+        'foo(x)bar' | 'foo(x)bar'
+        'foo<x>bar' | 'foo<x>bar'
         and:
         '$foo'      | '\\$foo'
-        'foo|bar'   | 'foo\\|bar'
-        'foo`bar'   | 'foo\\`bar'
-        'foo&bar'   | 'foo\\&bar'
-        'foo(x)bar' | 'foo\\(x\\)bar'
-        'foo<x>bar' | 'foo\\<x\\>bar'
     }
 }

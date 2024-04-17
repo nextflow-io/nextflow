@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,6 +90,7 @@ class NameGenerator {
             "lethal",
             "lonely",
             "loving",
+            "loquacious",
             "mad",
             "magical",
             "maniac",
@@ -330,6 +331,9 @@ class NameGenerator {
 
             // Douglas Engelbart gave the mother of all demos: https://en.wikipedia.org/wiki/Douglas_Engelbart
             "engelbart",
+
+            // Maurits Cornelis Escher - Dutch graphic artist who made woodcuts, lithographs, and mezzotints, many of which were inspired by mathematics. His work features mathematical objects and operations including impossible objects, explorations of infinity, reflection, symmetry, perspective, truncated and stellated polyhedra, hyperbolic geometry, and tessellations. https://en.wikipedia.org/wiki/M._C._Escher
+            "escher",
 
             // Euclid invented geometry. https://en.wikipedia.org/wiki/Euclid
             "euclid",
@@ -786,6 +790,9 @@ class NameGenerator {
             // James Watson - American molecular biologist, geneticist and zoologist, best known as one of the co-discoverers of the structure of DNA. https://en.wikipedia.org/wiki/James_Watson
             "watson",
 
+            // Alfred Wegener - German climatologist, geologist, geophysicist, meteorologist, and polar researcher. Best known for proposing the theory of continental drift, the precursor to plate tectonics. https://en.wikipedia.org/wiki/Alfred_Wegener
+            "wegener",
+        
             // Marlyn Wescoff - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Marlyn_Meltzer
             "wescoff",
 

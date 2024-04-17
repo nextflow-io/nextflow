@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import nextflow.ISession
 import nextflow.Session
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
+import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -608,14 +609,14 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.type('file')
+        param.setType('file')
         result = fetchResultFiles(processor, param, '*.fa', folder)
         then:
         result  == ['file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.type('dir')
+        param.setType('dir')
         result = fetchResultFiles(processor, param, '*.fa', folder)
         then:
         result == []
@@ -628,14 +629,14 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.followLinks(false)
+        param.setFollowLinks(false)
         result = fetchResultFiles(processor, param, '**.fa', folder)
         then:
         result == ['dir1/dir2/file4.fa', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.maxDepth(1)
+        param.setMaxDepth(1)
         result = fetchResultFiles(processor, param, '**.fa', folder)
         then:
         result == ['file2.fa']
@@ -648,22 +649,22 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.type('dir')
+        param.setType('dir')
         result = fetchResultFiles(processor, param, '*', folder)
         then:
         result == ['dir1', 'dir_link']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.type('file')
+        param.setType('file')
         result = fetchResultFiles(processor, param, '*', folder)
         then:
         result == ['file1.txt', 'file2.fa']
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.type('file')
-        param.hidden(true)
+        param.setType('file')
+        param.setHidden(true)
         result = fetchResultFiles(processor, param, '*', folder)
         then:
         result == ['.hidden.fa', 'file1.txt', 'file2.fa']
@@ -700,25 +701,25 @@ class TaskProcessorTest extends Specification {
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.type('dir')
+        param.setType('dir')
         then:
         processor.visitOptions(param,'dir-name') == [type:'dir', followLinks: true, maxDepth: null, hidden: false, relative: false]
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.hidden(true)
+        param.setHidden(true)
         then:
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: null, hidden: true, relative: false]
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.followLinks(false)
+        param.setFollowLinks(false)
         then:
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: false, maxDepth: null, hidden: false, relative: false]
 
         when:
         param = new FileOutParam(Mock(Binding), Mock(List))
-        param.maxDepth(5)
+        param.setMaxDepth(5)
         then:
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: 5, hidden: false, relative: false]
     }
@@ -798,7 +799,7 @@ class TaskProcessorTest extends Specification {
         then:
         env == '''\
             export PATH="foo:\\$PATH"
-            export HOLA="one\\|two"
+            export HOLA="one|two"
             '''.stripIndent()
         env.charAt(env.size()-1) == '\n' as char
 
@@ -864,13 +865,12 @@ class TaskProcessorTest extends Specification {
         config.setContext( foo: 'DDDD', bar: 'OOOO' )
 
         when:
-        def result = processor.getTaskDirectiveVars(task)
+        def result = processor.getTaskExtensionDirectiveVars(task)
         then:
         1 * task.getVariableNames() >> {[ 'task.cpus', 'task.ext.alpha', 'task.ext.delta', 'task.ext.omega' ] as Set}
         1 * task.getConfig() >> config
         then:
         result == [
-                'task.cpus': 4,
                 'task.ext.alpha': 'AAAA',
                 'task.ext.delta': 'DDDD',
                 'task.ext.omega': 'OOOO',
@@ -945,18 +945,50 @@ class TaskProcessorTest extends Specification {
         def envFile = workDir.resolve(TaskRun.CMD_ENV)
         envFile.text =  '''
                         ALPHA=one
+                        /ALPHA/
                         DELTA=x=y
+                        /DELTA/
                         OMEGA=
+                        /OMEGA/
+                        LONG=one
+                        two
+                        three
+                        /LONG/=exit:0
                         '''.stripIndent()
         and:
         def processor = Spy(TaskProcessor)
 
         when:
-        def result = processor.collectOutEnvMap(workDir)
+        def result = processor.collectOutEnvMap(workDir, Map.of())
         then:
-        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
+        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '', LONG: 'one\ntwo\nthree']
     }
 
+    def 'should parse env map with command error' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+        def envFile = workDir.resolve(TaskRun.CMD_ENV)
+        envFile.text =  '''
+                        ALPHA=one
+                        /ALPHA/
+                        cmd_out_1=Hola
+                        /cmd_out_1/=exit:0
+                        cmd_out_2=This is an error message
+                        for unknown reason
+                        /cmd_out_2/=exit:100
+                        '''.stripIndent()
+        and:
+        def processor = Spy(TaskProcessor)
+
+        when:
+        processor.collectOutEnvMap(workDir, [cmd_out_1: 'foo --this', cmd_out_2: 'bar --that'])
+        then:
+        def e = thrown(ProcessEvalException)
+        e.message == 'Unable to evaluate output'
+        e.command == 'bar --that'
+        e.output == 'This is an error message\nfor unknown reason'
+        e.status == 100
+    }
     def 'should create a task preview' () {
         given:
         def config = new ProcessConfig([cpus: 10, memory: '100 GB'])
