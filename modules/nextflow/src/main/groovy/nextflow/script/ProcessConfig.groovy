@@ -1004,10 +1004,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    private static final List<String> VALID_RESOURCE_LIMITS = List.of('cpus', 'memory', 'disk', 'time')
+
     ProcessConfig resourceLimits( Map entries ) {
-        final validDirectives = ['cpus', 'memory', 'disk', 'time']
         for( entry in entries )
-            if( entry.key !in validDirectives )
+            if( entry.key !in VALID_RESOURCE_LIMITS )
                 throw new IllegalArgumentException("Not a valid directive in `resourceLimits`: $entry.key")
 
         configProperties.put('resourceLimits', entries)
