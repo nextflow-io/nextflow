@@ -14,7 +14,7 @@ process blast {
     path 'query.fa'
 
     output:
-    path top_hits
+    path 'top_hits'
 
     """
     blastp -db ${db} -query query.fa -outfmt 6 > blast_result
@@ -27,7 +27,7 @@ process blast {
  */ 
 process extract {
     input:
-    path top_hits
+    path 'top_hits'
 
     output:
     path 'sequences'

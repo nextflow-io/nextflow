@@ -287,12 +287,11 @@ class PublishDir {
     /**
      * Apply the publishing process to the specified {@link TaskRun} instance
      *
-     * @param files Set of output files
      * @param task The task whose output need to be published
      */
-    void apply( Set<Path> files, TaskRun task ) {
+    void apply( TaskRun task ) {
 
-        if( !files || !enabled )
+        if( !task.outputFiles || !enabled )
             return
 
         if( !path )
@@ -306,7 +305,7 @@ class PublishDir {
         this.stageInMode = task.config.stageInMode
         this.task = task
 
-        apply0(files)
+        apply0(task.outputFiles)
     }
 
     protected void apply1(Path source, boolean inProcess ) {

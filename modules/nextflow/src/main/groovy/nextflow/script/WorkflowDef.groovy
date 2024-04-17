@@ -52,18 +52,12 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private WorkflowBinding binding
 
-    WorkflowDef(BaseScript owner, Closure<BodyDef> rawBody, String name=null) {
+    WorkflowDef(BaseScript owner, String name, BodyDef body, List<String> takes, List<String> emits) {
         this.owner = owner
         this.name = name
-        // invoke the body resolving in/out params
-        final copy = (Closure<BodyDef>)rawBody.clone()
-        final resolver = new WorkflowParamsResolver()
-        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
-        copy.setDelegate(resolver)
-        this.body = copy.call()
-        // now it can access the parameters
-        this.declaredInputs = new ArrayList<>(resolver.getTakes().keySet())
-        this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
+        this.body = body
+        this.declaredInputs = takes
+        this.declaredOutputs = emits
         this.variableNames = getVarNames0()
     }
 
@@ -207,50 +201,4 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         return output
     }
 
-}
-
-/**
- * Hold workflow parameters
- */
-@Slf4j
-@CompileStatic
-class WorkflowParamsResolver {
-
-    static final private String TAKE_PREFIX = '_take_'
-    static final private String EMIT_PREFIX = '_emit_'
-
-
-    Map<String,Object> takes = new LinkedHashMap<>(10)
-    Map<String,Object> emits = new LinkedHashMap<>(10)
-
-    @Override
-    def invokeMethod(String name, Object args) {
-        if( name.startsWith(TAKE_PREFIX) )
-            takes.put(name.substring(TAKE_PREFIX.size()), args)
-
-        else if( name.startsWith(EMIT_PREFIX) )
-            emits.put(name.substring(EMIT_PREFIX.size()), args)
-
-        else
-            throw new MissingMethodException(name, WorkflowDef, args)
-    }
-
-    private Map argsToMap(Object args) {
-        if( args && args.getClass().isArray() ) {
-            if( ((Object[])args)[0] instanceof Map ) {
-                def map = (Map)((Object[])args)[0]
-                return new HashMap(map)
-            }
-        }
-        Collections.emptyMap()
-    }
-
-    private Map argToPublishOpts(Object args) {
-        final opts = argsToMap(args)
-        if( opts.containsKey('saveAs')) {
-            log.warn "Workflow publish does not support `saveAs` option"
-            opts.remove('saveAs')
-        }
-        return opts
-    }
 }

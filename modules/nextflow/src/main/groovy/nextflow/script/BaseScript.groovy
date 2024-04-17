@@ -19,10 +19,13 @@ package nextflow.script
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.script.dsl.ProcessDsl
+import nextflow.script.dsl.WorkflowBuilder
 import nextflow.secret.SecretsLoader
 
 /**
@@ -31,6 +34,7 @@ import nextflow.secret.SecretsLoader
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 abstract class BaseScript extends Script implements ExecutionContext {
 
     private Session session
@@ -91,29 +95,51 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
-    protected process( String name, Closure<BodyDef> body ) {
-        final process = new ProcessDef(this,body,name)
+    /**
+     * Define a process.
+     *
+     * @param name
+     * @param rawBody
+     */
+    protected void process(String name, Closure<BodyDef> rawBody) {
+        final builder = new ProcessDsl(this, name)
+        final copy = (Closure<BodyDef>)rawBody.clone()
+        copy.delegate = builder
+        copy.resolveStrategy = Closure.DELEGATE_FIRST
+        final taskBody = copy.call()
+        final process = builder.withBody(taskBody).build()
         meta.addDefinition(process)
     }
 
     /**
-     * Workflow main entry point
+     * Define an anonymous workflow.
      *
-     * @param body The implementation body of the workflow
-     * @return The result of workflow execution
+     * @param rawBody
      */
-    protected workflow(Closure<BodyDef> workflowBody) {
-        // launch the execution
-        final workflow = new WorkflowDef(this, workflowBody)
-        // capture the main (unnamed) workflow definition
+    protected void workflow(Closure<BodyDef> rawBody) {
+        final workflow = workflow0(null, rawBody)
         this.entryFlow = workflow
-        // add it to the list of workflow definitions
         meta.addDefinition(workflow)
     }
 
-    protected workflow(String name, Closure<BodyDef> workflowDef) {
-        final workflow = new WorkflowDef(this,workflowDef,name)
+    /**
+     * Define a named workflow.
+     *
+     * @param name
+     * @param rawBody
+     */
+    protected void workflow(String name, Closure<BodyDef> rawBody) {
+        final workflow = workflow0(name, rawBody)
         meta.addDefinition(workflow)
+    }
+
+    protected WorkflowDef workflow0(String name, Closure<BodyDef> rawBody) {
+        final builder = new WorkflowBuilder(this, name)
+        final copy = (Closure<BodyDef>)rawBody.clone()
+        copy.delegate = builder
+        copy.resolveStrategy = Closure.DELEGATE_FIRST
+        final body = copy.call()
+        return builder.withBody(body).build()
     }
 
     protected IncludeDef include( IncludeDef include ) {
@@ -241,7 +267,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
 
         if( session?.ansiLog )
-            log.info(String.printf(msg, arg))
+            log.info(String.format(msg, arg))
         else
             super.printf(msg, arg)
     }
@@ -252,7 +278,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
 
         if( session?.ansiLog )
-            log.info(String.printf(msg, args))
+            log.info(String.format(msg, args))
         else
             super.printf(msg, args)
     }

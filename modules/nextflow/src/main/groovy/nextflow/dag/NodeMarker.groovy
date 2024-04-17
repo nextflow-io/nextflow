@@ -21,8 +21,8 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.TaskProcessor
-import nextflow.script.params.InputsList
-import nextflow.script.params.OutputsList
+import nextflow.script.ProcessInputs
+import nextflow.script.ProcessOutputs
 /**
  * Helper class to mark DAG node with the proper labels
  *
@@ -46,7 +46,7 @@ class NodeMarker {
      * @param inputs The list of inputs entering in the process
      * @param outputs the list of outputs leaving the process
      */
-    static void addProcessNode( TaskProcessor process, InputsList inputs, OutputsList outputs ) {
+    static void addProcessNode( TaskProcessor process, ProcessInputs inputs, ProcessOutputs outputs ) {
         if( session && session.dag && !session.aborted )
             session.dag.addProcessNode( process.name, inputs, outputs, process )
     }

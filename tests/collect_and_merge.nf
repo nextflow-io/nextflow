@@ -27,7 +27,7 @@ process algn {
   each seq_id
 
   output:
-  tuple val(barcode), val(seq_id), file('bam'), file('bai')
+  tuple val(barcode), val(seq_id), path('bam'), path('bai')
 
   """
   echo BAM $seq_id - $barcode > bam
@@ -44,7 +44,7 @@ process merge {
   debug true
 
   input:
-  tuple val(barcode), val(seq_id), file(bam: 'bam?'), file(bai: 'bai?')
+  tuple val(barcode), val(seq_id), path(bam, stageAs: 'bam?'), path(bai, stageAs: 'bai?')
 
   """
   echo barcode: $barcode

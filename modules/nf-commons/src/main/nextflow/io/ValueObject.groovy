@@ -32,7 +32,7 @@ import groovy.transform.Immutable
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @AutoClone
-@Immutable(copyWith=true)
+@Immutable(copyWith=true, knownImmutableClasses=[java.nio.file.Path])
 @SerializableObject
 @AnnotationCollector(mode = AnnotationCollectorMode.PREFER_EXPLICIT_MERGED)
 @Retention(RetentionPolicy.RUNTIME)

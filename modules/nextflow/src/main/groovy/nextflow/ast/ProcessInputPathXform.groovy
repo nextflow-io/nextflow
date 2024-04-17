@@ -14,27 +14,16 @@
  * limitations under the License.
  */
 
-package nextflow.script.params
+package nextflow.ast
 
-import groovyx.gpars.dataflow.DataflowReadChannel
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-/**
- * Basic interface for *all* input parameters
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-interface InParam extends Cloneable {
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
-    String getName()
-
-    DataflowReadChannel getInChannel()
-
-    Object getRawChannel()
-
-    short index
-
-    short mapIndex
-
-    def decodeInputs( List values )
-
-}
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [ProcessInputPathXformImpl])
+@interface ProcessInputPathXform {}
