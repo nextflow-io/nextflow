@@ -25,6 +25,8 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
+import com.azure.core.credential.TokenRequestContext
+import com.azure.identity.DefaultAzureCredentialBuilder
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
 import com.microsoft.azure.batch.auth.BatchCredentials
@@ -285,8 +287,8 @@ class AzBatchService implements Closeable {
     protected BatchCredentials createBatchCredentialsWithServicePrincipal() {
         log.debug "[AZURE BATCH] Creating Azure Batch client using Service Principal credentials"
 
-        final batchEndpoint = "https://batch.core.windows.net/";
-        final authenticationEndpoint = "https://login.microsoftonline.com/";
+        final batchEndpoint = "https://batch.core.windows.net/"
+        final authenticationEndpoint = "https://login.microsoftonline.com/"
 
         def servicePrincipalBasedCred = new BatchApplicationTokenCredentials(
                 config.batch().endpoint,
@@ -300,11 +302,36 @@ class AzBatchService implements Closeable {
         return servicePrincipalBasedCred
     }
 
+    protected BatchCredentials createBatchCredentialsWithManagedIdentity() {
+        log.debug "[AZURE BATCH] Creating Azure Batch client using Managed Identity credentials"
+
+        final batchEndpoint = "https://batch.core.windows.net/"
+        final authenticationEndpoint = "https://login.microsoftonline.com/"
+
+        final clientId = config.managedIdentity().clientId
+        final credentialBuilder = new DefaultAzureCredentialBuilder()
+        if( clientId )
+            credentialBuilder.managedIdentityClientId(clientId)
+        final credential = credentialBuilder.build()
+        final token = credential.getTokenSync( new TokenRequestContext() )
+
+        return new BatchApplicationTokenCredentials(
+                config.batch().endpoint,
+                clientId,
+                token.getToken(),
+                null,
+                batchEndpoint,
+                authenticationEndpoint
+        )
+    }
+
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
 
         BatchCredentials cred
 
+        if( config.managedIdentity().isConfigured() )
+            cred = createBatchCredentialsWithManagedIdentity()
         if( config.activeDirectory().isConfigured() )
             cred = createBatchCredentialsWithServicePrincipal()
         else if( config.batch().endpoint || config.batch().accountKey || config.batch().accountName )

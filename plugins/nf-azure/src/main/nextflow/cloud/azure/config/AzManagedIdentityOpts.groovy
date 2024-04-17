@@ -43,4 +43,8 @@ class AzManagedIdentityOpts {
         return props
     }
 
+    boolean isConfigured() {
+        return clientId || system
+    }
+
 }
