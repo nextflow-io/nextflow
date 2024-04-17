@@ -46,7 +46,7 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
 import nextflow.fusion.FusionHelper
-import nextflow.util.CacheHelper
+import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
 
 import static nextflow.util.CacheHelper.HashMode
@@ -520,8 +520,8 @@ class PublishDir {
             return overwrite
 
         final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
-        final sourceHash = CacheHelper.hasher(CacheHelper.defaultHasher().newHasher(), source, hashMode, source.parent).hash()
-        final targetHash = CacheHelper.hasher(CacheHelper.defaultHasher().newHasher(), target, hashMode, target.parent).hash()
+        final sourceHash = new HashBuilder().withMode(hashMode).withBasePath(source.parent).with(source).build()
+        final targetHash = new HashBuilder().withMode(hashMode).withBasePath(target.parent).with(target).build()
         log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
         return sourceHash != targetHash
     }

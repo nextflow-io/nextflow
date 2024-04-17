@@ -302,9 +302,9 @@ class CacheHelperTest extends Specification {
         folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar within yyy"
 
         when:
-        def hash1 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher().newHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
+        def hash1 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
         and:
-        def hash2 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher().newHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
+        def hash2 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
 
         then:
         hash1.hash() == hash2.hash()
