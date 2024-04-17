@@ -206,7 +206,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         if( managedIdentity ) {
             client = createBlobServiceWithManagedIdentity(accountName, managedIdentity)
         }
-        if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
+        else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
             client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
         }
         else if( sasToken ) {
