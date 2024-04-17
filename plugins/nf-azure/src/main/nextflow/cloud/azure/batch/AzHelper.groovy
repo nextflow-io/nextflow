@@ -220,19 +220,16 @@ class AzHelper {
 
     @Memoized
     static synchronized BlobServiceClient getOrCreateBlobServiceWithManagedIdentity(String accountName, String clientId) {
-        if( !clientId )
-            throw new IllegalArgumentException("Missing Azure blob managed identity client ID")
-
-        log.debug "Creating Azure blob storage client -- accountName: $accountName; clientId: ${clientId}"
+        log.debug "Creating Azure blob storage client -- accountName: $accountName; clientId: ${clientId ?: '<system-assigned identity>'}"
 
         final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
-        final credential = new DefaultAzureCredentialBuilder()
-                .managedIdentityClientId(clientId)
-                .build()
+        final credentialBuilder = new DefaultAzureCredentialBuilder()
+        if( clientId )
+            credentialBuilder.managedIdentityClientId(clientId)
 
         return new BlobServiceClientBuilder()
-                .credential(credential)
+                .credential(credentialBuilder.build())
                 .endpoint(endpoint)
                 .buildClient()
     }

@@ -28,14 +28,18 @@ class AzManagedIdentityOpts {
 
     String clientId
 
+    Boolean system
+
     AzManagedIdentityOpts(Map config) {
         assert config != null
         this.clientId = config.clientId
+        this.system = config.system as Boolean
     }
 
     Map<String, Object> getEnv() {
         Map<String, Object> props = new HashMap<>();
-        props.put(AzFileSystemProvider.AZURE_MANAGED_IDENTITY, clientId)
+        props.put(AzFileSystemProvider.AZURE_MANAGED_IDENTITY_USER, clientId)
+        props.put(AzFileSystemProvider.AZURE_MANAGED_IDENTITY_SYSTEM, system)
         return props
     }
 

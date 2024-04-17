@@ -61,7 +61,8 @@ class AzFileSystemProvider extends FileSystemProvider {
     public static final String AZURE_CLIENT_SECRET = 'AZURE_CLIENT_SECRET'
     public static final String AZURE_TENANT_ID = 'AZURE_TENANT_ID'
 
-    public static final String AZURE_MANAGED_IDENTITY = 'AZURE_MANAGED_IDENTITY'
+    public static final String AZURE_MANAGED_IDENTITY_USER = 'AZURE_MANAGED_IDENTITY_USER'
+    public static final String AZURE_MANAGED_IDENTITY_SYSTEM = 'AZURE_MANAGED_IDENTITY_SYSTEM'
 
     public static final String SCHEME = 'az'
 
@@ -196,15 +197,16 @@ class AzFileSystemProvider extends FileSystemProvider {
         final servicePrincipalSecret = config.get(AZURE_CLIENT_SECRET) as String
         final tenantId = config.get(AZURE_TENANT_ID) as String
 
-        final managedIdentity = config.get(AZURE_MANAGED_IDENTITY) as String
+        final managedIdentityUser = config.get(AZURE_MANAGED_IDENTITY_USER) as String
+        final managedIdentitySystem = config.get(AZURE_MANAGED_IDENTITY_SYSTEM) as Boolean
 
         if( !accountName )
             throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_NAME")
 
         def client
 
-        if( managedIdentity ) {
-            client = createBlobServiceWithManagedIdentity(accountName, managedIdentity)
+        if( managedIdentityUser || managedIdentitySystem ) {
+            client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)
         }
         else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
             client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)

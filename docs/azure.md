@@ -446,6 +446,8 @@ azure {
 }
 ```
 
+Alternatively, you can set `azure.managedIdentity.system = true` to authenticate using the system-assigned identity.
+
 ## Advanced configuration
 
 Read the {ref}`Azure configuration<config-azure>` section to learn more about advanced configuration options.
