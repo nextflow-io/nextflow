@@ -1431,6 +1431,15 @@ class Session implements ISession {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
+    private ThreadPoolManager finalizePoolManager = new ThreadPoolManager('FinalizeTask')
+
+    @Memoized
+    synchronized ExecutorService finalizeTaskExecutorService() {
+        return finalizePoolManager
+                .withConfig(config)
+                .create()
+    }
+
     private ThreadPoolManager publishPoolManager = new ThreadPoolManager('PublishDir')
 
     @Memoized

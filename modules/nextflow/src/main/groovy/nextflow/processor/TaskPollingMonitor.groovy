@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -454,19 +455,7 @@ class TaskPollingMonitor implements TaskMonitor {
             // finalize all completed tasks
             finalizeAllTasks(tasks)
 
-            final shouldBreak
-                    =  (session.isTerminated() && finalizingQueue.size()==0 && pendingQueue.size()==0)
-                    || (session.isCancelled() && finalizingQueue.size()==0)
-                    || session.isAborted()
-            if( shouldBreak ) {
-                break
-            }
-
             await(time)
-
-            if( session.isAborted() ) {
-                break
-            }
         }
     }
 
@@ -580,6 +569,9 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
+    @Lazy
+    private ExecutorService finalizerPool = { session.finalizeTaskExecutorService() }()
+
     /**
      * Finalize all completed tasks
      */
@@ -588,7 +580,8 @@ class TaskPollingMonitor implements TaskMonitor {
         for( int i=0; i<queue.size(); i++ ) {
             final handler = queue.get(i)
             try {
-                finalizeTask(handler)
+                finalizingQueue.remove(handler)
+                finalizerPool.submit({ finalizeTask(handler) } as Runnable)
             }
             catch (Throwable error) {
                 handleException(handler, error)
@@ -686,9 +679,6 @@ class TaskPollingMonitor implements TaskMonitor {
 
     protected void finalizeTask( TaskHandler handler ) {
         assert handler
-
-        // remove the task from the queue
-        finalizingQueue.remove(handler)
 
         // finalize the task execution
         final fault = handler.task.processor.finalizeTask(handler.task)
