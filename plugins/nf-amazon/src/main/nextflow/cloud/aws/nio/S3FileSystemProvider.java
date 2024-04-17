@@ -202,7 +202,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Path s3Path = (S3Path) path;
 
 		Preconditions.checkArgument(!s3Path.getKey().equals(""),
-				"cannot create InputStream for root directory: %s", s3Path);
+				"cannot create InputStream for root directory: %s", FilesEx.toUriString(s3Path));
 
 		InputStream result;
 		try {
@@ -213,13 +213,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 					.getObjectContent();
 
 			if (result == null)
-				throw new IOException(String.format("The specified path is a directory: %s", path));
+				throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
 		}
 		catch (AmazonS3Exception e) {
 			if (e.getStatusCode() == 404)
 				throw new NoSuchFileException(path.toString());
 			// otherwise throws a generic IO exception
-			throw new IOException(String.format("Cannot access file: %s", path),e);
+			throw new IOException(String.format("Cannot access file: %s", FilesEx.toUriString(s3Path)),e);
 		}
 
 		return result;
@@ -258,11 +258,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			if (!(create && truncateExisting)) {
 				if (exists(s3Path)) {
 					if (createNew || !truncateExisting) {
-						throw new FileAlreadyExistsException(path.toString());
+						throw new FileAlreadyExistsException(FilesEx.toUriString(s3Path));
 					}
 				} else {
 					if (!createNew && !create) {
-						throw new NoSuchFileException(path.toString());
+						throw new NoSuchFileException(FilesEx.toUriString(s3Path));
 					}
 				}
 			}
@@ -496,13 +496,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Path s3Path = (S3Path) path;
 
         if (Files.notExists(path)){
-            throw new NoSuchFileException("the path: " + path + " does not exist");
+            throw new NoSuchFileException("the path: " + FilesEx.toUriString(s3Path) + " does not exist");
         }
 
         if (Files.isDirectory(path)){
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
                 if (stream.iterator().hasNext()){
-                    throw new DirectoryNotEmptyException("the path: " + path + " is a directory and is not empty");
+                    throw new DirectoryNotEmptyException("the path: " + FilesEx.toUriString(s3Path) + " is a directory and is not empty");
                 }
             }
         }
@@ -541,7 +541,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		if (!actualOptions.contains(StandardCopyOption.REPLACE_EXISTING)) {
 			if (exists(s3Target)) {
 				throw new FileAlreadyExistsException(format(
-						"target already exists: %s", target));
+						"target already exists: %s", FilesEx.toUriString(s3Target)));
 			}
 		}
 
