@@ -2333,18 +2333,19 @@ See also: [label](#label)
 
 ### resourceLimits
 
-:::{versionadded} 23.08.0-edge
+:::{versionadded} 24.04.0
 :::
 
 The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process as follows:
 
 ```groovy
 process my_task {
-    resourceLimits [
-        cpus: 24,
-        memory: 768.GB,
-        time: 72.h
-    ]
+  resourceLimits cpus: 24, memory: 768.GB, time: 72.h
+
+  script:
+  '''
+  your_command --here
+  '''
 }
 ```
 
@@ -2352,11 +2353,7 @@ Or in the Nextflow configuration:
 
 ```groovy
 process {
-    resourceLimits = [
-        cpus: 24,
-        memory: 768.GB,
-        time: 72.h
-    ]
+    resourceLimits = [ cpus: 24, memory: 768.GB, time: 72.h ]
 }
 ```
 
