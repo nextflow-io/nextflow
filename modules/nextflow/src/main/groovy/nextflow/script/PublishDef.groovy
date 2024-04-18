@@ -24,7 +24,9 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.MixOp
 import nextflow.extension.PublishOp
+import nextflow.extension.PublishIndexOp
 /**
  * Models the workflow publish definition
  *
@@ -61,7 +63,7 @@ class PublishDef {
 @CompileStatic
 class PublishDsl {
 
-    private Map<String,Map> targetConfigs = [:]
+    private Map<String,Map> publishConfigs = [:]
 
     private Path directory
 
@@ -116,7 +118,7 @@ class PublishDsl {
     }
 
     void target(String name, Closure closure) {
-        if( targetConfigs.containsKey(name) )
+        if( publishConfigs.containsKey(name) )
             throw new ScriptRuntimeException("Target '${name}' is defined more than once in the workflow publish definition")
 
         final dsl = new TargetDsl()
@@ -125,16 +127,34 @@ class PublishDsl {
         cl.setDelegate(dsl)
         cl.call()
 
-        targetConfigs[name] = dsl.getOptions()
+        publishConfigs[name] = dsl.getOptions()
     }
 
     void build(Map<DataflowWriteChannel,String> targets) {
-        for( final entry : targets ) {
-            final source = entry.key
-            final name = entry.value
-            final opts = publishOptions(name, targetConfigs[name] ?: [:])
+        // construct mapping of target name -> source channels
+        final Map<String,List<DataflowWriteChannel>> publishSources = [:]
+        for( final source : targets.keySet() ) {
+            final name = targets[source]
+            if( name !in publishSources )
+                publishSources[name] = []
+            publishSources[name] << source
+        }
 
-            new PublishOp(CH.getReadChannel(source), opts).apply()
+        // create publish op (and optional index op) for each target
+        for( final name : publishSources.keySet() ) {
+            final sources = publishSources[name]
+            final mixed = sources.size() > 1
+                ? new MixOp(sources.collect( ch -> CH.getReadChannel(ch) )).apply()
+                : sources.first()
+            final opts = publishOptions(name, publishConfigs[name] ?: [:])
+
+            new PublishOp(CH.getReadChannel(mixed), opts).apply()
+
+            if( opts.index ) {
+                final indexPath = (opts.path as Path).resolve(opts.index as String)
+                final indexOpts = opts.indexOpts as Map
+                new PublishIndexOp(CH.getReadChannel(mixed), indexPath, indexOpts).apply()
+            }
         }
     }
 
@@ -173,6 +193,22 @@ class PublishDsl {
             setOption('ignoreErrors', value)
         }
 
+        void index(String path, Closure closure=null) {
+            setOption('index', path)
+
+            if( closure != null ) {
+                final dsl = new IndexDsl()
+                final cl = (Closure)closure.clone()
+                cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+                cl.setDelegate(dsl)
+                cl.call()
+                opts.indexOpts = dsl.getOptions()
+            }
+            else {
+                opts.indexOpts = Map.of()
+            }
+        }
+
         void mode(String value) {
             setOption('mode', value)
         }
@@ -200,6 +236,38 @@ class PublishDsl {
         private void setOption(String name, Object value) {
             if( opts.containsKey(name) )
                 throw new ScriptRuntimeException("Publish option `${name}` cannot be defined more than once for a given target")
+            opts[name] = value
+        }
+
+        Map getOptions() {
+            opts
+        }
+
+    }
+
+    static class IndexDsl {
+
+        private Map opts = [:]
+
+        void header(boolean value) {
+            setOption('header', value)
+        }
+
+        void header(List<String> value) {
+            setOption('header', value)
+        }
+
+        void mapper(Closure value) {
+            setOption('mapper', value)
+        }
+
+        void sep(String value) {
+            setOption('sep', value)
+        }
+
+        private void setOption(String name, Object value) {
+            if( opts.containsKey(name) )
+                throw new ScriptRuntimeException("Index option `${name}` cannot be defined more than once for a given index definition")
             opts[name] = value
         }
 

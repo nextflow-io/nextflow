@@ -75,7 +75,7 @@ public class HashBuilder {
     }
 
     public static Hasher defaultHasher() {
-        return HashBuilder.DEFAULT_HASHING.newHasher();
+        return DEFAULT_HASHING.newHasher();
     }
 
     private Hasher hasher = defaultHasher();

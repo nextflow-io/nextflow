@@ -78,6 +78,11 @@ publish {
 
   'data' {
     mode 'link'
+    index('index.csv') {
+      mapper { val -> [filename: val.name] }
+      header true
+      sep ','
+    }
   }
 
   'more/data' {

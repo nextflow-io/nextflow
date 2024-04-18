@@ -317,6 +317,82 @@ Each workflow invocation has its own scope. As a result, the same process can be
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
+## Special operators
+
+### Pipe `|`
+
+The `|` *pipe* operator can be used to compose Nextflow processes and operators. For example:
+
+```groovy
+process foo {
+    input:
+    val data
+
+    output:
+    val result
+
+    exec:
+    result = "$data world"
+}
+
+workflow {
+   channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
+}
+```
+
+The above snippet defines a process named `foo` and invokes it with the `data` channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
+
+:::{tip}
+Statements can also be split across multiple lines for better readability:
+
+```groovy
+workflow {
+    channel.from('Hello','Hola','Ciao')
+      | foo
+      | map { it.toUpperCase() }
+      | view
+}
+```
+:::
+
+### And `&`
+
+The `&` *and* operator can be used to feed multiple processes with the same channel(s). For example:
+
+```groovy
+process foo {
+    input:
+    val data
+
+    output:
+    val result
+
+    exec:
+    result = "$data world"
+}
+
+process bar {
+    input:
+    val data
+
+    output:
+    val result
+
+    exec:
+    result = data.toUpperCase()
+}
+
+workflow {
+    channel.from('Hello')
+      | map { it.reverse() }
+      | (foo & bar)
+      | mix
+      | view
+}
+```
+
+In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+
 (workflow-publish-def)=
 
 ## Publishing outputs
@@ -536,78 +612,59 @@ Available options:
   tags FOO: 'hello', BAR: 'world'
   ```
 
-## Special operators
+### Index files
 
-### Pipe `|`
+A publish target can create an index file of the values that were published. An index file is a useful way to save the metadata associated with files, and is more flexible than encoding metadata in the file path. Currently only CSV files are supported.
 
-The `|` *pipe* operator can be used to compose Nextflow processes and operators. For example:
-
-```groovy
-process foo {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = "$data world"
-}
-
-workflow {
-   channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
-}
-```
-
-The above snippet defines a process named `foo` and invokes it with the `data` channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
-
-:::{tip}
-Statements can also be split across multiple lines for better readability:
+For example:
 
 ```groovy
 workflow {
-    channel.from('Hello','Hola','Ciao')
-      | foo
-      | map { it.toUpperCase() }
-      | view
+    ch_foo = Channel.of(
+        [id: 1, name: 'foo 1'],
+        [id: 2, name: 'foo 2'],
+        [id: 3, name: 'foo 3']
+    )
+
+    publish:
+    ch_foo >> 'foo/'
+}
+
+publish {
+    directory 'results'
+
+    'foo/' {
+        index 'index.csv'
+    }
 }
 ```
-:::
 
-### And `&`
+The above example will write the following CSV file to `results/foo/index.csv`:
 
-The `&` *and* operator can be used to feed multiple processes with the same channel(s). For example:
+```csv
+"id","name"
+"1","foo 1"
+"2","foo 2"
+"3","foo 3"
+```
+
+You can customize the index file by specifying options in a block, for example:
 
 ```groovy
-process foo {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = "$data world"
-}
-
-process bar {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = data.toUpperCase()
-}
-
-workflow {
-    channel.from('Hello')
-      | map { it.reverse() }
-      | (foo & bar)
-      | mix
-      | view
+index('index.csv') {
+    header ['name', 'extra_option']
+    sep '\t'
+    mapper { val -> val + [extra_option: 'bar'] }
 }
 ```
 
-In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+The following options are available:
+
+`header`
+: When `true`, the keys of the first record are used as the column names (default: `true`). Can also be a list of column names.
+
+`mapper`
+: Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.
+
+`sep`
+: The character used to separate values (default: `','`).
