@@ -40,6 +40,7 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.script.params.FileOutParam
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 /**
@@ -199,6 +200,7 @@ class TesTaskHandler extends TaskHandler {
 
         exec.image = task.container
         exec.workdir = WORK_DIR
+        exec.workdir = WORK_DIR
 
         final body = new TesTask()
 
@@ -224,16 +226,18 @@ class TesTaskHandler extends TaskHandler {
         }
 
         // add the task output files
-        body.addOutputsItem(outItem(outputFile.name))
-        body.addOutputsItem(outItem(errorFile.name))
-        body.addOutputsItem(outItem(logFile.name))
-        body.addOutputsItem(outItem(exitFile.name))
+        body.addOutputsItem(outItem(outputFile.name, "FILE"))
+        body.addOutputsItem(outItem(errorFile.name, "FILE"))
+        body.addOutputsItem(outItem(logFile.name, "FILE"))
+        body.addOutputsItem(outItem(exitFile.name, "FILE"))
 
         // set requested resources
         body.setResources(getResources(task.config))
 
-        task.getOutputFilesNames().each { fileName ->
-            body.addOutputsItem(outItem(fileName))
+        task.getOutputsByType(FileOutParam).keySet().each { param ->
+            final type = param.type
+            final patterns = param.getFilePatterns(task.context, task.workDir)
+            patterns.each { pattern -> body.addOutputsItem(outItem(pattern, type)) }
         }
 
         body.setName(task.getName())
@@ -267,6 +271,13 @@ class TesTaskHandler extends TaskHandler {
         final azure_path = "/${azure_account}/"
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
+        
+        if (realPath.isDirectory()) {
+            result.type = "DIRECTORY"
+        }
+        else {
+            result.type = "FILE"
+        }
 
         if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
             result.url = realPath.toUriString().replaceAll('az://', "$azure_path")
@@ -283,6 +294,7 @@ class TesTaskHandler extends TaskHandler {
         final azure_path = "/${azure_account}/"
         result.url = realPath.toUriString()
         result.path = realPath.toString()
+        result.type = "FILE"
 
         if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
             result.url = realPath.toUriString().replaceAll('az://', "$azure_path")
@@ -292,11 +304,21 @@ class TesTaskHandler extends TaskHandler {
         return result
     }
 
-    private TesOutput outItem( String fileName ) {
+    private TesOutput outItem( String fileName, String type ) {
         final result = new TesOutput()
         String azure_account = executor.getAzureStorageAccount()
         String tes_end_point = executor.getEndpoint()
         final azure_path = "/${azure_account}/"
+        if (type == 'file') {
+            result.type = "FILE"
+        }
+        else if (type == 'dir') {
+            result.type = "DIRECTORY"
+        }
+        else {
+            result.type = "FILE"
+        }
+        
         if( fileName.contains('*') || fileName.contains('?') ) {
             result.path = "$WORK_DIR/$fileName"
             result.pathPrefix = WORK_DIR
