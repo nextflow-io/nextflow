@@ -54,8 +54,12 @@ class PublishOpTest extends BaseSpec {
 
         when:
         def now = System.currentTimeMillis()
-        def op = new PublishOp(ch, [to:target, mode:'symlink']) .apply()
-        while( !op.complete ) { sleep 100; if( System.currentTimeMillis()-now>5_000) throw new TimeoutException() }
+        def op = new PublishOp(ch, [path:target, mode:'symlink']).apply()
+        while( !op.complete ) {
+            sleep 100
+            if( System.currentTimeMillis() - now > 5_000 )
+                throw new TimeoutException()
+        }
         then:
         target.resolve('file1.txt').text == 'Hello'
         target.resolve('file2.txt').text == 'world'

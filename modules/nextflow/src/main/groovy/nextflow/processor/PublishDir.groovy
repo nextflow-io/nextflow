@@ -79,7 +79,7 @@ class PublishDir {
     /**
      * Whether to overwrite existing files
      */
-    def /* Boolean | String */ overwrite = 'standard'
+    def /* Boolean | String */ overwrite
 
     /**
      * The publish {@link Mode}

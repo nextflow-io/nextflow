@@ -165,6 +165,8 @@ class PublishDsl {
         final opts = defaults + overrides
         if( opts.containsKey('ignoreErrors') )
             opts.failOnError = !opts.remove('ignoreErrors')
+        if( !opts.containsKey('overwrite') )
+            opts.overwrite = 'standard'
 
         final path = opts.path as String ?: name
         if( path.startsWith('/') )
