@@ -2329,6 +2329,43 @@ Resource labels in Azure are added to pools, rather than jobs, in order to facil
 
 See also: [label](#label)
 
+(process-resourcelimits)=
+
+### resourceLimits
+
+:::{versionadded} 24.04.0
+:::
+
+The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process as follows:
+
+```groovy
+process my_task {
+  resourceLimits cpus: 24, memory: 768.GB, time: 72.h
+
+  script:
+  '''
+  your_command --here
+  '''
+}
+```
+
+Or in the Nextflow configuration:
+
+```groovy
+process {
+    resourceLimits = [ cpus: 24, memory: 768.GB, time: 72.h ]
+}
+```
+
+Resource limits can be defined for the following directives:
+
+- [cpus](#cpus)
+- [disk](#disk)
+- [memory](#memory)
+- [time](#time)
+
+Resource limits are a useful way to specify environment-specific limits alongside tasks with [dynamic resources](#dynamic-computing-resources). Normally, if a task requests more resources than can be provisioned (e.g. a task requests 32 cores but the largest node in the cluster has 24), the task will either fail or cause the pipeline to hang forever as it will never be scheduled. If the `resourceLimits` directive is defined with these limits, the task resources will be automatically reduced to comply with these limits before the job is submitted.
+
 (process-scratch)=
 
 ### scratch
