@@ -679,6 +679,10 @@ The following settings are available:
 `executor.perTaskReserve`
 : Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
 
+`executor.neverRerunnable`
+: *Used only by the {ref}`LSF` executor.*
+: Disables job rerun if the job was submitted to a re-runnable queue or application profile with job rerun configured. See {ref}`lsf-executor`.
+
 `executor.pollInterval`
 : Determines how often to check for process termination. Default varies for each executor (see below).
 

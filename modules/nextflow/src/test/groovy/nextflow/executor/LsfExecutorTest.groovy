@@ -129,6 +129,29 @@ class LsfExecutorTest extends Specification {
 
     }
 
+    def testNonRerunnable() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def executor = Spy(new LsfExecutor(nonRerunnable: true))
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
+
+        when:
+        executor.@perJobMemLimit = true
+        executor.@perTaskReserve = true
+        def result = executor.getDirectives(task, [])
+        then:
+        1 * executor.getJobNameFor(task) >> 'foo'
+        _ * task.config >> new TaskConfig(memory: '10MB', cpus: 2)
+        then:
+        result == ['-o', '/work/dir/.command.log',
+                   '-n', '2',
+                   '-M', '10240',
+                   '-rn', '',
+                   '-J', 'foo']
+
+    }
+
     def testHeaders() {
 
         setup:
@@ -651,6 +674,30 @@ class LsfExecutorTest extends Specification {
         1 * executor.parseLsfConfig() >> [LSB_JOB_MEMLIMIT:'y']
         1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> { execName,name,defValue -> defValue }
         executor.perJobMemLimit
+    }
+
+    def 'should apply never rerunnable' () {
+
+        given:
+        def session = Mock(Session)
+        def executor = Spy(LsfExecutor)
+        executor.session = session
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [:]
+        1 * session.getExecConfigProp(_,'neverRerunnable',_) >> false
+        !executor.perTaskReserve
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [:]
+        1 * session.getExecConfigProp(_,'neverRerunnable',_) >> true
+        executor.perTaskReserve
+
+        
     }
 
 

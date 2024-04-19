@@ -46,6 +46,8 @@ class LsfExecutor extends AbstractGridExecutor {
 
     private boolean perTaskReserve
 
+    private boolean neverRerunnable
+
     /*
      * If LSF_UNIT_FOR_LIMITS is not defined in lsf.conf, then the default setting is in KB, and for RUSAGE it is MB
      * see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
@@ -56,6 +58,7 @@ class LsfExecutor extends AbstractGridExecutor {
 
     protected boolean getPerJobMemLimit() { perJobMemLimit }
     protected boolean getPerTaskReserve() { perTaskReserve }
+    protected boolean getNeverRerunnable() { neverRerunnable }
     protected String getMemUnit() { memUnit }
     protected String getUsageUnit() { usageUnit }
     
@@ -96,6 +99,10 @@ class LsfExecutor extends AbstractGridExecutor {
 
             result << '-M' << String.valueOf(mem1.toUnit(memUnit))
             result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
+        }
+
+        if (neverRerunnable) {
+            result << '-rn' << ''
         }
 
         def disk = task.config.getDisk()
