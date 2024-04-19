@@ -95,8 +95,8 @@ class CrgExecutor extends SgeExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
+        if( task.config.getClusterOptions() ) {
+            result << task.config.getClusterOptions() << ''
         }
 
         return result
