@@ -181,7 +181,10 @@ class SplitOp {
 
     @PackageScope
     List<DataflowWriteChannel> createSourceCopies(DataflowReadChannel source, int n) {
-        new IntoOp(source, n).apply().getOutputs()
+        final targets = new ArrayList(n)
+        for( int i = 0; i < n; i++ )
+            targets << new DataflowQueue()
+        new TapOp(source, targets).apply().getOutputs()
     }
 
     @PackageScope

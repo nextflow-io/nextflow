@@ -20,10 +20,15 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
+import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.Channel
+import nextflow.Global
 import nextflow.NF
-import static nextflow.extension.DataflowHelper.newOperator
+import nextflow.Session
 /**
  * Implements the {@link OperatorImpl#tap} operator
  *
@@ -33,34 +38,34 @@ import static nextflow.extension.DataflowHelper.newOperator
 @CompileStatic
 class TapOp {
 
-    /**
-     * Operator input channel
-     */
-    DataflowReadChannel source
+    private DataflowReadChannel source
 
-    /**
-     * Operator `tapped` channel
-     */
-    List<DataflowWriteChannel> outputs
+    private List<DataflowWriteChannel> outputs
 
-    /**
-     * Operator output channel
-     */
-    DataflowWriteChannel result
+    private DataflowWriteChannel result
+
+    private Session session = (Session)Global.session
 
     /**
      * Create the operator instance
      *
      * @param source An instance of {@link DataflowReadChannel} used to feed the operator
-     * @param holder A closure used to declare the target channel name e.g. {@code { targetChannelName } }
+     * @param outputs A list of {@link DataflowWriteChannel}'s in which to 'tap' the source channel
      */
-    TapOp( DataflowReadChannel source, Closure holder ) {
-        assert source != null
-        assert holder != null
-
+    TapOp( DataflowReadChannel source, List<DataflowWriteChannel> outputs ) {
         this.source = source
         this.result = CH.createBy(source)
-        this.outputs = [result]
+        this.outputs = [result, *outputs]
+    }
+
+    /**
+     * Create the operator instance
+     *
+     * @param source An instance of {@link DataflowReadChannel} used to feed the operator
+     * @param holder A closure used to declare the target channel name e.g. {@code { ch_foo ; ch_bar } }
+     */
+    TapOp( DataflowReadChannel source, Closure holder ) {
+        this(source, [])
 
         // -- set the target variable in the script binding context
         final names = CaptureProperties.capture(holder)
@@ -68,48 +73,61 @@ class TapOp {
             throw new IllegalArgumentException("Missing target channel on `tap` operator")
 
         final binding = NF.binding
-        names.each { item ->
-            def channel = CH.createBy(source)
-            if( binding.hasVariable(item) )
-                log.warn "A variable named '${item}' already exists in the script global context -- Consider renaming it "
+        names.each { name ->
+            final channel = CH.createBy(source)
+            if( binding.hasVariable(name) )
+                log.warn "A variable named '${name}' already exists in the script global context -- Consider renaming it "
 
-            binding.setVariable(item, channel)
+            binding.setVariable(name, channel)
             outputs << channel
         }
 
     }
 
-    /**
-     * Create the operator instance
-     *
-     * @param source An instance of {@link DataflowReadChannel} used to feed the operator
-     * @param target An instance of {@link DataflowWriteChannel} that will receive the items emitted by the source
-     */
-    @Deprecated
-    TapOp( DataflowReadChannel source, DataflowWriteChannel target ) {
-        assert source != null
-        assert target != null
-        if( source.class != target.class ) {
-                throw new IllegalArgumentException("Operator `tap` source and target channel types must match -- source: ${source.class.name}, target: ${target.class.name} ")
-        }
-
-        this.source = source
-        this.result = CH.createBy(source)
-        this.outputs = [result, target]
-    }
-
-    /**
-     * @return A list holding the output channels of the `tap` operator
-     */
     List<DataflowWriteChannel> getOutputs() { outputs }
 
-    /**
-     * Apply the operator
-     * @return An instance of {@link TapOp} itself
-     */
+    DataflowWriteChannel getResult() { result }
+
     TapOp apply() {
-        newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
+
+        final params = [:]
+        params.inputs = [source]
+        params.outputs = outputs
+        params.listeners = createListener()
+
+        DataflowHelper.newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
         return this
+    }
+
+    private createListener() {
+
+        final stopOnFirst = source instanceof DataflowExpression
+        final listener = new DataflowEventAdapter() {
+            @Override
+            void afterRun(DataflowProcessor processor, List<Object> messages) {
+                if( !stopOnFirst )
+                    return
+                // -- terminate the process
+                processor.terminate()
+                // -- close the output channels
+                for( final output : outputs ) {
+                    if( output !instanceof DataflowExpression )
+                        output.bind(Channel.STOP)
+
+                    else if( !(output as DataflowExpression).isBound() )
+                        output.bind(Channel.STOP)
+                }
+            }
+
+            @Override
+            boolean onException(DataflowProcessor processor, Throwable e) {
+                log.error("@unknown", e)
+                session.abort(e)
+                return true
+            }
+        }
+
+        return [listener]
     }
 
 }
