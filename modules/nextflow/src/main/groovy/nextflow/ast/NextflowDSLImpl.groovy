@@ -471,9 +471,9 @@ class NextflowDSLImpl implements ASTTransformation {
                         }
                         body.add(stm)
                 }
+
+                readSource(stm, source, unit)
             }
-            // read the closure source
-            readSource(closure, source, unit, true)
 
             final bodyClosure = closureX(null, block(scope, body))
             final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
@@ -750,28 +750,25 @@ class NextflowDSLImpl implements ASTTransformation {
          * @param buffer
          * @param unit
          */
-        private void readSource( ASTNode node, StringBuilder buffer, SourceUnit unit, stripBrackets=false ) {
+        private void readSource( Statement node, StringBuilder buffer, SourceUnit unit ) {
             final colx = node.getColumnNumber()
             final colz = node.getLastColumnNumber()
             final first = node.getLineNumber()
             final last = node.getLastLineNumber()
-            for( int i=first; i<=last; i++ ) {
-                def line = unit.source.getLine(i, null)
-                if( i==last ) {
-                    line = line.substring(0,colz-1)
-                    if( stripBrackets ) {
-                        line = line.replaceFirst(/}.*$/,'')
-                        if( !line.trim() ) continue
-                    }
+            for( int i = first; i <= last; i++ ) {
+                final line = unit.source.getLine(i, null)
+
+                // prepend first-line indent
+                if( i == first ) {
+                    int k = 0
+                    while( k < line.size() && line[k] == ' ' )
+                        k++
+                    buffer.append( line.substring(0, k) )
                 }
-                if( i==first ) {
-                    line = line.substring(colx-1)
-                    if( stripBrackets ) {
-                        line = line.replaceFirst(/^.*\{/,'').trim()
-                        if( !line.trim() ) continue
-                    }
-                }
-                buffer.append(line) .append('\n')
+
+                final begin = (i == first) ? colx - 1 : 0
+                final end = (i == last) ? colz - 1 : line.size()
+                buffer.append( line.substring(begin, end) ).append('\n')
             }
         }
 

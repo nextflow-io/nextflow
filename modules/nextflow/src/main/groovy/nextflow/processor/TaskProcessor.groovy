@@ -1265,14 +1265,8 @@ class TaskProcessor {
         else {
             if( task?.source )  {
                 message << "Source block:"
-                // Trim indentation
-                def ws_size = []
-                task.source.eachLine {
-                    ws_size << it.indexOf(it.trim())
-                }
-                def min_ws_size = ws_size.findAll{ it > 0 }.min()
-                task.source.eachLine {
-                    message << "  ${min_ws_size && it.startsWith(" ") ? it.substring(min_ws_size) : it}"
+                task.source.stripIndent(true).eachLine {
+                    message << "  $it"
                 }
             }
 
@@ -1334,8 +1328,8 @@ class TaskProcessor {
         else
             message = err0(error.cause)
 
-        message.eachLine {
-            result << '  ' << it << '\n'
+        message.eachLine { line ->
+            result << '  ' << line << '\n'
         }
         result
             .append('\n')
