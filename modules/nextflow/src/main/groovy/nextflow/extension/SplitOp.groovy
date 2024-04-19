@@ -184,7 +184,7 @@ class SplitOp {
         final targets = new ArrayList(n)
         for( int i = 0; i < n; i++ )
             targets << new DataflowQueue()
-        new TapOp(source, targets).apply().getOutputs()
+        new TapOp(source, targets).apply().getOutputs().tail()
     }
 
     @PackageScope
