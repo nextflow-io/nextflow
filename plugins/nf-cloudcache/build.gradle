@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,10 +32,10 @@ configurations {
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.7'
-    compileOnly 'org.pf4j:pf4j:3.4.1'
+    compileOnly 'org.pf4j:pf4j:3.10.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.19"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.19"
+    testImplementation "org.apache.groovy:groovy:4.0.21"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.21"
 }
 

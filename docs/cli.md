@@ -50,6 +50,9 @@ Available options:
 `-syslog`
 : Send logs to syslog server (e.g. localhost:514).
 
+`-trace`
+: Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
+
 `-v, -version`
 : Print the program version.
 
@@ -121,7 +124,7 @@ The `-c` option is used to append a new configuration to the default configurati
 
 ### Docker driven execution
 
-:::{warning} *Experimental: not recommended for production environments.*
+:::{deprecated} 23.09.0-edge
 :::
 
 Launch Nextflow via Docker.
@@ -1129,13 +1132,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Enable/disable ANSI console logging.
 
 `-bucket-dir`
-: Remote bucket where intermediate result files are stored.
+: Remote bucket where intermediate result files are stored. When running a hybrid workflow, `-bucket-dir` and `-work-dir` should define separate work directories for remote tasks and local tasks, respectively.
 
 `-cache`
 : Enable/disable processes caching.
-
-`-cloudcache`
-: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
 
 `-d, -deep`
 : Create a shallow clone of the specified depth.
@@ -1157,7 +1157,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Dump channels for debugging purpose.
 
 `-dump-hashes`
-: Dump task hash keys for debugging purpose.
+: Dump task hash keys for debugging purposes.
+: :::{versionadded} 23.10.0
+  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`caching and resuming tips <cache-compare-hashes>` for more details.
+  :::
 
 `-e.<key>=<value>`
 : Add the specified variable to execution environment.
@@ -1230,6 +1233,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-charliecloud`
 : Enable process execution in a Charliecloud container.
 
+`-with-cloudcache`
+: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
+
 `-with-conda`
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
@@ -1260,8 +1266,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-timeline` (`timeline-<timestamp>.html`)
 : Create workflow execution timeline.
 
-`-with-tower` (`https://api.tower.nf`)
-: Monitor workflow execution with [Tower](https://cloud.tower.nf/).
+`-with-tower` (`https://api.cloud.seqera.io`)
+: Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
 
 `-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
@@ -1319,19 +1325,13 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run nextflow-io/hello -qs 4
   ```
 
-- Execute the pipeline with DSL-2 syntax.
-
-  ```console
-  $ nextflow run nextflow-io/hello -dsl2
-  ```
-
-- Execute a pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
+- Invoke the pipeline with a specific workflow as the entry-point.
 
   ```console
   $ nextflow run main.nf -entry workflow_A
   ```
 
-- Execute a pipeline with integrated monitoring in [Tower](https://cloud.tower.nf).
+- Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io).
 
   ```console
   $ nextflow run nextflow-io/hello -with-tower
@@ -1433,7 +1433,6 @@ $ nextflow view nextflow-io/hello
 
 == content of file: .nextflow/assets/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:
@@ -1474,7 +1473,6 @@ View the contents of a downloaded pipeline without omitting the header:
 $ nextflow view -q nextflow-io/hello
 
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process sayHello {
   input:

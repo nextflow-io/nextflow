@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,12 +73,11 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> outputEnvNames
 
+    Map<String,String> outputEvals
+
     String beforeScript
 
     String afterScript
-
-    @Deprecated
-    boolean containerExecutable
 
     boolean containerNative
 
@@ -147,6 +146,7 @@ class TaskBean implements Serializable, Cloneable {
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()
+        this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
 
         this.inputFiles = task.getInputFilesMap()

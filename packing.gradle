@@ -15,7 +15,7 @@ configurations {
 dependencies {
     api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
-    defaultCfg "org.apache.ivy:ivy:2.5.1"
+    defaultCfg "org.apache.ivy:ivy:2.5.2"
     // default cfg = runtime + httpfs + amazon + tower client + wave client
     defaultCfg project(':nf-httpfs')
     // Capsule manages the fat jar building process
@@ -98,7 +98,7 @@ protected coordinates( it ) {
  */
 task packOne(type: Jar) {
     dependsOn configurations.capsule, configurations.defaultCfg
-    archiveName = "nextflow-${version}-one.jar"
+    archiveFileName = "nextflow-${version}-one.jar"
 
     from (configurations.capsule.collect { zipTree(it) })
 
@@ -133,7 +133,7 @@ task packOne(type: Jar) {
 
 task packAll(type: Jar) {
     dependsOn configurations.capsule, configurations.defaultCfg
-    archiveName = "nextflow-${version}-all.jar"
+    archiveFileName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
     from (configurations.amazon + configurations.google + configurations.tower + configurations.wave)
@@ -175,7 +175,7 @@ task packAll(type: Jar) {
 
 task packCore(type: Jar) {
     dependsOn configurations.capsule, configurations.defaultCfg
-    archiveName = "nextflow-${version}-core.jar"
+    archiveFileName = "nextflow-${version}-core.jar"
 
     from jar // embed our application jar
     from (configurations.defaultCfg)
@@ -225,7 +225,7 @@ task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
         checkVersionExits(version)
         
         def path = new File(releaseDir)
-        if( !path.exists() ) error("Releases path does not exists: $path")
+        if( !path.exists() ) error("Releases path does not exist: $path")
         path.eachFile {
             if( it.name.startsWith("nextflow-$version"))
                 files << it

@@ -10,6 +10,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -225,6 +226,86 @@ class AzBatchServiceTest extends Specification {
     }
 
 
+    def 'should configure default startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
+        then:
+        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.resourceFiles().size()==1
+        configuredStartTask.resourceFiles().first().filePath() == 'azcopy'
+    }
+
+    def 'should configure custom startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
+        then:
+        configuredStartTask.commandLine() == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"; bash -c \'echo hello-world\''
+        and:
+        configuredStartTask.resourceFiles().size()==1
+        configuredStartTask.resourceFiles().first().filePath() == 'azcopy'
+    }
+
+    def 'should configure not install AzCopy because copyToolInstallMode is off' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'off']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
+        then:
+        configuredStartTask.commandLine() == "bash -c 'echo hello-world'"
+        configuredStartTask.resourceFiles() == []
+    }
+
+    def 'should configure not install AzCopy because copyToolInstallMode is task and quote command' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'task']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
+        then:
+        configuredStartTask.commandLine() == "bash -c 'echo ''hello-world'''"
+        configuredStartTask.resourceFiles() == []
+    }
+
+    def 'should create null startTask because no options are enabled' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'off']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
+        then:
+        configuredStartTask == null
+    }
+
+    def 'should configure privileged startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+        and:
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(privileged: true) )
+        then:
+        configuredStartTask.userIdentity().autoUser().elevationLevel().value == 'admin'
+    }
+
     def 'should check scaling formula' () {
         given:
         def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
@@ -235,6 +316,18 @@ class AzBatchServiceTest extends Specification {
         then:
         formula.contains 'interval = TimeInterval_Minute * 5;'
         formula.contains '$TargetDedicatedNodes = lifespan < interval ? 3 : targetPoolSize;'
+    }
+
+    def 'should check scaling formula for low-priority' () {
+        given:
+        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def formula = svc.scaleFormula( new AzPoolOpts(lowPriority: true, vmCount: 3, maxVmCount: 10, scaleInterval: Duration.of('5 min')) )
+        then:
+        formula.contains 'interval = TimeInterval_Minute * 5;'
+        formula.contains '$TargetLowPriorityNodes = lifespan < interval ? 3 : targetPoolSize;'
     }
 
     def 'should  check formula vars' () {
@@ -347,7 +440,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-9022a3fbfb5f93028d78fefaea5e21ab-Standard_X1'
+        spec.poolId == 'nf-pool-289d374ac1622e709cf863bce2570cab-Standard_X1'
         spec.metadata == [foo: 'bar']
 
     }

@@ -38,7 +38,7 @@ tower {
 ```
 
 :::{note}
-The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/overview) in Tower.
+The Seqera Platform access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://docs.seqera.io/platform/latest/credentials/overview) in Seqera Platform.
 :::
 
 ## Use cases
@@ -47,9 +47,9 @@ The Tower access token is not mandatory, but it is recommended in order to acces
 
 ### Authenticate private repositories
 
-Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Tower credentials](https://help.tower.nf/latest/credentials/overview/).
+Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Seqera Platform credentials](https://docs.seqera.io/platform/latest/credentials/overview/).
 
-Once the credentials have been created, simply specify your [Tower account access token](https://help.tower.nf/22.2/api/overview/#authentication) in your pipeline configuration file. If the credentials were created in a Tower organization workspace, specify the workspace ID as well in the config file as shown below:
+Once the credentials have been created, simply specify your [personal access token](https://docs.seqera.io/platform/23.3.0/api/overview#authentication) in your pipeline configuration file. If the credentials were created in a Seqera Platform organization workspace, specify the workspace ID as well in the config file as shown below:
 
 ```groovy
 tower {
@@ -62,7 +62,7 @@ tower {
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <dsl2-module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
+To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
 
 :::{tip}
 Make sure the process does not declare a `container` directive, otherwise it will take precedence over the Dockerfile definition.
@@ -93,6 +93,16 @@ wave.strategy = ['conda']
 ```
 
 The above setting instructs Wave to use the `conda` directive to provision the pipeline containers and ignore the `container` directive and any Dockerfile(s).
+
+:::{tip}
+Some configuration options in the `conda` scope are used when Wave is used to build Conda-based containers.
+For example, the Conda channels and their priority can be set with `conda.channels`:
+
+```groovy
+wave.strategy = ['conda']
+conda.channels = 'seqera,conda-forge,bioconda,defaults'
+```
+:::
 
 ### Build Spack based containers
 
@@ -149,7 +159,7 @@ In the above configuration replace `docker.io/user/repo` with a repository of yo
 should be uploaded.
 
 :::{note}
-When using a private repository, the repository access keys must be provider via Tower credentials manager (see {ref}`above <wave-authenticate-private-repos>`).
+When using a private repository, the repository access keys must be provided via the Seqera Platform credentials manager (see {ref}`above <wave-authenticate-private-repos>`).
 
 Moreover the access to the repository must be granted in the compute nodes by using the command `singularity remote login <registry>`.
 Please see Singularity documentation for further details.
@@ -168,7 +178,7 @@ wave.build.cacheRepository = 'example.com/your/cache-repo'
 
 The first repository is used to store the built container images. The second one is used to store the individual image layers for caching purposes.
 
-The repository access keys must be provided as Tower credentials (see
+The repository access keys must be provided as Seqera Platform credentials (see
 [Authenticate private repositories](#authenticate-private-repositories) above).
 
 ### Run pipelines using Fusion file system
@@ -181,81 +191,4 @@ See the {ref}`Fusion documentation <fusion-page>` for more details.
 
 ## Advanced settings
 
-The following configuration options are available:
-
-`wave.enabled`
-: Enable/disable the execution of Wave containers.
-
-`wave.endpoint`
-: The Wave service endpoint (default: `https://wave.seqera.io`).
-
-`wave.freeze`
-: :::{versionadded} 23.07.0-edge
-  :::
-: When enabling the container freeze mode, Wave will provision an non-ephemeral container image
-that will be pushed to a container repository your choice. It requires the use of the `wave.build.repository` setting.
-It is also suggested to specify a custom cache repository via the setting `wave.build.cacheRepository`. Note: when using
-container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.    
-
-`wave.build.repository`
-: The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
-
-`wave.build.cacheRepository`
-: The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
-
-`wave.build.conda.basePackages`
-: One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
-
-`wave.build.conda.commands`
-: One or more commands to be added to the Dockerfile used to build a Conda based image.
-
-`wave.build.conda.mambaImage`
-: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
-
-`wave.build.spack.basePackages`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more Spack packages to be always added in the resulting container.
-
-`wave.build.spack.commands`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more commands to be added to the Dockerfile used to build a Spack based image.
-
-`wave.httpClient.connectTime`
-: :::{versionadded} 22.06.0-edge
-  :::
-: Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
-
-`wave.strategy`
-: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
-
-`wave.report.enabled` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`).
-
-`wave.report.file` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: The name of the containers report file (default: `'containers-<timestamp>.config'`).
-
-`wave.retryPolicy.delay`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The initial delay when a failing HTTP request is retried (default: `150ms`). 
-
-`wave.retryPolicy.maxDelay`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The max delay when a failing HTTP request is retried (default: `90 seconds`).
-
-`wave.retryPolicy.maxAttempts`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The max number of attempts a failing HTTP request is retried (default: `5`).
-
-`wave.retryPolicy.jitter`
-: :::{versionadded} 22.06.0-edge
-  :::
-: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).
+Wave advanced configuration settings are described in the {ref}`Wave <config-wave>` section on the Nextflow configuration page.

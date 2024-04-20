@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.inspect.ContainersInspector
 import nextflow.util.LoggerHelper
 /**
@@ -69,6 +70,7 @@ class CmdInspect extends CmdBase {
 
     @Override
     void run() {
+        ContainerInspectMode.activate(true)
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command

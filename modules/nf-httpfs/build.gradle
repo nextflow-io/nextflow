@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ sourceSets {
 
 dependencies {
     api project(':nf-commons')
-    api "ch.qos.logback:logback-classic:1.4.6"
-    api "org.codehaus.groovy:groovy:3.0.19"
-    api "org.codehaus.groovy:groovy-nio:3.0.19"
+    api "ch.qos.logback:logback-classic:1.4.12"
+    api "org.apache.groovy:groovy:4.0.21"
+    api "org.apache.groovy:groovy-nio:4.0.21"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
 
     /* testImplementation inherited from top gradle build file */
-    testImplementation "org.codehaus.groovy:groovy-json:3.0.19" // needed by wiremock
+    testImplementation "org.apache.groovy:groovy-json:4.0.21" // needed by wiremock
     testImplementation ('com.github.tomakehurst:wiremock:1.57') { exclude module: 'groovy-all' }
     testImplementation ('com.github.tomjankes:wiremock-groovy:0.2.0') { exclude module: 'groovy-all' }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.EnumSet;
 
+import nextflow.extension.FilesEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,7 +131,7 @@ public class CopyMoveHelper {
                 String delta = rel != null ? rel.toString() : null;
                 Path newFile = delta != null ? target.resolve(delta) : target;
                 if( log.isTraceEnabled())
-                    log.trace("Copy file: " + current + " -> "+newFile.toUri());
+                    log.trace("Copy file: " + current + " -> "+ FilesEx.toUriString(newFile));
                 copyFile(current, newFile, foreign, options);
                 return FileVisitResult.CONTINUE;
             }

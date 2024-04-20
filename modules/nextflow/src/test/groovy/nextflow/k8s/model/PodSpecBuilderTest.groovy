@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -581,6 +581,21 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should create pod spec with schedulerName' () {
+
+        when:
+        def pod = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions(new PodOptions(schedulerName: 'my-scheduler'))
+                .build()
+
+        then:
+        pod.spec.schedulerName == 'my-scheduler'
+
+    }
+
     def 'should create image pull request map' () {
         given:
         def builder = new PodSpecBuilder(imagePullSecret: 'MySecret')
@@ -852,6 +867,27 @@ class PodSpecBuilderTest extends Specification {
         then:
         job.metadata == metadata
         job.spec.template.metadata == metadata
+    }
+
+    def 'should create job spec with ttl seconds' () {
+        when:
+        def job = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .buildAsJob()
+        then:
+        !job.spec.ttlSecondsAfterFinished
+
+        when:
+        job = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions( new PodOptions(ttlSecondsAfterFinished: 60) )
+                .buildAsJob()
+        then:
+        job.spec.ttlSecondsAfterFinished == 60
     }
 
 }

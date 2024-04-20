@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
 import nextflow.k8s.client.PodUnschedulableException
 import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodHostMount
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodMountSecret
 import nextflow.k8s.model.PodOptions
@@ -249,15 +250,18 @@ class K8sTaskHandlerTest extends Specification {
         2 * podOptions.getEnvVars() >> [ PodEnv.value('FOO','bar') ]
         2 * podOptions.getMountSecrets() >> [ new PodMountSecret('my-secret/key-z', '/data/secret.txt') ]
         2 * podOptions.getMountConfigMaps() >> [ new PodMountConfig('my-data/key-x', '/etc/file.txt') ]
+        2 * podOptions.getMountHostPaths() >> [ new PodHostMount('/host/x', '/mnt/x') ]
         and:
         result.spec.containers[0].env == [[name:'FOO', value:'bar']]
         result.spec.containers[0].volumeMounts == [
             [name:'vol-1', mountPath:'/etc'],
-            [name:'vol-2', mountPath:'/data']
+            [name:'vol-2', mountPath:'/data'],
+            [name:'vol-3', mountPath:'/mnt/x']
         ]
         result.spec.volumes == [
             [name:'vol-1', configMap:[name:'my-data', items:[[key:'key-x', path:'file.txt']]]],
-            [name:'vol-2', secret:[secretName:'my-secret', items:[[key:'key-z', path:'secret.txt']]]]
+            [name:'vol-2', secret:[secretName:'my-secret', items:[[key:'key-z', path:'secret.txt']]]],
+            [name:'vol-3', 'hostPath':[path:'/host/x']]
         ]
 
     }
@@ -934,7 +938,9 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def launcher = Mock(FusionScriptLauncher)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        def k8sConfig = Spy(K8sConfig)
+        def exec = Mock(K8sExecutor) { getK8sConfig()>>k8sConfig  }
+        def handler = Spy(new K8sTaskHandler(builder:builder, client: client, executor: exec))
         Map result
 
         when:
@@ -968,6 +974,45 @@ class K8sTaskHandlerTest extends Specification {
         result.spec.containers[0].args == ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
         result.spec.containers[0].env == [[name:'FUSION_BUCKETS', value:'this,that']]
         result.spec.containers[0].resources == [limits:['nextflow.io/fuse':1]]
+        !result.spec.containers[0].securityContext
+
+
+        /*
+         * use custom fuse device
+         */
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
+        launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        and:
+        k8sConfig.fuseDevicePlugin() >> ['custom/device/fuse': 1]
+        and:
+        handler.getTask() >> task
+        handler.fusionEnabled() >> true
+        handler.fusionLauncher() >> launcher
+        handler.fusionConfig() >> new FusionConfig(privileged: false)
+        and:
+        task.getContainer() >> 'debian:latest'
+        task.getWorkDir() >> WORK_DIR
+        task.getConfig() >> config
+        and:
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        and:
+        1 * config.getCpus() >> 0
+        1 * config.getMemory() >> null
+        1 * client.getConfig() >> new ClientConfig()
+        and:
+        result.spec.containers[0].args == ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        result.spec.containers[0].env == [[name:'FUSION_BUCKETS', value:'this,that']]
+        result.spec.containers[0].resources == [limits:['custom/device/fuse':1]]
         !result.spec.containers[0].securityContext
     }
 

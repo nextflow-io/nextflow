@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class WaveContainerResolverTest extends Specification {
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
-        1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> SINGULARITY_CONTAINER
+        1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target, WAVE_CONTAINER.hashKey) >> SINGULARITY_CONTAINER
         and:
         result == SINGULARITY_CONTAINER
 

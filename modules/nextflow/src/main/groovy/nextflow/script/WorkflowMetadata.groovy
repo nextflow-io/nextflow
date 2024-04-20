@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
@@ -29,6 +30,7 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.config.Manifest
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.InvokerHelper
@@ -392,6 +394,10 @@ class WorkflowMetadata {
             try {
                 action.call()
             }
+            catch (WorkflowScriptErrorException e) {
+                // re-throw it to allow `error` function to be invoked by completion handler
+                throw e
+            }
             catch (Exception e) {
                 log.error("Failed to invoke `workflow.onComplete` event handler", e)
             }
@@ -419,7 +425,7 @@ class WorkflowMetadata {
         final allProperties = this.metaClass.getProperties()
         final result = new LinkedHashMap(allProperties.size())
         for( MetaProperty property : allProperties ) {
-            if( property.name == 'class' )
+            if( property.name == 'class' || !Modifier.isPublic(property.modifiers) )
                 continue
             try {
                 result[property.name] = property.getProperty(this)
@@ -458,10 +464,10 @@ class WorkflowMetadata {
      */
     protected void safeMailNotification() {
         try {
-            def notifier = new WorkflowNotifier()
-            notifier.workflow = this
-            notifier.config = session.config
-            notifier.variables = NF.binding.variables
+            final notifier = new WorkflowNotifier(
+                workflow: this,
+                config: session.config,
+                variables: NF.binding.variables )
             notifier.sendNotification()
         }
         catch (Exception e) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,20 +35,34 @@ import nextflow.Channel
 class MixOp {
 
     private DataflowReadChannel source
-    private DataflowReadChannel[] others
+    private List<DataflowReadChannel> others
+    private DataflowWriteChannel target
 
     MixOp(DataflowReadChannel source, DataflowReadChannel other) {
         this.source = source
-        this.others = [other]
+        this.others = List.of(other)
     }
 
     MixOp(DataflowReadChannel source, DataflowReadChannel[] others) {
         this.source = source
-        this.others = others
+        this.others = others.toList()
+    }
+
+    MixOp(List<DataflowReadChannel> channels) {
+        if( channels.size()<2 )
+            throw new IllegalArgumentException("Mix operator requires at least 2 source channels")
+        this.source = channels.get(0)
+        this.others = channels.subList(1, channels.size())
+    }
+
+    MixOp withTarget(DataflowWriteChannel target) {
+        this.target = target
+        return this
     }
 
     DataflowWriteChannel apply() {
-        def target = CH.create()
+        if( target == null )
+            target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
         def handlers = [
                 onNext: { target << it },
@@ -60,7 +74,7 @@ class MixOp {
             subscribeImpl(it, handlers)
         }
 
-        def allSources = [source]
+        final allSources = [source]
         allSources.addAll(others)
         return target
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,22 +39,22 @@ class WaveAssetsTest extends Specification {
 
     def 'should validate container name' () {
         when:
-        WaveAssets.validateContainerRepo('ubuntu')
+        WaveAssets.validateContainerName('ubuntu')
         then:
         noExceptionThrown()
 
         when:
-        WaveAssets.validateContainerRepo('ubuntu:latest')
+        WaveAssets.validateContainerName('ubuntu:latest')
         then:
         noExceptionThrown()
 
         when:
-        WaveAssets.validateContainerRepo('quay.io/wtsicgp/nanoseq:3.3.0')
+        WaveAssets.validateContainerName('quay.io/wtsicgp/nanoseq:3.3.0')
         then:
         noExceptionThrown()
 
         when:
-        WaveAssets.validateContainerRepo('docker://quay.io/wtsicgp/nanoseq:3.3.0')
+        WaveAssets.validateContainerName('docker://quay.io/wtsicgp/nanoseq:3.3.0')
         then:
         thrown(IllegalArgumentException)
     }

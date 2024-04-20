@@ -202,7 +202,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Path s3Path = (S3Path) path;
 
 		Preconditions.checkArgument(!s3Path.getKey().equals(""),
-				"cannot create InputStream for root directory: %s", s3Path);
+				"cannot create InputStream for root directory: %s", FilesEx.toUriString(s3Path));
 
 		InputStream result;
 		try {
@@ -213,13 +213,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 					.getObjectContent();
 
 			if (result == null)
-				throw new IOException(String.format("The specified path is a directory: %s", path));
+				throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
 		}
 		catch (AmazonS3Exception e) {
 			if (e.getStatusCode() == 404)
 				throw new NoSuchFileException(path.toString());
 			// otherwise throws a generic IO exception
-			throw new IOException(String.format("Cannot access file: %s", path),e);
+			throw new IOException(String.format("Cannot access file: %s", FilesEx.toUriString(s3Path)),e);
 		}
 
 		return result;
@@ -258,11 +258,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			if (!(create && truncateExisting)) {
 				if (exists(s3Path)) {
 					if (createNew || !truncateExisting) {
-						throw new FileAlreadyExistsException(path.toString());
+						throw new FileAlreadyExistsException(FilesEx.toUriString(s3Path));
 					}
 				} else {
 					if (!createNew && !create) {
-						throw new NoSuchFileException(path.toString());
+						throw new NoSuchFileException(FilesEx.toUriString(s3Path));
 					}
 				}
 			}
@@ -496,13 +496,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Path s3Path = (S3Path) path;
 
         if (Files.notExists(path)){
-            throw new NoSuchFileException("the path: " + path + " not exists");
+            throw new NoSuchFileException("the path: " + FilesEx.toUriString(s3Path) + " does not exist");
         }
 
         if (Files.isDirectory(path)){
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
                 if (stream.iterator().hasNext()){
-                    throw new DirectoryNotEmptyException("the path: " + path + " is a directory and is not empty");
+                    throw new DirectoryNotEmptyException("the path: " + FilesEx.toUriString(s3Path) + " is a directory and is not empty");
                 }
             }
         }
@@ -541,7 +541,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		if (!actualOptions.contains(StandardCopyOption.REPLACE_EXISTING)) {
 			if (exists(s3Target)) {
 				throw new FileAlreadyExistsException(format(
-						"target already exists: %s", target));
+						"target already exists: %s", FilesEx.toUriString(s3Target)));
 			}
 		}
 
@@ -666,7 +666,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				return (V) new S3FileAttributesView(readAttr0(s3Path));
 			}
 			catch (IOException e) {
-				throw new RuntimeException("Unable read attributes for file: " + s3Path.toUri(), e);
+				throw new RuntimeException("Unable read attributes for file: " + FilesEx.toUriString(s3Path), e);
 			}
 		}
 		throw new UnsupportedOperationException("Not a valid S3 file system provider file attribute view: " + type.getName());
@@ -711,11 +711,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		boolean directory = false;
 		boolean regularFile = false;
 		String key = objectSummary.getKey();
-		// check if is a directory and exists the key of this directory at amazon s3
+		// check if is a directory and the key of this directory exists in amazon s3
 		if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
 			directory = true;
 		}
-		// is a directory but not exists at amazon s3
+		// is a directory but does not exist in amazon s3
 		else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
 			directory = true;
 			// no metadata, we fake one
@@ -836,7 +836,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		final String bucketName = S3Path.bucketName(uri);
 		final boolean global = bucketName!=null;
-		final AwsClientFactory factory = new AwsClientFactory(awsConfig, Regions.US_EAST_1.getName());
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, globalRegion(awsConfig));
 		client = new S3Client(factory.getS3Client(clientConfig, global));
 
 		// set the client acl
@@ -845,12 +845,18 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
-		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
-		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
-		client.setGlacierRetrievalTier(props.getProperty("glacier_retrieval_tier"));
+
+		if( props.getProperty("glacier_auto_retrieval") != null )
+			log.warn("Glacier auto-retrieval is no longer supported, config option `aws.client.glacierAutoRetrieval` will be ignored");
 
 		return new S3FileSystem(this, client, uri, props);
 	}
+
+    protected String globalRegion(AwsConfig awsConfig) {
+        return awsConfig.getRegion() != null && awsConfig.getS3Config().isCustomEndpoint()
+                ? awsConfig.getRegion()
+                : Regions.US_EAST_1.getName();
+    }
 
 	protected String getProp(Properties props, String... keys) {
 		for( String k : keys ) {
@@ -904,7 +910,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	/**
-	 * Get the Control List, if the path not exists
+	 * Get the Control List, if the path does not exist
      * (because the path is a directory and this key isn't created at amazon s3)
      * then return the ACL of the first child.
      *

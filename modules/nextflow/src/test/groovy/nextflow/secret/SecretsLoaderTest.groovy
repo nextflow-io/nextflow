@@ -17,10 +17,13 @@
 
 package nextflow.secret
 
+import java.nio.file.Files
+
 import nextflow.SysEnv
+import nextflow.exception.AbortOperationException
+import nextflow.extension.FilesEx
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
@@ -56,6 +59,51 @@ class SecretsLoaderTest extends Specification {
         'valid' | false
         'false' | false
         'f'     | false
+    }
+
+    def 'should create secret context' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = '''
+            [
+              {
+                "name": "FOO",
+                "value": "ciao"
+              }
+            ]
+            '''
+        and:
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+
+        when:
+        def ctx = SecretsLoader.secretContext()
+        then:
+        ctx.FOO == 'ciao'
+        and:
+        ctx.BAR == null
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should note create secret context' () {
+        given:
+        SysEnv.push(NXF_ENABLE_SECRETS: "false")
+
+        when:
+        SecretsLoader.secretContext().'FOO'
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Unable to access 'secrets.FOO' because secrets feature is disabled - Enable it setting the variable NXF_ENABLE_SECRETS=true in your environment"
+
+        cleanup:
+        SysEnv.pop()
     }
 
 }

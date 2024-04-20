@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,9 +187,9 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run', '-', '-a', '-b') == ['run','-stdin', '-a', '-b']
         launcher.normalizeArgs('run') == ['run']
 
-        launcher.normalizeArgs('run','-cloudcache') == ['run', '-cloudcache', '-']
-        launcher.normalizeArgs('run','-cloudcache', '-x') == ['run', '-cloudcache', '-', '-x']
-        launcher.normalizeArgs('run','-cloudcache', 's3://foo/bar') == ['run', '-cloudcache','s3://foo/bar']
+        launcher.normalizeArgs('run','-with-cloudcache') == ['run', '-with-cloudcache', '-']
+        launcher.normalizeArgs('run','-with-cloudcache', '-x') == ['run', '-with-cloudcache', '-', '-x']
+        launcher.normalizeArgs('run','-with-cloudcache', 's3://foo/bar') == ['run', '-with-cloudcache','s3://foo/bar']
         
         launcher.normalizeArgs('run','-with-tower') == ['run', '-with-tower', '-']
         launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']

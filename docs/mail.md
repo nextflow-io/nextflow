@@ -10,7 +10,7 @@ The built-in function `sendMail` allows you to send a mail message from a workfl
 
 ### Basic mail
 
-The mail attributes are specified as named parameters or providing an equivalent associative array as argument. For example:
+The mail attributes are specified as named parameters or an equivalent map. For example:
 
 ```groovy
 sendMail(
@@ -36,20 +36,39 @@ sendMail(mail)
 
 The following parameters can be specified:
 
-| Name          | Description                                                            |
-| ------------- | ---------------------------------------------------------------------- |
-| to {sup}`*`   | The mail target recipients.                                            |
-| cc {sup}`*`   | The mail CC recipients.                                                |
-| bcc {sup}`*`  | The mail BCC recipients.                                               |
-| from {sup}`*` | The mail sender address.                                               |
-| subject       | The mail subject.                                                      |
-| charset       | The mail content charset (default: `UTF-8`).                           |
-| text          | The mail plain text content.                                           |
-| body          | The mail body content. It can be either plain text or HTML content.    |
-| type          | The mail body mime type. If not specified it's automatically detected. |
-| attach        | Single file or a list of files to be included as mail attachments.     |
+`to`
+: *Multiple email addresses can be specified separating them with a comma.*
+: The mail target recipients.
 
-`*` Multiple email addresses can be specified separating them with a comma.
+`cc`
+: *Multiple email addresses can be specified separating them with a comma.*
+: The mail CC recipients.
+
+`bcc`
+: *Multiple email addresses can be specified separating them with a comma.*
+: The mail BCC recipients.
+
+`from`
+: *Multiple email addresses can be specified separating them with a comma.*
+: The mail sender address.
+
+`subject`
+: The mail subject.
+
+`charset`
+: The mail content charset (default: `UTF-8`).
+
+`text`
+: The mail plain text content.
+
+`body`
+: The mail body content. It can be either plain text or HTML content.
+
+`type`
+: The mail body mime type. If not specified it's automatically detected.
+
+`attach`
+: Single file or a list of files to be included as mail attachments.
 
 (mail-advanced)=
 
@@ -89,14 +108,19 @@ To send an email that includes text and HTML content, use both the `text` and `b
 
 When using the curly brackets syntax, the `attach` parameter can be repeated two or more times to include multiple attachments in the mail message.
 
-Moreover for each attachment it's possible to specify one or more of the following optional attributes:
+Moreover for each attachment it's possible to specify any of the following options:
 
-| Name        | Description                                                                 |
-| ----------- | --------------------------------------------------------------------------- |
-| contentId   | Defines the `Content-ID` header field for the attachment.                   |
-| disposition | Defines the `Content-Disposition` header field for the attachment.          |
-| fileName    | Defines the `filename` parameter of the "Content-Disposition" header field. |
-| description | Defines the `Content-Description` header field for the attachment.          |
+`contentId`
+: Defines the `Content-ID` header field for the attachment.
+
+`disposition`
+: Defines the `Content-Disposition` header field for the attachment.
+
+`fileName`
+: Defines the `filename` parameter of the `Content-Disposition` header field.
+
+`description`
+: Defines the `Content-Description` header field for the attachment.
 
 For example:
 
@@ -129,6 +153,26 @@ mail {
 ```
 
 See the {ref}`mail scope <config-mail>` section to learn more the mail server configuration options.
+
+### AWS SES configuration
+
+:::{versionadded} 23.06.0-edge
+:::
+
+Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative
+provider to send emails in place of SMTP server.
+
+To enable this feature add the following environment variable in the launching environment:
+
+```bash
+export NXF_ENABLE_AWS_SES=true
+```
+
+Make also sure to add the following AWS IAM permission to the AWS user (or role) used to launch the pipeline execution:
+
+```
+ses:SendRawEmail
+```
 
 ## Mail notification
 
@@ -166,7 +210,7 @@ nextflow run <pipeline name> -N <recipient address>
 
 It will send a notification mail when the execution completes similar to the one shown below:
 
-```{image} images/workflow-notification-min.png
+```{image} _static/workflow-notification-min.png
 ```
 
 :::{warning}
