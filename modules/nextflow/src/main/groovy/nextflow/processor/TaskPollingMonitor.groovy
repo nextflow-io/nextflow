@@ -197,9 +197,10 @@ class TaskPollingMonitor implements TaskMonitor {
             handler.prepareLauncher()
             handler.submit()
             // add each child task to the running queue
-            for( TaskHandler h0 : handler.task.children ) {
-                runningQueue.add(h0)
-                session.notifyTaskSubmit(h0)
+            final task = handler.task as TaskArray
+            for( TaskHandler it : task.children ) {
+                runningQueue.add(it)
+                session.notifyTaskSubmit(it)
             }
         }
         else {
@@ -702,19 +703,25 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected void notifyTaskPending0(TaskHandler handler) {
-        if( handler.task instanceof TaskArray )
-            for( TaskHandler h0 : handler.task.children )
-                session.notifyTaskPending(h0)
-        else
+        if( handler.task instanceof TaskArray ) {
+            final task = handler.task as TaskArray
+            for( TaskHandler it : task.children )
+                session.notifyTaskPending(it)
+        }
+        else {
             session.notifyTaskPending(handler)
+        }
     }
 
     protected void notifyTaskComplete0(TaskHandler handler) {
-        if( handler.task instanceof TaskArray )
-            for( TaskHandler h0 : handler.task.children )
-                session.notifyTaskComplete(h0)
-        else
+        if( handler.task instanceof TaskArray ) {
+            final task = handler.task as TaskArray
+            for( TaskHandler it : task.children )
+                session.notifyTaskComplete(it)
+        }
+        else {
             session.notifyTaskComplete(handler)
+        }
     }
 
 }
