@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,6 @@ dependencies {
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.19"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.19"
+    testImplementation "org.apache.groovy:groovy:4.0.21"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.21"
 }

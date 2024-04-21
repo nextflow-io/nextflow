@@ -45,6 +45,7 @@ class BatchConfig {
     private String network
     private String subnetwork
     private String serviceAccountEmail
+    private BatchRetryConfig retryConfig
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
@@ -59,6 +60,7 @@ class BatchConfig {
     String getNetwork() { network }
     String getSubnetwork() { subnetwork }
     String getServiceAccountEmail() { serviceAccountEmail }
+    BatchRetryConfig getRetryConfig() { retryConfig }
 
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
@@ -75,6 +77,7 @@ class BatchConfig {
         result.network = session.config.navigate('google.batch.network')
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
+        result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
         return result
     }
 

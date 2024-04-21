@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     @Override
     protected boolean canSubmit(TaskHandler handler) {
-        return super.canSubmit(handler) && semaphore?.tryAcquire()
+        return super.canSubmit(handler) && (semaphore == null || semaphore.tryAcquire())
     }
 
     protected RateLimiter createSubmitRateLimit() {

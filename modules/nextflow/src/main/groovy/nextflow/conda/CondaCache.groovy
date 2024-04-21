@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class CondaCache {
 
     private String createOptions
 
-    private boolean useMamba 
+    private boolean useMamba
 
     private boolean useMicromamba 
 
@@ -98,23 +98,24 @@ class CondaCache {
     CondaCache(CondaConfig config) {
         this.config = config
 
-        if( config.createTimeout )
-            createTimeout = config.createTimeout as Duration
+        if( config.createTimeout() )
+            createTimeout = config.createTimeout()
 
-        if( config.createOptions )
-            createOptions = config.createOptions
+        if( config.createOptions() )
+            createOptions = config.createOptions()
 
-        if( config.cacheDir )
-            configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
+        if( config.cacheDir() )
+            configCacheDir0 = config.cacheDir().toAbsolutePath()
 
-        if( config.useMamba && config.useMicroMamba)
+        if( config.useMamba() && config.useMicromamba() )
             throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
         
-        if( config.useMamba )
-            useMamba = config.useMamba as boolean
+        if( config.useMamba() ) {
+            useMamba = config.useMamba()
+        }
 
-        if( config.useMicromamba )
-            useMicromamba = config.useMicromamba as boolean
+        if( config.useMicromamba() )
+            useMicromamba = config.useMicromamba()
 
         if( config.getChannels() )
             channels = config.getChannels()

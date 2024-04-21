@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package nextflow.script
 
+import static nextflow.util.CacheHelper.*
+
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.NF
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.ConfigParseException
 import nextflow.exception.IllegalConfigException
@@ -30,8 +31,24 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
-import static nextflow.util.CacheHelper.HashMode
-import nextflow.script.params.*
+import nextflow.script.params.CmdEvalParam
+import nextflow.script.params.DefaultInParam
+import nextflow.script.params.DefaultOutParam
+import nextflow.script.params.EachInParam
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.FileOutParam
+import nextflow.script.params.InParam
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutParam
+import nextflow.script.params.OutputsList
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.TupleOutParam
+import nextflow.script.params.ValueInParam
+import nextflow.script.params.ValueOutParam
 
 /**
  * Holds the process configuration properties
@@ -50,12 +67,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'array',
             'beforeScript',
             'cache',
-            'conda',
-            'cpus',
-            'container',
-            'containerOptions',
             'cleanup',
             'clusterOptions',
+            'conda',
+            'container',
+            'containerOptions',
+            'cpus',
             'debug',
             'disk',
             'echo', // deprecated
@@ -63,9 +80,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'executor',
             'ext',
             'fair',
-            'machineType',
-            'queue',
             'label',
+            'machineType',
             'maxSubmitAwait',
             'maxErrors',
             'maxForks',
@@ -75,9 +91,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
+            'queue',
+            'resourceLabels',
+            'resourceLimits',
             'scratch',
+            'secret',
             'shell',
             'spack',
+            'stageInMode',
+            'stageOutMode',
             'storeDir',
             'tag',
             'time',
@@ -86,12 +108,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'val',
             'each',
             'env',
-            'secret',
             'stdin',
             'stdout',
-            'stageInMode',
-            'stageOutMode',
-            'resourceLabels'
     ]
 
     /**
@@ -573,6 +591,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                 .bind(obj)
     }
 
+    OutParam _out_eval(Object obj ) {
+        new CmdEvalParam(this).bind(obj)
+    }
+
+    OutParam _out_eval(Map opts, Object obj ) {
+        new CmdEvalParam(this)
+            .setOptions(opts)
+            .bind(obj)
+    }
 
     OutParam _out_file( Object obj ) {
         // note: check that is a String type to avoid to force
@@ -995,6 +1022,17 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         catch( NumberFormatException e ) {
             throw new IllegalArgumentException("Process directive `array` should be an integer greater than 1 -- offending value: '$value'", e)
         }
+    }
+
+    private static final List<String> VALID_RESOURCE_LIMITS = List.of('cpus', 'memory', 'disk', 'time')
+
+    ProcessConfig resourceLimits( Map entries ) {
+        for( entry in entries )
+            if( entry.key !in VALID_RESOURCE_LIMITS )
+                throw new IllegalArgumentException("Not a valid directive in `resourceLimits`: $entry.key")
+
+        configProperties.put('resourceLimits', entries)
+        return this
     }
 
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  Copyright 2013-2023, Seqera Labs
+#  Copyright 2013-2024, Seqera Labs
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'23.12.0-edge'}
+NXF_VER=${NXF_VER:-'24.03.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -275,7 +275,7 @@ if [ ! -x "$JAVA_CMD" ] ; then
             JAVA_CMD="$JAVA_HOME/bin/java"
         fi
     elif [ -x /usr/libexec/java_home ]; then
-        JAVA_CMD="$(/usr/libexec/java_home -v 1.8+)/bin/java"
+        JAVA_CMD="$(/usr/libexec/java_home -v 11+ 2>/dev/null)/bin/java" || JAVA_CMD=java
     else
         JAVA_CMD="$(which java)" || JAVA_CMD=java
     fi
@@ -288,7 +288,13 @@ if [ -f "$JAVA_KEY" ]; then
 else
   JAVA_VER="$("$JAVA_CMD" $NXF_OPTS -version 2>&1)"
   if [ $? -ne 0 ]; then
+      getstarted_web="https://www.nextflow.io/docs/latest/getstarted.html"
       echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
+      echo_red "NOTE: Nextflow needs a Java virtual machine to run. To this end:
+ - make sure a \`java\` command can be found; or
+ - manually define the variables JAVA_HOME to point to an existing installation; or
+ - install a Java virtual machine, for instance through https://sdkman.io (read the docs);
+ - for more details please refer to the Nextflow Get Started page at http://docs.nextflow.io."
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
       exit 1
   fi

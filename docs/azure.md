@@ -81,10 +81,10 @@ azure {
 }
 ```
 
-The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount. 
+The task can access the File share in `/mnt/mydata/myresources`. Note: The string `rnaseqResources` in the above config can be any name of your choice, and it does not affect the underlying mount.
 
 :::{warning}
-Azure File shares do not support authentication and management with Active Directory. The storage account key must be 
+Azure File shares do not support authentication and management with Active Directory. The storage account key must be
 set in the configuration if a share is mounted.
 :::
 
@@ -92,11 +92,17 @@ set in the configuration if a share is mounted.
 
 ## Azure Batch
 
+:::{tip}
+This section describes how to manually set up and use Nextflow with Azure Batch.
+You may be interested in using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/azure-batch#compute-environment) in [Seqera Platform](https://seqera.io/platform/),
+which automatically creates the required Azure infrastructure for you with minimal intervention.
+:::
+
 [Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) is a managed computing service that allows the execution of containerised workloads in the Azure cloud infrastructure.
 
 Nextflow provides built-in support for Azure Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`Azore Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
+Read the {ref}`Azure Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
 
 ### Get started
 
@@ -242,6 +248,7 @@ When Nextflow is configured to use a pool already available in the Batch account
 
 1. The pool must be declared as `dockerCompatible` (`Container Type` property).
 2. The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow will return an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
+3. Unless you are using [Fusion](./fusion.md), all tasks must have [AzCopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10) available in the path. If `azure.batch.copyToolInstallMode = 'node'` this will require every node to have the azcopy binary located at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
 
 ### Pool autoscaling
 
@@ -346,7 +353,7 @@ When using containers hosted in a private registry, the registry name must also 
 :::{versionadded} 23.03.0-edge
 :::
 
-Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the 
+Sometimes it might be useful to create a pool in an existing [Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/). To do so, the
 `virtualNetwork` option can be added to the pool settings as follows:
 
 ```groovy

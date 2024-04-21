@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -239,8 +239,12 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
+    def getResourceLimit(String directive) {
+        final limits = get('resourceLimits') as Map
+        return limits?.get(directive)
+    }
 
-    MemoryUnit getMemory() {
+    private MemoryUnit getMemory0() {
         def value = get('memory')
 
         if( !value )
@@ -257,7 +261,13 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
-    DiskResource getDiskResource() {
+    MemoryUnit getMemory() {
+        final val = getMemory0()
+        final lim = getResourceLimit('memory') as MemoryUnit
+        return val && lim && val > lim ? lim : val
+    }
+
+    private DiskResource getDiskResource0() {
         def value = get('disk')
 
         if( value instanceof Map )
@@ -267,6 +277,12 @@ class TaskConfig extends LazyMap implements Cloneable {
             return new DiskResource(value)
 
         return null
+    }
+
+    DiskResource getDiskResource() {
+        final val = getDiskResource0()
+        final lim = getResourceLimit('disk') as MemoryUnit
+        return val && lim && val.request > lim ? val.withRequest(lim) : val
     }
 
     MemoryUnit getDisk() {
@@ -294,8 +310,14 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     }
 
-    Duration getTime() {
+    private Duration getTime0() {
         return getDuration0('time')
+    }
+
+    Duration getTime() {
+        final val = getTime0()
+        final lim = getResourceLimit('time') as Duration
+        return val && lim && val > lim ? lim : val
     }
 
     Duration getMaxSubmitAwait() {
@@ -306,9 +328,15 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('cpus') != null
     }
 
-    int getCpus() {
+    private int getCpus0() {
         final value = get('cpus')
         value ? value as int : 1  // note: always return at least 1 cpus
+    }
+
+    int getCpus() {
+        final val = getCpus0()
+        final lim = getResourceLimit('cpus') as Integer
+        return val && lim && val > lim ? lim : val
     }
 
     int getMaxRetries() {
@@ -386,6 +414,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    String getClusterOptions() {
+        return get('clusterOptions')
+    }
+    
     def getContainer() {
         return get('container')
     }

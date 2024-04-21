@@ -4,17 +4,19 @@
 
 Nextflow has a plugin system that allows the use of extensible components that are downloaded and installed at runtime.
 
+(plugins-core)=
+
 ## Core plugins
 
 The following functionalities are provided via plugin components, and they make part of the Nextflow *core* plugins:
 
-- `nf-amazon`: Support for Amazon cloud.
-- `nf-azure`: Support for Azure cloud.
+- `nf-amazon`: Support for Amazon Web Services.
+- `nf-azure`: Support for Microsoft Azure.
 - `nf-cloudcache`: Support for the cloud cache (see `NXF_CLOUDCACHE_PATH` under {ref}`config-env-vars`).
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
 - `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
-- `nf-google`: Support for Google cloud.
-- `nf-tower`: Support for [Tower](https://tower.nf) cloud platform.
+- `nf-google`: Support for Google Cloud.
+- `nf-tower`: Support for [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 - `nf-wave`: Support for [Wave containers](https://seqera.io/wave/) service.
 
 
@@ -173,7 +175,7 @@ import nextflow.Session
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.PluginExtensionPoint
 
-class MyExtension implements PluginExtensionPoint {
+class MyExtension extends PluginExtensionPoint {
 
     @Override
     void init(Session session) {}
@@ -217,7 +219,7 @@ import nextflow.plugin.extension.Factory
 import nextflow.plugin.extension.Operator
 import nextflow.plugin.extension.PluginExtensionPoint
 
-class MyExtension implements PluginExtensionPoint {
+class MyExtension extends PluginExtensionPoint {
 
     @Override
     void init(Session session) {}
@@ -377,7 +379,7 @@ nextflow run <pipeline> -plugins nf-hello
 
 To use Nextflow plugins in an offline environment:
 
-1. {ref}`Download Nextflow <getstarted-install>` and install it on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
+1. {ref}`Download Nextflow <install-nextflow>` and install it on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
 
 2. Download any additional plugins by running `nextflow plugin install <pluginId,..>`. Alternatively, simply run your pipeline once and Nextflow will download all of the plugins that it needs.
 
