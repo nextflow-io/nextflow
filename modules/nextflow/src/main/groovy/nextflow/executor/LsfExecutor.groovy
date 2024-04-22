@@ -23,7 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -37,7 +37,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class LsfExecutor extends AbstractGridExecutor {
+class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
 
@@ -105,7 +105,7 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
         }

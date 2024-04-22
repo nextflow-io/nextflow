@@ -18,7 +18,7 @@ package nextflow.executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Implements a executor for PBSPro cluster executor
@@ -46,7 +46,7 @@ class PbsProExecutor extends PbsExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result ) {
         assert result !=null
 
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             result << '-J' << "0-${arraySize - 1}".toString()
         }

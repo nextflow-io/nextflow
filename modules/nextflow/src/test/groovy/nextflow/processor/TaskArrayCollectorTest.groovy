@@ -21,7 +21,7 @@ import java.nio.file.Paths
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.executor.Executor
-import nextflow.executor.TaskArrayAware
+import nextflow.executor.TaskArrayExecutor
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
@@ -32,7 +32,7 @@ import test.TestHelper
  */
 class TaskArrayCollectorTest extends Specification {
 
-    static class DummyExecutor extends Executor implements TaskArrayAware {
+    static class DummyExecutor extends Executor implements TaskArrayExecutor {
         TaskMonitor createTaskMonitor() { null }
         TaskHandler createTaskHandler(TaskRun task) { null }
     }
@@ -41,7 +41,7 @@ class TaskArrayCollectorTest extends Specification {
         given:
         def executor = Mock(DummyExecutor)
         def handler = Mock(TaskHandler)
-        def taskArray = [:] as TaskArray
+        def taskArray = [:] as TaskArrayRun
         def collector = Spy(new TaskArrayCollector(executor, 5)) {
             createTaskArray(_) >> taskArray
         }

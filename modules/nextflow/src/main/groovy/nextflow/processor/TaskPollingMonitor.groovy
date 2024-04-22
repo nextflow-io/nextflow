@@ -192,12 +192,12 @@ class TaskPollingMonitor implements TaskMonitor {
      *      A {@link TaskHandler} instance representing the task to be submitted for execution
      */
     protected void submit(TaskHandler handler) {
-        if( handler.task instanceof TaskArray ) {
+        if( handler.task instanceof TaskArrayRun ) {
             // submit task array
             handler.prepareLauncher()
             handler.submit()
             // add each child task to the running queue
-            final task = handler.task as TaskArray
+            final task = handler.task as TaskArrayRun
             for( TaskHandler it : task.children ) {
                 runningQueue.add(it)
                 session.notifyTaskSubmit(it)
@@ -703,8 +703,8 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected void notifyTaskPending0(TaskHandler handler) {
-        if( handler.task instanceof TaskArray ) {
-            final task = handler.task as TaskArray
+        if( handler.task instanceof TaskArrayRun ) {
+            final task = handler.task as TaskArrayRun
             for( TaskHandler it : task.children )
                 session.notifyTaskPending(it)
         }
@@ -714,8 +714,8 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected void notifyTaskComplete0(TaskHandler handler) {
-        if( handler.task instanceof TaskArray ) {
-            final task = handler.task as TaskArray
+        if( handler.task instanceof TaskArrayRun ) {
+            final task = handler.task as TaskArrayRun
             for( TaskHandler it : task.children )
                 session.notifyTaskComplete(it)
         }

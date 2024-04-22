@@ -43,7 +43,7 @@ import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -185,9 +185,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     void onSubmit(String jobId, String taskId, String uid) {
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             task.children.eachWithIndex { handler, i ->
-                final arrayTaskId = i.toString()
+                final arrayTaskId = executor.getArrayTaskId(jobId, i)
                 ((GoogleBatchTaskHandler)handler).onSubmit(jobId, arrayTaskId, uid)
             }
         }
@@ -254,7 +254,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             container.setOptions( containerOptions )
 
         // add child container mounts if task is an array
-        if( task instanceof TaskArray )
+        if( task instanceof TaskArrayRun )
             for( TaskHandler handler : task.children )
                 container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
@@ -431,7 +431,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final taskGroup = TaskGroup.newBuilder()
             .setTaskSpec(taskSpec)
 
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             taskGroup.setTaskCount(arraySize)
         }

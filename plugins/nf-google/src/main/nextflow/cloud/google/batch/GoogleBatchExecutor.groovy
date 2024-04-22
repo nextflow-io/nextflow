@@ -27,7 +27,7 @@ import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
-import nextflow.executor.TaskArrayAware
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.FilesEx
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
@@ -45,7 +45,7 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName(value='google-batch')
 @CompileStatic
-class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAware {
+class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExecutor {
 
     private BatchClient client
     private BatchConfig config
@@ -146,4 +146,10 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayA
 
     @Override
     String getArrayIndexName() { 'BATCH_TASK_INDEX' }
+
+    @Override
+    int getArrayIndexStart() { 0 }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) { index.toString() }
 }

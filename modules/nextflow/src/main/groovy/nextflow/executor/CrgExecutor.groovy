@@ -18,7 +18,7 @@ package nextflow.executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * An executor specialised for CRG cluster
@@ -42,7 +42,7 @@ class CrgExecutor extends SgeExecutor {
             task.config.penv = 'smp'
         }
 
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             result << '-t' << "1-${arraySize}".toString()
         }

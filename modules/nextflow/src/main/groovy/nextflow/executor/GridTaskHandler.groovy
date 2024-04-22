@@ -38,7 +38,7 @@ import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -306,9 +306,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     void onSubmit(String jobId) {
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             task.children.eachWithIndex { handler, i ->
-                final arrayTaskId = executor.getArrayTaskId(jobId, i)
+                final arrayTaskId = ((TaskArrayExecutor)executor).getArrayTaskId(jobId, i)
                 ((GridTaskHandler)handler).onSubmit(arrayTaskId)
             }
         }

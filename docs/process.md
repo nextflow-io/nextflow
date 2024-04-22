@@ -1335,7 +1335,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 ## array
 
-:::{versionadded} 24.02.0-edge
+:::{versionadded} 24.04.0
 :::
 
 :::{warning} *Experimental: may change in a future release.*
@@ -1379,6 +1379,7 @@ The following directives must be uniform across all tasks in a process that uses
 - {ref}`process-cpus`
 - {ref}`process-disk`
 - {ref}`process-machineType`
+- {ref}`process-maxsubmitawait`
 - {ref}`process-memory`
 - {ref}`process-queue`
 - {ref}`process-resourcelabels`

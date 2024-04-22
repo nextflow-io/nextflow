@@ -23,7 +23,7 @@ import java.util.concurrent.locks.ReentrantLock
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
-import nextflow.executor.TaskArrayAware
+import nextflow.executor.TaskArrayExecutor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
@@ -38,7 +38,7 @@ import nextflow.util.Escape
 @CompileStatic
 class TaskArrayCollector {
 
-    private TaskArrayAware executor
+    private TaskArrayExecutor executor
 
     private int arraySize
 
@@ -49,10 +49,10 @@ class TaskArrayCollector {
     private boolean closed = false
 
     TaskArrayCollector(Executor executor, int arraySize) {
-        if( executor !instanceof TaskArrayAware )
+        if( executor !instanceof TaskArrayExecutor )
             throw new IllegalArgumentException("Executor '${executor.name}' does not support job arrays")
 
-        this.executor = (TaskArrayAware)executor
+        this.executor = (TaskArrayExecutor)executor
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
     }
@@ -126,7 +126,7 @@ class TaskArrayCollector {
         final script = createTaskArrayScript(array)
 
         // create task handler
-        return new TaskArray(
+        return new TaskArrayRun(
             id: first.id,
             index: first.index,
             processor: first.processor,

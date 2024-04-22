@@ -26,7 +26,7 @@ import nextflow.processor.TaskRun
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-interface TaskArrayAware {
+interface TaskArrayExecutor {
 
     String getName()
 
@@ -41,15 +41,17 @@ interface TaskArrayAware {
     /**
      * Get the environment variable name that provides the array index of a task.
      */
-    default String getArrayIndexName() {
-        throw new UnsupportedOperationException("Executor '${getName()}' does not support job arrays")
-    }
+    String getArrayIndexName()
 
     /**
      * Get the start of the job array index range.
      */
-    default int getArrayIndexStart() {
-        return 0
-    }
+    int getArrayIndexStart()
+
+    /**
+     * Get the name of a child job based on the array job name
+     * and child index.
+     */
+    String getArrayTaskId(String jobId, int index)
 
 }

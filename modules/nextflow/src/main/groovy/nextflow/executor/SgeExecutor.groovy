@@ -19,7 +19,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.fusion.FusionHelper
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -27,7 +27,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class SgeExecutor extends AbstractGridExecutor {
+class SgeExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -38,7 +38,7 @@ class SgeExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             result << '-t' << "1-${arraySize}".toString()
         }

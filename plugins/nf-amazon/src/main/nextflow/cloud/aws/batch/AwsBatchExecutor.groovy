@@ -34,7 +34,7 @@ import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
-import nextflow.executor.TaskArrayAware
+import nextflow.executor.TaskArrayExecutor
 import nextflow.fusion.FusionHelper
 import nextflow.extension.FilesEx
 import nextflow.processor.ParallelPollingMonitor
@@ -56,7 +56,7 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName('awsbatch')
 @CompileStatic
-class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAware {
+class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExecutor {
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -337,13 +337,10 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayAwar
     @Override
     String getArrayIndexName() { 'AWS_BATCH_JOB_ARRAY_INDEX' }
 
+    @Override
+    int getArrayIndexStart() { 0 }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) { "${jobId}:${index}" }
+
 }
-
-
-
-
-
-
-
-
-

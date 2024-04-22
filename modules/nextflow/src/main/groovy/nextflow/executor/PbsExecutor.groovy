@@ -21,7 +21,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Implements a executor for PBS/Torque cluster
@@ -30,7 +30,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class PbsExecutor extends AbstractGridExecutor {
+class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     private static Pattern OPTS_REGEX = ~/(?:^|\s)-l.+/
 
@@ -44,7 +44,7 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             result << '-J' << "0-${arraySize - 1}".toString()
         }
@@ -183,6 +183,9 @@ class PbsExecutor extends AbstractGridExecutor {
 
     @Override
     String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
+
+    @Override
+    int getArrayIndexStart() { 0 }
 
     @Override
     String getArrayTaskId(String jobId, int index) {

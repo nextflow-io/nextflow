@@ -133,7 +133,7 @@ class TaskPollingMonitorTest extends Specification {
             getTask() >> Mock(TaskRun)
         }
         def arrayHandler = Mock(TaskHandler) {
-            getTask() >> Mock(TaskArray) {
+            getTask() >> Mock(TaskArrayRun) {
                 children >> (1..3).collect( i -> handler )
             }
         }

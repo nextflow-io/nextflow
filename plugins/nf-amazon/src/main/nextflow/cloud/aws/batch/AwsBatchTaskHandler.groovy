@@ -68,7 +68,7 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -327,9 +327,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     void onSubmit(String jobId, String queueName) {
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             task.children.eachWithIndex { handler, i ->
-                final arrayTaskId = "${jobId}:${i}"
+                final arrayTaskId = executor.getArrayTaskId(jobId, i)
                 ((AwsBatchTaskHandler)handler).onSubmit(arrayTaskId, queueName)
             }
         }
@@ -789,7 +789,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setContainerOverrides(container)
 
         // set the array properties
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
 
             if( arraySize > 10_000 )

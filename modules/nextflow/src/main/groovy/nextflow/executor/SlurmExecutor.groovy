@@ -22,7 +22,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
-import nextflow.processor.TaskArray
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
@@ -35,7 +35,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class SlurmExecutor extends AbstractGridExecutor {
+class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
@@ -56,7 +56,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        if( task instanceof TaskArray ) {
+        if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             result << '--array' << "0-${arraySize - 1}".toString()
         }
@@ -221,6 +221,9 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     @Override
     String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
+
+    @Override
+    int getArrayIndexStart() { 0 }
 
     @Override
     String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
