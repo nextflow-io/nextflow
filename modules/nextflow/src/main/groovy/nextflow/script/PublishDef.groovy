@@ -151,9 +151,12 @@ class PublishDsl {
             new PublishOp(CH.getReadChannel(mixed), opts).apply()
 
             if( opts.index ) {
-                final indexPath = (opts.path as Path).resolve(opts.index as String)
-                final indexOpts = opts.indexOpts as Map
-                new PublishIndexOp(CH.getReadChannel(mixed), indexPath, indexOpts).apply()
+                final basePath = opts.path as Path
+                final indexOpts = opts.index as Map
+                final indexPath = indexOpts.path as String
+                if( !indexPath )
+                    throw new ScriptRuntimeException("Index file definition for publish target '${name}' is missing `path` option")
+                new PublishIndexOp(CH.getReadChannel(mixed), basePath, indexPath, indexOpts).apply()
             }
         }
     }
@@ -195,20 +198,13 @@ class PublishDsl {
             setOption('ignoreErrors', value)
         }
 
-        void index(String path, Closure closure=null) {
-            setOption('index', path)
-
-            if( closure != null ) {
-                final dsl = new IndexDsl()
-                final cl = (Closure)closure.clone()
-                cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-                cl.setDelegate(dsl)
-                cl.call()
-                opts.indexOpts = dsl.getOptions()
-            }
-            else {
-                opts.indexOpts = Map.of()
-            }
+        void index(Closure closure) {
+            final dsl = new IndexDsl()
+            final cl = (Closure)closure.clone()
+            cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+            cl.setDelegate(dsl)
+            cl.call()
+            setOption('index', dsl.getOptions())
         }
 
         void mode(String value) {
@@ -261,6 +257,10 @@ class PublishDsl {
 
         void mapper(Closure value) {
             setOption('mapper', value)
+        }
+
+        void path(String value) {
+            setOption('path', value)
         }
 
         void sep(String value) {

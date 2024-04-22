@@ -47,6 +47,8 @@ class CsvWriter {
             columns = header
         }
 
+        path.delete()
+
         if( columns )
             path << columns.collect(it -> '"' + it + '"').join(sep) << '\n'
 

@@ -78,8 +78,9 @@ publish {
 
   'data' {
     mode 'link'
-    index('index.csv') {
-      mapper { val -> [filename: val.name] }
+    index {
+      path 'index.csv'
+      mapper { val -> [filename: val] }
       header true
       sep ','
     }

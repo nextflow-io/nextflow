@@ -634,7 +634,9 @@ publish {
     directory 'results'
 
     'foo/' {
-        index 'index.csv'
+        index {
+            path 'index.csv'
+        }
     }
 }
 ```
@@ -651,7 +653,8 @@ The above example will write the following CSV file to `results/foo/index.csv`:
 You can customize the index file by specifying options in a block, for example:
 
 ```groovy
-index('index.csv') {
+index {
+    path 'index.csv'
     header ['name', 'extra_option']
     sep '\t'
     mapper { val -> val + [extra_option: 'bar'] }
@@ -661,10 +664,13 @@ index('index.csv') {
 The following options are available:
 
 `header`
-: When `true`, the keys of the first record are used as the column names (default: `true`). Can also be a list of column names.
+: When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names.
 
 `mapper`
 : Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.
+
+`path`
+: The name of the index file relative to the target path (required).
 
 `sep`
 : The character used to separate values (default: `','`).

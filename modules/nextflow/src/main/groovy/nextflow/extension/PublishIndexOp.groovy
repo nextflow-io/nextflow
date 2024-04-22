@@ -21,6 +21,8 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
+import nextflow.Global
+import nextflow.Session
 import nextflow.util.CsvWriter
 /**
  *
@@ -32,19 +34,24 @@ class PublishIndexOp {
 
     private DataflowReadChannel source
 
+    private Path basePath
+
     private Path path
 
     private Closure mapper
 
-    private /* boolean | List<String> */ header = true
+    private /* boolean | List<String> */ header = false
 
     private String sep = ','
 
     private List records = []
 
-    PublishIndexOp(DataflowReadChannel source, Path path, Map opts) {
+    private Session getSession() { Global.session as Session }
+
+    PublishIndexOp(DataflowReadChannel source, Path basePath, String indexPath, Map opts) {
         this.source = source
-        this.path = path
+        this.basePath = basePath
+        this.path = basePath.resolve(indexPath)
         if( opts.mapper )
             this.mapper = opts.mapper as Closure
         if( opts.header != null )
@@ -61,7 +68,8 @@ class PublishIndexOp {
     }
 
     protected void onNext(value) {
-        final normalized = mapper != null ? mapper.call(value) : value
+        final record = mapper != null ? mapper.call(value) : value
+        final normalized = normalizePaths(record)
         log.trace "Normalized record for index file: ${normalized}"
         records << normalized
     }
@@ -69,6 +77,61 @@ class PublishIndexOp {
     protected void onComplete(nope) {
         log.trace "Saving records to index file: ${records}"
         new CsvWriter(header: header, sep: sep).apply(records, path)
+    }
+
+    protected Object normalizePaths(value) {
+        if( value instanceof Collection ) {
+            return value.collect { el ->
+                if( el instanceof Path )
+                    return normalizePath(el)
+                if( el instanceof Collection<Path> )
+                    return normalizePaths(el)
+                return el
+            }
+        }
+
+        if( value instanceof Map ) {
+            return value.collectEntries { k, v ->
+                if( v instanceof Path )
+                    return List.of(k, normalizePath(v))
+                if( v instanceof Collection<Path> )
+                    return List.of(k, normalizePaths(v))
+                return List.of(k, v)
+            }
+        }
+
+        throw new IllegalArgumentException("Index file record must be a list or map: ${value} [${value.class.simpleName}]")
+    }
+
+    private Path normalizePath(Path path) {
+        final sourceDir = getTaskDir(path)
+        return basePath.resolve(sourceDir.relativize(path))
+    }
+
+    /**
+     * Given a path try to infer the task directory to which the path below
+     * ie. the directory starting with a workflow work dir and having at lest
+     * two sub-directories eg work-dir/xx/yyyyyy/etc
+     *
+     * @param path
+     */
+    protected Path getTaskDir(Path path) {
+        if( path == null )
+            return null
+        return getTaskDir0(path, session.workDir.resolve('tmp'))
+            ?: getTaskDir0(path, session.workDir)
+            ?: getTaskDir0(path, session.bucketDir)
+    }
+
+    private Path getTaskDir0(Path file, Path base) {
+        if( base == null )
+            return null
+        if( base.fileSystem != file.fileSystem )
+            return null
+        final len = base.nameCount
+        if( file.startsWith(base) && file.getNameCount() > len+2 )
+            return base.resolve(file.subpath(len,len+2))
+        return null
     }
 
 }
