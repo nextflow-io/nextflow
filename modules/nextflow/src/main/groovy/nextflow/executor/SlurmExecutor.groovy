@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for SLURM resource manager
@@ -39,8 +40,8 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     private boolean perCpuMemAllocation
 
-    private boolean hasSignalOpt(Map config) {
-        def opts = config.clusterOptions?.toString()
+    private boolean hasSignalOpt(TaskConfig config) {
+        def opts = config.getClusterOptions()
         return opts ? opts.contains('--signal ') || opts.contains('--signal=') : false
     }
 
@@ -91,8 +92,8 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
+        if( task.config.getClusterOptions() ) {
+            result << task.config.getClusterOptions() << ''
         }
 
         return result

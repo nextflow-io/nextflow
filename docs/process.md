@@ -1049,21 +1049,13 @@ To sum up, the use of output files with static names over dynamic ones is prefer
 
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
-```groovy
-process myTask {
-    output:
-    env FOO
-
-    script:
-    '''
-    FOO=$(ls -la)
-    '''
-}
-
-workflow {
-    myTask | view { "directory contents: $it" }
-}
+```{literalinclude} snippets/process-out-env.nf
+:language: groovy
 ```
+
+:::{versionchanged} 23.12.0-edge
+Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
+:::
 
 (process-stdout)=
 
@@ -1071,20 +1063,26 @@ workflow {
 
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
-```groovy
-process sayHello {
-    output:
-    stdout
-
-    """
-    echo Hello world!
-    """
-}
-
-workflow {
-    sayHello | view { "I say... $it" }
-}
+```{literalinclude} snippets/process-stdout.nf
+:language: groovy
 ```
+
+(process-out-eval)=
+
+### Output type `eval`
+
+:::{versionadded} 24.02.0-edge
+:::
+
+The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
+
+```{literalinclude} snippets/process-out-eval.nf
+:language: groovy
+```
+
+Only one-line Bash commands are supported. You can use a semi-colon `;` to specify multiple Bash commands on a single line, and many interpreters can execute arbitrary code on the command line, e.g. `python -c 'print("Hello world!")'`.
+
+If the command fails, the task will also fail. In Bash, you can append `|| true` to a command to suppress any command failure.
 
 (process-out-tuple)=
 
@@ -1636,7 +1634,6 @@ The following executors are available:
 | `azurebatch`          | [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service                    |
 | `condor`              | [HTCondor](https://research.cs.wisc.edu/htcondor/) job scheduler                            |
 | `google-lifesciences` | [Google Genomics Pipelines](https://cloud.google.com/life-sciences) service                 |
-| `ignite`              | [Apache Ignite](https://ignite.apache.org/) cluster                                         |
 | `k8s`                 | [Kubernetes](https://kubernetes.io/) cluster                                                |
 | `local`               | The computer where `Nextflow` is launched                                                   |
 | `lsf`                 | [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler                     |
@@ -2151,6 +2148,11 @@ The following options are available:
       effect: "NoSchedule"
   ```
 
+`ttlSecondsAfterFinished`
+: :::{versionadded} 24.02.0-edge
+  :::
+: Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs) for finished jobs in seconds. Applies to both successful and failed jobs.
+
 `volumeClaim: '<name>', mountPath: '</absolute/path>' [, subPath: '<path>', readOnly: true | false]`
 : *Can be specified multiple times*
 : Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with the given name to the given path.
@@ -2217,7 +2219,10 @@ Available options:
 : Enable or disable the publish rule depending on the boolean value specified (default: `true`).
 
 `failOnError`
-: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)
+: :::{versionchanged} 24.03.0-edge
+  The default value was change from `false` to `true`
+  :::
+: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `true`)
 
 `mode`
 : The file publishing method. Can be one of the following values:
@@ -2323,6 +2328,43 @@ Resource labels in Azure are added to pools, rather than jobs, in order to facil
 :::
 
 See also: [label](#label)
+
+(process-resourcelimits)=
+
+### resourceLimits
+
+:::{versionadded} 24.04.0
+:::
+
+The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process as follows:
+
+```groovy
+process my_task {
+  resourceLimits cpus: 24, memory: 768.GB, time: 72.h
+
+  script:
+  '''
+  your_command --here
+  '''
+}
+```
+
+Or in the Nextflow configuration:
+
+```groovy
+process {
+    resourceLimits = [ cpus: 24, memory: 768.GB, time: 72.h ]
+}
+```
+
+Resource limits can be defined for the following directives:
+
+- [cpus](#cpus)
+- [disk](#disk)
+- [memory](#memory)
+- [time](#time)
+
+Resource limits are a useful way to specify environment-specific limits alongside tasks with [dynamic resources](#dynamic-computing-resources). Normally, if a task requests more resources than can be provisioned (e.g. a task requests 32 cores but the largest node in the cluster has 24), the task will either fail or cause the pipeline to hang forever as it will never be scheduled. If the `resourceLimits` directive is defined with these limits, the task resources will be automatically reduced to comply with these limits before the job is submitted.
 
 (process-scratch)=
 

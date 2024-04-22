@@ -1,6 +1,11 @@
 nf-cloudcache changelog
 =======================
-0.4.0 - 5 Feb 20204
+0.4.1 - 10 Mar 2024
+- Fix typo in error message [ci fast] [a7f23305]
+- minor cli docstring fix (#4759) [ci skip] [ee4b4a25]
+- Bump groovy 4.0.19 [854dc1f0]
+
+0.4.0 - 5 Feb 2024
 - Bump Groovy 4 (#4443) [9d32503b]
 
 0.3.1 - 24 Nov 2023
