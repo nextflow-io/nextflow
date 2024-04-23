@@ -66,6 +66,7 @@ import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun

@@ -46,7 +46,7 @@ class TaskArrayCollectorTest extends Specification {
         def executor = Mock(DummyExecutor)
         def handler = Mock(TaskHandler)
         def taskArray = [:] as TaskArrayRun
-        def collector = Spy(new TaskArrayCollector(executor, 5)) {
+        def collector = Spy(new TaskArrayCollector(null, executor, 5)) {
             createTaskArray(_) >> taskArray
         }
         and:
@@ -63,24 +63,20 @@ class TaskArrayCollectorTest extends Specification {
         collector.collect(task)
         collector.collect(task)
         then:
-        4 * executor.createTaskHandler(task) >> handler
         0 * executor.submit(_)
 
         // submit job array when it is ready
         when:
         collector.collect(task)
         then:
-        1 * executor.createTaskHandler(task) >> handler
-        5 * handler.prepareLauncher()
         1 * executor.submit(taskArray)
 
         // submit partial job array when closed
         when:
         collector.collect(task)
+        collector.collect(task)
         collector.close()
         then:
-        1 * executor.createTaskHandler(task) >> handler
-        1 * handler.prepareLauncher()
         1 * executor.submit(taskArray)
 
         // submit tasks directly once closed
@@ -93,7 +89,7 @@ class TaskArrayCollectorTest extends Specification {
     def 'should submit retried tasks directly' () {
         given:
         def executor = Mock(DummyExecutor)
-        def collector = Spy(new TaskArrayCollector(executor, 5))
+        def collector = Spy(new TaskArrayCollector(null, executor, 5))
         and:
         def task = Mock(TaskRun) {
             getConfig() >> Mock(TaskConfig) {
@@ -109,19 +105,21 @@ class TaskArrayCollectorTest extends Specification {
 
     def 'should create task array' () {
         given:
-        def executor = Mock(DummyExecutor) {
+        def exec = Mock(DummyExecutor) {
             getWorkDir() >> TestHelper.createInMemTempDir()
             getArrayIndexName() >> 'ARRAY_JOB_INDEX'
         }
-        def collector = Spy(new TaskArrayCollector(executor, 5))
+        def proc = Mock(TaskProcessor) {
+            config >> Mock(ProcessConfig) {
+                createTaskConfig() >> Mock(TaskConfig)
+            }
+            getExecutor() >> exec
+            getSession() >> Mock(Session)
+            getTaskBody() >> { new BodyDef(null, 'source') }
+        }
+        def collector = Spy(new TaskArrayCollector(proc, exec, 5))
         and:
         def task = Mock(TaskRun) {
-            processor >> Mock(TaskProcessor) {
-                config >> Mock(ProcessConfig)
-                getExecutor() >> executor
-                getSession() >> Mock(Session)
-                getTaskBody() >> { new BodyDef(null, 'source') }
-            }
             getHash() >> HashCode.fromString('0123456789abcdef')
         }
         def handler = Mock(TaskHandler) {
@@ -131,10 +129,12 @@ class TaskArrayCollectorTest extends Specification {
         }
 
         when:
-        def taskArray = collector.createTaskArray([handler, handler, handler])
+        def taskArray = collector.createTaskArray([task, task, task])
         then:
-        taskArray.config == task.config
-        taskArray.processor == task.processor
+        3 * exec.createTaskHandler(task) >> handler
+        3 * handler.prepareLauncher()
+        and:
+        taskArray.processor == proc
         taskArray.script == '''
             array=( /work/foo /work/foo /work/foo )
             export task_dir=${array[ARRAY_JOB_INDEX]}

@@ -313,7 +313,7 @@ class TaskProcessor {
         this.isFair0 = config.getFair()
         
         final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(executor, arraySize) : null
+        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
     }
 
     /**

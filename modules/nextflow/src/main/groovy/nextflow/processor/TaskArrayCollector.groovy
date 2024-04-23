@@ -38,20 +38,23 @@ import nextflow.util.Escape
 @CompileStatic
 class TaskArrayCollector {
 
+    private TaskProcessor processor
+
     private TaskArrayExecutor executor
 
     private int arraySize
 
     private Lock sync = new ReentrantLock()
 
-    private List<TaskHandler> array
+    private List<TaskRun> array
 
     private boolean closed = false
 
-    TaskArrayCollector(Executor executor, int arraySize) {
+    TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize) {
         if( executor !instanceof TaskArrayExecutor )
             throw new IllegalArgumentException("Executor '${executor.name}' does not support job arrays")
 
+        this.processor = processor
         this.executor = (TaskArrayExecutor)executor
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
@@ -72,11 +75,8 @@ class TaskArrayCollector {
                 return
             }
 
-            // create task handler
-            final handler = executor.createTaskHandler(task)
-
             // add task to the array
-            array << handler
+            array << task
 
             // submit job array when it is ready
             if( array.size() == arraySize ) {
@@ -91,30 +91,29 @@ class TaskArrayCollector {
      */
     void close() {
         sync.withLock {
-            if( array.size() > 0 )
+            if( array.size() == 1 )
+                executor.submit(array.first())
+            else if( array.size() > 0 )
                 submit0(array)
 
             closed = true
         }
     }
 
-    protected void submit0(List<TaskHandler> array) {
-        // prepare child job launcher scripts
-        for( TaskHandler handler : array )
-            handler.prepareLauncher()
-
-        // submit job array
-        executor.submit(createTaskArray(array))
+    protected void submit0(List<TaskRun> tasks) {
+        executor.submit(createTaskArray(tasks))
     }
 
     /**
      * Create the task run for a job array.
      *
-     * @param array
+     * @param tasks
      */
-    protected TaskRun createTaskArray(List<TaskHandler> array) {
-        final tasks = array.collect( h -> h.task )
-        final first = tasks.first()
+    protected TaskRun createTaskArray(List<TaskRun> tasks) {
+        // prepare child job launcher scripts
+        final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
+        for( TaskHandler handler : handlers )
+            handler.prepareLauncher()
 
         // create work directory
         final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
@@ -123,21 +122,25 @@ class TaskArrayCollector {
         Files.createDirectories(workDir)
 
         // create wrapper script
-        final script = createTaskArrayScript(array)
+        final script = createTaskArrayScript(handlers)
 
-        // create task handler
-        return new TaskArrayRun(
+        // create job array
+        final first = tasks.min( t -> t.index )
+        final taskArray = new TaskArrayRun(
             id: first.id,
             index: first.index,
-            processor: first.processor,
-            type: first.type,
-            config: first.processor.config.createTaskConfig(),
-            context: new TaskContext(first.processor),
+            processor: processor,
+            type: processor.taskBody.type,
+            config: processor.config.createTaskConfig(),
+            context: new TaskContext(processor),
             hash: hash,
             workDir: workDir,
             script: script,
-            children: array
+            children: handlers
         )
+        taskArray.config.remove('tag')
+
+        return taskArray
     }
 
     /**
