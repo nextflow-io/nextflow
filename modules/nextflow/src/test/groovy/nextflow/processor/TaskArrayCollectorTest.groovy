@@ -35,6 +35,10 @@ class TaskArrayCollectorTest extends Specification {
     static class DummyExecutor extends Executor implements TaskArrayExecutor {
         TaskMonitor createTaskMonitor() { null }
         TaskHandler createTaskHandler(TaskRun task) { null }
+
+        String getArrayIndexName() { null }
+        int getArrayIndexStart() { 0 }
+        String getArrayTaskId(String jobId, int index) { null }
     }
 
     def 'should submit tasks as job arrays' () {
