@@ -62,10 +62,10 @@ class WorkflowDefTest extends Dsl2Spec {
               take: foo
               take: bar
               main:
-                print foo
-                print bar
-              emit: 
-                foo+bar
+              print foo
+              print bar
+              emit:
+              foo+bar
             }
             
             workflow delta() {
@@ -91,20 +91,24 @@ class WorkflowDefTest extends Dsl2Spec {
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
         meta.getWorkflow('bravo') .declaredVariables == ['$out0']
         meta.getWorkflow('bravo') .source.stripIndent(true) == '''\
-              take: foo
-              take: bar
+              take:
+              foo
+              take:
+              bar
               main:
-                print foo
-                print bar
-              emit: 
-                foo+bar
+              print foo
+              print bar
+              emit:
+              foo+bar
               '''.stripIndent(true)
 
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
         meta.getWorkflow('delta') .declaredVariables == [] 
         meta.getWorkflow('delta') .source.stripIndent(true) == '''\
-                take: foo
-                take: bar
+                take:
+                foo
+                take:
+                bar
                 main:
                 println foo+bar
                 '''.stripIndent(true)

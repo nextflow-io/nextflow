@@ -759,16 +759,21 @@ class NextflowDSLImpl implements ASTTransformation {
                 final line = unit.source.getLine(i, null)
 
                 // prepend first-line indent
+                def indent = ''
                 if( i == first ) {
                     int k = 0
                     while( k < line.size() && line[k] == ' ' )
                         k++
-                    buffer.append( line.substring(0, k) )
+                    indent = line.substring(0, k)
                 }
+
+                // prepend statement label
+                if( node.statementLabel )
+                    buffer.append(indent).append(node.statementLabel).append(':\n')
 
                 final begin = (i == first) ? colx - 1 : 0
                 final end = (i == last) ? colz - 1 : line.size()
-                buffer.append( line.substring(begin, end) ).append('\n')
+                buffer.append(indent).append( line.substring(begin, end) ).append('\n')
             }
         }
 
