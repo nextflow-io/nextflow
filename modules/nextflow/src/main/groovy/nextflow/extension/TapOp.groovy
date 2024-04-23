@@ -24,6 +24,7 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
@@ -55,7 +56,8 @@ class TapOp {
     TapOp( DataflowReadChannel source, List<DataflowWriteChannel> outputs ) {
         this.source = source
         this.result = CH.createBy(source)
-        this.outputs = [result, *outputs]
+        this.outputs = new ArrayList<>(outputs)
+        outputs << result
     }
 
     /**
@@ -90,16 +92,16 @@ class TapOp {
 
     TapOp apply() {
 
-        final params = [:]
-        params.inputs = [source]
+        final params = new HashMap<>(3)
+        params.inputs = List.of(source)
         params.outputs = outputs
-        params.listeners = createListener()
+        params.listeners = List.of(createListener())
 
         DataflowHelper.newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
         return this
     }
 
-    private createListener() {
+    private DataflowEventListener createListener() {
 
         final stopOnFirst = source instanceof DataflowExpression
         final listener = new DataflowEventAdapter() {
@@ -127,7 +129,7 @@ class TapOp {
             }
         }
 
-        return [listener]
+        return listener
     }
 
 }
