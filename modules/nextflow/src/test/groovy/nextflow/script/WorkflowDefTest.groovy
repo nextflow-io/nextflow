@@ -91,27 +91,27 @@ class WorkflowDefTest extends Dsl2Spec {
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
         meta.getWorkflow('bravo') .declaredVariables == ['$out0']
         meta.getWorkflow('bravo') .source.stripIndent(true) == '''\
-              take:
-              foo
-              take:
-              bar
-              main:
-              print foo
-              print bar
-              emit:
-              foo+bar
-              '''.stripIndent(true)
+            take:
+            foo
+            take:
+            bar
+            main:
+            print foo
+            print bar
+            emit:
+            foo+bar
+            '''.stripIndent(true)
 
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
         meta.getWorkflow('delta') .declaredVariables == [] 
         meta.getWorkflow('delta') .source.stripIndent(true) == '''\
-                take:
-                foo
-                take:
-                bar
-                main:
-                println foo+bar
-                '''.stripIndent(true)
+            take:
+            foo
+            take:
+            bar
+            main:
+            println foo+bar
+            '''.stripIndent(true)
 
         meta.getWorkflow('empty') .source == ''
         meta.getWorkflow('empty') .declaredInputs == []
@@ -328,11 +328,11 @@ class WorkflowDefTest extends Dsl2Spec {
                     
             workflow alpha {
               take:
-                foo
+              foo
               main:
-                print x 
+              print x 
               emit: 
-                foo  
+              foo  
             }
         '''
 
@@ -342,13 +342,13 @@ class WorkflowDefTest extends Dsl2Spec {
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
         workflow.getSource().stripIndent(true) == '''\
-                            take:
-                              foo
-                            main:
-                              print x 
-                            emit: 
-                              foo  
-                            '''.stripIndent(true)
+            take:
+            foo
+            main:
+            print x 
+            emit: 
+            foo  
+            '''.stripIndent(true)
     }
 
     def 'should capture empty workflow code'  () {
