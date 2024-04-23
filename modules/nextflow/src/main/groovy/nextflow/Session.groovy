@@ -666,7 +666,7 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-            // shutdown publish dir executor
+            // shutdown thread pools
             finalizePoolManager.shutdown(aborted)
             publishPoolManager.shutdown(aborted)
             // invoke shutdown callbacks
@@ -1438,6 +1438,10 @@ class Session implements ISession {
     synchronized ExecutorService finalizeTaskExecutorService() {
         return finalizePoolManager
                 .withConfig(config)
+                .withShutdownMessage(
+                    "Waiting for remaining tasks to complete (%d tasks)",
+                    "Exiting before some tasks were completed"
+                )
                 .create()
     }
 
