@@ -17,24 +17,36 @@
 
 package nextflow.extension
 
+import spock.lang.Timeout
 import test.Dsl2Spec
 
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Timeout(10)
 class TapOpTest extends Dsl2Spec {
 
     def 'should forward a queue channel into multiple targets' () {
         when:
         def result = dsl_eval('''
-            Channel.of(1, 2, 3).tap { foo ; bar }
-            [ foo.collect(), bar.collect() ]
+            result = Channel.of( 4,7,9 ).tap { foo; bar }.map { v -> v + 1 }
+            [ foo, bar, result ]
             ''')
 
         then:
-        result[0].getVal() == [1, 2, 3]
-        result[1].getVal() == [1, 2, 3]
+        result[0].getVal() == 4
+        result[0].getVal() == 7
+        result[0].getVal() == 9
+        result[0].getVal() == Channel.STOP
+        result[1].getVal() == 4
+        result[1].getVal() == 7
+        result[1].getVal() == 9
+        result[1].getVal() == Channel.STOP
+        result[2].getVal() == 5
+        result[2].getVal() == 8
+        result[2].getVal() == 10
+        result[2].getVal() == Channel.STOP
     }
 
     def 'should forward a value channel into multiple targets' () {
