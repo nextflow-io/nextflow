@@ -524,7 +524,18 @@ The trailing slash in the target name is not required; it is only used to denote
 The target name must not begin with a slash (`/`), it should be a relative path name.
 :::
 
-Publish targets can also be customized in the publish definition using a set of options similar to the {ref}`process-publishdir` directive.
+Workflows can also disable publishing for specific channels by redirecting them to `null`:
+
+```groovy
+workflow {
+    ch_foo = foo()
+
+    publish:
+    ch_foo >> params.save_foo ? 'foo/' : null
+}
+```
+
+Publish targets can be customized in the publish definition using a set of options similar to the {ref}`process-publishdir` directive.
 
 For example:
 
@@ -534,26 +545,18 @@ publish {
     mode 'copy'
 
     'foo/' {
-        enabled params.save_foo
         mode 'link'
     }
 }
 ```
 
-In this example, the following publish options are applied:
-
-- All files will be copied by default
-
-- Files published to `foo/` will be hard-linked, overriding the default option. Additionally, these files will be published only if `params.save_foo` is true.
+In this example, all files will be copied by default, and files published to `foo/` will be hard-linked, overriding the default option.
 
 Available options:
 
 `contentType`
 : *Currently only supported for S3.*
 : Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
-
-`enabled`
-: Enable or disable publishing (default: `true`).
 
 `ignoreErrors`
 : When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).

@@ -16,6 +16,8 @@
  */
 nextflow.preview.publish = true
 
+params.save_foo = true
+
 process align {
   input:
   val(x)
@@ -70,7 +72,7 @@ workflow {
   publish:
   align.out       >> 'data'
   my_combine.out  >> 'more/data'
-  foo.out         >> 'data'
+  foo.out         >> params.save_foo ? 'data' : null
 }
 
 publish {

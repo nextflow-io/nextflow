@@ -83,10 +83,6 @@ class PublishDsl {
         setDefault('contentType', value)
     }
 
-    void enabled(boolean value) {
-        setDefault('enabled', value)
-    }
-
     void ignoreErrors(boolean value) {
         setDefault('ignoreErrors', value)
     }
@@ -135,6 +131,8 @@ class PublishDsl {
         final Map<String,List<DataflowWriteChannel>> publishSources = [:]
         for( final source : targets.keySet() ) {
             final name = targets[source]
+            if( !name )
+                continue
             if( name !in publishSources )
                 publishSources[name] = []
             publishSources[name] << source
@@ -188,10 +186,6 @@ class PublishDsl {
 
         void contentType(boolean value) {
             setOption('contentType', value)
-        }
-
-        void enabled(boolean value) {
-            setOption('enabled', value)
         }
 
         void ignoreErrors(boolean value) {
