@@ -531,7 +531,7 @@ workflow {
     ch_foo = foo()
 
     publish:
-    ch_foo >> params.save_foo ? 'foo/' : null
+    ch_foo >> (params.save_foo ? 'foo/' : null)
 }
 ```
 

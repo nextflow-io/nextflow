@@ -44,7 +44,6 @@ import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.BinaryExpression
-import org.codehaus.groovy.ast.expr.BooleanExpression
 import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
@@ -55,7 +54,6 @@ import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
-import org.codehaus.groovy.ast.expr.TernaryExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.UnaryMinusExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
@@ -433,46 +431,18 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         protected Statement normWorkflowPublish(ExpressionStatement stm) {
-            // HACK: fix ternary expression for publish target
-            //       right shift takes precedence over ternary in Groovy grammar
-            //       custom parser will handle this more elegantly
-            if( stm.expression instanceof TernaryExpression ) {
-                final ternaryX = (TernaryExpression)stm.expression
-                if( ternaryX.booleanExpression.expression !instanceof BinaryExpression ) {
-                    syntaxError(stm, "Invalid workflow publish statement")
-                    return stm
-                }
-
-                final binaryX = (BinaryExpression)ternaryX.booleanExpression.expression
-                if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
-                    syntaxError(stm, "Invalid workflow publish statement")
-                    return stm
-                }
-
-                // transform:
-                //   (ch_foo >> params.save_foo) ? 'foo' : null
-                // to:
-                //   ch_foo >> (params.save_foo ? 'foo' : null)
-                final target = new TernaryExpression(
-                    new BooleanExpression(binaryX.rightExpression),
-                    ternaryX.trueExpression,
-                    ternaryX.falseExpression
-                )
-                return stmt( callThisX('_publish_target', args(binaryX.leftExpression, target)) )
+            if( stm.expression !instanceof BinaryExpression ) {
+                syntaxError(stm, "Invalid workflow publish statement")
+                return stm
             }
 
-            if( stm.expression instanceof BinaryExpression ) {
-                final binaryX = (BinaryExpression)stm.expression
-                if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
-                    syntaxError(stm, "Invalid workflow publish statement")
-                    return stm
-                }
-
-                return stmt( callThisX('_publish_target', args(binaryX.leftExpression, binaryX.rightExpression)) )
+            final binaryX = (BinaryExpression)stm.expression
+            if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
+                syntaxError(stm, "Invalid workflow publish statement")
+                return stm
             }
 
-            syntaxError(stm, "Invalid workflow publish statement")
-            return stm
+            return stmt( callThisX('_publish_target', args(binaryX.leftExpression, binaryX.rightExpression)) )
         }
 
         protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {

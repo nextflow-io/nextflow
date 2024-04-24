@@ -72,7 +72,7 @@ workflow {
   publish:
   align.out       >> 'data'
   my_combine.out  >> 'more/data'
-  foo.out         >> params.save_foo ? 'data' : null
+  foo.out         >> (params.save_foo ? 'data' : null)
 }
 
 publish {
