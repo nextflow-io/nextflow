@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.TaskArrayExecutor
 import nextflow.util.MemoryUnit
 
 /**
@@ -103,6 +104,10 @@ class TaskBean implements Serializable, Cloneable {
 
     Map<String,String> resourceLabels
 
+    String arrayIndexName
+
+    Integer arrayIndexStart
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -156,6 +161,13 @@ class TaskBean implements Serializable, Cloneable {
         this.stageOutMode = task.config.getStageOutMode()
 
         this.resourceLabels = task.config.getResourceLabels()
+
+        // job array
+        if( task instanceof TaskArrayRun ) {
+            final executor = (TaskArrayExecutor)task.getProcessor().getExecutor()
+            this.arrayIndexName = executor.getArrayIndexName()
+            this.arrayIndexStart = executor.getArrayIndexStart()
+        }
     }
 
     @Override
