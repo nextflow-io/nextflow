@@ -39,11 +39,12 @@ class FusionMetadata {
         if( session.config.fusion as Map ) {
             final Map fusionConfig = session.config.fusion as Map
             this.enabled = fusionConfig.enabled as boolean
+            // TODO work in progress
+            this.version = 'not-defined-yet'
         } else {
             this.enabled = false
+            this.version = null
         }
-        // TODO work in progress
-        this.version = 'not-defined-yet'
     }
 
 }
