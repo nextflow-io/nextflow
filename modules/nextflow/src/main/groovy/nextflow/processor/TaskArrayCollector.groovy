@@ -38,6 +38,26 @@ import nextflow.util.Escape
 @CompileStatic
 class TaskArrayCollector {
 
+    /**
+     * The set of directives which are used by the job array.
+     */
+    private static final List<String> ARRAY_DIRECTIVES = [
+            'accelerator',
+            'arch',
+            'clusterOptions',
+            'cpus',
+            'disk',
+            'machineType',
+            'memory',
+            'queue',
+            'resourceLabels',
+            'resourceLimits',
+            'time',
+            // only needed for container-native executors and/or Fusion
+            'container',
+            'containerOptions',
+    ]
+
     private TaskProcessor processor
 
     private TaskArrayExecutor executor
@@ -124,6 +144,14 @@ class TaskArrayCollector {
         // create wrapper script
         final script = createTaskArrayScript(handlers)
 
+        // create config for job array
+        final rawConfig = new HashMap<String,Object>(ARRAY_DIRECTIVES.size())
+        for( final key : ARRAY_DIRECTIVES ) {
+            final value = processor.config.get(key)
+            if( value != null )
+                rawConfig[key] = value
+        }
+
         // create job array
         final first = tasks.min( t -> t.index )
         final taskArray = new TaskArrayRun(
@@ -131,14 +159,13 @@ class TaskArrayCollector {
             index: first.index,
             processor: processor,
             type: processor.taskBody.type,
-            config: processor.config.createTaskConfig(),
+            config: new TaskConfig(rawConfig),
             context: new TaskContext(processor),
             hash: hash,
             workDir: workDir,
             script: script,
             children: handlers
         )
-        taskArray.config.remove('tag')
 
         return taskArray
     }

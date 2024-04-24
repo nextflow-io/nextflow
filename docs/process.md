@@ -1379,10 +1379,10 @@ The following directives must be uniform across all tasks in a process that uses
 - {ref}`process-cpus`
 - {ref}`process-disk`
 - {ref}`process-machineType`
-- {ref}`process-maxsubmitawait`
 - {ref}`process-memory`
 - {ref}`process-queue`
 - {ref}`process-resourcelabels`
+- {ref}`process-resourcelimits`
 - {ref}`process-time`
 
 For cloud-based executors like AWS Batch, or when using Fusion with any executor, the following additional directives must be uniform:

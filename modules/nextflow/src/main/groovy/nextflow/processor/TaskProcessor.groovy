@@ -382,6 +382,8 @@ class TaskProcessor {
         return provider
     }
 
+    boolean isSingleton() { singleton }
+
     /**
      * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
      * to allow the access for the associated {@link TaskConfig} during a pipeline "preview" execution.

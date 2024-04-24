@@ -22,6 +22,7 @@ import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
+import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
@@ -109,17 +110,23 @@ class TaskArrayCollectorTest extends Specification {
             getWorkDir() >> TestHelper.createInMemTempDir()
             getArrayIndexName() >> 'ARRAY_JOB_INDEX'
         }
+        def config = Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) {
+            createTaskConfig() >> Mock(TaskConfig)
+            get('cpus') >> 4
+            get('tag') >> 'foo'
+        }
         def proc = Mock(TaskProcessor) {
-            config >> Mock(ProcessConfig) {
-                createTaskConfig() >> Mock(TaskConfig)
-            }
+            getConfig() >> config
             getExecutor() >> exec
+            getName() >> 'PROC'
             getSession() >> Mock(Session)
+            isSingleton() >> false
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
         def collector = Spy(new TaskArrayCollector(proc, exec, 5))
         and:
         def task = Mock(TaskRun) {
+            index >> 1
             getHash() >> HashCode.fromString('0123456789abcdef')
         }
         def handler = Mock(TaskHandler) {
@@ -134,6 +141,9 @@ class TaskArrayCollectorTest extends Specification {
         3 * exec.createTaskHandler(task) >> handler
         3 * handler.prepareLauncher()
         and:
+        taskArray.name == 'PROC (1)'
+        taskArray.config.cpus == 4
+        taskArray.config.tag == null
         taskArray.processor == proc
         taskArray.script == '''
             array=( /work/foo /work/foo /work/foo )
