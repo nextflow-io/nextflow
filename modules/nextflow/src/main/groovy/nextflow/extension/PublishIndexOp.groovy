@@ -75,6 +75,8 @@ class PublishIndexOp {
     }
 
     protected void onComplete(nope) {
+        if( records.size() == 0 )
+            return
         log.trace "Saving records to index file: ${records}"
         new CsvWriter(header: header, sep: sep).apply(records, path)
     }
