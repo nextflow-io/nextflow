@@ -157,11 +157,36 @@ See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick
 
 ### Pools configuration
 
-When using the `autoPoolMode` option, Nextflow automatically creates a `pool` of compute nodes to execute the jobs in your pipeline. By default, it only uses one compute node of the type `Standard_D4_v3`.
+When using the `autoPoolMode` option, Nextflow automatically creates a `pool` of compute nodes appropriate for your pipeline.
+
+By default, the `cpus` and `memory` directives are used to find the smallest machine type that fits the requested resources in the Azure machine family, specified by `machineType`. If `memory` is not specified, 1 GB of memory is allocated per CPU. When no options are specified, it only uses one compute node of the type `Standard_D4_v3`.
+
+To specify multiple Azure machine families, use a comma separated list with glob (`*`) values in the `machineType` directive. For example, the following will select any machine size from D or E v5 machines, with additional data disk, denoted by the `d` suffix:
+
+```config
+process.machineType = "Standard_D*d_v5,Standard_E*d_v5"
+```
+
+For example, the following process will create a pool of `Standard_E4d_v5` machines based when using `autoPoolMode`:
+
+```nextflow
+process EXAMPLE_PROCESS {
+    machineType "Standard_E*d_v5"
+    cpus 16
+    memory 8.GB
+
+    script:
+    """
+    echo "cpus: ${task.cpus}"
+    """
+}
+```
+
+Note when creating tasks that use fewer than 4 CPUs, Nextflow will create a pool with machines that have 4 times the number of CPUs required in order to pack more tasks onto each machine. This means the pipeline spends less time waiting for machines to be created, startup and join the Azure Batch pool. Similarly, if a process requires fewer than 8 CPUs Nextflow will use a machine with double the number of CPUs required. If you wish to override this behaviour you can use a specific `machineType` directive, e.g. using a `machineType` directive of `Standard_E2d_v5` will use always use a Standard_E2d_v5 machine.
 
 The pool is not removed when the pipeline terminates, unless the configuration setting `deletePoolsOnCompletion = true` is added in your Nextflow configuration file.
 
-Pool specific settings, such as VM type and count, should be provided in the `auto` pool configuration scope, for example:
+Pool specific settings should be provided in the `auto` pool configuration scope. If you wish to specify a single machine size for all processes, you can specify a fixed `vmSize` for the `auto` pool.
 
 ```groovy
 azure {
@@ -169,7 +194,6 @@ azure {
         pools {
             auto {
                 vmType = 'Standard_D2_v2'
-                vmCount = 10
             }
         }
     }
