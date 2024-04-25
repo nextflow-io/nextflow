@@ -102,8 +102,8 @@ class ContainerConfigTest extends Specification {
         where:
         OPTS                                            | EXPECTED
         [:]                                             | null
-        [engine:'docker']                               | '--rm --privileged'
-        [engine:'podman']                               | '--rm --privileged'
+        [engine:'docker']                               | '--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'
+        [engine:'podman']                               | '--rm --device /dev/fuse'
         and:
         [engine: 'singularity']                         | null
         [engine: 'singularity', ociMode:true]           | '-B /dev/fuse'
