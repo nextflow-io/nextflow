@@ -71,26 +71,23 @@ class WaveContainerResolver implements ContainerResolver {
         final config = task.getContainerConfig()
         final engine = getContainerEngine0(config)
         final singularitySpec = freeze && engine in SINGULARITY_LIKE && !config.canRunOciImage()
-        if( !imageName ) {
-            // when no image name is provided the module bundle should include a
-            // Dockerfile or a Conda recipe or a Spack recipe to build
-            // an image on-fly with an automatically assigned name
-            return waveContainer(task, null, singularitySpec)
-        }
 
         if( engine in DOCKER_LIKE ) {
-            final image = defaultResolver.resolveImage(task, imageName)
-            return waveContainer(task, image.target, false)
+            // find out the configured image name applying the default resolver
+            if( imageName )
+                imageName = defaultResolver.resolveImage(task, imageName).getTarget()
+            // fetch the wave container image name
+            return waveContainer(task, imageName, false)
         }
         else if( engine in SINGULARITY_LIKE ) {
             // remove any `docker://` prefix if any
-            if( imageName.startsWith(DOCKER_PREFIX) )
+            if( imageName && imageName.startsWith(DOCKER_PREFIX) )
                 imageName = imageName.substring(DOCKER_PREFIX.length())
             // singularity file image use the default resolver
-            else if( imageName.startsWith('/') || imageName.startsWith('file://') || Files.exists(Path.of(imageName))) {
+            else if( imageName && (imageName.startsWith('/') || imageName.startsWith('file://') || Files.exists(Path.of(imageName)))) {
                 return defaultResolver.resolveImage(task, imageName)
             }
-            // fetch the wave container name
+            // fetch the wave container image name
             final image = waveContainer(task, imageName, singularitySpec)
             // when wave returns no info, just default to standard behaviour
             if( !image ) {
