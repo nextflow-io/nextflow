@@ -337,27 +337,32 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
-    def 'should add process directives' () {
+    def 'should add task metadata' () {
         when:
         def bash = newBashWrapperBuilder()
         then:
-        bash.makeBinding().containsKey('process_directives')
-        bash.makeBinding().process_directives == ''
+        bash.makeBinding().containsKey('task_metadata')
+        bash.makeBinding().task_metadata == ''
 
         when:
         bash = newBashWrapperBuilder(
             arrayIndexName: 'SLURM_ARRAY_TASK_ID',
             arrayIndexStart: 0,
+            arrayWorkDirs: [ '/work/01', '/work/02', '/work/03' ],
             containerConfig: [enabled: true],
             containerImage: 'quay.io/nextflow:bash',
             outputFiles: ['foo.txt', '*.bar', '**/baz']
         )
         then:
-        bash.makeBinding().process_directives == '''\
+        bash.makeBinding().task_metadata == '''\
             ### ---
             ### array:
             ###   index-name: SLURM_ARRAY_TASK_ID
             ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
             ### container: 'quay.io/nextflow:bash'
             ### outputs:
             ### - 'foo.txt'

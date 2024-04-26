@@ -307,7 +307,7 @@ class BashWrapperBuilder {
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
-        binding.process_directives = getProcessDirectives()
+        binding.task_metadata = getTaskMetadata()
         binding.task_name = name
         binding.helpers_script = getHelpersScript()
 
@@ -462,7 +462,7 @@ class BashWrapperBuilder {
         }
     }
 
-    protected String getProcessDirectives() {
+    protected String getTaskMetadata() {
         final lines = []
         lines << '---'
 
@@ -470,6 +470,9 @@ class BashWrapperBuilder {
             lines << 'array:'
             lines << "  index-name: ${arrayIndexName}"
             lines << "  index-start: ${arrayIndexStart}"
+            lines << "  work-dirs:"
+            for( String workDir : arrayWorkDirs )
+                lines << "  - ${Escape.path(workDir)}"
         }
 
         if( containerConfig?.isEnabled() )

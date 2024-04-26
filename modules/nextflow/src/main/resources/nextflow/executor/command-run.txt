@@ -14,7 +14,7 @@
 ##  limitations under the License.
 #!/bin/bash
 {{header_script}}
-{{process_directives}}
+{{task_metadata}}
 # NEXTFLOW TASK: {{task_name}}
 set -e
 set -u
