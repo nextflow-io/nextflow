@@ -20,6 +20,7 @@ package nextflow.fusion
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Global
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.util.MemoryUnit
 
@@ -97,6 +98,10 @@ class FusionConfig {
 
     static FusionConfig getConfig() {
         return createConfig0(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+    }
+
+    static FusionConfig getConfig(Session session) {
+        return createConfig0(session.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
     }
 
     @Memoized
