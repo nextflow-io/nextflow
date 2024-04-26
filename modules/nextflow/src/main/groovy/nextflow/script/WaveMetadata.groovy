@@ -42,4 +42,8 @@ class WaveMetadata {
             this.enabled = false
         }
     }
+
+    WaveMetadata(Boolean enabled) {
+        this.enabled = enabled
+    }
 }

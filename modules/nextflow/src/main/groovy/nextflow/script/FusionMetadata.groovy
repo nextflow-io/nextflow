@@ -56,6 +56,11 @@ class FusionMetadata {
         }
     }
 
+    FusionMetadata(Boolean enabled, String version) {
+        this.enabled = enabled
+        this.version = version
+    }
+
     private String retrieveFusionVersion(Map config) {
         final String url = config.containerConfigUrl as String
         if( url && !url.isEmpty() && url.startsWith("https://fusionfs.seqera.io/") ) {
