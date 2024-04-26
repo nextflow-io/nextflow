@@ -1434,7 +1434,7 @@ Process configuration settings are applied to a process in the following order (
 3. `withLabel` selectors matching any of the process labels
 4. `withName` selectors matching the process name
 5. `withName` selectors matching the process included alias
-5. `withName` selectors matching the process fully qualified name
+6. `withName` selectors matching the process fully qualified name
 
 For example:
 
