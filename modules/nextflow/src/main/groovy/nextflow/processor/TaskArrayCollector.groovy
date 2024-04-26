@@ -87,7 +87,8 @@ class TaskArrayCollector {
      * @param task
      */
     void collect(TaskRun task) {
-        sync.withLock {
+        sync.lock()
+        try {
             // submit task directly if the collector is closed
             // or if the task is retried (since it might have dynamic resources)
             if( closed || task.config.getAttempt() > 1 ) {
@@ -104,19 +105,26 @@ class TaskArrayCollector {
                 array = new ArrayList<>(arraySize)
             }
         }
+        finally {
+            sync.unlock()
+        }
     }
 
     /**
      * Close the collector, submitting any remaining tasks as a partial job array.
      */
     void close() {
-        sync.withLock {
+        sync.lock()
+        try {
             if( array.size() == 1 )
                 executor.submit(array.first())
             else if( array.size() > 0 )
                 submit0(array)
 
             closed = true
+        }
+        finally {
+            sync.unlock()
         }
     }
 
