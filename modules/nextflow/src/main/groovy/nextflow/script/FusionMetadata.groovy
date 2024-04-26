@@ -59,7 +59,7 @@ class FusionMetadata {
     }
 
     private String retrieveFusionVersion(Map config) {
-        final String url = config.containerConfigUrl as String
+        final String url = config.containerConfigUrl?.toString() ?: System.getenv().get('FUSION_CONTAINER_CONFIG_URL')
         if( url && !url.isEmpty() && url.startsWith("https://fusionfs.seqera.io/") ) {
             final Matcher matcher_json = VERSION_JSON.matcher(url)
             if( matcher_json.matches() )
