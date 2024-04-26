@@ -17,6 +17,9 @@
 
 package nextflow.script
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
@@ -32,6 +35,12 @@ import nextflow.Session
 @ToString(includeNames = true)
 @EqualsAndHashCode
 class FusionMetadata {
+    // TODO FIX THESE
+    //final private Pattern VERSION_JSON = Pattern.compile(".*/v(\\d+(?:\\.\\w+)*)-(\\w*)\\.json$")
+    //final private Pattern VERSION_TARGZ = Pattern.compile(".*/pkg\\/(\\d+(?:\\/\\w+)+)\\/fusion-(\\w+)\\.tar\\.gz$")
+    final private Pattern VERSION_JSON = Pattern.compile('NEED-TO-FIX')
+    final private Pattern VERSION_TARGZ = Pattern.compile('NEED-TO-FIX')
+
     boolean enabled
     String version
 
@@ -40,11 +49,25 @@ class FusionMetadata {
             final Map fusionConfig = session.config.fusion as Map
             this.enabled = fusionConfig.enabled as boolean
             // TODO work in progress
-            this.version = 'not-defined-yet'
+            this.version = this.enabled ? retrieveFusionVersion(fusionConfig) : null
         } else {
             this.enabled = false
             this.version = null
         }
+    }
+
+    private String retrieveFusionVersion(Map config) {
+        final String url = config.containerConfigUrl as String
+        if( url && !url.isEmpty() && url.startsWith("https://fusionfs.seqera.io/") ) {
+            final Matcher matcher_json = VERSION_JSON.matcher(url)
+            if( matcher_json.matches() )
+                return matcher_json.group(1)
+            final Matcher matcher_targz = VERSION_TARGZ.matcher(url)
+            if( matcher_targz.matches() )
+                return matcher_targz.group(1).replaceAll("/", ".")
+            return url
+        }
+        return null
     }
 
 }

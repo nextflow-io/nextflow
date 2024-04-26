@@ -59,7 +59,7 @@ class WorkflowMetadataTest extends Specification {
         def config = [workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ],
                     docker:[enabled:true],
                     manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1'],
-                    wave:[enabled:true], fusion:[enabled:true]]
+                    wave:[enabled:true], fusion:[enabled:true, containerConfigUrl: 'https://fusionfs.seqera.io/releases/v2.2.13-amd64.json']]
         Session session = Spy(Session, constructorArgs: [config])
         session.configFiles >> [Paths.get('foo'), Paths.get('bar')]
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
@@ -92,7 +92,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.containerEngine == 'docker'
         metadata.wave.enabled == true
         metadata.fusion.enabled == true
-        metadata.fusion.version == 'not-defined-yet'
+        metadata.fusion.version == '2.2.13'
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         metadata.resume == false
         metadata.stubRun == false
