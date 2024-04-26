@@ -36,8 +36,8 @@ import nextflow.Session
 @EqualsAndHashCode
 class FusionMetadata {
     // TODO FIX THESE
-    //final private Pattern VERSION_JSON = Pattern.compile(".*/v(\\d+(?:\\.\\w+)*)-(\\w*)\\.json$")
-    //final private Pattern VERSION_TARGZ = Pattern.compile(".*/pkg\\/(\\d+(?:\\/\\w+)+)\\/fusion-(\\w+)\\.tar\\.gz$")
+    //static final private Pattern VERSION_JSON = Pattern.compile(".*/v(\\d+(?:\\.\\w+)*)-(\\w*)\\.json$")
+    //static final private Pattern VERSION_TARGZ = Pattern.compile(".*/pkg\\/(\\d+(?:\\/\\w+)+)\\/fusion-(\\w+)\\.tar\\.gz$")
     final private Pattern VERSION_JSON = Pattern.compile('NEED-TO-FIX')
     final private Pattern VERSION_TARGZ = Pattern.compile('NEED-TO-FIX')
 
