@@ -127,6 +127,7 @@ reference/operator
 :maxdepth: 1
 
 developer/index
+developer/diagram
 developer/packages
 developer/plugins
 ```

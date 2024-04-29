@@ -720,6 +720,16 @@ class ProcessConfigTest extends Specification {
         process.arch == [name: 'linux/x86_64', target: 'zen3']
     }
 
+    def 'should apply resourceLimits' () {
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.resourceLimits time:'1h', memory: '2GB'
+        then:
+        process.resourceLimits == [time:'1h', memory: '2GB']
+    }
+
 
     def 'should get default config path' () {
         given:
