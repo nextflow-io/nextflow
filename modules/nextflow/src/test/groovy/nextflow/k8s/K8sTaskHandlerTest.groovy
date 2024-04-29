@@ -61,7 +61,9 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        def handler = Spy(new K8sTaskHandler(builder:builder, client: client)) {
+            getK8sConfig() >> new K8sConfig()
+        }
         Map result
 
         when:
@@ -172,6 +174,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
+        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -207,6 +210,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
+        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> new TaskConfig()
@@ -244,6 +248,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> podOptions
         1 * handler.getContainerMounts() >> []
+        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -274,7 +279,9 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
+        def handler = Spy(new K8sTaskHandler(builder:builder, client:client)) {
+            getK8sConfig() >> new K8sConfig()
+        }
         def podOptions = Mock(PodOptions)
         and:
         Map result
@@ -400,6 +407,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         1 * handler.getPodOptions() >> podOptions
+        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -920,6 +928,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
+        _ * handler.getK8sConfig() >> new K8sConfig()
         and:
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
