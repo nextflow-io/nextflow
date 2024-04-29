@@ -174,6 +174,9 @@ class TaskArrayCollector {
             script: script,
             children: handlers
         )
+        taskArray.config.context = taskArray.context
+        taskArray.config.process = taskArray.processor.name
+        taskArray.config.executor = taskArray.processor.executor.name
 
         return taskArray
     }
