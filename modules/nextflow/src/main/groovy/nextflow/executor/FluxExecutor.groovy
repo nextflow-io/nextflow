@@ -91,10 +91,10 @@ class FluxExecutor extends AbstractGridExecutor {
 
         // Any extra cluster options the user wants!
         // Options tokenized with ; akin to OarExecutor
-        if( task.config.clusterOptions ) {
+        if( task.config.getClusterOptions() ) {
 
             // Split by space
-            for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
+            for (String item : task.config.getClusterOptions().tokenize(' ')) {
                 if ( item ) {
                     result << item.stripIndent(true).trim()
                 }

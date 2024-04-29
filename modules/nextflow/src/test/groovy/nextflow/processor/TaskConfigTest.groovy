@@ -219,6 +219,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.time = value
+        config.resourceLimits = [time: '24h']
 
         then:
         config.time == expected
@@ -230,6 +231,7 @@ class TaskConfigTest extends Specification {
         new Duration('1s')  || 1000
         new Duration('2h')  || '2h'
         new Duration('10h') || { "$ten hours" }
+        new Duration('24h') || '48h'
 
     }
 
@@ -256,6 +258,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.memory = value
+        config.resourceLimits = [memory: '16G']
 
         then:
         config.memory == expected
@@ -267,6 +270,7 @@ class TaskConfigTest extends Specification {
         new MemoryUnit('1K')    || 1024
         new MemoryUnit('2M')    || '2M'
         new MemoryUnit('10G')   || { "$ten G" }
+        new MemoryUnit('16G')   || '32G'
 
     }
 
@@ -275,6 +279,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(x: 20)
         config.disk = value
+        config.resourceLimits = [disk: '100G']
 
         then:
         config.disk == expected
@@ -288,6 +293,7 @@ class TaskConfigTest extends Specification {
         new MemoryUnit('5M')    || '5M'
         new MemoryUnit('20G')   || { "$x G" }
         new MemoryUnit('30G')   || MemoryUnit.of('30G')
+        new MemoryUnit('100G')  || '200G'
 
     }
 
@@ -296,6 +302,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
+        config.resourceLimits = [cpus: 24]
 
         then:
         config.cpus == expected
@@ -308,6 +315,7 @@ class TaskConfigTest extends Specification {
         1            | true     | 1
         8            | true     | 8
         10           | true     | { ten ?: 0  }
+        24           | true     | 32
 
     }
 
