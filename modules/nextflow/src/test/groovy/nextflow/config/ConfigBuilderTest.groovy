@@ -2745,6 +2745,10 @@ class ConfigBuilderTest extends Specification {
         configMain.text = '''
         k8s {
             pod = [
+                volumeClaim: 'bi-readonly-pvc',
+                mountPath: '/mnt/bi/abc',
+                imagePullPolicy: 'IfNotPresent',
+                imagePullSecret: 'dockersecret',
                 nodeSelector: 'purpose=nextflow',
                 toleration: [
                     [
@@ -2762,7 +2766,8 @@ class ConfigBuilderTest extends Specification {
         def config = new ConfigBuilder().buildConfig0([:], [configMain])
 
         then:
-        config.k8s.pod[0].nodeSelector == 'purpose=nextflow'
+        config.k8s.pod.mountPath == '/mnt/bi/abc'
+        config.k8s.pod.nodeSelector == 'purpose=nextflow'
 
         cleanup:
         folder?.deleteDir()
