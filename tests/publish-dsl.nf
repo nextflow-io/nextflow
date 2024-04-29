@@ -58,7 +58,7 @@ process foo {
   '''
 }
 
-workflow {
+workflow align_combine_foo {
   def input = Channel.of('alpha','beta','delta')
   align(input)
 
@@ -75,6 +75,13 @@ workflow {
   foo.out         >> (params.save_foo ? 'data' : null)
 }
 
+workflow {
+  align_combine_foo()
+
+  publish:
+  'more/data' >> 'more'
+}
+
 publish {
   directory 'results'
 
@@ -88,7 +95,7 @@ publish {
     }
   }
 
-  'more/data' {
+  'more' {
     mode 'copy'
   }
 }

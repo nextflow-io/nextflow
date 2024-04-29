@@ -165,4 +165,11 @@ class WorkflowBinding extends Binding  {
             _publish_target(ch, name)
     }
 
+    void _publish_target(String oldTarget, String newTarget) {
+        final targets = owner.session.publishTargets
+        for( final source : targets.keySet() )
+            if( targets[source] == oldTarget )
+                targets[source] = newTarget
+    }
+
 }

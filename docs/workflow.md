@@ -453,7 +453,11 @@ In the above example, the output `results` of process `foo` is published to the 
 In a process, any output with an `emit` name can be published. In a workflow, any channel defined in the workflow, including process and subworkflow outputs, can be published.
 
 :::{note}
-If a process/workflow output (e.g. `foo.out`) contains multiple channels, each channel will be published. Individual output channels can also be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
+If the publish source is a process/workflow output (e.g. `foo.out`) with multiple channels, each channel will be published. Individual output channels can also be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
+:::
+
+:::{note}
+The publish source can also be a target name, in which case all channels published to the old target will be re-mapped to the new target. This is a useful way to override publish directories in calling workflows.
 :::
 
 As shown in the example, workflows can override the publish targets of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
@@ -600,9 +604,6 @@ Available options:
 
   `'standard'`
   : Overwrite existing files when the file size or last modified timestamp is different.
-
-`path`
-: Specify the publish path relative to the output directory (default: the target name). Can only be specified within a target definition.
 
 `storageClass`
 : *Currently only supported for S3.*
