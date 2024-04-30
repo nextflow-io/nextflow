@@ -1,10 +1,9 @@
-FROM mambaorg/micromamba:1.3.1
-
-MAINTAINER Ben Sherman <bentshermann@gmail.com>
+FROM mambaorg/micromamba:1.5.8
 
 RUN micromamba install --yes --name base --channel conda-forge \
       make=4.3 \
       python=3.7 \
+      git=2.44.0 \
       && \
     micromamba clean --all --yes
 
