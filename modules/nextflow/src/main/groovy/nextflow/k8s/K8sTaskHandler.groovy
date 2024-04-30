@@ -159,7 +159,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected String getSyntheticPodName(TaskRun task) {
-        "nf-${task.hash}"
+        final suffix = System.currentTimeMillis().toString().md5()[-5..-1]
+        return "nf-${task.hash}-${suffix}"
     }
 
     protected String getOwner() { OWNER }
