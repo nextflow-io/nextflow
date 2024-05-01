@@ -454,7 +454,7 @@ class TaskRun implements Cloneable {
         cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
     }
 
-    protected List<String> getOutputFilesNames0() {
+    private List<String> getOutputFilesNames0() {
         def result = []
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
@@ -617,7 +617,7 @@ class TaskRun implements Cloneable {
         cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
     }
 
-    protected Path getCondaEnv0() {
+    private Path getCondaEnv0() {
         if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
             return null
 
@@ -629,7 +629,7 @@ class TaskRun implements Cloneable {
         cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
     }
 
-    protected Path getSpackEnv0() {
+    private Path getSpackEnv0() {
         if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
             return null
 
@@ -643,7 +643,7 @@ class TaskRun implements Cloneable {
         cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
     }
 
-    protected ContainerInfo containerInfo0() {
+    private ContainerInfo containerInfo0() {
         // fetch the container image from the config
         def configImage = config.getContainer()
         // the boolean `false` literal can be provided
