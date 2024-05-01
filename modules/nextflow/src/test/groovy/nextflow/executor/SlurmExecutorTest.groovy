@@ -18,6 +18,7 @@ package nextflow.executor
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -77,7 +78,7 @@ class SlurmExecutorTest extends Specification {
         '/some/path/job.sh'     | true      | ['sbatch']
     }
 
-    def testGetHeaders() {
+    def 'test job script headers' () {
 
         setup:
         // SLURM executor
@@ -135,7 +136,6 @@ class SlurmExecutorTest extends Specification {
         task.config.time = '1h'
         task.config.memory = '50 M'
         task.config.clusterOptions = '-a 1 --signal=KILL'
-
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -J nf-the_task_name
@@ -153,7 +153,6 @@ class SlurmExecutorTest extends Specification {
         task.config.time = '2h'
         task.config.memory = '200 M'
         task.config.clusterOptions = '-b 2'
-
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -J nf-the_task_name
@@ -173,7 +172,6 @@ class SlurmExecutorTest extends Specification {
         task.config.time = '2d 3h'
         task.config.memory = '3 G'
         task.config.clusterOptions = '-x 3'
-
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -J nf-the_task_name
@@ -187,8 +185,7 @@ class SlurmExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-        // test perCpuMemAllocation
-        when:
+        when: 'with perCpuMemAllocation'
         executor.@perCpuMemAllocation = true
         task.config = new TaskConfig()
         task.config.cpus = 8
@@ -201,6 +198,23 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --signal B:USR2@30
                 #SBATCH -c 8
                 #SBATCH --mem-per-cpu 3072M
+                '''
+                .stripIndent().leftTrim()
+
+        when: 'with job array'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            workDir >> task.workDir
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(taskArray) == '''
+                #SBATCH --array 0-4
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
                 '''
                 .stripIndent().leftTrim()
     }

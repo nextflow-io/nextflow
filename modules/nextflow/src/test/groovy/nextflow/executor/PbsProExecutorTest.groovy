@@ -16,13 +16,13 @@
 
 package nextflow.executor
 
-import nextflow.processor.TaskProcessor
-import spock.lang.Specification
-
 import java.nio.file.Paths
 
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import spock.lang.Specification
 /**
  *
  * @author Lorenz Gerber <lorenzottogerber@gmail.com>
@@ -174,12 +174,31 @@ class PbsProExecutorTest extends Specification {
         ]
     }
 
+    def 'should get directives with job array' () {
+        given:
+        def executor = Spy(PbsProExecutor)
+        def task = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> 'foo'
+            workDir >> Paths.get('/foo/bar')
+            getArraySize() >> 5
+        }
+
+        expect:
+        executor.getDirectives(task, []) == [
+                '-J', '0-4',
+                '-N', 'nf-foo',
+                '-o', '/foo/bar/.command.log',
+                '-j', 'oe',
+        ]
+    }
+
     def 'should return qstat command line' () {
         given:
         def executor = [:] as PbsProExecutor
 
         expect:
-		executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }

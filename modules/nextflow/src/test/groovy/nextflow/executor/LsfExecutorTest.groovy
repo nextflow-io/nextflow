@@ -21,6 +21,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -129,21 +130,17 @@ class LsfExecutorTest extends Specification {
 
     }
 
-    def testHeaders() {
+    def 'test job script headers' () {
 
         setup:
-        // LSF executor
         def executor = Spy(LsfExecutor)
         executor.@memUnit = 'MB'
         executor.@usageUnit = 'MB'
         executor.session = new Session()
 
-        // mock process
         def proc = Mock(TaskProcessor)
-        // process name
         proc.getName() >> 'task'
 
-        // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/scratch')
@@ -151,13 +148,11 @@ class LsfExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
-        // config
         task.config.queue = 'bsc_ls'
         task.config.clusterOptions = "-x 1 -R \"span[ptile=2]\""
         task.config.cpus = '2'
         task.config.time = '1h 30min'
         task.config.memory = '8GB'
-
         then:
         executor.getHeaders(task) == '''
                 #BSUB -o /scratch/.command.log
@@ -173,7 +168,6 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'alpha'
@@ -185,7 +179,6 @@ class LsfExecutorTest extends Specification {
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -204,7 +197,6 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'gamma'
@@ -221,7 +213,6 @@ class LsfExecutorTest extends Specification {
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -259,7 +250,6 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'gamma'
@@ -279,7 +269,6 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
@@ -293,6 +282,20 @@ class LsfExecutorTest extends Specification {
                 #BSUB -M 2048
                 #BSUB -R "select[mem>=2048] rusage[mem=2048]"
                 #BSUB -J nf-mapping_hola
+                '''
+                .stripIndent().leftTrim()
+
+        when: 'with job array'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            workDir >> task.workDir
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(taskArray) == '''
+                #BSUB -o /scratch/.command.log
+                #BSUB -J "nf-mapping_hola[1-5]"
                 '''
                 .stripIndent().leftTrim()
 
