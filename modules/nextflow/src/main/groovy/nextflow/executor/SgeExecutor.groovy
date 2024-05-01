@@ -74,9 +74,9 @@ class SgeExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.getClusterOptions() ) {
-            result << task.config.getClusterOptions() << ''
-        }
+        final opts = task.config.getClusterOptionsAsString()
+        if( opts )
+            result << opts << ''
 
         return result
     }

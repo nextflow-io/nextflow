@@ -53,8 +53,9 @@ class PbsExecutor extends AbstractGridExecutor {
         }
 
         // task cpus
+        final opts = task.config.getClusterOptionsAsString()
         if( task.config.getCpus() > 1 ) {
-            if( matchOptions(task.config.getClusterOptions()) ) {
+            if( matchOptions(opts) ) {
                 log.warn1 'cpus directive is ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }'
             }
             else {
@@ -75,9 +76,8 @@ class PbsExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.getClusterOptions() ) {
-            result << task.config.getClusterOptions() << ''
-        }
+        if( opts )
+            result << opts << ''
 
         return result
     }

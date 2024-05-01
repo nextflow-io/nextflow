@@ -40,8 +40,7 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     private boolean perCpuMemAllocation
 
-    private boolean hasSignalOpt(TaskConfig config) {
-        def opts = config.getClusterOptions()
+    private boolean hasSignalOpt(String opts) {
         return opts ? opts.contains('--signal ') || opts.contains('--signal=') : false
     }
 
@@ -59,7 +58,8 @@ class SlurmExecutor extends AbstractGridExecutor {
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
         result << '--no-requeue' << '' // note: directive need to be returned as pairs
 
-        if( !hasSignalOpt(task.config) ) {
+        final opts = task.config.getClusterOptionsAsString()
+        if( !hasSignalOpt(opts) ) {
             // see https://github.com/nextflow-io/nextflow/issues/2163
             // and https://slurm.schedmd.com/sbatch.html#OPT_signal
             result << '--signal' << 'B:USR2@30'
@@ -92,9 +92,8 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.getClusterOptions() ) {
-            result << task.config.getClusterOptions() << ''
-        }
+        if( opts )
+            result << opts << ''
 
         return result
     }

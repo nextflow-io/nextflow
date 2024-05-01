@@ -178,11 +178,15 @@ class LsfExecutorTest extends Specification {
         task.config = new TaskConfig()
         task.config.queue = 'alpha'
         task.config.cpus = 1
+        task.config.clusterOptions = ['-x 1', '-R "span[ptile=2]"', '-rn']
         then:
         executor.getHeaders(task) == '''
                 #BSUB -o /scratch/.command.log
                 #BSUB -q alpha
                 #BSUB -J nf-mapping_hola
+                #BSUB -x 1
+                #BSUB -R "span[ptile=2]"
+                #BSUB -rn
                 '''
                 .stripIndent().leftTrim()
 

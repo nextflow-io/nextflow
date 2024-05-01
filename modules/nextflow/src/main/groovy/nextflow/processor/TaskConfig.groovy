@@ -410,10 +410,17 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
-    String getClusterOptions() {
+    def getClusterOptions() {
         return get('clusterOptions')
     }
-    
+
+    String getClusterOptionsAsString() {
+        final opts = get('clusterOptions')
+        return opts != null
+            ? opts instanceof List<String> ? CmdLineHelper.toLine(opts) : opts.toString()
+            : ''
+    }
+
     def getContainer() {
         return get('container')
     }
@@ -427,24 +434,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( value != null )
             throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
         return null
-    }
-
-    /**
-     * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
-     */
-    List<String> getClusterOptionsAsList() {
-
-        def opts = get('clusterOptions')
-        if ( !opts ) {
-            return Collections.emptyList()
-        }
-
-        if( opts instanceof Collection ) {
-            return new ArrayList<String>(opts)
-        }
-        else {
-            return CmdLineHelper.splitter( opts.toString() )
-        }
     }
 
     Integer getSubmitAttempt() {

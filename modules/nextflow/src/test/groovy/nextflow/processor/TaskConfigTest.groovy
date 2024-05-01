@@ -338,21 +338,21 @@ class TaskConfigTest extends Specification {
     }
 
 
-    def testGetClusterOptionsAsList() {
+    def testGetClusterOptionsAsString() {
 
         when:
         def config = new TaskConfig()
         config.clusterOptions = value
 
         then:
-        config.getClusterOptionsAsList() == expected
+        config.getClusterOptionsAsString() == expected
 
         where:
-        expected                            || value
-        Collections.emptyList()             || null
-        ['-queue','alpha']                  || ['-queue','alpha']
-        ['-queue','alpha']                  || '-queue alpha'
-        ['-queue','alpha and beta']         || "-queue 'alpha and beta"
+        value                               | expected
+        null                                | ''
+        '-queue alpha'                      | '-queue alpha'
+        ['-queue','alpha']                  | '-queue alpha'
+        ['-queue','alpha and beta']         | "-queue 'alpha and beta'"
     }
 
     def testIsDynamic() {

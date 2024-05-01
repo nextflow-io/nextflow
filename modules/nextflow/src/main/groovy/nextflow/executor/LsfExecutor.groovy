@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
+import nextflow.util.CmdLineHelper
 /**
  * Processor for LSF resource manager
  *
@@ -107,7 +108,17 @@ class LsfExecutor extends AbstractGridExecutor {
         result << '-J' << getJobNameFor(task)
 
         // -- at the end append the command script wrapped file name
-        result.addAll( task.config.getClusterOptionsAsList() )
+        final opts = task.config.getClusterOptions()
+        if( opts instanceof Collection ) {
+            for( String line : opts )
+                result << line << ''
+        }
+        else if( opts != null ) {
+            // NOTE: does not work when an option is specified without a value
+            // see https://github.com/nextflow-io/nextflow/issues/4935
+            log.warn1 '[LSF] Specifying multiple cluster options in a string is error-prone, use a string list instead with one option per string'
+            result.addAll( CmdLineHelper.splitter(opts.toString()) )
+        }
 
         return result
     }

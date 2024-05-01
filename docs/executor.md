@@ -407,12 +407,19 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-queue`
 - {ref}`process-time`
 
-### Known Limitations
+:::{versionchanged} 24.04.0
+Prior to this version, if `clusterOptions` was specified as a string, multiple options were separated by semicolons to ensure that the job script was formatted correctly:
+```groovy
+clusterOptions = '-t besteffort;--project myproject'
+```
 
-- Multiple `clusterOptions` should be semicolon-separated to ensure that the OAR job script is accurately formatted:
-  ```groovy
-  clusterOptions = '-t besteffort;--project myproject'
-  ```
+The same behavior can now be achieved using a string list:
+```groovy
+clusterOptions = [ '-t besteffort', '--project myproject' ]
+```
+
+See {ref}`process-clusteroptions` for details.
+:::
 
 (pbs-executor)=
 

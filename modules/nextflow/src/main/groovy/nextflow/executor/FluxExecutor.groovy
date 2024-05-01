@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
+import nextflow.util.CmdLineHelper
 /**
  * Processor for Flux Framework executor
  *
@@ -90,16 +91,10 @@ class FluxExecutor extends AbstractGridExecutor {
         }
 
         // Any extra cluster options the user wants!
-        // Options tokenized with ; akin to OarExecutor
-        if( task.config.getClusterOptions() ) {
+        final opts = task.config.getClusterOptionsAsString()
+        if( opts )
+            result.addAll( CmdLineHelper.splitter(opts) )
 
-            // Split by space
-            for (String item : task.config.getClusterOptions().tokenize(' ')) {
-                if ( item ) {
-                    result << item.stripIndent(true).trim()
-                }
-            }
-        }
         result << '/bin/bash' << scriptFile.getName()
         return result
     }

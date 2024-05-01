@@ -81,10 +81,17 @@ class OarExecutor extends AbstractGridExecutor {
 
         // -- at the end append the command script wrapped file name
         // Options need to be semicolon ";" separated, if several are needed
-        if( task.config.getClusterOptions() ) {
-          for (String item : task.config.getClusterOptions().tokenize(';')) {
-            result << item << ''
-          }
+        final opts = task.config.getClusterOptions()
+        if( opts instanceof Collection ) {
+            for( String line : opts )
+                result << line << ''
+        }
+        else if( opts != null ) {
+            final lines = opts.toString().tokenize(';')
+            if( lines.size() > 1 )
+                log.warn1 "[OAR] Specifing multiple cluster options in a string is deprecated, use a string list instead: clusterOptions = [ ${lines.collect(v -> "'$v'").join(', ')} ]"
+            for( String line : lines )
+                result << line << ''
         }
 
         return result
