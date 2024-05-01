@@ -97,11 +97,11 @@ class TaskArrayCollector {
             }
 
             // add task to the array
-            array << task
+            array.add(task)
 
             // submit job array when it is ready
             if( array.size() == arraySize ) {
-                submit0(array)
+                executor.submit(createTaskArray(array))
                 array = new ArrayList<>(arraySize)
             }
         }
@@ -116,20 +116,18 @@ class TaskArrayCollector {
     void close() {
         sync.lock()
         try {
-            if( array.size() == 1 )
+            if( array.size() == 1 ) {
                 executor.submit(array.first())
-            else if( array.size() > 0 )
-                submit0(array)
-
+            }
+            else if( array.size() > 0 ) {
+                executor.submit(createTaskArray(array))
+                array = null
+            }
             closed = true
         }
         finally {
             sync.unlock()
         }
-    }
-
-    protected void submit0(List<TaskRun> tasks) {
-        executor.submit(createTaskArray(tasks))
     }
 
     /**
@@ -140,13 +138,13 @@ class TaskArrayCollector {
     protected TaskRun createTaskArray(List<TaskRun> tasks) {
         // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
-        for( TaskHandler handler : handlers )
+        for( TaskHandler handler : handlers ) {
             handler.prepareLauncher()
+        }
 
         // create work directory
         final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
         final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
-
         Files.createDirectories(workDir)
 
         // create wrapper script
