@@ -179,8 +179,8 @@ class NextflowDSLImpl implements ASTTransformation {
                 super.visitMethodCallExpression(methodCall)
             }
 
-            else if( methodName == 'publish' && preCondition ) {
-                convertPublishDef(methodCall,sourceUnit)
+            else if( methodName == 'output' && preCondition ) {
+                convertOutputDef(methodCall,sourceUnit)
                 super.visitMethodCallExpression(methodCall)
             }
 
@@ -519,29 +519,29 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         /**
-         * Transform targets in the workflow publish definition:
+         * Transform targets in the workflow output definition:
          *
-         *   publish {
+         *   output {
          *     'foo' { ... }
          *   }
          *
          * becomes:
          *
-         *   publish {
+         *   output {
          *     target('foo') { ... }
          *   }
          *
          * @param methodCall
          * @param unit
          */
-        protected void convertPublishDef(MethodCallExpression methodCall, SourceUnit unit) {
-            log.trace "Convert 'publish' ${methodCall.arguments}"
+        protected void convertOutputDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'output' ${methodCall.arguments}"
 
             assert methodCall.arguments instanceof ArgumentListExpression
             final arguments = (ArgumentListExpression)methodCall.arguments
 
             if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
-                syntaxError(methodCall, "Invalid publish definition")
+                syntaxError(methodCall, "Invalid output definition")
                 return
             }
 

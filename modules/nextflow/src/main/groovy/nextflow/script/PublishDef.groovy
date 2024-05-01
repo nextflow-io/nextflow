@@ -159,11 +159,9 @@ class PublishDsl {
         }
     }
 
-    private Map publishOptions(String path, Map overrides) {
+    private Map publishOptions(String name, Map overrides) {
         if( !directory )
             directory = Paths.get('.').complete()
-        if( path.startsWith('/') )
-            throw new ScriptRuntimeException("Invalid publish target '${path}' -- it should be a relative path")
 
         final opts = defaults + overrides
         if( opts.containsKey('ignoreErrors') )
@@ -171,6 +169,9 @@ class PublishDsl {
         if( !opts.containsKey('overwrite') )
             opts.overwrite = 'standard'
 
+        final path = opts.path as String ?: name
+        if( path.startsWith('/') )
+            throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should be a relative path")
         opts.path = directory.resolve(path)
         return opts
     }
@@ -210,6 +211,10 @@ class PublishDsl {
 
         void overwrite(String value) {
             setOption('overwrite', value)
+        }
+
+        void path(String value) {
+            setOption('path', value)
         }
 
         void storageClass(String value) {

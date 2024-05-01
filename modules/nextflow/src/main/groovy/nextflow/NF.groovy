@@ -64,8 +64,8 @@ class NF {
         NextflowMeta.instance.isStrictModeEnabled()
     }
 
-    static boolean isPublishDefinitionEnabled() {
-        NextflowMeta.instance.preview.publish
+    static boolean isOutputDefinitionEnabled() {
+        NextflowMeta.instance.preview.output
     }
 
     static boolean isRecurseEnabled() {

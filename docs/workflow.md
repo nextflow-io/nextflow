@@ -393,7 +393,7 @@ workflow {
 
 In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
 
-(workflow-publish-def)=
+(workflow-output-def)=
 
 ## Publishing outputs
 
@@ -401,22 +401,22 @@ In the above snippet, the initial channel is piped to the {ref}`operator-map` op
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.publish` feature flag to be enabled.
+This feature requires the `nextflow.preview.output` feature flag to be enabled.
 :::
 
-A script may define the set of outputs that should be published by the implicit workflow, known as the workflow publish definition:
+A script may define the set of outputs that should be published by the implicit workflow, known as the workflow output definition:
 
 ```groovy
 workflow {
     foo(bar())
 }
 
-publish {
+output {
     directory 'results'
 }
 ```
 
-The publish definition must be defined after the implicit workflow.
+The output definition must be defined after the implicit workflow.
 
 ### Publishing channels
 
@@ -456,10 +456,6 @@ In a process, any output with an `emit` name can be published. In a workflow, an
 If the publish source is a process/workflow output (e.g. `foo.out`) with multiple channels, each channel will be published. Individual output channels can also be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
 :::
 
-:::{note}
-The publish source can also be a target name, in which case all channels published to the old target will be re-mapped to the new target. This is a useful way to override publish directories in calling workflows.
-:::
-
 As shown in the example, workflows can override the publish targets of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
 
 By default, all files emitted by the channel will be published into the specified directory. If a channel emits list values, any files in the list (including nested lists) will also be published. For example:
@@ -480,7 +476,7 @@ workflow {
 The `directory` statement is used to set the top-level publish directory of the workflow:
 
 ```groovy
-publish {
+output {
     directory 'results'
 
     // ...
@@ -493,7 +489,7 @@ It is optional, and it defaults to the launch directory (`workflow.launchDir`). 
 
 A publish target is a name with a specific publish configuration. By default, when a channel is published to a target in the `publish:` section of a process or workflow, the target name is used as the publish path.
 
-For example, given the following publish definition:
+For example, given the following output definition:
 
 ```groovy
 workflow {
@@ -505,7 +501,7 @@ workflow {
     ch_bar >> 'bar/'
 }
 
-publish {
+output {
     directory 'results'
 }
 ```
@@ -539,12 +535,12 @@ workflow {
 }
 ```
 
-Publish targets can be customized in the publish definition using a set of options similar to the {ref}`process-publishdir` directive.
+Publish targets can be customized in the output definition using a set of options similar to the {ref}`process-publishdir` directive.
 
 For example:
 
 ```groovy
-publish {
+output {
     directory 'results'
     mode 'copy'
 
@@ -605,6 +601,9 @@ Available options:
   `'standard'`
   : Overwrite existing files when the file size or last modified timestamp is different.
 
+`path`
+: Specify the publish path relative to the output directory (default: the target name). Can only be specified within a target definition.
+
 `storageClass`
 : *Currently only supported for S3.*
 : Specify the storage class for published files.
@@ -634,7 +633,7 @@ workflow {
     ch_foo >> 'foo/'
 }
 
-publish {
+output {
     directory 'results'
 
     'foo/' {

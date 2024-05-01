@@ -41,7 +41,7 @@ class NextflowMeta {
     static class Preview implements Flags {
         @Deprecated volatile float dsl
         @Deprecated boolean strict
-        boolean publish
+        boolean output
         boolean recursion
         boolean topic
 
@@ -56,10 +56,10 @@ class NextflowMeta {
             dsl = num
         }
 
-        void setPublish(Boolean publish) {
-            if( publish )
-                log.warn "WORKFLOW PUBLISH DEFINITION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.publish = publish
+        void setOutput(Boolean output) {
+            if( output )
+                log.warn "WORKFLOW OUTPUT DEFINITION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.output = output
         }
 
         void setRecursion(Boolean recursion) {

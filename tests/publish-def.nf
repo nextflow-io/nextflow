@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.preview.publish = true
+nextflow.preview.output = true
 
 params.save_foo = true
 
@@ -58,7 +58,7 @@ process foo {
   '''
 }
 
-workflow align_combine_foo {
+workflow {
   def input = Channel.of('alpha','beta','delta')
   align(input)
 
@@ -75,27 +75,16 @@ workflow align_combine_foo {
   foo.out         >> (params.save_foo ? 'data' : null)
 }
 
-workflow {
-  align_combine_foo()
-
-  publish:
-  'more/data' >> 'more'
-}
-
-publish {
+output {
   directory 'results'
+  mode 'copy'
 
   'data' {
-    mode 'link'
     index {
       path 'index.csv'
       mapper { val -> [filename: val] }
       header true
       sep ','
     }
-  }
-
-  'more' {
-    mode 'copy'
   }
 }
