@@ -92,7 +92,7 @@ class BashWrapperBuilder {
     ScriptFileCopyStrategy copyStrategy
 
     @Delegate
-    protected TaskBean bean
+    private TaskBean bean
 
     private boolean runWithContainer
 
