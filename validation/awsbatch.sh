@@ -63,8 +63,7 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
 
 ## Test use of job array
 NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
-$NXF_CMD run nextflow-io/rnaseq-nf \
-    -profile batch \
+$NXF_CMD run nextflow-io/hello \
     -process.array 10 \
-    -plugins nf-cloudcache
-
+    -plugins nf-cloudcache \
+    -c awsbatch.config
