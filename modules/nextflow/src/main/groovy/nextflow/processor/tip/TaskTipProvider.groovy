@@ -1,6 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
- * Copyright 2022, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +12,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
-package nextflow.cloud.azure.config
+
+package nextflow.processor.tip
+
+import org.pf4j.ExtensionPoint
 
 /**
- * Define the strategy to install the azcopy tool
+ * Basic interface for tips suggestion
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-enum CopyToolInstallMode {
-    node,
-    task,
-    off
+interface TaskTipProvider extends ExtensionPoint {
+
+    boolean enabled()
+
+    String suggestTip(List<String> context)
+
 }

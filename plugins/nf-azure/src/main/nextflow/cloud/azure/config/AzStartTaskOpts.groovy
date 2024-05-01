@@ -1,7 +1,6 @@
 /*
- * Copyright 2021, Microsoft Corp
- * Copyright 2022, Seqera Labs
- *
+ * Copyright 2024, Seqera Labs
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,13 +15,23 @@
  */
 package nextflow.cloud.azure.config
 
+import groovy.transform.CompileStatic
+
 /**
- * Define the strategy to install the azcopy tool
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Model Azure pool start task options
  */
-enum CopyToolInstallMode {
-    node,
-    task,
-    off
+@CompileStatic
+class AzStartTaskOpts {
+
+    String  script
+    boolean privileged
+
+    AzStartTaskOpts() {
+        this(Collections.emptyMap())
+    }
+
+    AzStartTaskOpts(Map config) {
+        this.script     = config.script
+        this.privileged = Boolean.parseBoolean(config.privileged as String)
+    }
 }

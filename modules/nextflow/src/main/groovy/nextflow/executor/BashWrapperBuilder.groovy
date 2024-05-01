@@ -235,7 +235,7 @@ class BashWrapperBuilder {
         // out eval
         for( Map.Entry<String,String> eval : outEvals ) {
             result << "#\n"
-            result <<"nxf_eval_cmd STDOUT STDERR ${eval.value}\n"
+            result <<"nxf_eval_cmd STDOUT STDERR bash -c \"${eval.value.replace('"','\\\"')}\"\n"
             result << 'status=$?\n'
             result << 'if [ $status -eq 0 ]; then\n'
             result << "  echo $eval.key=\"\$STDOUT\" >> ${TaskRun.CMD_ENV}\n"

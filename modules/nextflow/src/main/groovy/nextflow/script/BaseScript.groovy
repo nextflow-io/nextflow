@@ -155,7 +155,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
-                log.warn "No entry workflow specified"
+                throw new AbortOperationException("No entry workflow specified")
             if( meta.getLocalProcessNames() ) {
                 final msg = """\
                         =============================================================================
