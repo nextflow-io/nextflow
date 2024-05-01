@@ -586,6 +586,14 @@ The following settings are available:
 `docker.fixOwnership`
 : Fix ownership of files created by the docker container.
 
+`docker.fusionOptions`
+: :::{versionadded} 23.01.0-edge
+  :::
+: :::{versionchanged} 23.10.0
+  The default options were changed from `'--rm --privileged'` to the current default.
+  :::
+: The extra command line options to be used with Fusion (default: `'--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'`).
+
 `docker.legacy`
 : Use command line options removed since Docker 1.10.0 (default: `false`).
 
@@ -1320,6 +1328,14 @@ The following settings are available:
 
 `podman.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
+
+`podman.fusionOptions`
+: :::{versionadded} 23.01.0-edge
+  :::
+: :::{versionchanged} 23.10.0
+  The default options were changed from `'--rm --privileged'` to the current default.
+  :::
+: The extra command line options to be used with Fusion (default: `'--rm --device /dev/fuse'`).
 
 `podman.mountFlags`
 : Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`.
