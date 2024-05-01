@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -26,6 +27,7 @@ import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
@@ -110,6 +112,11 @@ class TaskPollingMonitor implements TaskMonitor {
      * Define rate limit for task submission
      */
     private RateLimiter submitRateLimit
+
+    @Lazy
+    private ExecutorService finalizerPool = { session.finalizeTaskExecutorService() }()
+
+    private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -627,18 +634,27 @@ class TaskPollingMonitor implements TaskMonitor {
                 handler.task.error = new ProcessSubmitTimeoutException("Task '${handler.task.lazyName()}' could not be submitted within specified 'maxAwait' time: ${handler.task.config.getMaxSubmitAwait()}")
             }
 
-            // finalize the tasks execution
-            final fault = handler.task.processor.finalizeTask(handler.task)
-
-            // notify task completion
-            session.notifyTaskComplete(handler)
-
-            // abort the execution in case of task failure
-            if (fault instanceof TaskFault) {
-                session.fault(fault, handler)
+            // finalize the task asynchronously
+            if( enableAsyncFinalizer ) {
+                finalizerPool.submit( ()-> finalizeTask(handler) )
+            }
+            else {
+                finalizeTask(handler)
             }
         }
+    }
 
+    protected void finalizeTask( TaskHandler handler ) {
+        // finalize the task execution
+        final fault = handler.task.processor.finalizeTask(handler.task)
+
+        // notify task completion
+        session.notifyTaskComplete(handler)
+
+        // abort the execution in case of task failure
+        if( fault instanceof TaskFault ) {
+            session.fault(fault, handler)
+        }
     }
 
     /**
