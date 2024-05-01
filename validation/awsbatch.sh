@@ -60,3 +60,11 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
     -plugins nf-cloudcache,nf-wave \
     -c awsfargate.config
+
+## Test use of job array
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
+$NXF_CMD run nextflow-io/rnaseq-nf \
+    -profile batch \
+    -process.array 10 \
+    -plugins nf-cloudcache
+

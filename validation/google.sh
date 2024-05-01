@@ -72,3 +72,10 @@ $NXF_CMD -C ./google.config \
     -resume
 [[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 [[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
+
+## Test job array
+NXF_CLOUDCACHE_PATH=gs://rnaseq-nf/cache \
+$NXF_CMD -C ./google.config \
+    run nextflow-io/rnaseq-nf \
+    -process.array 10 \
+    -plugins nf-cloudcache
