@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
@@ -114,6 +115,8 @@ class TaskPollingMonitor implements TaskMonitor {
 
     @Lazy
     private ExecutorService finalizerPool = { session.finalizeTaskExecutorService() }()
+
+    private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -632,7 +635,12 @@ class TaskPollingMonitor implements TaskMonitor {
             }
 
             // finalize the task asynchronously
-            finalizerPool.submit( ()-> finalizeTask(handler) )
+            if( enableAsyncFinalizer ) {
+                finalizerPool.submit( ()-> finalizeTask(handler) )
+            }
+            else {
+                finalizeTask(handler)
+            }
         }
     }
 
