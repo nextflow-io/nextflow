@@ -67,3 +67,10 @@ $NXF_CMD run nextflow-io/hello \
     -process.array 10 \
     -plugins nf-cloudcache \
     -c awsbatch.config
+
+## Test use of job array using Fusion
+$NXF_CMD run nextflow-io/hello \
+    -process.array 10 \
+    -with-wave \
+    -with-fusion \
+    -c awsbatch.config
