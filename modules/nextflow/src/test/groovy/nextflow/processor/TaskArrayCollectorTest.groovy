@@ -147,8 +147,8 @@ class TaskArrayCollectorTest extends Specification {
         taskArray.processor == proc
         taskArray.script == '''
             array=( /work/foo /work/foo /work/foo )
-            export array_task_dir=${array[ARRAY_JOB_INDEX]}
-            bash -o pipefail -c 'bash ${array_task_dir}/.command.run 2>&1 | tee ${array_task_dir}/.command.log'
+            export nxf_array_task_dir=${array[ARRAY_JOB_INDEX]}
+            bash -o pipefail -c 'bash ${nxf_array_task_dir}/.command.run 2>&1 | tee ${nxf_array_task_dir}/.command.log'
             '''.stripIndent().leftTrim()
         and:
         taskArray.getArraySize() == 3

@@ -188,7 +188,7 @@ class TaskArrayCollector {
         // get work directory and launch command for each task
         final workDirs = array.collect( h -> h.getWorkDir() )
         final args = array.first().getLaunchCommand().toArray() as String[]
-        final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${array_task_dir}')
+        final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${nxf_array_task_dir}')
 
         // create wrapper script
         final indexName = executor.getArrayIndexName()
@@ -199,7 +199,7 @@ class TaskArrayCollector {
 
         """
         array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
-        export array_task_dir=\${array[${arrayIndex}]}
+        export nxf_array_task_dir=\${array[${arrayIndex}]}
         ${cmd}
         """.stripIndent().leftTrim()
     }
