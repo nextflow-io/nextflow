@@ -1,8 +1,8 @@
 (metrics-page)=
 
-# Metrics
+# Understanding task resource metrics
 
-This section details how the resource usage metrics from the {ref}`Execution report <execution-report>` are computed.
+This tutorial explains how the resource usage metrics from the {ref}`Execution report <execution-report>` are computed.
 
 ## CPU Usage
 

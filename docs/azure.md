@@ -1,6 +1,6 @@
 (azure-page)=
 
-# Azure Cloud
+# Azure
 
 :::{versionadded} 21.04.0
 :::
