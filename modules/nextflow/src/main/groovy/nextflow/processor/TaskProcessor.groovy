@@ -1328,9 +1328,10 @@ class TaskProcessor {
         else
             message = err0(error.cause)
 
+        message.eachLine { line ->
+            result << '  ' << line << '\n'
+        }
         result
-            .append('  ')
-            .append(message)
             .append('\n')
             .toString()
     }
