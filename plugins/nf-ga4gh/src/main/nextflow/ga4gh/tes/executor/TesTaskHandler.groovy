@@ -28,7 +28,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.extension.FilesEx
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
 import nextflow.ga4gh.tes.client.model.TesExecutor as TesExecutorModel
 import nextflow.ga4gh.tes.client.model.TesInput
@@ -88,7 +87,6 @@ class TesTaskHandler extends TaskHandler {
         this.executor = executor
         this.client = executor.getClient()
 
-
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
@@ -136,14 +134,14 @@ class TesTaskHandler extends TaskHandler {
 
         return false
     }
-    
 
     private int readExitStatus() {
-        final response = client.getTask(requestId, "FULL")
-
         try {
-            def logs = response.logs[0].logs
-            def exitCode = logs[0].exitCode as Integer
+            return client
+                .getTask(requestId, 'FULL')
+                .logs[0]
+                .logs[0]
+                .exitCode
         }
         catch( Exception e ) {
             log.trace "[TES] Cannot read exitstatus for task: `$task.name` | ${e.message}"
@@ -186,18 +184,7 @@ class TesTaskHandler extends TaskHandler {
             throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
 
         final exec = new TesExecutorModel()
-        String tes_end_point = executor.getEndpoint()
-        if ( tes_end_point.contains('azure.com') ) {
-            String azure_work = WORK_DIR.replace("/", "")
-            final result = new ArrayList(BashWrapperBuilder.BASH)
-            String bashAsString = result.join(' ')
-            exec.command = List.of('/bin/bash', '-c', "${bashAsString} ${azure_work}/${wrapperFile.getName()} &> ${azure_work}/${TaskRun.CMD_LOG}".toString())
-
-        }
-        else 
-            exec.command = List.of('/bin/bash', '-c', "${BashWrapperBuilder.BASH} ${wrapperFile.getName()} &> ${TaskRun.CMD_LOG}".toString())
-
-
+        exec.command = List.of('bash', '-o', 'pipefail', '-c', "bash ${WORK_DIR}/${TaskRun.CMD_RUN} 2>&1 | tee ${WORK_DIR}/${TaskRun.CMD_LOG}".toString())
         exec.image = task.container
         exec.workdir = WORK_DIR
 
@@ -207,17 +194,11 @@ class TesTaskHandler extends TaskHandler {
         body.addInputsItem(inItem(scriptFile))
         body.addInputsItem(inItem(wrapperFile))
 
-        final remoteBinDir = executor.getRemoteBinDir()
-        def remoteBinFiles = executor.fileList()
-        
-        if( remoteBinDir ){
-            remoteBinFiles.each { Path path ->
-                body.addInputsItem(inItemFromBin(path))
-            }
-        }
+        for( Path path : executor.getRemoteBinFiles() )
+            body.addInputsItem(inItemFromBin(path))
 
         // add task input files
-        if( inputFile.exists() ) 
+        if( inputFile.exists() )
             body.addInputsItem(inItem(inputFile))
 
         task.getInputFilesMap().each { String name, Path path ->
@@ -225,18 +206,20 @@ class TesTaskHandler extends TaskHandler {
         }
 
         // add the task output files
-        body.addOutputsItem(outItem(outputFile.name, "FILE"))
-        body.addOutputsItem(outItem(errorFile.name, "FILE"))
-        body.addOutputsItem(outItem(logFile.name, "FILE"))
-        body.addOutputsItem(outItem(exitFile.name, "FILE"))
+        body.addOutputsItem(outItem(outputFile.name))
+        body.addOutputsItem(outItem(errorFile.name))
+        body.addOutputsItem(outItem(logFile.name))
+        body.addOutputsItem(outItem(exitFile.name))
 
         // set requested resources
         body.setResources(getResources(task.config))
 
-        task.getOutputsByType(FileOutParam).keySet().each { param ->
-            final type = param.type
-            final patterns = param.getFilePatterns(task.context, task.workDir)
-            patterns.each { pattern -> body.addOutputsItem(outItem(pattern, type)) }
+        for( final param : task.getOutputsByType(FileOutParam).keySet() ) {
+            final type = param.type == 'dir'
+                ? 'DIRECTORY'
+                : 'FILE'
+            for( final pattern : param.getFilePatterns(task.context, task.workDir) )
+                body.addOutputsItem(outItem(pattern, type))
         }
 
         body.setName(task.getName())
@@ -265,22 +248,12 @@ class TesTaskHandler extends TaskHandler {
 
     private TesInput inItem(Path realPath, String fileName = null) {
         final result = new TesInput()
-        String azure_account = executor.getAzureStorageAccount()
-        String tes_end_point = executor.getEndpoint()
-        final azure_path = "/${azure_account}/"
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
-        
-        if (realPath.isDirectory()) {
-            result.type = "DIRECTORY"
-        }
-        else {
-            result.type = "FILE"
-        }
+        result.type = realPath.isDirectory() ? 'DIRECTORY' : 'FILE'
 
-        if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
-            result.url = realPath.toUriString().replaceAll('az://', "$azure_path")
-        }
+        // fix local path for TES Azure
+        result.url = fixTesAzureLocalPath(result.url)
 
         log.trace "[TES] Adding INPUT file: $result"
         return result
@@ -288,36 +261,19 @@ class TesTaskHandler extends TaskHandler {
 
     private TesInput inItemFromBin(Path realPath) {
         final result = new TesInput()
-        String azure_account = executor.getAzureStorageAccount()
-        String tes_end_point = executor.getEndpoint()
-        final azure_path = "/${azure_account}/"
         result.url = realPath.toUriString()
         result.path = realPath.toString()
-        result.type = "FILE"
+        result.type = 'FILE'
 
-        if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
-            result.url = realPath.toUriString().replaceAll('az://', "$azure_path")
-        }
-        
+        // fix local path for TES Azure
+        result.url = fixTesAzureLocalPath(result.url)
+
         log.trace "[TES] Adding INPUT file: $result"
         return result
     }
 
-    private TesOutput outItem( String fileName, String type ) {
+    private TesOutput outItem( String fileName, String type = null ) {
         final result = new TesOutput()
-        String azure_account = executor.getAzureStorageAccount()
-        String tes_end_point = executor.getEndpoint()
-        final azure_path = "/${azure_account}/"
-        if (type == 'file') {
-            result.type = "FILE"
-        }
-        else if (type == 'dir') {
-            result.type = "DIRECTORY"
-        }
-        else {
-            result.type = "FILE"
-        }
-        
         if( fileName.contains('*') || fileName.contains('?') ) {
             result.path = "$WORK_DIR/$fileName"
             result.pathPrefix = WORK_DIR
@@ -327,13 +283,35 @@ class TesTaskHandler extends TaskHandler {
             result.path = "$WORK_DIR/$fileName"
             result.url = task.workDir.resolve(fileName).toUriString()
         }
+        if( type != null )
+            result.type = type
 
-        if ( result.url.startsWith('az://') && azure_path != null && tes_end_point.contains('azure.com') ) {
-            result.url = result.url.replaceAll('az://', "$azure_path")
-        }
+        // fix local path for TES Azure
+        result.url = fixTesAzureLocalPath(result.url)
 
         log.trace "[TES] Adding OUTPUT file: $result"
         return result
+    }
+
+    /**
+     * Fix local paths when using TES Azure, which requires the
+     * following AZ path:
+     *
+     *   az://<blob>/<path>
+     *
+     * to be formatted as:
+     *
+     *   /<storage-account>/<blob>/<path>
+     *
+     * @param url
+     */
+    private String fixTesAzureLocalPath(String url) {
+        if( !url.startsWith('az://') )
+            return url
+        final storageAccount = executor.getAzureStorageAccount()
+        if( !executor.getEndpoint().contains('azure.com') || !storageAccount )
+            return url
+        return url.replaceAll('az://', "/${storageAccount}/")
     }
 
 }

@@ -16,7 +16,6 @@
 
 package nextflow.ga4gh.tes.executor
 
-import groovy.io.FileType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -38,7 +37,6 @@ import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * Experimental TES executor
@@ -57,7 +55,9 @@ class TesExecutor extends Executor implements ExtensionPoint {
     /**
      * A path accessible to TES where executable scripts need to be uploaded
      */
-    private Path remoteBinDir = null
+    private Path remoteBinDir
+
+    private List<Path> remoteBinFiles = []
 
     @Override
     protected void register() {
@@ -83,6 +83,11 @@ class TesExecutor extends Executor implements ExtensionPoint {
         remoteBinDir
     }
 
+    @PackageScope
+    List<Path> getRemoteBinFiles() {
+        remoteBinFiles
+    }
+
     protected void uploadBinDir() {
         /*
          * upload local binaries
@@ -92,23 +97,14 @@ class TesExecutor extends Executor implements ExtensionPoint {
             log.info "Uploading local `bin` scripts folder to ${tempBin.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, tempBin)
 
-        }
-    }
-
-    List<Path> fileList() {
-        List<Path> fileList = []
-        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
-            final tempBin = getRemoteBinDir()
-
-            session.binDir.eachFileRecurse(FileType.FILES) { file ->
-                file = file.toUriString().replaceAll("${session.binDir}",  "${tempBin.toUriString()}")
-                log.debug  "Adding file ${file}"
-                fileList.add(Paths.get(new URI(file)))
+            remoteBinFiles = []
+            session.binDir.eachFileRecurse { file ->
+                if( file.isDirectory() )
+                    return
+                remoteBinFiles << tempBin.resolve(session.binDir.relativize(file))
             }
         }
-            log.debug  "filelist  ${fileList}"
-            return fileList
-        }
+    }
 
     protected String getEndpoint() {
         def result = session.getConfigAttribute('executor.tes.endpoint', null)
@@ -119,12 +115,6 @@ class TesExecutor extends Executor implements ExtensionPoint {
 
         log.debug "[TES] endpoint=$result"
         return result
-    }
-
-    protected String getAzureStorageAccount() {
-        final account = session.config.navigate('azure.storage.accountName')
-        log.debug "[TES] Azure storage account = ${account}"
-        return account
     }
 
     protected Map<String, Authentication> getAuthentications() {
@@ -153,6 +143,12 @@ class TesExecutor extends Executor implements ExtensionPoint {
 
         log.debug "[TES] Authentication methods: ${result.keySet()}"
         return result
+    }
+
+    protected String getAzureStorageAccount() {
+        final storageAccount = session.config.navigate('azure.storage.accountName')
+        log.debug "[TES] Azure storage account = ${storageAccount}"
+        return storageAccount
     }
 
     /**

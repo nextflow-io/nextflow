@@ -26,7 +26,6 @@ import java.nio.file.WatchService
 import com.azure.storage.blob.BlobClient
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.models.BlobItem
-import nextflow.cloud.azure.config.AzConfig
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
@@ -327,7 +326,6 @@ class AzPath implements Path {
             return "${AzFileSystemProvider.SCHEME}:${path.toString()}"
         }
     }
-
 
     AzFileAttributes attributesCache() {
         def result = attributes
