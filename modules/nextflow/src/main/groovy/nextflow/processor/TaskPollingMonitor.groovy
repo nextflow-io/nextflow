@@ -247,7 +247,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try{
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
-            notifyTaskPending0(handler)
+            notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"
         }
         finally {
@@ -587,7 +587,7 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             catch ( Throwable e ) {
                 handleException(handler, e)
-                notifyTaskComplete0(handler)
+                notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
@@ -718,7 +718,7 @@ class TaskPollingMonitor implements TaskMonitor {
         return pendingQueue
     }
 
-    protected void notifyTaskPending0(TaskHandler handler) {
+    protected void notifyTaskPending(TaskHandler handler) {
         if( handler.task instanceof TaskArrayRun ) {
             final task = handler.task as TaskArrayRun
             for( TaskHandler it : task.children )
@@ -729,7 +729,7 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
-    protected void notifyTaskComplete0(TaskHandler handler) {
+    protected void notifyTaskComplete(TaskHandler handler) {
         if( handler.task instanceof TaskArrayRun ) {
             final task = handler.task as TaskArrayRun
             for( TaskHandler it : task.children )
