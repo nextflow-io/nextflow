@@ -285,7 +285,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             final result = safeExecute( () -> processStart(builder, stdinScript) )
             // -- save the job id
             final jobId = (String)executor.parseJobId(result)
-            this.onSubmit(jobId)
+            updateStatus(jobId)
             log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
 
         }
@@ -302,14 +302,14 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }
-
     }
 
-    void onSubmit(String jobId) {
+    private void updateStatus(String jobId) {
         if( task instanceof TaskArrayRun ) {
-            task.children.eachWithIndex { handler, i ->
+            for( int i=0; i<task.children.size(); i++ ) {
+                final handler = task.children[i] as GridTaskHandler
                 final arrayTaskId = ((TaskArrayExecutor)executor).getArrayTaskId(jobId, i)
-                ((GridTaskHandler)handler).onSubmit(arrayTaskId)
+                handler.updateStatus(arrayTaskId)
             }
         }
         else {

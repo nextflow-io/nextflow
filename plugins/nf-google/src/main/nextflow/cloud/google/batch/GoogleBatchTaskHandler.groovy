@@ -41,7 +41,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
-import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
@@ -180,15 +179,17 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         final uid = resp.getUid()
-        this.onSubmit(jobId, '0', uid)
+        updateStatus(jobId, '0', uid)
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    void onSubmit(String jobId, String taskId, String uid) {
+    private void updateStatus(String jobId, String taskId, String uid) {
         if( task instanceof TaskArrayRun ) {
-            task.children.eachWithIndex { handler, i ->
+            // update status for children
+            for( int i=0; i<task.children.size(); i++ ) {
+                final handler = task.children[i] as GoogleBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
-                ((GoogleBatchTaskHandler)handler).onSubmit(jobId, arrayTaskId, uid)
+                handler.updateStatus(jobId, arrayTaskId, uid)
             }
         }
         else {

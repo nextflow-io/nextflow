@@ -59,7 +59,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
-import nextflow.Const
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessSubmitException
@@ -323,15 +322,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // note use the real client object because this method
         // is supposed to be invoked by the thread pool
         final resp = submit0(bypassProxy(client), req)
-        this.onSubmit(resp.jobId, req.getJobQueue())
+        updateStatus(resp.jobId, req.getJobQueue())
         log.debug "[AWS BATCH] Process `${task.lazyName()}` submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
     }
 
-    void onSubmit(String jobId, String queueName) {
+    private void updateStatus(String jobId, String queueName) {
         if( task instanceof TaskArrayRun ) {
-            task.children.eachWithIndex { handler, i ->
+            // update status for children tasks
+            for( int i=0; i<task.children.size(); i++ ) {
+                final handler = task.children[i] as AwsBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
-                ((AwsBatchTaskHandler)handler).onSubmit(arrayTaskId, queueName)
+                handler.updateStatus(arrayTaskId, queueName)
             }
         }
         else {
