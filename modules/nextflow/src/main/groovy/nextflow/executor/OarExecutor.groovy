@@ -89,7 +89,7 @@ class OarExecutor extends AbstractGridExecutor {
         else if( opts != null ) {
             final lines = opts.toString().tokenize(';')
             if( lines.size() > 1 )
-                log.warn1 "[OAR] Specifing multiple cluster options in a string is deprecated, use a string list instead: clusterOptions = [ ${lines.collect(v -> "'$v'").join(', ')} ]"
+                log.warn1 "[OAR] Specifying multiple cluster options in a string is deprecated, use a string list instead: clusterOptions = [ ${lines.collect(v -> "'$v'").join(', ')} ]"
             for( String line : lines )
                 result << line << ''
         }
