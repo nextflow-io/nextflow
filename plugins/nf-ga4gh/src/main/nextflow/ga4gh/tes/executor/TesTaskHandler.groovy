@@ -200,7 +200,6 @@ class TesTaskHandler extends TaskHandler {
 
         exec.image = task.container
         exec.workdir = WORK_DIR
-        exec.workdir = WORK_DIR
 
         final body = new TesTask()
 
