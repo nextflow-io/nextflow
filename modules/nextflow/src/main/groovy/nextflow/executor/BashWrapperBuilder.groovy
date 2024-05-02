@@ -463,32 +463,28 @@ class BashWrapperBuilder {
     }
 
     protected String getTaskMetadata() {
-        final lines = []
-        lines << '---'
-
+        final lines = new StringBuilder()
+        lines << '### ---\n'
+        lines << "### name: '${name}'\n"
         if( arrayIndexName ) {
-            lines << 'array:'
-            lines << "  index-name: ${arrayIndexName}"
-            lines << "  index-start: ${arrayIndexStart}"
-            lines << "  work-dirs:"
+            lines << '### array:\n'
+            lines << "###   index-name: ${arrayIndexName}\n"
+            lines << "###   index-start: ${arrayIndexStart}\n"
+            lines << "###   work-dirs:\n"
             for( String workDir : arrayWorkDirs )
-                lines << "  - ${Escape.path(workDir)}"
+                lines << "###   - ${Escape.path(workDir)}\n"
         }
 
         if( containerConfig?.isEnabled() )
-            lines << "container: '${containerImage}'"
+            lines << "### container: '${containerImage}'\n"
 
         if( outputFiles.size() > 0 ) {
-            lines << 'outputs:'
+            lines << '### outputs:\n'
             for( final output : outputFiles )
-                lines << "- '${output}'"
+                lines << "### - '${output}'\n"
         }
 
-        if( lines.size() == 1 )
-            return ''
-
-        lines << '...'
-        return lines.collect( line -> '### ' + line ).join('\n')
+        lines << '### ...\n'
     }
 
     protected String getHelpersScript() {
