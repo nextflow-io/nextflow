@@ -85,6 +85,15 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:DescribeImageScanFindings"
   ```
 
+Note: If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
+  ```json
+  "ecs:CreateCluster"
+  "ecs:DeleteCluster"
+  "ecs:DescribeClusters"
+  "ecs:ListClusters"
+  "ec2:DescribeSubnets"
+  ```
+
 ### S3 policies
 
 Nextflow also requires policies to access [S3 buckets](https://aws.amazon.com/s3/) in order to use the work directory, pull input data, and publish results.
