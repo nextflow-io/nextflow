@@ -62,7 +62,12 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         }
 
         result << '-J' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
+
+        if( task !instanceof TaskArrayRun ) {
+            // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
+            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+
         result << '--no-requeue' << '' // note: directive need to be returned as pairs
 
         if( !hasSignalOpt(task.config) ) {

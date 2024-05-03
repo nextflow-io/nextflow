@@ -190,8 +190,6 @@ class PbsProExecutorTest extends Specification {
         executor.getDirectives(task, []) == [
                 '-J', '0-4',
                 '-N', 'nf-foo',
-                '-o', '/foo/bar/.command.log',
-                '-j', 'oe',
         ]
     }
 

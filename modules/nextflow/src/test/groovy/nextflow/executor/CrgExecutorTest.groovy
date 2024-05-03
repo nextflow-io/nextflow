@@ -351,8 +351,6 @@ class CrgExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                     #$ -t 1-5
                     #$ -N nf-mapping_tag
-                    #$ -o /abc/.command.log
-                    #$ -j y
                     #$ -terse
                     #$ -notify
                     '''

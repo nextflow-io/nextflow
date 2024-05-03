@@ -48,8 +48,12 @@ class CrgExecutor extends SgeExecutor {
         }
 
         result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        result << '-j' << 'y'
+
+        if( task !instanceof TaskArrayRun ) {
+            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+            result << '-j' << 'y'
+        }
+
         result << '-terse' << ''    // note: directive need to be returned as pairs
 
         /*

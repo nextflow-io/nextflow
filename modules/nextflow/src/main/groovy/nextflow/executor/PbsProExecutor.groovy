@@ -59,8 +59,11 @@ class PbsProExecutor extends PbsExecutor {
         }
 
         result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        result << '-j' << 'oe'
+
+        if( task !instanceof TaskArrayRun ) {
+            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+            result << '-j' << 'oe'
+        }
 
         // the requested queue name
         if( task.config.queue ) {

@@ -170,8 +170,6 @@ class PbsExecutorTest extends Specification {
         executor.getHeaders(taskArray) == '''
                 #PBS -J 0-4
                 #PBS -N nf-task_name
-                #PBS -o /work/dir/.command.log
-                #PBS -j oe
                 '''
                 .stripIndent().leftTrim()
     }

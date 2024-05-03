@@ -294,7 +294,6 @@ class LsfExecutorTest extends Specification {
         }
         then:
         executor.getHeaders(taskArray) == '''
-                #BSUB -o /scratch/.command.log
                 #BSUB -J "nf-mapping_hola[1-5]"
                 '''
                 .stripIndent().leftTrim()
