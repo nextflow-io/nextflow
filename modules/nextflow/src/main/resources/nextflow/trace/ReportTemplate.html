@@ -201,7 +201,7 @@
         <dd class="col-sm-9"><samp>${workflow.wave.enabled}</samp></dd>
 
         <dt class="col-sm-3">Fusion enabled</dt>
-        <dd class="col-sm-9"><samp>${workflow.fusion.enabled}</samp>, version <samp>${workflow.fusion.enabled? workflow.fusion.version :'-'}</samp></dd>
+        <dd class="col-sm-9"><samp>${workflow.fusion.enabled}</samp>, version <samp>${workflow.fusion.version ?: '-'}</samp></dd>
         <% } %>
 
         <dt class="col-sm-3">Nextflow version</dt>
