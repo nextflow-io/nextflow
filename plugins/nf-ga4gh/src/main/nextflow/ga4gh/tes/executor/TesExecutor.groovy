@@ -55,7 +55,9 @@ class TesExecutor extends Executor implements ExtensionPoint {
     /**
      * A path accessible to TES where executable scripts need to be uploaded
      */
-    private Path remoteBinDir = null
+    private Path remoteBinDir
+
+    private List<Path> remoteBinFiles = []
 
     @Override
     protected void register() {
@@ -81,6 +83,11 @@ class TesExecutor extends Executor implements ExtensionPoint {
         remoteBinDir
     }
 
+    @PackageScope
+    List<Path> getRemoteBinFiles() {
+        remoteBinFiles
+    }
+
     protected void uploadBinDir() {
         /*
          * upload local binaries
@@ -89,6 +96,13 @@ class TesExecutor extends Executor implements ExtensionPoint {
             final tempBin = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${tempBin.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, tempBin)
+
+            remoteBinFiles = []
+            session.binDir.eachFileRecurse { file ->
+                if( file.isDirectory() )
+                    return
+                remoteBinFiles << tempBin.resolve(session.binDir.relativize(file))
+            }
         }
     }
 
@@ -129,6 +143,12 @@ class TesExecutor extends Executor implements ExtensionPoint {
 
         log.debug "[TES] Authentication methods: ${result.keySet()}"
         return result
+    }
+
+    protected String getAzureStorageAccount() {
+        final storageAccount = session.config.navigate('azure.storage.accountName')
+        log.debug "[TES] Azure storage account = ${storageAccount}"
+        return storageAccount
     }
 
     /**
