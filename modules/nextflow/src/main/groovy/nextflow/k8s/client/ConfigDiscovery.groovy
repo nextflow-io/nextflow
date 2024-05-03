@@ -22,6 +22,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyStore
+import java.security.Security
+
 import static nextflow.util.StringUtils.formatHostName
 
 import groovy.util.logging.Slf4j

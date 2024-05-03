@@ -32,12 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
-import java.security.KeyFactory;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.UnrecoverableKeyException;
+import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -50,6 +45,9 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 
 import org.apache.commons.codec.binary.Base64;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 
 public class SSLUtils {
@@ -93,18 +91,24 @@ public class SSLUtils {
         CertificateFactory certFactory = CertificateFactory.getInstance("X509");
         X509Certificate cert = (X509Certificate) certFactory.generateCertificate(certInputStream);
 
-        byte[] keyBytes = decodePem(keyInputStream);
-
         PrivateKey privateKey;
 
-        KeyFactory keyFactory = KeyFactory.getInstance(clientKeyAlgo);
-        try {
-            // First let's try PKCS8
-            privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
-        } catch (InvalidKeySpecException e) {
-            // Otherwise try PKCS1
-            RSAPrivateCrtKeySpec keySpec = decodePKCS1(keyBytes);
-            privateKey = keyFactory.generatePrivate(keySpec);
+        if(clientKeyAlgo.equals("EC")) {
+            Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+            PEMKeyPair keys = (PEMKeyPair) new PEMParser(new InputStreamReader(keyInputStream)).readObject();
+            privateKey = new JcaPEMKeyConverter().getKeyPair(keys).getPrivate();
+        }else {
+            byte[] keyBytes = decodePem(keyInputStream);
+
+            KeyFactory keyFactory = KeyFactory.getInstance(clientKeyAlgo);
+            try {
+                // First let's try PKCS8
+                privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+            } catch (InvalidKeySpecException e) {
+                // Otherwise try PKCS1
+                RSAPrivateCrtKeySpec keySpec = decodePKCS1(keyBytes);
+                privateKey = keyFactory.generatePrivate(keySpec);
+            }
         }
 
         KeyStore keyStore = KeyStore.getInstance("JKS");
