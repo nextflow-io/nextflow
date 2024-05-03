@@ -17,6 +17,9 @@
 
 package nextflow.fusion
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Global
@@ -37,6 +40,9 @@ class FusionConfig {
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
+
+    final static private Pattern VERSION_JSON = Pattern.compile(/.*\/v(\d+(?:\.\w+)*)-(\w*)\.json$/)
+    final static private Pattern VERSION_TARGZ = Pattern.compile(/.*\/pkg\/(\d+(?:\/\w+)+)\/fusion-(\w+)\.tar\.gz$/)
 
     final private Boolean enabled
     final private String containerConfigUrl
@@ -100,12 +106,26 @@ class FusionConfig {
         return createConfig0(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
     }
 
-    static FusionConfig getConfig(Session session) {
+    public static FusionConfig getConfig(Session session) {
         return createConfig0(session.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
     }
 
     @Memoized
     static private FusionConfig createConfig0(Map config, Map env) {
         new FusionConfig(config, env)
+    }
+
+    static public String retrieveFusionVersion(FusionConfig config) {
+        final String url = config.containerConfigUrl?.toString() ?: System.getenv().get('FUSION_CONTAINER_CONFIG_URL')
+        if( url && !url.isEmpty() && url.startsWith("https://fusionfs.seqera.io/") ) {
+            final Matcher matcher_json = VERSION_JSON.matcher(url)
+            if( matcher_json.matches() )
+                return matcher_json.group(1)
+            final Matcher matcher_targz = VERSION_TARGZ.matcher(url)
+            if( matcher_targz.matches() )
+                return matcher_targz.group(1).replaceAll("/", ".")
+            return url
+        }
+        return null
     }
 }

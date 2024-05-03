@@ -17,13 +17,11 @@
 
 package nextflow.script
 
-import java.util.regex.Matcher
-import java.util.regex.Pattern
-
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.fusion.FusionConfig
 import nextflow.Session
 /**
  * Models Fusion metadata for Nextflow execution
@@ -35,18 +33,15 @@ import nextflow.Session
 @ToString(includeNames = true)
 @EqualsAndHashCode
 class FusionMetadata {
-    final private Pattern VERSION_JSON = Pattern.compile(/.*\/v(\d+(?:\.\w+)*)-(\w*)\.json$/)
-    final private Pattern VERSION_TARGZ = Pattern.compile(/.*\/pkg\/(\d+(?:\/\w+)+)\/fusion-(\w+)\.tar\.gz$/)
-
     boolean enabled
     String version
 
     FusionMetadata(Session session) {
         if( session.config.fusion as Map ) {
-            final Map fusionConfig = session.config.fusion as Map
-            this.enabled = fusionConfig.enabled as boolean
+            final FusionConfig fusionConfig = FusionConfig.getConfig(session)
+            this.enabled = fusionConfig.enabled()
             // TODO work in progress
-            this.version = this.enabled ? retrieveFusionVersion(fusionConfig) : null
+            this.version = this.enabled ? FusionConfig.retrieveFusionVersion(fusionConfig) : null
         } else {
             this.enabled = false
             this.version = null
@@ -57,19 +52,4 @@ class FusionMetadata {
         this.enabled = enabled
         this.version = version
     }
-
-    private String retrieveFusionVersion(Map config) {
-        final String url = config.containerConfigUrl?.toString() ?: System.getenv().get('FUSION_CONTAINER_CONFIG_URL')
-        if( url && !url.isEmpty() && url.startsWith("https://fusionfs.seqera.io/") ) {
-            final Matcher matcher_json = VERSION_JSON.matcher(url)
-            if( matcher_json.matches() )
-                return matcher_json.group(1)
-            final Matcher matcher_targz = VERSION_TARGZ.matcher(url)
-            if( matcher_targz.matches() )
-                return matcher_targz.group(1).replaceAll("/", ".")
-            return url
-        }
-        return null
-    }
-
 }
