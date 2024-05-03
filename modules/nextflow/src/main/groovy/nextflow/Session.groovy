@@ -16,7 +16,6 @@
 
 package nextflow
 
-import static nextflow.Const.*
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -48,8 +47,6 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
-import nextflow.util.Threads
-import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -74,6 +71,8 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.ThreadPoolManager
+import nextflow.util.Threads
 import nextflow.util.VersionNumber
 import org.apache.commons.lang.exception.ExceptionUtils
 import sun.misc.Signal
@@ -666,8 +665,9 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-            // shutdown publish dir executor
-            publishPoolManager.shutdown(aborted)
+            // shutdown thread pools
+            finalizePoolManager?.shutdown(aborted)
+            publishPoolManager?.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -1431,10 +1431,25 @@ class Session implements ISession {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
-    private ThreadPoolManager publishPoolManager = new ThreadPoolManager('PublishDir')
+    private volatile ThreadPoolManager finalizePoolManager
+
+    @Memoized
+    synchronized ExecutorService finalizeTaskExecutorService() {
+        finalizePoolManager = new ThreadPoolManager('FinalizeTask')
+        return finalizePoolManager
+                .withConfig(config)
+                .withShutdownMessage(
+                    "Waiting for remaining tasks to complete (%d tasks)",
+                    "Exiting before some tasks were completed"
+                )
+                .create()
+    }
+
+    private volatile ThreadPoolManager publishPoolManager
 
     @Memoized
     synchronized ExecutorService publishDirExecutorService() {
+        publishPoolManager = new ThreadPoolManager('PublishDir')
         return publishPoolManager
                 .withConfig(config)
                 .create()
