@@ -54,6 +54,7 @@ class FusionConfig {
     final private String tagsPattern
     final private boolean privileged
     final private MemoryUnit cacheSize
+    final private String version
 
     boolean enabled() { enabled }
 
@@ -75,6 +76,8 @@ class FusionConfig {
 
     MemoryUnit cacheSize() { cacheSize }
 
+    String version() { version }
+
     URL containerConfigUrl() {
         this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
     }
@@ -94,6 +97,7 @@ class FusionConfig {
         this.tagsPattern = (opts.tags==null || (opts.tags instanceof Boolean && opts.tags)) ? DEFAULT_TAGS : ( opts.tags !instanceof Boolean ? opts.tags as String : null )
         this.privileged = opts.privileged==null || opts.privileged.toString()=='true'
         this.cacheSize = opts.cacheSize as MemoryUnit
+        this.version = this.enabled ? retrieveFusionVersion(this.containerConfigUrl) : null
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
     }
@@ -106,7 +110,7 @@ class FusionConfig {
         return createConfig0(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
     }
 
-    public static FusionConfig getConfig(Session session) {
+    static FusionConfig getConfig(Session session) {
         return createConfig0(session.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
     }
 
@@ -115,8 +119,7 @@ class FusionConfig {
         new FusionConfig(config, env)
     }
 
-    static public String retrieveFusionVersion(FusionConfig config) {
-        final String url = config.containerConfigUrl?.toString() ?: System.getenv().get('FUSION_CONTAINER_CONFIG_URL')
+    protected String retrieveFusionVersion(String url) {
         if( url && !url.isEmpty() && url.startsWith("https://fusionfs.seqera.io/") ) {
             final Matcher matcher_json = VERSION_JSON.matcher(url)
             if( matcher_json.matches() )

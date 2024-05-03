@@ -40,8 +40,7 @@ class FusionMetadata {
         if( session.config.fusion as Map ) {
             final FusionConfig fusionConfig = FusionConfig.getConfig(session)
             this.enabled = fusionConfig.enabled()
-            // TODO work in progress
-            this.version = this.enabled ? FusionConfig.retrieveFusionVersion(fusionConfig) : null
+            this.version = fusionConfig.version()
         } else {
             this.enabled = false
             this.version = null
