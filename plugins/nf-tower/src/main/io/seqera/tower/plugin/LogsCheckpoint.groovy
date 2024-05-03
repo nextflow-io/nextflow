@@ -36,7 +36,7 @@ class LogsCheckpoint implements TraceObserver {
 
     private Session session
     private Map config
-    private Thread thread
+    private volatile Thread thread
     private Duration interval
     private LogsHandler handler
     private volatile boolean terminated
