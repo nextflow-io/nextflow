@@ -59,7 +59,7 @@ workflow {
 }
 ```
 
-The above example defines two processes. Their execution order is not determined by the fact that the `blastSearch` process comes before `extractTopHits` in the script (it could also be written the other way around). Instead, execution order is determined by their sequence in the _workflow_. In that block, `blastSearch` comes first, so it will execute first. `extractTopHits` executes after, and uses the output from `blastSearch`.
+The above example defines two processes. Their execution order is not determined by the fact that the `blastSearch` process comes before `extractTopHits` in the script (it could also be written the other way around). Instead, execution order is determined by their _dependencies_ -- `extractTopHits` depends on the output of `blastSearch`, so `blastSearch` will be executed first, and then `extractTopHits`.
 
 When the workflow is started, it will create two processes and one channel (`query_ch`) and it will link all of them. Both processes will be started at the same time and they will listen to their respective input channels. Whenever `blastSearch` emits a value, `extractTopHits` will receive it (i.e. `extractTopHits` consumes the channel in a *reactive* way).
 
