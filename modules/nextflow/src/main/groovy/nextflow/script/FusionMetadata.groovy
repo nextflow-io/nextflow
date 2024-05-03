@@ -37,14 +37,9 @@ class FusionMetadata {
     String version
 
     FusionMetadata(Session session) {
-        if( session.config.fusion as Map ) {
-            final FusionConfig fusionConfig = FusionConfig.getConfig(session)
-            this.enabled = fusionConfig.enabled()
-            this.version = fusionConfig.version()
-        } else {
-            this.enabled = false
-            this.version = null
-        }
+        final FusionConfig fusionConfig = FusionConfig.getConfig(session)
+        this.enabled = fusionConfig.enabled()
+        this.version = fusionConfig.version()
     }
 
     FusionMetadata(Boolean enabled, String version) {

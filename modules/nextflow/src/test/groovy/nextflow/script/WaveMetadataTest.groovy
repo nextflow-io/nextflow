@@ -17,33 +17,29 @@
 
 package nextflow.script
 
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
-import groovy.util.logging.Slf4j
 import nextflow.Session
+import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
- * Models Wave metadata for Nextflow execution
- * 
- * @author Marco De La Pierre <marco.delapierre@gmail.com>
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@CompileStatic
-@ToString(includeNames = true, includePackage = false)
-@EqualsAndHashCode
-class WaveMetadata {
+class WaveMetadataTest extends Specification {
 
-    final boolean enabled
+    @Unroll
+    def 'should create meta' () {
+        given:
+        def session = Mock(Session) { getConfig()>>OPTS }
 
-    WaveMetadata(Session session) {
-        this( session.config.wave as Map ?: Map.of() )
+        expect:
+        new WaveMetadata(session).enabled == EXPECTED
+        where:
+        OPTS                        | EXPECTED
+        [:]                         | false
+        [wave:[enabled:false]]      | false
+        [wave:[enabled:true]]       | true
+
     }
 
-    WaveMetadata(Map opts) {
-        this.enabled = opts.enabled as boolean
-    }
-
-    WaveMetadata(Boolean enabled) {
-        this.enabled = enabled
-    }
 }

@@ -17,7 +17,7 @@
 
 package nextflow.fusion
 
-import java.util.regex.Matcher
+
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
@@ -26,7 +26,6 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.util.MemoryUnit
-
 /**
  * Model Fusion config options
  *
@@ -41,8 +40,7 @@ class FusionConfig {
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
 
-    final static private Pattern VERSION_JSON = Pattern.compile(/.*\/v(\d+(?:\.\w+)*)-(\w*)\.json$/)
-    final static private Pattern VERSION_TARGZ = Pattern.compile(/.*\/pkg\/(\d+(?:\/\w+)+)\/fusion-(\w+)\.tar\.gz$/)
+    final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
 
     final private Boolean enabled
     final private String containerConfigUrl
@@ -54,7 +52,6 @@ class FusionConfig {
     final private String tagsPattern
     final private boolean privileged
     final private MemoryUnit cacheSize
-    final private String version
 
     boolean enabled() { enabled }
 
@@ -76,8 +73,6 @@ class FusionConfig {
 
     MemoryUnit cacheSize() { cacheSize }
 
-    String version() { version }
-
     URL containerConfigUrl() {
         this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
     }
@@ -97,7 +92,6 @@ class FusionConfig {
         this.tagsPattern = (opts.tags==null || (opts.tags instanceof Boolean && opts.tags)) ? DEFAULT_TAGS : ( opts.tags !instanceof Boolean ? opts.tags as String : null )
         this.privileged = opts.privileged==null || opts.privileged.toString()=='true'
         this.cacheSize = opts.cacheSize as MemoryUnit
-        this.version = this.enabled ? retrieveFusionVersion(this.containerConfigUrl) : null
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
     }
@@ -120,15 +114,17 @@ class FusionConfig {
     }
 
     protected String retrieveFusionVersion(String url) {
-        if( url && !url.isEmpty() && url.startsWith("https://fusionfs.seqera.io/") ) {
-            final Matcher matcher_json = VERSION_JSON.matcher(url)
-            if( matcher_json.matches() )
-                return matcher_json.group(1)
-            final Matcher matcher_targz = VERSION_TARGZ.matcher(url)
-            if( matcher_targz.matches() )
-                return matcher_targz.group(1).replaceAll("/", ".")
-            return url
-        }
+        if( !url )
+            return null
+        final matcher_json = VERSION_JSON.matcher(url)
+        if( matcher_json.matches() )
+            return matcher_json.group(1)
         return null
+    }
+
+    String version() {
+        return enabled
+            ? retrieveFusionVersion(this.containerConfigUrl ?: DEFAULT_FUSION_AMD64_URL)
+            : null
     }
 }
