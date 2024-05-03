@@ -307,7 +307,7 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks ? config.maxForks as int : 0
+        this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
     }
@@ -1329,9 +1329,11 @@ class TaskProcessor {
         else
             message = err0(error.cause)
 
+        for( String line : message.readLines() ) {
+            result << '  ' << line << '\n'
+        }
+
         result
-            .append('  ')
-            .append(message)
             .append('\n')
             .toString()
     }

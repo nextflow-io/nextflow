@@ -43,4 +43,9 @@ class DiskResourceTest extends Specification {
         [request: _375_GB, type: 'local-ssd']  | _375_GB  | 'local-ssd'
     }
 
+    def 'should return a disk resource with the specified request' () {
+        expect:
+        new DiskResource(request: _100_GB).withRequest(_375_GB) == new DiskResource(request: _375_GB)
+        new DiskResource(request: _100_GB, type: 'ssd').withRequest(_375_GB) == new DiskResource(request: _375_GB, type: 'ssd')
+    }
 }
