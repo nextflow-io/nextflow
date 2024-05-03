@@ -129,4 +129,26 @@ class FusionConfigTest extends Specification {
         [privileged:true]       | true
         [privileged:false]      | false
     }
+
+    @Unroll
+    def 'should parse fusion version' () {
+        expect:
+        new FusionConfig([:]).retrieveFusionVersion(FUSION_URL) == EXPECTED
+        where:
+        FUSION_URL                              | EXPECTED
+        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.2'
+        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.2'
+        'https://foo.com/releases/v3.0-amd.json'| '3.0'
+    }
+
+    def 'should get version version from config' () {
+        expect:
+        new FusionConfig([containerConfigUrl:FUSION_URL, enabled:ENABLED]).version() == EXPECTED
+        where:
+        FUSION_URL                                      | ENABLED  | EXPECTED
+        null                                            | false    | null
+        null                                            | true     | '2.2'
+        'https://foo.com/releases/v4.0-amd64.json'      | true     | '4.0'
+        'https://foo.com/releases/v4.0.1-amd64.json'    | true     | '4.0.1'
+    }
 }

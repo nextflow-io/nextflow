@@ -24,6 +24,8 @@ import groovy.json.JsonSlurper
 import nextflow.NextflowMeta
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
+import nextflow.script.FusionMetadata
+import nextflow.script.WaveMetadata
 import nextflow.script.WorkflowMetadata
 import spock.lang.Specification
 import test.TestHelper
@@ -120,6 +122,8 @@ class ReportObserverTest extends Specification {
                 complete: OffsetDateTime.now(),
                 workDir: workDir,
                 stats: new WorkflowStats(),
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
                 nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12')
         )
 
