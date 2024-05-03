@@ -29,7 +29,7 @@ import nextflow.Session
  */
 @Slf4j
 @CompileStatic
-@ToString(includeNames = true)
+@ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 class WaveMetadata {
     boolean enabled
