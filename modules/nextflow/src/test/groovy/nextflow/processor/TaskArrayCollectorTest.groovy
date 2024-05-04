@@ -128,6 +128,7 @@ class TaskArrayCollectorTest extends Specification {
         def task = Mock(TaskRun) {
             index >> 1
             getHash() >> HashCode.fromString('0123456789abcdef')
+            getWorkDir() >> Paths.get('/work/foo')
         }
         def handler = Mock(TaskHandler) {
             getTask() >> task

@@ -117,9 +117,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     List<String> getLaunchCommand() {
+        // final launcher command
+        return fusionEnabled()
+            ? fusionSubmitCli()
+            : classicSubmitCli()
+    }
+
+    private List<String> classicSubmitCli() {
         final workDir = Escape.path(getWorkDir())
         final cmd = "bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}"
-
         List.of('bash', '-o', 'pipefail', '-c', cmd.toString())
     }
 
