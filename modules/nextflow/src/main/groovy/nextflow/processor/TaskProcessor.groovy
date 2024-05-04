@@ -1328,9 +1328,11 @@ class TaskProcessor {
         else
             message = err0(error.cause)
 
+        for( String line : message.readLines() ) {
+            result << '  ' << line << '\n'
+        }
+
         result
-            .append('  ')
-            .append(message)
             .append('\n')
             .toString()
     }
