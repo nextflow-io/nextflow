@@ -81,7 +81,8 @@ class StringUtils {
         return str.contains('password') \
             || str.contains('token') \
             || str.contains('secret') \
-            || str.contains('license')
+            || str.contains('license') \
+            || str.contains('auth')
     }
 
 
