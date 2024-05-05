@@ -16,7 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
-import java.nio.file.Paths
+
 import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
@@ -34,7 +34,6 @@ import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
-import com.amazonaws.services.batch.model.TerminateJobRequest
 import nextflow.BuildInfo
 import nextflow.Session
 import nextflow.cloud.aws.config.AwsConfig
@@ -184,14 +183,18 @@ class AwsBatchTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(memory: '2GB', cpus: 4, accelerator: 2)
-
-        def handler = Spy(AwsBatchTaskHandler)
+        task.getWorkDirStr() >> 's3://my-bucket/work/dir'
+        and:
+        def executor = Spy(AwsBatchExecutor) { getAwsOptions()>> new AwsOptions() }
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor))
 
         when:
         def req = handler.newSubmitRequest(task)
         then:
         handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'],region: 'eu-west-1')) }
         and:
+        _ * handler.getTask() >> task
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -210,15 +213,21 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         given:
         def task = Mock(TaskRun)
-        def handler = Spy(AwsBatchTaskHandler)
+        task.getWorkDirStr() >> 's3://my-bucket/work/dir'
+        and:
+        def executor = Spy(AwsBatchExecutor) {
+            getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'])) }
+        }
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor))
 
         when:
         def req = handler.newSubmitRequest(task)
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig()
-        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'])) }
         and:
+        _ * handler.getTask() >> task
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -234,8 +243,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(time: '5 sec')
-        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws']))  }
         and:
+        _ * handler.getTask() >> task
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue2'
@@ -253,8 +262,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(time: '1 hour')
-        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws']))  }
         and:
+        _ * handler.getTask() >> task
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue3'
@@ -911,62 +920,60 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should render submit command' () {
         given:
-        def handler = Spy(AwsBatchTaskHandler) {
+        def executor = Spy(AwsBatchExecutor)
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
             fusionEnabled() >> false
+            getTask() >> Mock(TaskRun) { getWorkDirStr()>> 's3://work'}
         }
 
         when:
         def result =  handler.getLaunchCommand()
         then:
-        handler.getAwsOptions() >> Mock(AwsOptions)  { getAwsCli() >> 'aws' }
-        handler.getLogFile() >> Paths.get('/work/log')
-        handler.getWrapperFile() >> Paths.get('/work/run')
+        executor.getAwsOptions()>> Mock(AwsOptions) { getAwsCli() >> 'aws' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/run - | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/.command.run - | bash 2>&1 | tee .command.log'
 
         when:
         result =  handler.getLaunchCommand()
         then:
-        handler.getAwsOptions() >> Mock(AwsOptions)  {
+        executor.getAwsOptions() >> Mock(AwsOptions)  {
             getAwsCli() >> 'aws';
             getDebug() >> true
             getStorageEncryption() >> 'aws:kms'
             getStorageKmsKeyId() >> 'kms-key-123'
         }
-        handler.getLogFile() >> Paths.get('/work/log')
-        handler.getWrapperFile() >> Paths.get('/work/run')
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/run - | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash 2>&1 | tee .command.log'
 
     }
 
     def 'should render submit command with s5cmd' () {
         given:
-        def handler = Spy(AwsBatchTaskHandler) {
+        def executor = Spy(AwsBatchExecutor)
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
             fusionEnabled() >> false
+            getTask() >> Mock(TaskRun) { getWorkDirStr()>> 's3://work'}
         }
 
         when:
         def result =  handler.getLaunchCommand()
         then:
-        handler.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> 's5cmd' }
-        handler.getLogFile() >> Paths.get('/work/log')
-        handler.getWrapperFile() >> Paths.get('/work/run')
+        executor.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> 's5cmd' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd cp .command.log s3://work/log||true; exit $ret; }" EXIT; s5cmd cat s3://work/run | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd cp .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://work/.command.run | bash 2>&1 | tee .command.log'
 
         when:
         result =  handler.getLaunchCommand()
         then:
-        handler.getAwsOptions() >> Mock(AwsOptions)  {
+        executor.getAwsOptions() >> Mock(AwsOptions)  {
             getS5cmdPath() >> 's5cmd --debug'
             getStorageEncryption() >> 'aws:kms'
             getStorageKmsKeyId() >> 'kms-key-123'
         }
-        handler.getLogFile() >> Paths.get('/work/log')
-        handler.getWrapperFile() >> Paths.get('/work/run')
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/run | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash 2>&1 | tee .command.log'
 
     }
 

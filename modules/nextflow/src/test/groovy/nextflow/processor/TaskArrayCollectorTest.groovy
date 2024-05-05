@@ -132,8 +132,6 @@ class TaskArrayCollectorTest extends Specification {
         }
         def handler = Mock(TaskHandler) {
             getTask() >> task
-            getWorkDir() >> Paths.get('/work/foo')
-            getLaunchCommand() >> ['bash', '-o', 'pipefail', '-c', 'bash /work/foo/.command.run 2>&1 | tee /work/foo/.command.log']
         }
 
         when:
@@ -141,16 +139,13 @@ class TaskArrayCollectorTest extends Specification {
         then:
         3 * exec.createTaskHandler(task) >> handler
         3 * handler.prepareLauncher()
+        1 * collector.createTaskArrayScript([handler,handler,handler]) >> 'the-task-array-script'
         and:
         taskArray.name == 'PROC (1)'
         taskArray.config.cpus == 4
         taskArray.config.tag == null
         taskArray.processor == proc
-        taskArray.script == '''
-            array=( /work/foo /work/foo /work/foo )
-            export nxf_array_task_dir=${array[ARRAY_JOB_INDEX]}
-            bash -o pipefail -c 'bash ${nxf_array_task_dir}/.command.run 2>&1 | tee ${nxf_array_task_dir}/.command.log'
-            '''.stripIndent().leftTrim()
+        taskArray.script == 'the-task-array-script'
         and:
         taskArray.getArraySize() == 3
         taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]

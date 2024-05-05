@@ -21,6 +21,7 @@ import static nextflow.cloud.google.batch.GoogleBatchScriptLauncher.*
 
 import java.nio.file.Path
 
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
@@ -160,13 +161,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
         return index.toString()
     }
 
+    @Override
     String getArrayWorkDir(TaskHandler handler) {
-        if( isFusionEnabled() || isWorkDirDefaultFS() ) {
-            return TaskArrayExecutor.super.getArrayWorkDir(handler)
-        }
-        else {
-            return (handler as GoogleBatchTaskHandler).getWorkDirContainerMount()
-        }
+        return isFusionEnabled() || isWorkDirDefaultFS()
+            ? TaskArrayExecutor.super.getArrayWorkDir(handler)
+            : containerMountPath(handler.task.workDir as CloudStoragePath)
     }
 
     @Override

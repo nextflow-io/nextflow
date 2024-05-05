@@ -144,21 +144,4 @@ class GridTaskHandlerTest extends Specification {
                 '''.stripIndent()
     }
 
-    def 'should get launch command' () {
-        given:
-        def task = Mock(TaskRun) {
-            workDir >> Path.of('/work/dir')
-        }
-        def exec = Mock(AbstractGridExecutor)
-        def handler = Spy(new GridTaskHandler(task, exec)) {
-            fusionEnabled() >> false
-        }
-
-        expect:
-        handler.getLaunchCommand() == [
-            'bash',
-            '-o', 'pipefail',
-            '-c', 'bash /work/dir/.command.run 2>&1 > /work/dir/.command.log'
-        ]
-    }
 }

@@ -108,7 +108,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         if( path instanceof CloudStoragePath ) {
             buckets.add(path.bucket())
             pathTrie.add( (parent ? "/${path.bucket()}${path.parent}" : "/${path.bucket()}${path}").toString() )
-            final containerMount = "$MOUNT_ROOT/${path.bucket()}${path}"
+            final containerMount = containerMountPath(path)
             log.trace "Path ${FilesEx.toUriString(path)} to container mount: $containerMount"
             return Paths.get(containerMount)
         }
@@ -179,5 +179,9 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     static String launchCommand( String workDir ) {
         "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+    }
+
+    static String containerMountPath(CloudStoragePath path) {
+        return "$MOUNT_ROOT/${path.bucket()}${path}"
     }
 }
