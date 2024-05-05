@@ -158,7 +158,7 @@ class GridTaskHandlerTest extends Specification {
         handler.getLaunchCommand() == [
             'bash',
             '-o', 'pipefail',
-            '-c', 'bash /work/dir/.command.run 2>&1 | tee /work/dir/.command.log'
+            '-c', 'bash /work/dir/.command.run 2>&1 > /work/dir/.command.log'
         ]
     }
 }

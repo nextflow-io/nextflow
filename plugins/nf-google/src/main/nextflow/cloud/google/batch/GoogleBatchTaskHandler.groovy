@@ -156,18 +156,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         launcher.build()
     }
 
-    @Override
-    String getWorkDir() {
-        launcher.workDir.toString()
-    }
-
-    @Override
-    List<String> getLaunchCommand() {
-        spec0(launcher).launchCommand()
-    }
-
-    List<String> getContainerMounts() {
-        spec0(launcher).getContainerMounts()
+    Path getWorkDirContainerMount() {
+        if( launcher instanceof GoogleBatchScriptLauncher )
+            return launcher.toContainerMount(task.workDir)
+        // this method is only expected to be accessed by the job array collector
+        // when using Google Storage as work directory
+        // it should not be invoked when using Fusion or a NFS shared file system
+        throw new IllegalStateException("Unexpected access to getWorkDirContainerMount method")
     }
 
     @Override
@@ -253,11 +248,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( containerOptions )
             container.setOptions( containerOptions )
-
-        // add child container mounts if task is an array
-        if( task instanceof TaskArrayRun )
-            for( TaskHandler handler : task.children )
-                container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
         // task spec
         final env = Environment
