@@ -23,6 +23,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Lorenz Gerber <lorenzottogerber@gmail.com>
@@ -264,4 +266,24 @@ class PbsProExecutorTest extends Specification {
                 .stripIndent().leftTrim()
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(PbsProExecutor)
+        expect:
+        executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(PbsProExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo[]'     | 1             | 'foo[1]'
+        'bar[]'     | 2             | 'bar[2]'
+    }
 }

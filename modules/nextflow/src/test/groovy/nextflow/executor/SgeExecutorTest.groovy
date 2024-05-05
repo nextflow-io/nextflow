@@ -22,6 +22,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -385,4 +387,24 @@ class SgeExecutorTest extends Specification {
 
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(SgeExecutor)
+        expect:
+        executor.getArrayIndexName() == 'SGE_TASK_ID'
+        executor.getArrayIndexStart() == 1
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(SgeExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo'       | 1             | 'foo.1'
+        'bar'       | 2             | 'bar.2'
+    }
 }

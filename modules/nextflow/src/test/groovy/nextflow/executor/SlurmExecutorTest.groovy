@@ -287,6 +287,27 @@ class SlurmExecutorTest extends Specification {
         usr
         exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
         exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
-
     }
+
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(SlurmExecutor)
+        expect:
+        executor.getArrayIndexName() == 'SLURM_ARRAY_TASK_ID'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(SlurmExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo'       | 1             | 'foo_1'
+        'bar'       | 2             | 'bar_2'
+    }
+
 }
