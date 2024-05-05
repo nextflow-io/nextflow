@@ -343,7 +343,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     int getArrayIndexStart() { 0 }
 
     @Override
-    String getArrayTaskId(String jobId, int index) { "${jobId}:${index}" }
+    String getArrayTaskId(String jobId, int index) {
+        return "${jobId}:${index}"
+    }
 
     @Override
     String getArrayLaunchCommand(String taskDir) {

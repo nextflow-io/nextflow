@@ -61,6 +61,12 @@ interface TaskArrayExecutor {
         getWorkDir().fileSystem== FileSystems.default
     }
 
+    /**
+     * Get a {@link TaskHandler} work directory for the task array resolution
+     *
+     * @param handler
+     * @return
+     */
     default String getArrayWorkDir(TaskHandler handler) {
         return isFusionEnabled()
             ? FusionHelper.toContainerMount(handler.task.workDir).toString()
