@@ -147,7 +147,7 @@ class TaskArrayCollector {
         Files.createDirectories(workDir)
 
         // create wrapper script
-        final script = createTaskArrayScript(handlers)
+        final script = createArrayTaskScript(handlers)
         log.debug "Creating task array run >> $workDir\n$script"
         
         // create config for job array
@@ -184,7 +184,7 @@ class TaskArrayCollector {
      *
      * @param array
      */
-    protected String createTaskArrayScript(List<TaskHandler> array) {
+    protected String createArrayTaskScript(List<TaskHandler> array) {
         // get work directory and launch command for each task
         final workDirs = array.collect( h -> executor.getArrayWorkDir(h) )
         """
