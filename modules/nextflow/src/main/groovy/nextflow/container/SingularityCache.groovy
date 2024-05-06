@@ -42,6 +42,8 @@ import nextflow.util.Escape
 @CompileStatic
 class SingularityCache {
 
+    static final private Duration DEFAULT_PULLTIMEOUT_DURATION = Duration.of('20min')
+
     static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
 
     private ContainerConfig config
@@ -50,12 +52,12 @@ class SingularityCache {
 
     private boolean missingCacheDir
 
-    private Duration pullTimeout = Duration.of('20min')
+    private Duration pullTimeout
 
     /** Only for debugging purpose - do not use */
     @PackageScope
     SingularityCache() {}
-
+z
     protected String getBinaryName() { return 'singularity' }
 
     protected String getAppName() { getBinaryName().capitalize() }
@@ -139,8 +141,7 @@ class SingularityCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
+        pullTimeout = config.pullTimeout ? config.pullTimeout as Duration : DEFAULT_PULLTIMEOUT_DURATION
 
         def str = config.cacheDir as String
         if( str )
@@ -303,7 +304,7 @@ class SingularityCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  hint   : Try and increase $binaryName.pullTimeout in the config (default is $DEFAULT_PULLTIMEOUT_DURATION)\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }

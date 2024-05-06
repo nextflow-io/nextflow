@@ -39,6 +39,8 @@ import nextflow.util.Duration
 @CompileStatic
 class CharliecloudCache {
 
+    static final private Duration DEFAULT_PULLTIMEOUT_DURATION = Duration.of('20min')
+
     static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
 
     private ContainerConfig config
@@ -47,7 +49,7 @@ class CharliecloudCache {
 
     private boolean missingCacheDir
 
-    private Duration pullTimeout = Duration.of('20min')
+    private Duration pullTimeout
 
     private String registry
 
@@ -122,8 +124,7 @@ class CharliecloudCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
+        pullTimeout = config.pullTimeout ? config.pullTimeout as Duration : DEFAULT_PULLTIMEOUT_DURATION
 
         def str = config.cacheDir as String
         if( str )
@@ -239,7 +240,7 @@ class CharliecloudCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  hint   : Try and increase charliecloud.pullTimeout in the config (default is $DEFAULT_PULLTIMEOUT_DURATION)\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
