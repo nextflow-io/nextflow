@@ -304,7 +304,7 @@ class SingularityCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  hint   : Try and increase $binaryName.pullTimeout in the config (default is $DEFAULT_PULLTIMEOUT_DURATION)\n  message:\n"
+            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  hint   : Try and increase ${binaryName}.pullTimeout in the config (default is "${DEFAULT_PULLTIMEOUT_DURATION}")\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
