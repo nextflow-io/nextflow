@@ -39,8 +39,6 @@ import nextflow.util.Duration
 @CompileStatic
 class CharliecloudCache {
 
-    static final private Duration DEFAULT_PULLTIMEOUT_DURATION = Duration.of('20min')
-
     static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
 
     private ContainerConfig config
@@ -49,7 +47,7 @@ class CharliecloudCache {
 
     private boolean missingCacheDir
 
-    private Duration pullTimeout
+    private Duration pullTimeout = Duration.of('20min')
 
     private String registry
 
@@ -124,7 +122,8 @@ class CharliecloudCache {
     @PackageScope
     Path getCacheDir() {
 
-        pullTimeout = config.pullTimeout ? config.pullTimeout as Duration : DEFAULT_PULLTIMEOUT_DURATION
+        if( config.pullTimeout )
+            pullTimeout = config.pullTimeout as Duration
 
         def str = config.cacheDir as String
         if( str )
