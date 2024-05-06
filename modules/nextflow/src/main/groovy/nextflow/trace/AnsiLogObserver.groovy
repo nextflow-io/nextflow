@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
@@ -404,8 +405,8 @@ class AnsiLogObserver implements TraceObserver {
 
     protected Ansi line(ProgressRecord stats) {
         final term = ansi()
-        final float tot = stats.getTotalCount()
-        final float com = stats.getCompletedCount()
+        final tot = stats.getTotalCount()
+        final com = stats.getCompletedCount()
         // Truncate or pad the label to the correct width
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
         // Break up the process label into components for styling. eg:
@@ -422,11 +423,12 @@ class AnsiLogObserver implements TraceObserver {
         final labelNoFinalProcess = labelNoTag.dropRight(labelFinalProcess.length())
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
-        final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
         // eg. 100% (whitespace padded for alignment)
-        final pct = "${String.valueOf(x).padLeft(3)}%".toString()
+        final pct0 = tot ? Math.floor((float)com / tot * 100f).toInteger() : 0
+        final pct1 = stats.closed ? String.valueOf(pct0) : '?'
+        final pct = "${pct1.padLeft(3)}%".toString()
         // eg. 1 of 1
-        final numbs = " ${(int)com} of ${(int)tot}".toString()
+        final numbs = " ${com} of ${tot}".toString()
 
         // Task hash, eg: [fa/71091a]
         term.a(Attribute.INTENSITY_FAINT).a('[').reset()
@@ -475,8 +477,8 @@ class AnsiLogObserver implements TraceObserver {
             term.a(Attribute.INTENSITY_FAINT).a(", cached: $stats.cached").reset()
         if( stats.stored )
             term.a(", stored: $stats.stored")
-        if( stats.failed )
-            term.a(", failed: $stats.failed")
+        if( stats.ignored )
+            term.a(", ignored: $stats.ignored")
         if( stats.retries )
             term.a(", retries: $stats.retries")
         // Show red cross ('✘') or green tick ('✔') according to status
@@ -516,6 +518,11 @@ class AnsiLogObserver implements TraceObserver {
         final exec = handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
         executors[exec] = count+1
+        markModified()
+    }
+
+    @Override
+    synchronized void onProcessClose(TaskProcessor process) {
         markModified()
     }
 

@@ -93,6 +93,7 @@ class TowerJsonGeneratorTest extends Specification {
         rec2.peakRunning = 13
         rec2.peakCpus = 14
         rec2.peakMemory = 15
+        rec2.closed = true
         rec2.terminated = true
 
         when:
@@ -124,6 +125,7 @@ class TowerJsonGeneratorTest extends Specification {
                 peakCpus: 0,
                 peakMemory: 0,
                 peakRunning: 0,
+                closed: false,
                 terminated: false]
         and:
         progress[1] == [
@@ -144,6 +146,7 @@ class TowerJsonGeneratorTest extends Specification {
                 peakRunning: 13,
                 peakCpus: 14,
                 peakMemory: 15,
+                closed: true,
                 terminated: true]
 
     }

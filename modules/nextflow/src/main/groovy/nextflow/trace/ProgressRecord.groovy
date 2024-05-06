@@ -43,6 +43,7 @@ class ProgressRecord implements Cloneable {
     int stored
     int ignored
     int retries
+    boolean closed
     boolean terminated
     boolean errored
 
@@ -63,11 +64,11 @@ class ProgressRecord implements Cloneable {
 
     int getTotalCount() {
         pending+ submitted+ running+
-           succeeded+ failed+ cached+ stored
+           succeeded+ cached+ stored
     }
 
     int getCompletedCount() {
-        succeeded+ failed+ cached+ stored
+        succeeded+ cached+ stored
     }
 
     @Override

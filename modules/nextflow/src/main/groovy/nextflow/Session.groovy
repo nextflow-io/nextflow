@@ -964,6 +964,17 @@ class Session implements ISession {
         }
     }
 
+    void notifyProcessClose(TaskProcessor process) {
+        for( def observer : observers ) {
+            try {
+                observer.onProcessClose(process)
+            }
+            catch( Exception e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+    }
+
     void notifyProcessTerminate(TaskProcessor process) {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)

@@ -288,6 +288,13 @@ class WorkflowStats implements Cloneable {
         this.changeTimestamp = System.currentTimeMillis()
     }
 
+    void markClosed(TaskProcessor process) {
+        final pid = process.getId()
+        final state = records.get(pid)
+        state.closed = true
+        this.changeTimestamp = System.currentTimeMillis()
+    }
+
     void markSubmitted(TaskRun task) {
         final state = getOrCreateRecord(task.processor)
         state.hash = task.hashLog

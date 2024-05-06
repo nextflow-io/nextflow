@@ -55,6 +55,12 @@ class WorkflowStatsObserver implements TraceObserver {
     }
 
     @Override
+    void onProcessClose(TaskProcessor process){
+        log.trace "== event close pid=${process.id}"
+        agent.send { data.markClosed(process) }
+    }
+
+    @Override
     void onProcessTerminate( TaskProcessor processor ) {
         log.trace "== event terminated pid=${processor.id}"
         agent.send { data.markTerminated(processor) }

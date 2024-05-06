@@ -2417,6 +2417,10 @@ class TaskProcessor {
         state.update { StateObj it -> it.incCompleted() }
     }
 
+    protected void closeProcess() {
+        session.notifyProcessClose(this)
+    }
+
     protected void terminateProcess() {
         log.trace "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
@@ -2569,6 +2573,7 @@ class TaskProcessor {
             // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**
