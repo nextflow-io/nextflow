@@ -59,7 +59,7 @@ workflow {
 }
 ```
 
-The above example defines two processes. Their execution order is not determined by the fact that the `blastSearch` process comes before `extractTopHits` in the script (it could also be written the other way around). Instead, the pipe operator (`|`) in the workflow between `blastSearch` and `extractTopHits` forwards the outputs from one process to the inputs of the following one.
+The above example defines two processes. Their execution order is not determined by the fact that the `blastSearch` process comes before `extractTopHits` in the script (it could also be written the other way around). Instead, execution order is determined by their _dependencies_ -- `extractTopHits` depends on the output of `blastSearch`, so `blastSearch` will be executed first, and then `extractTopHits`.
 
 When the workflow is started, it will create two processes and one channel (`query_ch`) and it will link all of them. Both processes will be started at the same time and they will listen to their respective input channels. Whenever `blastSearch` emits a value, `extractTopHits` will receive it (i.e. `extractTopHits` consumes the channel in a *reactive* way).
 
