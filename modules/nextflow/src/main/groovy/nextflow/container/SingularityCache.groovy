@@ -57,7 +57,7 @@ class SingularityCache {
     /** Only for debugging purpose - do not use */
     @PackageScope
     SingularityCache() {}
-z
+
     protected String getBinaryName() { return 'singularity' }
 
     protected String getAppName() { getBinaryName().capitalize() }
