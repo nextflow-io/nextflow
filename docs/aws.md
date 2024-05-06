@@ -85,7 +85,8 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:DescribeImageScanFindings"
   ```
 
-Note: If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
+:::{note}
+If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
   ```json
   "ecs:CreateCluster"
   "ecs:DeleteCluster"
@@ -93,6 +94,7 @@ Note: If you are running Fargate or Fargate Spot, you may need the following pol
   "ecs:ListClusters"
   "ec2:DescribeSubnets"
   ```
+:::
 
 ### S3 policies
 
