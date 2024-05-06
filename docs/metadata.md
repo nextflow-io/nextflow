@@ -73,6 +73,9 @@ The following table lists the properties that can be accessed on the `workflow` 
 `workflow.manifest`
 : Entries of the workflow manifest.
 
+`workflow.preview`
+: Returns `true` whenever the current instance is a preview execution.
+
 `workflow.profile`
 : Used configuration profile.
 
