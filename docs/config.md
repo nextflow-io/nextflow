@@ -1741,11 +1741,32 @@ The following settings are available:
 There are additional variables that can be defined within a configuration file that do not have a dedicated scope.
 
 `cleanup`
-: If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
-
-  :::{warning}
-  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
+: :::{versionchanged} 23.10.0
+  Added `'lazy'`, `'eager'`, and `'aggressive'` strategies.
   :::
+: Automatically delete task directories using one of the following strategies:
+
+  `false` (default)
+  : Disable automatic cleanup.
+
+  `true`
+  : Equivalent to `'lazy'`.
+
+  `'lazy'`
+  : If a workflow completes successfully, delete all task directories.
+  : This strategy supports resumability for both successful and failed runs.
+  : Note that deleting all work directories at once can take a lot of time, especially when using a shared file system or remote cloud storage.
+
+  `'eager'`
+  : Delete each task directory as soon as it is no longer needed by downstream tasks.
+  : A task can be deleted once all of the tasks that use any of its output files have completed.
+  : This strategy supports resumability for both successful and failed runs.
+  : Output files that are published via symlink will be invalidated when the original task directory is deleted. Avoid using the following publish modes: `copyNoFollow`, `rellink`, `symlink`.
+
+  `'aggressive'`
+  : Equivalent to `'eager'`, but also deletes individual output files as soon as they are no longer needed.
+  : An output file can be deleted once the tasks that use it have completed. In some cases, an output file can be deleted sooner than its originating task.
+  : This strategy supports resumability for successful runs, but not necessarily for failed runs. Therefore, it is recommended when you want to minimize disk storage during the pipeline and you don't need resumability.
 
 `dumpHashes`
 : If `true`, dump task hash keys in the log file, for debugging purposes. Equivalent to the `-dump-hashes` option of the `run` command.

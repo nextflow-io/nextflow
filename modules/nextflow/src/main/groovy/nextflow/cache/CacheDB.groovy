@@ -77,7 +77,7 @@ class CacheDB implements Closeable {
      * @param processor The {@link TaskProcessor} instance to be assigned to the retrieved task
      * @return A {link TaskEntry} instance or {@code null} if a task for the given hash does not exist
      */
-    TaskEntry getTaskEntry(HashCode taskHash, TaskProcessor processor) {
+    TaskEntry getTaskEntry(HashCode taskHash, Map<String,TaskProcessor> processorLookup=[:]) {
 
         final payload = store.getEntry(taskHash)
         if( !payload )
@@ -85,9 +85,11 @@ class CacheDB implements Closeable {
 
         final record = (List)KryoHelper.deserialize(payload)
         TraceRecord trace = TraceRecord.deserialize( (byte[])record[0] )
+        final processor = processorLookup[trace.get('process')]
         TaskContext ctx = record[1]!=null && processor!=null ? TaskContext.deserialize(processor, (byte[])record[1]) : null
+        final consumers = record[3]!=null ? ((List<String>)record[3]).collect( s -> HashCode.fromString(s) ) : null
 
-        return new TaskEntry(trace,ctx)
+        return new TaskEntry(processor, trace, ctx, consumers)
     }
 
     void incTaskEntry( HashCode hash ) {
@@ -99,7 +101,7 @@ class CacheDB implements Closeable {
 
         final record = (List)KryoHelper.deserialize(payload)
         // third record contains the reference count for this record
-        record[2] = ((Integer)record[2]) +1
+        record[2] = ((Integer)record[2]) + 1
         // save it again
         store.putEntry(hash, KryoHelper.serialize(record))
 
@@ -114,7 +116,7 @@ class CacheDB implements Closeable {
 
         final record = (List)KryoHelper.deserialize(payload)
         // third record contains the reference count for this record
-        def count = record[2] = ((Integer)record[2]) -1
+        def count = record[2] = ((Integer)record[2]) - 1
         // save or delete
         if( count > 0 ) {
             store.putEntry(hash, KryoHelper.serialize(record))
@@ -128,9 +130,10 @@ class CacheDB implements Closeable {
 
 
     /**
-     * Save task runtime information to th cache DB
+     * Save task runtime information to the cache DB
      *
-     * @param handler A {@link TaskHandler} instance
+     * @param handler
+     * @param trace
      */
     @PackageScope
     void writeTaskEntry0( TaskHandler handler, TraceRecord trace ) {
@@ -143,10 +146,11 @@ class CacheDB implements Closeable {
         // only the 'cache' is active and
         TaskContext ctx = proc.isCacheable() && task.hasCacheableValues() ? task.context : null
 
-        def record = new ArrayList(3)
+        final record = new ArrayList(4)
         record[0] = trace.serialize()
         record[1] = ctx != null ? ctx.serialize() : null
         record[2] = 1
+        record[3] = null
 
         // -- save in the db
         store.putEntry( key, KryoHelper.serialize(record) )
@@ -155,6 +159,31 @@ class CacheDB implements Closeable {
 
     void putTaskAsync( TaskHandler handler, TraceRecord trace ) {
         writer.send { writeTaskEntry0(handler, trace) }
+    }
+
+    /**
+     * Finalize task entry in the cache DB with the list of
+     * consumer tasks.
+     *
+     * @param hash
+     * @param consumers
+     */
+    @PackageScope
+    void finalizeTaskEntry0( HashCode hash, List<HashCode> consumers ) {
+
+        final payload = store.getEntry(hash)
+        if( !payload ) {
+            log.debug "Unable to finalize task with key: $hash"
+            return
+        }
+
+        final record = (List)KryoHelper.deserialize(payload)
+        record[3] = consumers.collect( h -> h.toString() )
+        store.putEntry(hash, KryoHelper.serialize(record))
+    }
+
+    void finalizeTaskAsync( HashCode hash, List<HashCode> consumers ) {
+        writer.send { finalizeTaskEntry0(hash, consumers) }
     }
 
     void cacheTaskAsync( TaskHandler handler ) {
@@ -224,7 +253,7 @@ class CacheDB implements Closeable {
     }
 
     TraceRecord getTraceRecord( HashCode hashCode ) {
-        final result = getTaskEntry(hashCode, null)
+        final result = getTaskEntry(hashCode)
         return result ? result.trace : null
     }
 

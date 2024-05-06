@@ -190,7 +190,7 @@ class PublishDir {
 
         def result = new PublishDir()
         if( params.path )
-            result.path = params.path
+        result.path = params.path
 
         if( params.mode )
             result.mode = params.mode
@@ -222,6 +222,18 @@ class PublishDir {
             result.storageClass = params.storageClass as String
 
         return result
+    }
+
+    boolean canPublish(Path source, TaskRun task) {
+        if( !sourceDir ) {
+            this.sourceDir = task.targetDir
+            this.sourceFileSystem = sourceDir.fileSystem
+            this.stageInMode = task.config.stageInMode
+            this.task = task
+            validatePublishMode()
+        }
+
+        return getPublishTarget(source) != null
     }
 
     protected void apply0(Set<Path> files) {
@@ -311,13 +323,8 @@ class PublishDir {
 
     protected void apply1(Path source, boolean inProcess ) {
 
-        def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
-        if( matcher && !matcher.matches(target) ) {
-            // skip not matching file
-            return
-        }
-
-        if( saveAs && !(target=saveAs.call(target.toString()))) {
+        final target = getPublishTarget(source)
+        if( !target ) {
             // skip this file
             return
         }
@@ -347,6 +354,17 @@ class PublishDir {
             threadPool.submit({ safeProcessFile(source, destination) } as Runnable)
         }
 
+    }
+
+    protected def getPublishTarget(Path source) {
+        def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
+        if( matcher && !matcher.matches(target) )
+            return null
+
+        if( saveAs && !(target=saveAs.call(target.toString())))
+            return null
+
+        return target
     }
 
     protected Path resolveDestination(target) {

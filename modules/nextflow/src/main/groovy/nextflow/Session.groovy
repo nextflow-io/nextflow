@@ -371,6 +371,9 @@ class Session implements ISession {
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
+        // -- normalize cleanup config
+        if( config.cleanup == true )
+            config.cleanup = 'lazy'
     }
 
     protected Path cloudCachePath(Map cloudcache, Path workDir) {
@@ -964,6 +967,17 @@ class Session implements ISession {
         }
     }
 
+    void notifyProcessClose(TaskProcessor process) {
+        observers.each { observer ->
+            try {
+                observer.onProcessClose(process)
+            }
+            catch( Exception e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+    }
+
     void notifyProcessTerminate(TaskProcessor process) {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
@@ -1147,37 +1161,6 @@ class Session implements ISession {
      */
     void onError( Closure action ) {
         errorAction = action
-    }
-
-    /**
-     * Delete the workflow work directory from tasks temporary files
-     */
-    void cleanup() {
-        if( !workDir || !config.cleanup )
-            return
-
-        if( aborted || cancelled || error )
-            return
-
-        CacheDB db = null
-        try {
-            log.trace "Cleaning-up workdir"
-            db = CacheFactory.create(uniqueId, runName).openForRead()
-            db.eachRecord { HashCode hash, TraceRecord record ->
-                def deleted = db.removeTaskEntry(hash)
-                if( deleted ) {
-                    // delete folder
-                    FileHelper.deletePath(FileHelper.asPath(record.workDir))
-                }
-            }
-            log.trace "Clean workdir complete"
-        }
-        catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
-        }
-        finally {
-            db.close()
-        }
     }
 
     @Memoized

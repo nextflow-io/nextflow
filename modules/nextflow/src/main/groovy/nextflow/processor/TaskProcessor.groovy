@@ -23,6 +23,7 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
@@ -131,11 +132,11 @@ class TaskProcessor {
         RunType(String str) { message=str };
     }
 
-    static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
+    static final String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
-    final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
+    static private final Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
 
-    final private static Pattern QUESTION_MARK = ~/(\?+)/
+    static private final Pattern QUESTION_MARK = ~/(\?+)/
 
     @TestOnly private static volatile TaskProcessor currentProcessor0
 
@@ -149,7 +150,7 @@ class TaskProcessor {
     /**
      * Unique task index number (run)
      */
-    final protected AtomicInteger indexCount = new AtomicInteger()
+    protected final AtomicInteger indexCount = new AtomicInteger()
 
     /**
      * The current workflow execution session
@@ -202,7 +203,7 @@ class TaskProcessor {
      * Note: it is declared static because the error must be shown only the
      * very first time  for all processes
      */
-    private static final AtomicBoolean errorShown = new AtomicBoolean()
+    static private final AtomicBoolean errorShown = new AtomicBoolean()
 
     /**
      * Flag set {@code true} when the processor termination has been invoked
@@ -245,15 +246,26 @@ class TaskProcessor {
 
     private int maxForks
 
-    private static int processCount
+    static private int processCount
 
-    private static LockManager lockManager = new LockManager()
+    static private LockManager lockManager = new LockManager()
 
     private List<Map<Short,List>> fairBuffers = new ArrayList<>()
 
     private int currentEmission
 
     private Boolean isFair0
+
+    /**
+     * Map of all task processors by name.
+     */
+    static private Map<String,TaskProcessor> processorLookup = [:]
+
+    /**
+     * Set of tasks (across all processors) that were deleted in a
+     * previous run and successfully restored from the cache db.
+     */
+    static private Map<HashCode,Boolean> restoredTasks = new ConcurrentHashMap<>()
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -309,6 +321,8 @@ class TaskProcessor {
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+
+        processorLookup[name] = this
     }
 
     /**
@@ -727,6 +741,10 @@ class TaskProcessor {
         return null
     }
 
+    synchronized protected TaskStartParams createTaskStartParams() {
+        return new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
+    }
+
     /**
      * Create a new {@code TaskRun} instance, initializing the following properties :
      * <li>{@code TaskRun#id}
@@ -798,23 +816,17 @@ class TaskProcessor {
         while( true ) {
             hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
-            Path resumeDir = null
-            boolean exists = false
             try {
-                final entry = session.cache.getTaskEntry(hash, this)
-                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-                if( resumeDir )
-                    exists = resumeDir.exists()
-
-                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
-                if( cached )
+                if( shouldTryCache && checkCachedOutput(task.clone(), hash) )
                     break
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
             }
 
+            final entry = session.cache.getTaskEntry(hash, processorLookup)
+            Path resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+            boolean exists = resumeDir?.exists()
             if( exists ) {
                 tries++
                 continue
@@ -900,88 +912,113 @@ class TaskProcessor {
     }
 
     /**
-     * Check whenever the outputs for the specified task already exist
+     * Attempt to restore a cached task by verifying either its outputs
+     * or the outputs of its consumers.
      *
-     * @param task The task instance
-     * @param folder The folder where the outputs are stored (eventually)
-     * @return {@code true} when all outputs are available, {@code false} otherwise
+     * @param seedTask
+     * @param seedHash
+     * @return {@code true} if all outputs are available, {@code false} otherwise
      */
-    final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash, TaskEntry entry) {
+    final boolean checkCachedOutput(TaskRun seedTask, HashCode seedHash) {
 
-        // check if exists the task exit code file
-        def exitCode = null
-        def exitFile = folder.resolve(TaskRun.CMD_EXIT)
-        if( task.type == ScriptType.SCRIPTLET ) {
-            def str
-            try {
-                str = exitFile.text?.trim()
+        // -- recursively check for cached outputs
+        List<HashCode> queue = [ seedHash ]
+        Map<HashCode,TaskHandler> handlers = [:]
+
+        while( !queue.isEmpty() ) {
+            final hash = queue.pop()
+
+            // -- skip tasks that have already been restored
+            if( hash in handlers )
+                continue
+
+            // -- get cache entry
+            final entry = session.cache.getTaskEntry(hash, processorLookup)
+            if( !entry || !entry.trace.isCompleted() )
+                return false
+
+            // -- get or create task run
+            def task
+            if( hash == seedHash ) {
+                task = seedTask
+                log.trace "[${safeTaskName(task)}] Cacheable task hash=${hash} entry=${entry}"
             }
-            catch( IOException e ) {
-                log.trace "[${safeTaskName(task)}] Exit file can't be read > $exitFile -- return false -- Cause: ${e.message}"
+            else if( entry.processor ) {
+                final params = entry.processor.createTaskStartParams()
+                task = entry.processor.createTaskRun(params)
+                log.trace "[${safeTaskName(task)}] Restoring deleted task hash=${hash} context=${entry.context}"
+            }
+            else {
+                log.trace "[${safeTaskName(seedTask)}] Missing processor for downstream hash=${hash} entry=${entry} -- return false"
                 return false
             }
 
-            exitCode = str.isInteger() ? str.toInteger() : null
-            if( !task.isSuccess(exitCode) ) {
-                log.trace "[${safeTaskName(task)}] Exit code is not valid > $str -- return false"
+            // -- verify the task context map
+            if( task.hasCacheableValues() && !entry.context ) {
+                log.trace "[${safeTaskName(task)}] Missing cache context -- return false"
                 return false
             }
-        }
 
-        /*
-         * verify cached context map
-         */
-        if( !entry ) {
-            log.trace "[${safeTaskName(task)}] Missing cache entry -- return false"
-            return false
-        }
+            if( entry.context != null ) {
+                task.context = entry.context
+                task.config.context = entry.context
+                task.code?.delegate = entry.context
+            }
 
-        if( task.hasCacheableValues() && !entry.context ) {
-            log.trace "[${safeTaskName(task)}] Missing cache context -- return false"
-            return false
-        }
+            // -- verify the task exit code
+            final exitCode = entry.trace.get('exit') as Integer
+            if( task.type == ScriptType.SCRIPTLET && !task.isSuccess(exitCode) ) {
+                log.trace "[${safeTaskName(task)}] Exit code is not valid > ${exitCode} -- return false"
+                return false
+            }
 
-        /*
-         * verify stdout file
-         */
-        final stdoutFile = folder.resolve( TaskRun.CMD_OUTFILE )
-
-        if( entry.context != null ) {
-            task.context = entry.context
-            task.config.context = entry.context
-            task.code?.delegate = entry.context
-        }
-
-        try {
-            // -- expose task exit status to make accessible as output value
-            task.config.exitStatus = exitCode
-            // -- check if all output resources are available
-            collectOutputs(task, folder, stdoutFile, task.context)
-
-            // set the exit code in to the task object
+            // -- set the remaining task properties
             task.cached = true
             task.hash = hash
-            task.workDir = folder
-            task.stdout = stdoutFile
-            if( exitCode != null ) {
-                task.exitStatus = exitCode
+            task.workDir = FileHelper.asPath(entry.trace.getWorkDir())
+            task.stdout = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+            task.exitStatus = exitCode
+            task.config.exitStatus = exitCode
+
+            // -- check if all downstream outputs are available
+            if( entry.consumers != null ) {
+                queue.addAll( entry.consumers )
             }
 
-            log.info "[${task.hashLog}] Cached process > ${task.name}"
-            // -- notify cached event
-            if( entry )
-                session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
+            // -- otherwise check if all task outputs are available
+            else {
+                try {
+                    collectOutputs(task)
+                }
+                catch( MissingFileException | MissingValueException e ) {
+                    log.trace "[${safeTaskName(task)}] Missed cache > ${e.getMessage()} -- folder: ${task.workDir}"
+                    return false
+                }
+            }
 
-            // -- now bind the results
-            finalizeTask0(task)
-            return true
+            // -- create task handler
+            handlers[hash] = new CachedTaskHandler(task, entry.trace)
         }
-        catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed cache > ${e.getMessage()} -- folder: $folder"
-            task.exitStatus = Integer.MAX_VALUE
-            task.workDir = null
-            return false
+
+        // -- finalize all cached tasks
+        handlers.each { hash, handler ->
+            if( hash in restoredTasks )
+                return
+
+            final task = handler.task
+
+            log.info "[${task.hashLog}] Cached process > ${task.name}"
+            // -- update the set of restored tasks
+            if( task.processor != this )
+                task.processor.state.update { StateObj it -> it.incSubmitted() }
+            restoredTasks[hash] = true
+            // -- notify cached event
+            session.notifyTaskCached(handler)
+            // -- bind the results
+            task.processor.finalizeTask0(task)
         }
+
+        return true
     }
 
     /**
@@ -2417,6 +2454,10 @@ class TaskProcessor {
         state.update { StateObj it -> it.incCompleted() }
     }
 
+    protected void closeProcess() {
+        session.notifyProcessClose(this)
+    }
+
     protected void terminateProcess() {
         log.trace "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
@@ -2514,7 +2555,7 @@ class TaskProcessor {
             state.update { StateObj it -> it.incSubmitted() }
             // task index must be created here to guarantee consistent ordering
             // with the sequence of messages arrival since this method is executed in a thread safe manner
-            final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
+            final params = createTaskStartParams()
             final result = new ArrayList(2)
             result[0] = params
             result[1] = messages
@@ -2569,6 +2610,7 @@ class TaskProcessor {
             // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**
