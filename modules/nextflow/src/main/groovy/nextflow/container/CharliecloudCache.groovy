@@ -239,7 +239,7 @@ class CharliecloudCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  hint   : Try and increase charliecloud.pullTimeout in the config (current is \"${pullTimeout}\")\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
