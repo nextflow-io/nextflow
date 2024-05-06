@@ -108,7 +108,7 @@ class TaskBean implements Serializable, Cloneable {
 
     Integer arrayIndexStart
 
-    List<String> arrayWorkDirs
+    List<Path> arrayWorkDirs
 
     @PackageScope
     TaskBean() {
@@ -169,7 +169,7 @@ class TaskBean implements Serializable, Cloneable {
             final executor = (TaskArrayExecutor)task.getProcessor().getExecutor()
             this.arrayIndexName = executor.getArrayIndexName()
             this.arrayIndexStart = executor.getArrayIndexStart()
-            this.arrayWorkDirs = task.children.collect( h -> h.getWorkDir() )
+            this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
         }
     }
 

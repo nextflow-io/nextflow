@@ -320,12 +320,19 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     }
 
     @Override
-    String getArrayIndexName() { 'LSB_JOBINDEX' }
+    String getArrayIndexName() {
+        return 'LSB_JOBINDEX'
+    }
 
     @Override
-    int getArrayIndexStart() { 1 }
+    int getArrayIndexStart() {
+        return 1
+    }
 
     @Override
-    String getArrayTaskId(String jobId, int index) { "${jobId}[${index + 1}]" }
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}[${index + 1}]"
+    }
 
 }

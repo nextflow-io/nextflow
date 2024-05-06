@@ -16,16 +16,19 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
-
 /**
  * Interface for executors that support job arrays.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@CompileStatic
 interface TaskArrayExecutor {
 
     String getName()
@@ -54,4 +57,31 @@ interface TaskArrayExecutor {
      */
     String getArrayTaskId(String jobId, int index)
 
+    default boolean isWorkDirDefaultFS() {
+        getWorkDir().fileSystem== FileSystems.default
+    }
+
+    /**
+     * Get a {@link TaskHandler} work directory for the task array resolution
+     *
+     * @param handler
+     * @return
+     */
+    default String getArrayWorkDir(TaskHandler handler) {
+        return isFusionEnabled()
+            ? FusionHelper.toContainerMount(handler.task.workDir).toString()
+            : handler.task.workDir.toUriString()
+    }
+
+    default String getArrayLaunchCommand(String taskDir) {
+        if( isFusionEnabled() ) {
+            return "bash ${taskDir}/${TaskRun.CMD_RUN}"
+        }
+        else if( isWorkDirDefaultFS() ) {
+            return "bash ${taskDir}/${TaskRun.CMD_RUN} 2>&1 > ${taskDir}/${TaskRun.CMD_LOG}"
+        }
+        else {
+            throw new IllegalStateException("Executor ${getName()} does not support array jobs")
+        }
+    }
 }

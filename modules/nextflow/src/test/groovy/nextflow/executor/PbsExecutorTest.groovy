@@ -312,4 +312,24 @@ class PbsExecutorTest extends Specification {
         !PbsExecutor.matchOptions('-x-l foo')
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(PbsExecutor)
+        expect:
+        executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(PbsExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo[]'     | 1             | 'foo[1]'
+        'bar[]'     | 2             | 'bar[2]'
+    }
 }

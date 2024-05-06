@@ -65,7 +65,6 @@ import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
-import nextflow.fusion.FusionHelper
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
@@ -658,43 +657,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected List<String> classicSubmitCli() {
-        // the cmd list to launch it
-        final opts = getAwsOptions()
-        final cmd = opts.s5cmdPath ? s5Cmd(opts) : s3Cmd(opts)
-        return ['bash','-o','pipefail','-c', cmd.toString()]
+        return executor.getLaunchCommand(task.getWorkDirStr())
     }
 
-    protected String s3Cmd(AwsOptions opts) {
-        final cli = opts.getAwsCli()
-        final debug = opts.debug ? ' --debug' : ''
-        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
-        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
-        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
-        final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return cmd
-    }
-
-    protected String s5Cmd(AwsOptions opts) {
-        final cli = opts.getS5cmdPath()
-        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
-        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
-        final cmd = "trap \"{ ret=\$?; $cli cp${sse}${kms} ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $cli cat s3:/${getWrapperFile()} | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return cmd
-    }
-
-    @Override
     List<String> getLaunchCommand() {
         // final launcher command
         return fusionEnabled()
                 ? fusionSubmitCli()
                 : classicSubmitCli()
-    }
-
-    @Override
-    String getWorkDir() {
-        fusionEnabled()
-            ? FusionHelper.toContainerMount(task.workDir).toString()
-            : task.workDir.toUriString()
     }
 
     protected int maxSpotAttempts() {

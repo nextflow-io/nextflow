@@ -157,20 +157,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    String getWorkDir() {
-        launcher.workDir.toString()
-    }
-
-    @Override
-    List<String> getLaunchCommand() {
-        spec0(launcher).launchCommand()
-    }
-
-    List<String> getContainerMounts() {
-        spec0(launcher).getContainerMounts()
-    }
-
-    @Override
     void submit() {
         /*
          * create submit request
@@ -253,11 +239,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( containerOptions )
             container.setOptions( containerOptions )
-
-        // add child container mounts if task is an array
-        if( task instanceof TaskArrayRun )
-            for( TaskHandler handler : task.children )
-                container.addAllVolumes( ((GoogleBatchTaskHandler)handler).getContainerMounts() )
 
         // task spec
         final env = Environment

@@ -17,13 +17,16 @@
 
 package nextflow.cloud.google.batch
 
+import static nextflow.cloud.google.batch.GoogleBatchScriptLauncher.*
+
 import java.nio.file.Path
 
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
-import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -35,6 +38,7 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
 /**
@@ -145,11 +149,34 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     @Override
-    String getArrayIndexName() { 'BATCH_TASK_INDEX' }
+    String getArrayIndexName() {
+        return 'BATCH_TASK_INDEX'
+    }
 
     @Override
-    int getArrayIndexStart() { 0 }
+    int getArrayIndexStart() { return 0 }
 
     @Override
-    String getArrayTaskId(String jobId, int index) { index.toString() }
+    String getArrayTaskId(String jobId, int index) {
+        return index.toString()
+    }
+
+    @Override
+    String getArrayWorkDir(TaskHandler handler) {
+        return isFusionEnabled() || isWorkDirDefaultFS()
+            ? TaskArrayExecutor.super.getArrayWorkDir(handler)
+            : containerMountPath(handler.task.workDir as CloudStoragePath)
+    }
+
+    @Override
+    String getArrayLaunchCommand(String taskDir) {
+        if( isFusionEnabled() || isWorkDirDefaultFS() ) {
+            return TaskArrayExecutor.super.getArrayLaunchCommand(taskDir)
+        }
+        else {
+            final cmd = List.of('/bin/bash','-o','pipefail','-c', launchCommand(taskDir))
+            return Escape.cli(cmd as String[])
+        }
+    }
+
 }

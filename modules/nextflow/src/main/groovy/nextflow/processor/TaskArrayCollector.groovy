@@ -27,7 +27,6 @@ import nextflow.executor.TaskArrayExecutor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
-
 /**
  * Task monitor that batches tasks and submits them as job arrays
  * to an underlying task monitor.
@@ -148,8 +147,9 @@ class TaskArrayCollector {
         Files.createDirectories(workDir)
 
         // create wrapper script
-        final script = createTaskArrayScript(handlers)
-
+        final script = createArrayTaskScript(handlers)
+        log.debug "Creating task array run >> $workDir\n$script"
+        
         // create config for job array
         final rawConfig = new HashMap<String,Object>(ARRAY_DIRECTIVES.size())
         for( final key : ARRAY_DIRECTIVES ) {
@@ -184,24 +184,21 @@ class TaskArrayCollector {
      *
      * @param array
      */
-    protected String createTaskArrayScript(List<TaskHandler> array) {
+    protected String createArrayTaskScript(List<TaskHandler> array) {
         // get work directory and launch command for each task
-        final workDirs = array.collect( h -> h.getWorkDir() )
-        final args = array.first().getLaunchCommand().toArray() as String[]
-        final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${nxf_array_task_dir}')
-
-        // create wrapper script
-        final indexName = executor.getArrayIndexName()
-        final indexStart = executor.getArrayIndexStart()
-        final arrayIndex = indexStart > 0
-            ? "${indexName} - ${indexStart}"
-            : "${indexName}"
-
+        final workDirs = array.collect( h -> executor.getArrayWorkDir(h) )
         """
         array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
-        export nxf_array_task_dir=\${array[${arrayIndex}]}
-        ${cmd}
+        export nxf_array_task_dir=${getArrayIndexRef()}
+        ${executor.getArrayLaunchCommand('$nxf_array_task_dir')}
         """.stripIndent().leftTrim()
+    }
+
+    protected String getArrayIndexRef() {
+        final name = executor.getArrayIndexName()
+        final start = executor.getArrayIndexStart()
+        final index = start > 0 ? "${name} - ${start}" : name
+        return '${array[' + index + "]}"
     }
 
 }

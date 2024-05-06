@@ -182,14 +182,19 @@ class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     }
 
     @Override
-    String getArrayIndexName() { 'PBS_ARRAY_INDEX' }
+    String getArrayIndexName() {
+        return 'PBS_ARRAY_INDEX'
+    }
 
     @Override
-    int getArrayIndexStart() { 0 }
+    int getArrayIndexStart() {
+        return 0
+    }
 
     @Override
     String getArrayTaskId(String jobId, int index) {
-        jobId.replace('[]', "[$index]")
+        assert jobId, "Missing 'jobId' argument"
+        return jobId.replace('[]', "[$index]")
     }
 
 }

@@ -128,11 +128,10 @@ class TaskArrayCollectorTest extends Specification {
         def task = Mock(TaskRun) {
             index >> 1
             getHash() >> HashCode.fromString('0123456789abcdef')
+            getWorkDir() >> Paths.get('/work/foo')
         }
         def handler = Mock(TaskHandler) {
             getTask() >> task
-            getWorkDir() >> Paths.get('/work/foo')
-            getLaunchCommand() >> ['bash', '-o', 'pipefail', '-c', 'bash /work/foo/.command.run 2>&1 | tee /work/foo/.command.log']
         }
 
         when:
@@ -140,20 +139,60 @@ class TaskArrayCollectorTest extends Specification {
         then:
         3 * exec.createTaskHandler(task) >> handler
         3 * handler.prepareLauncher()
+        1 * collector.createArrayTaskScript([handler, handler, handler]) >> 'the-task-array-script'
         and:
         taskArray.name == 'PROC (1)'
         taskArray.config.cpus == 4
         taskArray.config.tag == null
         taskArray.processor == proc
-        taskArray.script == '''
-            array=( /work/foo /work/foo /work/foo )
-            export nxf_array_task_dir=${array[ARRAY_JOB_INDEX]}
-            bash -o pipefail -c 'bash ${nxf_array_task_dir}/.command.run 2>&1 | tee ${nxf_array_task_dir}/.command.log'
-            '''.stripIndent().leftTrim()
+        taskArray.script == 'the-task-array-script'
         and:
         taskArray.getArraySize() == 3
         taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]
         taskArray.isContainerEnabled() == false
     }
 
+    def 'should get array ref' () {
+        given:
+        def processor = Mock(TaskProcessor)
+        def executor = Mock(DummyExecutor) {
+            getArrayIndexName() >> NAME
+            getArrayIndexStart() >> START
+        }
+        def collector = Spy(new TaskArrayCollector(processor, executor, 10))
+        expect:
+        collector.getArrayIndexRef() == EXPECTED
+
+        where:
+        NAME        | START     | EXPECTED
+        'INDEX'     | 0         | '${array[INDEX]}'
+        'INDEX'     | 1         | '${array[INDEX - 1]}'
+        'OTHER'     | 99        | '${array[OTHER - 99]}'
+    }
+
+    def 'should get array launch script' () {
+        given:
+        def processor = Mock(TaskProcessor)
+        def executor = Spy(DummyExecutor) { isWorkDirDefaultFS()>>true }
+        def collector = Spy(new TaskArrayCollector(processor, executor, 10))
+        and:
+        def h1 = Mock(TaskHandler)
+        def h2 = Mock(TaskHandler)
+        def h3 = Mock(TaskHandler)
+
+        when:
+        def result = collector.createArrayTaskScript([h1,h2,h3])
+        then:
+        executor.getArrayWorkDir(h1) >> '/work/dir/1'
+        executor.getArrayWorkDir(h2) >> '/work/dir/2'
+        executor.getArrayWorkDir(h3) >> '/work/dir/3'
+        and:
+        collector.getArrayIndexRef() >> '$array[INDEX]'
+        then:
+        result == '''\
+                array=( /work/dir/1 /work/dir/2 /work/dir/3 )
+                export nxf_array_task_dir=$array[INDEX]
+                bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
+                '''.stripIndent(true)
+    }
 }

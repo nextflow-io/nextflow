@@ -344,7 +344,7 @@ class BashWrapperBuilderTest extends Specification {
             name: 'foo',
             arrayIndexName: 'SLURM_ARRAY_TASK_ID',
             arrayIndexStart: 0,
-            arrayWorkDirs: [ '/work/01', '/work/02', '/work/03' ],
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
             containerConfig: [enabled: true],
             containerImage: 'quay.io/nextflow:bash',
             outputFiles: ['foo.txt', '*.bar', '**/baz']
@@ -401,7 +401,7 @@ class BashWrapperBuilderTest extends Specification {
             name: 'task2',
             arrayIndexName: 'SLURM_ARRAY_TASK_ID',
             arrayIndexStart: 0,
-            arrayWorkDirs: [ '/work/01', '/work/02', '/work/03' ],
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
             containerConfig: [enabled: true],
             containerImage: 'quay.io/nextflow:bash',
             outputFiles: ['foo.txt', '*.bar', '**/baz']

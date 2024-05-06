@@ -724,5 +724,26 @@ class LsfExecutorTest extends Specification {
         'a'.repeat(509)    | 'nf-'.concat("a".repeat(508))
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(LsfExecutor)
+        expect:
+        executor.getArrayIndexName() == 'LSB_JOBINDEX'
+        executor.getArrayIndexStart() == 1
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(LsfExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo'       | 1             | 'foo[2]'
+        'bar'       | 2             | 'bar[3]'
+    }
+
 }
 

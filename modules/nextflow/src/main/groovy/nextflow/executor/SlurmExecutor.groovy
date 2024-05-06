@@ -220,12 +220,19 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     }
 
     @Override
-    String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
+    String getArrayIndexName() {
+        return 'SLURM_ARRAY_TASK_ID'
+    }
 
     @Override
-    int getArrayIndexStart() { 0 }
+    int getArrayIndexStart() {
+        return 0
+    }
 
     @Override
-    String getArrayTaskId(String jobId, int index) { "${jobId}_${index}" }
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}_${index}"
+    }
 
 }

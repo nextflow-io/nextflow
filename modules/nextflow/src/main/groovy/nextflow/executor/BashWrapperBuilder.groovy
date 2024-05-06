@@ -31,6 +31,7 @@ import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -465,22 +466,22 @@ class BashWrapperBuilder {
     protected String getTaskMetadata() {
         final lines = new StringBuilder()
         lines << '### ---\n'
-        lines << "### name: '${name}'\n"
-        if( arrayIndexName ) {
+        lines << "### name: '${bean.name}'\n"
+        if( bean.arrayIndexName ) {
             lines << '### array:\n'
-            lines << "###   index-name: ${arrayIndexName}\n"
-            lines << "###   index-start: ${arrayIndexStart}\n"
+            lines << "###   index-name: ${bean.arrayIndexName}\n"
+            lines << "###   index-start: ${bean.arrayIndexStart}\n"
             lines << "###   work-dirs:\n"
-            for( String workDir : arrayWorkDirs )
-                lines << "###   - ${Escape.path(workDir)}\n"
+            for( Path it : bean.arrayWorkDirs )
+                lines << "###   - ${Escape.path(FilesEx.toUriString(it))}\n"
         }
 
         if( containerConfig?.isEnabled() )
-            lines << "### container: '${containerImage}'\n"
+            lines << "### container: '${bean.containerImage}'\n"
 
         if( outputFiles.size() > 0 ) {
             lines << '### outputs:\n'
-            for( final output : outputFiles )
+            for( final output : bean.outputFiles )
                 lines << "### - '${output}'\n"
         }
 
