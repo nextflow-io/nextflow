@@ -16,10 +16,8 @@ import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
-import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -51,25 +49,21 @@ class AwsBatchExecutorTest extends Specification {
 
     }
 
-    def 'should kill tasks' () {
+    def 'should validate shouldDeleteJob method' () {
         given:
-        def reaper = Mock(ThrottlingExecutor) {
-            submit(_) >> { Closure cl -> cl() }
-        }
         def executor = Spy(AwsBatchExecutor)
-        executor.@reaper = reaper
 
-        when:
-        executor.killTask('job-id')
-        executor.killTask('job-id')
-        then:
-        1 * executor.killTask0('job-id') >> null
-
-        when:
-        executor.killTask('array-job-id:0')
-        executor.killTask('array-job-id:1')
-        then:
-        1 * executor.killTask0('array-job-id') >> null
+        expect:
+        executor.shouldDeleteJob('job-1')
+        executor.shouldDeleteJob('job-2')
+        executor.shouldDeleteJob('job-3')
+        and:
+        !executor.shouldDeleteJob('job-1')
+        !executor.shouldDeleteJob('job-1')
+        !executor.shouldDeleteJob('job-2')
+        !executor.shouldDeleteJob('job-2')
+        !executor.shouldDeleteJob('job-3')
+        !executor.shouldDeleteJob('job-3')
     }
 
     def 'should get array index variable and start' () {

@@ -16,7 +16,6 @@
 
 package nextflow.cloud.aws.batch
 
-
 import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
@@ -873,19 +872,35 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should kill a job' () {
         given:
-        def JOB_ID = '54321'
         def executor = Mock(AwsBatchExecutor)
         def task = Mock(TaskRun)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@executor = executor
         handler.task = task
-        handler.@jobId = JOB_ID
 
         when:
+        handler.@jobId = 'job1'
         handler.kill()
         then:
-        1 * executor.killTask(JOB_ID)
+        1 * executor.shouldDeleteJob('job1') >> true
+        and:
+        1 * handler.terminateJob('job1') >> null
 
+        when:
+        handler.@jobId = 'job1:task2'
+        handler.kill()
+        then:
+        1 * executor.shouldDeleteJob('job1') >> true
+        and:
+        1 * handler.terminateJob('job1') >> null
+
+        when:
+        handler.@jobId = 'job1:task2'
+        handler.kill()
+        then:
+        1 * executor.shouldDeleteJob('job1') >> false
+        and:
+        0 * handler.terminateJob('job1') >> null
     }
 
     def 'should create the trace record' () {
@@ -1069,5 +1084,20 @@ class AwsBatchTaskHandlerTest extends Specification {
         16      | 60000     | 65536
         16      | 100000    | 106496
         16      | 200000    | 122880
+    }
+
+    @Unroll
+    def 'should normalise job id' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        expect:
+        handler.normaliseJobId(JOB_ID) == EXPECTED
+        
+        where:
+        JOB_ID       | EXPECTED
+        null         | null
+        'job1'       | 'job1'
+        'job1:task2' | 'job1'
     }
 }
