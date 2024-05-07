@@ -141,8 +141,8 @@ class BatchLoggingTest extends Specification {
         state in ['SUCCEEDED', 'FAILED']
 
         when:
-        def stdout = logClient.stdout(uid)
-        def stderr = logClient.stderr(uid)
+        def stdout = logClient.stdout(uid, '0')
+        def stderr = logClient.stderr(uid, '0')
         log.debug "STDOUT: $stdout"
         log.debug "STDERR: $stderr"
         then:

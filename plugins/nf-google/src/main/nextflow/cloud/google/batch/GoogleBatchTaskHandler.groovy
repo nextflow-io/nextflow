@@ -484,8 +484,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( task.exitStatus == null )
                 task.exitStatus = readExitFile()
             if( state == 'FAILED' ) {
-                task.stdout = executor.logging.stdout(uid) ?: outputFile
-                task.stderr = executor.logging.stderr(uid) ?: errorFile
+                task.stdout = executor.logging.stdout(uid, taskId) ?: outputFile
+                task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
             else {
                 task.stdout = outputFile
