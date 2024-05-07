@@ -12,7 +12,6 @@ import java.nio.file.Path
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -66,18 +65,6 @@ class GoogleBatchExecutorTest extends Specification {
         [:]                             | true
         [NXF_CLOUDINFO_ENABLED:'true']  | true
         [NXF_CLOUDINFO_ENABLED:'false'] | false
-    }
-
-    def 'should kill tasks' () {
-        given:
-        def client = Mock(BatchClient)
-        def executor = new GoogleBatchExecutor(client: client)
-
-        when:
-        executor.killTask('job-id')
-        executor.killTask('job-id')
-        then:
-        1 * client.deleteJob('job-id')
     }
 
     def 'should get array index variable and start' () {
@@ -142,5 +129,22 @@ class GoogleBatchExecutorTest extends Specification {
         false   | false       | 'gs://foo/work/dir' | '/bin/bash -o pipefail -c \'trap "{ cp .command.log gs://foo/work/dir/.command.log; }" ERR; /bin/bash gs://foo/work/dir/.command.run 2>&1 | tee .command.log\''
         true    | false       | '/fusion/work/dir'  | 'bash /fusion/work/dir/.command.run'
         false   | true        | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run 2>&1 > /nfs/work/dir/.command.log'
+    }
+
+    def 'should validate shouldDeleteJob method' () {
+        given:
+        def executor = Spy(GoogleBatchExecutor)
+
+        expect:
+        executor.shouldDeleteJob('job-1')
+        executor.shouldDeleteJob('job-2')
+        executor.shouldDeleteJob('job-3')
+        and:
+        !executor.shouldDeleteJob('job-1')
+        !executor.shouldDeleteJob('job-1')
+        !executor.shouldDeleteJob('job-2')
+        !executor.shouldDeleteJob('job-2')
+        !executor.shouldDeleteJob('job-3')
+        !executor.shouldDeleteJob('job-3')
     }
 }

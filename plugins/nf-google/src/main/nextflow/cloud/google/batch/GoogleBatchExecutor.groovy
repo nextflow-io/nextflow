@@ -56,7 +56,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     private Path remoteBinDir
     private BatchLogging logging
 
-    private Set<String> deletedJobs = [] as Set
+    private final Set<String> deletedJobs = new HashSet<>()
 
     BatchClient getClient() { return client }
     BatchConfig getConfig() { return config }
@@ -137,15 +137,16 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
         return Boolean.parseBoolean(SysEnv.get('NXF_CLOUDINFO_ENABLED', 'true') )
     }
 
-    void killTask(String jobId) {
-        // prevent duplicate delete requests on the same job
-        if( jobId in deletedJobs )
-            return
-        else
-            deletedJobs.add(jobId)
-
-        // delete job
-        client.deleteJob(jobId)
+    boolean shouldDeleteJob(String jobId) {
+        if( jobId in deletedJobs ) {
+            // if the job is already in the list if has been already delete
+            return false
+        }
+        synchronized (deletedJobs) {
+            // add the job id to the set of delete jobs, if it's a new id, the `add` method
+            // returns true therefore the job should be deleted
+            return deletedJobs.add(jobId)
+        }
     }
 
     @Override

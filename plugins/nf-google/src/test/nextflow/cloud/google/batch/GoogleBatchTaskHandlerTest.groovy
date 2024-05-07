@@ -539,4 +539,42 @@ class GoogleBatchTaskHandlerTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should kill a job' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def task = Mock(TaskRun)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@executor = executor
+        handler.@client = client
+        handler.task = task
+
+        when:
+        handler.@jobId = 'job1'
+        handler.kill()
+        then:
+        handler.isActive() >> false
+        0 * executor.shouldDeleteJob('job1') >> true
+        and:
+        0 * client.deleteJob('job1') >> null
+
+        when:
+        handler.@jobId = 'job1'
+        handler.kill()
+        then:
+        handler.isActive() >> true
+        1 * executor.shouldDeleteJob('job1') >> true
+        and:
+        1 * client.deleteJob('job1') >> null
+
+        when:
+        handler.@jobId = 'job1'
+        handler.kill()
+        then:
+        handler.isActive() >> true
+        1 * executor.shouldDeleteJob('job1') >> false
+        and:
+        0 * client.deleteJob('job1') >> null
+    }
 }
