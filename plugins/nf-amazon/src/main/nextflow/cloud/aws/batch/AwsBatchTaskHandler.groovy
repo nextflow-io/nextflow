@@ -306,7 +306,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( !jobId )
             return null
         return jobId.contains(':')
-                ?  jobId.split(':')[0]
+                ? jobId.split(':')[0]
                 : jobId
     }
 

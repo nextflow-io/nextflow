@@ -198,7 +198,7 @@ class TaskArrayCollector {
         final name = executor.getArrayIndexName()
         final start = executor.getArrayIndexStart()
         final index = start > 0 ? "${name} - ${start}" : name
-        return '${array[' + index + "]}"
+        return '${array[' + index + ']}'
     }
 
 }

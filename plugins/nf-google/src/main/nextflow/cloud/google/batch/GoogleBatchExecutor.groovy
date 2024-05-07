@@ -139,11 +139,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
 
     boolean shouldDeleteJob(String jobId) {
         if( jobId in deletedJobs ) {
-            // if the job is already in the list if has been already delete
+            // if the job is already in the list it has been already deleted
             return false
         }
         synchronized (deletedJobs) {
-            // add the job id to the set of delete jobs, if it's a new id, the `add` method
+            // add the job id to the set of deleted jobs, if it's a new id, the `add` method
             // returns true therefore the job should be deleted
             return deletedJobs.add(jobId)
         }
@@ -155,7 +155,9 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     @Override
-    int getArrayIndexStart() { return 0 }
+    int getArrayIndexStart() {
+        return 0
+    }
 
     @Override
     String getArrayTaskId(String jobId, int index) {
