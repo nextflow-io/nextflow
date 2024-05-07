@@ -290,7 +290,8 @@ class SlurmExecutorTest extends Specification {
         and:
         def executor = Spy(SlurmExecutor)
         executor.getJobNameFor(_) >> 'foo'
-        executor.getSession() >> Mock(Session) { getConfigAttribute('slurm.account',null)>>ACCOUNT }
+        executor.getName() >> 'slurm'
+        executor.getSession() >> Mock(Session) { getExecConfigProp('slurm', 'account',null)>>ACCOUNT }
 
         when:
         def result = executor.getDirectives(task, [])

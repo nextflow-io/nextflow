@@ -91,15 +91,15 @@ class SlurmExecutor extends AbstractGridExecutor {
             result << '-p' << (task.config.queue.toString())
         }
 
-        // add slurm account from config
-        final account = session.getConfigAttribute('slurm.account', null) as String
-        if( account ) {
-            result << '-A' << account
-        }
-
         // -- at the end append the command script wrapped file name
         if( task.config.getClusterOptions() ) {
             result << task.config.getClusterOptions() << ''
+        }
+
+        // add slurm account from config
+        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        if( account ) {
+            result << '-A' << account
         }
 
         return result
