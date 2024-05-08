@@ -38,7 +38,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
 /**
- * Define if input/output element is a file or a directory. It is not required that the user provide this value, but it is required that the server fill in the value once the information is avalible at run time.
+ * Define if input/output element is a file or a directory. It is not required that the user provide this value, but it is required that the server fill in the value once the information is available at run time.
  */
 @JsonAdapter(TesFileType.Adapter.class)
 public enum TesFileType {

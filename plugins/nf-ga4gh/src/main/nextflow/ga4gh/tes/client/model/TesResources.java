@@ -154,10 +154,10 @@ public class TesResources {
   }
 
    /**
-   * Request that the task be run in these compute zones. How this string is utilized will be dependent on the backend system. For example, a system based on a cluster queueing system may use this string to define priorty queue to which the job is assigned.
+   * Request that the task be run in these compute zones. How this string is utilized will be dependent on the backend system. For example, a system based on a cluster queueing system may use this string to define priority queue to which the job is assigned.
    * @return zones
   **/
-  @Schema(example = "us-west-1", description = "Request that the task be run in these compute zones. How this string is utilized will be dependent on the backend system. For example, a system based on a cluster queueing system may use this string to define priorty queue to which the job is assigned.")
+  @Schema(example = "us-west-1", description = "Request that the task be run in these compute zones. How this string is utilized will be dependent on the backend system. For example, a system based on a cluster queueing system may use this string to define priority queue to which the job is assigned.")
   public List<String> getZones() {
     return zones;
   }

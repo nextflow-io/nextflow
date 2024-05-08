@@ -140,10 +140,10 @@ public class TesOutput {
   }
 
    /**
-   * Prefix to be removed from matching outputs if &#x60;tesOutput.path&#x60; contains wildcards; output URLs are constructed by appending pruned paths to the directory specfied in &#x60;tesOutput.url&#x60;. Required if &#x60;tesOutput.path&#x60; contains wildcards, ignored otherwise.
+   * Prefix to be removed from matching outputs if &#x60;tesOutput.path&#x60; contains wildcards; output URLs are constructed by appending pruned paths to the directory specified in &#x60;tesOutput.url&#x60;. Required if &#x60;tesOutput.path&#x60; contains wildcards, ignored otherwise.
    * @return pathPrefix
   **/
-  @Schema(description = "Prefix to be removed from matching outputs if `tesOutput.path` contains wildcards; output URLs are constructed by appending pruned paths to the directory specfied in `tesOutput.url`. Required if `tesOutput.path` contains wildcards, ignored otherwise.")
+  @Schema(description = "Prefix to be removed from matching outputs if `tesOutput.path` contains wildcards; output URLs are constructed by appending pruned paths to the directory specified in `tesOutput.url`. Required if `tesOutput.path` contains wildcards, ignored otherwise.")
   public String getPathPrefix() {
     return pathPrefix;
   }
