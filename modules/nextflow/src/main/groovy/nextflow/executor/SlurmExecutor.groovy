@@ -97,7 +97,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         // add slurm account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = session.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-A' << account
         }
