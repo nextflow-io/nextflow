@@ -96,6 +96,12 @@ class SlurmExecutor extends AbstractGridExecutor {
             result << task.config.getClusterOptions() << ''
         }
 
+        // add slurm account from config
+        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        if( account ) {
+            result << '-A' << account
+        }
+
         return result
     }
 
