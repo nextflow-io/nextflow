@@ -646,6 +646,12 @@ The `executor` scope controls various executor behaviors.
 
 The following settings are available:
 
+`executor.account`
+: :::{versionadded} 24.04.0
+  :::
+: *Used only by the {ref}`slurm-executor`, {ref}`lsf-executor`, {ref}`pbs-executor` and {ref}`pbspro-executor` executors.*
+: Allows specifying the project or organisation account that should be charged for running the pipeline jobs.
+
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
 

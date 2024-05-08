@@ -15,6 +15,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Paths
 
 import nextflow.Session
@@ -23,7 +24,6 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -82,6 +82,7 @@ class SlurmExecutorTest extends Specification {
         setup:
         // SLURM executor
         def executor = [:] as SlurmExecutor
+        executor.session = Mock(Session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -210,6 +211,7 @@ class SlurmExecutorTest extends Specification {
         setup:
         // LSF executor
         def executor = Spy(SlurmExecutor)
+        executor.session = Mock(Session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -274,5 +276,31 @@ class SlurmExecutorTest extends Specification {
         exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
         exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
 
+    }
+
+    @Unroll
+    def 'should set slurm account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.config = Mock(TaskConfig)
+        and:
+        def executor = Spy(SlurmExecutor)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'slurm'
+        executor.getSession() >> Mock(Session) { getExecConfigProp('slurm', 'account',null)>>ACCOUNT }
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-J', 'foo', '-o', '/work/dir/.command.log', '--no-requeue', '', '--signal', 'B:USR2@30']
+        'project-123'       | ['-J', 'foo', '-o', '/work/dir/.command.log', '--no-requeue', '', '--signal', 'B:USR2@30', '-A', 'project-123']
     }
 }
