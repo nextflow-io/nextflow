@@ -18,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -33,7 +34,7 @@ class PbsExecutorTest extends Specification {
     def testGetCommandLine() {
 
         given:
-        def executor = [:] as PbsExecutor
+        def executor = Spy(PbsExecutor)
         def task = Mock(TaskRun); task.getName() >> 'hello world'
 
         expect:
@@ -44,7 +45,8 @@ class PbsExecutorTest extends Specification {
     def testHeaders() {
 
         setup:
-        def executor = [:] as PbsExecutor
+        def executor = Spy(PbsExecutor)
+        executor.getSession() >> Mock(Session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -167,6 +169,7 @@ class PbsExecutorTest extends Specification {
 
         setup:
         def executor = Spy(PbsExecutor)
+        executor.getSession() >> Mock(Session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -299,4 +302,28 @@ class PbsExecutorTest extends Specification {
         !PbsExecutor.matchOptions('-x-l foo')
     }
 
+    def 'should set pbs account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
+        and:
+        def executor = Spy(PbsExecutor)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'pbs'
+        executor.getSession() >> Mock(Session) { getExecConfigProp('pbs', 'account',null)>>ACCOUNT }
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe']
+        'project-123'       | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe', '-P', 'project-123']
+    }
 }

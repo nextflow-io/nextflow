@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import nextflow.Session
 import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 
@@ -32,7 +33,9 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives' () {
         given:
+        def session = Mock(Session) { getConfig()>>[:] }
         def executor = Spy(PbsProExecutor)
+        executor.getSession() >> session
         def WORK_DIR = Paths.get('/here')
 
         def task = Mock(TaskRun)
@@ -54,7 +57,9 @@ class PbsProExecutorTest extends Specification {
 
     def 'should get directives with queue' () {
         given:
+        def session = Mock(Session) { getConfig()>>[:] }
         def executor = Spy(PbsProExecutor)
+        executor.getSession()>>session
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -78,6 +83,8 @@ class PbsProExecutorTest extends Specification {
     def 'should get directives with cpus' () {
         given:
         def executor = Spy(PbsProExecutor)
+        executor.getSession() >> Mock(Session)
+        and:
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -102,6 +109,7 @@ class PbsProExecutorTest extends Specification {
     def 'should get directives with mem' () {
         given:
         def executor = Spy(PbsProExecutor)
+        executor.getSession() >> Mock(Session)
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -126,6 +134,7 @@ class PbsProExecutorTest extends Specification {
     def 'should get directives with cpus and mem' () {
         given:
         def executor = Spy(PbsProExecutor)
+        executor.getSession() >> Mock(Session)
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -150,6 +159,7 @@ class PbsProExecutorTest extends Specification {
     def 'should ignore cpus and memory when clusterOptions contains -l option' () {
         given:
         def executor = Spy(PbsProExecutor)
+        executor.getSession() >> Mock(Session)
         def WORK_DIR = Paths.get('/foo/bar')
 
         def task = Mock(TaskRun)
@@ -221,7 +231,8 @@ class PbsProExecutorTest extends Specification {
     def 'should report cluster as first' () {
 
         setup:
-        def executor = [:] as PbsProExecutor
+        def executor = Spy(PbsProExecutor)
+        executor.getSession() >> Mock(Session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -245,4 +256,28 @@ class PbsProExecutorTest extends Specification {
                 .stripIndent().leftTrim()
     }
 
+    def 'should set pbs account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
+        and:
+        def executor = Spy(PbsProExecutor)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'pbspro'
+        executor.getSession() >> Mock(Session) { getExecConfigProp('pbspro', 'account',null)>>ACCOUNT }
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe']
+        'project-123'       | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe', '-P', 'project-123']
+    }
 }
