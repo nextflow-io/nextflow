@@ -118,6 +118,12 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         // -- at the end append the command script wrapped file name
         result.addAll( task.config.getClusterOptionsAsList() )
 
+        // add account from config
+        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        if( account ) {
+            result << '-G' << account
+        }
+
         return result
     }
 

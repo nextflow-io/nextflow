@@ -93,6 +93,12 @@ class PbsProExecutor extends PbsExecutor {
             result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
         }
 
+        // add account from config
+        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        if( account ) {
+            result << '-P' << account
+        }
+
         return result
     }
 

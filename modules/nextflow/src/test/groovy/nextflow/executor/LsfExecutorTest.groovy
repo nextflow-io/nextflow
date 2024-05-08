@@ -47,6 +47,8 @@ class LsfExecutorTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/work/dir')
         def executor = Spy(LsfExecutor)
+        executor.getSession() >> Mock(Session)
+        and:
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -66,6 +68,8 @@ class LsfExecutorTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/work/dir')
         def executor = Spy(new LsfExecutor(memUnit:'GB', usageUnit:'GB'))
+        executor.getSession() >> Mock(Session)
+        and:
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -87,6 +91,8 @@ class LsfExecutorTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/work/dir')
         def executor = Spy(new LsfExecutor(usageUnit:'KB', perJobMemLimit:true))
+        executor.getSession() >> Mock(Session)
+        and:
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -110,6 +116,8 @@ class LsfExecutorTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/work/dir')
         def executor = Spy(new LsfExecutor(perTaskReserve:true, perJobMemLimit: true, usageUnit:'KB'))
+        executor.getSession() >> Mock(Session)
+        and:
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -304,12 +312,14 @@ class LsfExecutorTest extends Specification {
         given:
         def config = new TaskConfig(clusterOptions: [], disk: '10GB')
         def WORKDIR = Paths.get('/my/work')
-        def lsf = Spy(LsfExecutor)
-        lsf.@memUnit = 'MB'
+        def executor = Spy(LsfExecutor)
+        executor.getSession() >> Mock(Session)
+        executor.@memUnit = 'MB'
+        and:
         def task = Mock(TaskRun)
 
         when:
-        def result = lsf.getDirectives(task)
+        def result = executor.getDirectives(task)
         then:
         task.workDir >> WORKDIR
         task.config >> config
@@ -742,6 +752,32 @@ class LsfExecutorTest extends Specification {
         JOB_ID      | TASK_INDEX    | EXPECTED
         'foo'       | 1             | 'foo[2]'
         'bar'       | 2             | 'bar[3]'
+    }
+    
+    @Unroll
+    def 'should set lsf account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
+        and:
+        def executor = Spy(LsfExecutor)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'lsf'
+        executor.getSession() >> Mock(Session) { getExecConfigProp('lsf', 'account',null)>>ACCOUNT }
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-o', '/work/dir/.command.log', '-J', 'foo']
+        'project-123'       | ['-o', '/work/dir/.command.log', '-J', 'foo', '-G', 'project-123']
     }
 
 }
