@@ -101,7 +101,7 @@ class TesExecutor extends Executor implements ExtensionPoint {
             session.binDir.eachFileRecurse { file ->
                 if( file.isDirectory() )
                     return
-                remoteBinFiles << tempBin.resolve(session.binDir.relativize(file).toString())
+                remoteBinFiles << tempBin.resolve('bin').resolve(session.binDir.relativize(file).toString())
             }
         }
     }
