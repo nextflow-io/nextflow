@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,10 @@ class DiskResource {
 
         if( opts.type )
             this.type = opts.type as String
+    }
+
+    DiskResource withRequest(MemoryUnit value) {
+        return new DiskResource(request: value, type: this.type)
     }
 
     private static MemoryUnit toMemoryUnit( value ) {

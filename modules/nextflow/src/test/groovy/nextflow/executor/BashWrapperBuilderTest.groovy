@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
+import org.yaml.snakeyaml.Yaml
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -51,6 +52,8 @@ class BashWrapperBuilderTest extends Specification {
             bean.script = 'echo Hello world!'
         if( !bean.containsKey('inputFiles') )
             bean.inputFiles = [:]
+        if( !bean.containsKey('outputFiles') )
+            bean.outputFiles = []
         new BashWrapperBuilder(bean as TaskBean) {
             @Override
             protected String getSecretsEnv() {
@@ -199,7 +202,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.getEnvironment() >> [:]
         bash.getBinDirs() >> [Paths.get('/my/bin') ]
         bash.getWorkDir() >> Paths.get('/my/work/dir')
-        bash.getStatsEnabled() >> false
+        bash.isStatsEnabled() >> false
         bash.getStageInMode() >> 'symlink'
         bash.getInputFiles() >> [:]
         bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
@@ -333,6 +336,94 @@ class BashWrapperBuilderTest extends Specification {
         then:
         bash.makeBinding().header_script == '#BSUB -x 1\n#BSUB -y 2'
 
+    }
+
+    def 'should create task metadata string' () {
+        given:
+        def builder = newBashWrapperBuilder(
+            name: 'foo',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: [enabled: true],
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+
+        when:
+        def meta = builder.getTaskMetadata()
+        then:
+        meta == '''\
+            ### ---
+            ### name: 'foo'
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: 'quay.io/nextflow:bash'
+            ### outputs:
+            ### - 'foo.txt'
+            ### - '*.bar'
+            ### - '**/baz'
+            ### ...
+            '''.stripIndent()
+
+        when:
+        def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
+        def obj = new Yaml().load(yaml) as Map
+        then:
+        obj.name == 'foo'
+        obj.array == [
+            'index-name':'SLURM_ARRAY_TASK_ID',
+            'index-start':0,
+            'work-dirs':['/work/01', '/work/02', '/work/03']
+        ]
+        obj.container == 'quay.io/nextflow:bash'
+        obj.outputs == ['foo.txt', '*.bar', '**/baz']
+    }
+
+    def 'should add task metadata' () {
+        when:
+        def bash = newBashWrapperBuilder([name:'task1'])
+        then:
+        bash.makeBinding().containsKey('task_metadata')
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: 'task1'
+            ### ...
+            '''.stripIndent()
+
+        when:
+        bash = newBashWrapperBuilder(
+            name: 'task2',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: [enabled: true],
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+        then:
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: 'task2'
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: 'quay.io/nextflow:bash'
+            ### outputs:
+            ### - 'foo.txt'
+            ### - '*.bar'
+            ### - '**/baz'
+            ### ...
+            '''.stripIndent()
     }
 
     def 'should copy control files' () {
@@ -1083,6 +1174,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
@@ -1123,17 +1215,80 @@ class BashWrapperBuilderTest extends Specification {
         def builder = new BashWrapperBuilder()
 
         when:
-        def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'])
+        def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'], Map.of())
         then:
         str == '''
             # capture process environment
             set +u
+            set +e
             cd "$NXF_TASK_WORKDIR"
-            echo FOO=${FOO[@]} > .command.env
-            echo BAR=${BAR[@]} >> .command.env
+            
+            nxf_eval_cmd() {
+                {
+                    IFS=$'\\n' read -r -d '' "${1}";
+                    IFS=$'\\n' read -r -d '' "${2}";
+                    (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+                } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+            }
+            
+            echo '' > .command.env
+            #
+            echo FOO="${FOO[@]}" >> .command.env
+            echo /FOO/ >> .command.env
+            #
+            echo BAR="${BAR[@]}" >> .command.env
+            echo /BAR/ >> .command.env
             '''
             .stripIndent()
+    }
 
+    def 'should return env & cmd capture snippet' () {
+        given:
+        def builder = new BashWrapperBuilder()
+
+        when:
+        def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other "quoted" --cmd'])
+        then:
+        str == '''
+            # capture process environment
+            set +u
+            set +e
+            cd "$NXF_TASK_WORKDIR"
+            
+            nxf_eval_cmd() {
+                {
+                    IFS=$'\\n' read -r -d '' "${1}";
+                    IFS=$'\\n' read -r -d '' "${2}";
+                    (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+                } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+            }
+            
+            echo '' > .command.env
+            #
+            echo FOO="${FOO[@]}" >> .command.env
+            echo /FOO/ >> .command.env
+            #
+            nxf_eval_cmd STDOUT STDERR bash -c "this --cmd"
+            status=$?
+            if [ $status -eq 0 ]; then
+              echo THIS="$STDOUT" >> .command.env
+              echo /THIS/=exit:0 >> .command.env
+            else
+              echo THIS="$STDERR" >> .command.env
+              echo /THIS/=exit:$status >> .command.env
+            fi
+            #
+            nxf_eval_cmd STDOUT STDERR bash -c "other \\"quoted\\" --cmd"
+            status=$?
+            if [ $status -eq 0 ]; then
+              echo THAT="$STDOUT" >> .command.env
+              echo /THAT/=exit:0 >> .command.env
+            else
+              echo THAT="$STDERR" >> .command.env
+              echo /THAT/=exit:$status >> .command.env
+            fi
+            '''
+            .stripIndent()
     }
 
     def 'should validate bash interpreter' () {

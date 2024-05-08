@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.TaskArrayExecutor
 import nextflow.util.MemoryUnit
 
 /**
@@ -73,6 +74,8 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> outputEnvNames
 
+    Map<String,String> outputEvals
+
     String beforeScript
 
     String afterScript
@@ -100,6 +103,12 @@ class TaskBean implements Serializable, Cloneable {
     List<String> secretNames
 
     Map<String,String> resourceLabels
+
+    String arrayIndexName
+
+    Integer arrayIndexStart
+
+    List<Path> arrayWorkDirs
 
     @PackageScope
     TaskBean() {
@@ -144,6 +153,7 @@ class TaskBean implements Serializable, Cloneable {
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()
+        this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
 
         this.inputFiles = task.getInputFilesMap()
@@ -153,6 +163,14 @@ class TaskBean implements Serializable, Cloneable {
         this.stageOutMode = task.config.getStageOutMode()
 
         this.resourceLabels = task.config.getResourceLabels()
+
+        // job array
+        if( task instanceof TaskArrayRun ) {
+            final executor = (TaskArrayExecutor)task.getProcessor().getExecutor()
+            this.arrayIndexName = executor.getArrayIndexName()
+            this.arrayIndexStart = executor.getArrayIndexStart()
+            this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
+        }
     }
 
     @Override

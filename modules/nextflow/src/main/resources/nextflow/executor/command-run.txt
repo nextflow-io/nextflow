@@ -1,5 +1,5 @@
 ##
-##  Copyright 2013-2023, Seqera Labs
+##  Copyright 2013-2024, Seqera Labs
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 ##  limitations under the License.
 #!/bin/bash
 {{header_script}}
-# NEXTFLOW TASK: {{task_name}}
+{{task_metadata}}
 set -e
 set -u
 NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x

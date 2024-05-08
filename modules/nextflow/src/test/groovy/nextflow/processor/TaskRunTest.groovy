@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -870,4 +870,19 @@ class TaskRunTest extends Specification {
         // the engine is enabled by default
         config == new ContainerConfig(engine:'foo', enabled: true)   // <-- 'foo' engine is enabled
     }
+
+    def 'should get container info' () {
+        given:
+        def session = Mock(Session)
+        def executor = Mock(Executor) { getSession()>>session }
+        def processor = Mock(TaskProcessor) { getExecutor()>>executor; getSession()>>session }
+        and:
+        def config = new TaskConfig([container:'ubuntu'])
+        def task = new TaskRun(config: config, processor: processor)
+        when:
+        def info = task.containerInfo()
+        then:
+        info == new ContainerInfo('ubuntu','ubuntu','ubuntu')
+    }
+
 }

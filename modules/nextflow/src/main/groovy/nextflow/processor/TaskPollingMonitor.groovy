@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -26,6 +27,7 @@ import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
@@ -111,6 +113,11 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     private RateLimiter submitRateLimit
 
+    @Lazy
+    private ExecutorService finalizerPool = { session.finalizeTaskExecutorService() }()
+
+    private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
+
     /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
@@ -192,14 +199,27 @@ class TaskPollingMonitor implements TaskMonitor {
      *      A {@link TaskHandler} instance representing the task to be submitted for execution
      */
     protected void submit(TaskHandler handler) {
-        // submit the job execution -- throws a ProcessException when submit operation fail
-        handler.prepareLauncher()
-        handler.submit()
-        // note: add the 'handler' into the polling queue *after* the submit operation,
-        // this guarantees that in the queue are only jobs successfully submitted
-        runningQueue.add(handler)
-        // notify task submission
-        session.notifyTaskSubmit(handler)
+        if( handler.task instanceof TaskArrayRun ) {
+            // submit task array
+            handler.prepareLauncher()
+            handler.submit()
+            // add each child task to the running queue
+            final task = handler.task as TaskArrayRun
+            for( TaskHandler it : task.children ) {
+                runningQueue.add(it)
+                session.notifyTaskSubmit(it)
+            }
+        }
+        else {
+            // submit the job execution -- throws a ProcessException when submit operation fail
+            handler.prepareLauncher()
+            handler.submit()
+            // note: add the 'handler' into the polling queue *after* the submit operation,
+            // this guarantees that in the queue are only jobs successfully submitted
+            runningQueue.add(handler)
+            // notify task submission
+            session.notifyTaskSubmit(handler)
+        }
     }
 
     /**
@@ -227,7 +247,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try{
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
-            session.notifyTaskPending(handler)
+            notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"
         }
         finally {
@@ -567,7 +587,7 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             catch ( Throwable e ) {
                 handleException(handler, e)
-                session.notifyTaskComplete(handler)
+                notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
@@ -628,18 +648,27 @@ class TaskPollingMonitor implements TaskMonitor {
                 handler.task.error = new ProcessSubmitTimeoutException("Task '${handler.task.lazyName()}' could not be submitted within specified 'maxAwait' time: ${handler.task.config.getMaxSubmitAwait()}")
             }
 
-            // finalize the tasks execution
-            final fault = handler.task.processor.finalizeTask(handler.task)
-
-            // notify task completion
-            session.notifyTaskComplete(handler)
-
-            // abort the execution in case of task failure
-            if (fault instanceof TaskFault) {
-                session.fault(fault, handler)
+            // finalize the task asynchronously
+            if( enableAsyncFinalizer ) {
+                finalizerPool.submit( ()-> finalizeTask(handler) )
+            }
+            else {
+                finalizeTask(handler)
             }
         }
+    }
 
+    protected void finalizeTask( TaskHandler handler ) {
+        // finalize the task execution
+        final fault = handler.task.processor.finalizeTask(handler.task)
+
+        // notify task completion
+        session.notifyTaskComplete(handler)
+
+        // abort the execution in case of task failure
+        if( fault instanceof TaskFault ) {
+            session.fault(fault, handler)
+        }
     }
 
     /**
@@ -687,6 +716,28 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected Queue<TaskHandler> getPendingQueue() {
         return pendingQueue
+    }
+
+    protected void notifyTaskPending(TaskHandler handler) {
+        if( handler.task instanceof TaskArrayRun ) {
+            final task = handler.task as TaskArrayRun
+            for( TaskHandler it : task.children )
+                session.notifyTaskPending(it)
+        }
+        else {
+            session.notifyTaskPending(handler)
+        }
+    }
+
+    protected void notifyTaskComplete(TaskHandler handler) {
+        if( handler.task instanceof TaskArrayRun ) {
+            final task = handler.task as TaskArrayRun
+            for( TaskHandler it : task.children )
+                session.notifyTaskComplete(it)
+        }
+        else {
+            session.notifyTaskComplete(handler)
+        }
     }
 
 }

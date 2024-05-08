@@ -20,10 +20,11 @@ package nextflow.cloud.google.batch
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.GCS
-import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.StatusEvent
+import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
@@ -236,6 +237,42 @@ class GoogleBatchTaskHandlerTest extends Specification {
         req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
     }
 
+    def 'should use custom job name'() {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def sess = Mock(Session)
+        def exec = new GoogleBatchExecutor(session: sess)
+
+        and:
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig)
+        }
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def result = handler.customJobName(task)
+        then:
+        1 * sess.getExecConfigProp(_,'jobName', null) >> null
+        and:
+        result == null
+
+        when:
+        result = handler.customJobName(task)
+        then:
+        1 * sess.getExecConfigProp(_,'jobName', null) >> { return { "foo-${task.hashLog}" }  }
+        and:
+        result == 'foo-abcd1234'
+
+    }
+
     def 'should use instance template' () {
         given:
         def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
@@ -313,6 +350,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def handler = Spy(GoogleBatchTaskHandler)
         handler.task = task
         handler.@jobId = 'xyz-123'
+        handler.@taskId = '0'
         handler.@uid = '789'
 
         when:
@@ -320,7 +358,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.isCompleted() >> false
         and:
-        trace.native_id == 'xyz-123/789'
+        trace.native_id == 'xyz-123/0/789'
         trace.executorName == 'google-batch'
     }
 
@@ -417,8 +455,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     }
 
-    JobStatus makeJobStatus(String desc) {
-        JobStatus.newBuilder()
+    TaskStatus makeTaskStatus(String desc) {
+        TaskStatus.newBuilder()
             .addStatusEvents(
                 StatusEvent.newBuilder()
                     .setDescription(desc)
@@ -429,16 +467,17 @@ class GoogleBatchTaskHandlerTest extends Specification {
     def 'should detect spot failures from status event'() {
         given:
         def jobId = 'job-id'
+        def taskId = 'task-id'
         def client = Mock(BatchClient)
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
         }
-        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, client: client, task: task))
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
 
         when:
-        client.getJobStatus(jobId) >>> [
-            makeJobStatus('Task failed due to Spot VM preemption with exit code 50001.'),
-            makeJobStatus('Task succeeded')
+        client.getTaskStatus(jobId, taskId) >>> [
+            makeTaskStatus('Task failed due to Spot VM preemption with exit code 50001.'),
+            makeTaskStatus('Task succeeded')
         ]
         then:
         handler.getJobExitCode() == 50001
@@ -499,5 +538,43 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         cleanup:
         SysEnv.pop()
+    }
+
+    def 'should kill a job' () {
+        given:
+        def client = Mock(BatchClient)
+        def executor = Mock(GoogleBatchExecutor)
+        def task = Mock(TaskRun)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@executor = executor
+        handler.@client = client
+        handler.task = task
+
+        when:
+        handler.@jobId = 'job1'
+        handler.kill()
+        then:
+        handler.isActive() >> false
+        0 * executor.shouldDeleteJob('job1') >> true
+        and:
+        0 * client.deleteJob('job1') >> null
+
+        when:
+        handler.@jobId = 'job1'
+        handler.kill()
+        then:
+        handler.isActive() >> true
+        1 * executor.shouldDeleteJob('job1') >> true
+        and:
+        1 * client.deleteJob('job1') >> null
+
+        when:
+        handler.@jobId = 'job1'
+        handler.kill()
+        then:
+        handler.isActive() >> true
+        1 * executor.shouldDeleteJob('job1') >> false
+        and:
+        0 * client.deleteJob('job1') >> null
     }
 }

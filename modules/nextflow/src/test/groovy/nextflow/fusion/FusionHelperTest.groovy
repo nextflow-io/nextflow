@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,12 @@
  *
  */
 
-package nextflow.executor.fusion
+package nextflow.fusion
 
 import java.nio.file.Path
 
 import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
-import nextflow.fusion.FusionHelper
-import nextflow.fusion.FusionScriptLauncher
 import spock.lang.Specification
 
 /**
