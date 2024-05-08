@@ -36,7 +36,7 @@ class LogsCheckpoint implements TraceObserver {
 
     private Session session
     private Map config
-    private Thread thread
+    private volatile Thread thread
     private Duration interval
     private LogsHandler handler
     private volatile boolean terminated
@@ -67,7 +67,7 @@ class LogsCheckpoint implements TraceObserver {
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !terminated ) {
+            while( !terminated && !thread.isInterrupted() ) {
                 // just wait the declared delay
                 await(interval)
                 // checkpoint the logs
