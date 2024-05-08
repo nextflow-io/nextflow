@@ -39,6 +39,7 @@ class TesTaskHandlerTest extends Specification {
         def task = Mock(TaskRun) {
             getInputFilesMap() >> [:]
             getOutputFilesNames() >> []
+            getOutputsByType(_) >> [:]
         }
         task.getName() >> 'tes-task'
         task.getWorkDir() >> Paths.get(".")
