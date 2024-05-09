@@ -1056,6 +1056,12 @@ The following settings are available:
 `k8s.context`
 : Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
 
+`k8s.cpuLimits`
+: :::{versionadded} 24.04.0
+  :::
+: When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
+: This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
+
 `k8s.debug.yaml`
 : When `true`, saves the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
 
