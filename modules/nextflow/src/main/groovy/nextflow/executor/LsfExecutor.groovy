@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -36,7 +37,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class LsfExecutor extends AbstractGridExecutor {
+class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
 
@@ -68,7 +69,9 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        if( task !instanceof TaskArrayRun ) {
+            result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        }
 
         // add other parameters (if any)
         if( task.config.queue ) {
@@ -104,7 +107,13 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << getJobNameFor(task)
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
+        }
+        else {
+            result << '-J' << getJobNameFor(task)
+        }
 
         // -- at the end append the command script wrapped file name
         result.addAll( task.config.getClusterOptionsAsList() )
@@ -317,4 +326,21 @@ class LsfExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'LSB_JOBINDEX'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 1
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}[${index + 1}]"
+    }
+
 }

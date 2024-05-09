@@ -64,6 +64,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'accelerator',
             'afterScript',
             'arch',
+            'array',
             'beforeScript',
             'cache',
             'cleanup',
@@ -1002,6 +1003,25 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
         return this
+    }
+
+    int getArray() {
+        final value = configProperties.get('array')
+        if( value == null )
+            return 0
+        if( value instanceof Closure )
+            throw new IllegalArgumentException("Process directive `array` cannot be declared in a dynamic manner with a closure")
+        try {
+            final result = value as Integer
+            if( result < 0 )
+                throw new IllegalArgumentException("Process directive `array` cannot be a negative number")
+            if( result == 1 )
+                throw new IllegalArgumentException("Process directive `array` should be greater than 1")
+            return result
+        }
+        catch( NumberFormatException e ) {
+            throw new IllegalArgumentException("Process directive `array` should be an integer greater than 1 -- offending value: '$value'", e)
+        }
     }
 
     private static final List<String> VALID_RESOURCE_LIMITS = List.of('cpus', 'memory', 'disk', 'time')
