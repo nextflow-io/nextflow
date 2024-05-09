@@ -76,7 +76,7 @@ class PodSpecBuilder {
 
     Integer cpus
 
-    boolean cpuLimits = false
+    boolean cpuLimits
 
     String memory
 
