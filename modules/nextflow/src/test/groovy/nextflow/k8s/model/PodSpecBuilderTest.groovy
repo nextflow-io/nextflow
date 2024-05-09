@@ -121,14 +121,15 @@ class PodSpecBuilderTest extends Specification {
             .withImageName('busybox')
             .withCommand('echo foo')
             .withCpus(8)
+            .withCpuLimits(true)
             .withMemory(MemoryUnit.of('10GB'))
             .withResourcesLimits('nextflow.io/fuse': 1)
             .build()
 
         then:
         pod2.spec.containers[0].resources == [
-                                                requests: ['cpu':8, 'memory':'10240Mi'],
-                                                limits: [memory:'10240Mi', 'nextflow.io/fuse':1] ]
+                requests: ['cpu':8, 'memory':'10240Mi'],
+                limits: ['cpu':8, 'memory':'10240Mi', 'nextflow.io/fuse':1] ]
     }
 
     def 'should set namespace, labels and annotations' () {

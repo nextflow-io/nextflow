@@ -76,6 +76,8 @@ class PodSpecBuilder {
 
     Integer cpus
 
+    boolean cpuLimits
+
     String memory
 
     String disk
@@ -180,6 +182,11 @@ class PodSpecBuilder {
 
     PodSpecBuilder withCpus( Integer cpus ) {
         this.cpus = cpus
+        return this
+    }
+
+    PodSpecBuilder withCpuLimits(boolean cpuLimits) {
+        this.cpuLimits = cpuLimits
         return this
     }
 
@@ -603,7 +610,7 @@ class PodSpecBuilder {
     @PackageScope
     Map addResourcesLimits(Map limits, Map result) {
         if( result == null )
-            result = new LinkedHashMap(10)
+            result = new LinkedHashMap(2)
 
         final limits0 = result.limits as Map ?: new LinkedHashMap(10)
         limits0.putAll( limits )
@@ -615,11 +622,17 @@ class PodSpecBuilder {
     @PackageScope
     Map addCpuResources(Integer cpus, Map res) {
         if( res == null )
-            res = [:]
+            res = new LinkedHashMap(2)
 
-        final req = res.requests as Map ?: new LinkedHashMap<>(10)
-        req.cpu = cpus
-        res.requests = req
+        final requests0 = res.requests as Map ?: new LinkedHashMap<>(10)
+        requests0.cpu = cpus
+        res.requests = requests0
+
+        if( cpuLimits ) {
+            final limits0 = res.limits as Map ?: new LinkedHashMap(10)
+            limits0.cpu = cpus
+            res.limits = limits0
+        }
 
         return res
     }
@@ -627,7 +640,7 @@ class PodSpecBuilder {
     @PackageScope
     Map addMemoryResources(String memory, Map res) {
         if( res == null )
-            res = new LinkedHashMap(10)
+            res = new LinkedHashMap(2)
 
         final req = res.requests as Map ?: new LinkedHashMap(10)
         req.memory = memory
@@ -643,7 +656,7 @@ class PodSpecBuilder {
     @PackageScope
     Map addDiskResources(String diskRequest, Map res) {
         if( res == null )
-            res = new LinkedHashMap(10)
+            res = new LinkedHashMap(2)
 
         final req = res.requests as Map ?: new LinkedHashMap(10)
         req.'ephemeral-storage' = diskRequest
