@@ -1,5 +1,7 @@
 #!/bin/bash
-# NEXTFLOW TASK: Hello 2
+### ---
+### name: 'Hello 2'
+### ...
 set -e
 set -u
 NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x

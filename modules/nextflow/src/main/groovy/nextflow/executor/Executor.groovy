@@ -81,7 +81,7 @@ abstract class Executor {
      *
      * @param task A {@code TaskRun} instance
      */
-    final void submit( TaskRun task ) {
+    void submit( TaskRun task ) {
         log.trace "Scheduling process: ${task}"
 
         if( session.isTerminated() ) {

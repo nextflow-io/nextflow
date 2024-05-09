@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Implements a executor for PBS/Torque cluster
@@ -29,7 +30,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class PbsExecutor extends AbstractGridExecutor {
+class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     private static Pattern OPTS_REGEX = ~/(?:^|\s)-l.+/
 
@@ -43,9 +44,17 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "0-${arraySize - 1}".toString()
+        }
+
         result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        result << '-j' << 'oe'
+
+        if( task !instanceof TaskArrayRun ) {
+            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+            result << '-j' << 'oe'
+        }
 
         // the requested queue name
         if( task.config.queue ) {
@@ -180,4 +189,21 @@ class PbsExecutor extends AbstractGridExecutor {
     static protected boolean matchOptions(String value) {
         value ? OPTS_REGEX.matcher(value).find() : null
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'PBS_ARRAY_INDEX'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 0
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return jobId.replace('[]', "[$index]")
+    }
+
 }

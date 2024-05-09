@@ -89,6 +89,14 @@ abstract class TaskHandler {
     abstract void submit()
 
     /**
+     * Prepare the launcher script.
+     *
+     * This method is optional. If it is not implemented, the launcher script should
+     * be prepared in the submit() method.
+     */
+    void prepareLauncher() {}
+
+    /**
      * Task status attribute setter.
      *
      * @param status The sask status as defined by {@link TaskStatus}

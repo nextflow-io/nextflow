@@ -45,6 +45,7 @@ class K8sWrapperBuilderTest extends Specification {
             getProcessor() >> proc
             getWorkDir() >> folder
             getInputFilesMap() >> [:]
+            getOutputFilesNames() >> []
         }
 
         and:

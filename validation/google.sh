@@ -72,3 +72,16 @@ $NXF_CMD -C ./google.config \
     -resume
 [[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 [[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
+
+## Test job array with Fusion
+$NXF_CMD -C ./google.config \
+    run nextflow-io/hello \
+    -process.array 10 \
+    -with-wave \
+    -with-fusion
+    
+## Test job array
+$NXF_CMD -C ./google.config \
+    run nextflow-io/hello \
+    -process.array 10
+

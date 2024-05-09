@@ -19,6 +19,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -26,7 +27,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class SgeExecutor extends AbstractGridExecutor {
+class SgeExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -37,9 +38,18 @@ class SgeExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-t' << "1-${arraySize}".toString()
+        }
+
         result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        result << '-j' << 'y'
+
+        if( task !instanceof TaskArrayRun ) {
+            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+            result << '-j' << 'y'
+        }
+
         result << '-terse' << ''    // note: directive need to be returned as pairs
 
         /*
@@ -114,8 +124,14 @@ class SgeExecutor extends AbstractGridExecutor {
             if( entry.toString().isLong() )
                 return entry
 
+            if( (id=entry.tokenize('.').get(0)).isLong() )
+                return id
+
             if( entry.startsWith('Your job') && entry.endsWith('has been submitted') && (id=entry.tokenize().get(2)) )
                 return id
+
+            if( entry.startsWith('Your job array') && entry.endsWith('has been submitted') && (id=entry.tokenize().get(3)) )
+                return id.tokenize('.').get(0)
         }
 
         throw new IllegalStateException("Invalid SGE submit response:\n$text\n\n")
@@ -185,4 +201,20 @@ class SgeExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'SGE_TASK_ID'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 1
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        return "${jobId}.${index}"
+    }
+
 }

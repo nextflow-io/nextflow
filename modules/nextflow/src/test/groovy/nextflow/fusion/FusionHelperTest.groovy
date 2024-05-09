@@ -15,14 +15,12 @@
  *
  */
 
-package nextflow.executor.fusion
+package nextflow.fusion
 
 import java.nio.file.Path
 
 import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
-import nextflow.fusion.FusionHelper
-import nextflow.fusion.FusionScriptLauncher
 import spock.lang.Specification
 
 /**

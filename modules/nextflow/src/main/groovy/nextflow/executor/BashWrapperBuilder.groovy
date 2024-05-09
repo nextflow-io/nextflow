@@ -31,6 +31,7 @@ import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -307,6 +308,7 @@ class BashWrapperBuilder {
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
+        binding.task_metadata = getTaskMetadata()
         binding.task_name = name
         binding.helpers_script = getHelpersScript()
 
@@ -459,6 +461,31 @@ class BashWrapperBuilder {
                 Thread.sleep(delay)
             }
         }
+    }
+
+    protected String getTaskMetadata() {
+        final lines = new StringBuilder()
+        lines << '### ---\n'
+        lines << "### name: '${bean.name}'\n"
+        if( bean.arrayIndexName ) {
+            lines << '### array:\n'
+            lines << "###   index-name: ${bean.arrayIndexName}\n"
+            lines << "###   index-start: ${bean.arrayIndexStart}\n"
+            lines << "###   work-dirs:\n"
+            for( Path it : bean.arrayWorkDirs )
+                lines << "###   - ${Escape.path(FilesEx.toUriString(it))}\n"
+        }
+
+        if( containerConfig?.isEnabled() )
+            lines << "### container: '${bean.containerImage}'\n"
+
+        if( outputFiles.size() > 0 ) {
+            lines << '### outputs:\n'
+            for( final output : bean.outputFiles )
+                lines << "### - '${output}'\n"
+        }
+
+        lines << '### ...\n'
     }
 
     protected String getHelpersScript() {

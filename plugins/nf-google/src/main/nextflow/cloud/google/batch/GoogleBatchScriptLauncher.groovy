@@ -64,6 +64,12 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         bean.workDir = toContainerMount(bean.workDir)
         bean.targetDir = toContainerMount(bean.targetDir)
 
+        // add all children work dir 
+        if( bean.arrayWorkDirs ) {
+            for( Path it : bean.arrayWorkDirs )
+                toContainerMount(it)
+        }
+
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
             bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
@@ -102,7 +108,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         if( path instanceof CloudStoragePath ) {
             buckets.add(path.bucket())
             pathTrie.add( (parent ? "/${path.bucket()}${path.parent}" : "/${path.bucket()}${path}").toString() )
-            final containerMount = "$MOUNT_ROOT/${path.bucket()}${path}"
+            final containerMount = containerMountPath(path)
             log.trace "Path ${FilesEx.toUriString(path)} to container mount: $containerMount"
             return Paths.get(containerMount)
         }
@@ -113,7 +119,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     @Override
     String runCommand() {
-        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        launchCommand(workDirMount)
     }
 
     @Override
@@ -171,4 +177,11 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return this
     }
 
+    static String launchCommand( String workDir ) {
+        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+    }
+
+    static String containerMountPath(CloudStoragePath path) {
+        return "$MOUNT_ROOT/${path.bucket()}${path}"
+    }
 }
