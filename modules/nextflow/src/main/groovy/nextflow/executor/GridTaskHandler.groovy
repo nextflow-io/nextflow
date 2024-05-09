@@ -196,7 +196,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             // -- wait the the process completes
             final result = process.text
             final exitStatus = process.waitFor()
-            final cmd = submitCmd0(builder,pipeScript)
+            final cmd = launchCmd0(builder,pipeScript)
 
             if( exitStatus ) {
                 throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, cmd)
@@ -244,12 +244,12 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    protected String submitCmd0(ProcessBuilder builder, String pipeScript) {
+    protected String launchCmd0(ProcessBuilder builder, String pipeScript) {
         def result = CmdLineHelper.toLine(builder.command())
         if( pipeScript ) {
-            result = "cat << 'SUBMIT_COMMAND_EOF' | ${result}\n"
+            result = "cat << 'LAUNCH_COMMAND_EOF' | ${result}\n"
             result += pipeScript.trim() + '\n'
-            result += 'SUBMIT_COMMAND_EOF\n'
+            result += 'LAUNCH_COMMAND_EOF\n'
         }
         return result
     }
