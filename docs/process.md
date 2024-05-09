@@ -1333,7 +1333,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 (process-array)=
 
-## array
+### array
 
 :::{versionadded} 24.04.0
 :::
