@@ -61,9 +61,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client)) {
-            getK8sConfig() >> new K8sConfig()
-        }
+        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
         Map result
 
         when:
@@ -72,6 +70,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -106,6 +105,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
@@ -132,6 +132,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -169,12 +170,12 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
-        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -205,12 +206,12 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
-        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> new TaskConfig()
@@ -243,12 +244,12 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> podOptions
         1 * handler.getContainerMounts() >> []
-        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -279,9 +280,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client:client)) {
-            getK8sConfig() >> new K8sConfig()
-        }
+        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
         def podOptions = Mock(PodOptions)
         and:
         Map result
@@ -292,6 +291,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> []
         1 * handler.getLabels(task) >> [:]
@@ -323,6 +323,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
         1 * handler.getLabels(task) >> [:]
@@ -402,12 +403,12 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.fixOwnership() >> false
         1 * handler.useJobResource() >> true
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         1 * handler.getPodOptions() >> podOptions
-        _ * handler.getK8sConfig() >> new K8sConfig()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -923,12 +924,12 @@ class K8sTaskHandlerTest extends Specification {
         and:
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
-        _ * handler.getK8sConfig() >> new K8sConfig()
         and:
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null

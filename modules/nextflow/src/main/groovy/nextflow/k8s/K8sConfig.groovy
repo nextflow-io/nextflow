@@ -204,7 +204,7 @@ class K8sConfig implements Map<String,Object> {
         podOptions.volumeClaims.collect { it.mountPath }
     }
 
-    boolean isCpuLimitsEnabled() {
+    boolean cpuLimitsEnabled() {
         target.cpuLimits ?: false
     }
 
