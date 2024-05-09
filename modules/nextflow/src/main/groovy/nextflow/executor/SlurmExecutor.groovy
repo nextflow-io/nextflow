@@ -22,6 +22,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
@@ -34,7 +35,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class SlurmExecutor extends AbstractGridExecutor {
+class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
@@ -55,8 +56,18 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '--array' << "0-${arraySize - 1}".toString()
+        }
+
         result << '-J' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
+
+        if( task !instanceof TaskArrayRun ) {
+            // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
+            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+
         result << '--no-requeue' << '' // note: directive need to be returned as pairs
 
         if( !hasSignalOpt(task.config) ) {
@@ -218,4 +229,21 @@ class SlurmExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'SLURM_ARRAY_TASK_ID'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 0
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}_${index}"
+    }
+
 }

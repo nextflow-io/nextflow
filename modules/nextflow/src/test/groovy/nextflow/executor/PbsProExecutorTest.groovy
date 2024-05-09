@@ -16,14 +16,15 @@
 
 package nextflow.executor
 
-import nextflow.Session
-import nextflow.processor.TaskProcessor
-import spock.lang.Specification
-
 import java.nio.file.Paths
 
+import nextflow.Session
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Lorenz Gerber <lorenzottogerber@gmail.com>
@@ -184,12 +185,31 @@ class PbsProExecutorTest extends Specification {
         ]
     }
 
+    def 'should get directives with job array' () {
+        given:
+        def executor = Spy(PbsProExecutor)
+        executor.getSession() >> Mock(Session)
+        and:
+        def task = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> 'foo'
+            workDir >> Paths.get('/foo/bar')
+            getArraySize() >> 5
+        }
+
+        expect:
+        executor.getDirectives(task, []) == [
+                '-J', '0-4',
+                '-N', 'nf-foo',
+        ]
+    }
+
     def 'should return qstat command line' () {
         given:
         def executor = [:] as PbsProExecutor
 
         expect:
-		executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
@@ -256,6 +276,27 @@ class PbsProExecutorTest extends Specification {
                 .stripIndent().leftTrim()
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(PbsProExecutor)
+        expect:
+        executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(PbsProExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo[]'     | 1             | 'foo[1]'
+        'bar[]'     | 2             | 'bar[2]'
+    }
+    
     def 'should set pbs account' () {
         given:
         // task

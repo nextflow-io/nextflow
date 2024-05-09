@@ -18,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Paths
 
+import nextflow.processor.TaskArrayRun
 import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -42,7 +43,7 @@ class PbsExecutorTest extends Specification {
 
     }
 
-    def testHeaders() {
+    def 'test job script headers'() {
 
         setup:
         def executor = Spy(PbsExecutor)
@@ -50,8 +51,6 @@ class PbsExecutorTest extends Specification {
 
         // mock process
         def proc = Mock(TaskProcessor)
-
-        // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/dir')
@@ -161,6 +160,20 @@ class PbsExecutorTest extends Specification {
                 #PBS -j oe
                 #PBS -l mem=8gb
                 #PBS -l nodes=1:x86:ppn=4
+                '''
+                .stripIndent().leftTrim()
+
+        when: 'with job array'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            workDir >> task.workDir
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(taskArray) == '''
+                #PBS -J 0-4
+                #PBS -N nf-task_name
                 '''
                 .stripIndent().leftTrim()
     }
@@ -302,6 +315,27 @@ class PbsExecutorTest extends Specification {
         !PbsExecutor.matchOptions('-x-l foo')
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(PbsExecutor)
+        expect:
+        executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(PbsExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo[]'     | 1             | 'foo[1]'
+        'bar[]'     | 2             | 'bar[2]'
+    }
+    
     def 'should set pbs account' () {
         given:
         // task
