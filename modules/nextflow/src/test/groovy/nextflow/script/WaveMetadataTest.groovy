@@ -12,39 +12,33 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.executor
+package nextflow.script
 
+import nextflow.Session
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BashTemplateEngineTest extends Specification {
+class WaveMetadataTest extends Specification {
 
-    def 'should strip comments from template' () {
-
+    @Unroll
+    def 'should create meta' () {
         given:
-        def engine = new BashTemplateEngine()
-        def template = '''\
-            ## comment
-            #!/bin/bash
-            line 1
-              ## comment
-            ##
-            line 2
-            line 3
-            '''.stripIndent()
+        def session = Mock(Session) { getConfig()>>OPTS }
 
         expect:
-        engine.render(template, [:]) == '''\
-                #!/bin/bash
-                line 1
-                line 2
-                line 3
-                '''.stripIndent()
+        new WaveMetadata(session).enabled == EXPECTED
+        where:
+        OPTS                        | EXPECTED
+        [:]                         | false
+        [wave:[enabled:false]]      | false
+        [wave:[enabled:true]]       | true
 
     }
 

@@ -256,6 +256,8 @@ class TaskProcessor {
 
     private Boolean isFair0
 
+    private TaskArrayCollector arrayCollector
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -310,6 +312,9 @@ class TaskProcessor {
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+        
+        final arraySize = config.getArray()
+        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
     }
 
     /**
@@ -377,6 +382,8 @@ class TaskProcessor {
             throw new IllegalStateException("Unable to find any tip provider")
         return provider
     }
+
+    boolean isSingleton() { singleton }
 
     /**
      * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
@@ -2324,7 +2331,10 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task)
+        if( arrayCollector )
+            arrayCollector.collect(task)
+        else
+            executor.submit(task)
 
     }
 
@@ -2416,6 +2426,10 @@ class TaskProcessor {
 
         // increment the number of processes executed
         state.update { StateObj it -> it.incCompleted() }
+    }
+
+    protected void closeProcess() {
+        arrayCollector?.close()
     }
 
     protected void terminateProcess() {
@@ -2570,6 +2584,7 @@ class TaskProcessor {
             // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**
