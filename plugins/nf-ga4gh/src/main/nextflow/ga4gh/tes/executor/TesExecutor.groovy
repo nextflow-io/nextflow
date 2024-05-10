@@ -24,6 +24,10 @@ import nextflow.executor.Executor
 import nextflow.extension.FilesEx
 import nextflow.ga4gh.tes.client.ApiClient
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
+import nextflow.ga4gh.tes.client.auth.ApiKeyAuth
+import nextflow.ga4gh.tes.client.auth.Authentication
+import nextflow.ga4gh.tes.client.auth.HttpBasicAuth
+import nextflow.ga4gh.tes.client.auth.OAuth
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -51,18 +55,23 @@ class TesExecutor extends Executor implements ExtensionPoint {
     /**
      * A path accessible to TES where executable scripts need to be uploaded
      */
-    private Path remoteBinDir = null
+    private Path remoteBinDir
+
+    private List<Path> remoteBinFiles = []
 
     @Override
     protected void register() {
         super.register()
         uploadBinDir()
 
-        client = new TaskServiceApi( new ApiClient(basePath: getEndPoint()) )
+        client = new TaskServiceApi( new ApiClient(
+                basePath: getEndpoint(),
+                debugging: log.isTraceEnabled(),
+                authentications: getAuthentications()) )
     }
 
     protected String getDisplayName() {
-        return "$name [${getEndPoint()}]"
+        return "$name [${getEndpoint()}]"
     }
 
     TaskServiceApi getClient() {
@@ -74,21 +83,72 @@ class TesExecutor extends Executor implements ExtensionPoint {
         remoteBinDir
     }
 
+    @PackageScope
+    List<Path> getRemoteBinFiles() {
+        remoteBinFiles
+    }
+
     protected void uploadBinDir() {
         /*
          * upload local binaries
          */
         if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
-            def tempBin = getTempDir()
+            final tempBin = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${tempBin.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, tempBin)
+
+            remoteBinFiles = []
+            session.binDir.eachFileRecurse { file ->
+                if( file.isDirectory() )
+                    return
+                remoteBinFiles << tempBin.resolve('bin').resolve(session.binDir.relativize(file).toString())
+            }
         }
     }
 
-    protected String getEndPoint() {
-        def result = session.getConfigAttribute('executor.tes.endpoint', 'http://localhost:8000')
+    protected String getEndpoint() {
+        def result = session.getConfigAttribute('executor.tes.endpoint', null)
+        if( result )
+            log.warn 'Config option `executor.tes.endpoint` is deprecated, use `tes.endpoint` instead'
+        else
+            result = session.config.navigate('tes.endpoint', 'http://localhost:8000')
+
         log.debug "[TES] endpoint=$result"
         return result
+    }
+
+    protected Map<String, Authentication> getAuthentications() {
+        final Map<String, Authentication> result = [:]
+
+        // basic
+        final username = session.config.navigate('tes.basicUsername')
+        final password = session.config.navigate('tes.basicPassword')
+        if( username && password )
+            result['basic'] = new HttpBasicAuth(username: username, password: password)
+
+        // API key
+        final apiKeyParamMode = session.config.navigate('tes.apiKeyParamMode', 'query') as String
+        final apiKeyParamName = session.config.navigate('tes.apiKeyParamName') as String
+        final apiKey = session.config.navigate('tes.apiKey') as String
+        if( apiKeyParamName && apiKey ) {
+            final auth = new ApiKeyAuth(apiKeyParamMode, apiKeyParamName)
+            auth.setApiKey(apiKey)
+            result['apikey'] = auth
+        }
+
+        // OAuth
+        final oauthToken = session.config.navigate('tes.oauthToken')
+        if( oauthToken )
+            result['oauth'] = new OAuth(accessToken: oauthToken)
+
+        log.debug "[TES] Authentication methods: ${result.keySet()}"
+        return result
+    }
+
+    protected String getAzureStorageAccount() {
+        final storageAccount = session.config.navigate('azure.storage.accountName')
+        log.debug "[TES] Azure storage account = ${storageAccount}"
+        return storageAccount
     }
 
     /**
