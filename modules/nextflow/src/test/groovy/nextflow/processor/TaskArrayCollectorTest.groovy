@@ -48,7 +48,7 @@ class TaskArrayCollectorTest extends Specification {
         def handler = Mock(TaskHandler)
         def taskArray = [:] as TaskArrayRun
         def collector = Spy(new TaskArrayCollector(null, executor, 5)) {
-            createTaskArray(_) >> taskArray
+            createAggregateTask(_) >> taskArray
         }
         and:
         def task = Mock(TaskRun) {
@@ -135,7 +135,7 @@ class TaskArrayCollectorTest extends Specification {
         }
 
         when:
-        def taskArray = collector.createTaskArray([task, task, task])
+        def taskArray = collector.createAggregateTask([task, task, task])
         then:
         3 * exec.createTaskHandler(task) >> handler
         3 * handler.prepareLauncher()

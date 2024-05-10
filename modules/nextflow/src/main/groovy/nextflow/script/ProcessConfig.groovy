@@ -1006,7 +1006,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
-    int getArray() {
+    int getArraySize() {
         final value = configProperties.get('array')
         if( value == null )
             return 0

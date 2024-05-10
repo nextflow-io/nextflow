@@ -38,7 +38,7 @@ class TaskBatchCollectorTest extends Specification {
         def handler = Mock(TaskHandler)
         def taskBatch = [:] as TaskBatchRun
         def collector = Spy(new TaskBatchCollector(null, executor, 5, false)) {
-            createTaskBatch(_) >> taskBatch
+            createAggregateTask(_) >> taskBatch
         }
         and:
         def task = Mock(TaskRun) {
@@ -124,7 +124,7 @@ class TaskBatchCollectorTest extends Specification {
         }
 
         when:
-        def taskBatch = collector.createTaskBatch([task, task, task])
+        def taskBatch = collector.createAggregateTask([task, task, task])
         then:
         3 * executor.createTaskHandler(task) >> handler
         3 * handler.prepareLauncher()

@@ -186,10 +186,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
-    int getArray() {
-        get('array') as Integer ?: 0
-    }
-
     String getBeforeScript() {
         return get('beforeScript')
     }

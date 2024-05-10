@@ -17,8 +17,6 @@
 package nextflow.processor
 
 import java.nio.file.Files
-import java.util.concurrent.locks.Lock
-import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -35,98 +33,19 @@ import nextflow.util.Escape
  */
 @Slf4j
 @CompileStatic
-class TaskArrayCollector {
-
-    /**
-     * The set of directives which are used by the job array.
-     */
-    private static final List<String> SUBMIT_DIRECTIVES = [
-            'accelerator',
-            'arch',
-            'clusterOptions',
-            'cpus',
-            'disk',
-            'machineType',
-            'memory',
-            'queue',
-            'resourceLabels',
-            'resourceLimits',
-            'time',
-            // only needed for container-native executors and/or Fusion
-            'container',
-            'containerOptions',
-    ]
+class TaskArrayCollector extends TaskCollector {
 
     private TaskProcessor processor
 
-    private TaskArrayExecutor executor
-
-    private int arraySize
-
-    private Lock sync = new ReentrantLock()
-
-    private List<TaskRun> array
-
-    private boolean closed = false
-
     TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize) {
+        super(executor, arraySize)
         if( executor !instanceof TaskArrayExecutor )
             throw new IllegalArgumentException("Executor '${executor.name}' does not support job arrays")
-
         this.processor = processor
-        this.executor = (TaskArrayExecutor)executor
-        this.arraySize = arraySize
-        this.array = new ArrayList<>(arraySize)
     }
 
-    /**
-     * Add a task to the current array, and submit the array when it
-     * reaches the desired size.
-     *
-     * @param task
-     */
-    void collect(TaskRun task) {
-        sync.lock()
-        try {
-            // submit task directly if the collector is closed
-            // or if the task is retried (since it might have dynamic resources)
-            if( closed || task.config.getAttempt() > 1 ) {
-                executor.submit(task)
-                return
-            }
-
-            // add task to the array
-            array.add(task)
-
-            // submit job array when it is ready
-            if( array.size() == arraySize ) {
-                executor.submit(createTaskArray(array))
-                array = new ArrayList<>(arraySize)
-            }
-        }
-        finally {
-            sync.unlock()
-        }
-    }
-
-    /**
-     * Close the collector, submitting any remaining tasks as a partial job array.
-     */
-    void close() {
-        sync.lock()
-        try {
-            if( array.size() == 1 ) {
-                executor.submit(array.first())
-            }
-            else if( array.size() > 0 ) {
-                executor.submit(createTaskArray(array))
-                array = null
-            }
-            closed = true
-        }
-        finally {
-            sync.unlock()
-        }
+    private TaskArrayExecutor arrayExecutor() {
+        (TaskArrayExecutor)executor
     }
 
     /**
@@ -134,7 +53,8 @@ class TaskArrayCollector {
      *
      * @param tasks
      */
-    protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
+    @Override
+    protected TaskRun createAggregateTask(List<TaskRun> tasks) {
         // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
         for( TaskHandler handler : handlers ) {
@@ -150,14 +70,6 @@ class TaskArrayCollector {
         final script = createArrayTaskScript(handlers)
         log.debug "Creating task array run >> $workDir\n$script"
 
-        // create config for job array
-        final rawConfig = new HashMap<String,Object>(SUBMIT_DIRECTIVES.size())
-        for( final key : SUBMIT_DIRECTIVES ) {
-            final value = processor.config.get(key)
-            if( value != null )
-                rawConfig[key] = value
-        }
-
         // create job array
         final first = tasks.min( t -> t.index )
         final taskArray = new TaskArrayRun(
@@ -165,7 +77,7 @@ class TaskArrayCollector {
             index: first.index,
             processor: processor,
             type: processor.taskBody.type,
-            config: new TaskConfig(rawConfig),
+            config: createAggregateConfig(processor),
             context: new TaskContext(processor),
             hash: hash,
             workDir: workDir,
@@ -194,8 +106,8 @@ class TaskArrayCollector {
     }
 
     protected String getArrayIndexRef() {
-        final name = executor.getArrayIndexName()
-        final start = executor.getArrayIndexStart()
+        final name = arrayExecutor().getArrayIndexName()
+        final start = arrayExecutor().getArrayIndexStart()
         final index = start > 0 ? "${name} - ${start}" : name
         return '${array[' + index + ']}'
     }

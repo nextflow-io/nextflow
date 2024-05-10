@@ -16,11 +16,7 @@
 
 package nextflow.executor
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
-import nextflow.processor.TaskHandler
-import nextflow.processor.TaskRun
 /**
  * Interface for executors that support job arrays.
  *
@@ -28,18 +24,6 @@ import nextflow.processor.TaskRun
  */
 @CompileStatic
 interface TaskArrayExecutor {
-
-    Path getWorkDir()
-
-    void submit( TaskRun task )
-
-    TaskHandler createTaskHandler(TaskRun task)
-
-    boolean isFusionEnabled()
-
-    String getChildWorkDir(TaskHandler handler)
-
-    String getChildLaunchCommand(String taskDir)
 
     /**
      * Get the environment variable name that provides the array index of a task.

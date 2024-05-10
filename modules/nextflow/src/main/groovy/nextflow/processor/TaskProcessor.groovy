@@ -255,9 +255,7 @@ class TaskProcessor {
 
     private Boolean isFair0
 
-    private TaskArrayCollector arrayCollector
-
-    private TaskBatchCollector batchCollector
+    private TaskCollector submitCollector
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -315,15 +313,15 @@ class TaskProcessor {
         this.isFair0 = config.getFair()
         
         if( scriptType == ScriptType.SCRIPTLET ) {
-            final arraySize = config.getArray()
-            this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
-
+            final arraySize = config.getArraySize()
             final batchSize = config.getBatchSize()
-            final batchParallel = config.isBatchParallel()
-            this.batchCollector = batchSize > 0 ? new TaskBatchCollector(this, executor, batchSize, batchParallel) : null
 
-            if( arrayCollector && batchCollector )
+            if( arraySize > 0 && batchSize > 0 )
                 throw new IllegalArgumentException("Process directives `array` and `batch` cannot be used together")
+            else if( arraySize > 0 )
+                this.submitCollector = new TaskArrayCollector(this, executor, arraySize)
+            else if( batchSize > 0 )
+                this.submitCollector = new TaskBatchCollector(this, executor, batchSize, config.isBatchParallel())
         }
     }
 
@@ -2341,10 +2339,8 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        if( arrayCollector )
-            arrayCollector.collect(task)
-        else if( batchCollector )
-            batchCollector.collect(task)
+        if( submitCollector )
+            submitCollector.collect(task)
         else
             executor.submit(task)
 
@@ -2449,8 +2445,7 @@ class TaskProcessor {
     }
 
     protected void closeProcess() {
-        arrayCollector?.close()
-        batchCollector?.close()
+        submitCollector?.close()
     }
 
     protected void terminateProcess() {
