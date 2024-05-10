@@ -16,7 +16,6 @@
 
 package nextflow.processor
 
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -38,6 +37,28 @@ import nextflow.util.Escape
 @CompileStatic
 class TaskBatchCollector {
 
+    /**
+     * The set of directives which are used by the task batch.
+     */
+    private static final List<String> SUBMIT_DIRECTIVES = [
+            'accelerator',
+            'arch',
+            'clusterOptions',
+            'cpus',
+            'disk',
+            'machineType',
+            'memory',
+            'queue',
+            'resourceLabels',
+            'resourceLimits',
+            'time',
+            // only needed for container-native executors and/or Fusion
+            'container',
+            'containerOptions',
+    ]
+
+    private TaskProcessor processor
+
     private Executor executor
 
     private int batchSize
@@ -46,11 +67,12 @@ class TaskBatchCollector {
 
     private Lock sync = new ReentrantLock()
 
-    private List<TaskHandler> batch
+    private List<TaskRun> batch
 
     private boolean closed = false
 
-    TaskBatchCollector(Executor executor, int batchSize, boolean parallel) {
+    TaskBatchCollector(TaskProcessor processor, Executor executor, int batchSize, boolean parallel) {
+        this.processor = processor
         this.executor = executor
         this.batchSize = batchSize
         this.parallel = parallel
@@ -65,7 +87,6 @@ class TaskBatchCollector {
      */
     void collect(TaskRun task) {
         sync.lock()
-
         try {
             // submit task directly if the collector is closed
             // or if the task is retried (since it might have dynamic resources)
@@ -74,15 +95,12 @@ class TaskBatchCollector {
                 return
             }
 
-            // create task handler
-            final handler = executor.createTaskHandler(task)
-
             // add task to the batch
-            batch << handler
+            batch.add(task)
 
             // submit task batch when it is ready
             if( batch.size() == batchSize ) {
-                submit0(batch)
+                executor.submit(createTaskBatch(batch))
                 batch = new ArrayList<>(batchSize)
             }
         }
@@ -96,11 +114,14 @@ class TaskBatchCollector {
      */
     void close() {
         sync.lock()
-
         try {
-            if( batch.size() > 0 )
-                submit0(batch)
-
+            if( batch.size() == 1 ) {
+                executor.submit(batch.first())
+            }
+            else if( batch.size() > 0 ) {
+                executor.submit(createTaskBatch(batch))
+                batch = null
+            }
             closed = true
         }
         finally {
@@ -108,46 +129,54 @@ class TaskBatchCollector {
         }
     }
 
-    protected void submit0(List<TaskHandler> batch) {
-        // prepare child job launcher scripts
-        for( TaskHandler handler : batch )
-            handler.prepareLauncher()
-
-        // submit task batch to the underlying executor
-        executor.submit(createTaskBatch(batch))
-    }
-
     /**
      * Create the task run for a task batch.
      *
-     * @param batch
+     * @param tasks
      */
-    protected TaskRun createTaskBatch(List<TaskHandler> batch) {
-        final tasks = batch.collect( h -> h.task )
-        final first = tasks.first()
+    protected TaskRun createTaskBatch(List<TaskRun> tasks) {
+        // prepare child job launcher scripts
+        final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
+        for( TaskHandler handler : handlers ) {
+            handler.prepareLauncher()
+        }
 
-        // compute hash and work directory
+        // create work directory
         final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
         final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
-
         Files.createDirectories(workDir)
 
         // create wrapper script
-        final script = createTaskBatchScript(batch)
+        final script = createBatchTaskScript(handlers)
+        log.debug "Creating task batch run >> $workDir\n$script"
+
+        // create config for task batch
+        final rawConfig = new HashMap<String,Object>(SUBMIT_DIRECTIVES.size())
+        for( final key : SUBMIT_DIRECTIVES ) {
+            final value = processor.config.get(key)
+            if( value != null )
+                rawConfig[key] = value
+        }
 
         // create task batch
-        return new TaskBatch(
+        final first = tasks.min( t -> t.index )
+        final taskBatch = new TaskBatchRun(
             id: first.id,
             index: first.index,
-            processor: first.processor,
-            type: first.type,
-            config: first.processor.config.createTaskConfig(),
-            context: new TaskContext(first.processor),
+            processor: processor,
+            type: processor.taskBody.type,
+            config: new TaskConfig(rawConfig),
+            context: new TaskContext(processor),
             hash: hash,
             workDir: workDir,
             script: script,
-            children: batch
+            children: tasks
         )
+        taskBatch.config.context = taskBatch.context
+        taskBatch.config.process = taskBatch.processor.name
+        taskBatch.config.executor = taskBatch.processor.executor.name
+
+        return taskBatch
     }
 
     /**
@@ -155,20 +184,14 @@ class TaskBatchCollector {
      *
      * @param batch
      */
-    protected String createTaskBatchScript(List<TaskHandler> batch) {
-        // get work directory and launch command for each task
-        final workDirs = batch.collect( h -> h.getWorkDir() )
-        final args = batch.first().getLaunchCommand().toArray() as String[]
-        final cmd = Escape.cli(args).replaceAll(workDirs.first(), '\\${task_dir}')
-
-        // create wrapper script
+    protected String createBatchTaskScript(List<TaskHandler> batch) {
+        final workDirs = batch.collect( h -> Escape.path(executor.getChildWorkDir(h)) )
         """
-        array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
-        for task_dir in \${array[@]}; do
-            export task_dir
-            ${cmd} || true${parallel ? ' &' : ''}
+        array=( ${workDirs.join(' ')} )
+        for nxf_batch_task_dir in \${array[@]}; do
+            export nxf_batch_task_dir
+            ${executor.getChildLaunchCommand('$nxf_batch_task_dir')} || true${parallel ? ' &' : ''}
         done
-
         ${parallel ? 'wait' : ''}
         """.stripIndent().leftTrim()
     }

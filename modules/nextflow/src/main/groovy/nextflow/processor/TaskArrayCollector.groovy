@@ -28,8 +28,8 @@ import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
 /**
- * Task monitor that batches tasks and submits them as job arrays
- * to an underlying task monitor.
+ * Collect tasks and submit them as job arrays to the underlying
+ * executor.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -40,7 +40,7 @@ class TaskArrayCollector {
     /**
      * The set of directives which are used by the job array.
      */
-    private static final List<String> ARRAY_DIRECTIVES = [
+    private static final List<String> SUBMIT_DIRECTIVES = [
             'accelerator',
             'arch',
             'clusterOptions',
@@ -151,8 +151,8 @@ class TaskArrayCollector {
         log.debug "Creating task array run >> $workDir\n$script"
         
         // create config for job array
-        final rawConfig = new HashMap<String,Object>(ARRAY_DIRECTIVES.size())
-        for( final key : ARRAY_DIRECTIVES ) {
+        final rawConfig = new HashMap<String,Object>(SUBMIT_DIRECTIVES.size())
+        for( final key : SUBMIT_DIRECTIVES ) {
             final value = processor.config.get(key)
             if( value != null )
                 rawConfig[key] = value
@@ -185,12 +185,11 @@ class TaskArrayCollector {
      * @param array
      */
     protected String createArrayTaskScript(List<TaskHandler> array) {
-        // get work directory and launch command for each task
-        final workDirs = array.collect( h -> executor.getArrayWorkDir(h) )
+        final workDirs = array.collect( h -> Escape.path(executor.getChildWorkDir(h)) )
         """
-        array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
+        array=( ${workDirs.join(' ')} )
         export nxf_array_task_dir=${getArrayIndexRef()}
-        ${executor.getArrayLaunchCommand('$nxf_array_task_dir')}
+        ${executor.getChildLaunchCommand('$nxf_array_task_dir')}
         """.stripIndent().leftTrim()
     }
 

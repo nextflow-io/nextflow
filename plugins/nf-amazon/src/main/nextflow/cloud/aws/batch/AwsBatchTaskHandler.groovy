@@ -66,7 +66,6 @@ import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
-import nextflow.fusion.FusionHelper
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
@@ -677,19 +676,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return executor.getLaunchCommand(task.getWorkDirStr())
     }
 
-    @Override
-    List<String> getLaunchCommand() {
+    protected List<String> getSubmitCommand() {
         // final launcher command
         return fusionEnabled()
                 ? fusionSubmitCli()
                 : classicSubmitCli()
-    }
-
-    @Override
-    String getWorkDir() {
-        fusionEnabled()
-            ? FusionHelper.toContainerMount(task.workDir).toString()
-            : task.workDir.toUriString()
     }
 
     protected int maxSpotAttempts() {
@@ -753,7 +744,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
         final container = new ContainerOverrides()
-        container.command = getLaunchCommand()
+        container.command = getSubmitCommand()
         // set the task memory
         final cpus = task.config.getCpus()
         final mem = task.config.getMemory()

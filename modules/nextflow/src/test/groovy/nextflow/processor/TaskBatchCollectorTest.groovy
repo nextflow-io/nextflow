@@ -21,6 +21,7 @@ import java.nio.file.Paths
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.executor.Executor
+import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
@@ -35,8 +36,8 @@ class TaskBatchCollectorTest extends Specification {
         given:
         def executor = Mock(Executor)
         def handler = Mock(TaskHandler)
-        def taskBatch = [:] as TaskBatch
-        def collector = Spy(new TaskBatchCollector(executor, 5, false)) {
+        def taskBatch = [:] as TaskBatchRun
+        def collector = Spy(new TaskBatchCollector(null, executor, 5, false)) {
             createTaskBatch(_) >> taskBatch
         }
         and:
@@ -53,24 +54,20 @@ class TaskBatchCollectorTest extends Specification {
         collector.collect(task)
         collector.collect(task)
         then:
-        4 * executor.createTaskHandler(task) >> handler
         0 * executor.submit(_)
 
         // submit task batch when it is ready
         when:
         collector.collect(task)
         then:
-        1 * executor.createTaskHandler(task) >> handler
-        5 * handler.prepareLauncher()
         1 * executor.submit(taskBatch)
 
         // submit partial task batch when closed
         when:
         collector.collect(task)
+        collector.collect(task)
         collector.close()
         then:
-        1 * executor.createTaskHandler(task) >> handler
-        1 * handler.prepareLauncher()
         1 * executor.submit(taskBatch)
 
         // submit tasks directly once closed
@@ -83,7 +80,7 @@ class TaskBatchCollectorTest extends Specification {
     def 'should submit retried tasks directly' () {
         given:
         def executor = Mock(Executor)
-        def collector = Spy(new TaskBatchCollector(executor, 5, false))
+        def collector = Spy(new TaskBatchCollector(null, executor, 5, false))
         and:
         def task = Mock(TaskRun) {
             getConfig() >> Mock(TaskConfig) {
@@ -102,62 +99,103 @@ class TaskBatchCollectorTest extends Specification {
         def executor = Mock(Executor) {
             getWorkDir() >> TestHelper.createInMemTempDir()
         }
-        def collector = Spy(new TaskBatchCollector(executor, 5, false))
+        def config = Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) {
+            createTaskConfig() >> Mock(TaskConfig)
+            get('cpus') >> 4
+            get('tag') >> 'foo'
+        }
+        def proc = Mock(TaskProcessor) {
+            getConfig() >> config
+            getExecutor() >> executor
+            getName() >> 'PROC'
+            getSession() >> Mock(Session)
+            isSingleton() >> false
+            getTaskBody() >> { new BodyDef(null, 'source') }
+        }
+        def collector = Spy(new TaskBatchCollector(proc, executor, 5, false))
         and:
         def task = Mock(TaskRun) {
-            processor >> Mock(TaskProcessor) {
-                config >> Mock(ProcessConfig)
-                getExecutor() >> executor
-                getSession() >> Mock(Session)
-                getTaskBody() >> { new BodyDef(null, 'source') }
-            }
+            index >> 1
             getHash() >> HashCode.fromString('0123456789abcdef')
+            getWorkDir() >> Paths.get('/work/foo')
         }
         def handler = Mock(TaskHandler) {
             getTask() >> task
-            getWorkDir() >> Paths.get('/work/foo')
-            getLaunchCommand() >> ['bash', '-o', 'pipefail', '-c', 'bash /work/foo/.command.run 2>&1 | tee /work/foo/.command.log']
         }
 
         when:
-        def taskBatch = collector.createTaskBatch([handler, handler, handler])
+        def taskBatch = collector.createTaskBatch([task, task, task])
         then:
-        taskBatch.config == task.config
-        taskBatch.processor == task.processor
-        taskBatch.script == '''
-            array=( /work/foo /work/foo /work/foo )
-            for task_dir in ${array[@]}; do
-                export task_dir
-                bash -o pipefail -c 'bash ${task_dir}/.command.run 2>&1 | tee ${task_dir}/.command.log' || true
+        3 * executor.createTaskHandler(task) >> handler
+        3 * handler.prepareLauncher()
+        1 * collector.createBatchTaskScript([handler, handler, handler]) >> 'the-task-batch-script'
+        and:
+        taskBatch.name == 'PROC (1)'
+        taskBatch.config.cpus == 4
+        taskBatch.config.tag == null
+        taskBatch.processor == proc
+        taskBatch.script == 'the-task-batch-script'
+        and:
+        taskBatch.children.size() == 3
+        taskBatch.isContainerEnabled() == false
+    }
+
+    def 'should get batch launch script' () {
+        given:
+        def processor = Mock(TaskProcessor)
+        def executor = Spy(Executor) {
+            isWorkDirDefaultFS() >> true
+        }
+        def collector = Spy(new TaskBatchCollector(processor, executor, 10, false))
+        and:
+        def h1 = Mock(TaskHandler)
+        def h2 = Mock(TaskHandler)
+        def h3 = Mock(TaskHandler)
+
+        when:
+        def result = collector.createBatchTaskScript([h1,h2,h3])
+        then:
+        executor.getChildWorkDir(h1) >> '/work/dir/1'
+        executor.getChildWorkDir(h2) >> '/work/dir/2'
+        executor.getChildWorkDir(h3) >> '/work/dir/3'
+        then:
+        result == '''\
+            array=( /work/dir/1 /work/dir/2 /work/dir/3 )
+            for nxf_batch_task_dir in ${array[@]}; do
+                export nxf_batch_task_dir
+                bash $nxf_batch_task_dir/.command.run 2>&1 > $nxf_batch_task_dir/.command.log || true
             done
 
-
-            '''.stripIndent().leftTrim()
-        and:
-        taskBatch.isContainerEnabled() == false
+            '''.stripIndent(true)
     }
 
     def 'should execute tasks in parallel if specified' () {
         given:
-        def collector = Spy(new TaskBatchCollector(Mock(Executor), 5, true))
-        and:
-        def handler = Mock(TaskHandler) {
-            getWorkDir() >> Paths.get('/work/foo')
-            getLaunchCommand() >> ['bash', '-o', 'pipefail', '-c', 'bash /work/foo/.command.run 2>&1 | tee /work/foo/.command.log']
+        def processor = Mock(TaskProcessor)
+        def executor = Spy(Executor) {
+            isWorkDirDefaultFS() >> true
         }
+        def collector = Spy(new TaskBatchCollector(processor, executor, 10, true))
+        and:
+        def h1 = Mock(TaskHandler)
+        def h2 = Mock(TaskHandler)
+        def h3 = Mock(TaskHandler)
 
         when:
-        def script = collector.createTaskBatchScript([handler, handler, handler])
+        def result = collector.createBatchTaskScript([h1,h2,h3])
         then:
-        script == '''
-            array=( /work/foo /work/foo /work/foo )
-            for task_dir in ${array[@]}; do
-                export task_dir
-                bash -o pipefail -c 'bash ${task_dir}/.command.run 2>&1 | tee ${task_dir}/.command.log' || true &
+        executor.getChildWorkDir(h1) >> '/work/dir/1'
+        executor.getChildWorkDir(h2) >> '/work/dir/2'
+        executor.getChildWorkDir(h3) >> '/work/dir/3'
+        then:
+        result == '''\
+            array=( /work/dir/1 /work/dir/2 /work/dir/3 )
+            for nxf_batch_task_dir in ${array[@]}; do
+                export nxf_batch_task_dir
+                bash $nxf_batch_task_dir/.command.run 2>&1 > $nxf_batch_task_dir/.command.log || true &
             done
-
             wait
-            '''.stripIndent().leftTrim()
+            '''.stripIndent(true)
     }
 
 }

@@ -335,9 +335,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     }
 
     @Override
-    String getArrayLaunchCommand(String taskDir) {
+    String getChildLaunchCommand(String taskDir) {
         if( isFusionEnabled() || isWorkDirDefaultFS() )
-            return TaskArrayExecutor.super.getArrayLaunchCommand(taskDir)
+            return super.getChildLaunchCommand(taskDir)
         else
             return Escape.cli(getLaunchCommand(taskDir) as String[])
     }

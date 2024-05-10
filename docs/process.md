@@ -1432,6 +1432,7 @@ The following directives must be uniform across all tasks in a process that uses
 - {ref}`process-memory`
 - {ref}`process-queue`
 - {ref}`process-resourcelabels`
+- {ref}`process-resourcelimits`
 - {ref}`process-time`
 
 For cloud-based executors like AWS Batch, the following additional directives must be uniform:
@@ -2748,6 +2749,7 @@ In the above example, the [queue](#queue) directive is evaluated dynamically, de
 
 All directives can be assigned a dynamic value except the following:
 
+- [array](#array)
 - [batch](#batch)
 - [executor](#executor)
 - [label](#label)

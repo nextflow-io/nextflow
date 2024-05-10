@@ -299,15 +299,18 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         k8sConfig.getAnnotations()
     }
 
+    @Override
+    void prepareLauncher() {
+        builder = createBashWrapper(task)
+        builder.build()
+    }
+
     /**
      * Creates a new K8s pod executing the associated task
      */
     @Override
     @CompileDynamic
     void submit() {
-        builder = createBashWrapper(task)
-        builder.build()
-
         final req = newSubmitRequest(task)
         final resp = useJobResource()
                 ? client.jobCreate(req, yamlDebugPath())

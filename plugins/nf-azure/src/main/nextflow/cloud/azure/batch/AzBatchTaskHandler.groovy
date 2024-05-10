@@ -77,16 +77,17 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
-    protected BashWrapperBuilder createBashWrapper() {
-        fusionEnabled()
+    @Override
+    void prepareLauncher() {
+        final wrapper = fusionEnabled()
                 ? fusionLauncher()
                 : new AzBatchScriptLauncher(task.toTaskBean(), executor)
+        wrapper.build()
     }
 
     @Override
     void submit() {
         log.debug "[AZURE BATCH] Submitting task $task.name - work-dir=${task.workDirStr}"
-        createBashWrapper().build()
         // submit the task execution
         this.taskKey = batchService.submitTask(task)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$taskKey"

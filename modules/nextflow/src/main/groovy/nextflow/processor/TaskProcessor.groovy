@@ -314,12 +314,17 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         
-        final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        if( scriptType == ScriptType.SCRIPTLET ) {
+            final arraySize = config.getArray()
+            this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
 
-        final batchSize = config.getBatchSize()
-        final batchParallel = config.isBatchParallel()
-        this.batchCollector = batchSize > 0 ? new TaskBatchCollector(executor, batchSize, batchParallel) : null
+            final batchSize = config.getBatchSize()
+            final batchParallel = config.isBatchParallel()
+            this.batchCollector = batchSize > 0 ? new TaskBatchCollector(this, executor, batchSize, batchParallel) : null
+
+            if( arrayCollector && batchCollector )
+                throw new IllegalArgumentException("Process directives `array` and `batch` cannot be used together")
+        }
     }
 
     /**
@@ -2371,8 +2376,8 @@ class TaskProcessor {
      */
     @PackageScope
     final finalizeTask( TaskRun task ) {
-        // finalize each child if task is a group
-        if( task instanceof TaskBatch ) {
+        // finalize each child if task is a batch
+        if( task instanceof TaskBatchRun ) {
             task.finalize()
             for( TaskHandler handler : task.children )
                 finalizeTask(handler.task)

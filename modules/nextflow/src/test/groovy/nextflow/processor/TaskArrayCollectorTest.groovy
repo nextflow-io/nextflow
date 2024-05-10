@@ -183,9 +183,9 @@ class TaskArrayCollectorTest extends Specification {
         when:
         def result = collector.createArrayTaskScript([h1,h2,h3])
         then:
-        executor.getArrayWorkDir(h1) >> '/work/dir/1'
-        executor.getArrayWorkDir(h2) >> '/work/dir/2'
-        executor.getArrayWorkDir(h3) >> '/work/dir/3'
+        executor.getChildWorkDir(h1) >> '/work/dir/1'
+        executor.getChildWorkDir(h2) >> '/work/dir/2'
+        executor.getChildWorkDir(h3) >> '/work/dir/3'
         and:
         collector.getArrayIndexRef() >> '$array[INDEX]'
         then:
