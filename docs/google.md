@@ -35,6 +35,9 @@ Then, define the following variable replacing the path in the example with the o
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 ```
 
+See [Get started with Nextflow on Google Cloud Batch](https://www.nextflow.io/blog/2023/nextflow-with-gbatch.html) for more information on how to use Google Cloud Batch, 
+including how to set the required roles for your service account.
+
 (google-batch)=
 
 ## Cloud Batch

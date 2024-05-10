@@ -46,6 +46,6 @@ dependencies {
     api 'org.threeten:threetenbp:1.3.5'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.20"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.20"
+    testImplementation "org.apache.groovy:groovy:4.0.21"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.21"
 }

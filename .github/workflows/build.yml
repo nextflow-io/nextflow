@@ -77,8 +77,10 @@ jobs:
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
             # configure test env
+            if [[ "$GOOGLE_SECRET" ]]; then
             echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
             export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+            fi
             # run tests
             make test
         env:
@@ -109,6 +111,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:

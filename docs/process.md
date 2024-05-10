@@ -1331,6 +1331,65 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent fa
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
+(process-array)=
+
+### array
+
+:::{versionadded} 24.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `array` directive allows you to submit tasks as *job arrays* for executors that support it.
+
+A job array is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Job arrays incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
+
+The directive should be specified with a given array size, along with an executor that supports job arrays. For example:
+
+```groovy
+process cpu_task {
+    executor 'slurm'
+    array 100
+
+    '''
+    your_command --here
+    '''
+}
+```
+
+Nextflow currently supports job arrays for the following executors:
+
+- {ref}`awsbatch-executor`
+- {ref}`google-batch-executor`
+- {ref}`lsf-executor`
+- {ref}`pbs-executor`
+- {ref}`pbspro-executor`
+- {ref}`sge-executor`
+- {ref}`slurm-executor`
+
+A process using job arrays will collect tasks and submit each batch as a job array when it is ready. Any "leftover" tasks will be submitted as a partial job array.
+
+Once a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, in order to allow for the use of [dynamic resources](#dynamic-computing-resources).
+
+The following directives must be uniform across all tasks in a process that uses job arrays, because these directives are specified once for the entire job array:
+
+- {ref}`process-accelerator`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-queue`
+- {ref}`process-resourcelabels`
+- {ref}`process-resourcelimits`
+- {ref}`process-time`
+
+For cloud-based executors like AWS Batch, or when using Fusion with any executor, the following additional directives must be uniform:
+
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+
 (process-beforescript)=
 
 ### beforeScript
@@ -2328,6 +2387,43 @@ Resource labels in Azure are added to pools, rather than jobs, in order to facil
 :::
 
 See also: [label](#label)
+
+(process-resourcelimits)=
+
+### resourceLimits
+
+:::{versionadded} 24.04.0
+:::
+
+The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process as follows:
+
+```groovy
+process my_task {
+  resourceLimits cpus: 24, memory: 768.GB, time: 72.h
+
+  script:
+  '''
+  your_command --here
+  '''
+}
+```
+
+Or in the Nextflow configuration:
+
+```groovy
+process {
+    resourceLimits = [ cpus: 24, memory: 768.GB, time: 72.h ]
+}
+```
+
+Resource limits can be defined for the following directives:
+
+- [cpus](#cpus)
+- [disk](#disk)
+- [memory](#memory)
+- [time](#time)
+
+Resource limits are a useful way to specify environment-specific limits alongside tasks with [dynamic resources](#dynamic-computing-resources). Normally, if a task requests more resources than can be provisioned (e.g. a task requests 32 cores but the largest node in the cluster has 24), the task will either fail or cause the pipeline to hang forever as it will never be scheduled. If the `resourceLimits` directive is defined with these limits, the task resources will be automatically reduced to comply with these limits before the job is submitted.
 
 (process-scratch)=
 
