@@ -16,6 +16,8 @@
 package nextflow.ui.console
 
 import javax.swing.UIManager
+import java.awt.Taskbar
+import java.awt.Toolkit
 
 import groovy.util.logging.Slf4j
 import nextflow.cli.CliOptions
@@ -53,8 +55,9 @@ class ConsoleRunner implements ConsoleExtension {
 
         //when starting via main set the look and feel to system
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+        loadDockIcon()
 
-        def console = new Nextflow(ConsoleRunner.getClassLoader())
+        final console = new Nextflow(ConsoleRunner.getClassLoader())
         console.useScriptClassLoaderForScriptExecution = true
         console.run()
         if (args.length == 2)
@@ -64,6 +67,23 @@ class ConsoleRunner implements ConsoleExtension {
             catch( IOException e ) {
                 log.warn("Can't open script file: ${args[1]}" )
             }
-
     }
+
+    static void loadDockIcon() {
+        final URL imageResource = ConsoleRunner.getResource("/nextflow-icon.png");
+        final defaultToolkit = Toolkit.getDefaultToolkit()
+        final image = defaultToolkit.getImage(imageResource)
+        final taskbar = Taskbar.getTaskbar()
+        try {
+            //set icon for mac os (and other systems which do support this method)
+            taskbar.setIconImage(image)
+        }
+        catch (final UnsupportedOperationException e) {
+            log.debug("The os does not support: 'taskbar.setIconImage'")
+        }
+        catch (final SecurityException e) {
+            log.debug("There was a security exception for: 'taskbar.setIconImage'")
+        }
+    }
+
 }
