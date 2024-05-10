@@ -352,6 +352,7 @@ class K8sTaskHandlerTest extends Specification {
         def RESPONSE = new K8sResponseJson([metadata: [name:POD_NAME]])
         def YAML = Paths.get('file.yaml')
         when:
+        handler.prepareLauncher()
         handler.submit()
         then:
         1 * handler.createBashWrapper(task) >> builder
@@ -363,6 +364,7 @@ class K8sTaskHandlerTest extends Specification {
         handler.status == TaskStatus.SUBMITTED
 
         when:
+        handler.prepareLauncher()
         handler.submit()
         then:
         1 * handler.createBashWrapper(task) >> builder
