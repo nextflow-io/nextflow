@@ -27,6 +27,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.plugin.Plugins
 import nextflow.util.HistoryFile
 /**
  * Run a nextflow script file
@@ -257,6 +258,7 @@ class ScriptRunner {
 
     protected shutdown() {
         session.destroy()
+        Plugins.stop()
         session.cleanup()
         Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"
