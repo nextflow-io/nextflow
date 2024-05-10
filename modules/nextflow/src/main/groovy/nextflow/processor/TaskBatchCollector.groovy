@@ -170,7 +170,7 @@ class TaskBatchCollector {
             hash: hash,
             workDir: workDir,
             script: script,
-            children: tasks
+            children: handlers
         )
         taskBatch.config.context = taskBatch.context
         taskBatch.config.process = taskBatch.processor.name

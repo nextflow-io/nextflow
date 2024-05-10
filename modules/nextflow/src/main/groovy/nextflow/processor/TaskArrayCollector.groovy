@@ -149,7 +149,7 @@ class TaskArrayCollector {
         // create wrapper script
         final script = createArrayTaskScript(handlers)
         log.debug "Creating task array run >> $workDir\n$script"
-        
+
         // create config for job array
         final rawConfig = new HashMap<String,Object>(SUBMIT_DIRECTIVES.size())
         for( final key : SUBMIT_DIRECTIVES ) {
