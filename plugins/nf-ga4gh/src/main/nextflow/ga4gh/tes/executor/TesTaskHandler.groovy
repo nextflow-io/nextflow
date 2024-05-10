@@ -26,6 +26,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
 import nextflow.ga4gh.tes.client.model.TesExecutor as TesExecutorModel
@@ -38,6 +39,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.script.params.FileOutParam
+import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 /**
  * Handle execution phases for a task executed by a TES executor
@@ -122,7 +125,7 @@ class TesTaskHandler extends TaskHandler {
         if( response.state in COMPLETE_STATUSES ) {
             // finalize the task
             log.trace "[TES] Task completed > $task.name"
-            task.exitStatus = readExitFile()
+            task.exitStatus = readExitStatus()
             task.stdout = outputFile
             task.stderr = errorFile
             status = COMPLETED
@@ -132,9 +135,13 @@ class TesTaskHandler extends TaskHandler {
         return false
     }
 
-    private int readExitFile() {
+    private int readExitStatus() {
         try {
-            exitFile.text as Integer
+            return client
+                .getTask(requestId, 'FULL')
+                .logs[0]
+                .logs[0]
+                .exitCode
         }
         catch( Exception e ) {
             log.trace "[TES] Cannot read exitstatus for task: `$task.name` | ${e.message}"
@@ -167,30 +174,35 @@ class TesTaskHandler extends TaskHandler {
     }
 
     protected TesBashBuilder newTesBashBuilder(TaskRun task, String remoteBinDir) {
-        return new TesBashBuilder(task, remoteBinDir)
+        final builder = new TesBashBuilder(task, remoteBinDir)
+        builder.headerScript = "NXF_CHDIR=${Escape.path(WORK_DIR)}"
+        return builder
     }
 
     protected TesTask newTesTask() {
-        // the cmd list to launch it
-        def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
-        List cmd = ['/bin/bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
 
-        def exec = new TesExecutorModel()
-        exec.command = cmd
+        final exec = new TesExecutorModel()
+        exec.command = List.of('bash', '-o', 'pipefail', '-c', "bash ${WORK_DIR}/${TaskRun.CMD_RUN} 2>&1 | tee ${WORK_DIR}/${TaskRun.CMD_LOG}".toString())
         exec.image = task.container
         exec.workdir = WORK_DIR
 
-        def body = new TesTask()
+        final body = new TesTask()
 
         // add task control files
         body.addInputsItem(inItem(scriptFile))
         body.addInputsItem(inItem(wrapperFile))
 
-        // add task input files
-        if(inputFile.exists()) body.addInputsItem(inItem(inputFile))
+        for( Path path : executor.getRemoteBinFiles() )
+            body.addInputsItem(inItemFromBin(path))
 
-        task.getInputFilesMap()?.each { String name, Path path ->
-            body.addInputsItem(inItem(path,name))
+        // add task input files
+        if( inputFile.exists() )
+            body.addInputsItem(inItem(inputFile))
+
+        task.getInputFilesMap().each { String name, Path path ->
+            body.addInputsItem(inItem(path, name))
         }
 
         // add the task output files
@@ -202,23 +214,27 @@ class TesTaskHandler extends TaskHandler {
         // set requested resources
         body.setResources(getResources(task.config))
 
-        task.outputFilesNames?.each { fileName ->
-            body.addOutputsItem(outItem(fileName))
+        for( final param : task.getOutputsByType(FileOutParam).keySet() ) {
+            final type = param.type == 'dir'
+                ? 'DIRECTORY'
+                : 'FILE'
+            for( final pattern : param.getFilePatterns(task.context, task.workDir) )
+                body.addOutputsItem(outItem(pattern, type))
         }
 
         body.setName(task.getName())
 
         // add the executor
-        body.executors = [exec]
+        body.executors = List.of(exec)
 
         return body
     }
 
-    private TesResources getResources(TaskConfig cfg) {
-        def res = new TesResources()
-        res.cpuCores(cfg.getCpus())
-            .ramGb(toGiga(cfg.getMemory()))
-            .diskGb(cfg.getDisk()?.toGiga())
+    private TesResources getResources(TaskConfig config) {
+        final res = new TesResources()
+            .cpuCores(config.getCpus())
+            .ramGb(toGiga(config.getMemory()))
+            .diskGb(config.getDisk()?.toGiga())
         log.trace("[TES] Adding resource request: $res")
         // @TODO preemptible
         // @TODO zones
@@ -230,22 +246,72 @@ class TesTaskHandler extends TaskHandler {
         return size != null ? ((double)size.bytes)/1073741824 : null
     }
 
-    private TesInput inItem( Path realPath, String fileName = null) {
-        def result = new TesInput()
+    private TesInput inItem(Path realPath, String fileName = null) {
+        final result = new TesInput()
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
-        result.type = TesFileType.FILE
+        result.type = realPath.isDirectory() ? 'DIRECTORY' : 'FILE'
+
+        // fix local path for TES Azure
+        result.url = fixTesAzureLocalPath(result.url)
+
         log.trace "[TES] Adding INPUT file: $result"
         return result
     }
 
-    private TesOutput outItem( String fileName ) {
-        def result = new TesOutput()
-        result.path = "$WORK_DIR/$fileName"
-        result.url = task.workDir.resolve(fileName).toUriString()
-        result.type = TesFileType.FILE
+    private TesInput inItemFromBin(Path realPath) {
+        final result = new TesInput()
+        result.url = realPath.toUriString()
+        result.path = realPath.toString()
+        result.type = 'FILE'
+
+        // fix local path for TES Azure
+        result.url = fixTesAzureLocalPath(result.url)
+
+        log.trace "[TES] Adding INPUT file: $result"
+        return result
+    }
+
+    private TesOutput outItem( String fileName, String type = null ) {
+        final result = new TesOutput()
+        if( fileName.contains('*') || fileName.contains('?') ) {
+            result.path = "$WORK_DIR/$fileName"
+            result.pathPrefix = WORK_DIR
+            result.url = task.workDir.toUriString()
+        }
+        else {
+            result.path = "$WORK_DIR/$fileName"
+            result.url = task.workDir.resolve(fileName).toUriString()
+        }
+        if( type != null )
+            result.type = type
+
+        // fix local path for TES Azure
+        result.url = fixTesAzureLocalPath(result.url)
+
         log.trace "[TES] Adding OUTPUT file: $result"
         return result
+    }
+
+    /**
+     * Fix local paths when using TES Azure, which requires the
+     * following AZ path:
+     *
+     *   az://<blob>/<path>
+     *
+     * to be formatted as:
+     *
+     *   /<storage-account>/<blob>/<path>
+     *
+     * @param url
+     */
+    private String fixTesAzureLocalPath(String url) {
+        if( !url.startsWith('az://') )
+            return url
+        final storageAccount = executor.getAzureStorageAccount()
+        if( !executor.getEndpoint().contains('azure.com') || !storageAccount )
+            return url
+        return url.replaceAll('az://', "/${storageAccount}/")
     }
 
 }

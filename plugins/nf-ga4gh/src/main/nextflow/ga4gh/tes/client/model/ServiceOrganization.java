@@ -29,14 +29,62 @@ package nextflow.ga4gh.tes.client.model;
 
 import java.util.Objects;
 import java.util.Arrays;
+import com.google.gson.TypeAdapter;
+import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.io.IOException;
 /**
- * CancelTaskResponse describes a response from the CancelTask endpoint.
+ * Organization providing the service
  */
-@Schema(description = "CancelTaskResponse describes a response from the CancelTask endpoint.")
+@Schema(description = "Organization providing the service")
 @javax.annotation.Generated(value = "io.swagger.codegen.v3.generators.java.JavaClientCodegen", date = "2023-08-15T14:10:09.878Z[GMT]")
 
-public class TesCancelTaskResponse {
+public class ServiceOrganization {
+  @SerializedName("name")
+  private String name = null;
+
+  @SerializedName("url")
+  private String url = null;
+
+  public ServiceOrganization name(String name) {
+    this.name = name;
+    return this;
+  }
+
+   /**
+   * Name of the organization responsible for the service
+   * @return name
+  **/
+  @Schema(example = "My organization", required = true, description = "Name of the organization responsible for the service")
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public ServiceOrganization url(String url) {
+    this.url = url;
+    return this;
+  }
+
+   /**
+   * URL of the website of the organization (RFC 3986 format)
+   * @return url
+  **/
+  @Schema(example = "https://example.com", required = true, description = "URL of the website of the organization (RFC 3986 format)")
+  public String getUrl() {
+    return url;
+  }
+
+  public void setUrl(String url) {
+    this.url = url;
+  }
+
 
   @Override
   public boolean equals(java.lang.Object o) {
@@ -46,20 +94,24 @@ public class TesCancelTaskResponse {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    return true;
+    ServiceOrganization serviceOrganization = (ServiceOrganization) o;
+    return Objects.equals(this.name, serviceOrganization.name) &&
+        Objects.equals(this.url, serviceOrganization.url);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash();
+    return Objects.hash(name, url);
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class TesCancelTaskResponse {\n");
+    sb.append("class ServiceOrganization {\n");
     
+    sb.append("    name: ").append(toIndentedString(name)).append("\n");
+    sb.append("    url: ").append(toIndentedString(url)).append("\n");
     sb.append("}");
     return sb.toString();
   }

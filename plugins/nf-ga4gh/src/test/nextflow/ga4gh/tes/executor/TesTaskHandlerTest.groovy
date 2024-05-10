@@ -36,10 +36,15 @@ class TesTaskHandlerTest extends Specification {
 
         given:
         def executor = Mock(TesExecutor)
-        def task = Mock(TaskRun)
+        def task = Mock(TaskRun) {
+            getInputFilesMap() >> [:]
+            getOutputFilesNames() >> []
+            getOutputsByType(_) >> [:]
+        }
         task.getName() >> 'tes-task'
         task.getWorkDir() >> Paths.get(".")
         task.getConfig() >> new TaskConfig(memory: '2GB', cpus: 4, disk: '10GB')
+        task.getContainer() >> 'foo'
         def handler = new TesTaskHandler(task, executor)
 
 

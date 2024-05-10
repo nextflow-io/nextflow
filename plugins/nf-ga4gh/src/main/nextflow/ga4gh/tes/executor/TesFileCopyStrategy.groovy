@@ -113,6 +113,7 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
             copy.remove('PATH')
         // when a remote bin directory is provide managed it properly
         if( remoteBinDir ) {
+            result << "mkdir \$PWD/nextflow-bin/\n"
             result << "cp -r ${remoteBinDir}/* \$PWD/nextflow-bin/\n"
             result << "chmod +x \$PWD/nextflow-bin/* || true\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"

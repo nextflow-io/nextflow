@@ -38,11 +38,12 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.10.0'
 
     api 'javax.annotation:javax.annotation-api:1.3.2'
-    api 'io.swagger:swagger-annotations:1.5.15'
+    api 'io.swagger.core.v3:swagger-annotations:2.0.0'
     api 'com.squareup.okhttp:okhttp:2.7.5'
     api 'com.squareup.okhttp:logging-interceptor:2.7.5'
     api 'com.google.code.gson:gson:2.10.1'
-    api 'joda-time:joda-time:2.9.9'
+    api 'io.gsonfire:gson-fire:1.8.3'
+    api 'org.threeten:threetenbp:1.3.5'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.21"
