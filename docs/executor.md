@@ -125,7 +125,7 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 Support for automatic upload of the `bin` directory was added.
 :::
 
-:::{versionchanged} 23.09.0-edge
+:::{versionchanged} 24.04.0
 Support for process output directories and output globs was added.
 :::
 
