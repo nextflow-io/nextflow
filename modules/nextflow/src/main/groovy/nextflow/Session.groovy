@@ -682,9 +682,6 @@ class Session implements ISession {
             // -- close db
             cache?.close()
 
-            // -- shutdown plugins
-            Plugins.stop()
-
             // -- cleanup script classes dir
             classesDir?.deleteDir()
         }
