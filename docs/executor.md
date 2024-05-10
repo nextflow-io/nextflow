@@ -121,55 +121,60 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 :::{warning} *Experimental: may change in a future release.*
 :::
 
+:::{versionchanged} 23.07.0-edge
+Support for automatic upload of the `bin` directory was added.
+:::
+
+:::{versionchanged} 24.04.0
+Support for process output directories and output globs was added.
+:::
+
 The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to define a standardized schema and API for describing batch execution tasks in a portable manner.
 
 Nextflow supports the TES API via the `tes` executor, which allows the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
 
-To use this feature, define the following variables in the workflow launching environment:
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be accessible to the TES backend.
 
-```bash
-export NXF_MODE=ga4gh
-export NXF_EXECUTOR=tes
-export NXF_EXECUTOR_TES_ENDPOINT='http://back.end.com'
+To enable this executor, add the following settings to your Nextflow configuration:
+
+```groovy
+plugins {
+  id 'nf-ga4gh'
+}
+
+process.executor = 'tes'
+tes.endpoint = '<endpoint>'
 ```
 
-It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will not be normalized and the requests to TES will fail.
+The default endpoint is `http://localhost:8000`. It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will not be normalized and the requests to TES will fail.
 
-You will then be able to run your workflow over TES using the usual Nextflow command line. Be sure to specify the Docker image to use, i.e.:
+The TES API supports multiple forms of authentication:
 
-```bash
-nextflow run rnaseq-nf -with-docker alpine
+```groovy
+// basic
+tes.basicUsername = '<username>'
+tes.basicPassword = '<password>'
+
+// API key
+tes.apiKeyParamMode = '<mode>' // 'query' or 'header'
+tes.apiKeyParamName = '<param-name>'
+tes.apiKey = '<key>'
+
+// OAuth
+tes.oauthToken = '<token>'
 ```
-
-:::{note}
-If the variable `NXF_EXECUTOR_TES_ENDPOINT` is omitted, the default endpoint is `http://localhost:8000`.
-:::
 
 :::{tip}
-You can use a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following launch command line:
+You can deploy a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following command:
 
 ```bash
 ./funnel server --Server.HTTPPort 8000 --LocalStorage.AllowedDirs $HOME run
 ```
-
-(tested with version 0.8.0 on macOS)
 :::
 
-:::{warning}
-Make sure the TES backend can access the Nextflow work directory when data is exchanged using a local or shared file system.
+:::{note}
+While the TES API is designed to abstract workflow managers from direct storage access, Nextflow still needs to access the shared work directory used by your TES endpoint. For example, if your TES endpoint is located in Azure and uses Azure Blob storage to store the work directory, you still need to provide the necessary Azure credentials for Nextflow to access the Blob storage.
 :::
-
-### Known Limitations
-
-- Automatic deployment of workflow scripts in the `bin` folder is not supported.
-
-  :::{versionchanged} 23.07.0-edge
-  Automatic upload of the `bin` directory is now supported.
-  :::
-
-- Process output directories are not supported. For details see [#76](https://github.com/ga4gh/task-execution-schemas/issues/76).
-
-- Glob patterns in process output declarations are not supported. For details see [#77](https://github.com/ga4gh/task-execution-schemas/issues/77).
 
 (google-batch-executor)=
 
