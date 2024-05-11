@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 import nextflow.util.CmdLineHelper
 /**
@@ -37,7 +38,7 @@ import nextflow.util.CmdLineHelper
  */
 @Slf4j
 @CompileStatic
-class LsfExecutor extends AbstractGridExecutor {
+class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
 
@@ -69,7 +70,9 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        if( task !instanceof TaskArrayRun ) {
+            result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        }
 
         // add other parameters (if any)
         if( task.config.queue ) {
@@ -105,7 +108,13 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << getJobNameFor(task)
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
+        }
+        else {
+            result << '-J' << getJobNameFor(task)
+        }
 
         // -- at the end append the command script wrapped file name
         final opts = task.config.getClusterOptions()
@@ -118,6 +127,12 @@ class LsfExecutor extends AbstractGridExecutor {
             // see https://github.com/nextflow-io/nextflow/issues/4935
             log.warn1 '[LSF] Specifying multiple cluster options in a string is error-prone, use a string list instead with one option per string'
             result.addAll( CmdLineHelper.splitter(opts.toString()) )
+        }
+
+        // add account from config
+        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        if( account ) {
+            result << '-G' << account
         }
 
         return result
@@ -322,4 +337,21 @@ class LsfExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'LSB_JOBINDEX'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 1
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}[${index + 1}]"
+    }
+
 }

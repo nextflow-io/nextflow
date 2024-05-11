@@ -27,6 +27,7 @@ import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
+import org.yaml.snakeyaml.Yaml
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -51,6 +52,8 @@ class BashWrapperBuilderTest extends Specification {
             bean.script = 'echo Hello world!'
         if( !bean.containsKey('inputFiles') )
             bean.inputFiles = [:]
+        if( !bean.containsKey('outputFiles') )
+            bean.outputFiles = []
         new BashWrapperBuilder(bean as TaskBean) {
             @Override
             protected String getSecretsEnv() {
@@ -333,6 +336,94 @@ class BashWrapperBuilderTest extends Specification {
         then:
         bash.makeBinding().header_script == '#BSUB -x 1\n#BSUB -y 2'
 
+    }
+
+    def 'should create task metadata string' () {
+        given:
+        def builder = newBashWrapperBuilder(
+            name: 'foo',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: [enabled: true],
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+
+        when:
+        def meta = builder.getTaskMetadata()
+        then:
+        meta == '''\
+            ### ---
+            ### name: 'foo'
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: 'quay.io/nextflow:bash'
+            ### outputs:
+            ### - 'foo.txt'
+            ### - '*.bar'
+            ### - '**/baz'
+            ### ...
+            '''.stripIndent()
+
+        when:
+        def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
+        def obj = new Yaml().load(yaml) as Map
+        then:
+        obj.name == 'foo'
+        obj.array == [
+            'index-name':'SLURM_ARRAY_TASK_ID',
+            'index-start':0,
+            'work-dirs':['/work/01', '/work/02', '/work/03']
+        ]
+        obj.container == 'quay.io/nextflow:bash'
+        obj.outputs == ['foo.txt', '*.bar', '**/baz']
+    }
+
+    def 'should add task metadata' () {
+        when:
+        def bash = newBashWrapperBuilder([name:'task1'])
+        then:
+        bash.makeBinding().containsKey('task_metadata')
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: 'task1'
+            ### ...
+            '''.stripIndent()
+
+        when:
+        bash = newBashWrapperBuilder(
+            name: 'task2',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: [enabled: true],
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+        then:
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: 'task2'
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: 'quay.io/nextflow:bash'
+            ### outputs:
+            ### - 'foo.txt'
+            ### - '*.bar'
+            ### - '**/baz'
+            ### ...
+            '''.stripIndent()
     }
 
     def 'should copy control files' () {
@@ -1083,6 +1174,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
