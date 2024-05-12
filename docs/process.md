@@ -1450,6 +1450,30 @@ The following options are available:
 
 The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command. You can use it to request non-standard resources or use settings that are specific to your cluster and not supported out of the box by Nextflow.
 
+The cluster options can be a string:
+
+```groovy
+process foo {
+  clusterOptions '-x 1 -y 2'
+  // ...
+}
+```
+
+:::{versionchanged} 24.04.0
+Prior to this version, grid executors that require each option to be on a separate line in the job script would attempt to split multiple options using a variety of different conventions. Multiple options can now be specified more clearly using a string list as shown below.
+:::
+
+The cluster options can also be a string list:
+
+```groovy
+process foo {
+  clusterOptions '-x 1', '-y 2', '--flag'
+  // ...
+}
+```
+
+Grid executors that require one option per line will write each option to a separate line, while grid executors that allow multiple options per line will write all options to a single line, the same as with a string. This form is useful to control how the options are split across lines when it is required by the scheduler.
+
 :::{note}
 This directive is only used by grid executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
 :::
