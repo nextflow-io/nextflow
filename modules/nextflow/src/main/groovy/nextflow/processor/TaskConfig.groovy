@@ -16,8 +16,6 @@
 
 package nextflow.processor
 
-import nextflow.util.CmdLineOptionMap
-
 import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
@@ -33,6 +31,7 @@ import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
+import nextflow.util.CmdLineOptionMap
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -414,10 +413,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
-    String getClusterOptions() {
-        return get('clusterOptions')
-    }
-    
     def getContainer() {
         return get('container')
     }
@@ -433,6 +428,21 @@ class TaskConfig extends LazyMap implements Cloneable {
         return null
     }
 
+    def getClusterOptions() {
+        return get('clusterOptions')
+    }
+
+    String getClusterOptionsAsString() {
+        final opts = getClusterOptions()
+        if( opts instanceof CharSequence )
+            return opts.toString()
+        if( opts instanceof Collection )
+            return CmdLineHelper.toLine(opts as List<String>)
+        if( opts != null )
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        return null
+    }
+    
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
      */

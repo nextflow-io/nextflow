@@ -178,6 +178,28 @@ class LsfExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
+        task.config.queue = 'bsc_ls'
+        task.config.clusterOptions = ['-x 1', '-R "span[ptile=2]"']
+        task.config.cpus = '2'
+        task.config.time = '1h 30min'
+        task.config.memory = '8GB'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -o /scratch/.command.log
+                #BSUB -q bsc_ls
+                #BSUB -n 2
+                #BSUB -R "span[hosts=1]"
+                #BSUB -W 01:30
+                #BSUB -M 4096
+                #BSUB -R "select[mem>=8192] rusage[mem=8192]"
+                #BSUB -J nf-mapping_hola
+                #BSUB -x 1
+                #BSUB -R "span[ptile=2]"
+                '''
+            .stripIndent().leftTrim()
+
+        when:
+        task.config = new TaskConfig()
         task.config.queue = 'alpha'
         task.config.cpus = 1
         then:

@@ -54,9 +54,7 @@ class PbsProExecutor extends PbsExecutor {
         // when multiple competing directives are provided, only the first one will take effect
         // therefore clusterOptions is added as first to give priority over other options as expected
         // by the clusterOptions semantics -- see https://github.com/nextflow-io/nextflow/pull/2036
-        if( task.config.getClusterOptions() ) {
-            result << task.config.getClusterOptions() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         result << '-N' << getJobNameFor(task)
 
@@ -79,7 +77,7 @@ class PbsProExecutor extends PbsExecutor {
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
         if( res ) {
-            if( matchOptions(task.config.getClusterOptions()) ) {
+            if( matchOptions(task.config.getClusterOptionsAsString()) ) {
                 log.warn1 'cpus and memory directives are ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.memory.toMega()}mb:..." }'
             }
             else {

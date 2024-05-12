@@ -63,7 +63,7 @@ class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         // task cpus
         if( task.config.getCpus() > 1 ) {
-            if( matchOptions(task.config.getClusterOptions()) ) {
+            if( matchOptions(task.config.getClusterOptionsAsString()) ) {
                 log.warn1 'cpus directive is ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }'
             }
             else {
@@ -83,16 +83,14 @@ class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             result << "-l" << "mem=${task.config.getMemory().toString().replaceAll(/[\s]/,'').toLowerCase()}".toString()
         }
 
-        // -- at the end append the command script wrapped file name
-        if( task.config.getClusterOptions() ) {
-            result << task.config.getClusterOptions() << ''
-        }
-
         // add account from config
         final account = session.getExecConfigProp(getName(), 'account', null) as String
         if( account ) {
             result << '-P' << account
         }
+
+        // -- at the end append the command script wrapped file name
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

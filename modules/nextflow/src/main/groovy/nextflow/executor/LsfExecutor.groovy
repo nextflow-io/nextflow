@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskArrayRun
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -116,7 +117,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        result.addAll( task.config.getClusterOptionsAsList() )
+        addClusterOptionsDirective(task.config, result)
 
         // add account from config
         final account = session.getExecConfigProp(getName(), 'account', null) as String
@@ -125,6 +126,22 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         }
 
         return result
+    }
+
+    @Override
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        // when cluster options are defined as a list rely on default behavior
+        if( opts instanceof Collection ) {
+            super.addClusterOptionsDirective(config,result)
+        }
+        // when cluster options are a string value use the `getClusterOptionsAsList` for backward compatibility
+        else if( opts instanceof CharSequence ) {
+            result.addAll( config.getClusterOptionsAsList() )
+        }
+        else if( opts != null ) {
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        }
     }
 
     @Override

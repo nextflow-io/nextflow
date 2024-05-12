@@ -150,6 +150,23 @@ class SlurmExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
+        task.config.time = '1h'
+        task.config.memory = '50 M'
+        task.config.clusterOptions = ['-a 1','--signal=KILL']
+        then:
+        executor.getHeaders(task) == '''
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
+                #SBATCH -t 01:00:00
+                #SBATCH --mem 50M
+                #SBATCH -a 1
+                #SBATCH --signal=KILL
+                '''
+            .stripIndent().leftTrim()
+
+        when:
+        task.config = new TaskConfig()
         task.config.cpus = 2
         task.config.time = '2h'
         task.config.memory = '200 M'

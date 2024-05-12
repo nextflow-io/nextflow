@@ -19,6 +19,7 @@ package nextflow.executor
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -160,6 +161,24 @@ class AbstractGridExecutorTest extends Specification {
         1 * exec.getQueueStatus0(null) >> STATUS
         and:
         result == STATUS
+    }
+
+    def 'should add cluster options' () {
+        given:
+        def exec = Spy(AbstractGridExecutor)
+
+        when:
+        def result = []
+        exec.addClusterOptionsDirective(new TaskConfig(clusterOptions: OPTS), result)
+        then:
+        result == EXPECTED
+
+        where:
+        OPTS                    | EXPECTED
+        null                    | []
+        '-foo 1'                | ['-foo 1', '']
+        '-foo 1 --bar 2'        | ['-foo 1 --bar 2', '']
+        ['-foo 1','--bar 2']    | ['-foo 1', '', '--bar 2', '']
     }
 
 }

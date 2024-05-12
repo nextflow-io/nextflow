@@ -42,10 +42,9 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     private boolean perCpuMemAllocation
 
     private boolean hasSignalOpt(TaskConfig config) {
-        def opts = config.getClusterOptions()
+        final opts = config.getClusterOptionsAsString()
         return opts ? opts.contains('--signal ') || opts.contains('--signal=') : false
     }
-
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -103,9 +102,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.getClusterOptions() ) {
-            result << task.config.getClusterOptions() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         // add slurm account from config
         final account = session.getExecConfigProp(getName(), 'account', null) as String
