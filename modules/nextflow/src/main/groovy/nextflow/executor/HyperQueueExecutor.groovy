@@ -73,9 +73,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
             result << '--resource' << "gpus=${task.config.getAccelerator().limit}".toString()
 
         // -- At the end append the command script wrapped file name
-        if( task.config.getClusterOptions() ) {
-            result << task.config.getClusterOptions() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }
