@@ -78,15 +78,6 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
-    final static private String[] REQUEST_HEADERS =  new String[]{
-                        'Content-Type','application/json',
-                        'Accept','application/json',
-                        'Accept','application/vnd.oci.image.index.v1+json',
-                        'Accept','application/vnd.oci.image.manifest.v1+json',
-                        'Accept','application/vnd.docker.distribution.manifest.v1+prettyjws',
-                        'Accept','application/vnd.docker.distribution.manifest.v2+json',
-                        'Accept','application/vnd.docker.distribution.manifest.list.v2+json' }
-
     public static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
 
     private static final String DEFAULT_SPACK_ARCH = 'x86_64'
