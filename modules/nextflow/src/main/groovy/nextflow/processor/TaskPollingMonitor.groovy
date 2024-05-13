@@ -34,6 +34,8 @@ import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
 import nextflow.util.Threads
 import nextflow.util.Throttle
+import static nextflow.util.SysHelper.dumpThreads
+
 /**
  * Monitors the queued tasks waiting for their termination
  *
@@ -449,8 +451,13 @@ class TaskPollingMonitor implements TaskMonitor {
             // dump this line every two minutes
             Throttle.after(dumpInterval) {
                 dumpRunningQueue()
+                dumpCurrentThreads()
             }
         }
+    }
+
+    protected dumpCurrentThreads() {
+        log.trace "Current runnign threads:\n${dumpThreads()}"
     }
 
     protected void dumpRunningQueue() {
