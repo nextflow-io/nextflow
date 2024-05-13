@@ -25,6 +25,8 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.util.CsvWriter
 /**
+ * Publish an index file describing all files from a source
+ * channel, including metdata.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

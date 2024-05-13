@@ -27,32 +27,6 @@ import nextflow.extension.CH
 import nextflow.extension.MixOp
 import nextflow.extension.PublishOp
 import nextflow.extension.PublishIndexOp
-/**
- * Models the workflow publish definition
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-@Slf4j
-@CompileStatic
-class PublishDef {
-
-    private Closure closure
-
-    PublishDef(Closure closure) {
-        this.closure = closure
-    }
-
-    void run(Map<DataflowWriteChannel,String> targets) {
-        final dsl = new PublishDsl()
-        final cl = (Closure)closure.clone()
-        cl.setDelegate(dsl)
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.call()
-
-        dsl.build(targets)
-    }
-
-}
 
 /**
  * Implements the DSL for publishing workflow outputs
@@ -61,7 +35,7 @@ class PublishDef {
  */
 @Slf4j
 @CompileStatic
-class PublishDsl {
+class OutputDsl {
 
     private Map<String,Map> publishConfigs = [:]
 

@@ -520,8 +520,8 @@ class PublishDir {
             return overwrite
 
         final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
-        final sourceHash = new HashBuilder().withMode(hashMode).withBasePath(source.parent).with(source).build()
-        final targetHash = new HashBuilder().withMode(hashMode).withBasePath(target.parent).with(target).build()
+        final sourceHash = HashBuilder.hashPath(source, source.parent, hashMode)
+        final targetHash = HashBuilder.hashPath(target, target.parent, hashMode)
         log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
         return sourceHash != targetHash
     }

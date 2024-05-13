@@ -25,6 +25,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.processor.PublishDir
 /**
+ * Publish files from a source channel.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

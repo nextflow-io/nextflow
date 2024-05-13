@@ -214,6 +214,18 @@ public class HashBuilder {
     }
 
     /**
+     * Hash a file using only the relative file name instead of
+     * the absolute file path.
+     *
+     * @param path
+     * @param basePath
+     * @param mode
+     */
+    public static HashCode hashPath(Path path, Path basePath, HashMode mode) {
+        return new HashBuilder().withMode(mode).withBasePath(basePath).with(path).build();
+    }
+
+    /**
      * Hashes the specified file
      *
      * @param hasher The current {@code Hasher} object

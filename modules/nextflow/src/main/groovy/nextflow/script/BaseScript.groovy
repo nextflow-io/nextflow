@@ -42,7 +42,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private WorkflowDef entryFlow
 
-    private PublishDef publisher
+    private OutputDef publisher
 
     @Lazy InputStream stdin = { System.in }()
 
@@ -131,7 +131,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
-        publisher = new PublishDef(closure)
+        publisher = new OutputDef(closure)
     }
 
     protected IncludeDef include( IncludeDef include ) {
