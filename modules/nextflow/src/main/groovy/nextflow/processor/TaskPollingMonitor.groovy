@@ -426,10 +426,16 @@ class TaskPollingMonitor implements TaskMonitor {
     protected void pollLoop() {
 
         int iteration=0
+        int previous=-1
         while( true ) {
             final long time = System.currentTimeMillis()
             final tasks = new ArrayList(runningQueue)
-            log.trace "Scheduler queue size: ${tasks.size()} (iteration: ${++iteration})"
+            final sz = tasks.size()
+            ++iteration
+            if( log.isTraceEnabled() && sz!=previous ) {
+                log.trace "Scheduler queue size: ${sz} (iteration: ${iteration})"
+                previous = sz
+            }
 
             // check all running tasks for termination
             checkAllTasks(tasks)
@@ -457,7 +463,7 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected dumpCurrentThreads() {
-        log.trace "Current runnign threads:\n${dumpThreads()}"
+        log.trace "Current running threads:\n${dumpThreads()}"
     }
 
     protected void dumpRunningQueue() {
