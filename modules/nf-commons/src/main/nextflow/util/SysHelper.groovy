@@ -178,4 +178,21 @@ class SysHelper {
         return os.getArch()
     }
 
+    /**
+     * Dump th stack trace of current running threads
+     * @return
+     */
+    static String dumpThreads() {
+
+        def buffer = new StringBuffer()
+        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
+        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
+            buffer.append('\n').append(e.getKey().toString()).append('\n')
+            for (StackTraceElement s : e.getValue()) {
+                buffer.append("  " + s).append('\n')
+            }
+        }
+
+        return buffer.toString()
+    }
 }

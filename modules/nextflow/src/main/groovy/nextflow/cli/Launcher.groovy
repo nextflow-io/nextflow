@@ -41,6 +41,9 @@ import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
 import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
+
+import static nextflow.util.SysHelper.dumpThreads
+
 /**
  * Main application entry point. It parses the command line and
  * launch the pipeline execution.
@@ -551,24 +554,6 @@ class Launcher {
             return(1)
         }
 
-    }
-
-    /**
-     * Dump th stack trace of current running threads
-     * @return
-     */
-    private String dumpThreads() {
-
-        def buffer = new StringBuffer()
-        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
-        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
-            buffer.append('\n').append(e.getKey().toString()).append('\n')
-            for (StackTraceElement s : e.getValue()) {
-                buffer.append("  " + s).append('\n')
-            }
-        }
-
-        return buffer.toString()
     }
 
     /**
