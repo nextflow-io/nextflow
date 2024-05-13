@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+2.5.0 - 13 May 2024
+- Add support for Job arrays (#3892) [ca9bc9d4]
+- Fix Use fully qualified S3 uris in error message (#4923) [f1cffd1b]
+
 2.4.2 - 15 Apr 2024
 - Improve retry logic for AWS Batch executor [62926c28]
 - Bump groovy 4.0.21 [9e08390b]
