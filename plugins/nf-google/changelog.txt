@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.13.0 - 13 May 2024
+- Add support for Job arrays (#3892) [ca9bc9d4]
+
 1.12.0 - 15 Apr 2024
 - Add custom jobName for Google Batch [df40d55f]
 - Add retry policy to Google Batch client [c4981dcc]
