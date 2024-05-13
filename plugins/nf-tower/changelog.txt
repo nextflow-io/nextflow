@@ -1,6 +1,9 @@
 nf-tower changelog
 ===================
-1.9.0 - 15 Apr 2025
+1.9.1 - 13 May 2024
+- Fix NPE in LogsCheckpoint class [deb3076d]
+
+1.9.0 - 15 Apr 2024
 - Update Platform API endpoint (#4855) [4842423a]
 - Publish built-in reports as Tower reports (#4760) [b710d923]
 - Bump groovy 4.0.21 [9e08390b]
