@@ -85,6 +85,7 @@ class CmdInspect extends CmdBase {
         target.preview = true
         target.previewAction = this.&applyInspect
         target.ansiLog = false
+        target.skipHistoryFile = true
         // run it
         target.run()
     }
