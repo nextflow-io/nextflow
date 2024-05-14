@@ -345,7 +345,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         log.debug "[AWS BATCH] Process `${task.lazyName()}` submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
     }
 
-    private void updateStatus(String jobId, String queueName) {
+    /*
+     * note: this method cannot be 'private' otherwise subclasses (xpack) will fail invoking it
+     */
+    protected void updateStatus(String jobId, String queueName) {
         if( task instanceof TaskArrayRun ) {
             // update status for children tasks
             for( int i=0; i<task.children.size(); i++ ) {
