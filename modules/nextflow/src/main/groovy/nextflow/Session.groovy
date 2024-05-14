@@ -1431,8 +1431,8 @@ class Session implements ISession {
     private volatile ThreadPoolManager finalizePoolManager
 
     @Memoized
-    synchronized ExecutorService finalizeTaskExecutorService() {
-        finalizePoolManager = new ThreadPoolManager('FinalizeTask')
+    synchronized ExecutorService taskFinalizerExecutorService() {
+        finalizePoolManager = new ThreadPoolManager('TaskFinalizer')
         return finalizePoolManager
                 .withConfig(config)
                 .withShutdownMessage(
