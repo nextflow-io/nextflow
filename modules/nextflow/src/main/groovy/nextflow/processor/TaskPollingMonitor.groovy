@@ -116,7 +116,7 @@ class TaskPollingMonitor implements TaskMonitor {
     private RateLimiter submitRateLimit
 
     @Lazy
-    private ExecutorService finalizerPool = { session.finalizeTaskExecutorService() }()
+    private ExecutorService finalizerPool = { session.taskFinalizerExecutorService() }()
 
     private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
 
