@@ -84,6 +84,9 @@ class PublishIndexOp {
     }
 
     protected Object normalizePaths(value) {
+        if( value instanceof Path )
+            return List.of(normalizePath(value))
+
         if( value instanceof Collection ) {
             return value.collect { el ->
                 if( el instanceof Path )
@@ -104,7 +107,7 @@ class PublishIndexOp {
             }
         }
 
-        throw new IllegalArgumentException("Index file record must be a list or map: ${value} [${value.class.simpleName}]")
+        throw new IllegalArgumentException("Index file record must be a list, map, or file: ${value} [${value.class.simpleName}]")
     }
 
     private Path normalizePath(Path path) {
