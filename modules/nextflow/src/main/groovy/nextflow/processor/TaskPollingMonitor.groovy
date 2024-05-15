@@ -34,6 +34,8 @@ import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
 import nextflow.util.Threads
 import nextflow.util.Throttle
+import static nextflow.util.SysHelper.dumpThreads
+
 /**
  * Monitors the queued tasks waiting for their termination
  *
@@ -114,7 +116,7 @@ class TaskPollingMonitor implements TaskMonitor {
     private RateLimiter submitRateLimit
 
     @Lazy
-    private ExecutorService finalizerPool = { session.finalizeTaskExecutorService() }()
+    private ExecutorService finalizerPool = { session.taskFinalizerExecutorService() }()
 
     private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
 
@@ -424,10 +426,16 @@ class TaskPollingMonitor implements TaskMonitor {
     protected void pollLoop() {
 
         int iteration=0
+        int previous=-1
         while( true ) {
             final long time = System.currentTimeMillis()
             final tasks = new ArrayList(runningQueue)
-            log.trace "Scheduler queue size: ${tasks.size()} (iteration: ${++iteration})"
+            final sz = tasks.size()
+            ++iteration
+            if( log.isTraceEnabled() && sz!=previous ) {
+                log.trace "Scheduler queue size: ${sz} (iteration: ${iteration})"
+                previous = sz
+            }
 
             // check all running tasks for termination
             checkAllTasks(tasks)
@@ -449,8 +457,13 @@ class TaskPollingMonitor implements TaskMonitor {
             // dump this line every two minutes
             Throttle.after(dumpInterval) {
                 dumpRunningQueue()
+                dumpCurrentThreads()
             }
         }
+    }
+
+    protected dumpCurrentThreads() {
+        log.trace "Current running threads:\n${dumpThreads()}"
     }
 
     protected void dumpRunningQueue() {
