@@ -47,6 +47,8 @@ import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.wave.api.BuildStatusResponse
+import io.seqera.wave.api.ContainerInspectRequest
+import io.seqera.wave.api.ContainerInspectResponse
 import io.seqera.wave.api.PackagesSpec
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
@@ -272,6 +274,40 @@ class WaveClient {
         }
     }
 
+    protected ContainerInspectResponse inspectRequest(String imageUri) {
+        final request = new ContainerInspectRequest(
+            containerImage: imageUri,
+            towerAccessToken: tower.accessToken,
+            towerWorkspaceId: tower.workspaceId,
+            towerEndpoint: tower.endpoint
+        )
+        return inspectRequest(request)
+    }
+
+    protected ContainerInspectResponse inspectRequest(ContainerInspectRequest request) {
+        final body = JsonOutput.toJson(request)
+        final uri = URI.create("${endpoint}/v1alpha1/inspect")
+        log.debug "Wave request: $uri; request: $request"
+        final req = HttpRequest.newBuilder()
+            .uri(uri)
+            .headers('Content-Type','application/json')
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build()
+
+        try {
+            final resp = httpSend(req)
+            log.debug "Wave response: statusCode=${resp.statusCode()}; body=${resp.body()}"
+            if( resp.statusCode()==200 )
+                return jsonToInspectResponse(resp.body())
+            else
+                throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+        }
+    }
+
+
     protected BuildStatusResponse jsonToBuildStatusResponse(String body) {
         final obj = new JsonSlurper().parseText(body) as Map
         new BuildStatusResponse(
@@ -285,6 +321,11 @@ class WaveClient {
 
     protected SubmitContainerTokenResponse jsonToSubmitResponse(String body) {
         final type = new TypeToken<SubmitContainerTokenResponse>(){}.getType()
+        return new Gson().fromJson(body, type)
+    }
+
+    protected ContainerInspectResponse jsonToInspectResponse(String body) {
+        final type = new TypeToken<ContainerInspectResponse>(){}.getType()
         return new Gson().fromJson(body, type)
     }
 
@@ -324,6 +365,19 @@ class WaveClient {
             // append each config to the other - the last has priority
             result += fetchContainerConfig(it)
         }
+        return result
+    }
+
+    @Memoized
+    synchronized String singularityOrasToHttp(String imageUri) {
+        final resp = inspectRequest(imageUri)
+        final spec = resp.container
+        if( spec.manifest.layers.size()!=1 )
+            throw new BadResponseException("Unexpected Singularity image structure - offending image: ${imageUri}")
+        final it = spec.manifest.layers[0]
+        if( it.mediaType != 'application/vnd.sylabs.sif.layer.v1.sif' )
+            throw new BadResponseException("Unexpected Singularity image mediaType - offending value: ${it.mediaType}")
+        final result = spec.getHostName() + "/v2/" + spec.getImageName() + "/blobs/" + it.digest
         return result
     }
 
