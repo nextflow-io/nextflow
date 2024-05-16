@@ -79,10 +79,13 @@ class ConsoleRunner implements ConsoleExtension {
             taskbar.setIconImage(image)
         }
         catch (final UnsupportedOperationException e) {
-            log.debug("The os does not support: 'taskbar.setIconImage'")
+            log.debug("Unable to config console icons [1] - cause: ${e.message}")
         }
         catch (final SecurityException e) {
-            log.debug("There was a security exception for: 'taskbar.setIconImage'")
+            log.debug("Unable to config console icons [2] - cause: ${e.message}")
+        }
+        catch (Throwable e) {
+            log.debug("Unable to configure console icon [3]", e)
         }
     }
 
