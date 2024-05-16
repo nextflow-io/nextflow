@@ -26,7 +26,6 @@ import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
-import java.util.regex.Pattern
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
@@ -35,7 +34,6 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -45,7 +43,6 @@ import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
-import nextflow.fusion.FusionHelper
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -58,8 +55,6 @@ import nextflow.util.PathTrie
 @EqualsAndHashCode
 @CompileStatic
 class PublishDir {
-
-    final static private Pattern FUSION_PATH_REGEX = ~/^\/fusion\/([^\/]+)\/(.*)/
 
     enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
@@ -138,10 +133,6 @@ class PublishDir {
 
     protected String getTaskName() {
         return task?.getName()
-    }
-
-    protected Map<String,Path> getTaskInputs() {
-        return task ? task.getInputFilesMap() : Map.<String,Path>of()
     }
 
     void setPath( def value ) {
@@ -404,13 +395,6 @@ class PublishDir {
 
     protected void processFile( Path source, Path destination ) {
 
-        // resolve Fusion symlink if applicable
-        if( FusionHelper.isFusionEnabled(session) ) {
-            final inputs = getTaskInputs()
-            if( source.name in inputs )
-                source = resolveFusionLink(inputs[source.name])
-        }
-
         // create target dirs if required
         makeDirs(destination.parent)
 
@@ -434,29 +418,6 @@ class PublishDir {
         }
 
         notifyFilePublish(destination, source)
-    }
-
-    /**
-     * Resolve a Fusion symlink by following the .fusion.symlinks
-     * file in the task directory until the original file is reached.
-     *
-     * @param file
-     */
-    protected Path resolveFusionLink(Path file) {
-        while( file.name in getFusionLinks(file.parent) )
-            file = file.text.replaceFirst(FUSION_PATH_REGEX) { _, scheme, path -> "${scheme}://${path}" } as Path
-        return file
-    }
-
-    @Memoized
-    protected List<String> getFusionLinks(Path workDir) {
-        try {
-            final file = workDir.resolve('.fusion.symlinks')
-            return file.text.tokenize('\n')
-        }
-        catch( NoSuchFileException e ) {
-            return List.of()
-        }
     }
 
     private String real0(Path p) {
