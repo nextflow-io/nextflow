@@ -24,6 +24,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.PublishDir
+import nextflow.util.CsvWriter
 /**
  * Publish files from a source channel.
  *
@@ -37,6 +38,12 @@ class PublishOp {
 
     private PublishDir publisher
 
+    private Path targetDir
+
+    private IndexOpts indexOpts
+
+    private List indexRecords = []
+
     private volatile boolean complete
 
     private Session getSession() { Global.session as Session }
@@ -44,6 +51,9 @@ class PublishOp {
     PublishOp(DataflowReadChannel source, Map opts) {
         this.source = source
         this.publisher = PublishDir.create(opts)
+        this.targetDir = opts.path as Path
+        if( opts.index )
+            this.indexOpts = new IndexOpts(targetDir, opts.index as Map)
     }
 
     boolean getComplete() { complete }
@@ -64,13 +74,32 @@ class PublishOp {
             final files = entry.value
             publisher.apply(files, sourceDir)
         }
+
+        if( indexOpts ) {
+            final record = indexOpts.mapper != null ? indexOpts.mapper.call(value) : value
+            final normalized = normalizePaths(record)
+            log.trace "Normalized record for index file: ${normalized}"
+            indexRecords << normalized
+        }
     }
 
     protected void onComplete(nope) {
+        if( indexOpts && indexRecords.size() > 0 ) {
+            log.trace "Saving records to index file: ${indexRecords}"
+            new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexOpts.path)
+            session.notifyFilePublish(indexOpts.path)
+        }
+
         log.trace "Publish operator complete"
         this.complete = true
     }
 
+    /**
+     * Extract files from a received value for publishing.
+     *
+     * @param result
+     * @param value
+     */
     protected Map<Path,Set<Path>> collectFiles(Map<Path,Set<Path>> result, value) {
         if( value instanceof Path ) {
             final sourceDir = getTaskDir(value)
@@ -86,9 +115,47 @@ class PublishOp {
     }
 
     /**
-     * Given a path try to infer the task directory to which the path below
-     * ie. the directory starting with a workflow work dir and having at lest
-     * two sub-directories eg work-dir/xx/yyyyyy/etc
+     * Normalize the paths in a record by converting
+     * work directory paths to publish paths.
+     *
+     * @param value
+     */
+    protected Object normalizePaths(value) {
+        if( value instanceof Path )
+            return List.of(normalizePath(value))
+
+        if( value instanceof Collection ) {
+            return value.collect { el ->
+                if( el instanceof Path )
+                    return normalizePath(el)
+                if( el instanceof Collection<Path> )
+                    return normalizePaths(el)
+                return el
+            }
+        }
+
+        if( value instanceof Map ) {
+            return value.collectEntries { k, v ->
+                if( v instanceof Path )
+                    return List.of(k, normalizePath(v))
+                if( v instanceof Collection<Path> )
+                    return List.of(k, normalizePaths(v))
+                return List.of(k, v)
+            }
+        }
+
+        throw new IllegalArgumentException("Index file record must be a list, map, or file: ${value} [${value.class.simpleName}]")
+    }
+
+    private Path normalizePath(Path path) {
+        final sourceDir = getTaskDir(path)
+        return targetDir.resolve(sourceDir.relativize(path))
+    }
+
+    /**
+     * Try to infer the parent task directory to which a path belongs. It
+     * should be a directory starting with a session work dir and having
+     * at lest two sub-directories, e.g. work/ab/cdef/etc
      *
      * @param path
      */
@@ -109,6 +176,24 @@ class PublishOp {
         if( file.startsWith(base) && file.getNameCount() > len+2 )
             return base.resolve(file.subpath(len,len+2))
         return null
+    }
+
+    static class IndexOpts {
+        Path path
+        Closure mapper
+        def /* boolean | List<String> */ header = false
+        String sep = ','
+
+        IndexOpts(Path targetDir, Map opts) {
+            this.path = targetDir.resolve(opts.path as String)
+
+            if( opts.mapper )
+                this.mapper = opts.mapper as Closure
+            if( opts.header != null )
+                this.header = opts.header
+            if( opts.sep )
+                this.sep = opts.sep as String
+        }
     }
 
 }

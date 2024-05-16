@@ -26,7 +26,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.MixOp
 import nextflow.extension.PublishOp
-import nextflow.extension.PublishIndexOp
+import nextflow.file.FileHelper
 
 /**
  * Implements the DSL for publishing workflow outputs
@@ -43,10 +43,12 @@ class OutputDsl {
 
     private Map defaults = [:]
 
+    private volatile List<PublishOp> ops = []
+
     void directory(String directory) {
         if( this.directory )
             throw new ScriptRuntimeException("Publish directory cannot be defined more than once in the workflow publish definition")
-        this.directory = (directory as Path).complete()
+        this.directory = FileHelper.toCanonicalPath(directory)
     }
 
     void contentType(String value) {
@@ -120,22 +122,13 @@ class OutputDsl {
                 : sources.first()
             final opts = publishOptions(name, publishConfigs[name] ?: [:])
 
-            new PublishOp(CH.getReadChannel(mixed), opts).apply()
-
-            if( opts.index ) {
-                final basePath = opts.path as Path
-                final indexOpts = opts.index as Map
-                final indexPath = indexOpts.path as String
-                if( !indexPath )
-                    throw new ScriptRuntimeException("Index file definition for publish target '${name}' is missing `path` option")
-                new PublishIndexOp(CH.getReadChannel(mixed), basePath, indexPath, indexOpts).apply()
-            }
+            ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
         }
     }
 
     private Map publishOptions(String name, Map overrides) {
         if( !directory )
-            directory = Paths.get('.').complete()
+            directory = FileHelper.toCanonicalPath('.')
 
         final opts = defaults + overrides
         if( opts.containsKey('ignoreErrors') )
@@ -147,7 +140,18 @@ class OutputDsl {
         if( path.startsWith('/') )
             throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should be a relative path")
         opts.path = directory.resolve(path)
+
+        if( opts.index && !(opts.index as Map).path )
+            throw new ScriptRuntimeException("Index file definition for publish target '${name}' is missing `path` option")
+
         return opts
+    }
+
+    boolean getComplete() {
+        for( final op : ops )
+            if( !op.complete )
+                return false
+        return true
     }
 
     static class TargetDsl {
