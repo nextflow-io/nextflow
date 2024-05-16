@@ -74,6 +74,8 @@ The following table lists the properties that can be accessed on the `workflow` 
 : Entries of the workflow manifest.
 
 `workflow.preview`
+: :::{versionadded} 24.04.0
+  :::
 : Returns `true` whenever the current instance is a preview execution.
 
 `workflow.profile`
