@@ -191,8 +191,11 @@ public class CacheHelper {
             return hasher;
         }
 
-        if( value instanceof FileHolder )
-            return CacheHelper.hasher(hasher, ((FileHolder) value).getSourceObj(), mode );
+        if( value instanceof FileHolder ) {
+            hasher = CacheHelper.hasher(hasher, ((FileHolder) value).getSourceObj(), mode );
+            hasher = CacheHelper.hasher(hasher, ((FileHolder) value).getStageName(), mode );
+            return hasher;
+        }
 
         if( value instanceof Path )
             return hashFile(hasher, (Path)value, mode);
