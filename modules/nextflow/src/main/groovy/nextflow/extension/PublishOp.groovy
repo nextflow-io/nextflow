@@ -122,8 +122,7 @@ class PublishOp {
      */
     protected Object normalizePaths(value) {
         if( value instanceof Path ) {
-            final target = normalizePath(value)
-            return List.of(targetDir.relativize(target), target)
+            return List.of(value.getBaseName(), normalizePath(value))
         }
 
         if( value instanceof Collection ) {
