@@ -121,8 +121,10 @@ class PublishOp {
      * @param value
      */
     protected Object normalizePaths(value) {
-        if( value instanceof Path )
-            return List.of(normalizePath(value))
+        if( value instanceof Path ) {
+            final target = normalizePath(value)
+            return List.of(targetDir.relativize(target), target)
+        }
 
         if( value instanceof Collection ) {
             return value.collect { el ->

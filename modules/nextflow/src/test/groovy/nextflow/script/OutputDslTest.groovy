@@ -70,7 +70,7 @@ class OutputDslTest extends Specification {
         target.resolve('foo/file1.txt').text == 'Hello'
         target.resolve('barbar/file2.txt').text == 'world'
         target.resolve('barbar/index.csv').text == """\
-            "${target}/barbar/file2.txt"
+            "file2.txt","${target}/barbar/file2.txt"
             """.stripIndent()
         and:
         1 * session.notifyFilePublish(target.resolve('foo/file1.txt'), file1)
