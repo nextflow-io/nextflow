@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,15 @@ class TesExecutorTest extends Specification {
 
     def 'should get endpoint' () {
         given:
-        def session = Mock(Session)
+        def config = [
+            tes: [endpoint: 'http://foo.com']
+        ]
+        def session = new Session(config)
         def exec = new TesExecutor(session: session)
 
         when:
-        def result = exec.getEndPoint()
+        def result = exec.getEndpoint()
         then:
-        session.getConfigAttribute('executor.tes.endpoint','http://localhost:8000') >> 'http://foo.com'
         result == 'http://foo.com'
     }
 
@@ -45,7 +47,7 @@ class TesExecutorTest extends Specification {
         def exec = Spy(TesExecutor)
 
         when:
-        def result = exec.getEndPoint()
+        def result = exec.getEndpoint()
         then:
         1 * exec.getSession() >> session
         1 * session.getSystemEnv() >> ENV

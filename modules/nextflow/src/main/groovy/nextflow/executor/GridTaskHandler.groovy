@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -98,6 +99,12 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.exitStatusReadTimeoutMillis = duration.toMillis()
         this.queue = task.config?.queue
         this.sanityCheckInterval = duration
+    }
+
+    @Override
+    void prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
     }
 
     protected ProcessBuilder createProcessBuilder() {
@@ -254,17 +261,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     void submit() {
         ProcessBuilder builder = null
         try {
-            // -- create the wrapper script
-            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
             final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
-            // -- save the JobId in the
-            this.jobId = executor.parseJobId(result)
-            this.status = SUBMITTED
+            // -- save the job id
+            final jobId = (String)executor.parseJobId(result)
+            updateStatus(jobId)
             log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
 
         }
@@ -281,9 +286,21 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }
-
     }
 
+    private void updateStatus(String jobId) {
+        if( task instanceof TaskArrayRun ) {
+            for( int i=0; i<task.children.size(); i++ ) {
+                final handler = task.children[i] as GridTaskHandler
+                final arrayTaskId = ((TaskArrayExecutor)executor).getArrayTaskId(jobId, i)
+                handler.updateStatus(arrayTaskId)
+            }
+        }
+        else {
+            this.jobId = jobId
+            this.status = SUBMITTED
+        }
+    }
 
     private long startedMillis
 

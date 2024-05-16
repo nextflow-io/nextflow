@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -177,5 +177,43 @@ class TupleOutParamTest extends Dsl2Spec {
         and:
         outs[0].inner[1] instanceof EnvOutParam
         outs[0].inner[1].getName() == 'BAR'
+    }
+
+    def 'should create tuple of eval' () {
+        setup:
+        def text = '''
+            process hola {
+              output:
+                tuple eval('this --one'), eval("$other --two")
+              
+              /echo command/ 
+            }
+            
+            workflow {
+              hola()
+            }
+            '''
+
+        def binding = [other:'tool']
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        def outs = process.config.getOutputs() as List<TupleOutParam>
+        then:
+        println outs.outChannel
+        outs.size() == 1
+        and:
+        outs[0].outChannel instanceof DataflowVariable
+        and:
+        outs[0].inner.size() == 2
+        and:
+        outs[0].inner[0] instanceof CmdEvalParam
+        outs[0].inner[0].getName() =~ /nxf_out_eval_\d+/
+        (outs[0].inner[0] as CmdEvalParam).getTarget(binding) == 'this --one'
+        and:
+        outs[0].inner[1] instanceof CmdEvalParam
+        outs[0].inner[1].getName() =~ /nxf_out_eval_\d+/
+        (outs[0].inner[1] as CmdEvalParam).getTarget(binding) == 'tool --two'
+
     }
 }

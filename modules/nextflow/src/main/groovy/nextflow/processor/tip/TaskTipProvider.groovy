@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Sage-Bionetworks
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,19 @@
  *
  */
 
-package nextflow.secret
+package nextflow.processor.tip
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import org.pf4j.ExtensionPoint
 
 /**
- * Model a context to access secret values in nextflow config files
+ * Basic interface for tips suggestion
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@CompileStatic
-class SecretsContext {
+interface TaskTipProvider extends ExtensionPoint {
 
-    SecretsContext() {}
+    boolean enabled()
 
-    @Override
-    Object getProperty(String name) {
-        if( metaClass.hasProperty(name) )
-            return metaClass.getProperty(this,name)
-        else {
-            return new SecretHolder(name)
-        }
-    }
+    String suggestTip(List<String> context)
+
 }

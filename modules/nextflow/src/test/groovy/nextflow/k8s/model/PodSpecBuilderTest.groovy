@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,14 +121,15 @@ class PodSpecBuilderTest extends Specification {
             .withImageName('busybox')
             .withCommand('echo foo')
             .withCpus(8)
+            .withCpuLimits(true)
             .withMemory(MemoryUnit.of('10GB'))
             .withResourcesLimits('nextflow.io/fuse': 1)
             .build()
 
         then:
         pod2.spec.containers[0].resources == [
-                                                requests: ['cpu':8, 'memory':'10240Mi'],
-                                                limits: [memory:'10240Mi', 'nextflow.io/fuse':1] ]
+                requests: ['cpu':8, 'memory':'10240Mi'],
+                limits: ['cpu':8, 'memory':'10240Mi', 'nextflow.io/fuse':1] ]
     }
 
     def 'should set namespace, labels and annotations' () {
@@ -867,6 +868,27 @@ class PodSpecBuilderTest extends Specification {
         then:
         job.metadata == metadata
         job.spec.template.metadata == metadata
+    }
+
+    def 'should create job spec with ttl seconds' () {
+        when:
+        def job = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .buildAsJob()
+        then:
+        !job.spec.ttlSecondsAfterFinished
+
+        when:
+        job = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions( new PodOptions(ttlSecondsAfterFinished: 60) )
+                .buildAsJob()
+        then:
+        job.spec.ttlSecondsAfterFinished == 60
     }
 
 }

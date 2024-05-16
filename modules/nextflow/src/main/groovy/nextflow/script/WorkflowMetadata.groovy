@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
@@ -194,6 +195,19 @@ class WorkflowMetadata {
     String containerEngine
 
     /**
+     * Metadata specific to Wave, including:
+     * <li>enabled: whether Wave is enabled
+     */
+    WaveMetadata wave
+
+    /**
+     * Metadata specific to Fusion, including:
+     * <li>enabled: whether Fusion is enabled
+     * <li>version: the version of Fusion in use
+     */
+    FusionMetadata fusion
+
+    /**
      * The list of files that concurred to create the config object
      */
     List<Path> configFiles
@@ -246,6 +260,8 @@ class WorkflowMetadata {
         this.userName = System.getProperty('user.name')
         this.homeDir = Paths.get(System.getProperty('user.home'))
         this.manifest = session.getManifest()
+        this.wave = new WaveMetadata(session)
+        this.fusion = new FusionMetadata(session)
 
         // check if there's a onComplete action in the config file
         registerConfigAction(session.config.workflow as Map)
@@ -424,7 +440,7 @@ class WorkflowMetadata {
         final allProperties = this.metaClass.getProperties()
         final result = new LinkedHashMap(allProperties.size())
         for( MetaProperty property : allProperties ) {
-            if( property.name == 'class' )
+            if( property.name == 'class' || !Modifier.isPublic(property.modifiers) )
                 continue
             try {
                 result[property.name] = property.getProperty(this)

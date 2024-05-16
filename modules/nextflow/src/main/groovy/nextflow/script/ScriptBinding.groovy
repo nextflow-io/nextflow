@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.secret.SecretHolder
 /**
  * Defines the script execution context. By default provided the following variables
  * <li>{@code __$session}: the current execution session
@@ -71,8 +70,8 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
-            args.addAll((List)vars.args)
+            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
         
@@ -263,11 +262,6 @@ class ScriptBinding extends WorkflowBinding {
         }
 
         private String put0(String name, Object value, boolean allowOverride=false) {
-            if( value instanceof SecretHolder ) {
-                log.warn "`params.$name` cannot be assigned to a secret value -- Assignment is ignored"
-                return null
-            }
-            
             return allowOverride || !target.containsKey(name)
                 ? target.put(name, value)
                 : null

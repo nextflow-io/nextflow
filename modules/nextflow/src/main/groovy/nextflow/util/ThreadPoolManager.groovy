@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,9 @@ class ThreadPoolManager {
     private Boolean allowThreadTimeout
     private Duration maxAwait = DEFAULT_MAX_AWAIT
     private ExecutorService executorService
-    final private String name
+    private String name
+    private String waitMsg = "Waiting for file transfers to complete (%d files)"
+    private String exitMsg = "Exiting before file transfers were completed -- Some files may be lost"
 
     ThreadPoolManager(String name) {
         this.name = name
@@ -69,6 +71,12 @@ class ThreadPoolManager {
         this.keepAlive = config.navigate("threadPool.${name}.keepAlive", keepAlive) as Duration
         this.allowThreadTimeout = config.navigate("threadPool.${name}.allowThreadTimeout", false) as Boolean
         this.maxAwait = config.navigate("threadPool.${name}.maxAwait", maxAwait) as Duration
+        return this
+    }
+
+    ThreadPoolManager withShutdownMessage(String waitMsg, String exitMsg) {
+        this.waitMsg = waitMsg
+        this.exitMsg = exitMsg
         return this
     }
 
@@ -116,9 +124,7 @@ class ThreadPoolManager {
         }
 
         executorService.shutdown()
-        // wait for ongoing file transfer to complete
-        final waitMsg = "Waiting for file transfers to complete (%d files)"
-        final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files may be lost"
+        // wait for remaining threads to complete
         ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
     }
