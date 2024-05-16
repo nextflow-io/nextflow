@@ -1873,7 +1873,22 @@ class ConfigBuilderTest extends Specification {
         then:
         config.stubRun == true
     }
-    
+
+    def 'should configure preview mode' () {
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.preview
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(preview: true)).build()
+        then:
+        config.preview == true
+    }
+
     def 'should merge profiles' () {
         given:
         def ENV = [:]
