@@ -70,11 +70,11 @@ class ConsoleRunner implements ConsoleExtension {
     }
 
     static void loadDockIcon() {
-        final URL imageResource = ConsoleRunner.getResource("/nextflow-icon.png");
-        final defaultToolkit = Toolkit.getDefaultToolkit()
-        final image = defaultToolkit.getImage(imageResource)
-        final taskbar = Taskbar.getTaskbar()
         try {
+            final URL imageResource = ConsoleRunner.getResource("/nextflow-icon.png");
+            final defaultToolkit = Toolkit.getDefaultToolkit()
+            final image = defaultToolkit.getImage(imageResource)
+            final taskbar = Taskbar.getTaskbar()
             //set icon for mac os (and other systems which do support this method)
             taskbar.setIconImage(image)
         }
