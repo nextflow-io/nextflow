@@ -96,6 +96,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         metadata.resume == false
         metadata.stubRun == false
+        metadata.preview == false
         metadata.userName == System.getProperty('user.name')
         metadata.homeDir == Paths.get(System.getProperty('user.home'))
         metadata.manifest.version == '1.0.0'
@@ -114,11 +115,13 @@ class WorkflowMetadataTest extends Specification {
         session.profile >> 'foo_profile'
         session.resumeMode >> true
         session.stubRun >> true
+        session.preview >> true
         metadata = new WorkflowMetadata(session, script)
         then:
         metadata.profile == 'foo_profile'
         metadata.resume
         metadata.stubRun
+        metadata.preview
     }
 
     def foo_test_method() {

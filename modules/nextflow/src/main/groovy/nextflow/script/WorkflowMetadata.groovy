@@ -190,6 +190,11 @@ class WorkflowMetadata {
     boolean stubRun
 
     /**
+     * Returns ``true`` whenever the current instance is in preview mode
+     */
+    boolean preview
+
+    /**
      * Which container engine was used to execute the workflow
      */
     String containerEngine
@@ -253,6 +258,7 @@ class WorkflowMetadata {
         this.sessionId = session.uniqueId
         this.resume = session.resumeMode
         this.stubRun = session.stubRun
+        this.preview = session.preview
         this.runName = session.runName
         this.containerEngine = containerEngine0(session)
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }

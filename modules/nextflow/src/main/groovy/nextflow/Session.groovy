@@ -154,6 +154,11 @@ class Session implements ISession {
     boolean stubRun
 
     /**
+     * Enable preview mode
+     */
+    boolean preview
+
+    /**
      * Folder(s) containing libs and classes to be added to the classpath
      */
     List<Path> libDir
@@ -344,6 +349,9 @@ class Session implements ISession {
 
         // -- dry run
         this.stubRun = config.stubRun
+
+        // -- preview
+        this.preview = config.preview
 
         // -- normalize taskConfig object
         if( config.process == null ) config.process = [:]
