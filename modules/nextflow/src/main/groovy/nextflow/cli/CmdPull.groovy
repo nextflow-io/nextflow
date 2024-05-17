@@ -79,6 +79,7 @@ class CmdPull extends CmdBase implements HubOptions {
             log.info "Checking $it${revision ? REVISION_DELIM + revision : ''} ..."
             def manager = new AssetManager(it, revision, this)
 
+            manager.updateLocalBareRepo()
             def result = manager.download(deep)
             manager.updateModules()
 

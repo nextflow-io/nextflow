@@ -574,6 +574,7 @@ class CmdRun extends CmdBase implements HubOptions {
             if( offline )
                 throw new AbortOperationException("Unknown project `$repo${revision ? REVISION_DELIM + revision : ''}` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo${revision ? REVISION_DELIM + revision : ''} ..."
+            manager.updateLocalBareRepo()
             def result = manager.download(deep)
             if( result )
                 log.info " $result"
