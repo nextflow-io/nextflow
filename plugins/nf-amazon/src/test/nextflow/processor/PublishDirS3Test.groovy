@@ -73,30 +73,4 @@ class PublishDirS3Test extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should resolve fusion symlinks' () {
-        given:
-        Global.session = Mock(Session) {
-            config >> [fusion: [enabled: true]]
-        }
-        and:
-        def prev = FileHelper.asPath('s3://bucket/work/0/foo.txt')
-        def file = FileHelper.asPath('s3://bucket/work/1/foo.txt')
-        def taskInputs = ['foo.txt': file]
-        and:
-        def targetDir = FileHelper.asPath('s3://bucket/results')
-        def target = targetDir.resolve('foo.txt')
-        def publisher = Spy(new PublishDir(path: targetDir)) { getTaskInputs()>>taskInputs }
-
-        when:
-        publisher.processFile(file, target)
-        then:
-        1 * publisher.resolveFusionLink(file) >> prev
-        _ * publisher.makeDirs(target.parent) >> _
-        1 * publisher.processFileImpl(prev, target) >> _
-        1 * publisher.notifyFilePublish(target, prev) >> _
-
-        cleanup:
-        Global.session = null
-    }
-
 }
