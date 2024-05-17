@@ -99,8 +99,8 @@ Some configuration options in the `conda` scope are used when Wave is used to bu
 For example, the Conda channels and their priority can be set with `conda.channels`:
 
 ```groovy
-wave.strategy = ['conda']
-conda.channels = 'seqera,conda-forge,bioconda,defaults'
+wave.strategy = 'conda'
+conda.channels = 'conda-forge,bioconda'
 ```
 :::
 
