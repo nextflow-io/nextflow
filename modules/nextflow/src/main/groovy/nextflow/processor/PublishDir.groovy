@@ -43,7 +43,12 @@ import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
+import nextflow.fusion.FusionHelper
+import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
+
+import static nextflow.util.CacheHelper.HashMode
+
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
  * files of a given task to a user specified directory.
@@ -68,9 +73,9 @@ class PublishDir {
     Path path
 
     /**
-     * Whenever overwrite existing files
+     * Whether to overwrite existing files
      */
-    Boolean overwrite
+    def /* Boolean | String */ overwrite
 
     /**
      * The publish {@link Mode}
@@ -190,7 +195,7 @@ class PublishDir {
             result.pattern = params.pattern
 
         if( params.overwrite != null )
-            result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
+            result.overwrite = params.overwrite
 
         if( params.saveAs )
             result.saveAs = (Closure) params.saveAs
@@ -411,7 +416,7 @@ class PublishDir {
             if( !sameRealPath && checkSourcePathConflicts(destination))
                 return
             
-            if( !sameRealPath && overwrite ) {
+            if( !sameRealPath && shouldOverwrite(source, destination) ) {
                 FileHelper.deletePath(destination)
                 processFileImpl(source, destination)
             }
@@ -470,6 +475,17 @@ class PublishDir {
 
     protected boolean isSymlinkMode() {
         return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
+    }
+
+    protected boolean shouldOverwrite(Path source, Path target) {
+        if( overwrite instanceof Boolean )
+            return overwrite
+
+        final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
+        final sourceHash = HashBuilder.hashPath(source, source.parent, hashMode)
+        final targetHash = HashBuilder.hashPath(target, target.parent, hashMode)
+        log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
+        return sourceHash != targetHash
     }
 
     protected void processFileImpl( Path source, Path destination ) {
