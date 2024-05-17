@@ -136,8 +136,8 @@ class FusionConfigTest extends Specification {
         new FusionConfig([:]).retrieveFusionVersion(FUSION_URL) == EXPECTED
         where:
         FUSION_URL                              | EXPECTED
-        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.2'
-        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.2'
+        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.3'
+        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.3'
         'https://foo.com/releases/v3.0-amd.json'| '3.0'
     }
 
@@ -147,7 +147,7 @@ class FusionConfigTest extends Specification {
         where:
         FUSION_URL                                      | ENABLED  | EXPECTED
         null                                            | false    | null
-        null                                            | true     | '2.2'
+        null                                            | true     | '2.3'
         'https://foo.com/releases/v4.0-amd64.json'      | true     | '4.0'
         'https://foo.com/releases/v4.0.1-amd64.json'    | true     | '4.0.1'
     }
