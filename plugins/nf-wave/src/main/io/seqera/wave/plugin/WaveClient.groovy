@@ -80,7 +80,7 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
-    public static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
+    public static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','bioconda']
 
     private static final String DEFAULT_SPACK_ARCH = 'x86_64'
 
