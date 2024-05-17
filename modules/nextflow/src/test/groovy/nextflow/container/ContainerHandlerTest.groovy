@@ -305,7 +305,7 @@ class ContainerHandlerTest extends Specification {
 
     def 'should invoke singularity cache' () {
         given:
-        def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
+        ContainerHandler handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
 
         when:
         def result = handler.normalizeImageName(IMG)

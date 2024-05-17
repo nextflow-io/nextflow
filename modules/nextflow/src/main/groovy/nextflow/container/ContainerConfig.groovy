@@ -73,6 +73,17 @@ class ContainerConfig extends LinkedHashMap {
         return get('ociAutoPull')?.toString()=='true'
     }
 
+    boolean useHttpOverOras() {
+        final engine = getEngine()
+        if( engine != 'singularity' && engine != 'apptainer' )
+            throw new UnsupportedOperationException("Method useHttpOverOras is only supported by singularity and apptainer container engine")
+        return get('useHttpOverOras')?.toString()=='true'
+    }
+
+    boolean useOrasOverHttp() {
+        return !useHttpOverOras()
+    }
+
     /**
      * Whenever the Singularity OCI-mode is enabled
      *

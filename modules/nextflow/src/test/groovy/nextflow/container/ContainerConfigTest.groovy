@@ -92,6 +92,7 @@ class ContainerConfigTest extends Specification {
 
     }
 
+    @Unroll
     def 'should get fusion options' () {
         when:
         def cfg = new ContainerConfig(OPTS)
@@ -116,4 +117,18 @@ class ContainerConfigTest extends Specification {
         [engine:'sarus', fusionOptions:'--other']       | '--other'
     }
 
+    @Unroll
+    def 'should use http over oras' () {
+        when:
+        def cfg = new ContainerConfig(OPTS)
+
+        then:
+        cfg.useHttpOverOras() == EXPECTED
+        cfg.useOrasOverHttp() == !EXPECTED
+
+        where:
+        OPTS                                            | EXPECTED
+        [useHttpOverOras:true, engine:'singularity']    | true
+        [useHttpOverOras:true, engine:'apptainer']      | true
+    }
 }

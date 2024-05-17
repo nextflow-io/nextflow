@@ -26,6 +26,7 @@ import io.seqera.wave.plugin.WaveClient
 import nextflow.Global
 import nextflow.Session
 import nextflow.container.ContainerConfig
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
@@ -88,14 +89,23 @@ class WaveContainerResolver implements ContainerResolver {
                 return defaultResolver.resolveImage(task, imageName)
             }
             // fetch the wave container image name
-            final image = waveContainer(task, imageName, singularitySpec)
+            def image = waveContainer(task, imageName, singularitySpec)
             // when wave returns no info, just default to standard behaviour
             if( !image ) {
                 return defaultResolver.resolveImage(task, imageName)
             }
             // oras prefixed container are served directly
-            if( image.target.startsWith("oras://") )
-                return image
+            if( image.target.startsWith("oras://") ) {
+                if( config.useOrasOverHttp() )
+                    return image
+                // fetch the http container uri for the given oras container
+                final httpUri = client().singularityOrasToHttp(image.target)
+                image = new ContainerInfo(image.source, httpUri, image.hashKey)
+                // when running inspect mode just return it, otherwise the following
+                // resolver invocation would try to download it
+                if( ContainerInspectMode.active() )
+                    return image
+            }
             // otherwise adapt it to singularity format using the target containerInfo to avoid the cache invalidation
             return defaultResolver.resolveImage(task, image.target, image.hashKey)
         }
