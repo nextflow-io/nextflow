@@ -165,6 +165,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     private outputs = new OutputsList()
 
     /**
+     * Map of default publish targets
+     */
+    private Map<String,String> publishTargets = [:]
+
+    /**
      * Initialize the taskConfig object with the defaults values
      *
      * @param script The owner {@code BaseScript} configuration object
@@ -515,6 +520,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     /**
+     * Typed shortcut to {@code #publishTargets}
+     */
+    Map<String,String> getPublishTargets() {
+        publishTargets
+    }
+
+    /**
      * Implements the process {@code debug} directive.
      */
     ProcessConfig debug( value ) {
@@ -649,6 +661,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             result.into(obj)
         }
         result
+    }
+
+    void _publish_target(String emit, String name) {
+        final emitNames = outputs.collect { param -> param.channelEmitName }
+        if( emit !in emitNames )
+            throw new IllegalArgumentException("Invalid emit name '${emit}' in publish statement, valid emits are: ${emitNames.join(', ')}")
+        publishTargets[emit] = name
     }
 
     /**

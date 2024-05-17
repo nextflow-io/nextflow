@@ -19,6 +19,7 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.exception.IllegalInvocationException
 import nextflow.extension.OpCall
@@ -153,6 +154,15 @@ class WorkflowBinding extends Binding  {
 
             throw e
         }
+    }
+
+    void _publish_target(DataflowWriteChannel source, String name) {
+        owner.session.publishTargets[source] = name
+    }
+
+    void _publish_target(ChannelOut out, String name) {
+        for( final ch : out )
+            _publish_target(ch, name)
     }
 
 }

@@ -1008,7 +1008,7 @@ Some caveats on glob pattern behavior:
 Although the input files matching a glob output declaration are not included in the resulting output channel, these files may still be transferred from the task scratch directory to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using loose wildcards when defining output files, e.g. `path '*'`. Instead, use a prefix or a suffix to restrict the set of matching files to only the expected ones, e.g. `path 'prefix_*.sorted.bam'`.
 :::
 
-Read more about glob syntax at the following link [What is a glob?][what is a glob?]
+Read more about glob syntax at the following link [What is a glob?][glob]
 
 ### Dynamic output file names
 
@@ -2791,4 +2791,3 @@ process foo {
 ```
 
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-[what is a glob?]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob

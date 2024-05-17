@@ -1472,6 +1472,8 @@ An optional {ref}`closure <script-closure>` can be used to transform each item b
 :language: console
 ```
 
+(operator-take)=
+
 ## take
 
 *Returns: queue channel*
@@ -1674,6 +1676,8 @@ The difference between `unique` and `distinct` is that `unique` removes *all* du
 :::
 
 See also: [distinct](#distinct)
+
+(operator-until)=
 
 ## until
 
