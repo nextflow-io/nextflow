@@ -12,18 +12,36 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 /**
+ * Models the workflow output definition
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-class BaseScriptConsts {
+@Slf4j
+@CompileStatic
+class OutputDef {
 
-    public static Object[] EMPTY_ARGS = [] as Object[]
+    private Closure closure
 
-    public static List<String> PRIVATE_NAMES = ['session','processFactory','taskProcessor','meta','entryFlow', 'publisher']
+    OutputDef(Closure closure) {
+        this.closure = closure
+    }
+
+    void run(Map<DataflowWriteChannel,String> targets) {
+        final dsl = new OutputDsl()
+        final cl = (Closure)closure.clone()
+        cl.setDelegate(dsl)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        cl.call()
+
+        dsl.build(targets)
+    }
+
 }
