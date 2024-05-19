@@ -368,7 +368,21 @@ class PublishDir {
 
     protected void safeProcessPath(Path source, Path target) {
         try {
-            retryableProcessPath(source, target)
+            // publish each file in the directory tree
+            if( Files.isDirectory(source) ) {
+                Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
+                    FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
+                        final targetFile = target.resolve(source.relativize(sourceFile).toString())
+                        retryableProcessFile(sourceFile, targetFile)
+                        FileVisitResult.CONTINUE
+                    }
+                })
+            }
+
+            // otherwise publish file directly
+            else {
+                retryableProcessFile(source, target)
+            }
         }
         catch( Throwable e ) {
             final msg =  "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details"
@@ -382,7 +396,7 @@ class PublishDir {
         }
     }
 
-    protected void retryableProcessPath(Path source, Path target) {
+    protected void retryableProcessFile(Path source, Path target) {
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {
@@ -398,26 +412,7 @@ class PublishDir {
             .build()
         Failsafe
             .with( retryPolicy )
-            .get { it-> processPath(source, target) }
-    }
-
-    protected void processPath(Path source, Path target) {
-
-        // publish each file in the directory tree
-        if( Files.isDirectory(source) ) {
-            Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
-                FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
-                    final targetFile = target.resolve(source.relativize(sourceFile).toString())
-                    processFile(sourceFile, targetFile)
-                    FileVisitResult.CONTINUE
-                }
-            })
-        }
-
-        // otherwise publish file directly
-        else {
-            processFile(source, target)
-        }
+            .get { it-> processFile(source, target) }
     }
 
     protected void processFile( Path source, Path destination ) {
