@@ -26,6 +26,7 @@ import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.azure.core.credential.TokenRequestContext
+import com.azure.core.management.AzureEnvironment
 import com.azure.identity.DefaultAzureCredentialBuilder
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
@@ -303,23 +304,27 @@ class AzBatchService implements Closeable {
     }
 
     protected BatchCredentials createBatchCredentialsWithManagedIdentity() {
-        log.debug "[AZURE BATCH] Creating Azure Batch client using Managed Identity credentials"
+        log.debug '[AZURE BATCH] Creating Azure Batch client using Managed Identity credentials'
 
-        final batchEndpoint = "https://batch.core.windows.net/"
-        final authenticationEndpoint = "https://login.microsoftonline.com/"
+        final batchEndpoint = 'https://batch.core.windows.net/'
+        final authenticationEndpoint = 'https://login.microsoftonline.com/'
 
         final clientId = config.managedIdentity().clientId
         final credentialBuilder = new DefaultAzureCredentialBuilder()
-        if( clientId )
-            credentialBuilder.managedIdentityClientId(clientId)
+        credentialBuilder.managedIdentityClientId(clientId)
         final credential = credentialBuilder.build()
-        final token = credential.getTokenSync( new TokenRequestContext() )
+        final tenantId = System.getenv('AZURE_TENANT_ID')
+        final tokenContext = new TokenRequestContext()
+            .setTenantId(tenantId)
+            .addScopes("${AzureEnvironment.AZURE.getManagementEndpoint()}/.default")
+        final token = credential.getTokenSync( tokenContext )
+        log.debug "[AZURE BATCH] Client ID: ${clientId}, Tenant ID: ${tokenContext.getTenantId()}, Token: ${token.getToken()}"
 
         return new BatchApplicationTokenCredentials(
                 config.batch().endpoint,
                 clientId,
                 token.getToken(),
-                null,
+                tenantId,
                 batchEndpoint,
                 authenticationEndpoint
         )
