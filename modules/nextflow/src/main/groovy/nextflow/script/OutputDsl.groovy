@@ -17,7 +17,6 @@
 package nextflow.script
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -27,7 +26,6 @@ import nextflow.extension.CH
 import nextflow.extension.MixOp
 import nextflow.extension.PublishOp
 import nextflow.file.FileHelper
-
 /**
  * Implements the DSL for publishing workflow outputs
  *
@@ -81,6 +79,10 @@ class OutputDsl {
 
     void tags(Map value) {
         setDefault('tags', value)
+    }
+
+    void enabled( boolean value ) {
+        setDefault('enabled', value)
     }
 
     private void setDefault(String name, Object value) {
@@ -203,6 +205,10 @@ class OutputDsl {
             setOption('tags', value)
         }
 
+        void enabled( boolean value ) {
+            setOption('enabled', value)
+        }
+
         private void setOption(String name, Object value) {
             if( opts.containsKey(name) )
                 throw new ScriptRuntimeException("Publish option `${name}` cannot be defined more than once for a given target")
@@ -210,7 +216,7 @@ class OutputDsl {
         }
 
         Map getOptions() {
-            opts
+            return opts
         }
 
     }
@@ -246,7 +252,7 @@ class OutputDsl {
         }
 
         Map getOptions() {
-            opts
+            return opts
         }
 
     }
