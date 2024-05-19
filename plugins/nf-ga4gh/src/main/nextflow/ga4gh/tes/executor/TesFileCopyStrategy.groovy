@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,6 +113,7 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
             copy.remove('PATH')
         // when a remote bin directory is provide managed it properly
         if( remoteBinDir ) {
+            result << "mkdir \$PWD/nextflow-bin/\n"
             result << "cp -r ${remoteBinDir}/* \$PWD/nextflow-bin/\n"
             result << "chmod +x \$PWD/nextflow-bin/* || true\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"

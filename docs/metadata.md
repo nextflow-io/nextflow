@@ -58,6 +58,12 @@ The following table lists the properties that can be accessed on the `workflow` 
 : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
 : Exit status of the task that caused the workflow execution to fail.
 
+`workflow.fusion.enabled`
+: Whether Fusion is enabled.
+
+`workflow.fusion.version`
+: Fusion version in use.
+
 `workflow.homeDir`
 : User system home directory.
 
@@ -66,6 +72,11 @@ The following table lists the properties that can be accessed on the `workflow` 
 
 `workflow.manifest`
 : Entries of the workflow manifest.
+
+`workflow.preview`
+: :::{versionadded} 24.04.0
+  :::
+: Returns `true` whenever the current instance is a preview execution.
 
 `workflow.profile`
 : Used configuration profile.
@@ -110,6 +121,9 @@ The following table lists the properties that can be accessed on the `workflow` 
 
 `workflow.userName`
 : User system account name.
+
+`workflow.wave.enabled`
+: Whether Wave is enabled.
 
 `workflow.workDir`
 : Workflow working directory.

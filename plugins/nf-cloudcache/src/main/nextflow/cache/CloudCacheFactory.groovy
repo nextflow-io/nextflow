@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ class CloudCacheFactory extends CacheFactory {
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
         final path = (Global.session as Session).cloudCachePath
         if( !path )
-            throw new IllegalArgumentException("Cloud-cache path not defined - use either -cloudcatch run option or NXF_CLOUDCACHE_PATH environment variable")
+            throw new IllegalArgumentException("Cloud-cache path not defined - use either -with-cloudcache run option or NXF_CLOUDCACHE_PATH environment variable")
         final store = new CloudCacheStore(uniqueId, runName, path)
         return new CacheDB(store)
     }

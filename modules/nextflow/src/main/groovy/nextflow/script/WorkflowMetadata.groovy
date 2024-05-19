@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -190,9 +190,27 @@ class WorkflowMetadata {
     boolean stubRun
 
     /**
+     * Returns ``true`` whenever the current instance is in preview mode
+     */
+    boolean preview
+
+    /**
      * Which container engine was used to execute the workflow
      */
     String containerEngine
+
+    /**
+     * Metadata specific to Wave, including:
+     * <li>enabled: whether Wave is enabled
+     */
+    WaveMetadata wave
+
+    /**
+     * Metadata specific to Fusion, including:
+     * <li>enabled: whether Fusion is enabled
+     * <li>version: the version of Fusion in use
+     */
+    FusionMetadata fusion
 
     /**
      * The list of files that concurred to create the config object
@@ -240,6 +258,7 @@ class WorkflowMetadata {
         this.sessionId = session.uniqueId
         this.resume = session.resumeMode
         this.stubRun = session.stubRun
+        this.preview = session.preview
         this.runName = session.runName
         this.containerEngine = containerEngine0(session)
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }
@@ -247,6 +266,8 @@ class WorkflowMetadata {
         this.userName = System.getProperty('user.name')
         this.homeDir = Paths.get(System.getProperty('user.home'))
         this.manifest = session.getManifest()
+        this.wave = new WaveMetadata(session)
+        this.fusion = new FusionMetadata(session)
 
         // check if there's a onComplete action in the config file
         registerConfigAction(session.config.workflow as Map)

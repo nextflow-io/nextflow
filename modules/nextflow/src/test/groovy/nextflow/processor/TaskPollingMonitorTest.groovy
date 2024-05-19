@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,5 +124,28 @@ class TaskPollingMonitorTest extends Specification {
         0 * session.notifyTaskComplete(handler) >> null
     }
 
+    def 'should submit a job array' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min')))
+        and:
+        def handler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskRun)
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                children >> (1..3).collect( i -> handler )
+            }
+        }
+
+        when:
+        monitor.submit(arrayHandler)
+        then:
+        1 * arrayHandler.prepareLauncher()
+        1 * arrayHandler.submit()
+        0 * handler.prepareLauncher()
+        0 * handler.submit()
+        3 * session.notifyTaskSubmit(handler)
+    }
 
 }
