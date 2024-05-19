@@ -115,7 +115,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         err.message.startsWith('Project Id `another-project` declared in the nextflow config file')
     }
 
-    def 'should abort operation when the workdir is not a GsPath'() {
+    def 'should abort operation when the workdir is not a CloudStoragePath'() {
         given:
         def session = Stub(Session)
         session.workDir = Stub(Path)

@@ -17,9 +17,9 @@
 
 package nextflow.file
 
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import nextflow.Global
 import nextflow.Session
-import nextflow.cloud.google.nio.GsPath
 import spock.lang.Specification
 
 /**
@@ -41,10 +41,10 @@ class GsPathTest extends Specification {
         def path4 = FileHelper.asPath('gs://bar/some/foo.txt')
 
         expect:
-        path1 instanceof GsPath
-        path2 instanceof GsPath
-        path3 instanceof GsPath
-        path4 instanceof GsPath
+        path1 instanceof CloudStoragePath
+        path2 instanceof CloudStoragePath
+        path3 instanceof CloudStoragePath
+        path4 instanceof CloudStoragePath
 
         and:
         path1 == path2

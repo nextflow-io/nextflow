@@ -1372,6 +1372,7 @@ class TaskProcessor {
      * Publish output files to a specified target folder
      *
      * @param task The task whose outputs need to be published
+     * @param overwrite When {@code true} any existing file will be overwritten, otherwise the publishing is ignored
      */
     @CompileStatic
     protected void publishOutputs( TaskRun task ) {
@@ -1386,6 +1387,10 @@ class TaskProcessor {
     }
 
     private void publishOutputs0( TaskRun task, PublishDir publish ) {
+
+        if( publish.overwrite == null ) {
+            publish.overwrite = !task.cached
+        }
 
         HashSet<Path> files = []
         def outputs = task.getOutputsByType(FileOutParam)

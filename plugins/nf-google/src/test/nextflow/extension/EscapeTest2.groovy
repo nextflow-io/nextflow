@@ -18,7 +18,7 @@ package nextflow.extension
 
 import java.nio.file.Path
 
-import nextflow.cloud.google.nio.GsFileSystem
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.util.Escape
 import spock.lang.Specification
 
@@ -30,7 +30,7 @@ class EscapeTest2 extends Specification {
 
 
     Path asPath(String bucket, String path) {
-        GsFileSystem.forBucket(bucket).getPath(path)
+        CloudStorageFileSystem.forBucket(bucket).getPath(path)
     }
 
 

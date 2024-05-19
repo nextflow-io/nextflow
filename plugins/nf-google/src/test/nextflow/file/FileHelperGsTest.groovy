@@ -21,12 +21,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import nextflow.Global
-import nextflow.Session
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.SysEnv
-import nextflow.cloud.google.nio.GsFileSystem
 import spock.lang.Ignore
 import spock.lang.Specification
+
+import nextflow.Global
+import nextflow.Session
 import spock.lang.Unroll
 
 /**
@@ -47,23 +48,23 @@ class FileHelperGsTest extends Specification {
                 Paths.get('file.txt')
         and:
         FileHelper.asPath('gs://foo') ==
-                GsFileSystem.forBucket('foo').getPath('')
+                CloudStorageFileSystem.forBucket('foo').getPath('')
 
         and:
         FileHelper.asPath('gs://foo/this/and/that.txt') ==
-                GsFileSystem.forBucket('foo').getPath('/this/and/that.txt')
+                CloudStorageFileSystem.forBucket('foo').getPath('/this/and/that.txt')
 
         and:
         FileHelper.asPath('gs://foo/b a r.txt') ==
-                GsFileSystem.forBucket('foo').getPath('/b a r.txt')
+                CloudStorageFileSystem.forBucket('foo').getPath('/b a r.txt')
 
         and:
         FileHelper.asPath('gs://f o o/bar.txt') ==
-                GsFileSystem.forBucket('f o o').getPath('/bar.txt')
+                CloudStorageFileSystem.forBucket('f o o').getPath('/bar.txt')
 
         and:
         FileHelper.asPath('gs://f_o_o/bar.txt') ==
-                GsFileSystem.forBucket('f_o_o').getPath('/bar.txt')
+                CloudStorageFileSystem.forBucket('f_o_o').getPath('/bar.txt')
     }
 
 
@@ -88,8 +89,8 @@ class FileHelperGsTest extends Specification {
     @Ignore
     def 'should throw FileAlreadyExistsException'() {
         given:
-        def foo = GsFileSystem.forBucket('nf-bucket').getPath('foo.txt')
-        def bar = GsFileSystem.forBucket('nf-bucket').getPath('bar.txt')
+        def foo = CloudStorageFileSystem.forBucket('nf-bucket').getPath('foo.txt')
+        def bar = CloudStorageFileSystem.forBucket('nf-bucket').getPath('bar.txt')
         and:
         if( !Files.exists(foo) ) Files.createFile(foo)
         if( !Files.exists(bar) ) Files.createFile(bar)
@@ -107,7 +108,7 @@ class FileHelperGsTest extends Specification {
         SysEnv.push(NXF_FILE_ROOT: 'gs://host.com/work')
 
         expect:
-        FileHelper.toCanonicalPath(VALUE) == EXPECTED
+        FileHelper.toCanonicalPath(VALUE) == (EXPECTED ? FileHelper.asPath(EXPECTED) : null)
 
         cleanup:
         SysEnv.pop()
@@ -116,15 +117,15 @@ class FileHelperGsTest extends Specification {
         where:
         VALUE                       | EXPECTED
         null                        | null
-        'file.txt'                  | FileHelper.asPath('gs://host.com/work/file.txt')
-        Path.of('file.txt')         | FileHelper.asPath('gs://host.com/work/file.txt')
+        'file.txt'                  | 'gs://host.com/work/file.txt'
+        Path.of('file.txt')         | 'gs://host.com/work/file.txt'
         and:
-        './file.txt'                | FileHelper.asPath('gs://host.com/work/file.txt')
-        '.'                         | FileHelper.asPath('gs://host.com/work')
-        './'                        | FileHelper.asPath('gs://host.com/work')
-        '../file.txt'               | FileHelper.asPath('gs://host.com/file.txt')
+        './file.txt'                | 'gs://host.com/work/file.txt'
+        '.'                         | 'gs://host.com/work'
+        './'                        | 'gs://host.com/work'
+        '../file.txt'               | 'gs://host.com/file.txt'
         and:
-        '/file.txt'                 | Path.of('/file.txt')
-        Path.of('/file.txt')        | Path.of('/file.txt')
+        '/file.txt'                 | '/file.txt'
+        Path.of('/file.txt')        | '/file.txt'
     }
 }

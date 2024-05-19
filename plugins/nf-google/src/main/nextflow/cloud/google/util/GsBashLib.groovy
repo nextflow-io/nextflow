@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cloud.google.file
+package nextflow.cloud.google.util
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized

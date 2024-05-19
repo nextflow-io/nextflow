@@ -14,48 +14,48 @@
  * limitations under the License.
  */
 
-package nextflow.cloud.google.file
+package nextflow.cloud.google.util
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.nio.GsPath
 import nextflow.util.SerializerRegistrant
 import org.pf4j.Extension
 /**
- * Serializer for a {@link GsPath}
+ * Serializer for a {@link CloudStoragePath}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @Extension
 @CompileStatic
-class GsPathSerializer extends Serializer<GsPath> implements SerializerRegistrant {
+class GsPathSerializer extends Serializer<CloudStoragePath> implements SerializerRegistrant {
 
     @Override
-    void write(Kryo kryo, Output output, GsPath target) {
+    void write(Kryo kryo, Output output, CloudStoragePath target) {
         def path = target.toString()
         if( !path.startsWith('/') )  // <-- it looks a bug in the google nio library, in some case the path returned is not absolute
             path = '/' + path
         path = target.bucket() + path
-        log.trace "Google GsPath serialisation > path=$path"
+        log.trace "Google CloudStoragePath serialisation > path=$path"
         output.writeString(path)
     }
 
     @Override
-    GsPath read(Kryo kryo, Input input, Class<GsPath> type) {
+    CloudStoragePath read(Kryo kryo, Input input, Class<CloudStoragePath> type) {
         final path = input.readString()
-        log.trace "Google GsPath de-serialization > path=$path"
+        log.trace "Google CloudStoragePath de-serialization > path=$path"
         def uri = CloudStorageFileSystem.URI_SCHEME + '://' + path
-        (GsPath) GsPathFactory.parse(uri)
+        (CloudStoragePath) GsPathFactory.parse(uri)
     }
 
     @Override
     void register(Map<Class, Object> serializers) {
-        serializers.put(GsPath, GsPathSerializer)
+        serializers.put(CloudStoragePath, GsPathSerializer)
     }
 }

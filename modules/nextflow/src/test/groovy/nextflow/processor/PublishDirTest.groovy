@@ -239,7 +239,7 @@ class PublishDirTest extends Specification {
                 sourceDir.resolve('file1.txt'),
                 sourceDir.resolve('file2.bam')
         ] as Set
-        def publisher = new PublishDir(path: targetDir, mode: 'copy')
+        def publisher = new PublishDir(path: targetDir, mode: 'copy', overwrite: 'deep')
         and:
         def timestamp1 = targetDir.resolve('file1.txt').lastModified()
         def timestamp2 = targetDir.resolve('file2.bam').lastModified()

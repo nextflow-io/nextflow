@@ -1,4 +1,4 @@
-package nextflow.cloud.google.file
+package nextflow.cloud.google.util
 
 
 import nextflow.Session

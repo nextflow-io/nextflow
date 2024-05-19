@@ -23,7 +23,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.file.GsBashLib
+import nextflow.cloud.google.util.GsBashLib
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun

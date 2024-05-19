@@ -35,17 +35,14 @@ import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 
-import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.FromString
 import groovy.util.logging.Slf4j
-import nextflow.file.ETagAwareFile
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
 import nextflow.io.ByteBufferBackedInputStream
-import nextflow.util.CacheHelper
 import nextflow.util.CharsetHelper
 import nextflow.util.CheckHelper
 
@@ -1601,17 +1598,5 @@ class FilesEx {
 
     static String getScheme(Path path) {
         path.getFileSystem().provider().getScheme()
-    }
-
-    static String getChecksum(Path path) {
-        if( Files.isDirectory(path) )
-            return null
-
-        // use etag if available
-        if( path instanceof ETagAwareFile )
-            return path.getETag()
-
-        // otherwise compute checksum manually
-        CacheHelper.hasher(Hashing.md5(), path, CacheHelper.HashMode.DEEP).hash().toString()
     }
 }
