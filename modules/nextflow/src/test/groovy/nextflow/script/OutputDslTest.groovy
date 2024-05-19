@@ -82,4 +82,60 @@ class OutputDslTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should set options' () {
+        when:
+        def dsl1 = new OutputDsl()
+        then:
+        dsl1.@defaults == [:]
+
+        when:
+        def dsl2 = new OutputDsl()
+        and:
+        dsl2.contentType('simple/text')
+        dsl2.ignoreErrors(true)
+        dsl2.mode('someMode')
+        dsl2.overwrite(true)
+        dsl2.storageClass('someClass')
+        dsl2.tags([foo:'1',bar:'2'])
+        dsl2.enabled(true)
+        then:
+        dsl2.@defaults == [
+            contentType:'simple/text',
+            ignoreErrors: true,
+            mode: 'someMode',
+            overwrite: true,
+            storageClass: 'someClass',
+            tags: [foo:'1',bar:'2'],
+            enabled: true
+        ]
+    }
+
+    def 'should set target dsl' () {
+        when:
+        def dsl1 = new OutputDsl.TargetDsl()
+        then:
+        dsl1.getOptions() == [:]
+
+        when:
+        def dsl2 = new OutputDsl.TargetDsl()
+        and:
+        dsl2.contentType('simple/text')
+        dsl2.ignoreErrors(true)
+        dsl2.mode('someMode')
+        dsl2.overwrite(true)
+        dsl2.storageClass('someClass')
+        dsl2.tags([foo:'1',bar:'2'])
+        dsl2.enabled(true)
+        then:
+        dsl2.getOptions() == [
+            contentType:'simple/text',
+            ignoreErrors: true,
+            mode: 'someMode',
+            overwrite: true,
+            storageClass: 'someClass',
+            tags: [foo:'1',bar:'2'],
+            enabled: true
+        ]
+    }
+
 }
