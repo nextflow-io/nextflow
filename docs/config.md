@@ -4,20 +4,20 @@
 
 ## Configuration file
 
-When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file can contain conflicting settings, the sources are ranked to determine which settings are applied. Possible configuration sources, in order of priority:
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. Parameters specified on the command line (`--something value`)
-2. Parameters provided using the `-params-file` option
-3. Config file specified using the `-c my_config` option
-4. The config file named `nextflow.config` in the current directory
-5. The config file named `nextflow.config` in the workflow project directory
-6. The config file `$HOME/.nextflow/config`
-7. Values defined within the pipeline script itself (e.g. `main.nf`)
+1. Parameters defined in pipeline scripts (e.g. `main.nf`)
+2. The config file `$HOME/.nextflow/config`
+3. The config file `nextflow.config` in the project directory
+4. The config file `nextflow.config` in the launch directory
+5. Config file specified using the `-c <config-file>` option
+6. Parameters specified in a params file (`-params-file` option)
+7. Parameters specified on the command line (`--something value`)
 
 When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
 
 :::{tip}
-If you want to ignore any default configuration files and use only a custom one, use `-C <config file>`.
+You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
 :::
 
 ### Config syntax
@@ -341,7 +341,7 @@ The following settings are available:
 : Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
 
 `azure.batch.copyToolInstallMode`
-: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
+: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution. Finally when `off` is specified, the `azcopy` tool is not installed (default: `node`).
 
 `azure.batch.deleteJobsOnCompletion`
 : Delete all jobs when the workflow completes (default: `false`).
@@ -413,6 +413,16 @@ The following settings are available:
 `azure.batch.pools.<name>.sku`
 : *New in `nf-azure` version `0.11.0`*
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
+
+`azure.batch.pools.<name>.startTask.script`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Specify the `startTask` that is executed as the node joins the Azure Batch node pool.
+
+`azure.batch.pools.<name>.startTask.privileged`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Enable the `startTask` to run with elevated access (default: `false`).
 
 `azure.batch.pools.<name>.virtualNetwork`
 : :::{versionadded} 23.03.0-edge
@@ -636,6 +646,12 @@ The `executor` scope controls various executor behaviors.
 
 The following settings are available:
 
+`executor.account`
+: :::{versionadded} 24.04.0
+  :::
+: *Used only by the {ref}`slurm-executor`, {ref}`lsf-executor`, {ref}`pbs-executor` and {ref}`pbspro-executor` executors.*
+: Allows specifying the project or organisation account that should be charged for running the pipeline jobs.
+
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
 
@@ -646,7 +662,7 @@ The following settings are available:
 : Determines how long to wait before returning an error status when a process is terminated but the `.exitcode` file does not exist or is empty (default: `270 sec`). Used only by grid executors.
 
 `executor.jobName`
-: Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+: Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler. This setting is only support by the following executors: Bridge, Condor, Flux, HyperQueue, Lsf, Moab, Nqsii, Oar, Pbs, PbsPro, Sge, Slurm and Google Batch.
 
 `executor.killBatchSize`
 : Determines the number of jobs that can be killed in a single command execution (default: `100`).
@@ -757,6 +773,47 @@ executor.$local.cpus = 8
 executor.$local.memory = '32 GB'
 ```
 
+(config-fusion)=
+
+### Scope `fusion`
+
+The `fusion` scope provides advanced configuration for the use of the {ref}`Fusion file system <fusion-page>`.
+
+The following settings are available:
+
+`fusion.enabled`
+: Enable/disable the use of Fusion file system.
+
+`fusion.cacheSize`
+: :::{versionadded} 23.11.0-edge
+  :::
+: The maximum size of the local cache used by the Fusion client.
+
+`fusion.containerConfigUrl`
+: The URL from where the container layer provisioning the Fusion client is downloaded.
+
+`fusion.exportStorageCredentials`
+: :::{versionadded} 23.05.0-edge
+  This option was previously named `fusion.exportAwsAccessKeys`.
+  :::
+: When `true` the access credentials required by the underlying object storage are exported to the task execution environment.
+
+`fusion.logLevel`
+: The level of logging emitted by the Fusion client.
+
+`fusion.logOutput`
+: Where the logging output is written. 
+
+`fusion.privileged`
+: :::{versionadded} 23.10.0
+  :::
+: Enables the use of privileged containers when using Fusion (default: `true`).
+: The use of Fusion without privileged containers is currently only supported for Kubernetes, and it requires the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) (or similar FUSE device plugin) to be installed in the cluster.
+
+`fusion.tags`
+: The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`).
+: To disable tags set it to `false`.
+
 (config-google)=
 
 ### Scope `google`
@@ -815,6 +872,9 @@ The following settings are available for Google Cloud Batch:
 
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+
+  Note that the `google.batch.serviceAccountEmail` service account will only be used for spawned jobs, not for the Nextflow process itself. 
+  See the [Google Cloud](https://www.nextflow.io/docs/latest/google.html#credentials) documentation for more information on credentials.
 
 `google.batch.spot`
 : When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
@@ -995,6 +1055,12 @@ The following settings are available:
 
 `k8s.context`
 : Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
+
+`k8s.cpuLimits`
+: :::{versionadded} 24.04.0
+  :::
+: When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
+: This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
 
 `k8s.debug.yaml`
 : When `true`, saves the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
@@ -1183,6 +1249,32 @@ manifest {
 
 Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHub, BitBucket or GitLab.
 
+(config-nextflow)=
+
+### Scope `nextflow`
+
+The `nextflow` scope provides configuration options for the Nextflow runtime.
+
+`nextflow.publish.retryPolicy.delay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Delay when retrying a failed publish operation (default: `350ms`).
+
+`nextflow.publish.retryPolicy.jitter`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Jitter value when retrying a failed publish operation (default: `0.25`).
+
+`nextflow.publish.retryPolicy.maxAttempt`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max attempts when retrying a failed publish operation (default: `5`).
+
+`nextflow.publish.retryPolicy.maxDelay`
+: :::{versionadded} 24.03.0-edge
+  :::
+: Max delay when retrying a failed publish operation (default: `90s`).
+
 (config-notification)=
 
 ### Scope `notification`
@@ -1306,9 +1398,9 @@ process {
 }
 ```
 
-:::{note}
-The `withName` selector applies to a process even when it is included from a module under an alias. For example, `withName: hello` will apply to any process originally defined as `hello`, regardless of whether it is included under an alias. Similarly, it will not apply to any process not originally defined as `hello`, even if it is included under the alias `hello`.
-:::
+The `withName` selector applies both to processes defined with the same name and processes included under the same alias. For example, `withName: hello` will apply to any process originally defined as `hello`, as well as any process included under the alias `hello`.
+
+Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `foo` and included as `bar`, the selectors `withName: foo` and `withName: bar` will both be applied to the process, with the second selector taking priority over the first.
 
 :::{tip}
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
@@ -1347,12 +1439,14 @@ The above configuration snippet sets 2 cpus for the processes annotated with the
 
 #### Selector priority
 
-When mixing generic process configuration and selectors the following priority rules are applied (from lower to higher):
+Process configuration settings are applied to a process in the following order (from lowest to highest priority):
 
-1. Process generic configuration.
-2. Process specific directive defined in the workflow script.
-3. `withLabel` selector definition.
-4. `withName` selector definition.
+1. Process configuration settings (without a selector)
+2. Process directives in the process definition
+3. `withLabel` selectors matching any of the process labels
+4. `withName` selectors matching the process name
+5. `withName` selectors matching the process included alias
+6. `withName` selectors matching the process fully qualified name
 
 For example:
 
@@ -1360,11 +1454,16 @@ For example:
 process {
     cpus = 4
     withLabel: foo { cpus = 8 }
-    withName: bar { cpus = 32 }
+    withName: bar { cpus = 16 }
+    withName: 'baz:bar' { cpus = 32 }
 }
 ```
 
-Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow script. Moreover processes annotated with the `foo` label use 8 cpus. Finally the process named `bar` uses 32 cpus.
+With the above configuration:
+- All processes will use 4 cpus (unless otherwise specified in their process definition).
+- Processes annotated with the `foo` label will use 8 cpus.
+- Any process named `bar` (or imported as `bar`) will use 16 cpus.
+- Any process named `bar` (or imported as `bar`) invoked by a workflow named `baz` with use 32 cpus.
 
 (config-report)=
 
@@ -1513,25 +1612,25 @@ The following settings are available:
 
 ### Scope `tower`
 
-The `tower` scope controls the settings for the [Nextflow Tower](https://tower.nf) monitoring and tracing service.
+The `tower` scope controls the settings for the [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 
 The following settings are available:
 
 `tower.accessToken`
-: The unique access token specific to your account on an instance of Tower.
+: The unique access token specific to your account on an instance of Seqera Platform.
 
-  Your `accessToken` can be obtained from your Tower instance in the [Tokens page](https://tower.nf/tokens).
+  Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
 
 `tower.enabled`
-: When `true` Nextflow sends the workflow tracing and execution metrics to the Nextflow Tower service (default: `false`).
+: When `true` Nextflow sends the workflow tracing and execution metrics to Seqera Platform (default: `false`).
 
 `tower.endpoint`
-: The endpoint of your Tower deployment (default: `https://tower.nf`).
+: The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqera.io`).
 
 `tower.workspaceId`
-: The ID of the Tower workspace where the run should be added (default: the launching user personal workspace).
+: The ID of the Seqera Platform workspace where the run should be added (default: the launching user personal workspace).
 
-  The Tower workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
+  The workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
 
 (config-trace)=
 
@@ -1570,6 +1669,82 @@ trace {
 ```
 
 Read the {ref}`trace-report` page to learn more about the execution report that can be generated by Nextflow.
+
+(config-wave)=
+
+### Scope `wave`
+
+The `wave` scope provides advanced configuration for the use of {ref}`Wave containers <wave-page>`.
+
+The following settings are available:
+
+`wave.enabled`
+: Enable/disable the use of Wave containers.
+
+`wave.build.repository`
+: The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Seqera Platform account).
+
+`wave.build.cacheRepository`
+: The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Seqera Platform account).
+
+`wave.build.conda.basePackages`
+: One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
+
+`wave.build.conda.commands`
+: One or more commands to be added to the Dockerfile used to build a Conda based image.
+
+`wave.build.conda.mambaImage`
+: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
+
+`wave.build.spack.basePackages`
+: :::{versionadded} 22.06.0-edge
+  :::
+: One or more Spack packages to be always added in the resulting container.
+
+`wave.build.spack.commands`
+: :::{versionadded} 22.06.0-edge
+  :::
+: One or more commands to be added to the Dockerfile used to build a Spack based image.
+
+`wave.endpoint`
+: The Wave service endpoint (default: `https://wave.seqera.io`).
+
+`wave.freeze`
+: :::{versionadded} 23.07.0-edge
+  :::
+: Enables Wave container freezing. Wave will provision a non-ephemeral container image that will be pushed to a container repository of your choice. It requires the use of the `wave.build.repository` setting.
+: It is also recommended to specify a custom cache repository using `wave.build.cacheRepository`.
+: :::{note}
+  The container repository authentication must be managed by the underlying infrastructure.
+  :::
+
+`wave.httpClient.connectTime`
+: :::{versionadded} 22.06.0-edge
+  :::
+: Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
+
+`wave.retryPolicy.delay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The initial delay when a failing HTTP request is retried (default: `150ms`).
+
+`wave.retryPolicy.jitter`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The jitter factor used to randomly vary retry delays (default: `0.25`).
+
+`wave.retryPolicy.maxAttempts`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max number of attempts a failing HTTP request is retried (default: `5`).
+
+`wave.retryPolicy.maxDelay`
+: :::{versionadded} 22.06.0-edge
+  :::
+: The max delay when a failing HTTP request is retried (default: `90 seconds`).
+
+`wave.strategy`
+: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
 (config-miscellaneous)=
 
@@ -1669,16 +1844,21 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_ASSETS`
 : Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
 
-`NXF_CLOUDCACHE_PATH`
-: :::{versionadded} 23.07.0-edge
+`NXF_CACHE_DIR`
+: :::{versionadded} 24.02.0-edge
   :::
-: Defines the base cache path when using the cloud cache store.
+: Defines the base cache directory when using the default cache store (default: `"$launchDir/.nextflow"`).
 
 `NXF_CHARLIECLOUD_CACHEDIR`
 : Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
 `NXF_CLASSPATH`
 : Allows the extension of the Java runtime classpath with extra JAR files or class folders.
+
+`NXF_CLOUDCACHE_PATH`
+: :::{versionadded} 23.07.0-edge
+  :::
+: Defines the base cache path when using the cloud cache store.
 
 `NXF_CLOUD_DRIVER`
 : Defines the default cloud driver to be used if not specified in the config file or as command line option, either `aws` or `google`.
@@ -1920,6 +2100,15 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
   - Nextflow will fail if a pipeline param is referenced before it is defined
 
   - Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
+
+`nextflow.preview.output`
+
+: :::{versionadded} 24.04.0
+  :::
+
+: *Experimental: may change in a future release.*
+
+: When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
 
 `nextflow.preview.recursion`
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class WaveContainerResolverTest extends Specification {
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
         resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) }
-        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
         1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target, WAVE_CONTAINER.hashKey) >> SINGULARITY_CONTAINER
@@ -76,7 +76,7 @@ class WaveContainerResolverTest extends Specification {
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
         resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) { freezeMode()>>true } }
-        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, true) >> ORAS_CONTAINER
         0 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> null

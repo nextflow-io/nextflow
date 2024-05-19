@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,32 +71,6 @@ class PublishDirS3Test extends Specification {
 
         cleanup:
         folder?.deleteDir()
-    }
-
-    def 'should resolve fusion symlinks' () {
-        given:
-        Global.session = Mock(Session) {
-            config >> [fusion: [enabled: true]]
-        }
-        and:
-        def prev = FileHelper.asPath('s3://bucket/work/0/foo.txt')
-        def file = FileHelper.asPath('s3://bucket/work/1/foo.txt')
-        def taskInputs = ['foo.txt': file]
-        and:
-        def targetDir = FileHelper.asPath('s3://bucket/results')
-        def target = targetDir.resolve('foo.txt')
-        def publisher = Spy(new PublishDir(path: targetDir)) { getTaskInputs()>>taskInputs }
-
-        when:
-        publisher.processFile(file, target)
-        then:
-        1 * publisher.resolveFusionLink(file) >> prev
-        _ * publisher.makeDirs(target.parent) >> _
-        1 * publisher.processFileImpl(prev, target) >> _
-        1 * publisher.notifyFilePublish(target, prev) >> _
-
-        cleanup:
-        Global.session = null
     }
 
 }

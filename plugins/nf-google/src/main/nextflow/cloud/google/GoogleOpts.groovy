@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.google.config.GoogleStorageOpts
 import nextflow.exception.AbortOperationException
 import nextflow.util.Duration
@@ -39,7 +40,7 @@ class GoogleOpts {
 
     static final public String DEFAULT_LOCATION = 'us-central1'
 
-    static Map<String,String> env = System.getenv()
+    static Map<String,String> env = SysEnv.get()
 
     private String projectId
     private String location
@@ -100,6 +101,9 @@ class GoogleOpts {
         }
         catch(FileNotFoundException e) {
             throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
+        }
+        catch (Exception e) {
+            throw new AbortOperationException("Invalid or corrupted Gogole credentials file: $credsFilePath", e)
         }
     }
 

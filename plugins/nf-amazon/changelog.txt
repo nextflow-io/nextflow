@@ -1,5 +1,24 @@
 nf-amazon changelog
 ===================
+2.5.2 - 20 May 2024
+- Fix nf-amazon plugin dependency [c234b09f]
+
+2.5.1 - 14 May 2024
+- Use protected visibility for updateStatus method [6871ba06]
+
+2.5.0 - 13 May 2024
+- Add support for Job arrays (#3892) [ca9bc9d4]
+- Fix Use fully qualified S3 uris in error message (#4923) [f1cffd1b]
+
+2.4.2 - 15 Apr 2024
+- Improve retry logic for AWS Batch executor [62926c28]
+- Bump groovy 4.0.21 [9e08390b]
+
+2.4.1 - 10 Mar 2024
+- Fix Error while publishing S3 file with blanks [b74c0227]
+- Update copyright info [e3089f0e]
+- Bump groovy 4.0.19 [854dc1f0]
+
 2.4.0 - 5 Feb 2024
 - Remove Glacier auto-retrieval (#4705) [5f0ec50d]
 - Bump nextflow 23.12.0-edge as min version [63e83702]
