@@ -558,6 +558,9 @@ Available options:
 : *Currently only supported for S3.*
 : Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
 
+`enabled`
+: Enable or disable publishing (default: `true`).
+
 `ignoreErrors`
 : When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
 
