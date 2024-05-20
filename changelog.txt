@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.04.1 - 20 May 2024 
+- Fix nf-google plugin dependecy [725e2860]
+- Fix nf-amazon plugin dependecy [c234b09f]
+- Bump nf-google@1.13.2 [633989a6]
+- Bump nf-amazon@2.5.2 [e31f70e0]
+
 24.04.0 - 20 May 2024
 - Add 'preview' to workflow runtime metadata (#4985) [935bb1e5]
 - Add enabled property to output dsl (#5008) [284415b1]
