@@ -1,5 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.04.0 - 20 May 2024
+- Add 'preview' to workflow runtime metadata (#4985) [935bb1e5]
+- Add enabled property to output dsl (#5008) [284415b1]
+- Fix Taskbar API is not supported error [0ea09ccc]
+- Fix inspect should not write history entry [c713ad51]
+- Fix unexpected container resolution [a5ecf8a4]
+- Improve icon loading error handling [c72e16f8]
+- Remove Fusion symlink resolution (#5004) [071ea74c]
+- Remove `seqera` and `defaults` from Conda default channels (#5003) [ec5ebd0b]
+- Use protected visibility for updateStatus method [6871ba06]
+- Workflow output definition (#4784) [cf0546b1]
+- Bump Fusion 2.3 (#5005) [7176c113]
+- Bump groovy-console 4.0.21-patch.2 [eb97831f]
+- Bump nf-amazon@2.5.1 [96ee633d]
+- Bump nf-console@1.1.3 [e8359042]
+- Bump nf-google@1.13.1 [5dcb4c7a]
+- Bump nf-wave@1.4.2 [73c668a6]
+
 24.04.0-edge - 13 May 2024
 - Add Wave and Fusion info to workflow metadata (#4945) [bb7e1c8e]
 - Add `k8s.cpuLimits` config option (#3027) [3c6e96d0]
