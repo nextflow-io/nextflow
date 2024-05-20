@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+2.5.2 - 20 May 2024
+- Fix nf-amazon plugin dependency [c234b09f]
+
 2.5.1 - 14 May 2024
 - Use protected visibility for updateStatus method [6871ba06]
 
