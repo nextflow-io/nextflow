@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.13.2 - 20 May 2024
+- Fix nf-google plugin dependency [725e2860]
+
 1.13.1 - 20 May 2024
 - Use protected visibility for updateStatus method [6871ba06]
 
