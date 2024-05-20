@@ -1,5 +1,10 @@
 nf-wave changelog
 ==================
+1.4.2 - 20 May 2024
+- Bump Fusion 2.3 (#5005) [7176c113]
+- Remove `seqera` and `defaults` from Conda default channels (#5003) [ec5ebd0b]
+- Fix unexpected container resolution [a5ecf8a4]
+
 1.4.1 - 13 May 2024
 - Remove unused const [ci fast] [6e91285d]
 - Fix Wave container resolution with singularity and ociMode [54ad6241]
