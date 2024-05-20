@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.13.1 - 20 May 2024
+- Use protected visibility for updateStatus method [6871ba06]
+
 1.13.0 - 13 May 2024
 - Add support for Job arrays (#3892) [ca9bc9d4]
 
