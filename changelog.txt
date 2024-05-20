@@ -1,8 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
 24.04.1 - 20 May 2024 
-- Fix nf-google plugin dependecy [725e2860]
-- Fix nf-amazon plugin dependecy [c234b09f]
+- Fix nf-google plugin dependency [725e2860]
+- Fix nf-amazon plugin dependency [c234b09f]
 - Bump nf-google@1.13.2 [633989a6]
 - Bump nf-amazon@2.5.2 [e31f70e0]
 
