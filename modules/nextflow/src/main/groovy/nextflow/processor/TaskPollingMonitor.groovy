@@ -34,6 +34,8 @@ import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
 import nextflow.util.Threads
 import nextflow.util.Throttle
+import static nextflow.util.SysHelper.dumpThreads
+
 /**
  * Monitors the queued tasks waiting for their termination
  *
@@ -114,7 +116,7 @@ class TaskPollingMonitor implements TaskMonitor {
     private RateLimiter submitRateLimit
 
     @Lazy
-    private ExecutorService finalizerPool = { session.finalizeTaskExecutorService() }()
+    private ExecutorService finalizerPool = { session.taskFinalizerExecutorService() }()
 
     private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
 
@@ -199,13 +201,27 @@ class TaskPollingMonitor implements TaskMonitor {
      *      A {@link TaskHandler} instance representing the task to be submitted for execution
      */
     protected void submit(TaskHandler handler) {
-        // submit the job execution -- throws a ProcessException when submit operation fail
-        handler.submit()
-        // note: add the 'handler' into the polling queue *after* the submit operation,
-        // this guarantees that in the queue are only jobs successfully submitted
-        runningQueue.add(handler)
-        // notify task submission
-        session.notifyTaskSubmit(handler)
+        if( handler.task instanceof TaskArrayRun ) {
+            // submit task array
+            handler.prepareLauncher()
+            handler.submit()
+            // add each child task to the running queue
+            final task = handler.task as TaskArrayRun
+            for( TaskHandler it : task.children ) {
+                runningQueue.add(it)
+                session.notifyTaskSubmit(it)
+            }
+        }
+        else {
+            // submit the job execution -- throws a ProcessException when submit operation fail
+            handler.prepareLauncher()
+            handler.submit()
+            // note: add the 'handler' into the polling queue *after* the submit operation,
+            // this guarantees that in the queue are only jobs successfully submitted
+            runningQueue.add(handler)
+            // notify task submission
+            session.notifyTaskSubmit(handler)
+        }
     }
 
     /**
@@ -233,7 +249,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try{
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
-            session.notifyTaskPending(handler)
+            notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"
         }
         finally {
@@ -410,10 +426,16 @@ class TaskPollingMonitor implements TaskMonitor {
     protected void pollLoop() {
 
         int iteration=0
+        int previous=-1
         while( true ) {
             final long time = System.currentTimeMillis()
             final tasks = new ArrayList(runningQueue)
-            log.trace "Scheduler queue size: ${tasks.size()} (iteration: ${++iteration})"
+            final sz = tasks.size()
+            ++iteration
+            if( log.isTraceEnabled() && sz!=previous ) {
+                log.trace "Scheduler queue size: ${sz} (iteration: ${iteration})"
+                previous = sz
+            }
 
             // check all running tasks for termination
             checkAllTasks(tasks)
@@ -435,8 +457,13 @@ class TaskPollingMonitor implements TaskMonitor {
             // dump this line every two minutes
             Throttle.after(dumpInterval) {
                 dumpRunningQueue()
+                dumpCurrentThreads()
             }
         }
+    }
+
+    protected dumpCurrentThreads() {
+        log.trace "Current running threads:\n${dumpThreads()}"
     }
 
     protected void dumpRunningQueue() {
@@ -573,7 +600,7 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             catch ( Throwable e ) {
                 handleException(handler, e)
-                session.notifyTaskComplete(handler)
+                notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
@@ -702,6 +729,28 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected Queue<TaskHandler> getPendingQueue() {
         return pendingQueue
+    }
+
+    protected void notifyTaskPending(TaskHandler handler) {
+        if( handler.task instanceof TaskArrayRun ) {
+            final task = handler.task as TaskArrayRun
+            for( TaskHandler it : task.children )
+                session.notifyTaskPending(it)
+        }
+        else {
+            session.notifyTaskPending(handler)
+        }
+    }
+
+    protected void notifyTaskComplete(TaskHandler handler) {
+        if( handler.task instanceof TaskArrayRun ) {
+            final task = handler.task as TaskArrayRun
+            for( TaskHandler it : task.children )
+                session.notifyTaskComplete(it)
+        }
+        else {
+            session.notifyTaskComplete(handler)
+        }
     }
 
 }

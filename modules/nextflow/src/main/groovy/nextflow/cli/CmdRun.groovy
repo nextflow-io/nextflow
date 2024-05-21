@@ -266,6 +266,8 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-disable-jobs-cancellation'], description = 'Prevent the cancellation of child jobs on execution termination')
     Boolean disableJobsCancellation
 
+    Boolean skipHistoryFile
+
     Boolean getDisableJobsCancellation() {
         return disableJobsCancellation!=null
                 ?  disableJobsCancellation
@@ -362,7 +364,9 @@ class CmdRun extends CmdBase implements HubOptions {
         log.debug( '\n'+info )
 
         // -- add this run to the local history
-        runner.verifyAndTrackHistory(launcher.cliString, runName)
+        if( !skipHistoryFile )  {
+            runner.verifyAndTrackHistory(launcher.cliString, runName)
+        }
 
         // -- run it!
         runner.execute(scriptArgs, this.entryName)

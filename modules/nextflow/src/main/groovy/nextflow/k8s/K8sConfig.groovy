@@ -204,6 +204,10 @@ class K8sConfig implements Map<String,Object> {
         podOptions.volumeClaims.collect { it.mountPath }
     }
 
+    boolean cpuLimitsEnabled() {
+        target.cpuLimits ?: false
+    }
+
     /**
      * Find a volume claim name given the mount path
      *
