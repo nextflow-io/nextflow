@@ -3,6 +3,12 @@ plugins {
     id "com.gradle.plugin-publish" version "1.2.1"
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(19)
+    }
+}
+
 repositories {
     mavenCentral()
 }
