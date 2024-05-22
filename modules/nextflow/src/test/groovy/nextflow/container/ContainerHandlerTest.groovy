@@ -200,6 +200,7 @@ class ContainerHandlerTest extends Specification {
         result == 'shifter://image'
             
     }
+
     @Unroll
     def 'test normalize method for charliecloud' () {
 
