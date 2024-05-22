@@ -15,302 +15,155 @@
  */
 
 package nextflow.container
-
 import java.nio.file.Path
-
-import nextflow.executor.BashWrapperBuilder
-import nextflow.util.Escape
-import nextflow.util.MemoryUnit
-import nextflow.util.PathTrie
+import java.nio.file.Paths
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 /**
- * Base class for container wrapper builders
+ * Implements a builder for Charliecloud containerisation
+ *
+ * see https://hpc.github.io/charliecloud/
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Patrick Hüther <patrick.huether@gmail.com>
+ * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
+ * @author Niklas Schandry <niklas@bio.lmu.de>
  */
-abstract class ContainerBuilder<V extends ContainerBuilder> {
+@CompileStatic
+@Slf4j
+class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
+    
+    protected boolean useSquash
 
-    /**
-     * Create a builder instance given the container engine
-     */
-    static ContainerBuilder create(String engine, String containerImage) {
-        if( engine == 'docker' )
-            return new DockerBuilder(containerImage)
-        if( engine == 'podman' )
-            return new PodmanBuilder(containerImage)
-        if( engine == 'singularity' )
-            return new SingularityBuilder(containerImage)
-        if( engine == 'apptainer' )
-            return new ApptainerBuilder(containerImage)
-        if( engine == 'udocker' )
-            return new UdockerBuilder(containerImage)
-        if( engine == 'sarus' )
-            return new SarusBuilder(containerImage)
-        if( engine == 'shifter' )
-            return new ShifterBuilder(containerImage)
-        if( engine == 'charliecloud' )
-            return new CharliecloudBuilder(containerImage)
-        //
-        throw new IllegalArgumentException("Unknown container engine: $engine")
+    protected boolean writeFake
+    
+    CharliecloudBuilder(String name) {
+        this.image = name
     }
 
-    final protected List env = []
+    @Override
+    CharliecloudBuilder params(Map params) {
 
-    final protected List<Path> mounts = []
+        if( params.containsKey('temp') )
+            this.temp = params.temp
 
-    protected List<String> runOptions = []
+        if( params.containsKey('entry') )
+            this.entryPoint = params.entry
 
-    protected List<String> engineOptions = []
+        if( params.containsKey('runOptions') )
+            addRunOptions(params.runOptions.toString())
 
-    protected Integer cpus
+        if ( params.containsKey('useSquash') )
+            this.useSquash = params.useSquash?.toString() == 'true'
 
-    protected String cpuset
+        if ( params.containsKey('writeFake') )
+            this.writeFake = params.writeFake?.toString() == 'true'
 
-    protected String memory
+        if( params.containsKey('readOnlyInputs') )
+            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
-    protected String temp
-
-    protected String image
-
-    protected Path workDir
-
-    protected boolean readOnlyInputs
-
-    @Deprecated
-    protected String entryPoint
-
-    protected String runCommand
-
-    protected boolean mountWorkDir = true
-
-    protected boolean privileged
-
-    String getImage() { image }
-
-    V addRunOptions(String str) {
-        if( str )
-            runOptions.add(str)
-        return (V)this
+        return this
     }
 
-    V addEngineOptions(String str) {
-        if( str )
-            engineOptions.add(str)
-        return (V)this
+    CharliecloudBuilder addRunOptions(String str) {
+        runOptions.add(str)
+        return this
     }
 
-    V setCpus(Integer value) {
-        this.cpus = value
-        return (V)this
+    @Override
+    CharliecloudBuilder build(StringBuilder result) {
+        assert image
+        def imageStorage = Paths.get(image).parent.parent
+        def imageToRun = String
+
+        if (!writeFake) {
+            // define image to run, if --write-fake is not used this is a copy of the image in the current workDir
+            imageToRun = '"$NXF_TASK_WORKDIR"/container_' + image.split('/')[-1]
+
+            // optional squash
+            if (useSquash) {
+                imageToRun = imageToRun + '.squashfs'
+            }
+
+            result << 'ch-convert -i ch-image --storage '
+            // handle storage to deal with cases where CH_IMAGE_STORAGE is not set
+            result << imageStorage
+            result << ' '
+            result << image.split('/')[-1]
+            result << ' '
+            result << imageToRun
+            result << ' && '
+        }
+
+        result << 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env '
+        
+        if (writeFake) {
+            result << '--write-fake ' 
+            // if we are using writeFake we do not need to create a temporary imagae
+            // image is run by name from the storage directory
+            imageToRun = image.split('/')[-1]
+        }
+
+        if (!readOnlyInputs)
+            result << '-w '
+
+        appendEnv(result)
+
+        if( temp )
+            result << "-b $temp:/tmp "
+
+        makeVolumes(mounts, result)
+
+        if( runOptions )
+            result << runOptions.join(' ') << ' '
+        
+        result << imageToRun
+        result << ' --'
+
+        runCommand = result.toString()
+
+        return this
     }
 
-    V setCpuset(String value) {
-        this.cpuset = value
-        return (V)this
-    }
+    protected String getRoot(String path) {
+        def rootPath = path.tokenize("/")
 
-    V setMemory( value ) {
-        if( value instanceof MemoryUnit )
-            this.memory = "${value.toMega()}m"
-
-        else if( value instanceof String )
-            this.memory = value
-
+        if (rootPath.size() >= 1 && path[0] == '/')
+            rootPath = "/${rootPath[0]}"
         else
-            throw new IllegalArgumentException("Not a supported memory value")
+            throw new IllegalArgumentException("Not a valid working directory value (absolute path?): ${path}")
 
-        return (V)this
+        return rootPath
+    }
+    
+    @Override
+    protected String composeVolumePath(String path, boolean readOnlyInputs = false) {
+        def mountCmd = "-b ${escape(path)}"
+        if (readOnlyInputs)
+            mountCmd = "-b ${getRoot(escape(path))}"
+        return mountCmd
     }
 
-    V setWorkDir( Path path ) {
-        this.workDir = path
-        return (V)this
-    }
-
-    V setName(String name) {
-        return (V)this
-    }
-
-    V setTemp( String value ) {
-        this.temp = value
-        return (V)this
-    }
-
-    abstract V params( Map config )
-
-    abstract V build(StringBuilder result)
-
-    /**
-     * @return The command string to run a container from Docker image
-     */
-    String getRunCommand() {
-        if( !runCommand ) throw new IllegalStateException("Missing `runCommand` -- make sure `build` method has been invoked")
-        runCommand
-    }
-
-    String getRunCommand(String launcher) {
-        def run = getRunCommand()
-        if( !run )
-            throw new IllegalStateException("Missing `runCommand` -- make sure `build` method has been invoked")
-
-        if( launcher ) {
-            def result = run
-            result += entryPoint ? " $entryPoint -c \"$launcher\"" : " $launcher"
-            return result
-        }
-        return run + ' ' + launcher
-    }
-
-    String getKillCommand() { BashWrapperBuilder.KILL_CMD }
-
-    String getRemoveCommand() { return null }
-
-    @Deprecated
-    final StringBuilder appendHelpers( StringBuilder wrapper ) {
-        final result = getScriptHelpers()
-        if( result ) wrapper.append(result)
-        return wrapper
-    }
-
-    String getScriptHelpers() {
-        return null
-    }
-
-    V build() {
-        build(new StringBuilder())
-    }
-
-    V addEnv( entry ) {
-        env.add(entry instanceof GString ? entry.toString() : entry)
-        return (V)this
-    }
-
-    V addMount( Path path ) {
-        if( path )
-            mounts.add(path)
-        return (V)this
-    }
-
-    V addMounts( List<Path> paths ) {
-        if( paths ) for( Path it : paths )
-            mounts.add(it)
-        return (V)this
-    }
-
-    V addMountForInputs( Map<String,Path> inputFiles ) {
-        mounts.addAll( inputFilesToPaths(inputFiles) )
-        return (V)this
-    }
-
-    V addMountWorkDir(boolean flag) {
-        this.mountWorkDir = flag
-        return (V)this
-    }
-
-    static List<Path> inputFilesToPaths( Map<String,Path> inputFiles ) {
-
-        List<Path> files = []
-        inputFiles.each { name, storePath ->
-
-            def path = storePath.getParent()
-            if( path ) files << path
-
-        }
-        return files
-    }
-
-
-    protected CharSequence appendEnv( StringBuilder result ) {
-        for( Object e : env ) {
-            makeEnv(e, result) << ' '
-        }
-        return result
-    }
-
-    /**
-     * Get the env command line option for the give environment definition
-     *
-     * @param env
-     * @param result
-     * @return
-     */
+    @Override
     protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             short index = 0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '
-                result << ("-e \"${entry.key}=${entry.value}\"")
+                result << ("--set-env=${entry.key}=${entry.value}")
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << '-e "' << env << '"'
+            result << "--set-env=" << env
         }
         else if( env instanceof String ) {
-            result << "-e \"$env\""
+            result << "\${$env:+--set-env=$env=\$$env}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
         }
 
         return result
-    }
-
-
-    /**
-     * Get the volumes command line options for the given list of input files
-     *
-     * @param mountPaths
-     * @param binDir
-     * @param result
-     * @return
-     */
-    protected CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
-
-        // add the work-dir to the list of container mounts
-        final workDirStr = workDir?.toString()
-        final allMounts = new ArrayList<Path>(mountPaths)
-        if( workDir )
-            allMounts << workDir
-
-        // find the longest commons paths and mount only them
-        final trie = new PathTrie()
-        for( String it : allMounts ) { trie.add(it) }
-
-        // when mounts are read-only make sure to remove the work-dir path
-        final paths = trie.longest()
-        if( readOnlyInputs && workDirStr && paths.contains(workDirStr) )
-            paths.remove(workDirStr)
-
-        for( String it : paths ) {
-            if(!it) continue
-            result << composeVolumePath(it,readOnlyInputs)
-            result << ' '
-        }
-
-        // when mounts are read-only, make sure to include the work-dir as writable
-        if( readOnlyInputs && workDir ) {
-            result << composeVolumePath(workDirStr)
-            result << ' '
-        }
-
-        // -- append by default the current path -- this is needed when `scratch` is set to true
-        if( mountWorkDir ) {
-            result << composeVolumePath('$NXF_TASK_WORKDIR')
-            result << ' '
-        }
-
-        return result
-    }
-
-    protected String composeVolumePath( String path, boolean readOnly = false ) {
-        return "-v ${escape(path)}:${escape(path)}${mountFlags(readOnly)}"
-    }
-
-    protected String escape(String path) {
-        path.startsWith('$') ? "\"$path\"" : Escape.path(path)
-    }
-
-    protected String mountFlags(boolean readOnly) {
-        readOnly ? ":ro" : ''
     }
 }
