@@ -236,4 +236,31 @@ class LocalSecretsProviderTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should handle dollar in secrets' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def secretFile = folder.resolve('secrets.json');
+        and:
+        def DOLLAR1 = new SecretImpl('dollar', '$foo')
+        def DOLLAR2 = new SecretImpl('dollar2', "\$foo")
+
+        def provider = new LocalSecretsProvider(storeFile: secretFile)
+        and:
+        provider.putSecret(DOLLAR1)
+        provider.putSecret(DOLLAR2)
+
+        when:
+        def file = provider.makeTempSecretsFile()
+        then:
+        file.permissions == 'rw-------'
+        and:
+        file.text == '''\
+                     export dollar="\\\$foo"
+                     export dollar2="\\\$foo"
+                     '''.stripIndent()
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
