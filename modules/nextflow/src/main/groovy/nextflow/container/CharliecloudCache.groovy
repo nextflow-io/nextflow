@@ -86,7 +86,7 @@ class CharliecloudCache {
             if( !registry.endsWith('/') ) {
                 registry += '/'
             }
-            imageUrl = registry + imageUrl
+            name = registry + name
         }
         name = name.replace(':','+').replace('/','%')
         return name 
