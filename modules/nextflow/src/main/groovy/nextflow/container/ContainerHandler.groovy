@@ -287,18 +287,24 @@ class ContainerHandler {
             return null
 
         // when starts with `/` it's an absolute image file path, just return it
-        if( img.startsWith("/") )
-            return img
-
-        // check if matches a protocol scheme such as `docker://xxx`
-        if( img =~ IMAGE_URL_PREFIX ) {
+        if( img.startsWith("/") ) {
             return img
         }
+        // remove docker:// if present
+        if( img.startsWith("docker://") ) {
+            img = img.minus("docker://")
+        }
+        // if no tag, add :latest
+        if( !img.contains(':') ) {
+            img += ':latest'
+        }
+
         // if it's the path of an existing image file return it
         def imagePath = baseDir.resolve(img)
         if( imagePath.exists() ) {
             return imagePath.toString()
         }
+
         // in all other case it's supposed to be the name of an image
         return "${normalizeDockerImageName(img)}"
     }
