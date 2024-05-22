@@ -337,7 +337,7 @@ class AzBatchService implements Closeable {
 
         if( config.managedIdentity().isConfigured() )
             cred = createBatchCredentialsWithManagedIdentity()
-        if( config.activeDirectory().isConfigured() )
+        else if( config.activeDirectory().isConfigured() )
             cred = createBatchCredentialsWithServicePrincipal()
         else if( config.batch().endpoint || config.batch().accountKey || config.batch().accountName )
             cred = createBatchCredentialsWithKey()
