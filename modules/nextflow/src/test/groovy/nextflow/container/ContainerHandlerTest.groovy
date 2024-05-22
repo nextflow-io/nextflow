@@ -202,6 +202,35 @@ class ContainerHandlerTest extends Specification {
     }
 
     @Unroll
+    def 'test normalize method for charliecloud' () {
+
+       given:
+        def n = new ContainerHandler([registry: registry])
+
+        expect:
+        n.normalizeCharliecloudImageName(image) == expected
+
+        where:
+        image                      | registry   | expected
+        null                       | null       | null
+        ''                         | null       | null
+        '/abs/path/bar.img'        | null       | '/abs/path/bar.img'
+        'docker://library/busybox' | null       | 'library/busybox:latest'
+        'shub://busybox'           | null       | 'shub://busybox'
+        'foo://busybox'            | null       | 'foo://busybox'
+        'foo'                      | null       | 'foo:latest'
+        'foo:2.0'                  | null       | 'foo:2.0'
+        'foo.img'                  | null       | 'foo.img:latest'
+        'quay.io/busybox'          | null       | 'quay.io/busybox:latest'
+        'http://reg.io/v1/alpine:latest'        | null       | 'http://reg.io/v1/alpine:latest'
+        'https://reg.io/v1/alpine:latest'       | null       | 'https://reg.io/v1/alpine:latest'
+        and:
+        '/abs/path/bar.img'        | 'my.reg'  | '/abs/path/bar.img'
+        'busybox'                  | 'my.reg'  | 'my.reg/busybox:latest'
+        'foo:2.0'                  | 'my.reg'  | 'my.reg/foo:2.0'
+    }
+
+    @Unroll
     def 'test normalize method for singularity' () {
         given:
         def BASE = Paths.get('/abs/path/')
