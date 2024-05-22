@@ -118,7 +118,7 @@ class TaskPollingMonitor implements TaskMonitor {
     @Lazy
     private ExecutorService finalizerPool = { session.taskFinalizerExecutorService() }()
 
-    private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
+    private boolean enableAsyncFinalizer = SysEnv.getBool('NXF_ENABLE_ASYNC_FINALIZER',true)
 
     /**
      * Create the task polling monitor with the provided named parameters object.
