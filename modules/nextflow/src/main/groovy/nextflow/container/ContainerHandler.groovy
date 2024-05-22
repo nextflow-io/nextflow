@@ -91,23 +91,13 @@ class ContainerHandler {
             final normalizedImageName = normalizeCharliecloudImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
-
-            final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
+            // if the imagename starts with '/' it's an absolute path
+            // otherwise we assume it's in a remote registry and pull it from there
+            final requiresCaching = !imageName.startsWith('/')
             if( ContainerInspectMode.active() && requiresCaching )
                 return imageName
             final result = requiresCaching ? createCharliecloudCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
-
-
-
-            // if the imagename starts with '/' it's an absolute path
-            // otherwise we assume it's in a remote registry and pull it from there
-            /*final requiresCaching = !imageName.startsWith('/')
-            if( ContainerInspectMode.active() && requiresCaching )
-                return imageName
-            final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
-            return Escape.path(result)
-            */
         }
         // fallback to docker
         return normalizeDockerImageName(imageName)
