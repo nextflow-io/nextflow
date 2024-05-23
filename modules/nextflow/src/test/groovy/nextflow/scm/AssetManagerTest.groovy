@@ -22,6 +22,7 @@ import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Config
 import org.junit.Rule
+import spock.lang.Ignore
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TemporaryPath
@@ -395,6 +396,33 @@ class AssetManagerTest extends Specification {
         holder.manifest.getHomePage() == 'http://foo.com'
         holder.manifest.getDescription() == 'This pipeline do this and that'
         holder.manifest.getAuthor() == 'Hi Dude'
+
+    }
+
+    def 'should read a default tag from the manifest file' () {
+
+        given:
+        def config =
+                '''
+                manifest {
+                    homePage = 'http://foo.com'
+                    mainScript = 'hello.nf'
+                    defaultBranch = '1.0.0'
+                    description = 'This pipeline do this and that'
+                    author = 'Hi Dude'
+                }
+                '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+        then:
+        holder.manifest.getDefaultBranch() == '1.0.0'
 
     }
 
