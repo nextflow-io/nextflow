@@ -182,6 +182,18 @@ class AssetManager {
                -> need to test this: git.fetch()
                                         .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
         */
+
+        // SEEMS LIKE THE RIGHT DIRECTION TO GO!
+        def gitTest = Git.open(localBarePath)
+        String revtest = revision ?: "master"
+        println('PLUTO ' + revtest)
+        def obj = gitTest.getRepository()
+                         .exactRef("refs/heads/" + revtest )
+                         .getObjectId().getName()   //.peel(revision)
+        gitTest.close()
+        println('PIPPO1 ' + localBarePath)
+        println('PIPPO2 ' + obj)
+
         this.localPath = checkProjectDir(project, this.revision)
 
         return this
