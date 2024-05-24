@@ -939,7 +939,15 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                Ref head = git.getRepository().findRef(Constants.HEAD);
+
+                // try to resolve the the current object id to a tag name
+                Map<ObjectId, String> names = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
+                def tag = names.get( head.objectId ) ?: head.objectId.name()
+                println tag
+                if( current != tag ) {
+                    throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                }
             }
         }
         if( !revision || revision == current ) {
