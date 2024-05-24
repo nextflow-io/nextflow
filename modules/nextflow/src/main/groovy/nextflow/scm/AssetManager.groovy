@@ -195,10 +195,25 @@ class AssetManager {
                          .resolve("refs/heads/" + revtest )
                          .getName()
 
+        def t1 = gitTest.getRepository()
+                         .resolve("toy" )
+                         .getName()
+        def t2 = gitTest.getRepository()
+                         .resolve("v1.1" )
+                         .getName()
+        def t3 = gitTest.getRepository()
+                         .resolve("1d71f857bb64af58716575d770ef74baf21313d1" )
+                         .getName()
+
         gitTest.close()
         println('PIPPO1 ' + localBarePath)
         println('PIPPO2 ' + obj)
         println('PIPPO3 ' + obj2)
+
+        println('ZIO1 ' + t1)
+        println('ZIO2 ' + t2)
+        println('ZIO3 ' + t3)
+
 
         this.localPath = checkProjectDir(project, this.revision)
 
