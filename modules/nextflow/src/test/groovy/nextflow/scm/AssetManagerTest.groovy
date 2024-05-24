@@ -18,11 +18,13 @@ package nextflow.scm
 
 import spock.lang.IgnoreIf
 
+import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Config
 import org.junit.Rule
 import spock.lang.Ignore
+import spock.lang.PendingFeature
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TemporaryPath
@@ -678,5 +680,34 @@ class AssetManagerTest extends Specification {
         local_master != null
         !AssetManager.isRemoteBranch(local_master)
     }
+    @PendingFeature
+    def 'should work with defaultBranch = master'() {}
+    @PendingFeature
+    def 'should not warn if project uses a tag as a defaultBranch'() {
+        given:
+        def ENV = [FOO: '/something', NXF_DEBUG: 'true']
+
+        when:
+        new CmdRun(revision: 'xyz')
+
+        then:
+        def warning = capture
+                .toString()
+                .readLines()
+                .findResults { line -> line.contains('WARN') ? line : null }
+                .join('\n')
+        and:
+        !warning
+        noExceptionThrown()
+    }
+
+    @PendingFeature
+    def 'should work with no defaultBranch'() {}
+    @PendingFeature
+    def 'should default to latest tag if no defaultBranch'() {}
+    @PendingFeature
+    def 'should fallback to master if no defaultBranch'() {}
+    @PendingFeature
+    def 'should default to version tag if manifest version and no defaultBranch'() {}
 
 }
