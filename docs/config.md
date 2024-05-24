@@ -109,6 +109,8 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
+  Note: leave `ociAutoPull` disabled if willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` page).
+
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
@@ -1561,10 +1563,14 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
+  Note: leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` page).
+
 `singularity.ociMode`
 : :::{versionadded} 23.12.0-edge
   :::
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+  Note: leave `ociMode` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` page).
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
