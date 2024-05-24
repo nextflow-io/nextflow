@@ -184,15 +184,21 @@ class AssetManager {
         */
 
         // SEEMS LIKE THE RIGHT DIRECTION TO GO!
+        // now what if I have a tag or commit as input? - .resolve() method instead?
         def gitTest = Git.open(localBarePath)
         String revtest = revision ?: "master"
         println('PLUTO ' + revtest)
         def obj = gitTest.getRepository()
                          .exactRef("refs/heads/" + revtest )
-                         .getObjectId().getName()   //.peel(revision)
+                         .getObjectId().getName()
+        def obj2 = gitTest.getRepository()
+                         .resolve("refs/heads/" + revtest )
+                         .getName()
+
         gitTest.close()
         println('PIPPO1 ' + localBarePath)
         println('PIPPO2 ' + obj)
+        println('PIPPO3 ' + obj2)
 
         this.localPath = checkProjectDir(project, this.revision)
 
