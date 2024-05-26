@@ -17,6 +17,7 @@
 package nextflow.cloud.aws.batch
 
 import com.amazonaws.services.batch.AWSBatch
+import com.amazonaws.services.batch.model.ContainerDetail
 import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsRequest
 import com.amazonaws.services.batch.model.DescribeJobQueuesRequest
 import com.amazonaws.services.batch.model.DescribeJobsRequest
@@ -176,12 +177,12 @@ class AwsBatchHelper {
         return null
     }
 
-    protected String getLogStreamId(String jobId) {
+    protected ContainerDetail getContainerDetails(String jobId) {
         final request = new DescribeJobsRequest() .withJobs(jobId)
         final response = batchClient.describeJobs(request)
         if( response.jobs ) {
             final detail = response.jobs[0]
-            return detail.container.logStreamName
+            return detail.container
         }
         else {
             log.debug "Unable to find info for batch job id=$jobId"
@@ -199,22 +200,25 @@ class AwsBatchHelper {
      *      is made of multiple *page* this method returns only the first one
      */
     String getTaskLogStream(String jobId) {
-        final streamId = getLogStreamId(jobId)
-        if( !streamId ) {
+        final containerDetail = getContainerDetails(jobId)
+        if( !containerDetail.logStreamName ) {
             log.debug "Unable to find CloudWatch log stream for batch job id=$jobId"
             return null
         }
+        // Fallback to the default log group name if log group name is not set
+        final logGroupName = containerDetail.logConfiguration?.options?.get('awslogs-group')
+            ?: '/aws/batch/job'
 
         final logRequest = new GetLogEventsRequest()
-                .withLogGroupName("/aws/batch/job")
-                .withLogStreamName(streamId)
+                .withLogGroupName(logGroupName)
+                .withLogStreamName(containerDetail.logStreamName)
 
         final result = new StringBuilder()
         final resp = logsClient .getLogEvents(logRequest)
         for( OutputLogEvent it : resp.events ) {
             result.append(it.getMessage()).append('\n')
         }
-        
+
         return result.toString()
     }
 
