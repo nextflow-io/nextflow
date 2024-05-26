@@ -268,6 +268,9 @@ The following settings are available:
 `aws.client.proxyPassword`
 : The password to use when connecting through a proxy.
 
+`aws.client.requesterPays`
+: Enable the requester pays feature for S3 buckets.
+
 `aws.client.s3PathStyleAccess`
 : Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
 
