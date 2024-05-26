@@ -45,9 +45,13 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 
 import org.apache.commons.codec.binary.Base64;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.openssl.PEMDecryptorProvider;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 
 
 public class SSLUtils {
@@ -91,12 +95,22 @@ public class SSLUtils {
         CertificateFactory certFactory = CertificateFactory.getInstance("X509");
         X509Certificate cert = (X509Certificate) certFactory.generateCertificate(certInputStream);
 
-        PrivateKey privateKey;
+        PrivateKey privateKey=null;
 
         if(clientKeyAlgo.equals("EC")) {
             Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-            PEMKeyPair keys = (PEMKeyPair) new PEMParser(new InputStreamReader(keyInputStream)).readObject();
-            privateKey = new JcaPEMKeyConverter().getKeyPair(keys).getPrivate();
+            Object object = new PEMParser(new InputStreamReader(keyInputStream)).readObject();
+            if (object instanceof PEMKeyPair) {
+                PEMKeyPair keys = (PEMKeyPair) object;
+                privateKey = new JcaPEMKeyConverter().getKeyPair(keys).getPrivate();
+            }
+            if( object instanceof PrivateKeyInfo){
+                PrivateKeyInfo privateKeyInfo = (PrivateKeyInfo)object;
+                privateKey = new JcaPEMKeyConverter().getPrivateKey(privateKeyInfo);
+            }
+            if( privateKey == null){
+                throw new IOException("Unsupported EC algorithm");
+            }
         }else {
             byte[] keyBytes = decodePem(keyInputStream);
 
