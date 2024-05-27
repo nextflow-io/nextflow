@@ -164,14 +164,16 @@ class AssetManager {
         validateBareProjectDir()
 
         /* TODO MARCO : revision dereferencing
-            5. updating of bare ideally would be at rev/tag level, however does everything by default
+            a. commitFromRevisionUsingBareLocal() fails when revision is new on remote
+               - needs a fix, because method is called at instantiation, causing failure
+            b. updating of bare ideally would be at rev/tag level, however does everything by default
                -> need to test this: git.fetch()
                                         .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
-            6. there are interferences between revisions when commit is the same -
-            7. also, the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
+            c. there are interferences between revisions when commit is the same -
+            d. also, the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
                -> how is RevisionInfo used in the run algorithm?
 
-            END. refactor with original AssetManager (which has no revision arg)
+            END. refactor with original AssetManager (which has no revision arg). also unit tests.
         */
 
         this.commitId = commitFromRevisionUsingBareLocal(this.revision)
