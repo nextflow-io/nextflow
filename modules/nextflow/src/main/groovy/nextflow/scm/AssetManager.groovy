@@ -163,13 +163,12 @@ class AssetManager {
         setupCredentials(cliOpts)
         validateBareProjectDir()
 
-        /* TODO MARCO : revision dereferencing
-            b. updating of bare ideally would be at rev/tag level, however does everything by default
+        /* TODO MARCO : Outstanding bits right now:
+            a. updating of bare ideally would be at rev/tag level, however does everything by default
                 -> need to test this: git.fetch()
                                         .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
-            c. there are interferences between revisions when commit is the same
-                -> how is RevisionInfo used in the run algorithm?
-            d. also, the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
+            b. the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
+                - also, no notice when remote branch is updated (probably related)
                 -> how is RevisionInfo used in the run algorithm?
 
             END. refactor with original AssetManager (which has no revision arg). also unit tests.
