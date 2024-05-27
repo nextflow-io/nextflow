@@ -170,6 +170,7 @@ class AssetManager {
             b. the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
                 - also, no notice when remote branch is updated (probably related)
                 -> how is RevisionInfo used in the run algorithm?
+            c. update mechanics of list/info commands
 
             END. refactor with original AssetManager (which has no revision arg). also unit tests.
         */
