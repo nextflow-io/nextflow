@@ -449,7 +449,7 @@ class BashWrapperBuilder {
                 }
                 return path
             }
-            catch (FileSystemException | SocketException | RuntimeException e) {
+            catch (FileSystemException | IOException | RuntimeException | SocketException e) {
                 final isLocalFS = path.getFileSystem()==FileSystems.default
                 // the retry logic is needed for non-local file system such as S3.
                 // when the file is local fail without retrying
