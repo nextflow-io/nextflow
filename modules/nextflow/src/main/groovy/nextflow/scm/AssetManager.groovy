@@ -81,6 +81,11 @@ class AssetManager {
     private String revision
 
     /**
+     * The commit ID as de-referenced from the requested revision
+     */
+    private String commitId
+
+    /**
      * Directory where the pipeline is cloned (i.e. downloaded)
      *
      * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/commits/<commit>
@@ -144,15 +149,6 @@ class AssetManager {
     @PackageScope
     AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
 
-        // if requested revision corresponds to the default branch, then unset it
-        // this avoids duplication of the default branch
-        if ( revision ) {
-            def referenceManager = new AssetManager(pipelineName, null, cliOpts)
-            if ( revision == referenceManager.getDefaultBranch() ) {
-                revision = null
-            }
-        }
-
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.revision = revision
@@ -168,57 +164,22 @@ class AssetManager {
         validateBareProjectDir()
 
         /* TODO MARCO : revision dereferencing
-            - key attributes are localPath and commitid
-            - do it at instantiation
-            - if cmdpull/cmdrun, use updateLocalBareRepo() to update the attributes
-
-            Let's simplify and minimise usage of the local bare
-            0. get local gitconfig
-            1. dereference revisions (branches!/tags?) to commits
-            2. use commits in localpath
-            3. use commits in CLI Cmds
-            4. use local bare path just to dereference locally without need for remote repo, and for local gitconfig
             5. updating of bare ideally would be at rev/tag level, however does everything by default
                -> need to test this: git.fetch()
                                         .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
+            6. there are interferences between revisions when commit is the same -
+            7. also, the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
+               -> how is RevisionInfo used in the run algorithm?
+
+            END. refactor with original AssetManager (which has no revision arg)
         */
 
-        // SEEMS LIKE THE RIGHT DIRECTION TO GO!
-        // now what if I have a tag or commit as input? - .resolve() method instead?
-        def gitTest = Git.open(localBarePath)
-        String revtest = revision ?: "master"
-        println('PLUTO ' + revtest)
-        def obj = gitTest.getRepository()
-                         .exactRef("refs/heads/" + revtest )
-                         .getObjectId().getName()
-        def obj2 = gitTest.getRepository()
-                         .resolve("refs/heads/" + revtest )
-                         .getName()
-
-        def t1 = gitTest.getRepository()
-                         .resolve("toy" )
-                         .getName()
-        def t2 = gitTest.getRepository()
-                         .resolve("v1.1" )
-                         .getName()
-        def t3 = gitTest.getRepository()
-                         .resolve("1d71f857bb64af58716575d770ef74baf21313d1" )
-                         .getName()
-
-        gitTest.close()
-        println('PIPPO1 ' + localBarePath)
-        println('PIPPO2 ' + obj)
-        println('PIPPO3 ' + obj2)
-
-        println('ZIO1 ' + t1)
-        println('ZIO2 ' + t2)
-        println('ZIO3 ' + t3)
-
-
-        this.localPath = checkProjectDir(project, this.revision)
+        this.commitId = commitFromRevisionUsingBareLocal(this.revision)
+        this.localPath = checkProjectDir(project, this.commitId)
 
         return this
     }
+
 
     @PackageScope
     File getLocalGitConfig() {
@@ -264,13 +225,13 @@ class AssetManager {
      * @return The project dir {@link File}
      */
     @PackageScope
-    File checkProjectDir(String projectName, String revision) {
+    File checkProjectDir(String projectName, String commit) {
 
         if( !isValidProjectName(projectName)) {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
-        new File(root, project + '/' + subdirCommits + '/' + (revision ?: 'DEFAULT_BRANCH'))
+        new File(root, project + '/' + subdirCommits + '/' + commit)
     }
 
     @PackageScope
@@ -310,6 +271,17 @@ class AssetManager {
         Git.open(localBarePath)
            .fetch()
            .call()
+    }
+
+    @PackageScope
+    String commitFromRevisionUsingBareLocal(String revision) {
+        String bareRevision = revision ?: Constants.HEAD
+        def git = Git.open(localBarePath)
+        def commit = git.getRepository()
+                        .resolve(bareRevision)
+                        .getName()
+        git.close()
+        return commit
     }
 
     /**
