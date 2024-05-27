@@ -164,19 +164,18 @@ class AssetManager {
         validateBareProjectDir()
 
         /* TODO MARCO : revision dereferencing
-            a. commitFromRevisionUsingBareLocal() fails when revision is new on remote
-               - needs a fix, because method is called at instantiation, causing failure
-               - something similar to checkRemoteStatus()?
             b. updating of bare ideally would be at rev/tag level, however does everything by default
-               -> need to test this: git.fetch()
+                -> need to test this: git.fetch()
                                         .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
-            c. there are interferences between revisions when commit is the same -
+            c. there are interferences between revisions when commit is the same
+                -> how is RevisionInfo used in the run algorithm?
             d. also, the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
-               -> how is RevisionInfo used in the run algorithm?
+                -> how is RevisionInfo used in the run algorithm?
 
             END. refactor with original AssetManager (which has no revision arg). also unit tests.
         */
 
+        // note: this will call updateLocalBareRepo() if revision cannot be resolved in first instance
         this.commitId = commitFromRevisionUsingBareLocal(this.revision)
         this.localPath = checkProjectDir(project, this.commitId)
 
@@ -280,9 +279,14 @@ class AssetManager {
     String commitFromRevisionUsingBareLocal(String revision) {
         String bareRevision = revision ?: Constants.HEAD
         def git = Git.open(localBarePath)
-        def commit = git.getRepository()
-                        .resolve(bareRevision)
-                        .getName()
+        def rev = git.getRepository().resolve(bareRevision)
+        if (rev == null) {
+            updateLocalBareRepo()
+            rev = git.getRepository().resolve(bareRevision)
+            if (rev == null)
+                throw new AbortOperationException("Cannot resolve revision: $bareRevision")
+        }
+        def commit = rev.getName()
         git.close()
         return commit
     }
@@ -748,67 +752,16 @@ class AssetManager {
                 clone.setDepth(deep)
             clone.call()
 
-            if( revision ) {
-                // use an explicit checkout command *after* the clone instead of cloning a specific branch
-                // because the clone command does not allow the use of SHA commit id (only branch and tag names)
-                try { git.checkout() .setName(revision) .call() }
-                catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
-            }
+            // use an explicit checkout command *after* the clone instead of cloning a specific branch
+            // because the clone command does not allow the use of SHA commit id (only branch and tag names)
+            try { git.checkout() .setName(commitId) .call() }
+            catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
 
             // return status message
             return "downloaded from ${cloneURL}"
         }
 
-        log.debug "Pulling $project  -- Using local path: $localPath"
-
-        // verify that is clean
-        if( !isClean() )
-            throw new AbortOperationException("$project contains uncommitted changes -- cannot pull from repository")
-
-        if( revision && revision != getCurrentRevision() ) {
-            /*
-             * check out a revision before the pull operation
-             */
-            try {
-                git.checkout() .setName(revision) .call()
-            }
-            /*
-             * If the specified revision does not exist
-             * Try to checkout it from a remote branch and return
-             */
-            catch ( RefNotFoundException e ) {
-                final ref = checkoutRemoteBranch()
-                final commitId = ref?.getObjectId()
-                return commitId
-                    ? "checked out at ${commitId.name()}"
-                    : "checked out revision ${revision}"
-            }
-        }
-
-        def pull = git.pull()
-        def revInfo = getCurrentRevisionAndName()
-
-        if ( revInfo.type == RevisionInfo.Type.COMMIT ) {
-            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we will assume the repo is already up to date and NOT pull it!")
-            return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
-        }
-
-        if ( revInfo.type == RevisionInfo.Type.TAG ) {
-            pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
-        }
-
-        if( provider.hasCredentials() )
-            pull.setCredentialsProvider( provider.getGitCredentials() )
-
-        if( manifest.recurseSubmodules ) {
-            pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
-        }
-        def result = pull.call()
-        if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
-
-        return result?.mergeResult?.mergeStatus?.toString()
-
+    return "already available"
     }
 
     /**
