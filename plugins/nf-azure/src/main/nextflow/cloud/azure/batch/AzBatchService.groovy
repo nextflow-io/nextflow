@@ -282,7 +282,11 @@ class AzBatchService implements Closeable {
         if( !config.batch().accountKey )
             throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
 
-        return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
+        return new BatchSharedKeyCredentials(
+                config.batch().endpoint,
+                config.batch().accountName,
+                config.batch().accountKey
+        )
     }
 
     protected BatchCredentials createBatchCredentialsWithServicePrincipal() {
@@ -291,7 +295,7 @@ class AzBatchService implements Closeable {
         final batchEndpoint = "https://batch.core.windows.net/"
         final authenticationEndpoint = "https://login.microsoftonline.com/"
 
-        def servicePrincipalBasedCred = new BatchApplicationTokenCredentials(
+        return new BatchApplicationTokenCredentials(
                 config.batch().endpoint,
                 config.activeDirectory().servicePrincipalId,
                 config.activeDirectory().servicePrincipalSecret,
@@ -299,8 +303,6 @@ class AzBatchService implements Closeable {
                 batchEndpoint,
                 authenticationEndpoint
         )
-
-        return servicePrincipalBasedCred
     }
 
     protected BatchCredentials createBatchCredentialsWithManagedIdentity() {
@@ -310,10 +312,10 @@ class AzBatchService implements Closeable {
         final authenticationEndpoint = 'https://login.microsoftonline.com/'
 
         final clientId = config.managedIdentity().clientId
-        final credentialBuilder = new DefaultAzureCredentialBuilder()
-        credentialBuilder.managedIdentityClientId(clientId)
-        final credential = credentialBuilder.build()
-        final tenantId = System.getenv('AZURE_TENANT_ID')
+        final tenantId = config.activeDirectory().tenantId
+        final credential = new DefaultAzureCredentialBuilder()
+            .managedIdentityClientId(clientId)
+            .build()
         final tokenContext = new TokenRequestContext()
             .setTenantId(tenantId)
             .addScopes("${AzureEnvironment.AZURE.getManagementEndpoint()}/.default")

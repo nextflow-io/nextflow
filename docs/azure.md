@@ -456,6 +456,10 @@ The managed identity can be specified as follows:
 
 ```groovy
 azure {
+    activeDirectory {
+        tenantId = '<YOUR TENANT ID>'
+    }
+
     managedIdentity {
         clientId = '<YOUR MANAGED IDENTITY>'
     }
