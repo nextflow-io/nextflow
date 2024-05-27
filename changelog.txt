@@ -316,7 +316,7 @@ NEXTFLOW CHANGE-LOG
 - Rename Microsoft AAD to Microsoft Entra (#4362) [5e3f2c0a]
 - Return -1 when exitcode file is empty (#4354) [d26c42be]
 - Support for Fusion unprivileged execution (#4387) [035e6e7b]
-- Use HistoryFile.Record instead of Record type conflic [11c3aac5]
+- Use HistoryFile.Record instead of Record type conflict [11c3aac5]
 - Bump nf-amazon@2.1.4 [a84208a8]
 - Bump nf-cloudcache@0.3.0 [b37b4014]
 - Bump nf-google@1.8.3 [b4eb8b96]
