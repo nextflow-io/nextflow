@@ -168,7 +168,8 @@ Please see Singularity documentation for further details.
 :::
 
 :::{note}
-In order to build Singularity native images, both configuration options `singularity.ociAutoPull` and `singularity.ociMode` need to be disabled (see the {ref}`config-singularity` page).
+In order to build Singularity native images, both `singularity.ociAutoPull` and `singularity.ociMode` need to be disabled in the configuration (see the {ref}`config-singularity` section).
+:::
 
 ### Push to a private repository
 
