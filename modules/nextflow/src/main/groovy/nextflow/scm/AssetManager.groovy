@@ -166,6 +166,7 @@ class AssetManager {
         /* TODO MARCO : revision dereferencing
             a. commitFromRevisionUsingBareLocal() fails when revision is new on remote
                - needs a fix, because method is called at instantiation, causing failure
+               - something similar to checkRemoteStatus()?
             b. updating of bare ideally would be at rev/tag level, however does everything by default
                -> need to test this: git.fetch()
                                         .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
