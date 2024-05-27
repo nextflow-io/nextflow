@@ -278,16 +278,16 @@ class AssetManager {
     @PackageScope
     String commitFromRevisionUsingBareLocal(String revision) {
         String bareRevision = revision ?: Constants.HEAD
-        def git = Git.open(localBarePath)
-        def rev = git.getRepository().resolve(bareRevision)
+        def bare = Git.open(localBarePath)
+        def rev = bare.getRepository().resolve(bareRevision)
         if (rev == null) {
             updateLocalBareRepo()
-            rev = git.getRepository().resolve(bareRevision)
+            rev = bare.getRepository().resolve(bareRevision)
             if (rev == null)
                 throw new AbortOperationException("Cannot resolve revision: $bareRevision")
         }
         def commit = rev.getName()
-        git.close()
+        bare.close()
         return commit
     }
 
