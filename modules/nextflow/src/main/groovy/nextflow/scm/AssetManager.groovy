@@ -751,8 +751,9 @@ class AssetManager {
 
             // use an explicit checkout command *after* the clone instead of cloning a specific branch
             // because the clone command does not allow the use of SHA commit id (only branch and tag names)
-            try { git.checkout() .setName(commitId) .call() }
-            catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
+            git.checkout() .setName(commitId) .call()
+            //try { git.checkout() .setName(commitId) .call() }
+            //catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
 
             // return status message
             return "downloaded from local bare repo"
