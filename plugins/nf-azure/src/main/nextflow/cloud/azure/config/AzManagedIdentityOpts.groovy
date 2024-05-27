@@ -30,10 +30,13 @@ class AzManagedIdentityOpts {
 
     Boolean system
 
+    String tenantId
+
     AzManagedIdentityOpts(Map config) {
         assert config != null
         this.clientId = config.clientId
         this.system = config.system as Boolean
+        this.tenantId = config.tenantId
     }
 
     Map<String, Object> getEnv() {
@@ -44,7 +47,13 @@ class AzManagedIdentityOpts {
     }
 
     boolean isConfigured() {
-        return clientId || system
+        if( clientId && !system && tenantId )
+            return true
+        if( !clientId && system && tenantId )
+            return true
+        if( !clientId && !system && !tenantId )
+            return false
+        throw new IllegalArgumentException("Invalid Managed Identity configuration - Make sure the `clientId` or `system` is set in the nextflow config, as well as `tenantId`")
     }
 
 }

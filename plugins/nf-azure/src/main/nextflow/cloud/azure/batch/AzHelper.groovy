@@ -19,7 +19,7 @@ import java.nio.file.Path
 import java.time.OffsetDateTime
 
 import com.azure.identity.ClientSecretCredentialBuilder
-import com.azure.identity.DefaultAzureCredentialBuilder
+import com.azure.identity.ManagedIdentityCredentialBuilder
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
@@ -220,13 +220,13 @@ class AzHelper {
 
     @Memoized
     static synchronized BlobServiceClient getOrCreateBlobServiceWithManagedIdentity(String accountName, String clientId) {
-        log.debug "Creating Azure blob storage client -- accountName: $accountName; clientId: ${clientId ?: '<system-assigned identity>'}"
+        log.debug "Creating Azure blob storage client using Managed Identity ${clientId ?: '<system-assigned identity>'}"
 
         final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
-        final credentialBuilder = new DefaultAzureCredentialBuilder()
+        final credentialBuilder = new ManagedIdentityCredentialBuilder()
         if( clientId )
-            credentialBuilder.managedIdentityClientId(clientId)
+            credentialBuilder.clientId(clientId)
 
         return new BlobServiceClientBuilder()
                 .credential(credentialBuilder.build())

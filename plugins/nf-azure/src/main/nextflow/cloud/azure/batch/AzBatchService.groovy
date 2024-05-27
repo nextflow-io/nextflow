@@ -27,7 +27,7 @@ import java.util.function.Predicate
 
 import com.azure.core.credential.TokenRequestContext
 import com.azure.core.management.AzureEnvironment
-import com.azure.identity.DefaultAzureCredentialBuilder
+import com.azure.identity.ManagedIdentityCredentialBuilder
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
 import com.microsoft.azure.batch.auth.BatchCredentials
@@ -313,8 +313,8 @@ class AzBatchService implements Closeable {
 
         final clientId = config.managedIdentity().clientId
         final tenantId = config.activeDirectory().tenantId
-        final credential = new DefaultAzureCredentialBuilder()
-            .managedIdentityClientId(clientId)
+        final credential = new ManagedIdentityCredentialBuilder()
+            .clientId(clientId)
             .build()
         final tokenContext = new TokenRequestContext()
             .setTenantId(tenantId)
