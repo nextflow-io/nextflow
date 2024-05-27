@@ -733,11 +733,8 @@ class AssetManager {
          */
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
-            // make sure it contains a valid repository
-            checkValidRemoteRepo()
 
-            final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling $project -- Using local bare repo"
 
             // clone it
             def clone = Git.cloneRepository()
@@ -745,7 +742,7 @@ class AssetManager {
                 clone.setCredentialsProvider( provider.getGitCredentials() )
 
             clone
-                .setURI(cloneURL)
+                .setURI(localBarePath.toString())
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
             if( deep )
@@ -758,8 +755,13 @@ class AssetManager {
             catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
 
             // return status message
-            return "downloaded from ${cloneURL}"
+            return "downloaded from local bare repo"
         }
+
+        // verify that is runnable
+        if( !isRunnable() )
+            throw new AbortOperationException("$project is not runnable and not empty -- cannot pull from repository")
+
 
     return "already available"
     }
