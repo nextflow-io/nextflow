@@ -182,6 +182,8 @@ class ConfigParser {
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
         config.addCompilationCustomizers(importCustomizer)
+        // set java 11 as target lang
+        config.setTargetBytecode(CompilerConfiguration.JDK11)
         grengine = new Grengine(config)
     }
 

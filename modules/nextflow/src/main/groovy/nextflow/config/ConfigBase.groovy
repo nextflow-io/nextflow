@@ -106,7 +106,7 @@ abstract class ConfigBase extends Script {
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
-
+        config.setTargetBytecode(CompilerConfiguration.JDK11)
         // -- setup the grengine instance
         def engine = new Grengine(this.class.classLoader,config)
         def clazz = engine.load(configText)
