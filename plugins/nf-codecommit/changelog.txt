@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+0.1.5-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 0.1.5 - 15 May 2023
 - Update logging libraries [d7eae86e]
 
