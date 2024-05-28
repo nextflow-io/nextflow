@@ -1,5 +1,8 @@
 nf-cloudcache changelog
 =======================
+0.3.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 0.3.0 - 10 Oct 2023
 - Add -cloudcache CLI option (#4385) [73fda582]
 
