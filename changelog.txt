@@ -1,5 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.10.2 - 28 May 2023
+- Update Platform API endpoint (#4855) [04cedce0]
+- Fix semaphore in parallel polling monitor (#4927) [d173ceab]
+- Fix security vulnerabilities (#5014) [a28b404c]
+- Bump nf-wave@1.0.1-patch1 [3852dd1e]
+- Bump nf-tower@1.6.3-patch1 [d692711b]
+- Bump nf-google@1.8.3-patch1 [b48a1423]
+- Bump nf-ga4gh@1.1.0-patch1 [911c1624]
+- Bump nf-console@1.0.6-patch1 [9d6b64c3]
+- Bump nf-codecommit@0.1.5-patch1 [f43964f8]
+- Bump nf-cloudcache@0.3.3-patch1 [fb9059c7]
+- Bump nf-azure@1.3.3-patch1 [8c398620]
+- Bump nf-amazon@2.1.4-patch1 [1d3726db]
+
 23.10.1 - 12 Jan 2023 
 - Fix bug with Fusion symlink resolution (#4593) [f28c9e48]
 - Fix Fusion symlinks when publishing files (#4348) [1fa5878a]
