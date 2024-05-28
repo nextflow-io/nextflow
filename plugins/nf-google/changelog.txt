@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.8.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 1.8.3 - 10 Oct 2023
 - Add setting to enable the use of sync command [f0d5cc5c]
 - Fix Google Batch do not stop running jobs (#4381) [3d6b7358]
