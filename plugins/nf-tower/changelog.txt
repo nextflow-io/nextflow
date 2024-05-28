@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.6.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 1.6.3 - 10 Oct 2023
 - Add -cloudcache CLI option (#4385) [73fda582]
 
