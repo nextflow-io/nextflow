@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.0.1-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 1.0.1 - 12 Jan 2024
 - Fix Inspect command fails with Singularity [25883df3]
 
