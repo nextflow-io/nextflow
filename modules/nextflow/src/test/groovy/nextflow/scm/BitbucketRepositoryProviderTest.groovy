@@ -114,9 +114,26 @@ class BitbucketRepositoryProviderTest extends Specification {
         expect:
         repo.readText('main.nf').contains('world')
         !repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('test-branch')
+        repo.readText('main.nf').contains('world')
+        !repo.readText('main.nf').contains('WORLD')
+
         and:
         repo.setRevision('feature/with-slash')
         !repo.readText('main.nf').contains('world')
         repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('v1.1')
+        repo.readText('main.nf').contains('world')
+        !repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('test/tag/v2')
+        !repo.readText('main.nf').contains('world')
+        repo.readText('main.nf').contains('mundo')
+
     }
 }
