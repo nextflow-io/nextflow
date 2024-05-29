@@ -379,8 +379,8 @@ class WaveClient {
     @Memoized
     synchronized String singularityOrasToHttp(String imageUri) {
         final resp = inspectRequest(imageUri)
-        if (resp==null)
-            return "WARNING: image not found - ${imageUri}"
+        if ( resp==null )
+            return "NULL"
         final spec = resp.container
         if( spec.manifest.layers.size()!=1 )
             throw new BadResponseException("Unexpected Singularity image structure - offending image: ${imageUri}")
