@@ -36,6 +36,7 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
@@ -50,6 +51,7 @@ import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerInspectRequest
 import io.seqera.wave.api.ContainerInspectResponse
 import io.seqera.wave.api.PackagesSpec
+import io.seqera.wave.plugin.adapter.InstantAdapter
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -326,7 +328,10 @@ class WaveClient {
 
     protected ContainerInspectResponse jsonToInspectResponse(String body) {
         final type = new TypeToken<ContainerInspectResponse>(){}.getType()
-        return new Gson().fromJson(body, type)
+        return new GsonBuilder()
+            .registerTypeAdapter(Instant.class, new InstantAdapter())
+            .create()
+            .fromJson(body, type)
     }
 
     protected ContainerConfig jsonToContainerConfig(String json) {
