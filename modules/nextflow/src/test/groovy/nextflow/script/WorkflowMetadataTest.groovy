@@ -58,7 +58,8 @@ class WorkflowMetadataTest extends Specification {
         def handlerInvoked
         def config = [workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ],
                     docker:[enabled:true],
-                    manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1']]
+                    manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1'],
+                    wave:[enabled:true], fusion:[enabled:true, containerConfigUrl: 'https://fusionfs.seqera.io/releases/v1.2.3-amd64.json']]
         Session session = Spy(Session, constructorArgs: [config])
         session.configFiles >> [Paths.get('foo'), Paths.get('bar')]
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
@@ -89,9 +90,13 @@ class WorkflowMetadataTest extends Specification {
         metadata.sessionId == session.uniqueId
         metadata.runName == session.runName
         metadata.containerEngine == 'docker'
+        metadata.wave.enabled == true
+        metadata.fusion.enabled == true
+        metadata.fusion.version == '1.2.3'
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         metadata.resume == false
         metadata.stubRun == false
+        metadata.preview == false
         metadata.userName == System.getProperty('user.name')
         metadata.homeDir == Paths.get(System.getProperty('user.home'))
         metadata.manifest.version == '1.0.0'
@@ -110,11 +115,13 @@ class WorkflowMetadataTest extends Specification {
         session.profile >> 'foo_profile'
         session.resumeMode >> true
         session.stubRun >> true
+        session.preview >> true
         metadata = new WorkflowMetadata(session, script)
         then:
         metadata.profile == 'foo_profile'
         metadata.resume
         metadata.stubRun
+        metadata.preview
     }
 
     def foo_test_method() {

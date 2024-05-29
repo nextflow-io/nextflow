@@ -78,6 +78,8 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.plugin.Plugins
+import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -107,6 +109,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.HashBuilder
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly
@@ -253,6 +256,8 @@ class TaskProcessor {
 
     private Boolean isFair0
 
+    private TaskArrayCollector arrayCollector
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -304,9 +309,12 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks ? config.maxForks as int : 0
+        this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+        
+        final arraySize = config.getArray()
+        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
     }
 
     /**
@@ -366,6 +374,16 @@ class TaskProcessor {
     int getMaxForks() { maxForks }
 
     boolean hasErrors() { errorCount>0 }
+
+    @Memoized
+    protected TaskTipProvider getTipProvider() {
+        final provider = Plugins.getPriorityExtensions(TaskTipProvider).find(it-> it.enabled())
+        if( !provider )
+            throw new IllegalStateException("Unable to find any tip provider")
+        return provider
+    }
+
+    boolean isSingleton() { singleton }
 
     /**
      * Create a "preview" for a task run. This method is only meant for the creation of "mock" task run
@@ -786,7 +804,7 @@ class TaskProcessor {
 
         int tries = task.failCount +1
         while( true ) {
-            hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
+            hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
             Path resumeDir = null
             boolean exists = false
@@ -1265,33 +1283,25 @@ class TaskProcessor {
         if( task?.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}"
 
-        message << "\nTip: ${getRndTip()}"
+        message << suggestTip(message)
 
         return message
+    }
+
+    private String suggestTip(List<String> message) {
+        try {
+            return "\nTip: ${getTipProvider().suggestTip(message)}"
+        }
+        catch (Exception e) {
+            log.debug "Unable to get tip for task message: $message", e
+            return ''
+        }
     }
 
     private static String stripWorkDir(String line, Path workDir) {
         if( workDir==null ) return line
         if( workDir.fileSystem != FileSystems.default ) return line
         return workDir ? line.replace(workDir.toString()+'/','') : line
-    }
-
-    static List tips = [
-            'when you have fixed the problem you can continue the execution adding the option `-resume` to the run command line',
-            "you can try to figure out what's wrong by changing to the process work dir and showing the script file named `${TaskRun.CMD_SCRIPT}`",
-            "view the complete command output by changing to the process work dir and entering the command `cat ${TaskRun.CMD_OUTFILE}`",
-            "you can replicate the issue by changing to the process work dir and entering the command `bash ${TaskRun.CMD_RUN}`"
-    ]
-
-    static Random RND = Random.newInstance()
-
-    /**
-     * Display a random tip at the bottom of the error report
-     *
-     * @return The tip string to display
-     */
-    protected String getRndTip() {
-        tips[ RND.nextInt( tips.size() ) ]
     }
 
 
@@ -1326,9 +1336,11 @@ class TaskProcessor {
         else
             message = err0(error.cause)
 
+        for( String line : message.readLines() ) {
+            result << '  ' << line << '\n'
+        }
+
         result
-            .append('  ')
-            .append(message)
             .append('\n')
             .toString()
     }
@@ -2319,7 +2331,10 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task)
+        if( arrayCollector )
+            arrayCollector.collect(task)
+        else
+            executor.submit(task)
 
     }
 
@@ -2411,6 +2426,10 @@ class TaskProcessor {
 
         // increment the number of processes executed
         state.update { StateObj it -> it.incCompleted() }
+    }
+
+    protected void closeProcess() {
+        arrayCollector?.close()
     }
 
     protected void terminateProcess() {
@@ -2565,6 +2584,7 @@ class TaskProcessor {
             // apparently auto if-guard instrumented by @Slf4j is not honoured in inner classes - add it explicitly
             if( log.isTraceEnabled() )
                 log.trace "<${name}> After stop"
+            closeProcess()
         }
 
         /**

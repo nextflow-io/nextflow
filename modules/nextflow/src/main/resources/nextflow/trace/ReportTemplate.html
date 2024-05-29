@@ -196,6 +196,14 @@
         <dd class="col-sm-9"><samp>${workflow.containerEngine?:'-'}</samp></dd>
         <% } %>
 
+        <% if (workflow.wave.enabled) { %>
+        <dt class="col-sm-3">Wave enabled</dt>
+        <dd class="col-sm-9"><samp>${workflow.wave.enabled}</samp></dd>
+
+        <dt class="col-sm-3">Fusion enabled</dt>
+        <dd class="col-sm-9"><samp>${workflow.fusion.enabled}</samp>, version <samp>${workflow.fusion.version ?: '-'}</samp></dd>
+        <% } %>
+
         <dt class="col-sm-3">Nextflow version</dt>
         <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
       </dl>

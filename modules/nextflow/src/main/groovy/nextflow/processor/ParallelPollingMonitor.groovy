@@ -55,7 +55,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     @Override
     protected boolean canSubmit(TaskHandler handler) {
-        return super.canSubmit(handler) && semaphore?.tryAcquire()
+        return super.canSubmit(handler) && (semaphore == null || semaphore.tryAcquire())
     }
 
     protected RateLimiter createSubmitRateLimit() {
@@ -86,7 +86,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
                 if( !session.success )
                     return // ignore error when the session has been interrupted 
                 handleException(handler, e)
-                session.notifyTaskComplete(handler)
+                notifyTaskComplete(handler)
             }
         }
 

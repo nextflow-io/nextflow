@@ -45,6 +45,10 @@ class DiskResource {
             this.type = opts.type as String
     }
 
+    DiskResource withRequest(MemoryUnit value) {
+        return new DiskResource(request: value, type: this.type)
+    }
+
     private static MemoryUnit toMemoryUnit( value ) {
         if( value instanceof MemoryUnit )
             return (MemoryUnit)value
