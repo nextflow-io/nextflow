@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.04.2 - 29 May 2024
+- Fix handling of tags with slash on Bitbucket (#5031) [ci fast] [76cd305f]
+- Fix the default for async finalizer (#5013) [f5fba709]
+- Fix the invocation of function with gstring (#5020) [04317f0d]
+- Fix escapes dollar char in local secret provider (#5021) [d8f8bf56]
+- Improve Charliecloud registry handling (#5018) [ci fast] [42496dbc]
+- Enable the use of Java 22  (#4970) [ci fast] [cbf24f9b]
+
 24.04.1 - 20 May 2024 
 - Fix nf-google plugin dependency [725e2860]
 - Fix nf-amazon plugin dependency [c234b09f]
