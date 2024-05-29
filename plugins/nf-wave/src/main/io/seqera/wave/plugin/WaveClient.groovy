@@ -301,6 +301,9 @@ class WaveClient {
             log.debug "Wave response: statusCode=${resp.statusCode()}; body=${resp.body()}"
             if( resp.statusCode()==200 )
                 return jsonToInspectResponse(resp.body())
+            else if( resp.statusCode()==404 ) {
+                return null
+            }
             else
                 throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
         }
@@ -376,6 +379,8 @@ class WaveClient {
     @Memoized
     synchronized String singularityOrasToHttp(String imageUri) {
         final resp = inspectRequest(imageUri)
+        if (resp==null)
+            return "WARNING: image not found - ${imageUri}"
         final spec = resp.container
         if( spec.manifest.layers.size()!=1 )
             throw new BadResponseException("Unexpected Singularity image structure - offending image: ${imageUri}")
