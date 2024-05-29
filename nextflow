@@ -312,7 +312,7 @@ else
     version_message="Java 7 or 8"
   else
     version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19|20|21|22)"
-    version_message="Java 8 or later (up to 21)"
+    version_message="Java 8 or later (up to 22)"
   fi
   if [[ ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
