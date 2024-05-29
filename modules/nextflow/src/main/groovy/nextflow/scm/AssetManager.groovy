@@ -164,13 +164,18 @@ class AssetManager {
         validateBareProjectDir()
 
         /* TODO MARCO : Outstanding bits right now:
-            a. updating of bare ideally would be at rev/tag level, however does everything by default
+            1. updating of bare ideally would be at rev/tag level, however does everything by default
                 -> need to test this: git.fetch()
                                         .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
-            b. the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
+            2. the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
                 - also, no notice when remote branch is updated (probably related)
                 -> how is RevisionInfo used in the run algorithm?
-            c. update mechanics of list/info commands
+                ==> should probably make sure that requested revision is printed in pipeline run
+            3. brittle algorithm:
+                - instantiation: decode revision to commit ID (so as to define localPath)
+                - if pull/run: update local bare -> can result in mismatch of revision vs commit
+
+            4. update mechanics of list/info commands
 
             END. refactor with original AssetManager (which has no revision arg). also unit tests.
         */
