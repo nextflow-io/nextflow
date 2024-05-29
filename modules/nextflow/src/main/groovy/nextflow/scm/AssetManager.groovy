@@ -164,18 +164,18 @@ class AssetManager {
         validateBareProjectDir()
 
         /* TODO MARCO : Outstanding bits right now:
-            1. updating of bare ideally would be at rev/tag level, however does everything by default
+            a. updating of bare ideally would be at rev/tag level, however does everything by default
                 -> need to test this: git.fetch()
-                                        .setRefSpecs("+refs/heads/<branch>:refs/heads/<branch>")
-            2. the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
+                                        .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
+            b. the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
                 - also, no notice when remote branch is updated (probably related)
                 -> how is RevisionInfo used in the run algorithm?
-            4. update mechanics of list/info commands
+            c. update mechanics of list/info commands
 
             END. refactor with original AssetManager (which has no revision arg). also unit tests.
         */
 
-        // note: this will update local bare repo if revision cannot be resolved in first instance
+        // note: this will call updateLocalBareRepo() if revision cannot be resolved in first instance
         this.commitId = commitFromRevisionUsingBareLocal(this.revision)
         this.localPath = checkProjectDir(project, this.commitId)
 
@@ -273,13 +273,6 @@ class AssetManager {
         Git.open(localBarePath)
            .fetch()
            .call()
-
-        def newCommitId = commitFromRevisionUsingBareLocal(this.revision)
-        if ( newCommitId != this.commitId ) {
-            log.debug "Fetching (updating) bare repo for $project - updating commit ID and local path"
-            this.commitId = newCommitId
-            this.localPath = checkProjectDir(project, this.commitId)
-        }
     }
 
     @PackageScope
@@ -288,8 +281,7 @@ class AssetManager {
         def bare = Git.open(localBarePath)
         def rev = bare.getRepository().resolve(bareRevision)
         if (rev == null) {
-            // update local bare repo if revision not found at first attempt
-            bare.fetch().call()
+            updateLocalBareRepo()
             rev = bare.getRepository().resolve(bareRevision)
             if (rev == null)
                 throw new AbortOperationException("Cannot resolve revision: $bareRevision")
