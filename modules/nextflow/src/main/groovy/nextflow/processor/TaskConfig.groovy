@@ -740,7 +740,7 @@ class LazyMap implements Map<String,Object> {
 @CompileStatic
 class ConfigList implements List {
 
-    @Delegate
+    @Delegate(excludes = 'reversed')
     private List target
 
     ConfigList() {

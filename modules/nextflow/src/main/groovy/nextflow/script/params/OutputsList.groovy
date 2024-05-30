@@ -35,7 +35,7 @@ class OutputsList implements List<OutParam>, Cloneable {
         return result
     }
 
-    @Delegate
+    @Delegate(excludes = 'reversed')
     private List<OutParam> target = new LinkedList<>()
 
     List<DataflowWriteChannel> getChannels() {

@@ -39,7 +39,7 @@ class InputsList implements List<InParam>, Cloneable {
         return result
     }
 
-    @Delegate
+    @Delegate(excludes = 'reversed')
     private List<InParam> target = new LinkedList<>()
 
     List<DataflowReadChannel> getChannels() {

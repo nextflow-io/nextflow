@@ -38,7 +38,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
 
-    @Delegate(interfaces = false)
+    @Delegate(interfaces = false, excludes = 'reversed')
     List target
 
     ArrayBag() { target = new ArrayList() }
