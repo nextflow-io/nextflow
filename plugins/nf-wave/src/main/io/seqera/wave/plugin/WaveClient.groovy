@@ -302,6 +302,7 @@ class WaveClient {
             if( resp.statusCode()==200 )
                 return jsonToInspectResponse(resp.body())
             else if( resp.statusCode()==404 ) {
+                log.warn "The following image was not found (was it built yet?): $request.containerImage"
                 return null
             }
             else
@@ -380,7 +381,7 @@ class WaveClient {
     synchronized String singularityOrasToHttp(String imageUri) {
         final resp = inspectRequest(imageUri)
         if ( resp==null )
-            return "NULL"
+            return "NOT AVAILABLE"
         final spec = resp.container
         if( spec.manifest.layers.size()!=1 )
             throw new BadResponseException("Unexpected Singularity image structure - offending image: ${imageUri}")
