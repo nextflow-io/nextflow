@@ -43,8 +43,8 @@ class CmdInspectTest extends Specification {
         [:]                             | false         | [:]
         [:]                             | true          | [:]
         and:
-        [enabled:true]                  | false         | [enabled:true]
-        [enabled:true]                  | true          | [enabled:true]
+        [enabled:true]                  | false         | [enabled:true, dryRun: true]
+        [enabled:true]                  | true          | [enabled:true, dryRun: true]
         and:
         [enabled:true, freeze: true]    | false         | [enabled:true, freeze:true, dryRun: true]
         [enabled:true, freeze: true]    | true          | [enabled:true, freeze:true, dryRun: false]
