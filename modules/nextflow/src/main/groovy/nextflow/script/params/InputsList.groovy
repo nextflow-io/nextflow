@@ -39,6 +39,9 @@ class InputsList implements List<InParam>, Cloneable {
         return result
     }
 
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
     @Delegate(excludes = 'reversed')
     private List<InParam> target = new LinkedList<>()
 

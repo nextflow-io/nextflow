@@ -33,6 +33,9 @@ import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 @CompileStatic
 class ChannelOut implements List<DataflowWriteChannel> {
 
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
     @Delegate(excludes = 'reversed')
     private List<DataflowWriteChannel> target
 
