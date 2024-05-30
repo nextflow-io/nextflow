@@ -31,7 +31,7 @@ import groovy.transform.EqualsAndHashCode
 @EqualsAndHashCode
 class BlankSeparatedList implements KryoSerializable, PathEscapeAware {
 
-    @Delegate(excludes = 'reversed')
+    @Delegate
     List target
 
     // note: this constructor is needed by kryo serialization
