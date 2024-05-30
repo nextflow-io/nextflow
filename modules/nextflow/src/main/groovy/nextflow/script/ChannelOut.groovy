@@ -33,7 +33,8 @@ import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 @CompileStatic
 class ChannelOut implements List<DataflowWriteChannel> {
 
-    private @Delegate List<DataflowWriteChannel> target
+    @Delegate(excludes = 'reversed')
+    private List<DataflowWriteChannel> target
 
     private Map<String,DataflowWriteChannel> channels
 
