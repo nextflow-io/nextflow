@@ -740,7 +740,10 @@ class LazyMap implements Map<String,Object> {
 @CompileStatic
 class ConfigList implements List {
 
-    @Delegate
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
+    @Delegate(excludes = ['reversed','addFirst','addLast','getFirst','getLast','removeFirst','removeLast'])
     private List target
 
     ConfigList() {
