@@ -68,7 +68,7 @@ allprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(19)
+            languageVersion = JavaLanguageVersion.of(21)
             // note: the use of Java 21 causes the error "NoClassDefFoundError: java/util/SequencedCollection"
             // see also
             //   https://aphyr.com/posts/369-classnotfoundexception-java-util-sequencedcollection
