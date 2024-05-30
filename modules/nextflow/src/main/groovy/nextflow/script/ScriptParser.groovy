@@ -124,7 +124,6 @@ class ScriptParser {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
-        config.setTargetBytecode(CompilerConfiguration.JDK11)
 
         if( session?.debug )
             config.debug = true

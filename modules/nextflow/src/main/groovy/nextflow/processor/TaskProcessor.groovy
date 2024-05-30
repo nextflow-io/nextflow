@@ -262,7 +262,6 @@ class TaskProcessor {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskCmdXform) )
-        config.setTargetBytecode(CompilerConfiguration.JDK11)
         return config
     }
 
