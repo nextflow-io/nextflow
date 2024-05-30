@@ -38,7 +38,10 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
 
-    @Delegate(interfaces = false)
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
+    @Delegate(interfaces = false, excludes = ['reversed','addFirst','addLast','getFirst','getLast','removeFirst','removeLast'])
     List target
 
     ArrayBag() { target = new ArrayList() }
