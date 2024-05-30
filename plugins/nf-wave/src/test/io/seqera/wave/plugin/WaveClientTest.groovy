@@ -229,7 +229,7 @@ class WaveClientTest extends Specification {
     def 'should create request object with dry-run mode' () {
         given:
         ContainerInspectMode.activate(true)
-        def session = Mock(Session) { getConfig() >> [:]}
+        def session = Mock(Session) { getConfig() >> [wave:[enabled:true]]}
         def IMAGE =  'foo:latest'
         def wave = new WaveClient(session)
 

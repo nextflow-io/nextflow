@@ -27,9 +27,12 @@ import groovy.transform.CompileStatic
 class ContainerInspectMode {
 
     private static boolean active
+    private static boolean dryRun
 
     static boolean active() { return active }
+    static boolean dryRun() { return dryRun }
 
     static void activate(boolean value) { active=value }
+    static void haveDryRun(boolean value) { dryRun=value }
 
 }

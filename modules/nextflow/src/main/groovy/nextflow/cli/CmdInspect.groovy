@@ -71,6 +71,7 @@ class CmdInspect extends CmdBase {
     @Override
     void run() {
         ContainerInspectMode.activate(true)
+        ContainerInspectMode.haveDryRun(true)
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command
@@ -102,12 +103,8 @@ class CmdInspect extends CmdBase {
     }
 
     protected void checkWaveConfig(Map wave) {
-        if( wave.enabled ) {
-            if( wave.freeze )
-                wave.dryRun = !concretize
-            else
-                wave.dryRun = true
-        }
+        if( wave.enabled && wave.freeze && concretize )
+            ContainerInspectMode.haveDryRun(false)
     }
 
 }

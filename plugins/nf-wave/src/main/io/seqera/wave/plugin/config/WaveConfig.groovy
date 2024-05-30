@@ -50,14 +50,12 @@ class WaveConfig {
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
     final private Boolean preserveFileTimestamp
-    final private Boolean dryRun
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.freezeMode = opts.freeze as Boolean
         this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
-        this.dryRun = opts.dryRun as Boolean
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
@@ -90,8 +88,6 @@ class WaveConfig {
     boolean freezeMode() { return this.freezeMode }
 
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
-
-    boolean dryRun() { return this.dryRun }
 
     boolean bundleProjectResources() { bundleProjectResources }
 
