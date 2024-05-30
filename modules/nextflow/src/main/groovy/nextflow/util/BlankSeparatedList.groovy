@@ -31,7 +31,7 @@ import groovy.transform.EqualsAndHashCode
 @EqualsAndHashCode
 class BlankSeparatedList implements KryoSerializable, PathEscapeAware, List {
 
-    List target
+    private List target
 
     // note: this constructor is needed by kryo serialization
     private BlankSeparatedList() { }
