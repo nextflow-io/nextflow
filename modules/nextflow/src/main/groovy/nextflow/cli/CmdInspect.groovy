@@ -102,8 +102,12 @@ class CmdInspect extends CmdBase {
     }
 
     protected void checkWaveConfig(Map wave) {
-        if( wave.enabled && wave.freeze )
-            wave.dryRun = !concretize
+        if( wave.enabled ) {
+            if( wave.freeze )
+                wave.dryRun = !concretize
+            else
+                wave.dryRun = true
+        }
     }
 
 }
