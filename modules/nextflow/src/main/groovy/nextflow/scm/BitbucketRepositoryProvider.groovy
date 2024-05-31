@@ -63,7 +63,31 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     private String getRefForRevision(String revision){
-        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/branches/$revision")
+        // when the revision does not contain a slash just use as it is
+        if( !revision.contains('/') ) {
+            return revision
+        }
+        // when the revision contains a slash, it's needed to find the corresponding branch or tag name
+        // see
+        // https://github.com/nextflow-io/nextflow/issues/4599
+        // https://jira.atlassian.com/browse/BCLOUD-20223
+        try {
+            return getRefForRevision0(revision, 'branches')
+        }
+        catch (Exception e1) {
+            // if an error is reported it may be a tag name instead of a branch
+            try {
+                return getRefForRevision0(revision, 'tags')
+            }
+            // still failing, raise the previous error
+            catch (Exception e2) {
+                throw e1
+            }
+        }
+    }
+
+    private String getRefForRevision0(String revision, String type){
+        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/$type/$revision")
         return resp?.target?.hash
     }
 
