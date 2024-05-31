@@ -95,10 +95,15 @@ class CmdInspect extends CmdBase {
         ContainerInspectMode.activateWaveDryRun(true)
     }
 
+    protected void disableInspectMode() {
+        ContainerInspectMode.activate(false)
+        ContainerInspectMode.activateWaveDryRun(false)
+    }
+
     protected void applyInspect(Session session) {
         // disable wave await mode when running
         if( session.config.wave instanceof Map )
-            checkWaveConfig(session.config.wave as Map)
+            checkWaveDryRun(session.config.wave as Map)
         // run the inspector
         new ContainersInspector(session.dag)
                 .withFormat(format)
@@ -106,7 +111,7 @@ class CmdInspect extends CmdBase {
                 .printContainers()
     }
 
-    protected void checkWaveConfig(Map wave) {
+    protected void checkWaveDryRun(Map wave) {
         if( wave.enabled && wave.freeze && concretize )
             ContainerInspectMode.activateWaveDryRun(false)
     }

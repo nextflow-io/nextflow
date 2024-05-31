@@ -35,21 +35,22 @@ class CmdInspectTest extends Specification {
         when:
         wave = WAVE
         cmd.setupInspectMode()
-        cmd.checkWaveConfig(wave)
+        cmd.checkWaveDryRun(wave)
+        def expectedDryRun = ContainerInspectMode.waveDryRun()
+        cmd.disableInspectMode()
         then:
-        wave == EXPECTED_WAVE
-        ContainerInspectMode.waveDryRun() == EXPECTED_DRYRUN
+        expectedDryRun == EXPECTED_DRYRUN
 
         where:
-        WAVE                            | CONCRETIZE    | EXPECTED_WAVE                | EXPECTED_DRYRUN
-        [:]                             | false         | [:]                          | true
-        [:]                             | true          | [:]                          | true
+        WAVE                            | CONCRETIZE    | EXPECTED_DRYRUN
+        [:]                             | false         | true
+        [:]                             | true          | true
         and:
-        [enabled:true]                  | false         | [enabled:true]               | true
-        [enabled:true]                  | true          | [enabled:true]               | true
+        [enabled:true]                  | false         | true
+        [enabled:true]                  | true          | true
         and:
-        [enabled:true, freeze: true]    | false         | [enabled:true, freeze:true]  | true
-        [enabled:true, freeze: true]    | true          | [enabled:true, freeze:true]  | false
+        [enabled:true, freeze: true]    | false         | true
+        [enabled:true, freeze: true]    | true          | false
 
     }
 
