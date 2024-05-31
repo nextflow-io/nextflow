@@ -198,7 +198,7 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: ( ContainerInspectMode.active() & ContainerInspectMode.waveDryRun() )
+                dryRun: ( ContainerInspectMode.active() && ContainerInspectMode.waveDryRun() )
         )
     }
 
@@ -222,7 +222,7 @@ class WaveClient {
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
-                dryRun: ( ContainerInspectMode.active() & ContainerInspectMode.waveDryRun() )
+                dryRun: ( ContainerInspectMode.active() && ContainerInspectMode.waveDryRun() )
         )
         return sendRequest(request)
     }

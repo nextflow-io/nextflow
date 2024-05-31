@@ -251,6 +251,7 @@ class WaveClientTest extends Specification {
 
         cleanup:
         ContainerInspectMode.activate(false)
+        ContainerInspectMode.activateWaveDryRun(false)
     }
 
     def 'should create request object and platform' () {
