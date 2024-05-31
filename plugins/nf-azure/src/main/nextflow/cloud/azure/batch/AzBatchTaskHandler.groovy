@@ -15,11 +15,12 @@
  */
 package nextflow.cloud.azure.batch
 
+import com.azure.compute.batch.models.BatchTaskExecutionInfo
+import com.azure.compute.batch.models.BatchTaskExecutionResult
+import com.azure.compute.batch.models.BatchTaskState
+
 import java.nio.file.Path
 
-import com.microsoft.azure.batch.protocol.models.TaskExecutionInformation
-import com.microsoft.azure.batch.protocol.models.TaskExecutionResult
-import com.microsoft.azure.batch.protocol.models.TaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
@@ -51,7 +52,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private volatile long timestamp
 
-    private volatile TaskState taskState
+    private volatile BatchTaskState taskState
 
     private CloudMachineInfo machineInfo
 
@@ -101,7 +102,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final state = taskState0(taskKey)
         // note, include complete status otherwise it hangs if the task
         // completes before reaching this check
-        final running = state==TaskState.RUNNING || state==TaskState.COMPLETED
+        final running = state==BatchTaskState.RUNNING || state==BatchTaskState.COMPLETED
         log.debug "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
         if( running )
             this.status = TaskStatus.RUNNING
@@ -113,16 +114,16 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         assert taskKey
         if( !isRunning() )
             return false
-        final done = taskState0(taskKey)==TaskState.COMPLETED
+        final done = taskState0(taskKey)==BatchTaskState.COMPLETED
         if( done ) {
             // finalize the task
             task.exitStatus = readExitFile()
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            TaskExecutionInformation info = batchService.getTask(taskKey).executionInfo()
-            if (info.result() == TaskExecutionResult.FAILURE)
-                task.error = new ProcessUnrecoverableException(info.failureInfo().message())
+            BatchTaskExecutionInfo info = batchService.getTask(taskKey).executionInfo
+            if (info.result == BatchTaskExecutionResult.FAILURE)
+                task.error = new ProcessUnrecoverableException(info.failureInfo.message)
             deleteTask(taskKey, task)
             return true
         }
@@ -153,11 +154,11 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     /**
      * @return Retrieve the task status caching the result for at lest one second
      */
-    protected TaskState taskState0(AzTaskKey key) {
+    protected BatchTaskState taskState0(AzTaskKey key) {
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
-            def newState = batchService.getTask(key).state()
+            def newState = batchService.getTask(key).state
             log.trace "[AZURE BATCH] Task: $key state=$newState"
             if( newState ) {
                 taskState = newState
