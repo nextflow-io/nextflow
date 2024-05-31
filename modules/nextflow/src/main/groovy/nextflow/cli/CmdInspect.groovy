@@ -70,8 +70,7 @@ class CmdInspect extends CmdBase {
 
     @Override
     void run() {
-        ContainerInspectMode.activate(true)
-        ContainerInspectMode.haveDryRun(true)
+        setupInspectMode()
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command
@@ -91,6 +90,11 @@ class CmdInspect extends CmdBase {
         target.run()
     }
 
+    protected void setupInspectMode() {
+        ContainerInspectMode.activate(true)
+        ContainerInspectMode.activateWaveDryRun(true)
+    }
+
     protected void applyInspect(Session session) {
         // disable wave await mode when running
         if( session.config.wave instanceof Map )
@@ -104,7 +108,7 @@ class CmdInspect extends CmdBase {
 
     protected void checkWaveConfig(Map wave) {
         if( wave.enabled && wave.freeze && concretize )
-            ContainerInspectMode.haveDryRun(false)
+            ContainerInspectMode.activateWaveDryRun(false)
     }
 
 }
