@@ -3,6 +3,7 @@ package nextflow.cloud.azure.batch
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.ElevationLevel
 
+import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
@@ -626,12 +627,15 @@ class AzBatchServiceTest extends Specification {
         given:
         def POOL_ID = 'my-pool'
         def SAS = '123'
-        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account']]
 
         def CONFIG = [storage: [sasToken: SAS, fileShares: [file1: [mountOptions: 'mountOptions1', mountPath: 'mountPath1']]]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         AzBatchService azure = Spy(new AzBatchService(exec))
-        Global.session = Mock(Session) { getConfig()>>[fusion:[enabled:true], azure: AZURE] }
+        def session = Mock(Session) {
+            getConfig() >>[fusion:[enabled:false]]
+            statsEnabled >> true
+        }
+        Global.session = session
         and:
         def TASK = Mock(TaskRun) {
             getHash() >> HashCode.fromInt(2)
@@ -640,6 +644,7 @@ class AzBatchServiceTest extends Specification {
                 getContainerOptions() >> '-v /foo:/foo'
                 getTime() >> Duration.of('24 h')
             }
+
         }
         and:
         def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
@@ -660,7 +665,7 @@ class AzBatchServiceTest extends Specification {
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
         and:
-        result.constraints.maxWallClockTime == TASK.config.time
+        Duration.of(result.constraints.maxWallClockTime.toMillis()) == TASK.config.time
     }
 
     def 'should create task for submit with fusion' () {
