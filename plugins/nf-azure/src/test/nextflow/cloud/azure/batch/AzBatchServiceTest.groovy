@@ -1,6 +1,7 @@
 package nextflow.cloud.azure.batch
 
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.ElevationLevel
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -236,8 +237,8 @@ class AzBatchServiceTest extends Specification {
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
         then:
         configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
-        configuredStartTask.resourceFiles().size()==1
-        configuredStartTask.resourceFiles().first().filePath() == 'azcopy'
+        configuredStartTask.resourceFiles.size()==1
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
     }
 
     def 'should configure custom startTask' () {
@@ -249,10 +250,10 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine() == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"; bash -c \'echo hello-world\''
+        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"; bash -c \'echo hello-world\''
         and:
-        configuredStartTask.resourceFiles().size()==1
-        configuredStartTask.resourceFiles().first().filePath() == 'azcopy'
+        configuredStartTask.resourceFiles.size()==1
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
@@ -264,8 +265,8 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine() == "bash -c 'echo hello-world'"
-        configuredStartTask.resourceFiles() == []
+        configuredStartTask.commandLine == "bash -c 'echo hello-world'"
+        configuredStartTask.resourceFiles.isEmpty()
     }
 
     def 'should configure not install AzCopy because copyToolInstallMode is task and quote command' () {
@@ -277,8 +278,8 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
         then:
-        configuredStartTask.commandLine() == "bash -c 'echo ''hello-world'''"
-        configuredStartTask.resourceFiles() == []
+        configuredStartTask.commandLine == "bash -c 'echo ''hello-world'''"
+        configuredStartTask.resourceFiles.isEmpty()
     }
 
     def 'should create null startTask because no options are enabled' () {
@@ -303,7 +304,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(privileged: true) )
         then:
-        configuredStartTask.userIdentity().autoUser().elevationLevel().value == 'admin'
+        configuredStartTask.userIdentity.autoUser.elevationLevel == ElevationLevel.ADMIN
     }
 
     def 'should check scaling formula' () {
@@ -612,22 +613,25 @@ class AzBatchServiceTest extends Specification {
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
-        result.id() == 'nf-01000000'
-        result.requiredSlots() == 4
+        result.id == 'nf-01000000'
+        result.requiredSlots == 4
         and:
-        result.commandLine() == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
     }
 
     def 'should create task for submit with extra options' () {
         given:
         def POOL_ID = 'my-pool'
         def SAS = '123'
+        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account']]
+
         def CONFIG = [storage: [sasToken: SAS, fileShares: [file1: [mountOptions: 'mountOptions1', mountPath: 'mountPath1']]]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         AzBatchService azure = Spy(new AzBatchService(exec))
+        Global.session = Mock(Session) { getConfig()>>[fusion:[enabled:true], azure: AZURE] }
         and:
         def TASK = Mock(TaskRun) {
             getHash() >> HashCode.fromInt(2)
@@ -648,15 +652,15 @@ class AzBatchServiceTest extends Specification {
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
-        result.id() == 'nf-02000000'
-        result.requiredSlots() == 4
+        result.id == 'nf-02000000'
+        result.requiredSlots == 4
         and:
-        result.commandLine() == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
         and:
-        result.constraints().maxWallClockTime() == TASK.config.time
+        result.constraints.maxWallClockTime == TASK.config.time
     }
 
     def 'should create task for submit with fusion' () {
@@ -691,12 +695,12 @@ class AzBatchServiceTest extends Specification {
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
-        result.id() == 'nf-01000000'
-        result.requiredSlots() == 1
+        result.id == 'nf-01000000'
+        result.requiredSlots == 1
         and:
-        result.commandLine() == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
+        result.commandLine == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
     }
 }
