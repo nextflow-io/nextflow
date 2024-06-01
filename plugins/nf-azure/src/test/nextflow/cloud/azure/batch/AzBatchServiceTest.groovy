@@ -1,11 +1,12 @@
 package nextflow.cloud.azure.batch
 
+import com.azure.compute.batch.models.BatchPool
+
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.google.common.hash.HashCode
-import com.microsoft.azure.batch.protocol.models.CloudPool
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
@@ -18,7 +19,6 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import org.joda.time.Period
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -551,7 +551,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def result = svc.specFromPoolConfig(POOL_ID)
         then:
-        1 * svc.getPool(_) >> new CloudPool(vmSize: 'Standard_D2_v2')
+        1 * svc.getPool(_) >> new BatchPool(vmSize: 'Standard_D2_v2')
         and:        
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
@@ -656,7 +656,7 @@ class AzBatchServiceTest extends Specification {
         result.containerSettings().imageName() == 'ubuntu:latest'
         result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
         and:
-        result.constraints().maxWallClockTime() == new Period( TASK.config.time.toMillis() )
+        result.constraints().maxWallClockTime() == TASK.config.time
     }
 
     def 'should create task for submit with fusion' () {
