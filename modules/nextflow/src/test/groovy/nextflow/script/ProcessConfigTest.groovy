@@ -244,6 +244,7 @@ class ProcessConfigTest extends Specification {
         false  | HashMode.STANDARD  | [cache:'false']
         false  | HashMode.STANDARD  | [cache:'off']
         false  | HashMode.STANDARD  | [cache:'no']
+        false  | HashMode.STANDARD  | [cache:{ false }]
 
     }
 

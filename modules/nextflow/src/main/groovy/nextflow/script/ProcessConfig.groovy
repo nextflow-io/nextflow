@@ -684,6 +684,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     boolean isCacheable() {
         def value = configProperties.cache
+        if ( value instanceof Closure )
+            value = value()
+
         if( value == null )
             return true
 
@@ -697,7 +700,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     HashMode getHashMode() {
-        HashMode.of(configProperties.cache) ?: HashMode.DEFAULT()
+        def value = configProperties.cache
+        if ( value instanceof Closure )
+            value = value()
+
+        return HashMode.of(value) ?: HashMode.DEFAULT()
     }
 
     protected boolean isValidLabel(String lbl) {
