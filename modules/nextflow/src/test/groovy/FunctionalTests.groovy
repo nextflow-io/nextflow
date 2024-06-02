@@ -756,7 +756,7 @@ class FunctionalTests extends Dsl2Spec {
         String config = '''
             process {
                 withName: MyProcess {
-                    cache = { task != null }
+                    cache = { task.tag != 'mytag' }
                 }
             }
             '''
