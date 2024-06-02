@@ -750,4 +750,109 @@ class FunctionalTests extends Dsl2Spec {
         and:
         runner.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
+
+    def 'should handle dynamic cache directives' () {
+        given:
+        String config = '''
+            process {
+                withName: MyProcess {
+                    cache = { task != null }
+                }
+            }
+            '''
+        String script = '''
+                process MyProcess {
+                    tag 'mytag'
+
+                    script:
+                    'echo hello'
+                }
+
+                workflow { MyProcess() }
+                '''
+
+        when:
+        new MockScriptRunner(new ConfigParser().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
+        then:
+        processor instanceof TaskProcessor
+        processor.config.cacheable == false
+
+
+        when:
+        config = ''
+
+        and:
+        script = '''
+                process foo {
+                    cache = { false }
+                    script:
+                    'echo hello'
+                }
+
+                workflow { foo() }
+                '''
+        and:
+        new MockScriptRunner(new ConfigParser().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
+        then:
+        processor instanceof TaskProcessor
+        processor.config.cacheable == false
+
+        when:
+        config = '''
+            process {
+                cache = { true }
+            }
+            '''
+        and:
+        script = '''
+                process foo {
+                    cache = { false }
+                    script:
+                    'echo hello'
+                }
+
+                workflow { foo() }
+                '''
+
+        and:
+        new MockScriptRunner(new ConfigParser().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
+        then:
+        processor instanceof TaskProcessor
+        processor.config.cacheable == false
+
+        when:
+        config = '''
+            process {
+                cache = { false }
+            }
+            '''
+        and:
+        script = '''
+                process foo {
+                    cache = { 'deep' }
+                    script:
+                    'echo hello'
+                }
+
+                workflow { foo() }
+                '''
+
+        and:
+        new MockScriptRunner(new ConfigParser().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
+        then:
+        processor instanceof TaskProcessor
+        processor.config.cacheable == true
+    }
 }
