@@ -778,7 +778,7 @@ class FunctionalTests extends Dsl2Spec {
         def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
-        processor.config.cacheable == false
+        processor.isCacheable() == false
 
 
         when:
@@ -801,7 +801,7 @@ class FunctionalTests extends Dsl2Spec {
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
-        processor.config.cacheable == false
+        processor.isCacheable() == false
 
         when:
         config = '''
@@ -827,7 +827,7 @@ class FunctionalTests extends Dsl2Spec {
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
-        processor.config.cacheable == false
+        processor.isCacheable() == false
 
         when:
         config = '''
@@ -853,6 +853,6 @@ class FunctionalTests extends Dsl2Spec {
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
-        processor.config.cacheable == true
+        processor.isCacheable() == true
     }
 }
