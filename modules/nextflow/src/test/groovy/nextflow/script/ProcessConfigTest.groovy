@@ -30,7 +30,6 @@ import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import static nextflow.util.CacheHelper.HashMode
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -232,19 +231,17 @@ class ProcessConfigTest extends Specification {
         then:
         config.cacheable == result
         config.isCacheable() == result
-        config.getHashMode() == mode
 
         where:
-        result | mode               | map
-        true   | HashMode.STANDARD  | [:]
-        true   | HashMode.STANDARD  | [cache:true]
-        true   | HashMode.STANDARD  | [cache:'yes']
-        true   | HashMode.DEEP      | [cache:'deep']
-        false  | HashMode.STANDARD  | [cache:false]
-        false  | HashMode.STANDARD  | [cache:'false']
-        false  | HashMode.STANDARD  | [cache:'off']
-        false  | HashMode.STANDARD  | [cache:'no']
-        false  | HashMode.STANDARD  | [cache:{ false }]
+        result | map
+        true   | [:]
+        true   | [cache:true]
+        true   | [cache:'yes']
+        true   | [cache:'deep']
+        false  | [cache:false]
+        false  | [cache:'false']
+        false  | [cache:'off']
+        false  | [cache:'no']
 
     }
 
