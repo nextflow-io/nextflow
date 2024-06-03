@@ -45,7 +45,6 @@ dependencies {
     }
     api('com.azure:azure-identity:1.11.3') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
-        exclude group: 'com.nimbusds', module: 'oauth2-oidc-sdk'
     }
 
     compileOnly(group: 'com.nimbusds', name: 'oauth2-oidc-sdk', version: '9.43')
