@@ -18,6 +18,7 @@ package nextflow.cloud.azure.batch
 
 import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.BatchClientBuilder
+import com.azure.compute.batch.implementation.BatchSharedKeyCredentialsPolicy
 import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
@@ -53,6 +54,7 @@ import com.azure.compute.batch.models.OutputFileUploadConfig
 import com.azure.compute.batch.models.ResourceFile
 import com.azure.compute.batch.models.UserIdentity
 import com.azure.compute.batch.models.VirtualMachineConfiguration
+import com.azure.core.credential.AzureNamedKeyCredential
 import com.azure.core.credential.TokenCredential
 import com.azure.core.exception.ClientAuthenticationException
 import com.azure.core.exception.HttpResponseException
@@ -278,7 +280,7 @@ class AzBatchService implements Closeable {
     }
 
 
-    protected TokenCredential createBatchCredentialsWithKey() {
+    protected AzureNamedKeyCredential createBatchCredentialsWithKey() {
         log.debug "[AZURE BATCH] Creating Azure Batch client using shared key creddentials"
 
         if( !config.batch().endpoint )
@@ -288,9 +290,8 @@ class AzBatchService implements Closeable {
         if( !config.batch().accountKey )
             throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKey'")
 
-        return new UsernamePasswordCredentialBuilder()
-            .username(config.batch().accountName)
-            .password(config.batch().accountKey).build()
+        return new AzureNamedKeyCredential(config.batch().accountName,config.batch().accountKey)
+
     }
 
     protected TokenCredential createBatchCredentialsWithServicePrincipal() {
@@ -320,17 +321,14 @@ class AzBatchService implements Closeable {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
 
         TokenCredential cred
-
-        if( config.managedIdentity().isConfigured() )
-            cred = createBatchCredentialsWithManagedIdentity()
-        else if( config.activeDirectory().isConfigured() )
-            cred = createBatchCredentialsWithServicePrincipal()
-        else if( config.batch().endpoint || config.batch().accountKey || config.batch().accountName )
-            cred = createBatchCredentialsWithKey()
-
-        // Create batch client
         def builder = new BatchClientBuilder()
-            .credential(cred)
+        if( config.managedIdentity().isConfigured() )
+            builder.credential (createBatchCredentialsWithManagedIdentity())
+        else if( config.activeDirectory().isConfigured() )
+            builder.credential(createBatchCredentialsWithServicePrincipal())
+        else if( config.batch().endpoint || config.batch().accountKey || config.batch().accountName )
+            builder.credential(createBatchCredentialsWithKey())
+
         if(config.batch().endpoint) {
             builder.endpoint(config.batch().endpoint)
         }
