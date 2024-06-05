@@ -229,7 +229,7 @@ div.deprecated p:first-child::before     { color: #C3514D; }
 .sidebar_version {
     margin-top: 0.5rem;
     font-size: 0.8rem;
-    color: #ffffffbf;
+    color: #160F26;
 }
 .sidebar_version samp {
     font-size: 0.6rem;
@@ -237,8 +237,8 @@ div.deprecated p:first-child::before     { color: #C3514D; }
 .sidebar_version select {
     background-color: #0DC09D;
     box-shadow: none;
-    color: #fff;
-    border: 1px solid #FFFFFF66;
+    color: #160F26;
+    border: 1px solid #160f26a3;
     border-radius: 1rem;
     padding: 0.15rem 0.2rem;
     font-size: 0.7rem;
