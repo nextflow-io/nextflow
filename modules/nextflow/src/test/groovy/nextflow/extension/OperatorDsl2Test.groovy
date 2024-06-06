@@ -49,7 +49,7 @@ class OperatorDsl2Test extends Dsl2Spec {
         channel.val == 1
     }
 
-    def 'should not hang' () {
+    def 'should test unique with collect' () {
         when:
         def ch = dsl_eval("""
             Channel.of( 'a', 'b', 'c')
