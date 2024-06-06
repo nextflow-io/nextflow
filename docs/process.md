@@ -1410,6 +1410,7 @@ process foo {
 
 :::{note}
 When combined with the {ref}`container directive <process-container>`, the `beforeScript` will be executed outside the specified container. In other words, the `beforeScript` is always executed in the host environment.
+The exception to this is container-native execution environments such as cloud batch and kubernetes, where `beforeScript` must run inside the container.
 :::
 
 (process-cache)=
@@ -1894,7 +1895,7 @@ process foo {
 
 In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
 task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
-queue named `on-demand-compute`. 
+queue named `on-demand-compute`.
 
 (process-maxerrors)=
 
@@ -2194,7 +2195,7 @@ The following options are available:
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
 `schedulerName: '<name>'`
-: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container.
 
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
