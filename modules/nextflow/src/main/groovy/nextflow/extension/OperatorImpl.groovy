@@ -313,14 +313,16 @@ class OperatorImpl {
      */
     DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
 
-        def history = [:]
-        def target = CH.createBy(source)
+        final history = [:]
+        final target = CH.createBy(source)
+        final stopOnFirst = source instanceof DataflowExpression
 
         // when the operator stop clear the history map
         def events = new DataflowEventAdapter() {
             void afterStop(final DataflowProcessor processor) {
                 history.clear()
-                history = null
+                if( stopOnFirst )
+                    processor.terminate()
             }
         }
 
