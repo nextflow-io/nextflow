@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,9 +73,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
             result << '--resource' << "gpus=${task.config.getAccelerator().limit}".toString()
 
         // -- At the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

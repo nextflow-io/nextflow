@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import spock.lang.Unroll
  * @author Patrick Hüther <patrick.huether@gmail.com>
  */
 class CharliecloudCacheTest extends Specification {
-
     @Unroll
     def 'should return a simple name given an image url'() {
 
@@ -46,6 +45,21 @@ class CharliecloudCacheTest extends Specification {
         'shub://hello/world'        | 'hello%world'
         'ftp://hello/world'         | 'hello%world'
         'foo:bar'                   | 'foo+bar'
+    }
+
+    @Unroll
+    def 'should return a path with registry'() {
+
+        given:
+        def helper = new CharliecloudCache([registry: registry])
+
+        expect:
+        helper.simpleName(url) == expected
+
+        where:
+        url                      | registry   | expected
+        'foo:2.0'                | 'my.reg'   | 'my.reg%foo+2.0'
+        'foo:2.0'                | 'my.reg/'  | 'my.reg%foo+2.0'
     }
 
     def 'should return the cache dir from the config file' () {

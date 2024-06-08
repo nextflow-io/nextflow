@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 package nextflow
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -52,6 +53,26 @@ class SysEnvTest extends Specification {
         SysEnv.pop()
         then:
         SysEnv.get('HOME') == System.getenv('HOME')
+
+    }
+
+    @Unroll
+    def 'should get bool value' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.getBool('FOO', DEF) == EXPECTED
+
+        where:
+        STATE           | DEF       | EXPECTED
+        [:]             | false     | false
+        [FOO:'false']   | false     | false
+        [FOO:'true']    | false     | true
+        and:
+        [:]             | true      | true
+        [FOO:'false']   | false     | false
+        [FOO:'true']    | true      | true
 
     }
 }

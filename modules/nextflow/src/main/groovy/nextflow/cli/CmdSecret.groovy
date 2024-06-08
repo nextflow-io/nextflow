@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import nextflow.secret.SecretsProvider
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Manage pipeline secrets (preview)")
+@Parameters(commandDescription = "Manage pipeline secrets")
 class CmdSecret extends CmdBase implements UsageAware {
 
     interface SubCmd {

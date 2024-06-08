@@ -35,6 +35,9 @@ Then, define the following variable replacing the path in the example with the o
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 ```
 
+See [Get started with Nextflow on Google Cloud Batch](https://www.nextflow.io/blog/2023/nextflow-with-gbatch.html) for more information on how to use Google Cloud Batch, 
+including how to set the required roles for your service account.
+
 (google-batch)=
 
 ## Cloud Batch
@@ -236,7 +239,7 @@ process.scratch = false
 tower.accessToken = '<YOUR ACCESS TOKEN>'
 ```
 
-The [Tower](https://cloud.tower.nf) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
+The [Seqera Platform](https://seqera.io) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
 
 By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
 

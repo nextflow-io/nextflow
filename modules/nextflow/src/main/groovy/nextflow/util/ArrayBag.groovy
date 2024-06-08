@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,10 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
 
-    @Delegate(interfaces = false)
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
+    @Delegate(interfaces = false, excludes = ['reversed','addFirst','addLast','getFirst','getLast','removeFirst','removeLast'])
     List target
 
     ArrayBag() { target = new ArrayList() }

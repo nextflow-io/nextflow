@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -104,6 +105,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
@@ -130,6 +132,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -167,6 +170,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -202,6 +206,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
@@ -239,6 +244,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -285,6 +291,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> []
         1 * handler.getLabels(task) >> [:]
@@ -316,6 +323,7 @@ class K8sTaskHandlerTest extends Specification {
         _ * handler.fusionEnabled() >> false
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
         1 * handler.getLabels(task) >> [:]
@@ -395,6 +403,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.fixOwnership() >> false
         1 * handler.useJobResource() >> true
         1 * handler.entrypointOverride() >> true
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -915,6 +924,7 @@ class K8sTaskHandlerTest extends Specification {
         and:
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -938,7 +948,9 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def launcher = Mock(FusionScriptLauncher)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        def k8sConfig = Spy(K8sConfig)
+        def exec = Mock(K8sExecutor) { getK8sConfig()>>k8sConfig  }
+        def handler = Spy(new K8sTaskHandler(builder:builder, client: client, executor: exec))
         Map result
 
         when:
@@ -972,6 +984,45 @@ class K8sTaskHandlerTest extends Specification {
         result.spec.containers[0].args == ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
         result.spec.containers[0].env == [[name:'FUSION_BUCKETS', value:'this,that']]
         result.spec.containers[0].resources == [limits:['nextflow.io/fuse':1]]
+        !result.spec.containers[0].securityContext
+
+
+        /*
+         * use custom fuse device
+         */
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
+        launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        and:
+        k8sConfig.fuseDevicePlugin() >> ['custom/device/fuse': 1]
+        and:
+        handler.getTask() >> task
+        handler.fusionEnabled() >> true
+        handler.fusionLauncher() >> launcher
+        handler.fusionConfig() >> new FusionConfig(privileged: false)
+        and:
+        task.getContainer() >> 'debian:latest'
+        task.getWorkDir() >> WORK_DIR
+        task.getConfig() >> config
+        and:
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        and:
+        1 * config.getCpus() >> 0
+        1 * config.getMemory() >> null
+        1 * client.getConfig() >> new ClientConfig()
+        and:
+        result.spec.containers[0].args == ['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run']
+        result.spec.containers[0].env == [[name:'FUSION_BUCKETS', value:'this,that']]
+        result.spec.containers[0].resources == [limits:['custom/device/fuse':1]]
         !result.spec.containers[0].securityContext
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ class ContainerConfig extends LinkedHashMap {
             return false
         }
         if( get('oci')?.toString()=='true' ) {
-            log.warn "The setting `singularity.oci` is deprecated - use `singularity.ociNative` instead"
+            log.warn "The setting `singularity.oci` is deprecated - use `singularity.ociMode` instead"
             return true
         }
         if( get('ociMode')?.toString()=='true' )

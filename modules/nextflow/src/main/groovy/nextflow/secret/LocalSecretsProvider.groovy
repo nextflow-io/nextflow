@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Sage-Bionetworks
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.CacheHelper
+import nextflow.util.Escape
 /**
  * Implements a secrets store that saves secrets into a JSON file save into the
  * nextflow home. The file can be relocated using the env variable {@code NXF_SECRETS_FILE}.
@@ -49,7 +50,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     private Map<String,String> env = SysEnv.get()
 
-    private Map<String,Secret> secretsMap
+    private Map<String, Secret> secretsMap
 
     private Path storeFile
 
@@ -207,7 +208,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
         def result = ''
         for( Secret s : secretsMap.values() ) {
-            result += /export ${s.name}="${s.value}"/
+            result += /export ${s.name}="${Escape.variable(s.value)}"/
             result += '\n'
         }
         Files.createFile(path)
