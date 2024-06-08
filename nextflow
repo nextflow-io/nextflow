@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'24.04.2'}
+NXF_VER=${NXF_VER:-'24.05.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -29,8 +29,7 @@ NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 NXF_CAPSULE_LAUNCHER=1
 NXF_V=$(echo $NXF_VER| cut -d'.' -f1)
 NXF_R=$(echo $NXF_VER| cut -d'.' -f2)
-if [[ NXF_V -ge 22 ]] && [[ NXF_R -ge 11 ]]; then
-  # from version 22.11.X we will use a fat jar and remove capsule dependency
+if [[ NXF_V -ge 24 ]] && [[ NXF_R -ge 5 ]]; then
   unset NXF_CAPSULE_LAUNCHER
 fi
 
