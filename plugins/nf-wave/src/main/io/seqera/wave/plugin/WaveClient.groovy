@@ -388,7 +388,17 @@ class WaveClient {
         final it = spec.manifest.layers[0]
         if( it.mediaType != 'application/vnd.sylabs.sif.layer.v1.sif' )
             throw new BadResponseException("Unexpected Singularity image mediaType - offending value: ${it.mediaType}")
-        final result = spec.getHostName() + "/v2/" + spec.getImageName() + "/blobs/" + it.digest
+
+        final String result
+        // Workaround in the case of Seqera Containers
+        if( spec.getHostName() == "https://community.wave.seqera.io" ) {
+          def digestWithoutPrefix = it.digest.replace("sha256:","")
+          result = "https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/" + digestWithoutPrefix.substring(0,2) + "/" + digestWithoutPrefix + "/data"
+        }
+        else {
+          result = spec.getHostName() + "/v2/" + spec.getImageName() + "/blobs/" + it.digest
+        }
+
         return result
     }
 
