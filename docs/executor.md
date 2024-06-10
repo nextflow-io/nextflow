@@ -114,68 +114,6 @@ Flux does not support the `memory` directive.
 By default, Flux will send all output to the `.command.log` file. To send this output to stdout and stderr instead, set `flux.terminalOutput = true` in your config file.
 :::
 
-(ga4ghtes-executor)=
-
-## GA4GH TES
-
-:::{warning} *Experimental: may change in a future release.*
-:::
-
-:::{versionchanged} 23.07.0-edge
-Support for automatic upload of the `bin` directory was added.
-:::
-
-:::{versionchanged} 24.04.0
-Support for process output directories and output globs was added.
-:::
-
-The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to define a standardized schema and API for describing batch execution tasks in a portable manner.
-
-Nextflow supports the TES API via the `tes` executor, which allows the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
-
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be accessible to the TES backend.
-
-To enable this executor, add the following settings to your Nextflow configuration:
-
-```groovy
-plugins {
-  id 'nf-ga4gh'
-}
-
-process.executor = 'tes'
-tes.endpoint = '<endpoint>'
-```
-
-The default endpoint is `http://localhost:8000`. It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will not be normalized and the requests to TES will fail.
-
-The TES API supports multiple forms of authentication:
-
-```groovy
-// basic
-tes.basicUsername = '<username>'
-tes.basicPassword = '<password>'
-
-// API key
-tes.apiKeyParamMode = '<mode>' // 'query' or 'header'
-tes.apiKeyParamName = '<param-name>'
-tes.apiKey = '<key>'
-
-// OAuth
-tes.oauthToken = '<token>'
-```
-
-:::{tip}
-You can deploy a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following command:
-
-```bash
-./funnel server --Server.HTTPPort 8000 --LocalStorage.AllowedDirs $HOME run
-```
-:::
-
-:::{note}
-While the TES API is designed to abstract workflow managers from direct storage access, Nextflow still needs to access the shared work directory used by your TES endpoint. For example, if your TES endpoint is located in Azure and uses Azure Blob storage to store the work directory, you still need to provide the necessary Azure credentials for Nextflow to access the Blob storage.
-:::
-
 (google-batch-executor)=
 
 ## Google Cloud Batch
