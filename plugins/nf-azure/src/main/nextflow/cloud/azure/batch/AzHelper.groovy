@@ -15,11 +15,13 @@
  */
 package nextflow.cloud.azure.batch
 
+import com.azure.identity.ClientSecretCredentialBuilder
+import com.azure.identity.ManagedIdentityCredentialBuilder
+
 import java.nio.file.Path
 import java.time.OffsetDateTime
 
-import com.azure.identity.ClientSecretCredentialBuilder
-import com.azure.identity.ManagedIdentityCredentialBuilder
+
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder

@@ -47,7 +47,7 @@ class AzManagedIdentityOpts {
     }
 
     boolean isConfigured() {
-        if( clientId && !system && tenantId )
+        if( clientId && !system )
             return true
         if( !clientId && system && tenantId )
             return true
