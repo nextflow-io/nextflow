@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -1358,5 +1359,18 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
+    }
+
+    @Unroll
+    def 'should check retryable errors' () {
+        expect:
+        BashWrapperBuilder.isRetryable0(ERROR) == EXPECTED
+        where:
+        ERROR                           | EXPECTED
+        new RuntimeException()          | true
+        new SocketException()           | true
+        new FileSystemException('foo')  | true
+        new IOException()               | false
+        new Exception()                 | false
     }
 }
