@@ -130,5 +130,9 @@ class ContainerConfigTest extends Specification {
         OPTS                                            | EXPECTED
         [useHttpOverOras:true, engine:'singularity']    | true
         [useHttpOverOras:true, engine:'apptainer']      | true
+        [useHttpOverOras:false, engine:'singularity']   | false
+        [useHttpOverOras:false, engine:'apptainer']     | false
+        [engine:'singularity']                          | false
+        [engine:'apptainer']                            | false
     }
 }
