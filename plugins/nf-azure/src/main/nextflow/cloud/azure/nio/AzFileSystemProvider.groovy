@@ -219,8 +219,9 @@ class AzFileSystemProvider extends FileSystemProvider {
             client = createBlobServiceWithKey(accountName, accountKey)
             this.accountKey = accountKey
         }
-        else
+        else {
             throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or account key")
+        }
 
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result

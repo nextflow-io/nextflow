@@ -15,12 +15,10 @@
  */
 package nextflow.cloud.azure.batch
 
-import com.azure.compute.batch.models.BatchTaskExecutionInfo
-import com.azure.compute.batch.models.BatchTaskExecutionResult
-import com.azure.compute.batch.models.BatchTaskState
-
 import java.nio.file.Path
 
+import com.azure.compute.batch.models.BatchTaskExecutionResult
+import com.azure.compute.batch.models.BatchTaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
@@ -121,7 +119,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            BatchTaskExecutionInfo info = batchService.getTask(taskKey).executionInfo
+            final info = batchService.getTask(taskKey).executionInfo
             if (info.result == BatchTaskExecutionResult.FAILURE)
                 task.error = new ProcessUnrecoverableException(info.failureInfo.message)
             deleteTask(taskKey, task)
