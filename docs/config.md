@@ -269,6 +269,8 @@ The following settings are available:
 : The password to use when connecting through a proxy.
 
 `aws.client.requesterPays`
+: :::{versionadded} 24.05.0-edge
+  :::
 : Enable the requester pays feature for S3 buckets.
 
 `aws.client.s3PathStyleAccess`
