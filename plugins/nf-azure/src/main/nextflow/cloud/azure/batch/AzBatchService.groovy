@@ -322,8 +322,6 @@ class AzBatchService implements Closeable {
         if( config.batch().endpoint )
             builder.endpoint(config.batch().endpoint)
 
-        // Global.onCleanup((it)->client.protocolLayer().restClient().close())
-
         return builder.buildClient()
     }
 
