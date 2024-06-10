@@ -356,7 +356,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final debug = opts.debug ? ' --debug' : ''
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
-        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
+        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
+        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
         final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
         return cmd
     }
@@ -365,7 +366,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final cli = opts.getS5cmdPath()
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
-        final cmd = "trap \"{ ret=\$?; $cli cp${sse}${kms} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
+        final cmd = "trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
         return cmd
     }
 

@@ -133,6 +133,10 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.s3Config.getDebug()
     }
 
+    Boolean getRequesterPays() {
+        return awsConfig.s3Config.getRequesterPays()
+    }
+
     String getAwsCli() {
         def result = getCliPath()
         if( !result ) result = 'aws'

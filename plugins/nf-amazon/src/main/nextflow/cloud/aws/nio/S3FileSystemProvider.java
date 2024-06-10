@@ -93,29 +93,29 @@ import static java.lang.String.format;
 
 /**
  * Spec:
- * 
+ *
  * URI: s3://[endpoint]/{bucket}/{key} If endpoint is missing, it's assumed to
  * be the default S3 endpoint (s3.amazonaws.com)
- * 
+ *
  * FileSystem roots: /{bucket}/
- * 
+ *
  * Treatment of S3 objects: - If a key ends in "/" it's considered a directory
  * *and* a regular file. Otherwise, it's just a regular file. - It is legal for
  * a key "xyz" and "xyz/" to exist at the same time. The latter is treated as a
  * directory. - If a file "a/b/c" exists but there's no "a" or "a/b/", these are
  * considered "implicit" directories. They can be listed, traversed and deleted.
- * 
+ *
  * Deviations from FileSystem provider API: - Deleting a file or directory
  * always succeeds, regardless of whether the file/directory existed before the
  * operation was issued i.e. Files.delete() and Files.deleteIfExists() are
  * equivalent.
- * 
- * 
+ *
+ *
  * Future versions of this provider might allow for a strict mode that mimics
  * the semantics of the FileSystem provider API on a best effort basis, at an
  * increased processing cost.
- * 
- * 
+ *
+ *
  */
 public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware {
 
@@ -468,9 +468,9 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	@Override
 	public void createDirectory(Path dir, FileAttribute<?>... attrs)
 			throws IOException {
-		
+
 		// FIXME: throw exception if the same key already exists at amazon s3
-		
+
 		S3Path s3Path = (S3Path) dir;
 
 		Preconditions.checkArgument(attrs.length == 0,
@@ -547,7 +547,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		S3Client client = s3Source.getFileSystem() .getClient();
 		Properties props = s3Target.getFileSystem().properties();
-		
+
 		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final long maxSize = opts.getMaxCopySize();
@@ -845,6 +845,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
+        client.setRequesterPaysEnabled(props.getProperty("requester_pays_enabled"));
 
 		if( props.getProperty("glacier_auto_retrieval") != null )
 			log.warn("Glacier auto-retrieval is no longer supported, config option `aws.client.glacierAutoRetrieval` will be ignored");
@@ -866,7 +867,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 		return null;
 	}
-	
+
 	/**
 	 * find /amazon.properties in the classpath
 	 * @return Properties amazon.properties
@@ -879,12 +880,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			if (in != null){
 				props.load(in);
 			}
-			
+
 		} catch (IOException e) {}
-		
+
 		return props;
 	}
-	
+
 	// ~~~
 
 	private <T> void verifySupportedOptions(Set<? extends T> allowedOptions,

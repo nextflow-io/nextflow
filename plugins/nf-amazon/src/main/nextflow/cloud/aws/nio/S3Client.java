@@ -51,6 +51,7 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyPartRequest;
 import com.amazonaws.services.s3.model.CopyPartResult;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectTaggingRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
@@ -94,7 +95,7 @@ import static nextflow.cloud.aws.nio.util.S3UploadHelper.*;
 public class S3Client {
 
 	private static final Logger log = LoggerFactory.getLogger(S3Client.class);
-	
+
 	private AmazonS3 client;
 
 	private CannedAccessControlList cannedAcl;
@@ -110,6 +111,8 @@ public class S3Client {
 	private Long uploadChunkSize = Long.valueOf(S3MultipartOptions.DEFAULT_CHUNK_SIZE);
 
 	private Integer uploadMaxThreads = 10;
+
+    private Boolean isRequesterPaysEnabled = false;
 
 	public S3Client(AmazonS3 client) {
 		this.client = client;
@@ -140,7 +143,8 @@ public class S3Client {
 	 * @see com.amazonaws.services.s3.AmazonS3Client#getObject(String, String)
 	 */
 	public S3Object getObject(String bucketName, String key) {
-		return client.getObject(bucketName, key);
+        GetObjectRequest req = new GetObjectRequest(bucketName, key, isRequesterPaysEnabled);
+		return client.getObject(req);
 	}
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, File)
@@ -281,6 +285,13 @@ public class S3Client {
 		this.storageEncryption = SSEAlgorithm.fromString(alg);
 		log.debug("Setting S3 SSE storage encryption algorithm={}", alg);
 	}
+
+    public void setRequesterPaysEnabled(String requesterPaysEnabled) {
+        if( requesterPaysEnabled == null )
+            return;
+        this.isRequesterPaysEnabled = Boolean.valueOf(requesterPaysEnabled);
+        log.debug("Setting S3 requester pays enabled={}", isRequesterPaysEnabled);
+    }
 
 	public void setUploadChunkSize(String value) {
 		if( value==null )
@@ -527,7 +538,7 @@ public class S3Client {
 		// see https://github.com/aws/aws-sdk-java/issues/1321
 		//
 		// just traverse to source path a copy all files
-		// 
+		//
 		final Path target = targetFile.toPath();
 		final List<Download> allDownloads = new ArrayList<>();
 
