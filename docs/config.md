@@ -110,7 +110,7 @@ The following settings are available:
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
   :::{note}
-  Leave `ociAutoPull` disabled if willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` section).
+  Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` section).
   :::
 
 `apptainer.pullTimeout`
