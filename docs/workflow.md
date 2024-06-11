@@ -430,7 +430,7 @@ process foo {
     path 'result.txt', emit: results
 
     publish:
-    results >> 'foo/'
+    results >> 'foo'
 
     // ...
 }
@@ -441,7 +441,7 @@ workflow foobar {
     bar(foo.out)
 
     publish:
-    foo.out >> 'foobar/foo/'
+    foo.out >> 'foobar/foo'
 
     emit:
     bar.out
@@ -467,7 +467,7 @@ workflow {
     )
 
     publish:
-    ch_samples >> 'samples/' // sample1.txt will be published
+    ch_samples >> 'samples' // sample1.txt will be published
 }
 ```
 
@@ -497,8 +497,8 @@ workflow {
     ch_bar = bar(ch_foo)
 
     publish:
-    ch_foo >> 'foo/'
-    ch_bar >> 'bar/'
+    ch_foo >> 'foo'
+    ch_bar >> 'bar'
 }
 
 output {
@@ -531,7 +531,7 @@ workflow {
     ch_foo = foo()
 
     publish:
-    ch_foo >> (params.save_foo ? 'foo/' : null)
+    ch_foo >> (params.save_foo ? 'foo' : null)
 }
 ```
 
@@ -544,7 +544,7 @@ output {
     directory 'results'
     mode 'copy'
 
-    'foo/' {
+    'foo' {
         mode 'link'
     }
 }
@@ -633,13 +633,13 @@ workflow {
     )
 
     publish:
-    ch_foo >> 'foo/'
+    ch_foo >> 'foo'
 }
 
 output {
     directory 'results'
 
-    'foo/' {
+    'foo' {
         index {
             path 'index.csv'
         }
