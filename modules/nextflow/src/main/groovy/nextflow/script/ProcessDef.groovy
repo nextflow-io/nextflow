@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
@@ -206,7 +207,15 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         }
 
         // make a copy of the output list because execution can change it
-        final copyOuts = declaredOutputs.clone()
+        output = new ChannelOut(declaredOutputs.clone())
+
+        // register process publish targets
+        for( final entry : processConfig.getPublishTargets() ) {
+            final emit = entry.key
+            final name = entry.value
+            final source = (DataflowWriteChannel)output.getProperty(emit)
+            session.publishTargets[source] = name
+        }
 
         // create the executor
         final executor = session
@@ -221,7 +230,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
-        return output = new ChannelOut(copyOuts)
+        return output
     }
 
 }

@@ -1,5 +1,5 @@
 #
-#  Copyright 2013-2023, Seqera Labs
+#  Copyright 2013-2024, Seqera Labs
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -99,12 +99,6 @@ pack:
 
 packCore:
 	BUILD_PACK=1 ./gradlew packCore
-
-#
-# Create self-contained distribution package, including GA4GH support and associated dependencies
-#
-packGA4GH:
-	BUILD_PACK=1 ./gradlew -PGA4GH packAll
 
 #
 # Upload NF launcher to nextflow.io web site

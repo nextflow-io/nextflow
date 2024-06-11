@@ -99,8 +99,8 @@ Some configuration options in the `conda` scope are used when Wave is used to bu
 For example, the Conda channels and their priority can be set with `conda.channels`:
 
 ```groovy
-wave.strategy = ['conda']
-conda.channels = 'seqera,conda-forge,bioconda,defaults'
+wave.strategy = 'conda'
+conda.channels = 'conda-forge,bioconda'
 ```
 :::
 
@@ -131,6 +131,8 @@ In order to request the build of containers that are optimised for a specific CP
 :::{note}
 If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
 :::
+
+(wave-singularity)=
 
 ### Build Singularity native images
 
@@ -165,6 +167,10 @@ Moreover the access to the repository must be granted in the compute nodes by us
 Please see Singularity documentation for further details.
 :::
 
+:::{note}
+In order to build Singularity native images, both `singularity.ociAutoPull` and `singularity.ociMode` need to be disabled in the configuration (see the {ref}`config-singularity` section).
+:::
+
 ### Push to a private repository
 
 Containers built by Wave are uploaded to the Wave default repository hosted on AWS ECR at `195996028523.dkr.ecr.eu-west-1.amazonaws.com/wave/build`. The images in this repository are automatically deleted 1 week after the date of their push.
@@ -191,71 +197,4 @@ See the {ref}`Fusion documentation <fusion-page>` for more details.
 
 ## Advanced settings
 
-The following configuration options are available:
-
-`wave.enabled`
-: Enable/disable the execution of Wave containers.
-
-`wave.endpoint`
-: The Wave service endpoint (default: `https://wave.seqera.io`).
-
-`wave.freeze`
-: :::{versionadded} 23.07.0-edge
-  :::
-: When enabling the container freeze mode, Wave will provision an non-ephemeral container image
-that will be pushed to a container repository your choice. It requires the use of the `wave.build.repository` setting.
-It is also suggested to specify a custom cache repository via the setting `wave.build.cacheRepository`. Note: when using
-container freeze mode, the container repository authentication needs to be managed by the underlying infrastructure.
-
-`wave.build.repository`
-: The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Seqera Platform account).
-
-`wave.build.cacheRepository`
-: The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Seqera Platform account).
-
-`wave.build.conda.basePackages`
-: One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
-
-`wave.build.conda.commands`
-: One or more commands to be added to the Dockerfile used to build a Conda based image.
-
-`wave.build.conda.mambaImage`
-: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
-
-`wave.build.spack.basePackages`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more Spack packages to be always added in the resulting container.
-
-`wave.build.spack.commands`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more commands to be added to the Dockerfile used to build a Spack based image.
-
-`wave.httpClient.connectTime`
-: :::{versionadded} 22.06.0-edge
-  :::
-: Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
-
-`wave.strategy`
-: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
-
-`wave.retryPolicy.delay`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The initial delay when a failing HTTP request is retried (default: `150ms`).
-
-`wave.retryPolicy.maxDelay`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The max delay when a failing HTTP request is retried (default: `90 seconds`).
-
-`wave.retryPolicy.maxAttempts`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The max number of attempts a failing HTTP request is retried (default: `5`).
-
-`wave.retryPolicy.jitter`
-: :::{versionadded} 22.06.0-edge
-  :::
-: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).
+Wave advanced configuration settings are described in the {ref}`Wave <config-wave>` section on the Nextflow configuration page.

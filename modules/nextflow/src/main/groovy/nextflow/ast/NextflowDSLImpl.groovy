@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -81,7 +82,8 @@ class NextflowDSLImpl implements ASTTransformation {
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
-    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
+    final static private String WORKFLOW_PUBLISH = 'publish'
+    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN, WORKFLOW_PUBLISH]
 
     final static public String PROCESS_WHEN = 'when'
     final static public String PROCESS_STUB = 'stub'
@@ -171,8 +173,14 @@ class NextflowDSLImpl implements ASTTransformation {
                     currentTaskName = null
                 }
             }
+
             else if( methodName == 'workflow' && preCondition ) {
                 convertWorkflowDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
+            }
+
+            else if( methodName == 'output' && preCondition ) {
+                convertOutputDef(methodCall,sourceUnit)
                 super.visitMethodCallExpression(methodCall)
             }
 
@@ -422,6 +430,21 @@ class NextflowDSLImpl implements ASTTransformation {
             return result
         }
 
+        protected Statement normWorkflowPublish(ExpressionStatement stm) {
+            if( stm.expression !instanceof BinaryExpression ) {
+                syntaxError(stm, "Invalid workflow publish statement")
+                return stm
+            }
+
+            final binaryX = (BinaryExpression)stm.expression
+            if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
+                syntaxError(stm, "Invalid workflow publish statement")
+                return stm
+            }
+
+            return stmt( callThisX('_publish_target', args(binaryX.leftExpression, binaryX.rightExpression)) )
+        }
+
         protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
 
             final codeBlock = (BlockStatement) closure.code
@@ -461,6 +484,14 @@ class NextflowDSLImpl implements ASTTransformation {
                         body.add(stm)
                         break
 
+                    case WORKFLOW_PUBLISH:
+                        if( !(stm instanceof ExpressionStatement) ) {
+                            syntaxError(stm, "Invalid workflow publish statement")
+                            break
+                        }
+                        body.add(normWorkflowPublish(stm as ExpressionStatement))
+                        break
+
                     default:
                         if( context ) {
                             def opts = SCOPES.closest(context)
@@ -472,7 +503,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
             }
             // read the closure source
-            readSource(closure, source, unit, true)
+            readSource(closure, source, unit)
 
             final bodyClosure = closureX(null, block(scope, body))
             final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
@@ -485,6 +516,62 @@ class NextflowDSLImpl implements ASTTransformation {
             int line = node.lineNumber
             int coln = node.columnNumber
             unit.addError( new SyntaxException(message,line,coln))
+        }
+
+        /**
+         * Transform targets in the workflow output definition:
+         *
+         *   output {
+         *     'foo' { ... }
+         *   }
+         *
+         * becomes:
+         *
+         *   output {
+         *     target('foo') { ... }
+         *   }
+         *
+         * @param methodCall
+         * @param unit
+         */
+        protected void convertOutputDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'output' ${methodCall.arguments}"
+
+            assert methodCall.arguments instanceof ArgumentListExpression
+            final arguments = (ArgumentListExpression)methodCall.arguments
+
+            if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid output definition")
+                return
+            }
+
+            final closure = (ClosureExpression)arguments[0]
+            final block = (BlockStatement)closure.code
+            for( Statement stmt : block.statements ) {
+                if( stmt !instanceof ExpressionStatement ) {
+                    syntaxError(stmt, "Invalid publish target definition")
+                    return     
+                }
+
+                final stmtExpr = (ExpressionStatement)stmt
+                if( stmtExpr.expression !instanceof MethodCallExpression ) {
+                    syntaxError(stmt, "Invalid publish target definition")
+                    return     
+                }
+
+                final call = (MethodCallExpression)stmtExpr.expression
+                assert call.arguments instanceof ArgumentListExpression
+
+                // HACK: target definition is a method call with single closure argument
+                //       custom parser will be able to detect more elegantly
+                final targetArgs = (ArgumentListExpression)call.arguments
+                if( targetArgs.size() != 1 || targetArgs[0] !instanceof ClosureExpression )
+                    continue
+
+                final targetName = call.method
+                final targetBody = (ClosureExpression)targetArgs[0]
+                stmtExpr.expression = callThisX('target', args(targetName, targetBody))
+            }
         }
 
         /**
@@ -544,6 +631,11 @@ class NextflowDSLImpl implements ASTTransformation {
                                 fixStdinStdout( stm )
                                 convertOutputMethod( stm.getExpression() )
                             }
+                            break
+
+                        case 'publish':
+                            if( stm instanceof ExpressionStatement )
+                                convertPublishMethod( stm )
                             break
 
                         case 'exec':
@@ -749,7 +841,29 @@ class NextflowDSLImpl implements ASTTransformation {
          * @param buffer
          * @param unit
          */
-        private void readSource( ASTNode node, StringBuilder buffer, SourceUnit unit, stripBrackets=false ) {
+        private void readSource( Statement node, StringBuilder buffer, SourceUnit unit ) {
+            final colx = node.getColumnNumber()
+            final colz = node.getLastColumnNumber()
+            final first = node.getLineNumber()
+            final last = node.getLastLineNumber()
+            for( int i = first; i <= last; i++ ) {
+                final line = unit.source.getLine(i, null)
+
+                // prepend first-line indent
+                if( i == first ) {
+                    int k = 0
+                    while( k < line.size() && line[k] == ' ' )
+                        k++
+                    buffer.append( line.substring(0, k) )
+                }
+
+                final begin = (i == first) ? colx - 1 : 0
+                final end = (i == last) ? colz - 1 : line.size()
+                buffer.append( line.substring(begin, end) ).append('\n')
+            }
+        }
+
+        private void readSource( ClosureExpression node, StringBuilder buffer, SourceUnit unit ) {
             final colx = node.getColumnNumber()
             final colz = node.getLastColumnNumber()
             final first = node.getLineNumber()
@@ -757,18 +871,12 @@ class NextflowDSLImpl implements ASTTransformation {
             for( int i=first; i<=last; i++ ) {
                 def line = unit.source.getLine(i, null)
                 if( i==last ) {
-                    line = line.substring(0,colz-1)
-                    if( stripBrackets ) {
-                        line = line.replaceFirst(/}.*$/,'')
-                        if( !line.trim() ) continue
-                    }
+                    line = line.substring(0,colz-1).replaceFirst(/}.*$/,'')
+                    if( !line.trim() ) continue
                 }
                 if( i==first ) {
-                    line = line.substring(colx-1)
-                    if( stripBrackets ) {
-                        line = line.replaceFirst(/^.*\{/,'').trim()
-                        if( !line.trim() ) continue
-                    }
+                    line = line.substring(colx-1).replaceFirst(/^.*\{/,'').trim()
+                    if( !line ) continue
                 }
                 buffer.append(line) .append('\n')
             }
@@ -955,7 +1063,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','eval','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
@@ -1123,6 +1231,11 @@ class NextflowDSLImpl implements ASTTransformation {
                     return createX( TokenEnvCall, args )
                 }
 
+                if( methodCall.methodAsString == 'eval' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenEvalCall, args )
+                }
+
                 /*
                  * input:
                  *   tuple val(x), .. from q
@@ -1184,6 +1297,27 @@ class NextflowDSLImpl implements ASTTransformation {
             }
 
             return false
+        }
+
+        protected void convertPublishMethod(ExpressionStatement stmt) {
+            if( stmt.expression !instanceof BinaryExpression ) {
+                syntaxError(stmt, "Invalid process publish statement")
+                return
+            }
+
+            final binaryX = (BinaryExpression)stmt.expression
+            if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
+                syntaxError(stmt, "Invalid process publish statement")
+                return
+            }
+
+            final left = binaryX.leftExpression
+            if( left !instanceof VariableExpression ) {
+                syntaxError(stmt, "Invalid process publish statement")
+                return
+            }
+
+            stmt.expression = callThisX('_publish_target', args(constX(((VariableExpression)left).name), binaryX.rightExpression))
         }
 
         protected boolean isIllegalName(String name, ASTNode node) {

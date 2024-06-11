@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  * Copyright 2022, CEA-CNRGH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,9 +76,7 @@ class BridgeExecutor extends AbstractGridExecutor {
         }
 
         // other cluster options 
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

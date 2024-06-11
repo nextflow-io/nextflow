@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -313,27 +313,34 @@ class OperatorImpl {
      */
     DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
 
-        def history = [:]
-        def target = CH.createBy(source)
+        final history = [:]
+        final target = CH.createBy(source)
+        final stopOnFirst = source instanceof DataflowExpression
 
         // when the operator stop clear the history map
-        def events = new DataflowEventAdapter() {
+        final events = new DataflowEventAdapter() {
             void afterStop(final DataflowProcessor processor) {
                 history.clear()
-                history = null
             }
         }
 
-        def filter = {
-            def key = comparator.call(it)
-            if( history.containsKey(key) ) {
-                return Channel.VOID
+        final filter = {
+            try {
+                final key = comparator.call(it)
+                if( history.containsKey(key) ) {
+                    return Channel.VOID
+                }
+                else {
+                    history.put(key,true)
+                    return it
+                }
             }
-            else {
-                history.put(key,true)
-                return it
+            finally {
+                if( stopOnFirst ) {
+                    ((DataflowProcessor) getDelegate()).terminate()
+                }
             }
-        }  as Closure
+        } as Closure
 
         // filter removing all duplicates
         chainImpl(source, target, [listeners: [events]], filter )

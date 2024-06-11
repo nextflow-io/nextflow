@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,11 @@ package nextflow.cli
 
 import java.nio.file.Files
 
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
+import nextflow.secret.SecretsLoader
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 /**
@@ -362,5 +365,48 @@ class CmdConfigTest extends Specification {
         result.params.foo == 'baz'
         result.profiles.test.params.foo == 'foo'
         result.profiles.debug.cleanup == false
+    }
+
+
+    def 'should remove secrets for config' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = "[ ]"
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+
+        and:
+        def CONFIG = folder.resolve('nextflow.config')
+        CONFIG.text = '''
+        process { 
+            queue = secrets.MYSTERY
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig()
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+        process {
+           queue = 'secrets.MYSTERY'
+        }
+        '''
+            .stripIndent().leftTrim()
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
     }
 }

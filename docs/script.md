@@ -533,6 +533,11 @@ The following variables are implicitly defined in the script global execution sc
   :::
 : The directory where the main script is located.
 
+`secrets`
+: :::{versionadded} 24.02.0-edge
+  :::
+: Dictionary like object holding workflow secrets. Read the {ref}`secrets-page` page for more information.
+
 `workDir`
 : The directory where tasks temporary files are created.
 
@@ -1302,6 +1307,9 @@ The following methods are defined for Paths for splitting and counting records:
 `countLines()`
 : Counts the number of lines in a text file. See the {ref}`operator-splittext` operator for available options.
 
+`splitCsv()`
+: Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
+
 `splitFasta()`
 : Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
 
@@ -1311,5 +1319,5 @@ The following methods are defined for Paths for splitting and counting records:
 `splitJson()`
 : Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
 
-`splitLines()`
+`splitText()`
 : Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.

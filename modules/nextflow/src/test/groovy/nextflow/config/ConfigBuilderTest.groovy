@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.config
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
@@ -26,6 +27,8 @@ import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.extension.FilesEx
+import nextflow.secret.SecretsLoader
 import nextflow.trace.TraceHelper
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
@@ -1107,7 +1110,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.tower instanceof Map
         config.tower.enabled
-        config.tower.endpoint == 'https://api.tower.nf'
+        config.tower.endpoint == 'https://api.cloud.seqera.io'
     }
 
     def 'should set wave options' () {
@@ -1870,7 +1873,22 @@ class ConfigBuilderTest extends Specification {
         then:
         config.stubRun == true
     }
-    
+
+    def 'should configure preview mode' () {
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.preview
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(preview: true)).build()
+        then:
+        config.preview == true
+    }
+
     def 'should merge profiles' () {
         given:
         def ENV = [:]
@@ -2488,6 +2506,251 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+
+    def 'should build config object with secrets' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = '''
+            [
+              {
+                "name": "FOO",
+                "value": "ciao"
+              }
+            ]
+            '''
+        and:
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        def text = '''
+        params.p = "$baseDir/1"
+        params.s = "$secrets.FOO/2"
+        '''
+
+        when:
+        def cfg = new ConfigBuilder().setBaseDir(folder).buildConfig0([:], [text])
+        then:
+        cfg.params.p == "$folder/1"
+        cfg.params.s == 'ciao/2'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should build include config with secrets' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = '''
+            [
+              {
+                "name": "ALPHA",
+                "value": "one"
+              },
+              {
+                "name": "DELTA",
+                "value": "two"
+              },
+              {
+                "name": "GAMMA",
+                "value": "three"
+              }
+            ]
+            '''
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+
+        def configMain = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('config1.txt')
+        def snippet2 = folder.resolve('config2.txt')
+        and:
+
+        configMain.text = """
+        p1 = secrets.ALPHA
+        includeConfig "$snippet1"
+        """
+
+        snippet1.text = """
+        p2 = secrets.DELTA
+        includeConfig "$snippet2" 
+        """
+
+        snippet2.text = '''
+        p3 = secrets.GAMMA
+        p4 = 'some value'
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).buildGivenFiles(configMain)
+        then:
+        config.p1 == 'one'
+        config.p2 == 'two'
+        config.p3 == 'three'
+        config.p4 == 'some value'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should build config with secrets in the include path' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def configMain = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('config1.txt')
+        def snippet2 = folder.resolve('config2.txt')
+
+        and:
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = """
+            [
+              {
+                "name": "SECRET_FILE1",
+                "value": "${snippet1.toAbsolutePath()}"
+              },
+              {
+                "name": "SECRET_FILE2",
+                "value": "${snippet2.toAbsolutePath()}"
+              }
+            ]
+            """
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        configMain.text = '''
+        p1 = 'one'
+        // include config via a secret property
+        includeConfig secrets.SECRET_FILE1
+        '''
+
+        snippet1.text = '''
+        p2 = 'two'
+        // include config via string interpolation using a secret 
+        includeConfig "$secrets.SECRET_FILE2"
+        '''
+
+        snippet2.text = '''
+        p3 = 'three'
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).buildGivenFiles(configMain)
+        then:
+        config.p1 == 'one'
+        config.p2 == 'two'
+        config.p3 == 'three'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should not render secret values' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def configMain = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('config1.txt')
+        def snippet2 = folder.resolve('config2.txt')
+
+        and:
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = """
+            [
+              {
+                "name": "SECRET_FILE1",
+                "value": "${snippet1.toAbsolutePath()}"
+              },
+              {
+                "name": "SECRET_FILE2",
+                "value": "${snippet2.toAbsolutePath()}"
+              },
+              {
+                "name": "ALPHA",
+                "value": "one"
+              },
+              {
+                "name": "DELTA",
+                "value": "two"
+              },
+              {
+                "name": "GAMMA",
+                "value": "three"
+              }
+            ]
+            """
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        configMain.text = '''
+        p1 = secrets.ALPHA
+        foo.p1 = secrets.ALPHA 
+        bar {
+          p1 = secrets.ALPHA 
+        }
+        // include config via a secret property
+        includeConfig secrets.SECRET_FILE1
+        '''
+
+        snippet1.text = '''
+        p2 = "$secrets.DELTA"
+        foo.p2 = "$secrets.DELTA"
+        bar {
+          p2 = "$secrets.DELTA"
+        }
+        // include config via string interpolation using a secret 
+        includeConfig "$secrets.SECRET_FILE2"
+        '''
+
+        snippet2.text = '''
+        p3 = "$secrets.GAMMA"
+        foo.p3 = "$secrets.GAMMA"
+        bar {
+          p3 = "$secrets.GAMMA"
+        }
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def config = new ConfigBuilder()
+                            .setBaseDir(folder)
+                            .setOptions(opt)
+                            .setStripSecrets(true)
+                            .buildGivenFiles(configMain)
+        then:
+        config.p1 == 'secrets.ALPHA'
+        config.p2 == 'secrets.DELTA'
+        config.p3 == 'secrets.GAMMA'
+        and:
+        config.foo.p1 == 'secrets.ALPHA'
+        config.foo.p2 == 'secrets.DELTA'
+        config.foo.p3 == 'secrets.GAMMA'
+        and:
+        config.bar.p1 == 'secrets.ALPHA'
+        config.bar.p2 == 'secrets.DELTA'
+        config.bar.p3 == 'secrets.GAMMA'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
     }
 
 }
