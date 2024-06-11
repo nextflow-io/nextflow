@@ -1725,7 +1725,6 @@ The following executors are available:
 | `pbspro`              | [PBS Pro](https://www.pbsworks.com/) job scheduler                                          |
 | `sge`                 | Sun Grid Engine / [Open Grid Engine](http://gridscheduler.sourceforge.net/)                 |
 | `slurm`               | [SLURM](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) workload manager              |
-| `tes`                 | [GA4GH TES](https://github.com/ga4gh/task-execution-schemas) service                        |
 | `uge`                 | Alias for the `sge` executor                                                                |
 
 The following example shows how to set the process's executor:
