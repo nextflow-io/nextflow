@@ -1575,7 +1575,7 @@ The following settings are available:
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
   :::{note}
-  Leave `ociMode` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
   :::
 
 `singularity.pullTimeout`
