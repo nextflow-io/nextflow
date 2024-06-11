@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+2.1.4-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
 2.1.4-patch1 - 28 May 2024
 - Bump dependency with Nextflow 23.10.2
 
