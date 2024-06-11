@@ -220,7 +220,7 @@ class AzFileSystemProvider extends FileSystemProvider {
             this.accountKey = accountKey
         }
         else {
-            throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or account key")
+            throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or storage account key")
         }
 
         final result = createFileSystem(client, bucket, config)
