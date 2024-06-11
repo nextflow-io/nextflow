@@ -1408,10 +1408,7 @@ process foo {
 }
 ```
 
-:::{note}
-When combined with the {ref}`container directive <process-container>`, the `beforeScript` will be executed outside the specified container. In other words, the `beforeScript` is always executed in the host environment.
-The exception to this is container-native execution environments such as cloud batch and kubernetes, where `beforeScript` must run inside the container.
-:::
+When the process is containerized (using the {ref}`process-container` directive), the `beforeScript` will be executed in the container only if the executor is *container-native* (e.g. cloud batch executors, Kubernetes). Otherwise, the `beforeScript` will be executed outside the container.
 
 (process-cache)=
 
