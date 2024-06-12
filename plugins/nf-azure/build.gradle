@@ -39,13 +39,12 @@ dependencies {
     api('com.azure:azure-storage-blob:12.25.2') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    api('com.microsoft.azure:azure-batch:11.0.0') {
+    api('com.azure:azure-compute-batch:1.0.0-beta.1') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
     api('com.azure:azure-identity:1.11.3') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
-        exclude group: 'com.nimbusds', module: 'oauth2-oidc-sdk'
     }
 
     compileOnly(group: 'com.nimbusds', name: 'oauth2-oidc-sdk', version: '9.43')

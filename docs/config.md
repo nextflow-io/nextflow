@@ -382,29 +382,24 @@ The following settings are available:
 : Enable autoscaling feature for the pool identified with `<name>`.
 
 `azure.batch.pools.<name>.fileShareRootPath`
-: *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
 
 `azure.batch.pools.<name>.lowPriority`
-: *New in `nf-azure` version `1.4.0`*
 : Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
 
 `azure.batch.pools.<name>.mountOptions`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the mount options for mounting the file shares (default: `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp`).
 
 `azure.batch.pools.<name>.offer`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
 
 `azure.batch.pools.<name>.privileged`
 : Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
 
 `azure.batch.pools.<name>.publisher`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
 
 `azure.batch.pools.<name>.runAs`
@@ -420,7 +415,6 @@ The following settings are available:
 : Specify the scheduling policy for the pool identified with `<name>`. It can be either `spread` or `pack` (default: `spread`).
 
 `azure.batch.pools.<name>.sku`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
 `azure.batch.pools.<name>.startTask.script`
@@ -444,16 +438,22 @@ The following settings are available:
 `azure.batch.pools.<name>.vmType`
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
+`azure.managedIdentity.clientId`
+: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.system`
+: When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.tenantId`
+: The Azure tenant ID
+
 `azure.registry.server`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
 
 `azure.registry.userName`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the username to connect to a private container registry.
 
 `azure.registry.password`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the password to connect to a private container registry.
 
 `azure.retryPolicy.delay`

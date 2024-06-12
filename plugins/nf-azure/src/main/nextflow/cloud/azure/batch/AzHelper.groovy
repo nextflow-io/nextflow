@@ -18,6 +18,8 @@ package nextflow.cloud.azure.batch
 import java.nio.file.Path
 import java.time.OffsetDateTime
 
+import com.azure.identity.ClientSecretCredentialBuilder
+import com.azure.identity.ManagedIdentityCredentialBuilder
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
@@ -130,7 +132,7 @@ class AzHelper {
         return delegationKey
     }
 
-        static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
+    static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
        
         final startTime = OffsetDateTime.now()
         final indicatedExpiryTime = startTime.plusHours(duration.toHours())
@@ -153,7 +155,7 @@ class AzHelper {
     }
 
     static String generateAccountSas(BlobServiceClient client, Duration duration) {
-        final expiryTime = OffsetDateTime.now().plusSeconds(duration.toSeconds());
+        final expiryTime = OffsetDateTime.now().plusSeconds(duration.toSeconds())
         final signature = new AccountSasSignatureValues(
                 expiryTime,
                 ACCOUNT_PERMS,
@@ -172,8 +174,8 @@ class AzHelper {
     static synchronized BlobServiceClient getOrCreateBlobServiceWithKey(String accountName, String accountKey) {
         log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
 
-        final credential = new StorageSharedKeyCredential(accountName, accountKey);
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+        final credential = new StorageSharedKeyCredential(accountName, accountKey)
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
@@ -190,11 +192,45 @@ class AzHelper {
 
         log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
 
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
                 .sasToken(sasToken)
+                .buildClient()
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
+        log.debug "Creating Azure Blob storage client using Service Principal credentials"
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+
+        final credential = new ClientSecretCredentialBuilder()
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .tenantId(tenantId)
+                .build()
+
+        return new BlobServiceClientBuilder()
+                .credential(credential)
+                .endpoint(endpoint)
+                .buildClient()
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithManagedIdentity(String accountName, String clientId) {
+        log.debug "Creating Azure blob storage client using Managed Identity ${clientId ?: '<system-assigned identity>'}"
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+
+        final credentialBuilder = new ManagedIdentityCredentialBuilder()
+        if( clientId )
+            credentialBuilder.clientId(clientId)
+
+        return new BlobServiceClientBuilder()
+                .credential(credentialBuilder.build())
+                .endpoint(endpoint)
                 .buildClient()
     }
 
