@@ -49,10 +49,10 @@ class AzPathFactory extends FileSystemPathFactory {
             throw new IllegalArgumentException("Invalid Azure path URI - make sure the schema prefix does not container more than two slash characters - offending value: $uri")
 
         final storageConfigEnv = AzConfig.getConfig().storage().getEnv()
-
         final activeDirectoryConfigEnv = AzConfig.getConfig().activeDirectory().getEnv()
+        final managedIdentityConfigEnv = AzConfig.getConfig().managedIdentity().getEnv()
 
-        final configEnv = storageConfigEnv + activeDirectoryConfigEnv
+        final configEnv = storageConfigEnv + activeDirectoryConfigEnv + managedIdentityConfigEnv
 
         // find the related file system
         final fs = getFileSystem(uri0(uri), configEnv)
