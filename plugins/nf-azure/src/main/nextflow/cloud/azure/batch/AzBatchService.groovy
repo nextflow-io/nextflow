@@ -26,11 +26,9 @@ import java.util.function.Predicate
 
 import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.BatchClientBuilder
-import com.azure.compute.batch.implementation.BatchSharedKeyCredentialsPolicy
 import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
-import com.azure.compute.batch.models.BatchJob
 import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.BatchJobUpdateContent
 import com.azure.compute.batch.models.BatchNodeFillType
@@ -46,7 +44,6 @@ import com.azure.compute.batch.models.BatchTaskContainerSettings
 import com.azure.compute.batch.models.BatchTaskCreateContent
 import com.azure.compute.batch.models.BatchTaskSchedulingPolicy
 import com.azure.compute.batch.models.ContainerConfiguration
-import com.azure.compute.batch.models.ContainerRegistry
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
@@ -70,7 +67,6 @@ import com.azure.core.exception.ResourceNotFoundException
 import com.azure.core.http.rest.PagedIterable
 import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.identity.ManagedIdentityCredentialBuilder
-import com.azure.identity.UsernamePasswordCredentialBuilder
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
@@ -746,14 +742,13 @@ class AzBatchService implements Closeable {
             List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())
             config.storage().fileShares.each {
                 if (it.key) {
-                    def azureFileShareConfiguration = new AzureFileShareConfiguration(
-                        config.storage().accountName,
-                        "https://${config.storage().accountName}.file.core.windows.net/${it.key}",
-                        config.storage().accountKey,
-                        it.key )
+                    final String accountName = config.storage().accountName
+                    final endpoint = "https://${config.storage().accountName}.file.core.windows.net/${it.key}" as String
+                    final accountKey = config.storage().accountKey
+                    final shareConfig = new AzureFileShareConfiguration( accountName, endpoint, accountKey, it.key )
                             .setMountOptions(it.value.mountOptions)
 
-                    mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(azureFileShareConfiguration)
+                    mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(shareConfig)
                 } else {
                     throw new IllegalArgumentException("Cannot mount a null File Share")
                 }
@@ -923,7 +918,7 @@ class AzBatchService implements Closeable {
                 .build()
     }
 
-    private static List<Integer> RETRY_CODES = [429, 408]
+    final private static List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
 
     /**
      * Carry out the invocation of the specified action using a retry policy
