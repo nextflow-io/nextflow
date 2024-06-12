@@ -109,6 +109,10 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
@@ -267,6 +271,11 @@ The following settings are available:
 
 `aws.client.proxyPassword`
 : The password to use when connecting through a proxy.
+
+`aws.client.requesterPays`
+: :::{versionadded} 24.05.0-edge
+  :::
+: Enable the requester pays feature for S3 buckets.
 
 `aws.client.s3PathStyleAccess`
 : Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
@@ -476,6 +485,7 @@ The following settings are available:
 ### Scope `charliecloud`
 
 The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charliecloud/) containers are executed by Nextflow.
+If `charliecloud.writeFake` is unset / `false`, charliecloud will create a copy of the container in the process working directory.
 
 The following settings are available:
 
@@ -496,6 +506,15 @@ The following settings are available:
 
 `charliecloud.temp`
 : Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
+
+`charliecloud.registry`
+: The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`charliecloud.writeFake`
+: Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode, using overlayfs, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details 
+
+`charliecloud.useSquash`
+: Create a temporary squashFS container image in the process work directory instead of a folder.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
@@ -645,6 +664,12 @@ The `env` scope provides environment variables to *tasks*, not Nextflow itself. 
 The `executor` scope controls various executor behaviors.
 
 The following settings are available:
+
+`executor.account`
+: :::{versionadded} 24.04.0
+  :::
+: *Used only by the {ref}`slurm-executor`, {ref}`lsf-executor`, {ref}`pbs-executor` and {ref}`pbspro-executor` executors.*
+: Allows specifying the project or organisation account that should be charged for running the pipeline jobs.
 
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
@@ -1049,6 +1074,12 @@ The following settings are available:
 
 `k8s.context`
 : Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
+
+`k8s.cpuLimits`
+: :::{versionadded} 24.04.0
+  :::
+: When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
+: This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
 
 `k8s.debug.yaml`
 : When `true`, saves the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
@@ -1539,10 +1570,18 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `singularity.ociMode`
 : :::{versionadded} 23.12.0-edge
   :::
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+  :::{note}
+  Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
@@ -2088,6 +2127,15 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
   - Nextflow will fail if a pipeline param is referenced before it is defined
 
   - Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
+
+`nextflow.preview.output`
+
+: :::{versionadded} 24.04.0
+  :::
+
+: *Experimental: may change in a future release.*
+
+: When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
 
 `nextflow.preview.recursion`
 

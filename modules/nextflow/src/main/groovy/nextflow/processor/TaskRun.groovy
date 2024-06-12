@@ -20,6 +20,7 @@ import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Function
 
 import com.google.common.hash.HashCode
 import groovy.transform.PackageScope
@@ -448,10 +449,16 @@ class TaskRun implements Cloneable {
     /**
      * Look at the {@code nextflow.script.FileOutParam} which name is the expected
      *  output name
-     *
      */
     List<String> getOutputFilesNames() {
-        cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('outputFileNames', new Function<String,List<String>>() {
+            @Override
+            List<String> apply(String s) {
+                return getOutputFilesNames0()
+            }})
     }
 
     private List<String> getOutputFilesNames0() {
@@ -614,7 +621,14 @@ class TaskRun implements Cloneable {
     }
 
     Path getCondaEnv() {
-        cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('condaEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getCondaEnv0()
+            }})
     }
 
     private Path getCondaEnv0() {
@@ -626,7 +640,14 @@ class TaskRun implements Cloneable {
     }
 
     Path getSpackEnv() {
-        cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('spackEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getSpackEnv0()
+            }})
     }
 
     private Path getSpackEnv0() {
@@ -640,7 +661,14 @@ class TaskRun implements Cloneable {
     }
 
     protected ContainerInfo containerInfo() {
-        cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('containerInfo', new Function<String,ContainerInfo>() {
+            @Override
+            ContainerInfo apply(String s) {
+                return containerInfo0()
+            }})
     }
 
     private ContainerInfo containerInfo0() {

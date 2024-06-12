@@ -1008,7 +1008,7 @@ Some caveats on glob pattern behavior:
 Although the input files matching a glob output declaration are not included in the resulting output channel, these files may still be transferred from the task scratch directory to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using loose wildcards when defining output files, e.g. `path '*'`. Instead, use a prefix or a suffix to restrict the set of matching files to only the expected ones, e.g. `path 'prefix_*.sorted.bam'`.
 :::
 
-Read more about glob syntax at the following link [What is a glob?][what is a glob?]
+Read more about glob syntax at the following link [What is a glob?][glob]
 
 ### Dynamic output file names
 
@@ -1331,6 +1331,65 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent fa
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
 
+(process-array)=
+
+### array
+
+:::{versionadded} 24.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `array` directive allows you to submit tasks as *job arrays* for executors that support it.
+
+A job array is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Job arrays incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
+
+The directive should be specified with a given array size, along with an executor that supports job arrays. For example:
+
+```groovy
+process cpu_task {
+    executor 'slurm'
+    array 100
+
+    '''
+    your_command --here
+    '''
+}
+```
+
+Nextflow currently supports job arrays for the following executors:
+
+- {ref}`awsbatch-executor`
+- {ref}`google-batch-executor`
+- {ref}`lsf-executor`
+- {ref}`pbs-executor`
+- {ref}`pbspro-executor`
+- {ref}`sge-executor`
+- {ref}`slurm-executor`
+
+A process using job arrays will collect tasks and submit each batch as a job array when it is ready. Any "leftover" tasks will be submitted as a partial job array.
+
+Once a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, in order to allow for the use of [dynamic resources](#dynamic-computing-resources).
+
+The following directives must be uniform across all tasks in a process that uses job arrays, because these directives are specified once for the entire job array:
+
+- {ref}`process-accelerator`
+- {ref}`process-clusterOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-machineType`
+- {ref}`process-memory`
+- {ref}`process-queue`
+- {ref}`process-resourcelabels`
+- {ref}`process-resourcelimits`
+- {ref}`process-time`
+
+For cloud-based executors like AWS Batch, or when using Fusion with any executor, the following additional directives must be uniform:
+
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+
 (process-beforescript)=
 
 ### beforeScript
@@ -1349,9 +1408,7 @@ process foo {
 }
 ```
 
-:::{note}
-When combined with the {ref}`container directive <process-container>`, the `beforeScript` will be executed outside the specified container. In other words, the `beforeScript` is always executed in the host environment.
-:::
+When the process is containerized (using the {ref}`process-container` directive), the `beforeScript` will be executed in the container only if the executor is *container-native* (e.g. cloud batch executors, Kubernetes). Otherwise, the `beforeScript` will be executed outside the container.
 
 (process-cache)=
 
@@ -1390,6 +1447,30 @@ The following options are available:
 ### clusterOptions
 
 The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command. You can use it to request non-standard resources or use settings that are specific to your cluster and not supported out of the box by Nextflow.
+
+The cluster options can be a string:
+
+```groovy
+process foo {
+  clusterOptions '-x 1 -y 2'
+  // ...
+}
+```
+
+:::{versionchanged} 24.04.0
+Prior to this version, grid executors that require each option to be on a separate line in the job script would attempt to split multiple options using a variety of different conventions. Multiple options can now be specified more clearly using a string list as shown below.
+:::
+
+The cluster options can also be a string list:
+
+```groovy
+process foo {
+  clusterOptions '-x 1', '-y 2', '--flag'
+  // ...
+}
+```
+
+Grid executors that require one option per line will write each option to a separate line, while grid executors that allow multiple options per line will write all options to a single line, the same as with a string. This form is useful to control how the options are split across lines when it is required by the scheduler.
 
 :::{note}
 This directive is only used by grid executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
@@ -1644,7 +1725,6 @@ The following executors are available:
 | `pbspro`              | [PBS Pro](https://www.pbsworks.com/) job scheduler                                          |
 | `sge`                 | Sun Grid Engine / [Open Grid Engine](http://gridscheduler.sourceforge.net/)                 |
 | `slurm`               | [SLURM](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) workload manager              |
-| `tes`                 | [GA4GH TES](https://github.com/ga4gh/task-execution-schemas) service                        |
 | `uge`                 | Alias for the `sge` executor                                                                |
 
 The following example shows how to set the process's executor:
@@ -1811,7 +1891,7 @@ process foo {
 
 In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
 task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
-queue named `on-demand-compute`. 
+queue named `on-demand-compute`.
 
 (process-maxerrors)=
 
@@ -2111,7 +2191,7 @@ The following options are available:
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
 `schedulerName: '<name>'`
-: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container.
 
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
@@ -2708,4 +2788,3 @@ process foo {
 ```
 
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-[what is a glob?]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob

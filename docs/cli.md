@@ -1109,6 +1109,8 @@ Checking nextflow-io/hello ...
 checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
 ```
 
+(cli-run)=
+
 ### run
 
 Execute a pipeline.

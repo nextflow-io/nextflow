@@ -86,7 +86,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
                 if( !session.success )
                     return // ignore error when the session has been interrupted 
                 handleException(handler, e)
-                session.notifyTaskComplete(handler)
+                notifyTaskComplete(handler)
             }
         }
 

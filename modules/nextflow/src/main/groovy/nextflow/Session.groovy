@@ -31,6 +31,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
@@ -71,6 +72,7 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
 import nextflow.util.VersionNumber
@@ -92,6 +94,8 @@ class Session implements ISession {
     final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
     final List<Closure> igniters = new ArrayList<>(20)
+
+    final Map<DataflowWriteChannel,String> publishTargets = [:]
 
     /**
      * Creates process executors
@@ -152,6 +156,11 @@ class Session implements ISession {
      * Enable stub run mode
      */
     boolean stubRun
+
+    /**
+     * Enable preview mode
+     */
+    boolean preview
 
     /**
      * Folder(s) containing libs and classes to be added to the classpath
@@ -344,6 +353,9 @@ class Session implements ISession {
 
         // -- dry run
         this.stubRun = config.stubRun
+
+        // -- preview
+        this.preview = config.preview
 
         // -- normalize taskConfig object
         if( config.process == null ) config.process = [:]
@@ -682,9 +694,6 @@ class Session implements ISession {
             // -- close db
             cache?.close()
 
-            // -- shutdown plugins
-            Plugins.stop()
-
             // -- cleanup script classes dir
             classesDir?.deleteDir()
         }
@@ -777,6 +786,8 @@ class Session implements ISession {
             def status = dumpNetworkStatus()
             if( status )
                 log.debug(status)
+            // dump threads status
+            log.debug(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()
@@ -1434,8 +1445,8 @@ class Session implements ISession {
     private volatile ThreadPoolManager finalizePoolManager
 
     @Memoized
-    synchronized ExecutorService finalizeTaskExecutorService() {
-        finalizePoolManager = new ThreadPoolManager('FinalizeTask')
+    synchronized ExecutorService taskFinalizerExecutorService() {
+        finalizePoolManager = new ThreadPoolManager('TaskFinalizer')
         return finalizePoolManager
                 .withConfig(config)
                 .withShutdownMessage(
