@@ -109,6 +109,10 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
@@ -267,6 +271,11 @@ The following settings are available:
 
 `aws.client.proxyPassword`
 : The password to use when connecting through a proxy.
+
+`aws.client.requesterPays`
+: :::{versionadded} 24.05.0-edge
+  :::
+: Enable the requester pays feature for S3 buckets.
 
 `aws.client.s3PathStyleAccess`
 : Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
@@ -1561,10 +1570,18 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `singularity.ociMode`
 : :::{versionadded} 23.12.0-edge
   :::
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+  :::{note}
+  Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).

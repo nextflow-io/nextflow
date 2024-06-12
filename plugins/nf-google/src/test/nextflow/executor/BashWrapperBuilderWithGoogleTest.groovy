@@ -12,29 +12,27 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.ga4gh.tes.executor
+package nextflow.executor
 
-import groovy.transform.CompileStatic
-import nextflow.executor.BashWrapperBuilder
-import nextflow.processor.TaskBean
-import nextflow.processor.TaskRun
 
+import com.google.api.client.http.HttpResponseException
+import spock.lang.Specification
 /**
- * Bash builder adapter to manage TES specific tasks
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class TesBashBuilder extends BashWrapperBuilder {
+class BashWrapperBuilderWithGoogleTest extends Specification {
 
-    TesBashBuilder(TaskRun task, String remoteBinDir) {
-        super(new TaskBean(task), new TesFileCopyStrategy(remoteBinDir))
-    }
-
-    TesBashBuilder(TaskBean task, String remoteBinDir) {
-        super(task, new TesFileCopyStrategy(remoteBinDir))
+    def 'should check retryable errors' () {
+        expect:
+        BashWrapperBuilder.isRetryable0(ERROR) == EXPECTED
+        where:
+        ERROR                                                                   | EXPECTED
+        new HttpResponseException(GroovyMock(HttpResponseException.Builder))    | true
+        new Exception()                                                         | false
     }
 
 }
