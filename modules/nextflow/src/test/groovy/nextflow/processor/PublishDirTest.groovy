@@ -44,17 +44,17 @@ class PublishDirTest extends Specification {
         publish.path == Paths.get('/data')
 
         when:
-        publish =  PublishDir.create(path: 'data')
+        publish = PublishDir.create(path: 'data')
         then:
         publish.path == Paths.get('data').complete()
 
         when:
-        publish =  PublishDir.create( path: Paths.get('data') )
+        publish = PublishDir.create( path: Paths.get('data') )
         then:
         publish.path == Paths.get('data').complete()
 
         when:
-        publish =  PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
+        publish = PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
         then:
         publish.path == Paths.get('/some/dir')
         publish.mode == PublishDir.Mode.LINK
@@ -63,7 +63,7 @@ class PublishDirTest extends Specification {
         publish.enabled
 
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
+        publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
@@ -72,7 +72,7 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
+        publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
@@ -81,15 +81,7 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
-        publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
-        then:
-        publish.path == Paths.get('this/folder').complete()
-        publish.mode == PublishDir.Mode.COPY
-        publish.pattern == '*.txt'
-        publish.overwrite == false
-
-        when:
-        publish =  PublishDir.create( [path:'this/folder', overwrite: 'false', pattern: '*.txt', mode: 'copy'] )
+        publish = PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
         publish.mode == PublishDir.Mode.COPY
@@ -132,7 +124,7 @@ class PublishDirTest extends Specification {
         def task = new TaskRun(workDir: workDir, config: new TaskConfig(), name: 'foo')
 
         when:
-        def outputs =  [
+        def outputs = [
                 workDir.resolve('file1.txt'),
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq')
@@ -326,7 +318,7 @@ class PublishDirTest extends Specification {
         def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
-        def outputs =  [
+        def outputs = [
                 workDir.resolve('file1.txt'),
         ] as Set
         def publisher = new PublishDir(path: publishDir, enabled: false)

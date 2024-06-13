@@ -64,14 +64,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'accelerator',
             'afterScript',
             'arch',
+            'array',
             'beforeScript',
             'cache',
-            'conda',
-            'cpus',
-            'container',
-            'containerOptions',
             'cleanup',
             'clusterOptions',
+            'conda',
+            'container',
+            'containerOptions',
+            'cpus',
             'debug',
             'disk',
             'echo', // deprecated
@@ -79,9 +80,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'executor',
             'ext',
             'fair',
-            'machineType',
-            'queue',
             'label',
+            'machineType',
             'maxSubmitAwait',
             'maxErrors',
             'maxForks',
@@ -91,9 +91,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
+            'queue',
+            'resourceLabels',
+            'resourceLimits',
             'scratch',
+            'secret',
             'shell',
             'spack',
+            'stageInMode',
+            'stageOutMode',
             'storeDir',
             'tag',
             'time',
@@ -102,12 +108,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'val',
             'each',
             'env',
-            'secret',
             'stdin',
             'stdout',
-            'stageInMode',
-            'stageOutMode',
-            'resourceLabels'
     ]
 
     /**
@@ -161,6 +163,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      * List of process output definitions
      */
     private outputs = new OutputsList()
+
+    /**
+     * Map of default publish targets
+     */
+    private Map<String,String> publishTargets = [:]
 
     /**
      * Initialize the taskConfig object with the defaults values
@@ -513,6 +520,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     /**
+     * Typed shortcut to {@code #publishTargets}
+     */
+    Map<String,String> getPublishTargets() {
+        publishTargets
+    }
+
+    /**
      * Implements the process {@code debug} directive.
      */
     ProcessConfig debug( value ) {
@@ -647,6 +661,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             result.into(obj)
         }
         result
+    }
+
+    void _publish_target(String emit, String name) {
+        final emitNames = outputs.collect { param -> param.channelEmitName }
+        if( emit !in emitNames )
+            throw new IllegalArgumentException("Invalid emit name '${emit}' in publish statement, valid emits are: ${emitNames.join(', ')}")
+        publishTargets[emit] = name
     }
 
     /**
@@ -1000,6 +1021,36 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('arch', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    int getArray() {
+        final value = configProperties.get('array')
+        if( value == null )
+            return 0
+        if( value instanceof Closure )
+            throw new IllegalArgumentException("Process directive `array` cannot be declared in a dynamic manner with a closure")
+        try {
+            final result = value as Integer
+            if( result < 0 )
+                throw new IllegalArgumentException("Process directive `array` cannot be a negative number")
+            if( result == 1 )
+                throw new IllegalArgumentException("Process directive `array` should be greater than 1")
+            return result
+        }
+        catch( NumberFormatException e ) {
+            throw new IllegalArgumentException("Process directive `array` should be an integer greater than 1 -- offending value: '$value'", e)
+        }
+    }
+
+    private static final List<String> VALID_RESOURCE_LIMITS = List.of('cpus', 'memory', 'disk', 'time')
+
+    ProcessConfig resourceLimits( Map entries ) {
+        for( entry in entries )
+            if( entry.key !in VALID_RESOURCE_LIMITS )
+                throw new IllegalArgumentException("Not a valid directive in `resourceLimits`: $entry.key")
+
+        configProperties.put('resourceLimits', entries)
         return this
     }
 

@@ -2,21 +2,12 @@ classDiagram
     %%
     %% nextflow.trace
     %%
-    direction LR
+    Session --> TraceObserverFactory : init
 
-    %% TraceObserverFactory "1" --> "*" TraceObserver : create
-    %% TraceObserver <|-- AnsiLogObserver
-    %% TraceObserver <|-- GraphObserver
-    %% TraceObserver <|-- ReportObserver
-    %% TraceObserver <|-- TimelineObserver
-    %% TraceObserver <|-- TraceFileObserver
-    %% TraceObserver <|-- WebLogObserver
-    %% TraceObserver <|-- WorkflowStatsObserver
-
-    Session --> AnsiLogObserver : init
-    Session --> GraphObserver : init
-    Session --> ReportObserver : init
-    Session --> TimelineObserver : init
-    Session --> TraceFileObserver : init
-    Session --> WebLogObserver : init
-    Session --> WorkflowStatsObserver : init
+    TraceObserverFactory "1" --> "*" TraceObserver : create
+    TraceObserver <|-- AnsiLogObserver
+    TraceObserver <|-- GraphObserver
+    TraceObserver <|-- ReportObserver
+    TraceObserver <|-- TimelineObserver
+    TraceObserver <|-- TraceFileObserver
+    TraceObserver <|-- WorkflowStatsObserver

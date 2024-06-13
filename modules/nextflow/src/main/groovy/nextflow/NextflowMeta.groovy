@@ -37,14 +37,15 @@ class NextflowMeta {
         abstract boolean strict
     }
 
-    @Deprecated
     @Slf4j
     static class Preview implements Flags {
-        volatile float dsl
-        boolean strict
+        @Deprecated volatile float dsl
+        @Deprecated boolean strict
+        boolean output
         boolean recursion
         boolean topic
 
+        @Deprecated
         void setDsl( float num ) {
             if( num == 1 )
                 throw new IllegalArgumentException(DSL1_EOL_MESSAGE)
@@ -55,16 +56,22 @@ class NextflowMeta {
             dsl = num
         }
 
-        void setRecursion(Boolean recurse) {
-            if( recurse )
-                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.recursion = recurse
+        void setOutput(Boolean output) {
+            if( output )
+                log.warn "WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.output = output
         }
 
-        void setTopic(Boolean value) {
+        void setRecursion(Boolean recursion) {
+            if( recursion )
+                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.recursion = recursion
+        }
+
+        void setTopic(Boolean topic) {
             if( topic )
                 log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.topic = value
+            this.topic = topic
         }
     }
 
@@ -81,7 +88,6 @@ class NextflowMeta {
      */
     final String timestamp
 
-    @Deprecated
     final Preview preview = new Preview()
 
     final Features enable = new Features()

@@ -1,5 +1,11 @@
 nf-azure changelog
 ===================
+1.6.0 - 15 Apr 2024
+- Add support for Azure custom startTask (#4913) [27d01e3a]
+- Improve control on azcopy install (#4883) [01447d5c]
+- Fix Azure pool creation [2ee4d11e]
+- Bump groovy 4.0.21 [9e08390b]
+
 1.5.1 - 10 Mar 2024
 - Update Azure dependencies [1bcbaf0d]
 - Bump groovy 4.0.19 [854dc1f0]
