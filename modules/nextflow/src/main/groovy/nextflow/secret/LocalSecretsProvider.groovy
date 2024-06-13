@@ -215,6 +215,9 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         // make sure the file can only be accessed by the owner user
         path.setPermissions(ONLY_OWNER_PERMS)
         path.text = result
+        // remove it on completion
+        path.toFile().deleteOnExit()
+        // return the temp path
         return path
     }
 }
