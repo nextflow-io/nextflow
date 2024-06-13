@@ -26,11 +26,9 @@ import java.util.function.Predicate
 
 import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.BatchClientBuilder
-import com.azure.compute.batch.implementation.BatchSharedKeyCredentialsPolicy
 import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
-import com.azure.compute.batch.models.BatchJob
 import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.BatchJobUpdateContent
 import com.azure.compute.batch.models.BatchNodeFillType
@@ -749,14 +747,14 @@ class AzBatchService implements Closeable {
             List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())
             config.storage().fileShares.each {
                 if (it.key) {
-                    def azureFileShareConfiguration = new AzureFileShareConfiguration(config.storage().accountName,
-                        "https://${config.storage().accountName}.file.core.windows.net/${it.key}",
-                        config.storage().accountKey,
-                        it.key)
-            	            .setMountOptions(it.value.mountOptions)
+                    final String accountName = config.storage().accountName
+                    final endpoint = "https://${config.storage().accountName}.file.core.windows.net/${it.key}" as String
+                    final accountKey = config.storage().accountKey
+                    final shareConfig = new AzureFileShareConfiguration( accountName, endpoint, accountKey, it.key )
+                            .setMountOptions(it.value.mountOptions)
 
-            	    mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(azureFileShareConfiguration)
-	            } else {
+                    mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(shareConfig)
+                } else {
                     throw new IllegalArgumentException("Cannot mount a null File Share")
                 }
             }
