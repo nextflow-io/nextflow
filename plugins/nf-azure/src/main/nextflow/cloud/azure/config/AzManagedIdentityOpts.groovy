@@ -49,11 +49,11 @@ class AzManagedIdentityOpts {
     boolean isConfigured() {
         if( clientId && !system )
             return true
-        if( !clientId && system && tenantId )
+        if( !clientId && system )
             return true
-        if( !clientId && !system && !tenantId )
+        if( !clientId && !system )
             return false
-        throw new IllegalArgumentException("Invalid Managed Identity configuration - Make sure the `clientId` or `system` is set in the nextflow config, as well as `tenantId`")
+        throw new IllegalArgumentException("Invalid Managed Identity configuration - Make sure the `clientId` or `system` is set in the nextflow config")
     }
 
 }
