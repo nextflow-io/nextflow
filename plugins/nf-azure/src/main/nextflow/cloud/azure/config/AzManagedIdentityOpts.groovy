@@ -30,13 +30,10 @@ class AzManagedIdentityOpts {
 
     Boolean system
 
-    String tenantId
-
     AzManagedIdentityOpts(Map config) {
         assert config != null
         this.clientId = config.clientId
         this.system = config.system as Boolean
-        this.tenantId = config.tenantId
     }
 
     Map<String, Object> getEnv() {
