@@ -46,6 +46,8 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     private transient Map cache = new LinkedHashMap(20)
 
+    private Boolean failOnComplete
+
     TaskConfig() {  }
 
     TaskConfig( Map<String,Object> entries ) {
@@ -224,10 +226,20 @@ class TaskConfig extends LazyMap implements Cloneable {
         return value != null && value.toString().toLowerCase() in Const.BOOL_YES
     }
 
+    boolean getFailOnComplete() {
+        return failOnComplete
+    }
+
     ErrorStrategy getErrorStrategy() {
         final strategy = get('errorStrategy')
-        if( strategy instanceof CharSequence )
+
+        if( strategy instanceof CharSequence ) {
+            if( ErrorStrategy.IGNORE_THEN_FAIL.equalsIgnoreCase(strategy.toString()) ) {
+                failOnComplete = true
+                return ErrorStrategy.IGNORE
+            }
             return strategy.toString().toUpperCase() as ErrorStrategy
+        }
 
         if( strategy instanceof ErrorStrategy )
             return (ErrorStrategy)strategy

@@ -25,6 +25,8 @@ import nextflow.script.TaskClosure
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -53,25 +55,27 @@ class TaskConfigTest extends Specification {
         ['hello']            | { "$my_shell" }
     }
 
+    @Unroll
     def testErrorStrategy() {
 
         when:
-        def config = new TaskConfig(map)
+        def config = new TaskConfig(MAP)
 
         then:
-        config.errorStrategy == strategy
-        config.getErrorStrategy() == strategy
+        config.errorStrategy == STRATEGY
+        config.getErrorStrategy() == STRATEGY
+        config.getFailOnComplete() == FAIL
 
         where:
-        strategy                    | map
-        ErrorStrategy.TERMINATE     | [:]
-        ErrorStrategy.TERMINATE     | [errorStrategy: 'terminate']
-        ErrorStrategy.TERMINATE     | [errorStrategy: 'TERMINATE']
-        ErrorStrategy.IGNORE        | [errorStrategy: 'ignore']
-        ErrorStrategy.IGNORE        | [errorStrategy: 'Ignore']
-        ErrorStrategy.RETRY         | [errorStrategy: 'retry']
-        ErrorStrategy.RETRY         | [errorStrategy: 'Retry']
-
+        STRATEGY                    | MAP                               | FAIL
+        ErrorStrategy.TERMINATE     | [:]                               | false
+        ErrorStrategy.TERMINATE     | [errorStrategy: 'terminate']      | false
+        ErrorStrategy.TERMINATE     | [errorStrategy: 'TERMINATE']      | false
+        ErrorStrategy.IGNORE        | [errorStrategy: 'ignore']         | false
+        ErrorStrategy.IGNORE        | [errorStrategy: 'Ignore']         | false
+        ErrorStrategy.RETRY         | [errorStrategy: 'retry']          | false
+        ErrorStrategy.RETRY         | [errorStrategy: 'Retry']          | false
+        ErrorStrategy.IGNORE        | [errorStrategy: 'ignoreThenFail'] | true
     }
 
     def testErrorStrategy2() {

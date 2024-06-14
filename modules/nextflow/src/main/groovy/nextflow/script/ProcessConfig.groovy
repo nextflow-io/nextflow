@@ -49,6 +49,7 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import static nextflow.processor.ErrorStrategy.IGNORE_THEN_FAIL
 
 /**
  * Holds the process configuration properties
@@ -849,7 +850,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig errorStrategy( strategy ) {
         if( strategy instanceof CharSequence && !ErrorStrategy.isValid(strategy) ) {
-            throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${ErrorStrategy.values().join(',').toLowerCase()}")
+            final list = (ErrorStrategy.values().collect(it->it.toString().toLowerCase()) + IGNORE_THEN_FAIL).sort().join(',')
+            throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${list}")
         }
 
         configProperties.put('errorStrategy', strategy)

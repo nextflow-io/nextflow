@@ -795,7 +795,7 @@ class ProcessConfigTest extends Specification {
 
         then:
         def e1 = thrown(IllegalArgumentException)
-        e1.message == "Unknown error strategy 'abort' ― Available strategies are: terminate,finish,ignore,ignorethenfail,retry"
+        e1.message == "Unknown error strategy 'abort' ― Available strategies are: finish,ignore,ignoreThenFail,retry,terminate"
 
     }
 
@@ -812,13 +812,20 @@ class ProcessConfigTest extends Specification {
         process2.errorStrategy 'terminate'
 
         then:
-        def e2 = noExceptionThrown()
+        process2.errorStrategy == 'terminate'
 
         when:
         def process3 = new ProcessConfig(Mock(BaseScript))
         process3.errorStrategy { task.exitStatus==14 ? 'retry' : 'terminate' }
 
         then:
-        def e3 = noExceptionThrown()
+        process3.errorStrategy instanceof Closure
+
+        when:
+        def process4 = new ProcessConfig(Mock(BaseScript))
+        process4.errorStrategy 'ignoreThenFail'
+
+        then:
+        process4.errorStrategy == 'ignoreThenFail'
     }
 }

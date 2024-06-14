@@ -1050,8 +1050,9 @@ class Session implements ISession {
         cache.putTaskAsync(handler, trace)
 
         // set the pipeline to return non-exit code if specified
-        if( handler.task.errorAction == ErrorStrategy.IGNORETHENFAIL )
+        if( handler.task.errorAction == ErrorStrategy.IGNORE && handler.task.config.getFailOnComplete() ) {
             failOnComplete = true
+        }
 
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {

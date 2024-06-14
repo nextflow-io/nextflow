@@ -26,8 +26,10 @@ enum ErrorStrategy {
     TERMINATE(false),       // on error, terminate the pipeline execution, killing all pending and running tasks
     FINISH(false),          // on error, terminate the pipeline execution, waiting for pending and running tasks to complete
     IGNORE(true),           // on error, ignore it and continue
-    IGNORETHENFAIL(true),   // on error, ignore it and continue, return non-zero exit code
     RETRY(true);            // on error, retry
+
+
+    static final public String IGNORE_THEN_FAIL = 'ignoreThenFail';
 
     final boolean soft
 
@@ -38,6 +40,8 @@ enum ErrorStrategy {
     static boolean isValid(CharSequence name) {
         if( !name )
             return false
+        if( IGNORE_THEN_FAIL.equalsIgnoreCase(name.toString()))
+            return true
         try {
             valueOf(name.toString().toUpperCase())
             return true
