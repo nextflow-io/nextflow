@@ -48,29 +48,6 @@ class DataflowHelper {
     private static Session getSession() { Global.getSession() as Session }
 
     /**
-     * Create a dataflow object by the type of the specified source argument
-     *
-     * @param source
-     * @return
-     */
-    @Deprecated
-    static <V> DataflowChannel<V> newChannelBy(DataflowReadChannel<?> source) {
-
-        switch( source ) {
-            case DataflowExpression:
-                return new DataflowVariable<V>()
-
-            case DataflowQueue:
-                return new DataflowQueue<V>()
-
-            default:
-                throw new IllegalArgumentException()
-        }
-
-    }
-
-
-    /**
      * Check if a {@code DataflowProcessor} is active
      *
      * @param operator A {@code DataflowProcessor} instance
