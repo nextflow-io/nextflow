@@ -41,7 +41,6 @@ import java.nio.file.spi.FileSystemProvider
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobStorageException
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.batch.AzHelper
 /**
@@ -203,7 +202,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         if( !accountName )
             throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_NAME")
 
-        def client
+        BlobServiceClient client
 
         if( managedIdentityUser || managedIdentitySystem ) {
             client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)

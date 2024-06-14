@@ -710,7 +710,7 @@ class AzBatchServiceTest extends Specification {
     }
 
     @Unroll
-    def 'should create manage credentials token' () {
+    def 'should create user-assigned managed identity credentials token' () {
         given:
         def config = Mock(AzConfig)
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
@@ -729,4 +729,5 @@ class AzBatchServiceTest extends Specification {
         [:]                                             | null
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
+
 }
