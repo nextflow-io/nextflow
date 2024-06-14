@@ -16,6 +16,8 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 
 /**
@@ -23,20 +25,19 @@ import nextflow.cloud.azure.nio.AzFileSystemProvider
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@ToString(includePackage = false, includeNames = true)
+@EqualsAndHashCode
 @CompileStatic
 class AzManagedIdentityOpts {
 
     String clientId
 
-    Boolean system
-
-    String tenantId
+    boolean system
 
     AzManagedIdentityOpts(Map config) {
         assert config != null
         this.clientId = config.clientId
-        this.system = config.system as Boolean
-        this.tenantId = config.tenantId
+        this.system = Boolean.parseBoolean(config.system as String)
     }
 
     Map<String, Object> getEnv() {
@@ -49,11 +50,11 @@ class AzManagedIdentityOpts {
     boolean isConfigured() {
         if( clientId && !system )
             return true
-        if( !clientId && system && tenantId )
+        if( !clientId && system )
             return true
-        if( !clientId && !system && !tenantId )
+        if( !clientId && !system )
             return false
-        throw new IllegalArgumentException("Invalid Managed Identity configuration - Make sure the `clientId` or `system` is set in the nextflow config, as well as `tenantId`")
+        throw new IllegalArgumentException("Invalid Managed Identity configuration - Make sure the `clientId` or `system` is set in the nextflow config")
     }
 
 }
