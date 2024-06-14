@@ -1,17 +1,17 @@
 package nextflow.cloud.azure.batch
 
-import com.azure.compute.batch.models.BatchPool
-import com.azure.compute.batch.models.ElevationLevel
-
-import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
+import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.ElevationLevel
+import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.file.FileSystemPathFactory
@@ -707,5 +707,26 @@ class AzBatchServiceTest extends Specification {
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
+    }
+
+    @Unroll
+    def 'should create manage credentials token' () {
+        given:
+        def config = Mock(AzConfig)
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService service = Spy(new AzBatchService(exec))
+
+        when:
+        def token = service.createBatchCredentialsWithManagedIdentity()
+        then:
+        config.managedIdentity() >> { Mock(AzManagedIdentityOpts) }
+        then:
+        token instanceof ManagedIdentityCredential
+        (token as ManagedIdentityCredential).clientId == EXPECTED
+
+        where:
+        CONFIG                                          | EXPECTED
+        [:]                                             | null
+        [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
 }

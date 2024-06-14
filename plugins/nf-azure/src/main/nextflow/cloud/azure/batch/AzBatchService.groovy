@@ -297,11 +297,16 @@ class AzBatchService implements Closeable {
     }
 
     protected TokenCredential createBatchCredentialsWithManagedIdentity() {
-        log.debug '[AZURE BATCH] Creating Azure Batch client using Managed Identity credentials'
-
-        return new ManagedIdentityCredentialBuilder()
-                .clientId(config.managedIdentity().clientId)
-                .build()
+        final clientId = config.managedIdentity().clientId
+        final credential = new ManagedIdentityCredentialBuilder()
+        if (clientId) {
+            log.debug "[AZURE BATCH] Creating Azure Batch client using Managed Identity credentials - clientId: ${clientId}"
+            credential.clientId(clientId)
+        }
+        else {
+            log.debug '[AZURE BATCH] Creating Azure Batch client using Managed Identity credentials - not clientId provided'
+        }
+        return credential.build()
     }
 
     protected BatchClient createBatchClient() {
