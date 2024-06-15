@@ -73,8 +73,8 @@ import org.slf4j.LoggerFactory
 @CompileStatic
 class WaveClient {
 
-    final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
-    final static public String DEFAULT_S5CMD_ARM64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+    final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
+    final static public String DEFAULT_S5CMD_ARM64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.2.2.json'
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 

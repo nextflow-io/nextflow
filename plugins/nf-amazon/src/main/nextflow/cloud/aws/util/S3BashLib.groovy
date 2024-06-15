@@ -162,7 +162,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local source=\$1
             local target=\$2
             local file_name=\$(basename \$1)
-            local is_dir=\$($cli ls \$source | grep -F "DIR \${file_name}/" -c)
+            local is_dir=\$($cli ls \$source | grep -F "DIR  \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
                 $cli cp "\$source/*" "\$target"
             else 
