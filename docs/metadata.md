@@ -61,7 +61,7 @@ The following table lists the properties that can be accessed on the `workflow` 
 `workflow.failOnIgnore`
 : :::{versionadded} 24.05.0-edge
   :::
-: Whether `failOnIgnore` execution option was set.
+: Whether the `workflow.failOnIgnore` config option was enabled.
 
 `workflow.fusion.enabled`
 : Whether Fusion is enabled.
