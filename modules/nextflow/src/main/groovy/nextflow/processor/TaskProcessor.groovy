@@ -1072,7 +1072,7 @@ class TaskProcessor {
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
                     def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
-                    if( errorStrategy == IGNORE || errorStrategy == IGNORETHENFAIL )
+                    if( errorStrategy == IGNORE )
                         msg += " -- Error is ignored"
                     else if( errorStrategy == RETRY )
                         msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
@@ -1146,10 +1146,6 @@ class TaskProcessor {
         // IGNORE strategy -- just continue
         if( action == IGNORE ) {
             return IGNORE
-        }
-
-        if( action == IGNORETHENFAIL ) {
-            return IGNORETHENFAIL
         }
 
         // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'

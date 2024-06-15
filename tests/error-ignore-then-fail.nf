@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.failOnIgnore = true
 
 process foo {
-    errorStrategy 'ignoreThenFail'
+    errorStrategy 'ignore'
 
     script:
     '''

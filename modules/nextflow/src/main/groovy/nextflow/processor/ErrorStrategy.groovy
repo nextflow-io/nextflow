@@ -26,7 +26,6 @@ enum ErrorStrategy {
     TERMINATE(false),       // on error, terminate the pipeline execution, killing all pending and running tasks
     FINISH(false),          // on error, terminate the pipeline execution, waiting for pending and running tasks to complete
     IGNORE(true),           // on error, ignore it and continue
-    IGNORETHENFAIL(true),   // on error, ignore it and continue, return non-zero exit code
     RETRY(true);            // on error, retry
 
     final boolean soft

@@ -1660,11 +1660,6 @@ The following error strategies are available:
 `ignore`
 : Ignore all task failures.
 
-`ignoreThenFail`
-: :::{versionadded} 24.05.0-edge
-  :::
-: Ignore all task failures, but return a non-zero exit code when the pipeline is complete.
-
 `retry`
 : When a task fails, retry it.
 
