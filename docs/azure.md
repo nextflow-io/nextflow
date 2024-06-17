@@ -405,22 +405,103 @@ The value of the setting must be the identifier of a subnet available in the vir
 Batch Authentication with Shared Keys does not allow to link external resources (like Virtual Networks) to the pool. Therefore, Active Directory Authentication must be used in conjunction with the `virtualNetwork` setting.
 :::
 
-## Microsoft Entra (formerly Active Directory Authentication)
+## Microsoft Entra
+
+Using Microsoft Entra for role-based access control is more secure than using access keys and should be used wherever possible. You can authenticate to Azure Entra using a Managed Identity when running on resources within the Azure environment, or by authenticating as an Azure Service Principal when running on external resources.
+
+### Required role assignments
+
+To access Azure resources, you must have the relevant role assignments (permissions). Access Azure Blob storage data (e.g. to retrieve data from a private Azure Storage account) you must have the following permissions:
+
+1. Storage Blob Data Reader
+2. Storage Blob Data Contributor
+
+To run Nextflow on Azure Batch you must have the following permissions to create and destroy resources in the Azure Batch account:
+
+1. Batch Contributor
+
+To assign the necessary roles to a Managed Identity or Service Principal, refer to the [official Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
+
+(azure-managed-identities)=
+
+### Managed identities
+
+:::{versionadded} 24.05.0-edge
+:::
+
+An Azure [Managed Identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) can be used to authenticate with Azure Resources without the use of access keys or credentials. When using a Managed Identity, an Azure resource is able to authenticate because of what _it is_, instead of using access keys. For example, if Nextflow is running on an [Azure Virtual Machine with a managed identity enabled](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm) which had the relevant permissions, it would be able to run a Nextflow workflow on Azure Batch and use data from a private storage account with no additional credentials supplied. This is more secure and reliable than using Access Keys or a Service Principal which can be compromised. The limitation is they are only able to work from within the Azure account, i.e. you cannot use a managed identity from an external service.
+
+An Azure Managed identity comes in two forms, system-assigned and user-assigned. Both are functionally equivalent but have a slightly method
+
+#### System Assigned Managed Identity
+
+When running on an Azure Service such as an Azure Virtual Machine, you can enable system-assigned Managed Identity for that machine. This grants the machine an identity in Azure from which it receives the permissions and role assignments.
+
+1. First we must [enable system-assigned Managed Identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm). Once you have done this the machine has an identity in Azure Entra.
+2. Next we must add the relevant role assignments to this Managed Identity. On the Azure Portal page for the virtual machine, select 'Identity' and then click 'Azure Role Assignments' to modify the existing role assignments. Note you must have `Microsoft.Authorization/roleAssignments/write` to perform this action.
+3. Make sure the identity has the following role assignments:
+    - Storage Blob Data Reader
+    - Storage Blob Data Contributor
+    - Batch Contributor
+4. Save the changes.
+5. Use the following Nextflow configuration to enable Nextflow to adopt the system-assigned identity while running on this machine:
+
+```groovy
+process.executor = 'azurebatch'
+azure {
+    managedIdentity {
+        system = true
+    }
+
+    storage {
+        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+    }
+
+    batch {
+        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        location = '<YOUR BATCH ACCOUNT LOCATION>'
+    }
+}
+```
+
+#### User Assigned Managed Identity
+
+A system-assigned managed identity is essentially 'anonymous' and is tied to a single resource. By comparison, a user-assigned managed identity is created by the user and can be assigned to multiple resources, furthermore the lifecycle of a user-assigned managed identity is not tied to the resource. See [the Azure Documentation](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identity-best-practice-recommendations#choosing-system-or-user-assigned-managed-identities) for further details.
+
+We can add a user-assigned identity to a resource in a similar manner to a system-assigned identity, but we must create it first.
+
+1. Create a Managed Identity as per [the Azure Documentation](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-manage-user-assigned-managed-identities?pivots=identity-mi-methods-azp).
+2. Assign the relevant role permissions to the Managed Identity as before.
+3. Assign the Managed Identity to the Azure Resource, this can be done at creation time or afterwards. [As an example, see the documentation on how to do this for a virtual machine](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#user-assigned-managed-identity).
+4. Retrieve the client ID for the Managed Identity. On the Azure Portal, this can be found on the 'Overview' or 'Properties' page as 'client ID'.
+5. Use the following configuration to enable Nextflow to adopt the user-assigned identity while running on the Azure Resource:
+
+```groovy
+process.executor = 'azurebatch'
+azure {
+    managedIdentity {
+        clientId = '<USER ASSIGNED MANAGED IDENTITY CLIENT ID>'
+    }
+
+    storage {
+        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+    }
+
+    batch {
+        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        location = '<YOUR BATCH ACCOUNT LOCATION>'
+    }
+}
+```
+
+(azure-service-principal)=
+
+### Service Principals
 
 :::{versionadded} 22.11.0-edge
 :::
 
-[Service Principal](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts.
-
-The Service Principal should have the at least the following role assignments:
-
-1. Contributor
-2. Storage Blob Data Reader
-3. Storage Blob Data Contributor
-
-:::{note}
-To assign the necessary roles to the Service Principal, refer to the [official Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
-:::
+[Service Principal](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) credentials can be used access to Azure Batch and Storage accounts. Similar to a Managed Identity, a Service Principal is an account which can have specific permissions and role based access. However, unlike with Managed Identities you must use a secret key to authenticate as a Service Principal. However, this means you can access authenticate as a Service Principal when operating outside of the Azure account.
 
 The credentials for Service Principal can be specified as follows:
 
@@ -442,37 +523,6 @@ azure {
     }
 }
 ```
-
-(azure-managed-identities)=
-
-## Managed identities
-
-:::{versionadded} 24.05.0-edge
-:::
-
-An Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) can be used to authenticate with Azure Blob storage without using secrets such as a storage account key.
-
-The managed identity can be specified as follows:
-
-```groovy
-azure {
-    managedIdentity {
-        clientId = '<YOUR MANAGED IDENTITY>'
-        tenantId = '<YOUR TENANT ID>'
-    }
-
-    storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
-    }
-
-    batch {
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
-        location = '<YOUR BATCH ACCOUNT LOCATION>'
-    }
-}
-```
-
-Alternatively, you can set `azure.managedIdentity.system = true` to authenticate using the system-assigned identity.
 
 ## Advanced configuration
 
