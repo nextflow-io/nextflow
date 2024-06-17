@@ -23,10 +23,10 @@ package nextflow.processor
  */
 enum ErrorStrategy {
 
-    TERMINATE(false),    // on error, terminate the pipeline execution killing all pending and running tasks
-    FINISH(false),       // on error, terminate the pipeline execution awaiting for previously submitted task to complete
-    IGNORE(true),       // on error, ignore it an go-on
-    RETRY(true);        // on error, retry
+    TERMINATE(false),       // on error, terminate the pipeline execution, killing all pending and running tasks
+    FINISH(false),          // on error, terminate the pipeline execution, waiting for pending and running tasks to complete
+    IGNORE(true),           // on error, ignore it and continue
+    RETRY(true);            // on error, retry
 
     final boolean soft
 

@@ -58,6 +58,11 @@ The following table lists the properties that can be accessed on the `workflow` 
 : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
 : Exit status of the task that caused the workflow execution to fail.
 
+`workflow.failOnIgnore`
+: :::{versionadded} 24.05.0-edge
+  :::
+: Whether the `workflow.failOnIgnore` config option was enabled.
+
 `workflow.fusion.enabled`
 : Whether Fusion is enabled.
 
