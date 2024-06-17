@@ -2,7 +2,7 @@ set -e
 
 set +e
 echo ''
-$NXF_RUN > stdout
+$NXF_CMD -q run $NXF_SCRIPT -c .nextflow.config  > stdout
 status=$?
 set -e
 
