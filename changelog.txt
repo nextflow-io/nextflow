@@ -1,5 +1,33 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.05.0-edge - 17 Jun 2024
+- Add Managed Identity to Azure authentication documentation (#5062) [ab5b3eb2]
+- Add support for Azure managed identity (#4897) [21ca16e6]
+- Add support for EC-encrypted private keys for K8s executor [4dbb5193]
+- Add workflow.failOnIgnore config option (#4686) [ci fast] [172edc38]
+- Allow requester pays for S3 buckets (#5027) [0070c1b0]
+- Dump threads on abort condition [e3740977]
+- Enable build with Java 21 (#5030) [4c54db6a]
+- Fix Azure system-assigned managed identity [a639a17d]
+- Fix Java 22 version in launcher [29d6f1df]
+- Fix executions hangs on finalisation exception (#5070) [38434b82]
+- Fix support for Azure managed identity clientId [306814e7]
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+- Fix the cleanup of local secret file (#5061) [e28537ca]
+- Fix typo in error message [f5c2355b]
+- Fix unique operator hangs when applied to value (#5053) [88b8ab0c]
+- Improve retry strategy for Google cloud errors when writing task helper files (#5037) [f8b324ab]
+- Remove GA4GH plugin (#5056) [0471b2e1]
+- Remove ending slashs for publish targets [891ed117]
+- Bump Gradle 8.8 final [ee54606c]
+- Bump aws-sdk 1.12.740 [acad2a1f]
+- Bump azure-compute-batch:1.0.0-beta.2 [c08dc49b]
+- Bump azure-storage-blob 12.26.1 [c76ff5e7]
+- Bump nf-wave@1.4.3 [01922f13]
+- Bump nf-google@1.13.3 [c064d209]
+- Bump nf-azure@1.7.0 [eeca7d67]
+- Bump nf-amazon@2.6.0 [d3f53c19]
+
 23.10.3 - 11 Jun 2024
 - Bump nf-google@1.8.3-patch2 [6960daab]
 - Bump nf-azure@1.3.3-patch2 [fbd3c1b4]
