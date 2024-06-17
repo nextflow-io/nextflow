@@ -663,11 +663,21 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // finalize the task asynchronously
             if( enableAsyncFinalizer ) {
-                finalizerPool.submit( ()-> finalizeTask(handler) )
+                finalizerPool.submit( ()-> safeFinalizeTask(handler) )
             }
             else {
                 finalizeTask(handler)
             }
+        }
+    }
+
+    protected void safeFinalizeTask(TaskHandler handler) {
+        try {
+            finalizeTask(handler)
+        }
+        catch (Throwable t) {
+            log.error "Unexpected error while finalizing task '${handler.task.name}' - cause: ${t.message}"
+            session.abort(t)
         }
     }
 
