@@ -62,6 +62,10 @@ class AssetManager {
     @PackageScope
     static File root = DEFAULT_ROOT
 
+    static final String REVISION_MAP = '.nextflow/revisionMapFile'
+
+    static public final String REVISION_SUBDIR = '.nextflow/commits'
+
     static public final String REVISION_DELIM = ':'
 
     /**
@@ -80,7 +84,7 @@ class AssetManager {
     /**
      * Directory where the pipeline is cloned (i.e. downloaded)
      *
-     * Schema: $NXF_ASSETS/<org>/<repo>[:<revision>]
+     * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/commits/<revision>
      */
     private File localPath
 
@@ -154,6 +158,27 @@ class AssetManager {
         localPath ? new File(localPath,'.git/config') : null
     }
 
+    /**
+     * Path of the revision -> commit map for the project
+     *
+     * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/revisionMapFile
+     */
+    @PackageScope
+    File getRevisionMap() {
+        File revisionMap = new File(root, project + '/' + REVISION_MAP)
+        return revisionMap.exists() ? revisionMap : null
+    }
+
+    @PackageScope
+    File getRevisionSubdir() {
+        File revisionSubdir = new File(root, project + '/' + REVISION_SUBDIR)
+        return revisionSubdir.exists() ? revisionSubdir : null
+    }
+
+    File getLocalRootPath() {
+        File localRootPath = new File(root, project)
+        return localRootPath.exists() ? localRootPath : null
+    }
     @PackageScope AssetManager setProject(String name) {
         this.project = name
         return this
@@ -199,7 +224,7 @@ class AssetManager {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
-        new File(root, project + (revision ? REVISION_DELIM + revision : ''))
+        new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : 'DEFAULT_REVISION') )
     }
 
     /**
@@ -565,18 +590,16 @@ class AssetManager {
     /**
      * @return The list of available revisions for a given project name
      */
-    List<String> listRevisions( String projectName = project ) {
+    List<String> listRevisions( String projectName = this.project ) {
         log.debug "Listing revisions for project: $projectName"
 
         def result = new LinkedList()
         if( !root.exists() )
             return result
+        if( !revisionSubdir )
+            return result
 
-        list().each {
-            if( it.tokenize(REVISION_DELIM)[0] == projectName ) {
-                result << it
-            }
-        }
+        revisionSubdir.eachDir { File it -> result << it.getName().toString() }
 
         return result
     }
