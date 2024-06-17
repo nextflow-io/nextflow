@@ -1,5 +1,12 @@
 nf-azure changelog
 ===================
+1.7.0 - 17 Jun 2024
+- Add support for Azure managed identity (#4897) [21ca16e6]
+- Fix Azure system-assigned managed identity [a639a17d]
+- Fix support for Azure managed identity clientId [306814e7]
+- Bump azure-compute-batch:1.0.0-beta.2 [c08dc49b]
+- Bump azure-storage-blob 12.26.1 [c76ff5e7]
+
 1.6.0 - 15 Apr 2024
 - Add support for Azure custom startTask (#4913) [27d01e3a]
 - Improve control on azcopy install (#4883) [01447d5c]
