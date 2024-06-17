@@ -866,8 +866,8 @@ class Session implements ISession {
         config.navigate('nextflow.enable.moduleBinaries', false) as boolean
     }
 
-    boolean enableFailOnIgnore() {
-        config.navigate('nextflow.enable.failOnIgnore', false) as boolean
+    boolean failOnIgnore() {
+        config.navigate('workflow.failOnIgnore', false) as boolean
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1054,8 +1054,10 @@ class Session implements ISession {
         cache.putTaskAsync(handler, trace)
 
         // set the pipeline to return non-exit code if specified
-        if( handler.task.errorAction == ErrorStrategy.IGNORE && enableFailOnIgnore() )
+        if( handler.task.errorAction == ErrorStrategy.IGNORE && failOnIgnore() ) {
+            log.debug "Setting fail-on-ignore flag due to ignored task '${handler.task.lazyName()}'"
             failOnIgnore = true
+        }
 
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {
