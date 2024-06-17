@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.4.3 - 17 Jun 2024
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+
 1.4.2 - 20 May 2024
 - Bump Fusion 2.3 (#5005) [7176c113]
 - Remove `seqera` and `defaults` from Conda default channels (#5003) [ec5ebd0b]
