@@ -137,11 +137,13 @@ class AssetManager {
 
         this.revision = revision
         this.project = resolveName(pipelineName, this.revision)
-        this.localPath = checkProjectDir(project, this.revision)
+
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         this.provider.setRevision(this.revision)
         setupCredentials(cliOpts)
+
+        this.localPath = checkProjectDir(this.project, this.revision)
         validateProjectDir()
 
         return this
@@ -206,6 +208,7 @@ class AssetManager {
      */
     @PackageScope
     void validateProjectDir() {
+        assert localPath
 
         if( !localPath.exists() ) {
             return
@@ -392,7 +395,7 @@ class AssetManager {
     @Memoized
     String getGitRepositoryUrl() {
 
-        if( localPath.exists() ) {
+        if( localPathDefinedAndExists() ) {
             return localPath.toURI().toString()
         }
 
@@ -450,7 +453,7 @@ class AssetManager {
         String text = null
         ConfigObject result = null
         try {
-            text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+            text = localPathDefinedAndExists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
         }
         catch( FileNotFoundException e ) {
             log.debug "Project manifest does not exist: ${e.message}"
@@ -475,7 +478,7 @@ class AssetManager {
     }
 
     Path getConfigFile() {
-        if( localPath.exists() ) {
+        if( localPathDefinedAndExists() ) {
             return new File(localPath, MANIFEST_FILE_NAME).toPath()
         }
         else {
@@ -511,6 +514,10 @@ class AssetManager {
      */
     boolean isRunnable() {
         localPath.exists() && ( new File(localPath,DEFAULT_MAIN_FILE_NAME).exists() || new File(localPath,MANIFEST_FILE_NAME).exists() )
+    }
+
+    boolean localPathDefinedAndExists() {
+        localPath != null ? localPath.exists() : false
     }
 
     /**
@@ -1069,7 +1076,7 @@ class AssetManager {
     }
 
     protected String getGitConfigRemoteUrl() {
-        if( !localPath ) {
+        if( !localPathDefinedAndExists() ) {
             return null
         }
 
@@ -1108,11 +1115,11 @@ class AssetManager {
 
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
-        assert localPath
 
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {
+            assert localPath
             def message = (localGitConfig.exists()
                             ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
                             : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
