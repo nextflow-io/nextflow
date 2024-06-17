@@ -19,7 +19,7 @@ import groovy.transform.CompileStatic
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 
 /**
- * Model Azure identity options from nextflow config file
+ * Model Azure Entra (formerly Active Directory) config options
  *
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */

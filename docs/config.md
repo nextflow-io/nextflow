@@ -4,20 +4,20 @@
 
 ## Configuration file
 
-When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file can contain conflicting settings, the sources are ranked to determine which settings are applied. Possible configuration sources, in order of priority:
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. Parameters specified on the command line (`--something value`)
-2. Parameters provided using the `-params-file` option
-3. Config file specified using the `-c my_config` option
-4. The config file named `nextflow.config` in the current directory
-5. The config file named `nextflow.config` in the workflow project directory
-6. The config file `$HOME/.nextflow/config`
-7. Values defined within the pipeline script itself (e.g. `main.nf`)
+1. Parameters defined in pipeline scripts (e.g. `main.nf`)
+2. The config file `$HOME/.nextflow/config`
+3. The config file `nextflow.config` in the project directory
+4. The config file `nextflow.config` in the launch directory
+5. Config file specified using the `-c <config-file>` option
+6. Parameters specified in a params file (`-params-file` option)
+7. Parameters specified on the command line (`--something value`)
 
 When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
 
 :::{tip}
-If you want to ignore any default configuration files and use only a custom one, use `-C <config file>`.
+You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
 :::
 
 ### Config syntax
@@ -108,6 +108,10 @@ The following settings are available:
 : :::{versionadded} 23.12.0-edge
   :::
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
+
+  :::{note}
+  Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` section).
+  :::
 
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
@@ -268,6 +272,11 @@ The following settings are available:
 `aws.client.proxyPassword`
 : The password to use when connecting through a proxy.
 
+`aws.client.requesterPays`
+: :::{versionadded} 24.05.0-edge
+  :::
+: Enable the requester pays feature for S3 buckets.
+
 `aws.client.s3PathStyleAccess`
 : Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
 
@@ -373,29 +382,24 @@ The following settings are available:
 : Enable autoscaling feature for the pool identified with `<name>`.
 
 `azure.batch.pools.<name>.fileShareRootPath`
-: *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
 
 `azure.batch.pools.<name>.lowPriority`
-: *New in `nf-azure` version `1.4.0`*
 : Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
 
 `azure.batch.pools.<name>.mountOptions`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the mount options for mounting the file shares (default: `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp`).
 
 `azure.batch.pools.<name>.offer`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
 
 `azure.batch.pools.<name>.privileged`
 : Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
 
 `azure.batch.pools.<name>.publisher`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
 
 `azure.batch.pools.<name>.runAs`
@@ -411,7 +415,6 @@ The following settings are available:
 : Specify the scheduling policy for the pool identified with `<name>`. It can be either `spread` or `pack` (default: `spread`).
 
 `azure.batch.pools.<name>.sku`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
 `azure.batch.pools.<name>.startTask.script`
@@ -435,16 +438,22 @@ The following settings are available:
 `azure.batch.pools.<name>.vmType`
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
+`azure.managedIdentity.clientId`
+: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.system`
+: When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.tenantId`
+: The Azure tenant ID
+
 `azure.registry.server`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
 
 `azure.registry.userName`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the username to connect to a private container registry.
 
 `azure.registry.password`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the password to connect to a private container registry.
 
 `azure.retryPolicy.delay`
@@ -476,6 +485,7 @@ The following settings are available:
 ### Scope `charliecloud`
 
 The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charliecloud/) containers are executed by Nextflow.
+If `charliecloud.writeFake` is unset / `false`, charliecloud will create a copy of the container in the process working directory.
 
 The following settings are available:
 
@@ -496,6 +506,15 @@ The following settings are available:
 
 `charliecloud.temp`
 : Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
+
+`charliecloud.registry`
+: The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`charliecloud.writeFake`
+: Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode, using overlayfs, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details 
+
+`charliecloud.useSquash`
+: Create a temporary squashFS container image in the process work directory instead of a folder.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
@@ -645,6 +664,12 @@ The `env` scope provides environment variables to *tasks*, not Nextflow itself. 
 The `executor` scope controls various executor behaviors.
 
 The following settings are available:
+
+`executor.account`
+: :::{versionadded} 24.04.0
+  :::
+: *Used only by the {ref}`slurm-executor`, {ref}`lsf-executor`, {ref}`pbs-executor` and {ref}`pbspro-executor` executors.*
+: Allows specifying the project or organisation account that should be charged for running the pipeline jobs.
 
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
@@ -1050,6 +1075,12 @@ The following settings are available:
 `k8s.context`
 : Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
 
+`k8s.cpuLimits`
+: :::{versionadded} 24.04.0
+  :::
+: When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
+: This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
+
 `k8s.debug.yaml`
 : When `true`, saves the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
 
@@ -1386,9 +1417,9 @@ process {
 }
 ```
 
-:::{note}
-The `withName` selector applies to a process even when it is included from a module under an alias. For example, `withName: hello` will apply to any process originally defined as `hello`, regardless of whether it is included under an alias. Similarly, it will not apply to any process not originally defined as `hello`, even if it is included under the alias `hello`.
-:::
+The `withName` selector applies both to processes defined with the same name and processes included under the same alias. For example, `withName: hello` will apply to any process originally defined as `hello`, as well as any process included under the alias `hello`.
+
+Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `foo` and included as `bar`, the selectors `withName: foo` and `withName: bar` will both be applied to the process, with the second selector taking priority over the first.
 
 :::{tip}
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
@@ -1427,12 +1458,14 @@ The above configuration snippet sets 2 cpus for the processes annotated with the
 
 #### Selector priority
 
-When mixing generic process configuration and selectors the following priority rules are applied (from lower to higher):
+Process configuration settings are applied to a process in the following order (from lowest to highest priority):
 
-1. Process generic configuration.
-2. Process specific directive defined in the workflow script.
-3. `withLabel` selector definition.
-4. `withName` selector definition.
+1. Process configuration settings (without a selector)
+2. Process directives in the process definition
+3. `withLabel` selectors matching any of the process labels
+4. `withName` selectors matching the process name
+5. `withName` selectors matching the process included alias
+6. `withName` selectors matching the process fully qualified name
 
 For example:
 
@@ -1440,11 +1473,16 @@ For example:
 process {
     cpus = 4
     withLabel: foo { cpus = 8 }
-    withName: bar { cpus = 32 }
+    withName: bar { cpus = 16 }
+    withName: 'baz:bar' { cpus = 32 }
 }
 ```
 
-Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow script. Moreover processes annotated with the `foo` label use 8 cpus. Finally the process named `bar` uses 32 cpus.
+With the above configuration:
+- All processes will use 4 cpus (unless otherwise specified in their process definition).
+- Processes annotated with the `foo` label will use 8 cpus.
+- Any process named `bar` (or imported as `bar`) will use 16 cpus.
+- Any process named `bar` (or imported as `bar`) invoked by a workflow named `baz` with use 32 cpus.
 
 (config-report)=
 
@@ -1532,10 +1570,18 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `singularity.ociMode`
 : :::{versionadded} 23.12.0-edge
   :::
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+  :::{note}
+  Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
@@ -2081,6 +2127,15 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
   - Nextflow will fail if a pipeline param is referenced before it is defined
 
   - Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
+
+`nextflow.preview.output`
+
+: :::{versionadded} 24.04.0
+  :::
+
+: *Experimental: may change in a future release.*
+
+: When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
 
 `nextflow.preview.recursion`
 

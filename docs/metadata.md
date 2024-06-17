@@ -58,6 +58,12 @@ The following table lists the properties that can be accessed on the `workflow` 
 : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
 : Exit status of the task that caused the workflow execution to fail.
 
+`workflow.fusion.enabled`
+: Whether Fusion is enabled.
+
+`workflow.fusion.version`
+: Fusion version in use.
+
 `workflow.homeDir`
 : User system home directory.
 
@@ -66,6 +72,11 @@ The following table lists the properties that can be accessed on the `workflow` 
 
 `workflow.manifest`
 : Entries of the workflow manifest.
+
+`workflow.preview`
+: :::{versionadded} 24.04.0
+  :::
+: Returns `true` whenever the current instance is a preview execution.
 
 `workflow.profile`
 : Used configuration profile.
@@ -111,6 +122,9 @@ The following table lists the properties that can be accessed on the `workflow` 
 `workflow.userName`
 : User system account name.
 
+`workflow.wave.enabled`
+: Whether Wave is enabled.
+
 `workflow.workDir`
 : Workflow working directory.
 
@@ -130,14 +144,23 @@ The implicit `nextflow` object allows you to access the metadata information of 
 : Nextflow runtime version number.
 
 `nextflow.version.matches()`
-: This method allows you to check if the Nextflow runtime satisfies a version requirement for your workflow script. The version requirement string can be prefixed with the usual comparison operators eg `>`, `>=`, `=`, etc. or postfixed with the `+` operator to specify a minimum version requirement. For example:
+: Check whether the Nextflow runtime satisfies a version requirement.
+
+: The version requirement string can be prefixed with the usual comparison operators:
+  - `=` or `==`: equal to
+  - `<` (`<=`): less than (or equal to)
+  - `>` (`>=`): greater than (or equal to)
+  - `!=` or `<>`: not equal
+
+  For example:
 
   ```groovy
-  if( !nextflow.version.matches('21.04+') ) {
-      println "This workflow requires Nextflow version 21.04 or greater -- You are running version $nextflow.version"
-      exit 1
+  if( !nextflow.version.matches('>=23.10') ) {
+      error "This workflow requires Nextflow version 23.10 or greater -- You are running version $nextflow.version"
   }
   ```
+
+: Alternatively, the version can be postfixed with `+`, which is similar to `==` but also allows the last version part to be greater. For example, `23.10.1+` is satisfied by `23.10.1` and `23.10.2`, but not `23.11.x` or `23.09.x`. Additionally, `23.10.+` is equivalent to `23.10.0+`. This operator is a useful way to enforce a specific version while allowing for newer patch releases.
 
 (metadata-completion-handler)=
 

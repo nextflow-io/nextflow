@@ -9,7 +9,6 @@ classDiagram
         session : Session
     }
     ScriptRunner --* ScriptFile
-    ScriptRunner --* Session
     ScriptRunner --> ScriptParser : execute
     ScriptParser --> BaseScript : parse
 
@@ -22,8 +21,15 @@ classDiagram
         projectName : String
     }
 
-    Session --* BaseScript
-    Session --* ScriptBinding
+    class BaseScript {
+        meta : ScriptMeta
+        entryFlow : WorkflowDef
+    }
+    BaseScript --* ScriptBinding
+    BaseScript --* ScriptMeta
+    BaseScript --> IncludeDef : include
+
+    IncludeDef --> ScriptParser : load0
 
     class ScriptBinding {
         scriptPath : Path
@@ -32,16 +38,6 @@ classDiagram
         configEnv : Map
         entryName : String
     }
-
-    IncludeDef --> BaseScript : load0
-
-    class BaseScript {
-        meta : ScriptMeta
-        entryFlow : WorkflowDef
-    }
-    BaseScript --* ScriptMeta
-    %% BaseScript --> ProcessDef : process
-    %% BaseScript --> WorkflowDef : workflow
 
     class ScriptMeta {
         scriptPath : Path
@@ -68,11 +64,9 @@ classDiagram
         baseName : String
         rawBody : Closure~BodyDef~
     }
-    ProcessDef --> ProcessConfig : run
-    ProcessDef --> BodyDef : run
-    ProcessDef --> Executor : run
-    ProcessDef --> TaskProcessor : run
-    ProcessDef --> ChannelOut : run
+    ProcessDef --* ProcessConfig
+    ProcessDef --* BodyDef
+    ProcessDef --* ChannelOut
 
     class WorkflowDef {
         name : String
@@ -82,8 +76,8 @@ classDiagram
         variableNames : Set~String~
     }
     WorkflowDef --* BodyDef
-    WorkflowDef --> WorkflowBinding : run
-    WorkflowDef --> ChannelOut : run
+    WorkflowDef --* WorkflowBinding
+    WorkflowDef --* ChannelOut
 
     class ProcessConfig {
         configProperties : Map

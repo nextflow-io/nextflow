@@ -73,21 +73,12 @@ import org.slf4j.LoggerFactory
 @CompileStatic
 class WaveClient {
 
-    final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
-    final static public String DEFAULT_S5CMD_ARM64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+    final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
+    final static public String DEFAULT_S5CMD_ARM64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.2.2.json'
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
-    final static private String[] REQUEST_HEADERS =  new String[]{
-                        'Content-Type','application/json',
-                        'Accept','application/json',
-                        'Accept','application/vnd.oci.image.index.v1+json',
-                        'Accept','application/vnd.oci.image.manifest.v1+json',
-                        'Accept','application/vnd.docker.distribution.manifest.v1+prettyjws',
-                        'Accept','application/vnd.docker.distribution.manifest.v2+json',
-                        'Accept','application/vnd.docker.distribution.manifest.list.v2+json' }
-
-    public static final List<String> DEFAULT_CONDA_CHANNELS = ['seqera','conda-forge','bioconda','defaults']
+    public static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','bioconda']
 
     private static final String DEFAULT_SPACK_ARCH = 'x86_64'
 

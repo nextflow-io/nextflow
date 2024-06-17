@@ -10,7 +10,6 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.NF
 import nextflow.dag.NodeMarker
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.ChannelOut
@@ -155,7 +154,7 @@ class OpCall implements Callable {
     protected Object invoke() {
         if( methodName==SET_OP_hack ) {
             // well this is ugly, the problem is that `set` is not a real operator
-            // but it's exposed as such. let's live whit this for now
+            // but it's exposed as such. let's live with this for now
             return invoke1('set', [source, args[0]] as Object[])
         }
 
