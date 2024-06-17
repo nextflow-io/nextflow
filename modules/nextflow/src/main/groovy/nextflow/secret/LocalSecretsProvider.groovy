@@ -198,7 +198,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         if( !secretsMap )
             return null
 
-        final name = ".nf-${CacheHelper.hasher(secretsMap.values()).hash()}.secrets"
+        final name = ".nf-${CacheHelper.hasher(secretsMap.values()).hash()}-${UUID.randomUUID().toString()}.secrets"
         final path = storeFile.parent.resolve(name)
         if( path.exists() ) {
             // make sure the file can only be accessed by the owner user
