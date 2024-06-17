@@ -1773,6 +1773,15 @@ The following settings are available:
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
 
+### Scope `workflow`
+
+The `workflow` scope provides workflow execution options.
+
+`workflow.failOnIgnore`
+: :::{versionadded} 24.05.0-edge
+  :::
+: When `true`, the pipeline will exit with a non-zero exit code if any failed tasks are ignored using the `ignore` error strategy.
+
 (config-miscellaneous)=
 
 ### Miscellaneous
