@@ -133,15 +133,6 @@ class AssetManager {
     @PackageScope
     AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
 
-        // if requested revision corresponds to the default branch, then unset it
-        // this avoids duplication of the default branch
-        if ( revision ) {
-            def referenceManager = new AssetManager(pipelineName, null, cliOpts)
-            if ( revision == referenceManager.getDefaultBranch() ) {
-                revision = null
-            }
-        }
-
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.revision = revision
