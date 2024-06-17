@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.13.3 - 17 Jun 2024
+- Improve retry strategy for Google cloud errors when writing task helper files (#5037) [f8b324ab]
+
 1.13.2 - 20 May 2024
 - Fix nf-google plugin dependency [725e2860]
 
