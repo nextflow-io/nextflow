@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.REVISION_DELIM
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -58,7 +56,7 @@ class CmdView extends CmdBase {
         Plugins.init()
         def manager = new AssetManager(args[0], revision)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}${revision ? REVISION_DELIM + revision : ''}`")
+            throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
 
         if( all ) {
             if( !quiet )

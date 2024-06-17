@@ -17,7 +17,6 @@
 package nextflow.cli
 
 import static org.fusesource.jansi.Ansi.*
-import static nextflow.scm.AssetManager.REVISION_DELIM
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -571,13 +570,13 @@ class CmdRun extends CmdBase implements HubOptions {
          * try to look for a pipeline in the repository
          */
         def manager = new AssetManager(pipelineName, revision, this)
-        def repo = manager.getProject()
+        def repo = manager.getProjectWithRevision()
 
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
             if( offline )
-                throw new AbortOperationException("Unknown project `$repo${revision ? REVISION_DELIM + revision : ''}` -- NOTE: automatic download from remote repositories is disabled")
-            log.info "Pulling $repo${revision ? REVISION_DELIM + revision : ''} ..."
+                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
+            log.info "Pulling $repo ..."
             def result = manager.download(deep)
             if( result )
                 log.info " $result"
@@ -596,7 +595,7 @@ class CmdRun extends CmdBase implements HubOptions {
             throw e
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Unknown error accessing project `$repo${revision ? REVISION_DELIM + revision : ''}` -- Repository may be corrupted: ${manager.localPath}", e)
+            throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
         }
 
     }
