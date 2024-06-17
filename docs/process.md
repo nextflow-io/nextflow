@@ -1652,16 +1652,19 @@ The `errorStrategy` directive allows you to define how an error condition is man
 The following error strategies are available:
 
 `terminate` (default)
-: Terminate the execution as soon as an error condition is reported. Pending jobs are killed.
+: When a task fails, terminate the pipeline immediately. Pending and running jobs are killed.
 
 `finish`
-: Initiate an orderly pipeline shutdown when an error condition is raised, waiting for the completion of any submitted jobs.
+: When a task fails, wait for pending and running tasks to finish and then terminate the pipeline.
 
 `ignore`
-: Ignore process execution errors.
+: Ignore all task failures and complete the pipeline execution successfully.
+: :::{versionadded} 24.05.0-edge
+  When the `workflow.failOnIgnore` config option is set to `true`, the pipeline will return a non-zero exit code if one or more failed tasks were ignored.
+  :::
 
 `retry`
-: Re-submit any process that returns an error condition.
+: When a task fails, retry it.
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
 
