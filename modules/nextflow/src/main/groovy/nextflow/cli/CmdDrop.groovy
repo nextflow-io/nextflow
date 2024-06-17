@@ -45,7 +45,7 @@ class CmdDrop extends CmdBase {
     String revision
 
     @Parameter(names=['-a','-all-revisions'], description = 'For specified project, drop all revisions')
-    Boolean allrevisions
+    Boolean allRevisions
 
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
     boolean force
@@ -58,10 +58,10 @@ class CmdDrop extends CmdBase {
         Plugins.init()
 
         List<AssetManager> dropList = []
-        if ( allrevisions ) {
+        if ( allRevisions ) {
             def referenceManager = new AssetManager(args[0])
             referenceManager.listRevisions().each {
-                dropList << new AssetManager(it.tokenize(REVISION_DELIM)[0], it.tokenize(REVISION_DELIM)[1])
+                dropList << new AssetManager(args[0], it)
             }
         } else {
             dropList << new AssetManager(args[0], revision)
@@ -84,6 +84,11 @@ class CmdDrop extends CmdBase {
             }
 
             throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
+        }
+
+        if ( allRevisions ) {
+            def referenceManager = new AssetManager(args[0])
+            referenceManager.localRootPath.deleteDir()
         }
     }
 }

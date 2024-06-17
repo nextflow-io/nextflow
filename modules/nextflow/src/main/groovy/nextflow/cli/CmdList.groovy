@@ -37,7 +37,7 @@ class CmdList extends CmdBase {
     static final public NAME = 'list'
 
     @Parameter(names=['-a','-all-revisions'], description = 'For each project, also list revisions')
-    Boolean revisions
+    Boolean allRevisions
 
     @Override
     final String getName() { NAME }
@@ -51,14 +51,18 @@ class CmdList extends CmdBase {
             return
         }
 
-    if (revisions) {
-        all.collect{ it.tokenize(REVISION_DELIM) }
-           .groupBy{ it[0] }
-           .each{ println ' ' + it.value[0][0] ; it.value.each{ y -> println ( y.size()==1 ? '   (default)' : '   ' + y[1] ) } }
+    if (allRevisions) {
+        all.each{
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listRevisions().each{ println("   $it") }
+            revManager.close()
+        }
+//           .collect{ it.tokenize(REVISION_DELIM) }
+//           .groupBy{ it[0] }
+//           .each{ println ' ' + it.value[0][0] ; it.value.each{ y -> println ( y.size()==1 ? '   (default)' : '   ' + y[1] ) } }
     } else {
-        all.collect{ it.replaceAll( /$REVISION_DELIM.*/, '' ) }
-           .unique()
-           .each{ println ' ' + it }
+        all.each{ println(" $it") }
     }
     }
 
