@@ -16,7 +16,7 @@
  */
 
 process foo {
-    errorStrategy 'ignoreThenFail'
+    errorStrategy 'ignore'
 
     script:
     '''

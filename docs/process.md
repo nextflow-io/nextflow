@@ -1658,12 +1658,9 @@ The following error strategies are available:
 : When a task fails, wait for pending and running tasks to finish and then terminate the pipeline.
 
 `ignore`
-: Ignore all task failures.
-
-`ignoreThenFail`
-: :::{versionadded} 24.05.0-edge
-  :::
-: Ignore all task failures, but return a non-zero exit code when the pipeline is complete.
+: Ignore all task failures and complete the pipeline execution successfully. As of version `24.05.0-edge` the option
+`workflow.failOnIgnore=true` can be specified in the `nextflow.config` file to force the pipeline execution to fail on
+completion when one or more task failures where marked as ignored.
 
 `retry`
 : When a task fails, retry it.

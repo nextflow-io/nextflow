@@ -223,7 +223,7 @@ class Session implements ISession {
 
     private Barrier monitorsBarrier = new Barrier()
 
-    private volatile boolean failOnComplete
+    private volatile boolean failOnIgnore
 
     private volatile boolean cancelled
 
@@ -826,7 +826,7 @@ class Session implements ISession {
 
     boolean isCancelled() { cancelled }
 
-    boolean isSuccess() { !aborted && !cancelled && !failOnComplete }
+    boolean isSuccess() { !aborted && !cancelled && !failOnIgnore }
 
     void processRegister(TaskProcessor process) {
         log.trace ">>> barrier register (process: ${process.name})"
@@ -864,6 +864,10 @@ class Session implements ISession {
 
     boolean enableModuleBinaries() {
         config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+    }
+
+    boolean failOnIgnore() {
+        config.navigate('workflow.failOnIgnore', false) as boolean
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1050,8 +1054,10 @@ class Session implements ISession {
         cache.putTaskAsync(handler, trace)
 
         // set the pipeline to return non-exit code if specified
-        if( handler.task.errorAction == ErrorStrategy.IGNORETHENFAIL )
-            failOnComplete = true
+        if( handler.task.errorAction == ErrorStrategy.IGNORE && failOnIgnore() ) {
+            log.debug "Setting fail-on-ignore flag due to ignored task '${handler.task.lazyName()}'"
+            failOnIgnore = true
+        }
 
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {
