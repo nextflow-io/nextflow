@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.REVISION_DELIM
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -58,9 +56,6 @@ class CmdList extends CmdBase {
             revManager.listRevisions().each{ println("   $it") }
             revManager.close()
         }
-//           .collect{ it.tokenize(REVISION_DELIM) }
-//           .groupBy{ it[0] }
-//           .each{ println ' ' + it.value[0][0] ; it.value.each{ y -> println ( y.size()==1 ? '   (default)' : '   ' + y[1] ) } }
     } else {
         all.each{ println(" $it") }
     }

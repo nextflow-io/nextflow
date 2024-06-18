@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.REVISION_DELIM
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
