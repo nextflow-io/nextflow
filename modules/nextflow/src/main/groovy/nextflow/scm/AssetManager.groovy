@@ -66,8 +66,6 @@ class AssetManager {
 
     static public final String REVISION_SUBDIR = '.nextflow/commits'
 
-    static public final String REVISION_DELIM = ':'
-
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
@@ -345,7 +343,7 @@ class AssetManager {
 
     String getRevision() { revision }
 
-    String getProjectWithRevision() { project + ( revision ? REVISION_DELIM + revision : '' ) }
+    String getProjectWithRevision() { project + ( revision ? ':' + revision : '' ) }
 
     String getHub() { hub }
 
