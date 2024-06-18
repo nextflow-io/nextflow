@@ -789,10 +789,7 @@ class AssetManager {
      * If revision is null, default is assumed
      */
     List<String> getPulledRevisions() {
-        return listRevisions().collect{
-            it -> String y = it.tokenize(REVISION_DELIM)[1]
-            it = ( y != null ? y : getDefaultBranch() )
-        }
+        listRevisions().collect{ it = ( it != "DEFAULT_REVISION" ? it : getDefaultBranch() ) }
     }
 
     RevisionInfo getCurrentRevisionAndName() {
