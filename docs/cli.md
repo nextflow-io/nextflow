@@ -715,10 +715,10 @@ $ nextflow info nextflow-io/hello
   local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
   main script : main.nf
   revisions   :
-  * master (default)
+  P master (default)
     mybranch
     testing
-    v1.1 [t]
+  P v1.1 [t]
     v1.2 [t]
 ```
 

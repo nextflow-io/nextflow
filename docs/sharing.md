@@ -61,7 +61,7 @@ It will execute two different project revisions corresponding to the Git tag/bra
 :::{versionadded} 24.XX.0-edge
 :::
 
-Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time. Each downloaded revision is stored in a sister path to the default revision one, featuring an extra suffix string `:<revision id>`.
+Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time. Each downloaded revision is stored in a subdirecrory path of the local project path: `$NXF_ASSETS/<org>/<repo>/.nextflow/commits/<revision>` (for the default branch, `<revision>` is set to `DEFAULT_REVISION`).
 
 :::{warning}
 If you really care about reproducibility of your pipelines, consider explicitly referring to them by tag or commit ID, rather than my branch. This is because the same branch will point to different underlying commits over time, as pipeline development goes on.
@@ -100,7 +100,7 @@ By using the `info` command you can show information from a downloaded project. 
 $ nextflow info hello
 project name: nextflow-io/hello
 repository  : http://github.com/nextflow-io/hello
-local path  : $HOME/.nextflow/assets/nextflow-io/hello
+local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
 main script : main.nf
 revisions   :
 P master (default)
@@ -109,7 +109,7 @@ P v1.1 [t]
   v1.2 [t]
 ```
 
-Starting from the top it shows: 1) the project name; 2) the Git repository URL; 3) the local path where the default project can be found (alternate revisions are in sister paths with an extra suffix `:<revision id>`); 4) the script that is executed when launched; 5) the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right, the locally pulled revisions are marked with a `P` on the left.
+Starting from the top it shows: 1) the project name; 2) the Git repository URL; 3) the local path where the project can be found; 4) the script that is executed when launched; 5) the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right, the locally pulled revisions are marked with a `P` on the left.
 
 ### Pulling or updating a project
 
