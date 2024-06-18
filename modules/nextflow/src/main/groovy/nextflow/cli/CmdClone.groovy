@@ -57,7 +57,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
-        def target = new File(args.size()> 1 ? args[1] : manager.getBaseNameWithRevision())
+        def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
         if( target.exists() ) {
             if( target.isFile() )
                 throw new AbortOperationException("A file with the same name already exists: $target")
