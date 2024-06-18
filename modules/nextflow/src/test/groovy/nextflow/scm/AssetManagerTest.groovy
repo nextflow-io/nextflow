@@ -136,7 +136,6 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
-        folder.resolve('cbcrg/pipe2:v2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
         def manager = new AssetManager()
@@ -217,7 +216,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello:v1.2/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/commits/v1.2/.git').isDirectory()
 
         when:
         manager.download()
@@ -237,7 +236,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello:6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/commits/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
 
         when:
         def result = manager.download()
@@ -260,7 +259,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello:mybranch/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/commits/mybranch/.git').isDirectory()
 
         when:
         def result = manager.download()
@@ -563,9 +562,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/nf-test-branch:dev/.git').isDirectory()
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/dev/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch:dev/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/dev/workflow.nf').text == "println 'Hello'\n"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -592,9 +591,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/nf-test-branch:v0.1/.git').isDirectory()
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/v0.1/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch:v0.1/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/v0.1/workflow.nf').text == "println 'Hello'\n"
     }
 
 }
