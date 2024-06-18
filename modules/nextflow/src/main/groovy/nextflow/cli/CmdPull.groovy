@@ -59,11 +59,11 @@ class CmdPull extends CmdBase implements HubOptions {
         if( !all && !args )
             throw new AbortOperationException('Missing argument')
 
-        def list = all ? AssetManager.list() : args.toList()
-        if( !list ) {
-            log.info "(nothing to do)"
-            return
-        }
+        if( all && args )
+            throw new AbortOperationException('Option `all` requires no arguments')
+
+        if( all && revision )
+            throw new AbortOperationException('Option `all` is not compatible with `revision`')
 
         /* only for testing purpose */
         if( root ) {
@@ -72,9 +72,31 @@ class CmdPull extends CmdBase implements HubOptions {
 
         // init plugin system
         Plugins.init()
-        
-        list.each {
-            def manager = new AssetManager(it, revision, this)
+
+        List<AssetManager> list = []
+        if ( all ) {
+            def all = AssetManager.list()
+            all.each{ proj ->
+                def revManager = new AssetManager(proj)
+                revManager.listRevisions().each{ rev ->
+                    if( rev == "DEFAULT_REVISION" )
+                        rev = null
+                    list << new AssetManager(proj, rev, this)
+                }
+                revManager.close()
+            }
+        } else {
+            args.toList().each {
+                list << new AssetManager(it, revision, this)
+            }
+        }
+
+        if( !list ) {
+            log.info "(nothing to do)"
+            return
+        }
+
+        list.each { manager ->
             log.info "Checking ${manager.getProjectWithRevision()} ..."
 
             def result = manager.download(deep)
