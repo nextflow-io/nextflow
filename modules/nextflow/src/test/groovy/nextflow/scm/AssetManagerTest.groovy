@@ -147,11 +147,6 @@ class AssetManagerTest extends Specification {
         result == 'x/y'
 
         when:
-        result = manager.resolveName('x/y', 'v2')
-        then:
-        result == 'x/y'
-
-        when:
         result = manager.resolveName('blast')
         then:
         result == 'ncbi/blast'
@@ -175,11 +170,6 @@ class AssetManagerTest extends Specification {
         manager.resolveName('pipe/alpha/beta')
         then:
         thrown(AbortOperationException)
-
-        when:
-        result = manager.resolveName('pipe2', 'v2')
-        then:
-        result == 'cbcrg/pipe2'
 
         when:
         result = manager.resolveName('../blast/script.nf')

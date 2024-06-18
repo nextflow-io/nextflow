@@ -140,7 +140,7 @@ class AssetManager {
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.revision = revision
-        this.project = resolveName(pipelineName, this.revision)
+        this.project = resolveName(pipelineName)
 
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
@@ -286,7 +286,7 @@ class AssetManager {
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
     @PackageScope
-    String resolveName( String name, String revision = null ) {
+    String resolveName( String name ) {
         assert name
 
         //
@@ -328,7 +328,7 @@ class AssetManager {
             name = parts[0]
         }
 
-        def qualifiedName = find(name, revision)
+        def qualifiedName = find(name)
         if( !qualifiedName ) {
             return "$DEFAULT_ORGANIZATION/$name".toString()
         }
@@ -603,29 +603,16 @@ class AssetManager {
         return result
     }
 
-    // Updated for new localPath schema (see localPath declaration at top of this class file)
-    static protected def find( String name, String revision = null ) {
+    static protected def find( String name ) {
         def exact = []
         def partial = []
 
         list().each {
             def items = it.split('/')
-            /**
-             * itemsRev[0] is the name of each list'ed project
-             * itemsRev[1] is the revision
-             */
-            def itemsRev = items[1].tokenize(REVISION_DELIM)
-            // Check on matching revision: either null or same revision string
-            if( (!revision && !itemsRev[1]) || (revision && itemsRev[1] == revision) ) {
-                // Exact name match
-                if( itemsRev[0] == name )
-                    // Return item without revision
-                    exact << it.tokenize(REVISION_DELIM)[0]
-                // Partial name match
-                else if( itemsRev[0].startsWith(name ) )
-                    // Return item without revision
-                    partial << it.tokenize(REVISION_DELIM)[0]
-            }
+            if( items[1] == name )
+                exact << it
+            else if( items[1].startsWith(name ) )
+                partial << it
         }
 
         def list = exact ?: partial
