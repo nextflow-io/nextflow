@@ -170,8 +170,8 @@ class AssetManager {
     }
 
     @PackageScope
-    File getRevisionSubdir() {
-        File revisionSubdir = new File(root, project + '/' + REVISION_SUBDIR)
+    File getRevisionSubdir( String projectName = project ) {
+        File revisionSubdir = new File(root, projectName + '/' + REVISION_SUBDIR)
         return revisionSubdir.exists() ? revisionSubdir : null
     }
 
@@ -595,10 +595,10 @@ class AssetManager {
         def result = new LinkedList()
         if( !root.exists() )
             return result
-        if( !revisionSubdir )
+        if( !getRevisionSubdir(projectName) )
             return result
 
-        revisionSubdir.eachDir { File it -> result << it.getName().toString() }
+        getRevisionSubdir(projectName).eachDir { File it -> result << it.getName().toString() }
 
         return result
     }

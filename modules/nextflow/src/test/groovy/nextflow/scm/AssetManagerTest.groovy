@@ -106,27 +106,27 @@ class AssetManagerTest extends Specification {
     def testListRevisions() {
         given:
         def folder = tempDir.getRoot()
-        folder.resolve('cbcrg/pipe1').mkdirs()
-        folder.resolve('cbcrg/pipe2').mkdirs()
-        folder.resolve('cbcrg/pipe2:v2').mkdirs()
-        folder.resolve('cbcrg/pipe3:v3').mkdirs()
+        folder.resolve('cbcrg/pipe1/.nextflow/commits/DEFAULT_REVISION').mkdirs()
+        folder.resolve('cbcrg/pipe2/.nextflow/commits/DEFAULT_REVISION').mkdirs()
+        folder.resolve('cbcrg/pipe2/.nextflow/commits/v2').mkdirs()
+        folder.resolve('cbcrg/pipe3/.nextflow/commits/v3').mkdirs()
 
         def manager = new AssetManager()
 
         when:
         def list = manager.listRevisions('cbcrg/pipe1')
         then:
-        list == ['cbcrg/pipe1']
+        list == ['DEFAULT_REVISION']
 
         when:
         list = manager.listRevisions('cbcrg/pipe3')
         then:
-        list == ['cbcrg/pipe3:v3']
+        list == ['v3']
 
         when:
         list = manager.listRevisions('cbcrg/pipe2')
         then:
-        list == ['cbcrg/pipe2', 'cbcrg/pipe2:v2']
+        list == ['DEFAULT_REVISION', 'v2']
     }
 
 
@@ -388,10 +388,10 @@ class AssetManagerTest extends Specification {
                 }
                 '''
         def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = config
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION').mkdirs()
+        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION/nextflow.config').text = config
+        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION/.git').mkdir()
+        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION/.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
