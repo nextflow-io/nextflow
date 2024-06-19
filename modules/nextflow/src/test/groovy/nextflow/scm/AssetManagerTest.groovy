@@ -16,6 +16,8 @@
 
 package nextflow.scm
 
+import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+
 import spock.lang.IgnoreIf
 
 import nextflow.exception.AbortOperationException
@@ -106,8 +108,8 @@ class AssetManagerTest extends Specification {
     def testListRevisions() {
         given:
         def folder = tempDir.getRoot()
-        folder.resolve('cbcrg/pipe1/.nextflow/commits/DEFAULT_REVISION').mkdirs()
-        folder.resolve('cbcrg/pipe2/.nextflow/commits/DEFAULT_REVISION').mkdirs()
+        folder.resolve('cbcrg/pipe1/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME).mkdirs()
+        folder.resolve('cbcrg/pipe2/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME).mkdirs()
         folder.resolve('cbcrg/pipe2/.nextflow/commits/v2').mkdirs()
         folder.resolve('cbcrg/pipe3/.nextflow/commits/v3').mkdirs()
 
@@ -116,7 +118,7 @@ class AssetManagerTest extends Specification {
         when:
         def list = manager.listRevisions('cbcrg/pipe1')
         then:
-        list == ['DEFAULT_REVISION']
+        list == [DEFAULT_REVISION_DIRNAME]
 
         when:
         list = manager.listRevisions('cbcrg/pipe3')
@@ -126,7 +128,7 @@ class AssetManagerTest extends Specification {
         when:
         list = manager.listRevisions('cbcrg/pipe2')
         then:
-        list == ['DEFAULT_REVISION', 'v2']
+        list == [DEFAULT_REVISION_DIRNAME, 'v2']
     }
 
 
@@ -387,10 +389,10 @@ class AssetManagerTest extends Specification {
                 }
                 '''
         def dir = tempDir.getRoot()
-        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION').mkdirs()
-        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION/nextflow.config').text = config
-        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION/.git').mkdir()
-        dir.resolve('foo/bar/.nextflow/commits/DEFAULT_REVISION/.git/config').text = GIT_CONFIG_TEXT
+        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME).mkdirs()
+        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME + '/nextflow.config').text = config
+        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME + '/.git').mkdir()
+        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME + '/.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()

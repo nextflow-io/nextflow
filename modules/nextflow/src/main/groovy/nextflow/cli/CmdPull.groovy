@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -79,7 +81,7 @@ class CmdPull extends CmdBase implements HubOptions {
             all.each{ proj ->
                 def revManager = new AssetManager(proj)
                 revManager.listRevisions().each{ rev ->
-                    if( rev == "DEFAULT_REVISION" )
+                    if( rev == DEFAULT_REVISION_DIRNAME )
                         rev = null
                     list << new AssetManager(proj, rev, this)
                 }

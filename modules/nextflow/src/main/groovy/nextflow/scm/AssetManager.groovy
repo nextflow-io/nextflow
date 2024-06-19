@@ -68,6 +68,8 @@ class AssetManager {
 
     static public final String REVISION_SUBDIR = '.nextflow/commits'
 
+    static public final String DEFAULT_REVISION_DIRNAME = 'DEFAULT_REVISION'
+
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
@@ -233,7 +235,7 @@ class AssetManager {
         String commitId = revisionToCommit(revision)
 
         if( commitId ) {
-            this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : 'DEFAULT_REVISION') )
+            this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : DEFAULT_REVISION_DIRNAME) )
             validateProjectDir()
         } else {
             this.localPath = null
@@ -245,7 +247,7 @@ class AssetManager {
         String commitId
 
         if( revisionMap ) {
-            String revisionTmp = revision ?: 'DEFAULT_REVISION'
+            String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
             commitId = revisionMap.readLines().find{ it.split(',')[0] == revisionTmp }
             commitId = commitId ? commitId.split(',')[1] : commitId
         }
@@ -804,7 +806,7 @@ class AssetManager {
      * If revision is null, default is assumed
      */
     List<String> getPulledRevisions() {
-        listRevisions().collect{ it = ( it != "DEFAULT_REVISION" ? it : getDefaultBranch() ) }
+        listRevisions().collect{ it = ( it != DEFAULT_REVISION_DIRNAME ? it : getDefaultBranch() ) }
     }
 
     RevisionInfo getCurrentRevisionAndName() {
