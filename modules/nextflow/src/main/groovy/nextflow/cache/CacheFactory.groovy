@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
+import nextflow.util.HistoryFile
 import org.pf4j.ExtensionPoint
 
 /**
@@ -33,7 +34,7 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 abstract class CacheFactory implements ExtensionPoint {
 
-    protected abstract CacheDB newInstance(UUID uniqueId, String runName, Path home=null)
+    protected abstract CacheDB newInstance(UUID uniqueId, String runName, String prevRunName, Path home=null)
 
     static CacheDB create(UUID uniqueId, String runName, Path home=null) {
         final all = Plugins.getPriorityExtensions(CacheFactory)
@@ -41,7 +42,13 @@ abstract class CacheFactory implements ExtensionPoint {
             throw new IllegalStateException("Unable to find Nextflow cache factory")
         final factory = all.first()
         log.debug "Using Nextflow cache factory: ${factory.getClass().getName()}"
-        return factory.newInstance(uniqueId, runName, home)
+        final runs = HistoryFile.DEFAULT.findById(uniqueId.toString())
+        def prevRunName = null
+        if( runs.size() > 1 ) {
+            prevRunName = runs[-2].runName
+            log.debug "Using previous cached run: ${prevRunName}"
+        }
+        return factory.newInstance(uniqueId, runName, prevRunName, home)
     }
 
 }

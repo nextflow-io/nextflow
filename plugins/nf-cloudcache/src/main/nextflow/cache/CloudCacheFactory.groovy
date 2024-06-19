@@ -36,13 +36,13 @@ import nextflow.plugin.Priority
 class CloudCacheFactory extends CacheFactory {
 
     @Override
-    protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
+    protected CacheDB newInstance(UUID uniqueId, String runName, String prevRunName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
         final path = (Global.session as Session).cloudCachePath
         if( !path )
             throw new IllegalArgumentException("Cloud-cache path not defined - use either -with-cloudcache run option or NXF_CLOUDCACHE_PATH environment variable")
-        final store = new CloudCacheStore(uniqueId, runName, path)
+        final store = new CloudCacheStore(uniqueId, runName, prevRunName, path)
         return new CacheDB(store)
     }
 
