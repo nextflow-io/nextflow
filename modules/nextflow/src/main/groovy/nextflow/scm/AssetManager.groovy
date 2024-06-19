@@ -143,12 +143,13 @@ class AssetManager {
 
         this.revision = revision
         this.project = resolveName(pipelineName)
+        validateProjectName(this.project)
 
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
 
-        defineProjectDir(this.project, this.revision)
+        updateProjectDir(this.project, this.revision, revisionToCommitWithMap(this.revision))
 
         return this
     }
@@ -218,8 +219,17 @@ class AssetManager {
     }
 
     /**
-     * Verify the project name matcher the expected pattern,
-     * map revision to commit ID,
+     * Verify the project name matches the expected pattern
+    */
+    @PackageScope
+    void validateProjectName(String projectName) {
+        if( !isValidProjectName(projectName)) {
+            throw new IllegalArgumentException("Not a valid project name: $projectName")
+        }
+    }
+
+    /**
+     * Map revision to commit ID,
      * define the directory where the project is stored locally,
      * and validate it.
      *
@@ -228,34 +238,13 @@ class AssetManager {
      * @return The project dir {@link File}
      */
     @PackageScope
-    void defineProjectDir(String projectName, String revision) {
-        if( !isValidProjectName(projectName)) {
-            throw new IllegalArgumentException("Not a valid project name: $projectName")
-        }
-
-        String commitId = revisionToCommit(revision)
-
+    void updateProjectDir(String projectName, String revision, String commitId) {
         // MARCO TEST ONLY
         if( true ) {
         //if( commitId ) {
             this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : DEFAULT_REVISION_DIRNAME) )
             validateProjectDir()
-        } else {
-            this.localPath = null
         }
-    }
-
-    @PackageScope
-    String revisionToCommit(String revision) {
-        String commitId
-
-        if( revisionMap ) {
-            String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
-            commitId = revisionMap.readLines().find{ it.split(',')[0] == revisionTmp }
-            commitId = commitId ? commitId.split(',')[1] : commitId
-        }
-
-        return commitId
     }
 
     /**
@@ -309,6 +298,47 @@ class AssetManager {
                .fetch()
                .call()
         }
+    }
+
+    @PackageScope
+    String revisionToCommitWithBareRepo(String revision) {
+        String commitId
+
+        def rev = Git.open(bareRepo)
+                     .getRepository()
+                     .resolve(revision ?: Constants.HEAD)
+        if ( rev )
+            commitId = rev.getName()
+
+        return commitId
+    }
+
+    @PackageScope
+    String revisionToCommitWithMap(String revision) {
+        String commitId
+
+        if( revisionMap ) {
+            String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
+            commitId = revisionMap.readLines().find{ it.split(',')[0] == revisionTmp }
+            commitId = commitId ? commitId.split(',')[1] : commitId
+        }
+
+        return commitId
+    }
+
+    @PackageScope
+    void updateRevisionMap() {
+        def a='a'
+    }
+
+    @PackageScope
+    void updateRevisionMapAndLocalPath(String revision) {
+        updateRevisionMap()
+
+        // MARCO TEST ONLY
+        String commitId = revisionToCommitWithMap(revision)
+        //String commitId = revisionToCommitWithBareRepo(revision)
+        updateProjectDir(this.project, revision, commitId)
     }
 
     /**
@@ -704,7 +734,7 @@ class AssetManager {
         // get local copy of bare repository
         checkBareRepo()
         // update mapping of revision to commit, and update localPath
-        //updateRevisionMap()
+        updateRevisionMapAndLocalPath(revision)
 
         /*
          * if the pipeline does not exists locally pull it from the remote repo
