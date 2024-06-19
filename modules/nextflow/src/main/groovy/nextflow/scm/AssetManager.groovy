@@ -283,7 +283,7 @@ class AssetManager {
     }
 
     @PackageScope
-    void checkLocalBarePath() {
+    void checkBareRepo() {
         /*
          * if the bare repository of the pipeline does not exists locally pull it from the remote repo
          */
@@ -702,7 +702,7 @@ class AssetManager {
         checkValidRemoteRepo()
 
         // get local copy of bare repository
-        checkLocalBarePath()
+        checkBareRepo()
         // update mapping of revision to commit, and update localPath
         //updateRevisionMap()
 
