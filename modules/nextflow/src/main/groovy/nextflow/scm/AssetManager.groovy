@@ -186,6 +186,7 @@ class AssetManager {
         File localRootPath = new File(root, project)
         return localRootPath.exists() ? localRootPath : null
     }
+
     @PackageScope AssetManager setProject(String name) {
         this.project = name
         return this
@@ -234,7 +235,9 @@ class AssetManager {
 
         String commitId = revisionToCommit(revision)
 
-        if( commitId ) {
+        // MARCO TEST ONLY
+        if( true ) {
+        //if( commitId ) {
             this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : DEFAULT_REVISION_DIRNAME) )
             validateProjectDir()
         } else {
@@ -277,6 +280,35 @@ class AssetManager {
             throw new AbortOperationException("A project with name: `$localPath` has already been downloaded from a different provider: `$configProvider`")
         }
 
+    }
+
+    @PackageScope
+    void checkLocalBarePath() {
+        /*
+         * if the bare repository of the pipeline does not exists locally pull it from the remote repo
+         */
+        if( !bareRepo.exists() ) {
+            bareRepo.parentFile.mkdirs()
+
+            final cloneURL = getGitRepositoryUrl()
+            log.debug "Pulling bare repo for $project -- Using remote clone url: ${cloneURL}"
+
+            def bare = Git.cloneRepository()
+            if( provider.hasCredentials() )
+                bare.setCredentialsProvider( provider.getGitCredentials() )
+
+            bare
+                .setBare( true )
+                .setURI(cloneURL)
+                .setGitDir(bareRepo)
+                .call()
+        }  else  {
+            log.debug "Fetching (updating) bare repo for $project"
+
+            Git.open(bareRepo)
+               .fetch()
+               .call()
+        }
     }
 
     /**
@@ -666,13 +698,19 @@ class AssetManager {
     String download(Integer deep=null) {
         assert project
 
+        // make sure it contains a valid repository
+        checkValidRemoteRepo()
+
+        // get local copy of bare repository
+        checkLocalBarePath()
+        // update mapping of revision to commit, and update localPath
+        //updateRevisionMap()
+
         /*
          * if the pipeline does not exists locally pull it from the remote repo
          */
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
-            // make sure it contains a valid repository
-            checkValidRemoteRepo()
 
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
