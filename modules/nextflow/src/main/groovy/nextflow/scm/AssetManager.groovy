@@ -327,17 +327,17 @@ class AssetManager {
     }
 
     @PackageScope
-    void updateRevisionMap() {
+    void updateRevisionMap(String revision, String commitId) {
         def a='a'
     }
 
     @PackageScope
     void updateRevisionMapAndLocalPath(String revision) {
-        updateRevisionMap()
-
         // MARCO TEST ONLY
         String commitId = revisionToCommitWithMap(revision)
         //String commitId = revisionToCommitWithBareRepo(revision)
+
+        updateRevisionMap(revision, commitId)
         updateProjectDir(this.project, revision, commitId)
     }
 
