@@ -80,6 +80,8 @@ class CmdInfo extends CmdBase {
             // if default branch not found locally, use first one from list of local pulls
             if ( manager.listRevisions() ) {
                 manager = new AssetManager(args[0], manager.getPulledRevisions()[0])
+                if( !manager.isLocal() )
+                    throw new AbortOperationException("Unknown project `${args[0]}`")
             }
             else {
                 throw new AbortOperationException("Unknown project `${args[0]}`")

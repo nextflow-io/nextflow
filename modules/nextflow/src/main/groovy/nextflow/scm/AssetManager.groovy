@@ -62,7 +62,9 @@ class AssetManager {
     @PackageScope
     static File root = DEFAULT_ROOT
 
-    static final String REVISION_MAP = '.nextflow/revisionMapFile'
+    static final String BARE_REPO = '.nextflow/bare_repo'
+
+    static final String REVISION_MAP = '.nextflow/revision_map_file'
 
     static public final String REVISION_SUBDIR = '.nextflow/commits'
 
@@ -144,8 +146,7 @@ class AssetManager {
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
 
-        this.localPath = checkProjectDir(this.project, this.revision)
-        validateProjectDir()
+        defineProjectDir(this.project, this.revision)
 
         return this
     }
@@ -155,8 +156,15 @@ class AssetManager {
         localPath ? new File(localPath,'.git/config') : null
     }
 
+    @PackageScope
+    File getBareRepo() {
+        new File(root, project + '/' + BARE_REPO)
+    }
+
     /**
-     * Path of the revision -> commit map for the project
+     * Path of the "revision -> commit" map file for the project
+     *
+     * CSV format: <revision>,<commit>
      *
      * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/revisionMapFile
      */
@@ -207,21 +215,42 @@ class AssetManager {
     }
 
     /**
-     * Verify the project name matcher the expected pattern.
-     * and return the directory where the project is stored locally
+     * Verify the project name matcher the expected pattern,
+     * map revision to commit ID,
+     * define the directory where the project is stored locally,
+     * and validate it.
      *
      * @param projectName A project name matching the pattern {@code owner/project}
      * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @return The project dir {@link File}
      */
     @PackageScope
-    File checkProjectDir(String projectName, String revision) {
-
+    void defineProjectDir(String projectName, String revision) {
         if( !isValidProjectName(projectName)) {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
-        new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : 'DEFAULT_REVISION') )
+        String commitId = revisionToCommit(revision)
+
+        if( commitId ) {
+            this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : 'DEFAULT_REVISION') )
+            validateProjectDir()
+        } else {
+            this.localPath = null
+        }
+    }
+
+    @PackageScope
+    String revisionToCommit(String revision) {
+        String commitId
+
+        if( revisionMap ) {
+            String revisionTmp = revision ?: 'DEFAULT_REVISION'
+            commitId = revisionMap.readLines().find{ it.split(',')[0] == revisionTmp }
+            commitId = commitId ? commitId.split(',')[1] : commitId
+        }
+
+        return commitId
     }
 
     /**
@@ -529,7 +558,7 @@ class AssetManager {
     }
 
     boolean isLocal() {
-        localPath.exists()
+        localPathDefinedAndExists()
     }
 
     /**
@@ -537,7 +566,7 @@ class AssetManager {
      *      file (i.e. main.nf) or the nextflow manifest file (i.e. nextflow.config)
      */
     boolean isRunnable() {
-        localPath.exists() && ( new File(localPath,DEFAULT_MAIN_FILE_NAME).exists() || new File(localPath,MANIFEST_FILE_NAME).exists() )
+        localPathDefinedAndExists() && ( new File(localPath,DEFAULT_MAIN_FILE_NAME).exists() || new File(localPath,MANIFEST_FILE_NAME).exists() )
     }
 
     boolean localPathDefinedAndExists() {
