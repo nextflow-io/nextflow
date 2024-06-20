@@ -717,6 +717,15 @@ class AssetManager {
     }
 
     /**
+     * uses getDefaultBranch()
+     * only for usage within service methods getRevisions() and getBranchesAndTags()
+     */
+    @PackageScope
+    List<String> listRevisionsToCompareInfo() {
+        listRevisions().collect{ it = ( it != DEFAULT_REVISION_DIRNAME ? it : getDefaultBranch() ) }
+    }
+
+    /**
      * @return The map of available revisions and corresponding commits for a given project name
      */
     Map<String,String> listRevisionsAndCommits( String projectName = this.project ) {
@@ -921,17 +930,6 @@ class AssetManager {
         names.get( head.objectId ) ?: head.objectId.name()
     }
 
-    /**
-     * @return The names of all locally pulled revisions for a given project
-     * 
-     * If revision is null, default is assumed
-     * Should only be used for the purpose of printing project information
-     * 
-     */
-    List<String> getPulledRevisions() {
-        listRevisions().collect{ it = ( it != DEFAULT_REVISION_DIRNAME ? it : getDefaultBranch() ) }
-    }
-
     RevisionInfo getCurrentRevisionAndName() {
         Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
@@ -974,7 +972,7 @@ class AssetManager {
 
         def current = getCurrentRevision()
         def master = getDefaultBranch()
-        def pulled = getPulledRevisions()
+        def pulled = listRevisionsToCompareInfo()
 
         List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
@@ -1021,7 +1019,7 @@ class AssetManager {
                 .each { Ref it -> tags << refToMap(it,remote) }
 
         result.master = master      // master branch name
-        result.pulled = getPulledRevisions() // list of pulled revisions
+        result.pulled = listRevisionsToCompareInfo() // list of pulled revisions
         result.branches = branches  // collection of branches
         result.tags = tags          // collect of tags
         return result
