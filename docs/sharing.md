@@ -61,7 +61,7 @@ It will execute two different project revisions corresponding to the Git tag/bra
 :::{versionadded} 24.XX.0-edge
 :::
 
-Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time. Each downloaded revision is stored in a subdirecrory path of the local project path: `$NXF_ASSETS/<org>/<repo>/.nextflow/commits/<revision>` (for the default branch, `<revision>` is set to `DEFAULT_REVISION`).
+Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time. Each downloaded revision is stored in a subdirecrory path of the local project path: `$NXF_ASSETS/<org>/<repo>/.nextflow/commits/<commitId>`.
 
 :::{warning}
 If you really care about reproducibility of your pipelines, consider explicitly referring to them by tag or commit ID, rather than my branch. This is because the same branch will point to different underlying commits over time, as pipeline development goes on.
