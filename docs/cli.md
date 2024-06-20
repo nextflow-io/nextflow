@@ -890,6 +890,9 @@ The `list` commands prints a list of the projects which are already downloaded i
 `-a, -all-revisions`
 : For each project, also list revisions.
 
+`-d`
+: Show commit information for revisions (in conjunction with `-a`)).
+
 `-h, -help`
 : Print the command usage.
 

@@ -40,6 +40,12 @@ class CmdList extends CmdBase {
     @Parameter(names=['-all-commits'], description = 'For each project, also list all downloaded commits')
     Boolean allCommits
 
+    @Parameter(names='-d',description = 'Show commit information for revisions', arity = 0)
+    boolean detailed
+
+    @Parameter(names='-dd', hidden = true, arity = 0)
+    boolean moreDetailed
+
     @Override
     final String getName() { NAME }
 
@@ -52,14 +58,28 @@ class CmdList extends CmdBase {
             return
         }
 
-    if (allRevisions) {
+    if( moreDetailed )
+        detailed = true
+    if( detailed && allRevisions ) {
+        all.each{
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listRevisionsAndCommits().each{ k,v ->
+                def value = v
+                if( !moreDetailed )
+                    value = v.substring(0,10)
+                println("   $value $k") }
+            revManager.close()
+        }
+    }
+    else if( allRevisions ) {
         all.each{
             println(" $it")
             def revManager = new AssetManager(it)
             revManager.listRevisions().each{ println("   $it") }
             revManager.close()
         }
-    } else if(allCommits) {
+    } else if( allCommits ) {
         all.each{
             println(" $it")
             def revManager = new AssetManager(it)

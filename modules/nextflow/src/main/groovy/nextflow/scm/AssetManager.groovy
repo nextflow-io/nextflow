@@ -717,6 +717,23 @@ class AssetManager {
     }
 
     /**
+     * @return The map of available revisions and corresponding commits for a given project name
+     */
+    Map<String,String> listRevisionsAndCommits( String projectName = this.project ) {
+        log.debug "Listing revisions for project: $projectName"
+
+        def result = new LinkedHashMap<String,String>()
+        if( !root.exists() )
+            return result
+        if( !revisionMap.exists() )
+            return result
+
+        revisionMap.eachLine{ it -> result[ it.split(',')[0] ] = it.split(',')[1] }
+
+        return result
+    }
+
+    /**
      * @return The list of downloaded bare commits for a given project name
      */
     List<String> listCommits( String projectName = this.project ) {
