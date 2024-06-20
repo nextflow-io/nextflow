@@ -149,7 +149,7 @@ class AssetManager {
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
 
-        updateProjectDir(this.project, this.revision, revisionToCommitWithMap(this.revision))
+        updateProjectDir(this.project, revisionToCommitWithMap(this.revision))
 
         return this
     }
@@ -235,7 +235,7 @@ class AssetManager {
      * @return The project dir {@link File}
      */
     @PackageScope
-    void updateProjectDir(String projectName, String revision, String commitId) {
+    void updateProjectDir(String projectName, String commitId) {
         if( commitId ) {
             this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + commitId )
             validateProjectDir()
@@ -321,9 +321,9 @@ class AssetManager {
         return commitId
     }
 
-    void pruneRevisionMap() {
+    void pruneRevisionMap(String revision) {
         if( revisionMap.exists() ) {
-            String commitId = revisionToCommitWithMap(this.revision)
+            String commitId = revisionToCommitWithMap(revision)
             List oldRevisionMap = revisionMap.readLines()
             revisionMap.text = ''
             oldRevisionMap.each{
@@ -358,7 +358,7 @@ class AssetManager {
         String commitId = revisionToCommitWithBareRepo(revision)
 
         updateRevisionMap(revision, commitId)
-        updateProjectDir(this.project, revision, commitId)
+        updateProjectDir(this.project, commitId)
     }
 
     /**

@@ -82,7 +82,7 @@ class CmdDrop extends CmdBase {
                 manager.close()
                 if( !manager.localPath.deleteDir() )
                     throw new AbortOperationException("Unable to delete project `${manager.getProjectWithRevision()}` -- Check access permissions for path: ${manager.localPath}")
-                manager.pruneRevisionMap()
+                manager.pruneRevisionMap(manager.revision)
                 return
             }
 
