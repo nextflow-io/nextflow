@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -57,9 +59,11 @@ class CmdDrop extends CmdBase {
 
         List<AssetManager> dropList = []
         if ( allRevisions ) {
-            def referenceManager = new AssetManager(args[0])
-            referenceManager.listRevisions().each {
-                dropList << new AssetManager(args[0], it)
+            def revManager = new AssetManager(args[0])
+            revManager.listRevisions().each { rev ->
+                if( rev == DEFAULT_REVISION_DIRNAME )
+                    rev = null
+                dropList << new AssetManager(args[0], rev)
             }
         } else {
             dropList << new AssetManager(args[0], revision)
@@ -86,8 +90,8 @@ class CmdDrop extends CmdBase {
         }
 
         if ( allRevisions ) {
-            def referenceManager = new AssetManager(args[0])
-            referenceManager.localRootPath.deleteDir()
+            def revManager = new AssetManager(args[0])
+            revManager.localRootPath.deleteDir()
         }
     }
 }
