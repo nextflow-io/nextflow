@@ -70,7 +70,7 @@ class CmdDrop extends CmdBase {
         }
 
         dropList.each { manager ->
-            if( !manager.localPath.exists() ) {
+            if( !manager.localPathDefinedAndExists() ) {
                 throw new AbortOperationException("No match found for: ${manager.getProjectWithRevision()}")
             }
 

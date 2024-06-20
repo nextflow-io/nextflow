@@ -236,9 +236,7 @@ class AssetManager {
      */
     @PackageScope
     void updateProjectDir(String projectName, String revision, String commitId) {
-        // PIPPO MARCO TEST ONLY
-        if( true ) {
-        //if( commitId ) {
+        if( commitId ) {
             this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : DEFAULT_REVISION_DIRNAME) )
             validateProjectDir()
         }
