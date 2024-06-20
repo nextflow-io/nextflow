@@ -403,8 +403,16 @@ class AssetManager {
 
         def mainScript = scriptName ?: getMainScriptName()
         def result = new File(localPath, mainScript)
-        if( !result.exists() )
-            throw new AbortOperationException("Missing project main script: $result")
+        if( !result.exists() ) {
+            def resolvedPath = result.absolutePath
+            throw new AbortOperationException(
+                "Missing project main script: $resolvedPath. " +
+                    "It appears a local directory named '${localPath.name}' exists at '${localPath.absolutePath}'. " +
+                    "Nextflow is looking for a workflow script in this directory. " +
+                    "If you intended to run a remote workflow named '${localPath.name}', " +
+                    "please rename or remove the local directory '${localPath.absolutePath}' and try again."
+            )
+        }
 
         return result
     }
