@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -65,10 +67,11 @@ class CmdList extends CmdBase {
             println(" $it")
             def revManager = new AssetManager(it)
             revManager.listRevisionsAndCommits().each{ k,v ->
-                def value = v
+                if( k == DEFAULT_REVISION_DIRNAME )
+                    k = '(default)'
                 if( !moreDetailed )
-                    value = v.substring(0,10)
-                println("   $value $k") }
+                    v = v.substring(0,10)
+                println("   $v $k") }
             revManager.close()
         }
     }
@@ -76,7 +79,11 @@ class CmdList extends CmdBase {
         all.each{
             println(" $it")
             def revManager = new AssetManager(it)
-            revManager.listRevisions().each{ println("   $it") }
+            revManager.listRevisions().each{
+                if( it == DEFAULT_REVISION_DIRNAME )
+                    it = '(default)'
+                println("   $it")
+            }
             revManager.close()
         }
     } else if( allCommits ) {
