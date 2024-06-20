@@ -237,7 +237,7 @@ class AssetManager {
     @PackageScope
     void updateProjectDir(String projectName, String revision, String commitId) {
         if( commitId ) {
-            this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : DEFAULT_REVISION_DIRNAME) )
+            this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + commitId )
             validateProjectDir()
         }
     }
@@ -322,13 +322,21 @@ class AssetManager {
     }
 
     void pruneRevisionMap() {
-        updateRevisionMap(this.revision, null)
+        if( revisionMap.exists() ) {
+            String commitId = revisionToCommitWithMap(this.revision)
+            List oldRevisionMap = revisionMap.readLines()
+            revisionMap.text = ''
+            oldRevisionMap.each{
+                if( it.split(',')[1] != commitId )
+                    revisionMap << it + '\n'
+            }
+        }
     }
 
     @PackageScope
     void updateRevisionMap(String revision, String commitId) {
         String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
-        if( !revisionMap.exists() && commitId != null ) {
+        if( !revisionMap.exists() ) {
             revisionMap.parentFile.mkdirs()
             revisionMap << revisionTmp + ',' + commitId + '\n'
         } else {
@@ -338,8 +346,7 @@ class AssetManager {
                 if( it.split(',')[0] != revisionTmp )
                     revisionMap << it + '\n'
             }
-            if( commitId != null )
-                revisionMap << revisionTmp + ',' + commitId + '\n'
+            revisionMap << revisionTmp + ',' + commitId + '\n'
         }
     }
 
@@ -701,6 +708,23 @@ class AssetManager {
         def result = new LinkedList()
         if( !root.exists() )
             return result
+        if( !revisionMap.exists() )
+            return result
+
+        revisionMap.eachLine{ it -> result << it.split(',')[0] }
+
+        return result
+    }
+
+    /**
+     * @return The list of downloaded bare commits for a given project name
+     */
+    List<String> listCommits( String projectName = this.project ) {
+        log.debug "Listing all commits for project: $projectName"
+
+        def result = new LinkedList()
+        if( !root.exists() )
+            return result
         if( !getRevisionSubdir(projectName).exists() )
             return result
 
@@ -753,6 +777,7 @@ class AssetManager {
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
 
+            //final cloneURL = bareRepo.toString()
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
@@ -883,6 +908,8 @@ class AssetManager {
      * @return The names of all locally pulled revisions for a given project
      * 
      * If revision is null, default is assumed
+     * Should only be used for the purpose of printing project information
+     * 
      */
     List<String> getPulledRevisions() {
         listRevisions().collect{ it = ( it != DEFAULT_REVISION_DIRNAME ? it : getDefaultBranch() ) }
