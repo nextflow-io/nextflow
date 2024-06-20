@@ -846,6 +846,7 @@ The following output qualifiers are available:
 - `env`: Emit the variable defined in the process environment with the specified name.
 - `stdout`: Emit the `stdout` of the executed process.
 - `tuple`: Emit multiple values.
+- `eval`: Emit the result of a script or command evaluated in the task execution context.
 
 ### Output type `val`
 
