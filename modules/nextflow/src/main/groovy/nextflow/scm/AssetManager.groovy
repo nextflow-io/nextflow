@@ -173,19 +173,16 @@ class AssetManager {
      */
     @PackageScope
     File getRevisionMap() {
-        File revisionMap = new File(root, project + '/' + REVISION_MAP)
-        return revisionMap.exists() ? revisionMap : null
+        new File(root, project + '/' + REVISION_MAP)
     }
 
     @PackageScope
     File getRevisionSubdir( String projectName = project ) {
-        File revisionSubdir = new File(root, projectName + '/' + REVISION_SUBDIR)
-        return revisionSubdir.exists() ? revisionSubdir : null
+        new File(root, projectName + '/' + REVISION_SUBDIR)
     }
 
     File getLocalRootPath() {
-        File localRootPath = new File(root, project)
-        return localRootPath.exists() ? localRootPath : null
+        new File(root, project)
     }
 
     @PackageScope AssetManager setProject(String name) {
@@ -239,7 +236,7 @@ class AssetManager {
      */
     @PackageScope
     void updateProjectDir(String projectName, String revision, String commitId) {
-        // MARCO TEST ONLY
+        // PIPPO MARCO TEST ONLY
         if( true ) {
         //if( commitId ) {
             this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + (revision ? revision : DEFAULT_REVISION_DIRNAME) )
@@ -279,7 +276,7 @@ class AssetManager {
         if( !bareRepo.exists() ) {
             bareRepo.parentFile.mkdirs()
 
-            final cloneURL = getGitRepositoryUrl()
+            final cloneURL = provider.getCloneUrl()
             log.debug "Pulling bare repo for $project -- Using remote clone url: ${cloneURL}"
 
             def bare = Git.cloneRepository()
@@ -307,7 +304,7 @@ class AssetManager {
         def rev = Git.open(bareRepo)
                      .getRepository()
                      .resolve(revision ?: Constants.HEAD)
-        if ( rev )
+        if( rev )
             commitId = rev.getName()
 
         return commitId
@@ -317,7 +314,7 @@ class AssetManager {
     String revisionToCommitWithMap(String revision) {
         String commitId
 
-        if( revisionMap ) {
+        if( revisionMap.exists() ) {
             String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
             commitId = revisionMap.readLines().find{ it.split(',')[0] == revisionTmp }
             commitId = commitId ? commitId.split(',')[1] : commitId
@@ -326,16 +323,34 @@ class AssetManager {
         return commitId
     }
 
+    void pruneRevisionMap() {
+        updateRevisionMap(this.revision, null)
+    }
+
     @PackageScope
     void updateRevisionMap(String revision, String commitId) {
-        def a='a'
+        String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
+        if( !revisionMap.exists() && commitId != null ) {
+            revisionMap.parentFile.mkdirs()
+            revisionMap << revisionTmp + ',' + commitId + '\n'
+        } else {
+            List oldRevisionMap = revisionMap.readLines()
+            revisionMap.text = ''
+            oldRevisionMap.each{
+                if( it.split(',')[0] != revisionTmp )
+                    revisionMap << it + '\n'
+            }
+            if( commitId != null )
+                revisionMap << revisionTmp + ',' + commitId + '\n'
+        }
     }
 
     @PackageScope
     void updateRevisionMapAndLocalPath(String revision) {
-        // MARCO TEST ONLY
-        String commitId = revisionToCommitWithMap(revision)
-        //String commitId = revisionToCommitWithBareRepo(revision)
+        // get local copy of bare repository
+        checkBareRepo()
+
+        String commitId = revisionToCommitWithBareRepo(revision)
 
         updateRevisionMap(revision, commitId)
         updateProjectDir(this.project, revision, commitId)
@@ -688,7 +703,7 @@ class AssetManager {
         def result = new LinkedList()
         if( !root.exists() )
             return result
-        if( !getRevisionSubdir(projectName) )
+        if( !getRevisionSubdir(projectName).exists() )
             return result
 
         getRevisionSubdir(projectName).eachDir { File it -> result << it.getName().toString() }
@@ -731,8 +746,6 @@ class AssetManager {
         // make sure it contains a valid repository
         checkValidRemoteRepo()
 
-        // get local copy of bare repository
-        checkBareRepo()
         // update mapping of revision to commit, and update localPath
         updateRevisionMapAndLocalPath(revision)
 

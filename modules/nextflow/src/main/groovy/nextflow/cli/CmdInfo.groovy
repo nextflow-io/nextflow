@@ -110,7 +110,7 @@ class CmdInfo extends CmdBase {
 
         out.println " project name: ${manager.project}"
         out.println " repository  : ${manager.repositoryUrl}"
-        out.println " local path  : ${manager.localRootPath?.toString()}"
+        out.println " local path  : ${manager.localRootPath.toString()}"
         out.println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
             out.println " home page   : ${manager.homePage}"
@@ -147,7 +147,7 @@ class CmdInfo extends CmdBase {
         def result = [:]
         result.projectName = manager.project
         result.repository = manager.repositoryUrl
-        result.localPath = manager.localRootPath?.toString()
+        result.localPath = manager.localRootPath.toString()
         result.manifest = manager.manifest.toMap()
         result.revisions = manager.getBranchesAndTags(checkForUpdates)
         return result
