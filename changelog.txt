@@ -18,7 +18,7 @@ NEXTFLOW CHANGE-LOG
 - Fix unique operator hangs when applied to value (#5053) [88b8ab0c]
 - Improve retry strategy for Google cloud errors when writing task helper files (#5037) [f8b324ab]
 - Remove GA4GH plugin (#5056) [0471b2e1]
-- Remove ending slashs for publish targets [891ed117]
+- Remove ending slashes for publish targets [891ed117]
 - Bump Gradle 8.8 final [ee54606c]
 - Bump aws-sdk 1.12.740 [acad2a1f]
 - Bump azure-compute-batch:1.0.0-beta.2 [c08dc49b]
