@@ -30,6 +30,7 @@ import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
+import nextflow.util.CacheHelper.HashMode
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
 import nextflow.util.Duration
@@ -525,6 +526,10 @@ class TaskConfig extends LazyMap implements Cloneable {
             result.append(it.key).append('=').append(it.value)
         }
         return result
+    }
+
+    HashMode getHashMode() {
+        HashMode.of(get('cache')) ?: HashMode.DEFAULT()
     }
 
     /**
