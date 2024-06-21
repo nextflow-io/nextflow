@@ -16,6 +16,11 @@
 
 package nextflow.file
 
+import nextflow.file.checksums.BytesChecksum
+import nextflow.file.checksums.Md5Checksum
+import nextflow.file.checksums.Sha1Checksum
+import nextflow.file.checksums.Sha256Checksum
+
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.FileSystem
@@ -49,6 +54,9 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+
+import java.util.zip.Checksum
+
 /**
  * Provides some helper method handling files
  *
@@ -1054,12 +1062,52 @@ class FileHelper {
         final checkIfExists = opts?.checkIfExists as boolean
         final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
         if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
-            return opts?.relative ? path : result
+            final res = opts?.relative ? path : result
+            if( opts?.checksum ) {
+                try {
+                    Files.setAttribute(res, 'checksum', opts?.checksum)
+                } catch ( IOException|UnsupportedOperationException|SecurityException e ) {
+                    throw new UnsupportedOperationException("Checksum not supported on $res path")
+                }
+            }
+            return res
         }
 
         throw new NoSuchFileException(opts?.relative ? path.toString() : FilesEx.toUriString(result))
     }
 
+    static BytesChecksum buildChecksum(String checksum) {
+        if( checksum.startsWith('sha256::') )
+            return new Sha256Checksum()
+
+        if( checksum.startsWith('sha1::'))
+            return new Sha1Checksum()
+
+        // Default to MD5 checksum
+        return new Md5Checksum()
+    }
+
+    static byte[] parseChecksum(String checksum) {
+        final parts = checksum.split("::")
+        final value = parts.length > 1 ? parts[1] : checksum
+
+        return value.decodeHex()
+    }
+
+    static boolean validateChecksum(String expected, Checksum checksum) {
+        if( checksum instanceof BytesChecksum ) {
+            final expectedValue = parseChecksum(expected)
+            final computedValue = checksum.getChecksumBytes()
+
+            if( expectedValue != computedValue ) {
+                log.debug("Expected checksum '${expectedValue.encodeHex()}' found '${computedValue.encodeHex()}'")
+                return false
+            }
+
+            return true
+        }
+        return false
+    }
 
     /**
      *

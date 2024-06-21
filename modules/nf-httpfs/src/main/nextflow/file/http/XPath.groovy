@@ -45,6 +45,8 @@ class XPath implements Path {
 
     private String query
 
+    private String checksum
+
     XPath(XFileSystem fs, String path) {
         this(fs, path, EMPTY)
     }
@@ -108,6 +110,14 @@ class XPath implements Path {
     @Override
     Path getName(int index) {
         return new XPath(null, path.getName(index).toString())
+    }
+
+    String getChecksum() {
+        return this.checksum
+    }
+
+    void setChecksum(String checksum) {
+        this.checksum = checksum
     }
 
     @Override
