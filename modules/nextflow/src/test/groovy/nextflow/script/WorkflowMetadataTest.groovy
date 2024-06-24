@@ -101,6 +101,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.homeDir == Paths.get(System.getProperty('user.home'))
         metadata.manifest.version == '1.0.0'
         metadata.manifest.nextflowVersion == '>=0.31.1'
+        !metadata.failOnIgnore
 
         when:
         metadata.invokeOnComplete()
@@ -116,12 +117,14 @@ class WorkflowMetadataTest extends Specification {
         session.resumeMode >> true
         session.stubRun >> true
         session.preview >> true
+        session.failOnIgnore() >> true
         metadata = new WorkflowMetadata(session, script)
         then:
         metadata.profile == 'foo_profile'
         metadata.resume
         metadata.stubRun
         metadata.preview
+        metadata.failOnIgnore
     }
 
     def foo_test_method() {
