@@ -85,7 +85,6 @@ class CmdPull extends CmdBase implements HubOptions {
                         rev = null
                     list << new AssetManager(proj, rev, this)
                 }
-                revManager.close()
             }
         } else {
             args.toList().each {

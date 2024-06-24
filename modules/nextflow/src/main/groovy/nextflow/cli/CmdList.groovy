@@ -72,7 +72,6 @@ class CmdList extends CmdBase {
                 if( !moreDetailed )
                     v = v.substring(0,10)
                 println("   $v $k") }
-            revManager.close()
         }
     }
     else if( allRevisions ) {
@@ -84,14 +83,12 @@ class CmdList extends CmdBase {
                     it = '(default)'
                 println("   $it")
             }
-            revManager.close()
         }
     } else if( allCommits ) {
         all.each{
             println(" $it")
             def revManager = new AssetManager(it)
             revManager.listCommits().each{ println("   $it") }
-            revManager.close()
         }
     } else {
         all.each{ println(" $it") }
