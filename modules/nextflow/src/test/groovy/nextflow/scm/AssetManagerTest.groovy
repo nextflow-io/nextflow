@@ -17,6 +17,8 @@
 package nextflow.scm
 
 import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+import static nextflow.scm.AssetManager.REVISION_MAP
+import static nextflow.scm.AssetManager.REVISION_SUBDIR
 
 import spock.lang.IgnoreIf
 
@@ -107,28 +109,56 @@ class AssetManagerTest extends Specification {
 
     def testListRevisions() {
         given:
+        def revisionMap1 =
+        """branch1,12345
+branch2,67890"""
+        def revisionMap2 =
+        """branchA,abcde
+branchB,fghij"""
+
         def folder = tempDir.getRoot()
-        folder.resolve('cbcrg/pipe1/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME).mkdirs()
-        folder.resolve('cbcrg/pipe2/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME).mkdirs()
-        folder.resolve('cbcrg/pipe2/.nextflow/commits/v2').mkdirs()
-        folder.resolve('cbcrg/pipe3/.nextflow/commits/v3').mkdirs()
-
-        def manager = new AssetManager()
+        folder.resolve('cbcrg/pipe1/.nextflow/').mkdirs()
+        folder.resolve('cbcrg/pipe2/.nextflow/').mkdirs()
+        folder.resolve('cbcrg/pipe1/' + REVISION_MAP).text = revisionMap1
+        folder.resolve('cbcrg/pipe2/' + REVISION_MAP).text = revisionMap2
 
         when:
-        def list = manager.listRevisions('cbcrg/pipe1')
+        def manager = new AssetManager('cbcrg/pipe1')
+        def list = manager.listRevisions()
+        def dict = manager.listRevisionsAndCommits()
         then:
-        list == [DEFAULT_REVISION_DIRNAME]
+        list == ['branch1','branch2']
+        dict == Map.of('branch1','12345','branch2','67890')
+        //dict == [branch1:'12345',branch2:'67890']
 
         when:
-        list = manager.listRevisions('cbcrg/pipe3')
+        manager = new AssetManager('cbcrg/pipe2')
+        list = manager.listRevisions()
+        dict = manager.listRevisionsAndCommits()
         then:
-        list == ['v3']
+        list == ['branchA', 'branchB']
+        dict == Map.of('branchA','abcde','branchB','fghij')
+    }
+
+    def testListCommits() {
+        given:
+        def folder = tempDir.getRoot()
+        folder.resolve('cbcrg/pipe1/' + REVISION_SUBDIR + '/12345').mkdirs()
+        folder.resolve('cbcrg/pipe1/' + REVISION_SUBDIR + '/67890').mkdirs()
+        folder.resolve('cbcrg/pipe2/' + REVISION_SUBDIR + '/abcde').mkdirs()
+        folder.resolve('cbcrg/pipe2/' + REVISION_SUBDIR + '/fghij').mkdirs()
 
         when:
-        list = manager.listRevisions('cbcrg/pipe2')
+        def manager = new AssetManager('cbcrg/pipe1')
+        def list = manager.listCommits()
         then:
-        list == [DEFAULT_REVISION_DIRNAME, 'v2']
+        list.sort() == ['12345','67890']
+
+        when:
+        manager = new AssetManager('cbcrg/pipe2')
+        list = manager.listCommits()
+        then:
+        list.sort() == ['abcde','fghij']
     }
 
 
