@@ -221,14 +221,14 @@ branchB,fghij"""
 
         given:
         def folder = tempDir.getRoot()
-        String revision = null
+        String revision = '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' // easier to fix commit for a generic test
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
 
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/.git').isDirectory()
 
         when:
         def result = manager.download()
@@ -245,11 +245,12 @@ branchB,fghij"""
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', "v1.2", [providers: [github: [auth: token]]])
+        // tag v1.2 -> commit 1b420d060d3fad67027154ac48e3bdea06f058da
 
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/v1.2/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '1b420d060d3fad67027154ac48e3bdea06f058da' + '/.git').isDirectory()
 
         when:
         manager.download()
@@ -269,7 +270,7 @@ branchB,fghij"""
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68' + '/.git').isDirectory()
 
         when:
         def result = manager.download()
@@ -288,11 +289,12 @@ branchB,fghij"""
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', "mybranch", [providers: [github: [auth: token]]])
+        // as of Jun 2024, branch "mybranch" -> commit "1c3e9e7404127514d69369cd87f8036830f5cf64"
 
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/mybranch/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '1c3e9e7404127514d69369cd87f8036830f5cf64' + '/.git').isDirectory()
 
         when:
         def result = manager.download()
@@ -587,13 +589,14 @@ branchB,fghij"""
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/nf-test-branch', "dev", [providers: [github: [auth: token]]])
+        // as of June 2024, branch "dev" -> commit "6f882561d589365c3950d170df8445e3c0dc8028"
 
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/dev/.git').isDirectory()
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/dev/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/workflow.nf').text == "println 'Hello'\n"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -616,13 +619,14 @@ branchB,fghij"""
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/nf-test-branch', "v0.1", [providers: [github: [auth: token]]])
+        // tag "v0.1" -> commit "6f882561d589365c3950d170df8445e3c0dc8028"
 
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/v0.1/.git').isDirectory()
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/v0.1/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/workflow.nf').text == "println 'Hello'\n"
     }
 
 }
