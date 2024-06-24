@@ -217,6 +217,23 @@ branchB,fghij"""
 
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testCloneBareRepo() {
+
+        given:
+        def folder = tempDir.getRoot()
+        String revision = null
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
+
+        when:
+        manager.checkBareRepo()
+        then:
+        folder.resolve('nextflow-io/hello/' + BARE_REPO).isDirectory()
+        folder.resolve('nextflow-io/hello/' + BARE_REPO + '/config').exists()
+    }
+
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPull() {
 
         given:
