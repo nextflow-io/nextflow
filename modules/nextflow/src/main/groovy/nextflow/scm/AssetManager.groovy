@@ -92,6 +92,8 @@ class AssetManager {
 
     private Git _git
 
+    private Git _bareGit
+
     private String mainScript
 
     private RepositoryProvider provider
@@ -148,6 +150,7 @@ class AssetManager {
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
+        validateProjectBareDir()
 
         updateProjectDir(this.project, revisionToCommitWithMap(this.revision))
 
@@ -156,7 +159,7 @@ class AssetManager {
 
     @PackageScope
     File getLocalGitConfig() {
-        localPath ? new File(localPath,'.git/config') : null
+        bareRepo.exists() ? new File(bareRepo,'config') : null
     }
 
     @PackageScope
@@ -238,7 +241,6 @@ class AssetManager {
     void updateProjectDir(String projectName, String commitId) {
         if( commitId ) {
             this.localPath = new File( root, projectName + '/' + REVISION_SUBDIR + '/' + commitId )
-            validateProjectDir()
         }
     }
 
@@ -247,21 +249,19 @@ class AssetManager {
      * line option or implicitly by entering a repository URL, matches with clone URL of a project already cloned (downloaded).
      */
     @PackageScope
-    void validateProjectDir() {
-        assert localPath
-
-        if( !localPath.exists() ) {
+    void validateProjectBareDir() {
+        if( !bareRepo.exists() ) {
             return
         }
 
         // if project dir exists it must contain the Git config file
         final configProvider = guessHubProviderFromGitConfig(true)
         if( !configProvider )
-            throw new IllegalStateException("Cannot find a provider config for repository at path: $localPath")
+            throw new IllegalStateException("Cannot find a provider config for repository at path: $bareRepo")
 
         // checks that the selected hub matches with the one defined in the git config file
         if( hub != configProvider ) {
-            throw new AbortOperationException("A project with name: `$localPath` has already been downloaded from a different provider: `$configProvider`")
+            throw new AbortOperationException("A project with name: `$bareRepo` has already been downloaded from a different provider: `$configProvider`")
         }
 
     }
@@ -274,7 +274,7 @@ class AssetManager {
         if( !bareRepo.exists() ) {
             bareRepo.parentFile.mkdirs()
 
-            final cloneURL = provider.getCloneUrl()
+            final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling bare repo for $project -- Using remote clone url: ${cloneURL}"
 
             def bare = Git.cloneRepository()
@@ -532,11 +532,6 @@ class AssetManager {
 
     @Memoized
     String getGitRepositoryUrl() {
-
-        if( localPathDefinedAndExists() ) {
-            return localPath.toURI().toString()
-        }
-
         provider.getCloneUrl()
     }
 
@@ -678,6 +673,10 @@ class AssetManager {
             _git.close()
             _git = null
         }
+        if( _bareGit ) {
+            _bareGit.close()
+            _bareGit = null
+        }
     }
 
     /**
@@ -783,6 +782,13 @@ class AssetManager {
         return _git
     }
 
+    protected Git getBareGit() {
+        if( !_bareGit ) {
+            _bareGit = Git.open(bareRepo)
+        }
+        return _bareGit
+    }
+
     /**
      * Download a pipeline from a remote Github repository
      *
@@ -803,8 +809,7 @@ class AssetManager {
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
 
-            //final cloneURL = bareRepo.toString()
-            final cloneURL = getGitRepositoryUrl()
+            final cloneURL = bareRepo.toString()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
             // clone it
@@ -828,7 +833,7 @@ class AssetManager {
             }
 
             // return status message
-            return "downloaded from ${cloneURL}"
+            return "downloaded from ${getGitRepositoryUrl()}"
         }
 
         log.debug "Pulling $project  -- Using local path: $localPath"
@@ -1007,13 +1012,13 @@ class AssetManager {
         final branches = []
         final tags = []
 
-        Map<String, Ref> remote = checkForUpdates ? git.lsRemote().callAsMap() : null
+        Map<String, Ref> remote = checkForUpdates ? bareGit.lsRemote().callAsMap() : null
         getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
                 .unique { shortenRefName(it.name) }
                 .each { Ref it -> branches << refToMap(it,remote)  }
 
-        remote = checkForUpdates ? git.lsRemote().setTags(true).callAsMap() : null
+        remote = checkForUpdates ? bareGit.lsRemote().setTags(true).callAsMap() : null
         getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .each { Ref it -> tags << refToMap(it,remote) }
@@ -1104,14 +1109,14 @@ class AssetManager {
     @Deprecated
     List<String> getUpdates(int level) {
 
-        def remote = git.lsRemote().callAsMap()
+        def remote = bareGit.lsRemote().callAsMap()
         List<String> branches = getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
                 .unique { shortenRefName(it.name) }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
                 .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
 
-        remote = git.lsRemote().setTags(true).callAsMap()
+        remote = bareGit.lsRemote().setTags(true).callAsMap()
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
@@ -1194,7 +1199,7 @@ class AssetManager {
 
     protected String getRemoteCommitId(RevisionInfo rev) {
         final tag = rev.type == RevisionInfo.Type.TAG
-        final cmd = git.lsRemote().setTags(tag)
+        final cmd = bareGit.lsRemote().setTags(tag)
         if( provider.hasCredentials() )
             cmd.setCredentialsProvider( provider.getGitCredentials() )
         final list = cmd.call()
@@ -1234,7 +1239,7 @@ class AssetManager {
     }
 
     protected String getGitConfigRemoteUrl() {
-        if( !localPathDefinedAndExists() ) {
+        if( !bareRepo.exists() ) {
             return null
         }
 
@@ -1244,10 +1249,8 @@ class AssetManager {
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = manifest.getDefaultBranch()
-        final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
-        final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
+        final url = iniFile.getString("remote \"origin\"", "url")
+        log.debug "Git config: $gitConfig; url: $url"
         return url
     }
 
@@ -1277,10 +1280,9 @@ class AssetManager {
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {
-            assert localPath
             def message = (localGitConfig.exists()
                             ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
-                            : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
+                            : "Can't find git repository config file -- Repository may be corrupted: $bareRepo" )
             throw new AbortOperationException(message)
         }
 
