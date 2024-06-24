@@ -428,7 +428,7 @@ branchB,fghij"""
         when:
         def holder = new AssetManager()
         holder.build('foo/bar')
-        holder.localPath = new File(dir.toString() + '/foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME)
+        holder.setLocalPath(new File(dir.toString() + '/foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME))
         then:
         holder.getMainScriptName() == 'hello.nf'
         holder.manifest.getDefaultBranch() == 'super-stuff'
@@ -444,12 +444,10 @@ branchB,fghij"""
         def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
-        holder.build('foo/bar')
+        holder.build('foo/bar').setLocalPath(new File(dir.toString() + '/foo/bar'))
 
         then:
         holder.getMainScriptName() == 'main.nf'
@@ -463,11 +461,11 @@ branchB,fghij"""
 
         given:
         def dir = tempDir.root
-        dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
+        dir.resolve('foo/bar/' + BARE_REPO).mkdirs()
+        dir.resolve('foo/bar/' + BARE_REPO + '/config').text = GIT_CONFIG_LONG
 
         when:
-        def manager = new AssetManager().setLocalPath(dir.toFile())
+        def manager = new AssetManager().build('foo/bar')
         then:
         manager.getGitConfigRemoteUrl() == 'git@github.com:nextflow-io/nextflow.git'
 
@@ -477,11 +475,11 @@ branchB,fghij"""
 
         given:
         def dir = tempDir.root
-        dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
+        dir.resolve('foo/bar/' + BARE_REPO).mkdirs()
+        dir.resolve('foo/bar/' + BARE_REPO + '/config').text = GIT_CONFIG_LONG
 
         when:
-        def manager = new AssetManager().setLocalPath(dir.toFile())
+        def manager = new AssetManager().build('foo/bar')
         then:
         manager.getGitConfigRemoteDomain() == 'github.com'
 
@@ -501,9 +499,6 @@ branchB,fghij"""
         repo.add().addFilepattern('.').call()
         def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
-
-        // append fake remote data
-        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
