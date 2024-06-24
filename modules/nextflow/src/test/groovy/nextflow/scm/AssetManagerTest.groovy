@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import static nextflow.scm.AssetManager.BARE_REPO
 import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
 import static nextflow.scm.AssetManager.REVISION_MAP
 import static nextflow.scm.AssetManager.REVISION_SUBDIR
@@ -248,7 +249,7 @@ branchB,fghij"""
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/commits/v1.2/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/v1.2/.git').isDirectory()
 
         when:
         manager.download()
@@ -268,7 +269,7 @@ branchB,fghij"""
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/commits/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
 
         when:
         def result = manager.download()
@@ -291,7 +292,7 @@ branchB,fghij"""
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/commits/mybranch/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/mybranch/.git').isDirectory()
 
         when:
         def result = manager.download()
@@ -419,14 +420,15 @@ branchB,fghij"""
                 }
                 '''
         def dir = tempDir.getRoot()
-        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME).mkdirs()
-        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME + '/nextflow.config').text = config
-        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME + '/.git').mkdir()
-        dir.resolve('foo/bar/.nextflow/commits/' + DEFAULT_REVISION_DIRNAME + '/.git/config').text = GIT_CONFIG_TEXT
+        dir.resolve('foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME).mkdirs()
+        dir.resolve('foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME + '/nextflow.config').text = config
+        dir.resolve('foo/bar/' + BARE_REPO).mkdirs()
+        dir.resolve('foo/bar/' + BARE_REPO + '/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
         holder.build('foo/bar')
+        holder.localPath = new File(dir.toString() + '/foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME)
         then:
         holder.getMainScriptName() == 'hello.nf'
         holder.manifest.getDefaultBranch() == 'super-stuff'
@@ -594,9 +596,9 @@ branchB,fghij"""
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/dev/.git').isDirectory()
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/dev/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/dev/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/dev/workflow.nf').text == "println 'Hello'\n"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -623,9 +625,9 @@ branchB,fghij"""
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/v0.1/.git').isDirectory()
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/v0.1/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/v0.1/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/v0.1/workflow.nf').text == "println 'Hello'\n"
     }
 
 }
