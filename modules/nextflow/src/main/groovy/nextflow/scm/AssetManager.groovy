@@ -354,8 +354,6 @@ class AssetManager {
 
     @PackageScope
     void updateRevisionMapAndLocalPath(String revision) {
-        // get local copy of bare repository
-        checkBareRepo()
 
         String commitId = revisionToCommitWithBareRepo(revision)
 
@@ -796,14 +794,18 @@ class AssetManager {
      *
      * @result A message representing the operation result
      */
-    String download(Integer deep=null) {
+    String download(Integer deep=null, boolean testDisableUpdateLocalPath = false) {
         assert project
 
         // make sure it contains a valid repository
         checkValidRemoteRepo()
 
+        // get local copy of bare repository
+        checkBareRepo()
         // update mapping of revision to commit, and update localPath
-        updateRevisionMapAndLocalPath(revision)
+        // boolean is for testing purposes only (e.g. UpdateModuleTest)
+        if( !testDisableUpdateLocalPath )
+            updateRevisionMapAndLocalPath(revision)
 
         /*
          * if the pipeline does not exists locally pull it from the remote repo
