@@ -17,7 +17,6 @@
 package nextflow.scm
 
 import static nextflow.scm.AssetManager.BARE_REPO
-import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
 import static nextflow.scm.AssetManager.REVISION_MAP
 import static nextflow.scm.AssetManager.REVISION_SUBDIR
 
@@ -501,15 +500,15 @@ class AssetManagerTest extends Specification {
                 }
                 '''
         def dir = tempDir.getRoot()
-        dir.resolve('foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME).mkdirs()
-        dir.resolve('foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME + '/nextflow.config').text = config
+        dir.resolve('foo/bar/' + REVISION_SUBDIR + '/' + 'mockup_dir').mkdirs()
+        dir.resolve('foo/bar/' + REVISION_SUBDIR + '/' + 'mockup_dir' + '/nextflow.config').text = config
         dir.resolve('foo/bar/' + BARE_REPO).mkdirs()
         dir.resolve('foo/bar/' + BARE_REPO + '/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
         holder.build('foo/bar')
-        holder.setLocalPath(new File(dir.toString() + '/foo/bar/' + REVISION_SUBDIR + '/' + DEFAULT_REVISION_DIRNAME))
+        holder.setLocalPath(new File(dir.toString() + '/foo/bar/' + REVISION_SUBDIR + '/' + 'mockup_dir'))
         then:
         holder.getMainScriptName() == 'hello.nf'
         holder.manifest.getDefaultBranch() == 'super-stuff'
