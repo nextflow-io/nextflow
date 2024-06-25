@@ -110,12 +110,8 @@ class AssetManagerTest extends Specification {
 
     def testListRevisions() {
         given:
-        def revisionMap1 =
-        """branch1,12345
-branch2,67890"""
-        def revisionMap2 =
-        """branchA,abcde
-branchB,fghij"""
+        String revisionMap1 = '''branch1,12345\nbranch2,67890'''
+        String revisionMap2 = '''branchA,abcde\nbranchB,fghij'''
 
         def folder = tempDir.getRoot()
         folder.resolve('cbcrg/pipe1/.nextflow/').mkdirs()
@@ -216,6 +212,38 @@ branchB,fghij"""
     }
 
 
+    def testUpdateRevisionMap() {
+
+        given:
+        def folder = tempDir.getRoot()
+        String revision = null
+        def manager = new AssetManager().build('nextflow-io/hello', revision)
+        String revisionMap1 = '''v1.2,1b420d060d3fad67027154ac48e3bdea06f058da\n'''
+
+        when:
+        manager.updateRevisionMap('v1.2','1b420d060d3fad67027154ac48e3bdea06f058da')
+        then:
+        folder.resolve('nextflow-io/hello/' + REVISION_MAP).exists()
+        folder.resolve('nextflow-io/hello/' + REVISION_MAP).text == revisionMap1
+    }
+
+
+    def testRevisionToCommitWithMap() {
+
+        given:
+        def folder = tempDir.getRoot()
+        String revision = null
+        def manager = new AssetManager().build('nextflow-io/hello', revision)
+        String revisionMap1 = '''v1.2,1b420d060d3fad67027154ac48e3bdea06f058da\n'''
+
+        when:
+        folder.resolve('nextflow-io/hello/.nextflow').mkdirs()
+        folder.resolve('nextflow-io/hello/' + REVISION_MAP).text = revisionMap1
+        then:
+        manager.revisionToCommitWithMap('v1.2') == '1b420d060d3fad67027154ac48e3bdea06f058da'
+    }
+
+
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testCloneBareRepo() {
 
@@ -230,6 +258,21 @@ branchB,fghij"""
         then:
         folder.resolve('nextflow-io/hello/' + BARE_REPO).isDirectory()
         folder.resolve('nextflow-io/hello/' + BARE_REPO + '/config').exists()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testRevisionToCommitWithBareRepo() {
+
+        given:
+        def folder = tempDir.getRoot()
+        String revision = null
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
+
+        when:
+        manager.checkBareRepo()
+        then:
+        manager.revisionToCommitWithBareRepo('v1.2') == '1b420d060d3fad67027154ac48e3bdea06f058da'
     }
 
 
