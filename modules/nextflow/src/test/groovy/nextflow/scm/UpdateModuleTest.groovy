@@ -16,7 +16,6 @@
 
 package nextflow.scm
 
-import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
 import static nextflow.scm.AssetManager.REVISION_SUBDIR
 
 import java.nio.file.Files
