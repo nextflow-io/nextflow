@@ -299,11 +299,13 @@ class AssetManager {
     String revisionToCommitWithBareRepo(String revision) {
         String commitId
 
-        def rev = Git.open(bareRepo)
-                     .getRepository()
-                     .resolve(revision ?: Constants.HEAD)
-        if( rev )
-            commitId = rev.getName()
+        if( bareRepo.exists() ) {
+            def rev = Git.open(bareRepo)
+                         .getRepository()
+                         .resolve(revision ?: Constants.HEAD)
+            if( rev )
+                commitId = rev.getName()
+        }
 
         return commitId
     }
