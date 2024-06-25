@@ -122,18 +122,37 @@ class AssetManagerTest extends Specification {
         when:
         def manager = new AssetManager('cbcrg/pipe1')
         def list = manager.listRevisions()
-        def dict = manager.listRevisionsAndCommits()
         then:
         list == ['branch1','branch2']
-        dict == Map.of('branch1','12345','branch2','67890')
-        //dict == [branch1:'12345',branch2:'67890']
 
         when:
         manager = new AssetManager('cbcrg/pipe2')
         list = manager.listRevisions()
-        dict = manager.listRevisionsAndCommits()
         then:
         list == ['branchA', 'branchB']
+    }
+
+    def testListRevisionsAndCommits() {
+        given:
+        String revisionMap1 = '''branch1,12345\nbranch2,67890'''
+        String revisionMap2 = '''branchA,abcde\nbranchB,fghij'''
+
+        def folder = tempDir.getRoot()
+        folder.resolve('cbcrg/pipe1/.nextflow/').mkdirs()
+        folder.resolve('cbcrg/pipe2/.nextflow/').mkdirs()
+        folder.resolve('cbcrg/pipe1/' + REVISION_MAP).text = revisionMap1
+        folder.resolve('cbcrg/pipe2/' + REVISION_MAP).text = revisionMap2
+
+        when:
+        def manager = new AssetManager('cbcrg/pipe1')
+        def dict = manager.listRevisionsAndCommits()
+        then:
+        dict == Map.of('branch1','12345','branch2','67890')
+
+        when:
+        manager = new AssetManager('cbcrg/pipe2')
+        dict = manager.listRevisionsAndCommits()
+        then:
         dict == Map.of('branchA','abcde','branchB','fghij')
     }
 
