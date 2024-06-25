@@ -40,7 +40,7 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(description = 'project name or repository url to pull', arity = 1)
     List<String> args
 
-    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+    @Parameter(names=['-a','-all'], description = 'Update all downloaded projects', arity = 0)
     boolean all
 
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')

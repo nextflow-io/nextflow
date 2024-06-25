@@ -1074,7 +1074,7 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 
 **Options**
 
-`-all`
+`-a, -all`
 : Update all downloaded projects.
 
 `-d, -deep`
