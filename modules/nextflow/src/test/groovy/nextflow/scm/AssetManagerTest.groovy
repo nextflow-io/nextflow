@@ -235,7 +235,8 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         String revision = null
-        def manager = new AssetManager().build('nextflow-io/hello', revision)
+        def manager = new AssetManager().build('nextflow-io/hello')
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
         String revisionMap1 = '''v1.2,1b420d060d3fad67027154ac48e3bdea06f058da\n'''
 
         when:
@@ -251,7 +252,8 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         String revision = null
-        def manager = new AssetManager().build('nextflow-io/hello', revision)
+        def manager = new AssetManager().build('nextflow-io/hello')
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
         String revisionMap1 = '''v1.2,1b420d060d3fad67027154ac48e3bdea06f058da\n'''
 
         when:
@@ -269,7 +271,8 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
         String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
 
         when:
         manager.checkBareRepo()
@@ -285,7 +288,8 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
         String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
 
         when:
         manager.checkBareRepo()
@@ -301,7 +305,8 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
         String revision = '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' // easier to fix commit for a generic test
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
 
         when:
         manager.download()
@@ -321,8 +326,10 @@ class AssetManagerTest extends Specification {
 
         given:
         def folder = tempDir.getRoot()
+        String revision = 'v1.2'
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', "v1.2", [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
         // tag v1.2 -> commit 1b420d060d3fad67027154ac48e3bdea06f058da
 
         when:
@@ -342,8 +349,10 @@ class AssetManagerTest extends Specification {
 
         given:
         def folder = tempDir.getRoot()
+        String revision = '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68'
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', "6b9515aba6c7efc6a9b3f273ce116fc0c224bf68", [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
 
         when:
         manager.download()
@@ -365,8 +374,10 @@ class AssetManagerTest extends Specification {
 
         given:
         def folder = tempDir.getRoot()
+        String revision = 'mybranch'
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', "mybranch", [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
         // as of Jun 2024, branch "mybranch" -> commit "1c3e9e7404127514d69369cd87f8036830f5cf64"
 
         when:
@@ -389,7 +400,8 @@ class AssetManagerTest extends Specification {
         def dir = tempDir.getRoot()
         String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', revision, [providers:[github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers:[github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
 
         when:
         manager.clone(dir.toFile())
@@ -527,7 +539,8 @@ class AssetManagerTest extends Specification {
 
         when:
         def holder = new AssetManager()
-        holder.build('foo/bar').setLocalPath(new File(dir.toString() + '/foo/bar'))
+        holder.build('foo/bar')
+        holder.setLocalPath(new File(dir.toString() + '/foo/bar'))
 
         then:
         holder.getMainScriptName() == 'main.nf'
@@ -665,8 +678,10 @@ class AssetManagerTest extends Specification {
 
         given:
         def folder = tempDir.getRoot()
+        String revision = 'dev'
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', "dev", [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/nf-test-branch', revision)
         // as of June 2024, branch "dev" -> commit "6f882561d589365c3950d170df8445e3c0dc8028"
 
         when:
@@ -682,7 +697,9 @@ class AssetManagerTest extends Specification {
 
         given:
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', 'dev', [providers: [github: [auth: token]]])
+        String revision = 'dev'
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
 
         expect:
         manager.checkValidRemoteRepo()
@@ -695,8 +712,10 @@ class AssetManagerTest extends Specification {
 
         given:
         def folder = tempDir.getRoot()
+        String revision = 'v0.1'
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/nf-test-branch', "v0.1", [providers: [github: [auth: token]]])
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
         // tag "v0.1" -> commit "6f882561d589365c3950d170df8445e3c0dc8028"
 
         when:

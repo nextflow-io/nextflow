@@ -63,10 +63,10 @@ class CmdDrop extends CmdBase {
             revManager.listRevisions().each { rev ->
                 if( rev == DEFAULT_REVISION_DIRNAME )
                     rev = null
-                dropList << new AssetManager(args[0], rev)
+                dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], rev)
             }
         } else {
-            dropList << new AssetManager(args[0], revision)
+            dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], revision)
         }
 
         if ( !dropList ) {

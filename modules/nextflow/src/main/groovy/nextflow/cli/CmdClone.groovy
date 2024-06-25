@@ -53,7 +53,8 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline, revision, this)
+        final manager = new AssetManager(pipeline, this)
+        manager.setRevisionAndLocalPath(pipeline, revision)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name

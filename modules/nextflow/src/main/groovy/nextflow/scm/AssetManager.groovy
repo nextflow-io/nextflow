@@ -86,7 +86,7 @@ class AssetManager {
     /**
      * Directory where the pipeline is cloned (i.e. downloaded)
      *
-     * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/commits/<revision>
+     * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/commits/<commitId>
      */
     private File localPath
 
@@ -113,37 +113,34 @@ class AssetManager {
      * Create a new asset manager with the specified pipeline name
      *
      * @param pipelineName The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
-     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      */
-    AssetManager( String pipelineName, String revision = null, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, HubOptions cliOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, revision, config, cliOpts)
+        build(pipelineName, config, cliOpts)
     }
 
-    AssetManager( String pipelineName, String revision, Map config) {
+    AssetManager( String pipelineName, Map config) {
         assert pipelineName
         // build the object
-        build(pipelineName, revision, config)
+        build(pipelineName, config)
     }
 
     /**
      * Build the asset manager internal data structure
      *
      * @param pipelineName A project name or a project repository Git URL
-     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
      * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
-        this.revision = revision
         this.project = resolveName(pipelineName)
         validateProjectName(this.project)
 
@@ -151,8 +148,6 @@ class AssetManager {
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
         validateProjectBareDir()
-
-        updateProjectDir(this.project, revisionToCommitWithMap(this.revision))
 
         return this
     }
@@ -350,6 +345,13 @@ class AssetManager {
             }
             revisionMap << revisionTmp + ',' + commitId + '\n'
         }
+    }
+
+    AssetManager setRevisionAndLocalPath(String pipelineName, String revision) {
+        this.revision = revision
+        updateProjectDir(resolveName(pipelineName), revisionToCommitWithMap(revision))
+
+        return this
     }
 
     @PackageScope

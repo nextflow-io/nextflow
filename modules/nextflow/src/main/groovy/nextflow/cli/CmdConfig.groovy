@@ -186,7 +186,8 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        final manager = new AssetManager(path, revision)
+        final manager = new AssetManager(path)
+        manager.setRevisionAndLocalPath(path, revision)
         manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
 
     }

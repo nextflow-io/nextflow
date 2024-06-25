@@ -54,7 +54,8 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0], revision)
+        def manager = new AssetManager(args[0])
+        manager.setRevisionAndLocalPath(args[0], revision)
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
 

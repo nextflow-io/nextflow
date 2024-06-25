@@ -83,12 +83,12 @@ class CmdPull extends CmdBase implements HubOptions {
                 revManager.listRevisions().each{ rev ->
                     if( rev == DEFAULT_REVISION_DIRNAME )
                         rev = null
-                    list << new AssetManager(proj, rev, this)
+                    list << new AssetManager(proj, this).setRevisionAndLocalPath(proj, rev)
                 }
             }
         } else {
             args.toList().each {
-                list << new AssetManager(it, revision, this)
+                list << new AssetManager(it, this).setRevisionAndLocalPath(it, revision)
             }
         }
 
