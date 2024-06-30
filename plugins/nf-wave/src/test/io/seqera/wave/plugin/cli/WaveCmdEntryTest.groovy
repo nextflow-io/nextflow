@@ -15,13 +15,13 @@
  *
  */
 
-package io.seqera.wave.plugin.packer
+package io.seqera.wave.plugin.cli
 
 import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.json.JsonSlurper
-import io.seqera.wave.plugin.cli.WaveCmdEntry
+import io.seqera.wave.plugin.packer.TarHelper
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import org.junit.Rule
