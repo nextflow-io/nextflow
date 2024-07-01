@@ -218,7 +218,9 @@ class AzBatchService implements Closeable {
 
     protected Double computeScore(int cpus, MemoryUnit mem, Map entry) {
         def vmCores = entry.numberOfCores as int
-        double vmMemGb = (entry.memoryInMb as int) /1024
+        // Azure spells it with two different spellings
+        int entryInMb = (entry.memoryInMB ?: entry.memoryInMb) as int
+        double vmMemGb = entryInMb/1024
 
         if( cpus > vmCores ) {
             return null
