@@ -189,7 +189,7 @@ The following settings are available:
 `aws.batch.logsGroup`
 : :::{versionadded} 22.09.0-edge
   :::
-: The name of the logs group used by Batch Jobs (default: `/aws/batch`).
+: The name of the logs group used by Batch Jobs (default: `/aws/batch/job`).
 
 `aws.batch.maxParallelTransfers`
 : Max parallel upload/download transfer operations *per job* (default: `4`).
