@@ -62,6 +62,11 @@ class AssetManager {
     @PackageScope
     static File root = DEFAULT_ROOT
 
+    @PackageScope
+    static final String subdirCommits = '.nextflow/commits'
+
+    static public final String REVISION_DELIM = ':'
+
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
@@ -70,9 +75,30 @@ class AssetManager {
     private String project
 
     /**
+     * The name of the commit/branch/tag as requested via command line
+     * This is now a first class attribute of a pipeline
+     */
+    private String revision
+
+    /**
+     * The commit ID as de-referenced from the requested revision
+     */
+    private String commitId
+
+    /**
      * Directory where the pipeline is cloned (i.e. downloaded)
+     *
+     * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/commits/<commit>
      */
     private File localPath
+
+    /**
+     * Directory where the bare repository of the pipeline
+     * is cloned (i.e. downloaded)
+     *
+     * Schema: $NXF_ASSETS/<org>/<repo>
+     */
+    private File localBarePath
 
     private Git _git
 
@@ -94,48 +120,77 @@ class AssetManager {
     /**
      * Create a new asset manager with the specified pipeline name
      *
-     * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
+     * @param pipelineName The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      */
-    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, String revision = null, HubOptions cliOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts)
+        build(pipelineName, revision, config, cliOpts)
     }
 
-    AssetManager( String pipelineName, Map config ) {
+    AssetManager( String pipelineName, String revision, Map config) {
         assert pipelineName
         // build the object
-        build(pipelineName, config)
+        build(pipelineName, revision, config)
     }
 
     /**
      * Build the asset manager internal data structure
      *
      * @param pipelineName A project name or a project repository Git URL
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
      * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
-        this.project = resolveName(pipelineName)
-        this.localPath = checkProjectDir(project)
+        this.revision = revision
+        this.project = resolveName(pipelineName, this.revision)
+
+        this.localBarePath = resolveLocalBarePath(project)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
+        this.provider.setRevision(this.revision)
+        checkLocalBarePath()
+
         setupCredentials(cliOpts)
-        validateProjectDir()
+        validateBareProjectDir()
+
+        /* TODO MARCO : Outstanding bits right now:
+            1. updating of bare ideally would be at rev/tag level, however does everything by default
+                -> need to test this: git.fetch()
+                                        .setRefSpecs("refs/heads/<branch>:refs/heads/<branch>")
+            2. the wrong revision/commit is printed at run time, as in "Launching <pipeline> ..."
+                - also, no notice when remote branch is updated (probably related)
+                -> how is RevisionInfo used in the run algorithm?
+                ==> should probably make sure that requested revision is printed in pipeline run
+            3. brittle algorithm:
+                - instantiation: decode revision to commit ID (so as to define localPath)
+                - if pull/run: update local bare -> can result in mismatch of revision vs commit
+
+            4. update mechanics of list/info commands
+
+            END. refactor with original AssetManager (which has no revision arg). also unit tests.
+        */
+
+        // note: this will call updateLocalBareRepo() if revision cannot be resolved in first instance
+        this.commitId = commitFromRevisionUsingBareLocal(this.revision)
+        this.localPath = checkProjectDir(project, this.commitId)
 
         return this
     }
 
+
     @PackageScope
     File getLocalGitConfig() {
-        localPath ? new File(localPath,'.git/config') : null
+        localBarePath ? new File(localBarePath,'config') : null
     }
 
     @PackageScope AssetManager setProject(String name) {
@@ -173,16 +228,72 @@ class AssetManager {
      * and return the directory where the project is stored locally
      *
      * @param projectName A project name matching the pattern {@code owner/project}
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @return The project dir {@link File}
      */
     @PackageScope
-    File checkProjectDir(String projectName) {
+    File checkProjectDir(String projectName, String commit) {
 
         if( !isValidProjectName(projectName)) {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
+        new File(root, project + '/' + subdirCommits + '/' + commit)
+    }
+
+    @PackageScope
+    File resolveLocalBarePath(String projectName) {
         new File(root, project)
+    }
+
+    @PackageScope
+    void checkLocalBarePath() {
+        /*
+         * if the bare repository of the pipeline does not exists locally pull it from the remote repo
+         */
+        if( !localBarePath.exists() ) {
+            localBarePath.parentFile.mkdirs()
+            // make sure it contains a valid repository
+            checkValidRemoteRepoBare()
+
+            final cloneBareURL = getGitRepositoryUrlBare()
+            log.debug "Pulling bare repo for $project -- Using remote clone url: ${cloneBareURL}"
+
+            // clone it
+            def bare = Git.cloneRepository()
+            if( provider.hasCredentials() )
+                bare.setCredentialsProvider( provider.getGitCredentials() )
+
+            bare
+                .setBare( true )
+                .setURI(cloneBareURL)
+                .setGitDir(localBarePath)
+                .call()
+        }
+    }
+
+    void updateLocalBareRepo() {
+        log.debug "Fetching (updating) bare repo for $project"
+
+        Git.open(localBarePath)
+           .fetch()
+           .call()
+    }
+
+    @PackageScope
+    String commitFromRevisionUsingBareLocal(String revision) {
+        String bareRevision = revision ?: Constants.HEAD
+        def bare = Git.open(localBarePath)
+        def rev = bare.getRepository().resolve(bareRevision)
+        if (rev == null) {
+            updateLocalBareRepo()
+            rev = bare.getRepository().resolve(bareRevision)
+            if (rev == null)
+                throw new AbortOperationException("Cannot resolve revision: $bareRevision")
+        }
+        def commit = rev.getName()
+        bare.close()
+        return commit
     }
 
     /**
@@ -190,20 +301,20 @@ class AssetManager {
      * line option or implicitly by entering a repository URL, matches with clone URL of a project already cloned (downloaded).
      */
     @PackageScope
-    void validateProjectDir() {
+    void validateBareProjectDir() {
 
-        if( !localPath.exists() ) {
+        if( !localBarePath.exists() ) {
             return
         }
 
         // if project dir exists it must contain the Git config file
         final configProvider = guessHubProviderFromGitConfig(true)
         if( !configProvider )
-            throw new IllegalStateException("Cannot find a provider config for repository at path: $localPath")
+            throw new IllegalStateException("Cannot find a provider config for repository at path: $localBarePath")
 
         // checks that the selected hub matches with the one defined in the git config file
         if( hub != configProvider ) {
-            throw new AbortOperationException("A project with name: `$localPath` has already been downloaded from a different provider: `$configProvider`")
+            throw new AbortOperationException("A project with name: `$localBarePath` has already been downloaded from a different provider: `$configProvider`")
         }
 
     }
@@ -243,7 +354,7 @@ class AssetManager {
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
     @PackageScope
-    String resolveName( String name ) {
+    String resolveName( String name, String revision = null ) {
         assert name
 
         //
@@ -285,7 +396,7 @@ class AssetManager {
             name = parts[0]
         }
 
-        def qualifiedName = find(name)
+        def qualifiedName = find(name, revision)
         if( !qualifiedName ) {
             return "$DEFAULT_ORGANIZATION/$name".toString()
         }
@@ -299,6 +410,10 @@ class AssetManager {
     }
 
     String getProject() { project }
+
+    String getRevision() { revision }
+
+    String getProjectWithRevision() { project + ( revision ? REVISION_DELIM + revision : '' ) }
 
     String getHub() { hub }
 
@@ -363,12 +478,16 @@ class AssetManager {
         return this
     }
 
-    AssetManager checkValidRemoteRepo(String revision=null) {
-        // Configure the git provider to use the required revision as source for all needed remote resources:
-        // - config if present in repo (nextflow.config by default)
-        // - main script (main.nf by default)
-        provider.revision = revision
+    AssetManager checkValidRemoteRepo() {
+        // Check that the remote git provider contains the main script file (main.nf by default)
         final scriptName = getMainScriptName()
+        provider.validateFor(scriptName)
+        return this
+    }
+
+    AssetManager checkValidRemoteRepoBare() {
+        // Check that the remote git provider contains the main script file (main.nf by default)
+        final scriptName = getMainScriptNameBare()
         provider.validateFor(scriptName)
         return this
     }
@@ -376,14 +495,21 @@ class AssetManager {
     @Memoized
     String getGitRepositoryUrl() {
 
-        if( localPath.exists() ) {
+        if( ( localPath != null ? localPath.exists() : false ) ) {
             return localPath.toURI().toString()
         }
 
         provider.getCloneUrl()
     }
 
+    @Memoized
+    String getGitRepositoryUrlBare() {
+        provider.getCloneUrl()
+    }
+
     File getLocalPath() { localPath }
+
+    File getLocalBarePath() { localBarePath }
 
     ScriptFile getScriptFile(String scriptName=null) {
 
@@ -413,6 +539,10 @@ class AssetManager {
         return mainScript ?: getManifest().getMainScript()
     }
 
+    String getMainScriptNameBare() {
+        return mainScript ?: getManifest0().getMainScript()
+    }
+
     String getHomePage() {
         getManifest().getHomePage() ?: provider.getRepositoryUrl()
     }
@@ -434,7 +564,7 @@ class AssetManager {
         String text = null
         ConfigObject result = null
         try {
-            text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+            text = ( localPath != null ? localPath.exists() : false ) ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
         }
         catch( FileNotFoundException e ) {
             log.debug "Project manifest does not exist: ${e.message}"
@@ -459,7 +589,7 @@ class AssetManager {
     }
 
     Path getConfigFile() {
-        if( localPath.exists() ) {
+        if( ( localPath != null ? localPath.exists() : false ) ) {
             return new File(localPath, MANIFEST_FILE_NAME).toPath()
         }
         else {
@@ -478,10 +608,11 @@ class AssetManager {
     }
 
 
-    String getBaseName() {
+    String getBaseNameWithRevision() {
         def result = project.tokenize('/')
         if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name: $project")
-        return result.size()==1 ? result[0] : result[1]
+        result = ( result.size()==1 ? result[0] : result[1] )
+        return result + ( revision ? REVISION_DELIM + revision : '' )
     }
 
     boolean isLocal() {
@@ -538,16 +669,48 @@ class AssetManager {
         return result
     }
 
-    static protected def find( String name ) {
+    /**
+     * @return The list of available revisions for a given project name
+     */
+    List<String> listRevisions( String projectName = project ) {
+        log.debug "Listing revisions for project: $projectName"
+
+        def result = new LinkedList()
+        if( !root.exists() )
+            return result
+
+        list().each {
+            if( it.tokenize(REVISION_DELIM)[0] == projectName ) {
+                result << it
+            }
+        }
+
+        return result
+    }
+
+    // Updated for new localPath schema (see localPath declaration at top of this class file)
+    static protected def find( String name, String revision = null ) {
         def exact = []
         def partial = []
 
         list().each {
             def items = it.split('/')
-            if( items[1] == name )
-                exact << it
-            else if( items[1].startsWith(name ) )
-                partial << it
+            /**
+             * itemsRev[0] is the name of each list'ed project
+             * itemsRev[1] is the revision
+             */
+            def itemsRev = items[1].tokenize(REVISION_DELIM)
+            // Check on matching revision: either null or same revision string
+            if( (!revision && !itemsRev[1]) || (revision && itemsRev[1] == revision) ) {
+                // Exact name match
+                if( itemsRev[0] == name )
+                    // Return item without revision
+                    exact << it.tokenize(REVISION_DELIM)[0]
+                // Partial name match
+                else if( itemsRev[0].startsWith(name ) )
+                    // Return item without revision
+                    partial << it.tokenize(REVISION_DELIM)[0]
+            }
         }
 
         def list = exact ?: partial
@@ -565,22 +728,18 @@ class AssetManager {
     /**
      * Download a pipeline from a remote Github repository
      *
-     * @param revision The revision to download
      * @result A message representing the operation result
      */
-    String download(String revision=null, Integer deep=null) {
+    String download(Integer deep=null) {
         assert project
 
         /*
-         * if the pipeline already exists locally pull it from the remote repo
+         * if the pipeline does not exists locally pull it from the remote repo
          */
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
-            // make sure it contains a valid repository
-            checkValidRemoteRepo(revision)
 
-            final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling $project -- Using local bare repo"
 
             // clone it
             def clone = Git.cloneRepository()
@@ -588,87 +747,41 @@ class AssetManager {
                 clone.setCredentialsProvider( provider.getGitCredentials() )
 
             clone
-                .setURI(cloneURL)
+                .setURI(localBarePath.toString())
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
             if( deep )
                 clone.setDepth(deep)
             clone.call()
 
-            if( revision ) {
-                // use an explicit checkout command *after* the clone instead of cloning a specific branch
-                // because the clone command does not allow the use of SHA commit id (only branch and tag names)
-                try { git.checkout() .setName(revision) .call() }
-                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
-            }
+            // use an explicit checkout command *after* the clone instead of cloning a specific branch
+            // because the clone command does not allow the use of SHA commit id (only branch and tag names)
+            git.checkout() .setName(commitId) .call()
+            //try { git.checkout() .setName(commitId) .call() }
+            //catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
 
             // return status message
-            return "downloaded from ${cloneURL}"
+            return "downloaded from local bare repo"
         }
 
-        log.debug "Pull pipeline $project  -- Using local path: $localPath"
+        // verify that is runnable
+        if( !isRunnable() )
+            throw new AbortOperationException("$project is not runnable and not empty -- cannot pull from repository")
 
-        // verify that is clean
-        if( !isClean() )
-            throw new AbortOperationException("$project contains uncommitted changes -- cannot pull from repository")
 
-        if( revision && revision != getCurrentRevision() ) {
-            /*
-             * check out a revision before the pull operation
-             */
-            try {
-                git.checkout() .setName(revision) .call()
-            }
-            /*
-             * If the specified revision does not exist
-             * Try to checkout it from a remote branch and return
-             */
-            catch ( RefNotFoundException e ) {
-                final ref = checkoutRemoteBranch(revision)
-                final commitId = ref?.getObjectId()
-                return commitId
-                    ? "checked out at ${commitId.name()}"
-                    : "checked out revision ${revision}"
-            }
-        }
-
-        def pull = git.pull()
-        def revInfo = getCurrentRevisionAndName()
-
-        if ( revInfo.type == RevisionInfo.Type.COMMIT ) {
-            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we will assume the repo is already up to date and NOT pull it!")
-            return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
-        }
-
-        if ( revInfo.type == RevisionInfo.Type.TAG ) {
-            pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
-        }
-
-        if( provider.hasCredentials() )
-            pull.setCredentialsProvider( provider.getGitCredentials() )
-
-        if( manifest.recurseSubmodules ) {
-            pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
-        }
-        def result = pull.call()
-        if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
-
-        return result?.mergeResult?.mergeStatus?.toString()
-
+    return "already available"
     }
 
     /**
      * Clone a pipeline from a remote pipeline repository to the specified folder
      *
      * @param directory The folder when the pipeline will be cloned
-     * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null, Integer deep=null) {
+    void clone(File directory, Integer deep=null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Cloning `${project}` from ${uri} into ${directory}"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -706,6 +819,18 @@ class AssetManager {
         names.get( head.objectId ) ?: head.objectId.name()
     }
 
+    /**
+     * @return The names of all locally pulled revisions for a given project
+     * 
+     * If revision is null, default is assumed
+     */
+    List<String> getPulledRevisions() {
+        return listRevisions().collect{
+            it -> String y = it.tokenize(REVISION_DELIM)[1]
+            it = ( y != null ? y : getDefaultBranch() )
+        }
+    }
+
     RevisionInfo getCurrentRevisionAndName() {
         Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
@@ -733,30 +858,31 @@ class AssetManager {
     /**
      * @return A list of existing branches and tags names. For example
      * <pre>
-     *     * master (default)
-     *       patch-x
-     *       v1.0 (t)
-     *       v1.1 (t)
+     *     * P master (default)
+     *         patch-x
+     *         v1.0 (t)
+     *         v1.1 (t)
      * </pre>
      *
-     * The star character on the left highlight the current revision, the string {@code (default)}
-     *  ticks that it is the default working branch (usually the master branch), while the string {@code (t)}
-     *  shows that the revision is a git tag (instead of a branch)
+     * The character {@code P} on the left indicates the revision is pulled locally,
+     *  the string {@code (default)} ticks that it is the default working branch,
+     *  while the string {@code (t)} shows that the revision is a git tag (instead of a branch)
      */
     @Deprecated
     List<String> getRevisions(int level) {
 
         def current = getCurrentRevision()
         def master = getDefaultBranch()
+        def pulled = getPulledRevisions()
 
         List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
             .unique { shortenRefName(it.name) }
-            .collect { Ref it -> refToString(it,current,master,false,level) }
+            .collect { Ref it -> refToString(it,current,master,pulled,false,level) }
 
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { refToString(it,current,master,true,level) }
+                .collect { refToString(it,current,master,pulled,true,level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
@@ -777,7 +903,6 @@ class AssetManager {
 
     Map getBranchesAndTags(boolean checkForUpdates) {
         final result = [:]
-        final current = getCurrentRevision()
         final master = getDefaultBranch()
 
         final branches = []
@@ -794,8 +919,8 @@ class AssetManager {
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .each { Ref it -> tags << refToMap(it,remote) }
 
-        result.current = current    // current branch name
         result.master = master      // master branch name
+        result.pulled = getPulledRevisions() // list of pulled revisions
         result.branches = branches  // collection of branches
         result.tags = tags          // collect of tags
         return result
@@ -830,11 +955,11 @@ class AssetManager {
         return human ? obj.name.substring(0,10) : obj.name
     }
 
-    protected String refToString(Ref ref, String current, String master, boolean tag, int level ) {
+    protected String refToString(Ref ref, String current, String master, List<String> pulled, boolean tag, int level ) {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        result << (name == current ? '*' : ' ')
+        result << (name in pulled ? 'P' : ' ')
 
         if( level ) {
             def peel = git.getRepository().peel(ref)
@@ -899,39 +1024,7 @@ class AssetManager {
         return result
     }
 
-    /**
-     * Checkout a specific revision
-     * @param revision The revision to be checked out
-     */
-    void checkout( String revision = null ) {
-        assert localPath
-
-        def current = getCurrentRevision()
-        if( current != defaultBranch ) {
-            if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
-            }
-        }
-        if( !revision || revision == current ) {
-            // nothing to do
-            return
-        }
-
-        // verify that is clean
-        if( !isClean() )
-            throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
-
-        try {
-            git.checkout().setName(revision) .call()
-        }
-        catch( RefNotFoundException e ) {
-            checkoutRemoteBranch(revision)
-        }
-
-    }
-
-
-    protected Ref checkoutRemoteBranch( String revision ) {
+    protected Ref checkoutRemoteBranch() {
 
         try {
             def fetch = git.fetch()
@@ -997,7 +1090,7 @@ class AssetManager {
         if( provider.hasCredentials() )
             update.setCredentialsProvider( provider.getGitCredentials() )
         def updatedList = update.call()
-        log.debug "Update submodules $updatedList"
+        log.debug "Updating submodules $updatedList"
     }
 
     protected String getRemoteCommitId(RevisionInfo rev) {
@@ -1042,7 +1135,7 @@ class AssetManager {
     }
 
     protected String getGitConfigRemoteUrl() {
-        if( !localPath ) {
+        if( !localBarePath ) {
             return null
         }
 
@@ -1052,10 +1145,8 @@ class AssetManager {
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = manifest.getDefaultBranch()
-        final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
-        final url = iniFile.getString("remote \"${remote}\"", "url")
-        log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
+        final url = iniFile.getString("remote \"origin\"", "url")
+        log.debug "Git config: $gitConfig; url: $url"
         return url
     }
 
@@ -1081,14 +1172,14 @@ class AssetManager {
 
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
-        assert localPath
+        assert localBarePath
 
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {
             def message = (localGitConfig.exists()
                             ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
-                            : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
+                            : "Can't find git repository config file -- Repository may be corrupted: $localBarePath" )
             throw new AbortOperationException(message)
         }
 
