@@ -28,6 +28,8 @@ import com.azure.storage.blob.sas.BlobContainerSasPermission
 import com.azure.storage.blob.sas.BlobSasPermission
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
 import com.azure.storage.common.StorageSharedKeyCredential
+import com.azure.storage.common.policy.RequestRetryOptions
+import com.azure.storage.common.policy.RetryPolicyType
 import com.azure.storage.common.sas.AccountSasPermission
 import com.azure.storage.common.sas.AccountSasResourceType
 import com.azure.storage.common.sas.AccountSasService
@@ -35,6 +37,8 @@ import com.azure.storage.common.sas.AccountSasSignatureValues
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.config.AzRetryConfig
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.util.Duration
 /**
@@ -180,6 +184,7 @@ class AzHelper {
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
                 .credential(credential)
+                .retryOptions(requestRetryOptions())
                 .buildClient()
     }
 
@@ -197,6 +202,7 @@ class AzHelper {
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
                 .sasToken(sasToken)
+                .retryOptions(requestRetryOptions())
                 .buildClient()
     }
 
@@ -215,6 +221,7 @@ class AzHelper {
         return new BlobServiceClientBuilder()
                 .credential(credential)
                 .endpoint(endpoint)
+                .retryOptions(requestRetryOptions())
                 .buildClient()
     }
 
@@ -231,7 +238,26 @@ class AzHelper {
         return new BlobServiceClientBuilder()
                 .credential(credentialBuilder.build())
                 .endpoint(endpoint)
+                .retryOptions(requestRetryOptions())
                 .buildClient()
+    }
+
+    @Memoized
+    static protected RequestRetryOptions requestRetryOptions() {
+        final cfg = AzConfig.getConfig().retryConfig()
+        return requestRetryOptions0(cfg)
+    }
+
+    static protected RequestRetryOptions requestRetryOptions0(AzRetryConfig cfg) {
+        final retryDelay = java.time.Duration.ofMillis(cfg.getDelay().millis)
+        final maxRetryDelay = java.time.Duration.ofMillis(cfg.getMaxDelay().millis)
+        new RequestRetryOptions(
+            RetryPolicyType.EXPONENTIAL,
+            cfg.maxAttempts,
+            null,
+            retryDelay,
+            maxRetryDelay,
+            null)
     }
 
 }
