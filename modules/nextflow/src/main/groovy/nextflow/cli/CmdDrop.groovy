@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -39,6 +41,12 @@ class CmdDrop extends CmdBase {
     @Parameter(required=true, description = 'name of the project to drop')
     List<String> args
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to drop (either a git branch, tag or commit SHA number)')
+    String revision
+
+    @Parameter(names=['-a','-all-revisions'], description = 'For specified project, drop all revisions')
+    Boolean allRevisions
+
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
     boolean force
 
@@ -48,18 +56,42 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
-        if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${args[0]}")
+
+        List<AssetManager> dropList = []
+        if ( allRevisions ) {
+            def revManager = new AssetManager(args[0])
+            revManager.listRevisions().each { rev ->
+                if( rev == DEFAULT_REVISION_DIRNAME )
+                    rev = null
+                dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], rev)
+            }
+        } else {
+            dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], revision)
         }
 
-        if( this.force || manager.isClean() ) {
-            manager.close()
-            if( !manager.localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${manager.project}` -- Check access permissions for path: ${manager.localPath}")
-            return
+        if ( !dropList ) {
+            throw new AbortOperationException("No revisions found for specified project: ${args[0]}")
         }
 
-        throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
+        dropList.each { manager ->
+            if( !manager.localPathDefinedAndExists() ) {
+                throw new AbortOperationException("No match found for: ${manager.getProjectWithRevision()}")
+            }
+
+            if( this.force || manager.isClean() ) {
+                manager.close()
+                if( !manager.localPath.deleteDir() )
+                    throw new AbortOperationException("Unable to delete project `${manager.getProjectWithRevision()}` -- Check access permissions for path: ${manager.localPath}")
+                manager.pruneRevisionMap(manager.revision)
+                return
+            }
+
+            throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
+        }
+
+        if ( allRevisions ) {
+            def revManager = new AssetManager(args[0])
+            revManager.localRootPath.deleteDir()
+        }
     }
 }

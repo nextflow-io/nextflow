@@ -8,9 +8,10 @@ classDiagram
 
     class AssetManager {
         project : String
+        revision : String
         localPath : File
         mainScript : String
-        repositoryProvider : RepositoryProvider
+        provider : RepositoryProvider
         hub : String
         providerConfigs : List~ProviderConfig~
     }
