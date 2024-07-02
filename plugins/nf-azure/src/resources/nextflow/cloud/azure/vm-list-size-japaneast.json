@@ -5832,38 +5832,6 @@
     "resourceDiskSizeInMB": 1048576
   },
   {
-    "maxDataDiskCount": 12,
-    "memoryInMB": 114688,
-    "name": "Standard_NC6s_v3",
-    "numberOfCores": 6,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 753664
-  },
-  {
-    "maxDataDiskCount": 24,
-    "memoryInMB": 229376,
-    "name": "Standard_NC12s_v3",
-    "numberOfCores": 12,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 1509376
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 458752,
-    "name": "Standard_NC24rs_v3",
-    "numberOfCores": 24,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 3018752
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 458752,
-    "name": "Standard_NC24s_v3",
-    "numberOfCores": 24,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 3018752
-  },
-  {
     "maxDataDiskCount": 8,
     "memoryInMB": 225280,
     "name": "Standard_NC24ads_A100_v4",
@@ -5926,5 +5894,37 @@
     "numberOfCores": 120,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 491520
+  },
+  {
+    "maxDataDiskCount": 12,
+    "memoryInMB": 114688,
+    "name": "Standard_NC6s_v3",
+    "numberOfCores": 6,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 753664
+  },
+  {
+    "maxDataDiskCount": 24,
+    "memoryInMB": 229376,
+    "name": "Standard_NC12s_v3",
+    "numberOfCores": 12,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 1509376
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 458752,
+    "name": "Standard_NC24rs_v3",
+    "numberOfCores": 24,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 3018752
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 458752,
+    "name": "Standard_NC24s_v3",
+    "numberOfCores": 24,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 3018752
   }
 ]

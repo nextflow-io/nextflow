@@ -4616,6 +4616,46 @@
     "resourceDiskSizeInMB": 720896
   },
   {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 466944,
+    "name": "Standard_HB120-16rs_v3",
+    "numberOfCores": 120,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 491520
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 466944,
+    "name": "Standard_HB120-32rs_v3",
+    "numberOfCores": 120,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 491520
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 466944,
+    "name": "Standard_HB120-64rs_v3",
+    "numberOfCores": 120,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 491520
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 466944,
+    "name": "Standard_HB120-96rs_v3",
+    "numberOfCores": 120,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 491520
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 466944,
+    "name": "Standard_HB120rs_v3",
+    "numberOfCores": 120,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 491520
+  },
+  {
     "maxDataDiskCount": 64,
     "memoryInMB": 5836800,
     "name": "Standard_M208ms_v2",
@@ -4702,45 +4742,5 @@
     "numberOfCores": 24,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 3018752
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 466944,
-    "name": "Standard_HB120-16rs_v3",
-    "numberOfCores": 120,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 491520
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 466944,
-    "name": "Standard_HB120-32rs_v3",
-    "numberOfCores": 120,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 491520
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 466944,
-    "name": "Standard_HB120-64rs_v3",
-    "numberOfCores": 120,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 491520
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 466944,
-    "name": "Standard_HB120-96rs_v3",
-    "numberOfCores": 120,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 491520
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 466944,
-    "name": "Standard_HB120rs_v3",
-    "numberOfCores": 120,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 491520
   }
 ]

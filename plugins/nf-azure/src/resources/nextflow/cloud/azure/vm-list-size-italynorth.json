@@ -3424,38 +3424,6 @@
     "resourceDiskSizeInMB": 2457600
   },
   {
-    "maxDataDiskCount": 8,
-    "memoryInMB": 14336,
-    "name": "Standard_NV4as_v4",
-    "numberOfCores": 4,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 90112
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMB": 28672,
-    "name": "Standard_NV8as_v4",
-    "numberOfCores": 8,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 180224
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 57344,
-    "name": "Standard_NV16as_v4",
-    "numberOfCores": 16,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 360448
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 114688,
-    "name": "Standard_NV32as_v4",
-    "numberOfCores": 32,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 720896
-  },
-  {
     "maxDataDiskCount": 16,
     "memoryInMB": 65536,
     "name": "Standard_L8as_v3",
@@ -4454,6 +4422,38 @@
     "numberOfCores": 96,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 2969600
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMB": 14336,
+    "name": "Standard_NV4as_v4",
+    "numberOfCores": 4,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 90112
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMB": 28672,
+    "name": "Standard_NV8as_v4",
+    "numberOfCores": 8,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 180224
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 57344,
+    "name": "Standard_NV16as_v4",
+    "numberOfCores": 16,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 360448
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 114688,
+    "name": "Standard_NV32as_v4",
+    "numberOfCores": 32,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 720896
   },
   {
     "maxDataDiskCount": 4,

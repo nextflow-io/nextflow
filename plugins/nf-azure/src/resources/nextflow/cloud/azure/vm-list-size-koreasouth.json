@@ -4024,6 +4024,14 @@
     "resourceDiskSizeInMB": 0
   },
   {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 688128,
+    "name": "Standard_E96ias_v4",
+    "numberOfCores": 96,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 1376256
+  },
+  {
     "maxDataDiskCount": 64,
     "memoryInMB": 5836800,
     "name": "Standard_M208ms_v2",
@@ -4078,13 +4086,5 @@
     "numberOfCores": 416,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 4194304
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 688128,
-    "name": "Standard_E96ias_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 1376256
   }
 ]

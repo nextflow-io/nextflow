@@ -4320,38 +4320,6 @@
     "resourceDiskSizeInMB": 2949120
   },
   {
-    "maxDataDiskCount": 8,
-    "memoryInMB": 16384,
-    "name": "Standard_NG8ads_V620_v1",
-    "numberOfCores": 8,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 262144
-  },
-  {
-    "maxDataDiskCount": 16,
-    "memoryInMB": 32768,
-    "name": "Standard_NG16ads_V620_v1",
-    "numberOfCores": 16,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 524288
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 180224,
-    "name": "Standard_NG32adms_V620_v1",
-    "numberOfCores": 32,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 1048576
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 65536,
-    "name": "Standard_NG32ads_V620_v1",
-    "numberOfCores": 32,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 1048576
-  },
-  {
     "maxDataDiskCount": 4,
     "memoryInMB": 4096,
     "name": "Standard_D2plds_v5",
@@ -4742,6 +4710,38 @@
     "numberOfCores": 16,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 0
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMB": 16384,
+    "name": "Standard_NG8ads_V620_v1",
+    "numberOfCores": 8,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 262144
+  },
+  {
+    "maxDataDiskCount": 16,
+    "memoryInMB": 32768,
+    "name": "Standard_NG16ads_V620_v1",
+    "numberOfCores": 16,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 524288
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 180224,
+    "name": "Standard_NG32adms_V620_v1",
+    "numberOfCores": 32,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 1048576
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 65536,
+    "name": "Standard_NG32ads_V620_v1",
+    "numberOfCores": 32,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 1048576
   },
   {
     "maxDataDiskCount": 8,

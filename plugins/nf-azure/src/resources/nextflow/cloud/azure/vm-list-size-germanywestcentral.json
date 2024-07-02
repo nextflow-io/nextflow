@@ -5120,52 +5120,36 @@
     "resourceDiskSizeInMB": 819200
   },
   {
-    "maxDataDiskCount": 4,
-    "memoryInMB": 56320,
-    "name": "Standard_NV6ads_A10_v5",
-    "numberOfCores": 6,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 184320
-  },
-  {
     "maxDataDiskCount": 8,
-    "memoryInMB": 112640,
-    "name": "Standard_NV12ads_A10_v5",
-    "numberOfCores": 12,
+    "memoryInMB": 14336,
+    "name": "Standard_NV4as_v4",
+    "numberOfCores": 4,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 368640
+    "resourceDiskSizeInMB": 90112
   },
   {
     "maxDataDiskCount": 16,
-    "memoryInMB": 225280,
-    "name": "Standard_NV18ads_A10_v5",
-    "numberOfCores": 18,
+    "memoryInMB": 28672,
+    "name": "Standard_NV8as_v4",
+    "numberOfCores": 8,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 737280
+    "resourceDiskSizeInMB": 180224
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMB": 901120,
-    "name": "Standard_NV36adms_A10_v5",
-    "numberOfCores": 36,
+    "memoryInMB": 57344,
+    "name": "Standard_NV16as_v4",
+    "numberOfCores": 16,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 2949120
+    "resourceDiskSizeInMB": 360448
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMB": 450560,
-    "name": "Standard_NV36ads_A10_v5",
-    "numberOfCores": 36,
+    "memoryInMB": 114688,
+    "name": "Standard_NV32as_v4",
+    "numberOfCores": 32,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 1474560
-  },
-  {
-    "maxDataDiskCount": 32,
-    "memoryInMB": 901120,
-    "name": "Standard_NV72ads_A10_v5",
-    "numberOfCores": 72,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 2949120
+    "resourceDiskSizeInMB": 720896
   },
   {
     "maxDataDiskCount": 16,
@@ -5216,36 +5200,52 @@
     "resourceDiskSizeInMB": 819200
   },
   {
-    "maxDataDiskCount": 8,
-    "memoryInMB": 14336,
-    "name": "Standard_NV4as_v4",
-    "numberOfCores": 4,
+    "maxDataDiskCount": 4,
+    "memoryInMB": 56320,
+    "name": "Standard_NV6ads_A10_v5",
+    "numberOfCores": 6,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 90112
+    "resourceDiskSizeInMB": 184320
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMB": 112640,
+    "name": "Standard_NV12ads_A10_v5",
+    "numberOfCores": 12,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 368640
   },
   {
     "maxDataDiskCount": 16,
-    "memoryInMB": 28672,
-    "name": "Standard_NV8as_v4",
-    "numberOfCores": 8,
+    "memoryInMB": 225280,
+    "name": "Standard_NV18ads_A10_v5",
+    "numberOfCores": 18,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 180224
+    "resourceDiskSizeInMB": 737280
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMB": 57344,
-    "name": "Standard_NV16as_v4",
-    "numberOfCores": 16,
+    "memoryInMB": 901120,
+    "name": "Standard_NV36adms_A10_v5",
+    "numberOfCores": 36,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 360448
+    "resourceDiskSizeInMB": 2949120
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMB": 114688,
-    "name": "Standard_NV32as_v4",
-    "numberOfCores": 32,
+    "memoryInMB": 450560,
+    "name": "Standard_NV36ads_A10_v5",
+    "numberOfCores": 36,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 720896
+    "resourceDiskSizeInMB": 1474560
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 901120,
+    "name": "Standard_NV72ads_A10_v5",
+    "numberOfCores": 72,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 2949120
   },
   {
     "maxDataDiskCount": 8,

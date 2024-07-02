@@ -4441,14 +4441,6 @@
   },
   {
     "maxDataDiskCount": 32,
-    "memoryInMB": 688128,
-    "name": "Standard_E96ias_v4",
-    "numberOfCores": 96,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 1376256
-  },
-  {
-    "maxDataDiskCount": 32,
     "memoryInMB": 896000,
     "name": "Standard_M32ms_v2",
     "numberOfCores": 32,
@@ -4473,9 +4465,25 @@
   },
   {
     "maxDataDiskCount": 64,
+    "memoryInMB": 3985408,
+    "name": "Standard_M128ms_v2",
+    "numberOfCores": 128,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 0
+  },
+  {
+    "maxDataDiskCount": 64,
     "memoryInMB": 2097152,
     "name": "Standard_M128s_v2",
     "numberOfCores": 128,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 0
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 4194304,
+    "name": "Standard_M192ims_v2",
+    "numberOfCores": 192,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 0
   },
@@ -4513,40 +4521,16 @@
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMB": 2097152,
-    "name": "Standard_M128ds_v2",
-    "numberOfCores": 128,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 4194304
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 2097152,
-    "name": "Standard_M192ids_v2",
-    "numberOfCores": 192,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 4194304
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 3985408,
-    "name": "Standard_M128ms_v2",
-    "numberOfCores": 128,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 0
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 4194304,
-    "name": "Standard_M192ims_v2",
-    "numberOfCores": 192,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 0
-  },
-  {
-    "maxDataDiskCount": 64,
     "memoryInMB": 3985408,
     "name": "Standard_M128dms_v2",
+    "numberOfCores": 128,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 4194304
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 2097152,
+    "name": "Standard_M128ds_v2",
     "numberOfCores": 128,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 4194304
@@ -4561,59 +4545,19 @@
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMB": 5836800,
-    "name": "Standard_M208ms_v2",
-    "numberOfCores": 208,
+    "memoryInMB": 2097152,
+    "name": "Standard_M192ids_v2",
+    "numberOfCores": 192,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 4194304
   },
   {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 2918400,
-    "name": "Standard_M208s_v2",
-    "numberOfCores": 208,
+    "maxDataDiskCount": 32,
+    "memoryInMB": 688128,
+    "name": "Standard_E96ias_v4",
+    "numberOfCores": 96,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 4194304
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 5836800,
-    "name": "Standard_M416-208s_v2",
-    "numberOfCores": 416,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 8388608
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 5836800,
-    "name": "Standard_M416s_v2",
-    "numberOfCores": 416,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 8388608
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 11673600,
-    "name": "Standard_M416-208ms_v2",
-    "numberOfCores": 416,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 8388608
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 11673600,
-    "name": "Standard_M416ms_v2",
-    "numberOfCores": 416,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 8388608
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 7782400,
-    "name": "Standard_M416s_8_v2",
-    "numberOfCores": 416,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 4194304
+    "resourceDiskSizeInMB": 1376256
   },
   {
     "maxDataDiskCount": 4,
@@ -5006,6 +4950,62 @@
     "numberOfCores": 16,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 0
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 5836800,
+    "name": "Standard_M208ms_v2",
+    "numberOfCores": 208,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 4194304
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 2918400,
+    "name": "Standard_M208s_v2",
+    "numberOfCores": 208,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 4194304
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 5836800,
+    "name": "Standard_M416-208s_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 8388608
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 5836800,
+    "name": "Standard_M416s_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 8388608
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 11673600,
+    "name": "Standard_M416-208ms_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 8388608
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 11673600,
+    "name": "Standard_M416ms_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 8388608
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 7782400,
+    "name": "Standard_M416s_8_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 4194304
   },
   {
     "maxDataDiskCount": 4,

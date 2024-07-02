@@ -4376,38 +4376,6 @@
     "resourceDiskSizeInMB": 5765120
   },
   {
-    "maxDataDiskCount": 8,
-    "memoryInMB": 32768,
-    "name": "Standard_DC8_v2",
-    "numberOfCores": 8,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 409600
-  },
-  {
-    "maxDataDiskCount": 1,
-    "memoryInMB": 4096,
-    "name": "Standard_DC1s_v2",
-    "numberOfCores": 1,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 51200
-  },
-  {
-    "maxDataDiskCount": 2,
-    "memoryInMB": 8192,
-    "name": "Standard_DC2s_v2",
-    "numberOfCores": 2,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 102400
-  },
-  {
-    "maxDataDiskCount": 4,
-    "memoryInMB": 16384,
-    "name": "Standard_DC4s_v2",
-    "numberOfCores": 4,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 204800
-  },
-  {
     "maxDataDiskCount": 64,
     "memoryInMB": 5836800,
     "name": "Standard_M208ms_v2",
@@ -4462,5 +4430,37 @@
     "numberOfCores": 416,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 4194304
+  },
+  {
+    "maxDataDiskCount": 8,
+    "memoryInMB": 32768,
+    "name": "Standard_DC8_v2",
+    "numberOfCores": 8,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 409600
+  },
+  {
+    "maxDataDiskCount": 1,
+    "memoryInMB": 4096,
+    "name": "Standard_DC1s_v2",
+    "numberOfCores": 1,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 51200
+  },
+  {
+    "maxDataDiskCount": 2,
+    "memoryInMB": 8192,
+    "name": "Standard_DC2s_v2",
+    "numberOfCores": 2,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 102400
+  },
+  {
+    "maxDataDiskCount": 4,
+    "memoryInMB": 16384,
+    "name": "Standard_DC4s_v2",
+    "numberOfCores": 4,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 204800
   }
 ]
