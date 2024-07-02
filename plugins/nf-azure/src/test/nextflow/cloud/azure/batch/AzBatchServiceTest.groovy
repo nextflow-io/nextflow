@@ -124,12 +124,12 @@ class AzBatchServiceTest extends Specification {
         
         where:
         CPUS    | MEM       | VM                                            | EXPECTED
-        1       | '10 MB'   | [numberOfCores: 1, memoryInMb: 10]            | 0.0
-        2       | '10 MB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 MB'   | [numberOfCores: 2, memoryInMb: 10]            | 1.0
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 11 * 1024]     | 1.0
+        1       | '10 MB'   | [numberOfCores: 1, memoryInMB: 10]            | 0.0
+        2       | '10 MB'   | [numberOfCores: 1, memoryInMB: 10]            | null
+        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 10]            | null
+        1       | '10 MB'   | [numberOfCores: 2, memoryInMB: 10]            | 1.0
+        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 10]            | null
+        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 11 * 1024]     | 1.0
     }
 
     def 'should find best match for northeurope' () {
