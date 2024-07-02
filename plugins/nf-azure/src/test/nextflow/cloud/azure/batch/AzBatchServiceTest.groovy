@@ -119,17 +119,17 @@ class AzBatchServiceTest extends Specification {
 
 
         expect:
-        svc.computeScore(CPUS, MemoryUnit.of(MEM), VM) == EXPECTED
+        svc.computeScore(CPUS, MemoryUnit.of(MEM), MemoryUnit.of(DISK), VM) == EXPECTED
 
         
         where:
-        CPUS    | MEM       | VM                                            | EXPECTED
-        1       | '10 MB'   | [numberOfCores: 1, memoryInMb: 10]            | 0.0
-        2       | '10 MB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 MB'   | [numberOfCores: 2, memoryInMb: 10]            | 1.0
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 11 * 1024]     | 1.0
+        CPUS    | MEM     | DISK | VM                                                                 | EXPECTED
+        1       | '10 MB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | 0.0
+        2       | '10 MB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
+        1       | '10 GB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
+        1       | '10 MB' | 10   | [numberOfCores: 2, memoryInMb: 10, resourceDiskSizeInMb: 10]       | 1.0
+        1       | '10 GB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
+        1       | '10 GB' | 10   | [numberOfCores: 1, memoryInMb: 11 * 1024, resourceDiskSizeInMb: 10]| 1.0
     }
 
     def 'should find best match for northeurope' () {
@@ -138,22 +138,22 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
         
         when:
-        def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), null)
+        def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(122880), null)
         then:
         ret.name == 'Basic_A3'
 
         when:
-        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), 'standard_a?')
+        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840),'standard_a?')
         then:
         ret.name == 'Standard_A3'
 
         when:
-        ret = svc.findBestVm('northeurope', 4, null, 'standard_a?')
+        ret = svc.findBestVm('northeurope', 4, null, MemoryUnit.of(291840), 'standard_a?')
         then:
         ret.name == 'Standard_A6'
 
         when:
-        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), 'standard_a2,standard_a*')
+        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840), 'standard_a2,standard_a*')
         then:
         ret.name == 'Standard_A3'
     }
@@ -360,32 +360,32 @@ class AzBatchServiceTest extends Specification {
         AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
 
         when:
-        def ret = svc.guessBestVm(LOC, 1, null, 'xyz')
+        def ret = svc.guessBestVm(LOC, 1, null, null, 'xyz')
         then:
-        1 * svc.findBestVm(LOC, 1, null, 'xyz')  >> TYPE
+        1 * svc.findBestVm(LOC, 1, null, null, 'xyz')  >> TYPE
         and:
         ret == TYPE
 
         when:
-        ret = svc.guessBestVm(LOC, 8, null, 'xyz_*')
+        ret = svc.guessBestVm(LOC, 8, null, null, 'xyz_*')
         then:
-        1 * svc.findBestVm(LOC, 16, null, 'xyz_*')  >> null
-        1 * svc.findBestVm(LOC, 8, null, 'xyz_*')  >> TYPE
+        1 * svc.findBestVm(LOC, 16, null, null, 'xyz_*')  >> null
+        1 * svc.findBestVm(LOC, 8, null, null, 'xyz_*')  >> TYPE
         and:
         ret == TYPE
 
         when:
-        ret = svc.guessBestVm(LOC, 8, null, 'xyz_?')
+        ret = svc.guessBestVm(LOC, 8, null, null, 'xyz_?')
         then:
-        1 * svc.findBestVm(LOC, 16, null, 'xyz_?')  >> null
-        1 * svc.findBestVm(LOC, 8, null, 'xyz_?')  >> TYPE
+        1 * svc.findBestVm(LOC, 16, null, null, 'xyz_?')  >> null
+        1 * svc.findBestVm(LOC, 8, null, null, 'xyz_?')  >> TYPE
         and:
         ret == TYPE
 
         when:
-        ret = svc.guessBestVm(LOC, 16, null, 'xyz*')
+        ret = svc.guessBestVm(LOC, 16, null, null, 'xyz*')
         then:
-        1 * svc.findBestVm(LOC, 16, null, 'xyz*')  >> TYPE
+        1 * svc.findBestVm(LOC, 16, null, null, 'xyz*')  >> TYPE
         and:
         ret == TYPE
 
@@ -442,7 +442,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def spec = svc.specFromAutoPool(TASK)
         then:
-        1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
+        1 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
         and:
         spec.poolId == 'nf-pool-289d374ac1622e709cf863bce2570cab-Standard_X1'
         spec.metadata == [foo: 'bar']
