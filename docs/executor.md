@@ -223,6 +223,9 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-memory`
 - {ref}`process-time`
 
+:::{note} As of Nextflow version 24.06.0-edge, HyperQueue version 0.17.0 or later is required.
+:::
+
 (k8s-executor)=
 
 ## Kubernetes
