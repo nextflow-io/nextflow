@@ -536,6 +536,18 @@ Available options:
 `tag`
 : Associate the channel with a tag that can be specified with the `-dump-channels` option to select which channels to dump.
 
+:::{versionadded} 23.09.0-edge
+The `dump` operator can be chained like any other operator:
+
+```groovy
+Channel.of('foo', 'bar', 'baz')
+    | dump(tag: 'words')
+    | map { it[0] }
+    | unique
+    | dump(tag: 'first_letters')
+```
+:::
+
 ## filter
 
 *Returns: queue channel or value channel, matching the source type*
