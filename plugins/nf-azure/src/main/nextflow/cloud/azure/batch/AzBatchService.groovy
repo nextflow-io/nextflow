@@ -143,15 +143,23 @@ class AzBatchService implements Closeable {
 
     @Memoized
     private List<Map> listAllVms(String location) {
+        
+        final locationNames = listLocationNames()
+        if( !locationNames.contains(location) )
+            throw new IllegalArgumentException("Invalid Azure location code: $location")
+
         if( !location )
             throw new IllegalArgumentException("Missing Azure location parameter")
         final json = AzBatchService.class.getResourceAsStream("/nextflow/cloud/azure/vm-list-size-${location}.json")
-        if( !json ) {
-            log.warn "Unable to find Azure VM names for location: $location"
-            return Collections.emptyList()
-        }
+        if( !json )
+            throw new IllegalArgumentException("[AZURE BATCH] Unable to find Azure VM names for location: $location")
 
-        return (List<Map>) new JsonSlurper().parse(json)
+        final vmList = (List<Map>) new JsonSlurper().parse(json)
+
+        if ( vmList.isEmpty() )
+            throw new IllegalArgumentException("[AZURE BATCH] No VM sizes found for location: $location")
+
+        return vmList
     }
 
     @Memoized
@@ -189,19 +197,23 @@ class AzBatchService implements Closeable {
      * @return The `AzVmType` instance that best accommodate the resource requirement
      */
     AzVmType findBestVm(String location, int cpus, MemoryUnit mem, String allFamilies) {
+        log.debug "[AZURE BATCH] Finding best VM given location=$location; cpus=$cpus; mem=$mem; family=$allFamilies"
         def all = listAllVms(location)
+        log.debug "[AZURE BATCH] Found ${all.size()} VM types in location $location"
         def scores = new TreeMap<Double,String>()
         def list = allFamilies ? allFamilies.tokenize(',') : ['']
+        log.debug "[AZURE BATCH] Listing VM families"
         for( String family : list ) {
             for( Map entry : all ) {
                 if( !matchType(family, entry.name as String) )
                     continue
                 def score = computeScore(cpus, mem, entry)
+                log.debug "[AZURE BATCH] VM family=${entry.name} score=${score}"
                 if( score != null )
                     scores.put(score, entry.name as String)
             }
         }
-
+        log.debug "[AZURE BATCH] Found ${scores.size()} VM types matching the criteria"
         return scores ? getVmType(location, scores.firstEntry().value) : null
     }
 
