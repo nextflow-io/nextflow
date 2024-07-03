@@ -1656,7 +1656,7 @@ The following error strategies are available:
 : When a task fails, terminate the pipeline immediately. Pending and running jobs are killed.
 
 `finish`
-: When a task fails, wait for pending and running tasks to finish and then terminate the pipeline.
+: When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline.
 
 `ignore`
 : Ignore all task failures and complete the pipeline execution successfully.
