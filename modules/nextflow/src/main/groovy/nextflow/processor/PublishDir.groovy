@@ -144,7 +144,7 @@ class PublishDir {
         final resolved = value instanceof Closure ? value.call() : value
         if( resolved instanceof String || resolved instanceof GString )
             nullPathWarn = checkNull(resolved.toString())
-        this.path = FileHelper.toCanonicalPath(resolved)
+        this.path = (resolved as Path).complete()
     }
 
     void setMode( String str ) {
