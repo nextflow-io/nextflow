@@ -123,13 +123,13 @@ class AzBatchServiceTest extends Specification {
 
         
         where:
-        CPUS    | MEM     | DISK | VM                                                                 | EXPECTED
-        1       | '10 MB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | 0.0
-        2       | '10 MB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
-        1       | '10 GB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
-        1       | '10 MB' | 10   | [numberOfCores: 2, memoryInMb: 10, resourceDiskSizeInMb: 10]       | 1.0
-        1       | '10 GB' | 10   | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
-        1       | '10 GB' | 10   | [numberOfCores: 1, memoryInMb: 11 * 1024, resourceDiskSizeInMb: 10]| 1.0
+        CPUS    | MEM     | DISK    | VM                                                                 | EXPECTED
+        1       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | 0.0
+        2       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
+        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
+        1       | '10 MB' | '10 MB' | [numberOfCores: 2, memoryInMb: 10, resourceDiskSizeInMb: 10]       | 1.0
+        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMb: 10, resourceDiskSizeInMb: 10]       | null
+        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMb: 11 * 1024, resourceDiskSizeInMb: 10]| 1.0
     }
 
     def 'should find best match for northeurope' () {
