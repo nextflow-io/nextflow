@@ -22,7 +22,7 @@ To install Java with SDKMAN:
     curl -s https://get.sdkman.io | bash
     ```
 
-2. Open a new terminal
+2. Open a new terminal.
 
 3. Install Java:
 
