@@ -1074,6 +1074,7 @@ class FileHelperTest extends Specification {
         'http://foo/bar'    | Paths.get(new URI('http://foo/bar'))
     }
 
+    @Unroll
     def 'should convert to canonical path' () {
         expect:
         FileHelper.toCanonicalPath(VALUE) == EXPECTED
@@ -1088,8 +1089,8 @@ class FileHelperTest extends Specification {
         Paths.get('/file.txt')      | Paths.get('/file.txt')
         and:
         'http://foo/file.txt'       | Paths.get(new URI('http://foo/file.txt'))
+        'http://foo/some///file.txt'| Paths.get(new URI('http://foo/some/file.txt'))
         Paths.get(new URI('http://foo/file.txt'))      | Paths.get(new URI('http://foo/file.txt'))
-
     }
 
     @Unroll
@@ -1117,5 +1118,29 @@ class FileHelperTest extends Specification {
         '/file.txt'                 | Paths.get('/file.txt')
         Paths.get('/file.txt')      | Paths.get('/file.txt')
 
+    }
+
+    @Unroll
+    def 'should remove invalid double slashed'  () {
+        expect:
+        FileHelper.normalisePathSlashes0(PATH) == EXPECTED
+        where:
+        PATH                                            | EXPECTED
+        null                                            | null
+        'foo'                                           | 'foo'
+        'http://foo/bar'                                | 'http://foo/bar'
+        '/some/file'                                    | '/some/file'
+        '//some/file'                                   | '//some/file'             // <-- by design ignore multi-slash at root
+        'file:/some/file'                               | 'file:/some/file'
+        'file://some/file'                              | 'file://some/file'
+        'file:///some/file'                             | 'file:///some/file'
+        'http://example.com//path//to//resource'            | 'http://example.com/path/to/resource'
+        'https://example.com////another///path/'            | 'https://example.com/another/path/'
+        'https://example.com////another///path//'           | 'https://example.com/another/path/'
+        'https://example.com////another///path/?and////'    | 'https://example.com/another/path/?and////'
+        'https://example.com////another///path//?and////'   | 'https://example.com/another/path/?and////'
+        's3://example.com////another///path//?and////'      | 's3://example.com/another/path/?and////'
+        's3:///example.com////another///path'               | 's3:///example.com/another/path'
+        'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
 }
