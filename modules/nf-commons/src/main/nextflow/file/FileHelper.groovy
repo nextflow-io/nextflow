@@ -244,7 +244,7 @@ class FileHelper {
 
         Path result = null
         if( value instanceof String || value instanceof GString ) {
-            result = asPath(normalisePathSlashes0(value.toString()))
+            result = asPath(value.toString())
         }
         else if( value instanceof Path ) {
             result = (Path)value
@@ -333,7 +333,7 @@ class FileHelper {
         if( INVALID_URL_PREFIX.matcher(str).matches() )
             throw new IllegalArgumentException("File path is prefixed with an invalid URL scheme - Offending path: '${Escape.blanks(str)}'")
 
-        return asPath0(str)
+        return asPath0(normalisePathSlashes0(str))
     }
 
     static private Path asPath0(String str) {

@@ -47,6 +47,7 @@ class FileHelperTest extends Specification {
         Files.createTempDirectory(tmp, 'test')
     }
 
+    @Unroll
     def 'should match invalid url prefix' (){
         expect:
         FileHelper.INVALID_URL_PREFIX.matcher(STR).matches() == EXPECTED
@@ -117,6 +118,17 @@ class FileHelperTest extends Specification {
         path.toString() == '/some/path/file.txt'
         path.getFileName().toString() == 'file.txt'
         path.toUri() == new URI('http://host.com/some/path/file.txt?x=1')
+    }
+
+    @Unroll
+    def 'should remove consecutive slashes in the path' () {
+        expect:
+        FileHelper.asPath(STR).toUri() == EXPECTED
+        where:
+        STR                         | EXPECTED
+        'http://foo//this///that'   | new URI('http://foo/this/that')
+        'http://foo/this//that?x'   | new URI('http://foo/this/that?x')
+        'http://foo/this//that?x//' | new URI('http://foo/this/that?x//') // <-- ignore slashes in the params
     }
 
     def 'should create a valid uri' () {
