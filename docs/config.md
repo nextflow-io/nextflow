@@ -1780,7 +1780,8 @@ The `workflow` scope provides workflow execution options.
 `workflow.failOnIgnore`
 : :::{versionadded} 24.05.0-edge
   :::
-: When `true`, the pipeline will exit with a non-zero exit code if any failed tasks are ignored using the `ignore` error strategy.
+: When `true`, the pipeline will exit with a non-zero exit code if any failed tasks are ignored using the `ignore` error strategy. 
+: This '`fail`' differs from the default `fail` `errorStrategy` in that the former allows all other possible tasks to be executed and complete before the pipeline fails, whereas the latter will prevent any new tasks from being started from the point of the failed task.
 
 (config-miscellaneous)=
 
