@@ -1684,7 +1684,7 @@ process ignoreAnyError {
 By definition, a command script fails when it ends with a non-zero exit status.
 :::
 
-:::{note}
+:::{tip}
 To illustrate the differences between error strategies, it can be helpful to imagine an example. Let's say you are analysing 96 patient samples, however the data from one is corrupted and will fail. If you try to analyse these samples with a pipeline written in Nextflow, here is the behaviour when using the following strategies when the process for the corrupted file fails:
 
 - `terminate`: Nextflow will cancel any existing processes and exit the pipeline and report an error
