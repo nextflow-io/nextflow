@@ -1,10 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.06.0-edge - 8 Jul 2024
+- Add ability to override failOnError setting default via env variable (#5117) [72d78425]
+- Add retry options to Azure Blob client (#5098) [7d5e5d2b]
+- Add support for HyperQueue 0.17.0 or later [BREAKING] [b45f7c48]
+- Adds example of error strategies to documentation (#5121) [e82b0dee]
+- Fix docs for `failOnDuplicate` and `failOnMismatch` (#5113) [7d5c4824]
+- Fix normalization of consecutive slashes in uri path (#5114) [18ec484f]
+- Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
+- Bump Fusion 2.4 (#5080) [0a8a484e]
+- Bump Groovy 4.0.22 [284a6606]
+
 24.05.0-edge - 17 Jun 2024
 - Add Managed Identity to Azure authentication documentation (#5062) [ab5b3eb2]
 - Add support for Azure managed identity (#4897) [21ca16e6]
 - Add support for EC-encrypted private keys for K8s executor [4dbb5193]
-- Add workflow.failOnIgnore config option (#4686) [ci fast] [172edc38]
+- Add workflow.failOnIgnore config option (#4686) [172edc38]
 - Allow requester pays for S3 buckets (#5027) [0070c1b0]
 - Dump threads on abort condition [e3740977]
 - Enable build with Java 21 (#5030) [4c54db6a]
@@ -35,12 +46,12 @@ NEXTFLOW CHANGE-LOG
 - Fix security vulnerabilities (#5057) [6d8765b8]
 
 24.04.2 - 29 May 2024
-- Fix handling of tags with slash on Bitbucket (#5031) [ci fast] [76cd305f]
+- Fix handling of tags with slash on Bitbucket (#5031) [76cd305f]
 - Fix the default for async finalizer (#5013) [f5fba709]
 - Fix the invocation of function with gstring (#5020) [04317f0d]
 - Fix escapes dollar char in local secret provider (#5021) [d8f8bf56]
-- Improve Charliecloud registry handling (#5018) [ci fast] [42496dbc]
-- Enable the use of Java 22  (#4970) [ci fast] [cbf24f9b]
+- Improve Charliecloud registry handling (#5018) [42496dbc]
+- Enable the use of Java 22  (#4970) [cbf24f9b]
 
 23.10.2 - 28 May 2024
 - Update Platform API endpoint (#4855) [04cedce0]
