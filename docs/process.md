@@ -1685,12 +1685,12 @@ By definition, a command script fails when it ends with a non-zero exit status.
 :::
 
 :::{tip}
-To illustrate the differences between error strategies, it can be helpful to imagine an example. Let's say you are analysing 96 patient samples, however the data from one is corrupted and will fail. If you try to analyse these samples with a pipeline written in Nextflow, here is the behaviour when using the following strategies when the process for the corrupted file fails:
+To illustrate the differences between error strategies, consider the following example. Let's say you are analyzing 96 patient samples and the data from one is corrupted, causing the associated task to fail. The different ways to handle this failure are as follows:
 
-- `terminate`: Nextflow will cancel any existing processes and exit the pipeline and report an error
-- `finish`: Nextflow will allow any existing jobs to conclude but not submit any more and report an error
-- `ignore`: Nextflow will proceed to continue submitting processes for the remaining 95 samples and proceed to completion. Nextflow will ignore the error and report a successful pipeline completion
-- `ignore` and `workflow.failOnIgnore`: Nextflow will proceed to continue submitting processes for the remaining 95 samples and proceed to completion, then exit with an error status and report the error
+- **errorStrategy `terminate`**: Nextflow will cancel any other ongoing tasks at the time of the failure, exit the pipeline, and report an error.
+- **errorStrategy `finish`**: Nextflow will allow any other existing tasks to conclude (but not submit any more) and report an error.
+- **errorStrategy `ignore`**: Nextflow will continue submitting tasks for the remaining 95 samples, complete the workflow, and report a successful pipeline completion.
+- **errorStrategy `ignore` and `workflow.failOnIgnore` set to `true` in configuration**: The same behavior as setting the errorStrategy alone, except the pipeline will return an exit status of -1 and report an error.
 :::
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
