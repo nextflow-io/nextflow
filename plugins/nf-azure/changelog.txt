@@ -1,5 +1,10 @@
 nf-azure changelog
 ===================
+1.8.0 - 8 Jul 2024
+- Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
+- Add retry options to Azure Blob client (#5098) [7d5e5d2b]
+- Bump groovy 4.0.22 [284a6606]
+
 1.7.0 - 17 Jun 2024
 - Add support for Azure managed identity (#4897) [21ca16e6]
 - Fix Azure system-assigned managed identity [a639a17d]
