@@ -3,7 +3,8 @@ FROM mambaorg/micromamba:1.5.8
 LABEL maintainer="Ben Sherman <bentshermann@gmail.com>"
 
 ARG MAKE_VERSION=4.3
-ARG PYTHON_VERSION=3.12
+# Note netlify latest currently supported python version is 3.8
+ARG PYTHON_VERSION=3.8
 ARG GIT_VERSION=2.45.2
 
 RUN micromamba install --yes --name base --channel conda-forge \
