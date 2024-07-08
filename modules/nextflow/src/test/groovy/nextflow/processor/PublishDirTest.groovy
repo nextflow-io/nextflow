@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -397,5 +398,23 @@ class PublishDirTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should set failOnError via env variable' () {
+        given:
+        SysEnv.push(ENV)
+
+        when:
+        def publish = new PublishDir()
+        then:
+        publish.failOnError == EXPECTED
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                         | EXPECTED
+        [:]                                         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'true']         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'false']        | false
     }
 }
