@@ -97,9 +97,10 @@ class GsPathFactory extends FileSystemPathFactory {
         init()
         final str = uri.substring(5)
         final p = str.indexOf('/')
-        return p == -1
+        final ret = p == -1
             ? CloudStorageFileSystem.forBucket(str, storageConfig, storageOptions).getPath('')
             : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig, storageOptions).getPath(str.substring(p))
+        return ret.normalize()
     }
 
     @Override
