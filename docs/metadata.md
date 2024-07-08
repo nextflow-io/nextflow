@@ -63,6 +63,8 @@ The following table lists the properties that can be accessed on the `workflow` 
   :::
 : Whether the `workflow.failOnIgnore` config option was enabled.
 
+: See {ref}`errorStrategy` for use-cases of this option.
+
 `workflow.fusion.enabled`
 : Whether Fusion is enabled.
 
