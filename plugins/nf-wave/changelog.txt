@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+1.4.4 - 8 Jul 2024
+- Bump groovy 4.0.22 [284a6606]
+- Bump Fusion 2.4 (#5080) [0a8a484e]
+
 1.4.3 - 17 Jun 2024
 - Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
 
