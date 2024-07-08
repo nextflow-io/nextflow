@@ -10,6 +10,10 @@ NEXTFLOW CHANGE-LOG
 - Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
 - Bump Fusion 2.4 (#5080) [0a8a484e]
 - Bump Groovy 4.0.22 [284a6606]
+- Bump nf-azure@1.8.0 [28122b70]
+- Bump nf-google@1.13.4 [a1c2a814]
+- Bump nf-wave@1.4.4 [a3dfba54]
+- Bump amazoncorretto:17-al2023 to Dockerfile [5e03a7b7]
 
 24.05.0-edge - 17 Jun 2024
 - Add Managed Identity to Azure authentication documentation (#5062) [ab5b3eb2]
