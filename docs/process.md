@@ -1692,7 +1692,7 @@ To illustrate the differences between error strategies, it can be helpful to ima
 - `ignore`: Nextflow will proceed to continue submitting processes for the remaining 95 samples and proceed to completion. Nextflow will ignore the error and report a successful pipeline completion
 - `ignore` and `workflow.failOnIgnore`: Nextflow will proceed to continue submitting processes for the remaining 95 samples and proceed to completion, then exit with an error status and report the error
 
-See {ref}`metadata` for more information on `workflow.failOnIgnore`.
+See {ref}`metadata-workflow` for more information on `workflow.failOnIgnore`.
 :::
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
