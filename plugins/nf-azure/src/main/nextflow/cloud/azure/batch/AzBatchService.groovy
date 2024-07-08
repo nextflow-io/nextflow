@@ -151,14 +151,17 @@ class AzBatchService implements Closeable {
         if( !location )
             throw new IllegalArgumentException("Missing Azure location parameter")
         final json = AzBatchService.class.getResourceAsStream("/nextflow/cloud/azure/vm-list-size-${location}.json")
-        if( !json )
+        if( !json ) {
             log.warn("[AZURE BATCH] Unable to find Azure VM names for location: $location")
+            return Collections.emptyList()
+        }
 
         final vmList = (List<Map>) new JsonSlurper().parse(json)
 
         if ( vmList.isEmpty() )
             log.warn("[AZURE BATCH] No VM sizes found for location: $location")
 
+        log.debug("[AZURE BATCH] vmList: ${vmList}")
         return vmList
     }
 
@@ -208,7 +211,6 @@ class AzBatchService implements Closeable {
                 if( !matchType(family, entry.name as String) )
                     continue
                 def score = computeScore(cpus, mem, entry)
-                log.debug "[AZURE BATCH] VM family=${entry.name} score=${score}"
                 if( score != null )
                     scores.put(score, entry.name as String)
             }
