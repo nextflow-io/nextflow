@@ -47,7 +47,6 @@ class FileHelperTest extends Specification {
         Files.createTempDirectory(tmp, 'test')
     }
 
-    @Unroll
     def 'should match invalid url prefix' (){
         expect:
         FileHelper.INVALID_URL_PREFIX.matcher(STR).matches() == EXPECTED
@@ -1086,7 +1085,6 @@ class FileHelperTest extends Specification {
         'http://foo/bar'    | Paths.get(new URI('http://foo/bar'))
     }
 
-    @Unroll
     def 'should convert to canonical path' () {
         expect:
         FileHelper.toCanonicalPath(VALUE) == EXPECTED
@@ -1103,6 +1101,7 @@ class FileHelperTest extends Specification {
         'http://foo/file.txt'       | Paths.get(new URI('http://foo/file.txt'))
         'http://foo/some///file.txt'| Paths.get(new URI('http://foo/some/file.txt'))
         Paths.get(new URI('http://foo/file.txt'))      | Paths.get(new URI('http://foo/file.txt'))
+
     }
 
     @Unroll

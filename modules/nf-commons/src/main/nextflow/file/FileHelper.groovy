@@ -333,7 +333,7 @@ class FileHelper {
         if( INVALID_URL_PREFIX.matcher(str).matches() )
             throw new IllegalArgumentException("File path is prefixed with an invalid URL scheme - Offending path: '${Escape.blanks(str)}'")
 
-        return asPath0(normalisePathSlashes0(str))
+        return asPath0(str)
     }
 
     static private Path asPath0(String str) {
