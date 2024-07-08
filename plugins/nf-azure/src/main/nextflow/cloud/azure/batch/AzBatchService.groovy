@@ -225,9 +225,8 @@ class AzBatchService implements Closeable {
         double vmMemGb = (entry.memoryInMb as int) /1024
         double vmDiskGb = (entry.resourceDiskSizeInMb as int) /1024
 
-        if( cpus > vmCores ) {
+        if( cpus > vmCores )
             return null
-        }
 
         int cpusDelta = cpus-vmCores
         double score = cpusDelta * cpusDelta
@@ -291,7 +290,7 @@ class AzBatchService implements Closeable {
                 task.config.getDisk(),
                 pool.vmType.numberOfCores,
                 pool.vmType.memory,
-                pool.vmType.osDiskSize )
+                pool.vmType.resourceDiskSize )
     }
 
 
