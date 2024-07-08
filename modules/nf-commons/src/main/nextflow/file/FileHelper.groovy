@@ -267,7 +267,7 @@ class FileHelper {
     }
 
     /**
-     * Remove consecutive slashes in a URI path. Ignore bu design any slash in the hostname and after the `?` 
+     * Remove consecutive slashes in a URI path. Ignore by design any slash in the hostname and after the `?`
      *
      * @param uri The input URI as string
      * @return The normalised URI string
