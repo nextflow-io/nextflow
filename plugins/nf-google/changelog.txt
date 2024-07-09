@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.13.2-patch1 - 9 Jul 2024
+- Fix normalization of consecutive slashes in uri path (#5114) [3f366b7e]
+
 1.13.2 - 20 May 2024
 - Fix nf-google plugin dependency [725e2860]
 
