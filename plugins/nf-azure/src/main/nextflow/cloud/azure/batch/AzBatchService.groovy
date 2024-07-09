@@ -258,14 +258,15 @@ class AzBatchService implements Closeable {
     }
 
     protected int computeSlots(int cpus, MemoryUnit mem, MemoryUnit disk, int vmCpus, MemoryUnit vmMem, MemoryUnit vmDisk) {
-        //  cpus requested should not exceed max cpus avail
-        final cpuSlots = Math.min(cpus, vmCpus) as int
+        // cpus requested should not exceed max cpus avail
+        // Max slots is 256
+        final cpuSlots = Collections.min([cpus, vmCpus, 256]) as int
         if( !mem || !vmMem )
             return cpuSlots
 
         //  mem requested should not exceed max mem avail
-        final vmMemGb = vmMem.mega /_1GB as float
-        final memGb = mem.mega /_1GB as float
+        final vmMemGb = vmMem.toGiga() as float
+        final memGb = mem.toGiga() as float
         final mem0 = Math.min(memGb, vmMemGb)
         final nMemSlots = memSlots(mem0, vmMemGb, vmCpus)
 
@@ -274,8 +275,8 @@ class AzBatchService implements Closeable {
             return Math.max(cpuSlots, nMemSlots)
 
         // Get slots based on disk usage
-        final vmDiskGb = vmDisk.mega /_1GB as float
-        final diskGb = disk.mega /_1GB as float
+        final vmDiskGb = vmDisk.toGiga()
+        final diskGb = disk.toGiga()
         final disk0 = Math.min(diskGb, vmDiskGb)
         final nDiskSlots = diskSlots(disk0, vmDiskGb, vmCpus)
 
@@ -296,11 +297,13 @@ class AzBatchService implements Closeable {
 
     protected int memSlots(float memGb, float vmMemGb, int vmCpus) {
         BigDecimal result = memGb / (vmMemGb / vmCpus)
+        log.warn("[AZURE BATCH] memSlots: memGb=${memGb}, vmMemGb=${vmMemGb}, vmCpus=${vmCpus}, result=${result}")
         result.setScale(0, RoundingMode.UP).intValue()
     }
 
     protected int diskSlots(float disk, float vmDisk, int vmCpus) {
         BigDecimal result = disk / (vmDisk / vmCpus)
+        log.warn("[AZURE BATCH] diskSlots: disk=${disk}, vmDisk=${vmDisk}, vmCpus=${vmCpus}, result=${result}")
         result.setScale(0, RoundingMode.UP).intValue()
     }
 
@@ -748,7 +751,7 @@ class AzBatchService implements Closeable {
                 .setVirtualMachineConfiguration(poolVmConfig(spec.opts))
                 // same as the number of cores
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
-                .setTaskSlotsPerNode(spec.vmType.numberOfCores)
+                .setTaskSlotsPerNode(Math.min(256, spec.vmType.numberOfCores))
 
         final startTask = createStartTask(spec.opts.startTask)
         if( startTask ) {

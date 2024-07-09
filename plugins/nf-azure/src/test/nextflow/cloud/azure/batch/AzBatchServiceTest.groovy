@@ -211,8 +211,7 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
         
         expect:
-        svc.computeSlots(CPUS, MemoryUnit.of(MEM * _1GB), MemoryUnit.of(DISK * _1GB), VM_CPUS, MemoryUnit.of(VM_MEM*_1GB), MemoryUnit.of(VM_DISK*_1GB)) == EXPECTED
-
+        svc.computeSlots(CPUS, MemoryUnit.of(MEM*_1GB), MemoryUnit.of(DISK*_1GB), VM_CPUS, MemoryUnit.of(VM_MEM*_1GB), MemoryUnit.of(VM_DISK*_1GB)) == EXPECTED
         where:
         CPUS  | MEM   | DISK | VM_CPUS   | VM_MEM    | VM_DISK |   EXPECTED
         1     | 1     | 1    | 1         | 1         | 1       |   1
@@ -226,7 +225,7 @@ class AzBatchServiceTest extends Specification {
         2     | 1     | 1    | 4         | 64        | 4       |   2
         4     | 1     | 1    | 4         | 64        | 4       |   4
         2     | 64    | 1    | 4         | 64        | 4       |   4
-
+        1     | 1     | 1    | 416       | 416       | 416     |   256
     }
 
 
