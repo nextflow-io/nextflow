@@ -1691,6 +1691,8 @@ To illustrate the differences between error strategies, consider the following e
 - **errorStrategy `finish`**: Nextflow will allow any other existing tasks to conclude (but not submit any more) and report an error.
 - **errorStrategy `ignore`**: Nextflow will continue submitting tasks for the remaining 95 samples, complete the workflow, and report a successful pipeline completion.
 - **errorStrategy `ignore` and `workflow.failOnIgnore` set to `true` in configuration**: The same behavior as setting the errorStrategy alone, except the pipeline will return an exit status of -1 and report an error.
+
+See {ref}`metadata-workflow` for more information on `workflow.failOnIgnore`.
 :::
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
