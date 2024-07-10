@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.04.3 - 9 Jul 2024
+- Add ability to override failOnError setting default via env variable (#5117) [ci fast] [6852429c]
+- Fix normalization of consecutive slashes in uri path (#5114) [3f366b7e]
+- Fix executions hangs on finalisation exception (#5070) [4c207c23]
+- Bump nf-google@1.13.2-patch1 [55ec5ec5]
+
 24.06.0-edge - 8 Jul 2024
 - Add ability to override failOnError setting default via env variable (#5117) [72d78425]
 - Add retry options to Azure Blob client (#5098) [7d5e5d2b]
