@@ -51,15 +51,14 @@ class DumpOp {
 
     DumpOp(Map opts, Closure<String> renderer) {
         checkParams('dump', opts, PARAMS_DUMP)
-        this.source = source
         this.tag = opts.tag
         this.pretty = opts.pretty ?: false
         this.renderer = renderer
         this.dumpNames = session.getDumpChannels()
     }
 
-    DumpOp setSource( DataflowWriteChannel source ) {
-        this.source = CH.getReadChannel(source)
+    DumpOp setSource( DataflowReadChannel source ) {
+        this.source = source
         return this
     }
 
@@ -78,12 +77,6 @@ class DumpOp {
     }
 
     DataflowWriteChannel apply() {
-
-        if( !isEnabled() ) {
-            if( source instanceof DataflowWriteChannel )
-                return (DataflowWriteChannel)source
-            throw new IllegalArgumentException("Illegal dump operator source channel")
-        }
 
         final target = CH.createBy(source)
         final events = new HashMap(2)
