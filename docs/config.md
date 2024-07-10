@@ -2017,6 +2017,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See {ref}`testing-plugins` for more information.
 
+`NXF_PUBLISH_FAIL_ON_ERROR`
+: :::{versionadded} 24.04.3
+  :::
+: Defines the default behavior of `publishDir.failOnError` setting. See {ref}`publishDir<process-publishdir>` directive for more information.
+
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0
   :::
