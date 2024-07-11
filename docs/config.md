@@ -848,8 +848,7 @@ The following settings are available for Google Cloud Batch:
 `google.batch.autoRetryExitCodes`
 : :::{versionadded} 24.06.0-edge
   :::
-: Defines the task exit codes that determine an automatic task execution retry when the setting `maxSpotAttempts` is set
-to a value greater than 0. (default `[50001]`). For more details check out the [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#vm_preemption_50001).
+: Defines the list of exit codes that will be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default `[50001]`). Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the list of retryable exit codes.
 
 `google.enableRequesterPaysBuckets`
 : When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
@@ -871,7 +870,7 @@ to a value greater than 0. (default `[50001]`). For more details check out the [
 : :::{versionadded} 23.11.0-edge
   :::
 : Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
-See also `autoRetryExitCodes`.
+: See also: `google.batch.autoRetryExitCodes`
 
 `google.project`
 : The Google Cloud project ID to use for pipeline execution

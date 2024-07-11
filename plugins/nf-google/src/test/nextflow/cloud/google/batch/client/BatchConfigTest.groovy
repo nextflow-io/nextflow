@@ -20,8 +20,6 @@ package nextflow.cloud.google.batch.client
 import nextflow.Session
 import spock.lang.Requires
 import spock.lang.Specification
-import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -32,10 +30,10 @@ class BatchConfigTest extends Specification {
     def 'should create batch config' () {
         given:
         def CONFIG = [google: [
-                                batch: [
-                                    spot: true
-                                ]
-                        ] ]
+            batch: [
+                spot: true
+            ]
+        ] ]
         def session = Mock(Session) { getConfig()>>CONFIG }
 
         when:
@@ -69,18 +67,6 @@ class BatchConfigTest extends Specification {
         config.retryConfig.maxAttempts == 10
         config.maxSpotAttempts == 8
         config.autoRetryExitCodes == [50001, 50003, 50005]
-    }
-
-    @Unroll
-    def 'should should parse exit codes' () {
-        expect:
-        BatchConfig.parseAutoRetryExitCodes0(CODES) == EXPECTED
-        where:
-        CODES       | EXPECTED
-        null        | []
-        '1'         | [1]
-        '2,4,8'     | [2,4,8]
-        [10,20]     | [10,20]
     }
 
 }

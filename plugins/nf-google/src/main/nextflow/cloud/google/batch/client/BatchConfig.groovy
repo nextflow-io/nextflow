@@ -33,6 +33,8 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class BatchConfig {
 
+    static private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
+
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
     private List<String> allowedLocations
@@ -81,43 +83,13 @@ class BatchConfig {
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
-        result.autoRetryExitCodes = parseAutoRetryExitCodes0(session.config.navigate('google.batch.autoRetryExitCodes','50001'))
+        result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes',DEFAULT_RETRY_LIST) as List<Integer>
         return result
     }
 
     @Override
     String toString(){
         return "BatchConfig[googleOpts=$googleOpts"
-    }
-
-    static private String _50001 = '50001'
-
-    static private List<Integer> DEFAULT_RETRY_LIST = List.of(_50001.toInteger())
-
-    static protected List<Integer> parseAutoRetryExitCodes0(value) {
-        if(!value)
-            return List.of()
-        if( value instanceof List ) {
-            // it's expected to be a list of integer
-            return value as List<Integer>
-        }
-        if( value instanceof CharSequence ) {
-            final v0 = value.toString()
-            if( v0==_50001 )
-                return DEFAULT_RETRY_LIST
-            else
-                return v0.tokenize(',').toList().collect(it->parseCode(it))
-        }
-        return null
-    }
-
-    static private Integer parseCode(String v) {
-        try {
-            return v.toInteger()
-        }
-        catch (NumberFormatException e) {
-            throw new ProcessUnrecoverableException("Invalid exit code value: $v -- check the setting `google.batch.autoRetryExitCodes`")
-        }
     }
 
 }
