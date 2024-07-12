@@ -18,6 +18,7 @@
 package nextflow.cloud.google.batch
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
@@ -37,6 +38,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
@@ -57,6 +59,8 @@ import nextflow.trace.TraceRecord
 @Slf4j
 @CompileStatic
 class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
+
+    private static Pattern EXIT_CODE_REGEX = ~/exit code 500(\d\d)/
 
     private GoogleBatchExecutor executor
 
@@ -480,10 +484,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( state in COMPLETED ) {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; task=$taskId; state=$state"
             // finalize the task
-            task.exitStatus = getJobExitCode()
-            if( task.exitStatus == null )
-                task.exitStatus = readExitFile()
+            task.exitStatus = readExitFile()
             if( state == 'FAILED' ) {
+                if( task.exitStatus == Integer.MAX_VALUE )
+                    task.error = getJobError()
                 task.stdout = executor.logging.stdout(uid, taskId) ?: outputFile
                 task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
@@ -498,15 +502,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return false
     }
 
-    protected Integer getJobExitCode() {
+    protected Throwable getJobError() {
         try {
             final status = client.getTaskStatus(jobId, taskId)
             final eventsCount = status.getStatusEventsCount()
             final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
-            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}"
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
-            if( lastEvent?.getDescription()?.contains('due to Spot VM preemption with exit code 50001') ) {
-                return 50001
+            final error = lastEvent?.description
+            if( error && EXIT_CODE_REGEX.matcher(error).find() ) {
+                return new ProcessException(error)
             }
         }
         catch (Throwable t) {
