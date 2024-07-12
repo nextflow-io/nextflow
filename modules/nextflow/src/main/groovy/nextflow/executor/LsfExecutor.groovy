@@ -70,7 +70,10 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        if( task !instanceof TaskArrayRun ) {
+        if( task instanceof TaskArrayRun ) {
+            result << '-o' << '/dev/null'
+        }
+        else {
             result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
         }
 
