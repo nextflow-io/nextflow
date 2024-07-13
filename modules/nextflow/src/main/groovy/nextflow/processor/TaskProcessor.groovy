@@ -1139,7 +1139,7 @@ class TaskProcessor {
         final action = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
-        if( error instanceof ProcessUnrecoverableException ) {
+        if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
             return !action.soft ? action : TERMINATE
         }
 
