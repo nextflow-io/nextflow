@@ -921,7 +921,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final mega = mem.toMega()
         final slot = FARGATE_MEM.get(cpus)
         if( slot==null )
-            new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
+            throw new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
         if( mega <=slot.min ) {
             log.warn "Process '${task.lazyName()}' memory requirement of ${mem} is below the minimum allowed by Fargate of ${MemoryUnit.of(mega+'MB')}"
             return slot.min
