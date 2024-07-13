@@ -6,5 +6,8 @@
 [[headers]]
 for = "/*"
 
+[build.environment]
+  PYTHON_VERSION = "3.8"
+
 [headers.values]
     X-Robots-Tag = "noindex"
