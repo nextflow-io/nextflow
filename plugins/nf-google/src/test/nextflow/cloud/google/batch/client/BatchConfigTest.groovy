@@ -20,6 +20,8 @@ package nextflow.cloud.google.batch.client
 import nextflow.Session
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,8 +33,7 @@ class BatchConfigTest extends Specification {
         given:
         def CONFIG = [google: [
                                 batch: [
-                                    spot: true,
-                                    retryPolicy: [maxAttempts: 10]
+                                    spot: true
                                 ]
                         ] ]
         def session = Mock(Session) { getConfig()>>CONFIG }
@@ -42,8 +43,44 @@ class BatchConfigTest extends Specification {
         then:
         config.getSpot()
         and:
+        config.retryConfig.maxAttempts == 5
+        config.maxSpotAttempts == 5
+        config.autoRetryExitCodes == [50001]
+    }
+
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
+    def 'should create batch config with custom settings' () {
+        given:
+        def CONFIG = [google: [
+            batch: [
+                spot: true,
+                maxSpotAttempts: 8,
+                autoRetryExitCodes: [50001, 50003, 50005],
+                retryPolicy: [maxAttempts: 10]
+            ]
+        ] ]
+        def session = Mock(Session) { getConfig()>>CONFIG }
+
+        when:
+        def config = BatchConfig.create(session)
+        then:
+        config.getSpot()
+        and:
         config.retryConfig.maxAttempts == 10
-        
+        config.maxSpotAttempts == 8
+        config.autoRetryExitCodes == [50001, 50003, 50005]
+    }
+
+    @Unroll
+    def 'should should parse exit codes' () {
+        expect:
+        BatchConfig.parseAutoRetryExitCodes0(CODES) == EXPECTED
+        where:
+        CODES       | EXPECTED
+        null        | []
+        '1'         | [1]
+        '2,4,8'     | [2,4,8]
+        [10,20]     | [10,20]
     }
 
 }
