@@ -480,8 +480,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
             makeTaskStatus('Task succeeded')
         ]
         then:
-        handler.getJobExitCode() == 50001
-        handler.getJobExitCode() == null
+        handler.getJobError().message == "Task failed due to Spot VM preemption with exit code 50001."
+        handler.getJobError() == null
     }
 
     def 'should find best instance type' () {
