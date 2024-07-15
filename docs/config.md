@@ -109,6 +109,10 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
@@ -268,6 +272,11 @@ The following settings are available:
 `aws.client.proxyPassword`
 : The password to use when connecting through a proxy.
 
+`aws.client.requesterPays`
+: :::{versionadded} 24.05.0-edge
+  :::
+: Enable the requester pays feature for S3 buckets.
+
 `aws.client.s3PathStyleAccess`
 : Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
 
@@ -373,29 +382,24 @@ The following settings are available:
 : Enable autoscaling feature for the pool identified with `<name>`.
 
 `azure.batch.pools.<name>.fileShareRootPath`
-: *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
 
 `azure.batch.pools.<name>.lowPriority`
-: *New in `nf-azure` version `1.4.0`*
 : Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
 
 `azure.batch.pools.<name>.mountOptions`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the mount options for mounting the file shares (default: `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp`).
 
 `azure.batch.pools.<name>.offer`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
 
 `azure.batch.pools.<name>.privileged`
 : Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
 
 `azure.batch.pools.<name>.publisher`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
 
 `azure.batch.pools.<name>.runAs`
@@ -411,7 +415,6 @@ The following settings are available:
 : Specify the scheduling policy for the pool identified with `<name>`. It can be either `spread` or `pack` (default: `spread`).
 
 `azure.batch.pools.<name>.sku`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
 `azure.batch.pools.<name>.startTask.script`
@@ -435,16 +438,22 @@ The following settings are available:
 `azure.batch.pools.<name>.vmType`
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
+`azure.managedIdentity.clientId`
+: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.system`
+: When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.tenantId`
+: The Azure tenant ID
+
 `azure.registry.server`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
 
 `azure.registry.userName`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the username to connect to a private container registry.
 
 `azure.registry.password`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the password to connect to a private container registry.
 
 `azure.retryPolicy.delay`
@@ -1561,10 +1570,18 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `singularity.ociMode`
 : :::{versionadded} 23.12.0-edge
   :::
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+  :::{note}
+  Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
@@ -1755,6 +1772,15 @@ The following settings are available:
 
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
+
+### Scope `workflow`
+
+The `workflow` scope provides workflow execution options.
+
+`workflow.failOnIgnore`
+: :::{versionadded} 24.05.0-edge
+  :::
+: When `true`, the pipeline will exit with a non-zero exit code if any failed tasks are ignored using the `ignore` error strategy.
 
 (config-miscellaneous)=
 
@@ -1990,6 +2016,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 23.04.0
   :::
 : Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See {ref}`testing-plugins` for more information.
+
+`NXF_PUBLISH_FAIL_ON_ERROR`
+: :::{versionadded} 24.04.3
+  :::
+: Defines the default behavior of `publishDir.failOnError` setting. See {ref}`publishDir<process-publishdir>` directive for more information.
 
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0

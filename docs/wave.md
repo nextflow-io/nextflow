@@ -132,6 +132,8 @@ In order to request the build of containers that are optimised for a specific CP
 If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
 :::
 
+(wave-singularity)=
+
 ### Build Singularity native images
 
 :::{versionadded} 23.09.0-edge
@@ -163,6 +165,10 @@ When using a private repository, the repository access keys must be provided via
 
 Moreover the access to the repository must be granted in the compute nodes by using the command `singularity remote login <registry>`.
 Please see Singularity documentation for further details.
+:::
+
+:::{note}
+In order to build Singularity native images, both `singularity.ociAutoPull` and `singularity.ociMode` need to be disabled in the configuration (see the {ref}`config-singularity` section).
 :::
 
 ### Push to a private repository

@@ -16,9 +16,9 @@
 
 package nextflow.cloud.azure.config
 
+import com.azure.compute.batch.models.ImageVerificationType
+import com.azure.compute.batch.models.OSType
 import com.google.common.hash.Hasher
-import com.microsoft.azure.batch.protocol.models.OSType
-import com.microsoft.azure.batch.protocol.models.VerificationType
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
@@ -50,7 +50,7 @@ class AzPoolOpts implements CacheFunnel {
     String fileShareRootPath
     String sku
     OSType osType = DEFAULT_OS_TYPE
-    VerificationType verification = VerificationType.VERIFIED
+    ImageVerificationType verification = ImageVerificationType.VERIFIED
 
     String vmType
     Integer vmCount = 1

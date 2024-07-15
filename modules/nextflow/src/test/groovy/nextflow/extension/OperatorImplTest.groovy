@@ -484,6 +484,9 @@ class OperatorImplTest extends Specification {
         expect:
         Channel.of(1,1,1,5,7,7,7,3,3).unique().toList().val == [1,5,7,3]
         Channel.of(1,3,4,5).unique { it%2 } .toList().val == [1,4]
+        and:
+        Channel.of(1).unique().val == 1
+        Channel.value(1).unique().val == 1
     }
 
     def testDistinct() {

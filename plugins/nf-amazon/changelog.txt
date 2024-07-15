@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+2.6.0 - 17 Jun 2024
+- Allow requester pays for S3 buckets (#5027) [0070c1b0]
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+- Bump aws-sdk 1.12.740 [acad2a1f]
+
 2.5.2 - 20 May 2024
 - Fix nf-amazon plugin dependency [c234b09f]
 
