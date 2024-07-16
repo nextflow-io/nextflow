@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.MemoryUnit
 /**
  * Model Google Batch config settings
@@ -31,6 +32,8 @@ import nextflow.util.MemoryUnit
 @Slf4j
 @CompileStatic
 class BatchConfig {
+
+    static private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
 
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
@@ -46,6 +49,7 @@ class BatchConfig {
     private String subnetwork
     private String serviceAccountEmail
     private BatchRetryConfig retryConfig
+    private List<Integer> autoRetryExitCodes
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
@@ -61,6 +65,7 @@ class BatchConfig {
     String getSubnetwork() { subnetwork }
     String getServiceAccountEmail() { serviceAccountEmail }
     BatchRetryConfig getRetryConfig() { retryConfig }
+    List<Integer> getAutoRetryExitCodes() { autoRetryExitCodes }
 
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
@@ -78,6 +83,7 @@ class BatchConfig {
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
+        result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes',DEFAULT_RETRY_LIST) as List<Integer>
         return result
     }
 
