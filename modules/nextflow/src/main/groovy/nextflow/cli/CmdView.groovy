@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.REVISION_DELIM
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -42,6 +44,9 @@ class CmdView extends CmdBase {
     @Parameter(description = 'project name', required = true)
     List<String> args = []
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project (either a git branch, tag or commit SHA number)')
+    String revision
+
     @Parameter(names = '-q', description = 'Hide header line', arity = 0)
     boolean quiet
 
@@ -51,9 +56,9 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(args[0], revision)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project name `${args[0]}`")
+            throw new AbortOperationException("Unknown project `${args[0]}${revision ? REVISION_DELIM + revision : ''}`")
 
         if( all ) {
             if( !quiet )

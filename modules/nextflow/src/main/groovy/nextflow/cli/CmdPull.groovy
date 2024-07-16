@@ -15,6 +15,9 @@
  */
 
 package nextflow.cli
+
+import static nextflow.scm.AssetManager.REVISION_DELIM
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -40,7 +43,7 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
     boolean all
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
@@ -73,10 +76,10 @@ class CmdPull extends CmdBase implements HubOptions {
         Plugins.init()
         
         list.each {
-            log.info "Checking $it ..."
-            def manager = new AssetManager(it, this)
+            log.info "Checking $it${revision ? REVISION_DELIM + revision : ''} ..."
+            def manager = new AssetManager(it, revision, this)
 
-            def result = manager.download(revision,deep)
+            def result = manager.download(deep)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

@@ -44,6 +44,9 @@ class CmdConfig extends CmdBase {
     @Parameter(description = 'project name')
     List<String> args = []
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project (either a git branch, tag or commit SHA number)')
+    String revision
+
     @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
     boolean showAllProfiles
 
@@ -183,7 +186,7 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        final manager = new AssetManager(path)
+        final manager = new AssetManager(path, revision)
         manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
 
     }

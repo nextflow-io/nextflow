@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.REVISION_DELIM
+
 import java.lang.management.ManagementFactory
 import java.nio.file.spi.FileSystemProvider
 
@@ -75,9 +77,16 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
-        if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}`")
+        def manager = new AssetManager(args[0], null)
+        if( !manager.isLocal() ) {
+            // if default branch not found locally, use first one from list of local pulls
+            if ( manager.listRevisions() ) {
+                manager = new AssetManager(args[0], manager.getPulledRevisions()[0])
+            }
+            else {
+                throw new AbortOperationException("Unknown project `${args[0]}`")
+            }
+        }
 
         if( !format || format == 'text' ) {
             printText(manager,level)
@@ -101,7 +110,7 @@ class CmdInfo extends CmdBase {
 
         out.println " project name: ${manager.project}"
         out.println " repository  : ${manager.repositoryUrl}"
-        out.println " local path  : ${manager.localPath}"
+        out.println " local path  : ${manager.localPath.toString().tokenize(REVISION_DELIM)[0]}"
         out.println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
             out.println " home page   : ${manager.homePage}"
@@ -138,7 +147,7 @@ class CmdInfo extends CmdBase {
         def result = [:]
         result.projectName = manager.project
         result.repository = manager.repositoryUrl
-        result.localPath = manager.localPath?.toString()
+        result.localPath = manager.localPath?.toString().tokenize(REVISION_DELIM)[0]
         result.manifest = manager.manifest.toMap()
         result.revisions = manager.getBranchesAndTags(checkForUpdates)
         return result
