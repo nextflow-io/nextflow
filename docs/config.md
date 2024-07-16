@@ -846,7 +846,7 @@ Read the {ref}`google-page` page for more information.
 The following settings are available for Google Cloud Batch:
 
 `google.batch.autoRetryExitCodes`
-: :::{versionadded} 24.06.0-edge
+: :::{versionadded} 24.07.0-edge
   :::
 : Defines the list of exit codes that will be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default `[50001]`). Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the list of retryable exit codes.
 
