@@ -299,7 +299,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
 
     String getJobOutputStream(String jobId) {
         try {
-            return helper.getTaskLogStream(jobId)
+            return helper.getTaskLogStream(jobId, awsOptions.getLogsGroup())
         }
         catch (ResourceNotFoundException e) {
             log.debug "Unable to find AWS Cloudwatch logs for Batch Job id=$jobId - ${e.message}"
