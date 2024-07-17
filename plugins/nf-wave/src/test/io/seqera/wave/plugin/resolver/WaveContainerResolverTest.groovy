@@ -76,7 +76,7 @@ class WaveContainerResolverTest extends Specification {
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
         resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) { freezeMode()>>true } }
-        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true; useOrasOverHttp()>>true }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, true) >> ORAS_CONTAINER
         0 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> null
