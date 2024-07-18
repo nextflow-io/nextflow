@@ -190,7 +190,7 @@ The `aws` command can be made available by either (1) installing it in the conta
 To configure your pipeline for AWS Batch:
 
 1. Specify the AWS Batch {ref}`executor <awsbatch-executor>`
-2. Specify one or more AWS Batch queues with the {ref}`process-queue` directive
+2. Specify an AWS Batch queue with the {ref}`process-queue` directive
 3. Specify any Batch job container options with the {ref}`process-containerOptions` directive.
 
 An example `nextflow.config` file is shown below:
@@ -213,6 +213,8 @@ aws {
 ```
 
 Different queues bound to the same or different Compute Environments can be configured according to each process' requirements.
+
+Nextflow on AWS Batch supports only a single queue in your pipeline configuration. Multiple queues are not supported.
 
 ## Container Options
 
