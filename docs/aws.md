@@ -214,8 +214,6 @@ aws {
 
 Different queues bound to the same or different Compute Environments can be configured according to each process' requirements.
 
-Nextflow on AWS Batch supports only a single queue in your pipeline configuration. Multiple queues are not supported.
-
 ## Container Options
 
 :::{versionadded} 21.12.1-edge
