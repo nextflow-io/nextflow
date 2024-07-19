@@ -36,7 +36,7 @@ Once the Blob Storage credentials are set, you can access the files in the blob 
 
 ## Azure File Shares
 
-_New in `nf-azure` version `0.11.0`_
+*New in `nf-azure` version `0.11.0`*
 
 Nextflow has built-in support also for [Azure Files](https://azure.microsoft.com/en-us/services/storage/files/). Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline. These files become immediately available in the file system and can be referred as local files within the processes. This is especially useful when a task needs to access large amounts of data (such as genome indexes) during its execution. An arbitrary number of File shares can be mounted on each pool node.
 
@@ -143,7 +143,6 @@ The list of Azure regions can be found by executing the following Azure CLI comm
 ```bash
 az account list-locations -o table
 ```
-
 :::
 
 Finally, launch your pipeline with the above configuration:
@@ -164,13 +163,13 @@ By default, the `cpus` and `memory` directives are used to find the smallest mac
 
 To specify multiple Azure machine families, use a comma separated list with glob (`*`) values in the `machineType` directive. For example, the following will select any machine size from D or E v5 machines, with additional data disk, denoted by the `d` suffix:
 
-```groovy
+```config
 process.machineType = "Standard_D*d_v5,Standard_E*d_v5"
 ```
 
 For example, the following process will create a pool of `Standard_E4d_v5` machines based when using `autoPoolMode`:
 
-```groovy
+```nextflow
 process EXAMPLE_PROCESS {
     machineType "Standard_E*d_v5"
     cpus 16
@@ -217,7 +216,6 @@ Error executing process > '<process name> (1)'
 Caused by:
     Azure Batch pool '<pool name>' not in active state
 ```
-
 :::
 
 ### Named pools
@@ -266,7 +264,6 @@ azure {
     }
 }
 ```
-
 :::
 
 ### Requirements on pre-existing named pools
@@ -325,28 +322,28 @@ If you need a different strategy, you can provide your own formula using the `sc
 
 When Nextflow creates a pool of compute nodes, it selects:
 
--   the virtual machine image reference to be installed on the node
--   the Batch node agent SKU, a program that runs on each node and provides an interface between the node and the Batch service
+- the virtual machine image reference to be installed on the node
+- the Batch node agent SKU, a program that runs on each node and provides an interface between the node and the Batch service
 
 Together, these settings determine the Operating System and version installed on each node.
 
 By default, Nextflow creates pool nodes based on CentOS 8, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
 
--   Ubuntu 20.04 (default):
+- Ubuntu 20.04 (default):
 
-    ```groovy
-    azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
-    azure.batch.pools.<name>.offer = "ubuntu-server-container"
-    azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
-    ```
+  ```groovy
+  azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
+  azure.batch.pools.<name>.offer = "ubuntu-server-container"
+  azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
+  ```
 
--   CentOS 8:
+- CentOS 8:
 
-    ```groovy
-    azure.batch.pools.<name>.sku = "batch.node.centos 8"
-    azure.batch.pools.<name>.offer = "centos-container"
-    azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
-    ```
+  ```groovy
+  azure.batch.pools.<name>.sku = "batch.node.centos 8"
+  azure.batch.pools.<name>.offer = "centos-container"
+  azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
+  ```
 
 In the above snippet, replace `<name>` with the name of your Azure node pool.
 
