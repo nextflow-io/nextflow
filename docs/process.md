@@ -2370,18 +2370,10 @@ process grid_job {
 }
 ```
 
-Multiple queues can be specified by separating their names with a comma for example:
-
-```groovy
-process grid_job {
-    queue 'short,long,cn-el6'
-    executor 'sge'
-
-    """
-    your task script here
-    """
-}
-```
+:::{tip}
+Grid executors allow specifying multiple queue names separating them with a comma e.g. `queue 'short,long,cn-el6'`.
+However, this does not generally apply to other executors such as AWS Batch, Azure Batch, Google Batch.
+:::
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
