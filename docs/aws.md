@@ -213,8 +213,7 @@ aws {
 ```
 
 :::{tip}
-Different queues bound to the same or different Compute Environments can be configured according to each process' requirements,
-either by specifying the `queue` directive in script the process definition or via {ref}`config-process-selectors` in your Nextflow configuration.
+Each process can be configured with its own queue by using the {ref}`process-queue` directive in the process definition or via {ref}`config-process-selectors` in your Nextflow configuration.
 :::
 
 ## Container Options
