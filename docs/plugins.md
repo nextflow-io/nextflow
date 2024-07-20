@@ -365,7 +365,7 @@ You can also use a different plugin registry with the `NXF_PLUGINS_TEST_REPOSITO
 For example:
 
 ```bash
-# custom registry at https://github.com/my-org/plugins
+# custom plugin repository at https://github.com/my-org/plugins
 export NXF_PLUGINS_TEST_REPOSITORY="https://raw.githubusercontent.com/my-org/plugins/main/plugins.json"
 
 # custom plugin release
@@ -373,6 +373,10 @@ export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/nextflow-io/nf-hello/rele
 
 nextflow run <pipeline> -plugins nf-hello
 ```
+
+:::{tip}
+To differentiate an `NXF_PLUGINS_TEST_REPOSITORY` value that points to a JSON file containing a single plugin (second example above) instead of a full custom repository (first example), the single-plugin JSON filename must match the regular expression `/(.+)-(\d+\.\d+\.\d+\S*)-meta\.json/`.
+:::
 
 ## Offline usage
 
