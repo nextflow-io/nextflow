@@ -250,7 +250,7 @@ The `disk` directive can be used to override the disk requested by Fusion. See t
 
 ### Supported directives
 
-The integration with Google Batch is a developer preview feature. Currently, the following Nextflow directives are supported:
+Currently, the following Nextflow directives are supported by the Google Batch executor:
 
 - {ref}`process-accelerator`
 - {ref}`process-container`
