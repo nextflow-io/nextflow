@@ -114,63 +114,6 @@ Flux does not support the `memory` directive.
 By default, Flux will send all output to the `.command.log` file. To send this output to stdout and stderr instead, set `flux.terminalOutput = true` in your config file.
 :::
 
-(ga4ghtes-executor)=
-
-## GA4GH TES
-
-:::{warning} *Experimental: may change in a future release.*
-:::
-
-The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to define a standardized schema and API for describing batch execution tasks in a portable manner.
-
-Nextflow supports the TES API via the `tes` executor, which allows the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
-
-To use this feature, define the following variables in the workflow launching environment:
-
-```bash
-export NXF_MODE=ga4gh
-export NXF_EXECUTOR=tes
-export NXF_EXECUTOR_TES_ENDPOINT='http://back.end.com'
-```
-
-It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will not be normalized and the requests to TES will fail.
-
-You will then be able to run your workflow over TES using the usual Nextflow command line. Be sure to specify the Docker image to use, i.e.:
-
-```bash
-nextflow run rnaseq-nf -with-docker alpine
-```
-
-:::{note}
-If the variable `NXF_EXECUTOR_TES_ENDPOINT` is omitted, the default endpoint is `http://localhost:8000`.
-:::
-
-:::{tip}
-You can use a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following launch command line:
-
-```bash
-./funnel server --Server.HTTPPort 8000 --LocalStorage.AllowedDirs $HOME run
-```
-
-(tested with version 0.8.0 on macOS)
-:::
-
-:::{warning}
-Make sure the TES backend can access the Nextflow work directory when data is exchanged using a local or shared file system.
-:::
-
-### Known Limitations
-
-- Automatic deployment of workflow scripts in the `bin` folder is not supported.
-
-  :::{versionchanged} 23.07.0-edge
-  Automatic upload of the `bin` directory is now supported.
-  :::
-
-- Process output directories are not supported. For details see [#76](https://github.com/ga4gh/task-execution-schemas/issues/76).
-
-- Glob patterns in process output declarations are not supported. For details see [#77](https://github.com/ga4gh/task-execution-schemas/issues/77).
-
 (google-batch-executor)=
 
 ## Google Cloud Batch
@@ -279,6 +222,9 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-time`
+
+:::{note} As of Nextflow version 24.06.0-edge, HyperQueue version 0.17.0 or later is required.
+:::
 
 (k8s-executor)=
 
@@ -407,12 +353,20 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-queue`
 - {ref}`process-time`
 
-### Known Limitations
+When specifying `clusterOptions` as a string, multiple options must be separated by semicolons to ensure that the job script is formatted correctly:
+```groovy
+clusterOptions = '-t besteffort;--project myproject'
+```
 
-- Multiple `clusterOptions` should be semicolon-separated to ensure that the OAR job script is accurately formatted:
-  ```groovy
-  clusterOptions = '-t besteffort;--project myproject'
-  ```
+:::{versionadded} 24.04.0
+:::
+
+The same behavior can now be achieved using a string list:
+```groovy
+clusterOptions = [ '-t besteffort', '--project myproject' ]
+```
+
+See {ref}`process-clusteroptions` for details.
 
 (pbs-executor)=
 

@@ -159,7 +159,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected String getSyntheticPodName(TaskRun task) {
-        "nf-${task.hash}"
+        final suffix = System.currentTimeMillis().toString().md5()[-5..-1]
+        return "nf-${task.hash}-${suffix}"
     }
 
     protected String getOwner() { OWNER }
@@ -192,6 +193,10 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         return executor.getK8sConfig().entrypointOverride()
     }
 
+    protected boolean cpuLimitsEnabled() {
+        return executor.getK8sConfig().cpuLimitsEnabled()
+    }
+
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
         final launcher = getSubmitCommand(task)
@@ -206,6 +211,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             .withLabels(getLabels(task))
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
+            .withCpuLimits(cpuLimitsEnabled())
 
         // when `entrypointOverride` is false the launcher is run via `args` instead of `command`
         // to not override the container entrypoint

@@ -85,6 +85,17 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:DescribeImageScanFindings"
   ```
 
+:::{note}
+If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
+  ```json
+  "ecs:CreateCluster"
+  "ecs:DeleteCluster"
+  "ecs:DescribeClusters"
+  "ecs:ListClusters"
+  "ec2:DescribeSubnets"
+  ```
+:::
+
 ### S3 policies
 
 Nextflow also requires policies to access [S3 buckets](https://aws.amazon.com/s3/) in order to use the work directory, pull input data, and publish results.
@@ -179,7 +190,7 @@ The `aws` command can be made available by either (1) installing it in the conta
 To configure your pipeline for AWS Batch:
 
 1. Specify the AWS Batch {ref}`executor <awsbatch-executor>`
-2. Specify one or more AWS Batch queues with the {ref}`process-queue` directive
+2. Specify the AWS Batch queue with the {ref}`process-queue` directive
 3. Specify any Batch job container options with the {ref}`process-containerOptions` directive.
 
 An example `nextflow.config` file is shown below:
@@ -201,7 +212,9 @@ aws {
 }
 ```
 
-Different queues bound to the same or different Compute Environments can be configured according to each process' requirements.
+:::{tip}
+Each process can be configured with its own queue by using the {ref}`process-queue` directive in the process definition or via {ref}`config-process-selectors` in your Nextflow configuration.
+:::
 
 ## Container Options
 

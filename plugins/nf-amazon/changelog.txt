@@ -1,5 +1,20 @@
 nf-amazon changelog
 ===================
+2.6.0 - 17 Jun 2024
+- Allow requester pays for S3 buckets (#5027) [0070c1b0]
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+- Bump aws-sdk 1.12.740 [acad2a1f]
+
+2.5.2 - 20 May 2024
+- Fix nf-amazon plugin dependency [c234b09f]
+
+2.5.1 - 14 May 2024
+- Use protected visibility for updateStatus method [6871ba06]
+
+2.5.0 - 13 May 2024
+- Add support for Job arrays (#3892) [ca9bc9d4]
+- Fix Use fully qualified S3 uris in error message (#4923) [f1cffd1b]
+
 2.4.2 - 15 Apr 2024
 - Improve retry logic for AWS Batch executor [62926c28]
 - Bump groovy 4.0.21 [9e08390b]

@@ -34,6 +34,7 @@ import nextflow.util.Duration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
+ * @author Niklas Schandry <niklas@bio.lmu.de>
  */
 @Slf4j
 @CompileStatic
@@ -79,11 +80,15 @@ class CharliecloudCache {
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
-
-        // add registry
-        if( registry )
-            name = registry + name
         
+        // add registry
+        if( registry ) {
+            if( !registry.endsWith('/') ) {
+                registry += '/'
+            }
+            name = registry + name
+        }
+
         name = name.replace(':','+').replace('/','%')
         return name 
     }
@@ -207,8 +212,9 @@ class CharliecloudCache {
         if( missingCacheDir )
             log.warn1 "Charliecloud cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent.parent -- Use the charliecloud.cacheDir config option or set the NXF_CHARLIECLOUD_CACHEDIR variable to specify a different location"
 
+        
         log.info "Charliecloud pulling image $imageUrl [cache $targetPath]"
-
+            
         String cmd = "ch-image pull -s $targetPath.parent.parent $imageUrl > /dev/null"
         try {
             runCommand( cmd, targetPath )
@@ -239,7 +245,7 @@ class CharliecloudCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  hint   : Try and increase charliecloud.pullTimeout in the config (current is \"${pullTimeout}\")\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }

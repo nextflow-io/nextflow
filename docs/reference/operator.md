@@ -9,7 +9,7 @@
 :::{versionadded} 19.08.0-edge
 :::
 
-*Returns: map of queue channels*
+*Returns: multiple queue channels or value channels, matching the source type*
 
 The `branch` operator forwards each item from a source channel to one of multiple output channels, based on a selection criteria.
 
@@ -474,7 +474,7 @@ See also: [combine](#combine)
 
 ## distinct
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `distinct` operator forwards a source channel with *consecutively* repeated items removed, such that each emitted item is different from the preceding one:
 
@@ -502,7 +502,7 @@ See also: [unique](#unique)
 
 ## dump
 
-*Returns: queue channel or value channel, depending on the input*
+*Returns: queue channel or value channel, matching the source type*
 
 The `dump` operator prints each item in a source channel when the pipeline is executed with the `-dump-channels` command-line option, otherwise it does nothing. It is a useful way to inspect and debug channels quickly without having to modify the pipeline script.
 
@@ -528,7 +528,7 @@ Available options:
 
 ## filter
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `filter` operator emits the items from a source channel that satisfy a condition, discarding all other items. The filter condition can be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate.
 
@@ -686,7 +686,7 @@ Available options:
 
 ## ifEmpty
 
-*Returns: value channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `ifEmpty` operator emits a source channel, or a default value if the source channel is *empty* (doesn't emit any value):
 
@@ -748,10 +748,10 @@ Available options:
 : The zero-based index of each item to use as the matching key. Can also be a list of indices, e.g. `by: [0, 2]` (default: `[0]`).
 
 `failOnDuplicate`
-: When `true`, an error is reported when the operator receives multiple items from the same channel with the same key (default: `true` if {ref}`strict mode <config-feature-flags>` is enabled, `false` otherwise).
+: When `true`, an error is reported when the operator receives multiple items from the same channel with the same key (default: `false`). Value is set to `true` if {ref}`strict mode <config-feature-flags>` is enabled.
 
 `failOnMismatch`
-: When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `true` if {ref}`strict mode <config-feature-flags>` is enabled, `false` otherwise). This option cannot be used with `remainder`.
+: When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `false`). Value is set to `true` if {ref}`strict mode <config-feature-flags>` is enabled. This option cannot be used with `remainder`.
 
 `remainder`
 : When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`). 
@@ -778,7 +778,7 @@ The `last` operator emits the last item from a source channel:
 
 ## map
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `map` operator applies a *mapping function* to each item from a source channel:
 
@@ -830,7 +830,7 @@ The following examples show how to find the longest string in a channel:
 
 ## merge
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `merge` operator joins the items from two or more channels into a new channel:
 
@@ -851,6 +851,12 @@ An optional closure can be used to control how two items are merged:
 ```{literalinclude} ../snippets/merge-with-mapper.out
 :language: console
 ```
+
+The `merge` operator may return a queue channel or value channel depending on the inputs:
+
+- If the first argument is a queue channel, the `merge` operator will return a queue channel merging as many values as are available for all inputs. Value channels will be re-used for each merged value.
+
+- If the first argument is a value channel, the `merge` operator will return a value channel merging the first value from each input, regardless of whether there are queue channel inputs with additional values.
 
 :::{danger}
 In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to {ref}`not work properly <cache-nondeterministic-inputs>`.
@@ -930,7 +936,7 @@ See also: [concat](#concat)
 :::{versionadded} 19.11.0-edge
 :::
 
-*Returns: map of queue channels*
+*Returns: multiple queue channels or value channels, matching the source type*
 
 The `multiMap` operator applies a set of mapping functions to a source channel, producing a separate output channel for each mapping function.
 
@@ -1480,7 +1486,7 @@ See also: [until](#until)
 
 ## tap
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `tap` operator assigns a source channel to a variable, and emits the source channel. It is a useful way to extract intermediate output channels from a chain of operators. For example:
 
@@ -1496,7 +1502,7 @@ See also: [set](#set)
 
 ## toInteger
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `toInteger` operator converts string values from a source channel to integer values:
 
@@ -1635,7 +1641,7 @@ See also: [groupTuple](#grouptuple)
 
 ## unique
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `unique` operator emits the unique items from a source channel:
 
@@ -1667,7 +1673,7 @@ See also: [distinct](#distinct)
 
 ## until
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `until` operator emits each item from a source channel until a stopping condition is satisfied:
 
@@ -1685,7 +1691,7 @@ See also: [take](#take)
 
 ## view
 
-*Returns: queue channel*
+*Returns: queue channel or value channel, matching the source type*
 
 The `view` operator prints each item from a source channel to standard output:
 

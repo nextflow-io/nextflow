@@ -54,7 +54,7 @@ class WaveContainerResolver implements ContainerResolver {
     }
 
     private String getContainerEngine0(ContainerConfig config) {
-        final result = config.getEngine()
+        final result = config.isEnabled() ? config.getEngine() : 'docker'
         if( result )
             return result
         // fallback to docker by default

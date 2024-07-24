@@ -3,7 +3,7 @@ FROM mambaorg/micromamba:1.5.8
 RUN micromamba install --yes --name base --channel conda-forge \
       make=4.3 \
       python=3.7 \
-      git=2.44.0 \
+      conda-forge:git=2.45.0 \
       && \
     micromamba clean --all --yes
 

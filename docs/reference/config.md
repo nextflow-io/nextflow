@@ -55,6 +55,10 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
@@ -131,7 +135,7 @@ The following settings are available:
 `aws.batch.logsGroup`
 : :::{versionadded} 22.09.0-edge
   :::
-: The name of the logs group used by Batch Jobs (default: `/aws/batch`).
+: The name of the logs group used by Batch Jobs (default: `/aws/batch/job`).
 
 `aws.batch.maxParallelTransfers`
 : Max parallel upload/download transfer operations *per job* (default: `4`).
@@ -213,6 +217,11 @@ The following settings are available:
 
 `aws.client.proxyPassword`
 : The password to use when connecting through a proxy.
+
+`aws.client.requesterPays`
+: :::{versionadded} 24.05.0-edge
+  :::
+: Enable the requester pays feature for S3 buckets.
 
 `aws.client.s3PathStyleAccess`
 : Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
@@ -319,29 +328,24 @@ The following settings are available:
 : Enable autoscaling feature for the pool identified with `<name>`.
 
 `azure.batch.pools.<name>.fileShareRootPath`
-: *New in `nf-azure` version `0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
 
 `azure.batch.pools.<name>.lowPriority`
-: *New in `nf-azure` version `1.4.0`*
 : Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
 
 `azure.batch.pools.<name>.mountOptions`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the mount options for mounting the file shares (default: `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp`).
 
 `azure.batch.pools.<name>.offer`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
 
 `azure.batch.pools.<name>.privileged`
 : Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
 
 `azure.batch.pools.<name>.publisher`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
 
 `azure.batch.pools.<name>.runAs`
@@ -357,7 +361,6 @@ The following settings are available:
 : Specify the scheduling policy for the pool identified with `<name>`. It can be either `spread` or `pack` (default: `spread`).
 
 `azure.batch.pools.<name>.sku`
-: *New in `nf-azure` version `0.11.0`*
 : Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
 `azure.batch.pools.<name>.startTask.script`
@@ -381,16 +384,22 @@ The following settings are available:
 `azure.batch.pools.<name>.vmType`
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
+`azure.managedIdentity.clientId`
+: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.system`
+: When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
+
+`azure.managedIdentity.tenantId`
+: The Azure tenant ID
+
 `azure.registry.server`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
 
 `azure.registry.userName`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the username to connect to a private container registry.
 
 `azure.registry.password`
-: *New in `nf-azure` version `0.9.8`*
 : Specify the password to connect to a private container registry.
 
 `azure.retryPolicy.delay`
@@ -442,6 +451,18 @@ The following settings are available:
 
 `charliecloud.temp`
 : Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
+
+`charliecloud.registry`
+: The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`charliecloud.writeFake`
+: Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode, using overlayfs, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
+: :::{note}
+  If `charliecloud.writeFake` is unset or `false`, charliecloud will create a copy of the container in the process working directory.
+  :::
+
+`charliecloud.useSquash`
+: Create a temporary squashFS container image in the process work directory instead of a folder.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
@@ -591,6 +612,12 @@ The `env` scope provides environment variables to *tasks*, not Nextflow itself. 
 The `executor` scope controls various executor behaviors.
 
 The following settings are available:
+
+`executor.account`
+: :::{versionadded} 24.04.0
+  :::
+: *Used only by the {ref}`slurm-executor`, {ref}`lsf-executor`, {ref}`pbs-executor` and {ref}`pbspro-executor` executors.*
+: Allows specifying the project or organisation account that should be charged for running the pipeline jobs.
 
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
@@ -783,11 +810,6 @@ The following settings are available for Google Cloud Batch:
 `google.location`
 : The Google Cloud location where jobs are executed (default: `us-central1`).
 
-`google.batch.maxSpotAttempts`
-: :::{versionadded} 23.11.0-edge
-  :::
-: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
-
 `google.project`
 : The Google Cloud project ID to use for pipeline execution
 
@@ -796,11 +818,22 @@ The following settings are available for Google Cloud Batch:
   :::
 : Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
 
+`google.batch.autoRetryExitCodes`
+: :::{versionadded} 24.07.0-edge
+  :::
+: Defines the list of exit codes that will be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default `[50001]`). Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the list of retryable exit codes.
+
 `google.batch.bootDiskSize`
 : Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).
 
 `google.batch.cpuPlatform`
 : Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
+
+`google.batch.maxSpotAttempts`
+: :::{versionadded} 23.11.0-edge
+  :::
+: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
+: See also: `google.batch.autoRetryExitCodes`
 
 `google.batch.network`
 : The URL of an existing network resource to which the VM will be attached.
@@ -874,37 +907,6 @@ The following settings are available for Cloud Life Sciences:
 
 `google.zone`
 : The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
-
-`google.batch.allowedLocations`
-: :::{versionadded} 22.12.0-edge
-  :::
-: Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
-
-`google.batch.bootDiskSize`
-: Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).
-
-`google.batch.cpuPlatform`
-: Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
-
-`google.batch.installGpuDrivers`
-: :::{versionadded} 23.08.0-edge
-  :::
-: When `true` automatically installs the appropriate GPU drivers to the VM when a GPU is requested (default: `false`). Only needed when using an instance template.
-
-`google.batch.network`
-: Set network name to attach the VM's network interface to. The value will be prefixed with `global/networks/` unless it contains a `/`, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
-
-`google.batch.serviceAccountEmail`
-: Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
-
-`google.batch.spot`
-: When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
-
-`google.batch.subnetwork`
-: Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
-
-`google.batch.usePrivateAddress`
-: When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
 
 `google.lifeSciences.bootDiskSize`
 : Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
@@ -995,6 +997,12 @@ The following settings are available:
 
 `k8s.context`
 : Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
+
+`k8s.cpuLimits`
+: :::{versionadded} 24.04.0
+  :::
+: When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
+: This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
 
 `k8s.debug.yaml`
 : When `true`, saves the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
@@ -1354,10 +1362,18 @@ The following settings are available:
   :::
 : When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow. Requires Singularity 3.11 or later (default: `false`).
 
+  :::{note}
+  Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
+
 `singularity.ociMode`
 : :::{versionadded} 23.12.0-edge
   :::
 : Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime. Note: it requires Singularity 4 or later. See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+  :::{note}
+  Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see the {ref}`wave-singularity` section).
+  :::
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).

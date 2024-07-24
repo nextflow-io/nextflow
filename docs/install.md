@@ -6,7 +6,7 @@
 
 ## Requirements
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 21)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 22)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
 
 ```bash
 java -version
@@ -16,19 +16,21 @@ If you don't have a compatible version of Java installed in your computer, it is
 
 To install Java with SDKMAN:
 
-1. Install SDKMAN:
+1. [Install SDKMAN](https://sdkman.io/install):
 
     ```bash
     curl -s https://get.sdkman.io | bash
     ```
 
-2. Open a new terminal and install Java:
+2. Open a new terminal.
+
+3. Install Java:
 
     ```bash
     sdk install java 17.0.10-tem
     ```
 
-3. Confirm that Java is installed correctly:
+4. Confirm that Java is installed correctly:
 
     ```bash
     java -version
