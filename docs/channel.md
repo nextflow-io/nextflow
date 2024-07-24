@@ -92,22 +92,17 @@ Filtering:
 
 Transforming:
 
-- {ref}`operator-collect`: collect the values from a channel into a list value
+- {ref}`operator-collect`: collect the values from a channel into a list
 - {ref}`operator-grouptuple`: group the values from a channel based on a grouping key
 - {ref}`operator-map`: transform each value from a channel with a mapping function
 - {ref}`operator-reduce`: accumulate each value from a channel into a single value
 
-Combining (i.e. multiple inputs):
+Combining multiple channels:
 
 - {ref}`operator-combine`: emit the combinations of two channels
 - {ref}`operator-concat`: emit the values from multiple channels (in the order in which the channels were given)
 - {ref}`operator-join`: join the values from two channels based on a matching key
 - {ref}`operator-mix`: emit the values from multiple channels (in the order in which items arrive)
-
-Forking (i.e. multiple outputs):
-
-- {ref}`operator-branch`: send each value from a channel into one of multiple output "branches" based on a condition
-- {ref}`operator-multimap`: send each value from a channel into multiple outputs, with each output applying its own mapping function
 
 Miscellaneous:
 
