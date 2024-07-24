@@ -11,6 +11,10 @@ The following task properties are defined in the process body:
 `task.attempt`
 : The current task attempt.
 
+`task.exitStatus`
+: The exit code of the task script. Only applicable for processes with a `script:` or `shell:` block.
+: Since the exit code is only available after the task has been executed, it can only be used by certain process directives such as [errorStrategy](#errorstrategy).
+
 `task.hash`
 : *Available only in `exec:` blocks*
 : The task unique hash ID.
@@ -29,7 +33,7 @@ The following task properties are defined in the process body:
 : *Available only in `exec:` blocks*
 : The task unique directory.
 
-Additionally, the directive values for the given task are also defined as `task.<directive>`.
+Additionally, the [directive values](#directives) for the given task can be accessed via `task.<directive>`.
 
 (process-reference-inputs)=
 
