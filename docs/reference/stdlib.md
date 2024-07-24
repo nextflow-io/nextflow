@@ -161,18 +161,6 @@ The following functions are available in Nextflow scripts:
 `branchCriteria( closure )`
 : Create a branch criteria to use with the {ref}`operator-branch` operator.
 
-`countFasta()`
-: Counts the number of records in a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. See the {ref}`operator-splitfasta` operator for available options.
-
-`countFastq()`
-: Counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file. See the {ref}`operator-splitfastq` operator for available options.
-
-`countJson()`
-: Counts the number of records in a JSON file. See the {ref}`operator-splitjson` operator for available options.
-
-`countLines()`
-: Counts the number of lines in a text file. See the {ref}`operator-splittext` operator for available options.
-
 `error( message = null )`
 : Throw a script runtime error with an optional error message.
 
@@ -218,21 +206,6 @@ The following functions are available in Nextflow scripts:
 
 `sendMail( params )`
 : Send an email. See {ref}`mail-page`.
-
-`splitCsv()`
-: Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
-
-`splitFasta()`
-: Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
-
-`splitFastq()`
-: Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the {ref}`operator-splitfastq` operator for available options.
-
-`splitJson()`
-: Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
-
-`splitText()`
-: Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
 
 `tuple( collection )`
 : Create a tuple object from the given collection.
@@ -654,6 +627,37 @@ The following methods are available for listing and traversing directories:
 : Iterates through files and directories depth-first.
 
 Refer to the [Groovy documentation](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html) for more details.
+
+### Splitting files
+
+The following methods are available for splitting and counting the records in files:
+
+`countFasta()`
+: Counts the number of records in a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. See the {ref}`operator-splitfasta` operator for available options.
+
+`countFastq()`
+: Counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file. See the {ref}`operator-splitfastq` operator for available options.
+
+`countJson()`
+: Counts the number of records in a JSON file. See the {ref}`operator-splitjson` operator for available options.
+
+`countLines()`
+: Counts the number of lines in a text file. See the {ref}`operator-splittext` operator for available options.
+
+`splitCsv()`
+: Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
+
+`splitFasta()`
+: Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
+
+`splitFastq()`
+: Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the {ref}`operator-splitfastq` operator for available options.
+
+`splitJson()`
+: Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
+
+`splitText()`
+: Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
 
 ### ValueObject
 
