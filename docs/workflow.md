@@ -41,12 +41,12 @@ The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
 Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
-## Implicit workflow
+## Entry workflow
 
-A script can define a single workflow without a name (also known as the *implicit workflow*), which is the default entrypoint of the script. The `-entry` command line option can be used to execute a different workflow as the entrypoint at runtime.
+A script can define a single workflow without a name (also known as the *entry workflow*), which is the default entrypoint of the script. The `-entry` command line option can be used to execute a different workflow as the entrypoint at runtime.
 
 :::{note}
-Implicit workflow definitions are ignored when a script is included as a module. This way, a script can be written such that it can be either imported as a module or executed as a pipeline.
+Entry workflow definitions are ignored when a script is included as a module. This way, a script can be written such that it can be either imported as a module or executed as a pipeline.
 :::
 
 ## Named workflows
@@ -82,7 +82,7 @@ workflow {
 ```
 
 :::{tip}
-The use of global variables and params in named workflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the implicit workflow.
+The use of global variables and params in named workflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the entry workflow.
 :::
 
 ## Workflow inputs (`take`)
@@ -397,30 +397,29 @@ In the above snippet, the initial channel is piped to the {ref}`operator-map` op
 
 ## Publishing outputs
 
-:::{versionadded} 24.04.0
+:::{versionadded} 24.10.0
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.output` feature flag to be enabled.
+This feature was introduced in 24.04.0 as a preview. It can be enabled in that version using the `nextflow.preview.output` feature flag.
 :::
 
-A script may define the set of outputs that should be published by the implicit workflow, known as the workflow output definition:
+A workflow may define the set of outputs that should be published:
 
 ```groovy
 workflow {
+    main:
     foo(bar())
-}
 
-output {
-    directory 'results'
+    publish:
+    foo.out >> 'foo'
+    bar.out >> 'bar'
 }
 ```
 
-The output definition must be defined after the implicit workflow.
-
 ### Publishing channels
 
-Processes and workflows can each define a `publish` section which maps channels to publish targets. For example:
+Workflows can define a `publish` section which maps channels to publish targets. Any channel defined in the workflow, including process and subworkflow outputs, can be published. For example:
 
 ```groovy
 process foo {
@@ -429,39 +428,31 @@ process foo {
     output:
     path 'result.txt', emit: results
 
-    publish:
-    results >> 'foo'
-
     // ...
 }
 
-workflow foobar {
+workflow {
     main:
     foo(data)
     bar(foo.out)
 
     publish:
-    foo.out >> 'foobar/foo'
-
-    emit:
-    bar.out
+    foo.out.results >> 'foo'
+    bar.out >> 'bar'
 }
 ```
 
-In the above example, the output `results` of process `foo` is published to the target `foo/` by default. However, when the workflow `foobar` invokes process `foo`, it publishes `foo.out` (i.e. `foo.out.results`) to the target `foobar/foo/`, overriding the default target defined by `foo`.
+In the above example, the output `results` of process `foo` is published to the target `foo`, and all outputs of process `bar` are published to the target `bar`.
 
-In a process, any output with an `emit` name can be published. In a workflow, any channel defined in the workflow, including process and subworkflow outputs, can be published.
-
-:::{note}
-If the publish source is a process/workflow output (e.g. `foo.out`) with multiple channels, each channel will be published. Individual output channels can also be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
+:::{tip}
+A workflow can override the publish targets of a subworkflow by "re-publishing" the same channels to a different target. However, the best practice is to define all publish targets in the entry workflow, so that all publish targets are defined in one place at the top-level.
 :::
-
-As shown in the example, workflows can override the publish targets of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
 
 By default, all files emitted by the channel will be published into the specified directory. If a channel emits list values, any files in the list (including nested lists) will also be published. For example:
 
 ```groovy
 workflow {
+    main:
     ch_samples = Channel.of(
         [ [id: 'sample1'], file('sample1.txt') ]
     )
@@ -471,38 +462,31 @@ workflow {
 }
 ```
 
-### Publish directory
+### Output directory
 
-The `directory` statement is used to set the top-level publish directory of the workflow:
+The top-level output directory of a workflow run can be set using the `-output-dir` command-line option or the `outputDir` config option:
 
 ```groovy
-output {
-    directory 'results'
-
-    // ...
-}
+outputDir = 'my-results'
 ```
 
-It is optional, and it defaults to the launch directory (`workflow.launchDir`). Published files will be saved within this directory.
+It defaults to `results` in the launch directory. Published files will be saved within this directory.
 
 ### Publish targets
 
-A publish target is a name with a specific publish configuration. By default, when a channel is published to a target in the `publish:` section of a process or workflow, the target name is used as the publish path.
+A publish target is a name with a specific publish configuration. By default, when a channel is published to a target in the `publish:` section of a workflow, the target name is used as the publish path.
 
 For example, given the following output definition:
 
 ```groovy
 workflow {
+    main:
     ch_foo = foo()
     ch_bar = bar(ch_foo)
 
     publish:
     ch_foo >> 'foo'
     ch_bar >> 'bar'
-}
-
-output {
-    directory 'results'
 }
 ```
 
@@ -516,18 +500,15 @@ results/
     └── ...
 ```
 
-:::{note}
-The trailing slash in the target name is not required; it is only used to denote that the target name is intended to be used as the publish path.
-:::
-
 :::{warning}
-The target name must not begin with a slash (`/`), it should be a relative path name.
+The target name should not begin or end with a slash (`/`).
 :::
 
 Workflows can also disable publishing for specific channels by redirecting them to `null`:
 
 ```groovy
 workflow {
+    main:
     ch_foo = foo()
 
     publish:
@@ -541,82 +522,23 @@ For example:
 
 ```groovy
 output {
-    directory 'results'
-    mode 'copy'
-
     'foo' {
         mode 'link'
     }
 }
 ```
 
-In this example, all files will be copied by default, and files published to `foo/` will be hard-linked, overriding the default option.
+In this example, all files will be copied by default, and files published to `foo` will be hard-linked, overriding the default option.
 
 Available options:
-
-`contentType`
-: *Currently only supported for S3.*
-: Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
 
 `enabled`
 : Enable or disable publishing (default: `true`).
 
-`ignoreErrors`
-: When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
-
-`mode`
-: The file publishing method (default: `'symlink'`). The following options are available:
-
-  `'copy'`
-  : Copy each file into the output directory.
-
-  `'copyNoFollow'`
-  : Copy each file into the output directory without following symlinks, i.e. only the link is copied.
-
-  `'link'`
-  : Create a hard link in the output directory for each file.
-
-  `'move'`
-  : Move each file into the output directory.
-  : Should only be used for files which are not used by downstream processes in the workflow.
-
-  `'rellink'`
-  : Create a relative symbolic link in the output directory for each file.
-
-  `'symlink'`
-  : Create an absolute symbolic link in the output directory for each output file.
-
-`overwrite`
-: When `true` any existing file in the specified folder will be overwritten (default: `'standard'`). The following options are available:
-
-  `false`
-  : Never overwrite existing files.
-
-  `true`
-  : Always overwrite existing files.
-
-  `'deep'`
-  : Overwrite existing files when the file content is different.
-
-  `'lenient'`
-  : Overwrite existing files when the file size is different.
-
-  `'standard'`
-  : Overwrite existing files when the file size or last modified timestamp is different.
-
 `path`
 : Specify the publish path relative to the output directory (default: the target name). Can only be specified within a target definition.
 
-`storageClass`
-: *Currently only supported for S3.*
-: Specify the storage class for published files.
-
-`tags`
-: *Currently only supported for S3.*
-: Specify arbitrary tags for published files. For example:
-  ```groovy
-  tags FOO: 'hello', BAR: 'world'
-  ```
+See also: {ref}`config-workflow`
 
 ### Index files
 
@@ -626,6 +548,7 @@ For example:
 
 ```groovy
 workflow {
+    main:
     ch_foo = Channel.of(
         [id: 1, name: 'foo 1'],
         [id: 2, name: 'foo 2'],

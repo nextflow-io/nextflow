@@ -36,9 +36,11 @@ class PublishOp {
 
     private DataflowReadChannel source
 
-    private PublishDir publisher
+    private Map opts
 
     private Path targetDir
+
+    private Closure pathAs
 
     private IndexOpts indexOpts
 
@@ -50,8 +52,10 @@ class PublishOp {
 
     PublishOp(DataflowReadChannel source, Map opts) {
         this.source = source
-        this.publisher = PublishDir.create(opts)
+        this.opts = opts
         this.targetDir = opts.path as Path
+        if( opts.pathAs instanceof Closure )
+            this.pathAs = opts.pathAs as Closure
         if( opts.index )
             this.indexOpts = new IndexOpts(targetDir, opts.index as Map)
     }
@@ -68,6 +72,10 @@ class PublishOp {
 
     protected void onNext(value) {
         log.trace "Publish operator received: $value"
+        final publisher = PublishDir.create(opts)
+        if( pathAs )
+            publisher.saveAs = { target -> pathAs.call(target, value) }
+
         final result = collectFiles([:], value)
         for( final entry : result ) {
             final sourceDir = entry.key
@@ -84,7 +92,7 @@ class PublishOp {
     }
 
     protected void onComplete(nope) {
-        if( indexOpts && indexRecords.size() > 0 && publisher.enabled ) {
+        if( opts.enabled && indexOpts && indexRecords.size() > 0 ) {
             log.trace "Saving records to index file: ${indexRecords}"
             new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexOpts.path)
             session.notifyFilePublish(indexOpts.path)
