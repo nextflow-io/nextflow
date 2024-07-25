@@ -401,7 +401,7 @@ class AzBatchService implements Closeable {
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
         // container settings
         // mount host certificates otherwise `azcopy` fails
-        def opts = "-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro "
+        def opts = ""
         // shared volume mounts
         final shares = getShareVolumeMounts(pool)
         if( shares )
