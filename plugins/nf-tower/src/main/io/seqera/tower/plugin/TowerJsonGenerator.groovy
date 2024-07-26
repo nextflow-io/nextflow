@@ -45,7 +45,7 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
     static TowerJsonGenerator create(Map<String,Integer> scheme) {
         final opts = new JsonGenerator.Options()
                 .addConverter(Path) { Path p, String key -> p.toUriString() }
-                .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
+                .addConverter(Duration) { Duration d, String key -> d.toMillis() }
                 .addConverter(NextflowMeta) { NextflowMeta m, String key -> m.toJsonMap() }
                 .addConverter(OffsetDateTime) { it.toString() }
                 .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")

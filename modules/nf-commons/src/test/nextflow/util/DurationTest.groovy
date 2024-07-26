@@ -109,7 +109,6 @@ class DurationTest extends Specification {
         def duration = new Duration('5min')
 
         then:
-        duration.durationInMillis == 5 * 60 * 1000
         duration.toMillis() == 5 * 60 * 1000
         duration.toSeconds() == 5 * 60
         duration.toMinutes() == 5
