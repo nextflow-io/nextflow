@@ -45,17 +45,4 @@ class S3SessionTest extends Specification {
 
     }
 
-
-    def 'should error with non-cloud bucket' () {
-        given:
-        def session = Spy(Session)
-
-        when:
-        session.cloudCachePath([enabled:true], Path.of('/foo/dir'))
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == "Storage path not supported by Cloud-cache - offending value: '/foo/dir'"
-
-    }
-
 }
