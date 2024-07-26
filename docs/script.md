@@ -1186,12 +1186,13 @@ The following methods are available for manipulating files and directories in a 
   file('any/path').mkdirs()
   ```
 
-`mklink( linkName, options = [:] )`
+`mklink( options = [:], linkName )`
 : Creates a *filesystem link* to a given path:
 
   ```groovy
   myFile = file('/some/path/file.txt')
   myFile.mklink('/user/name/link-to-file.txt')
+  myFile.mklink(['overwrite':true], '/user/name/other-link-to-file.txt')
   ```
 
   Available options:
