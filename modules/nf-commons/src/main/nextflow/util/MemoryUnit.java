@@ -82,7 +82,7 @@ public class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneab
         if( unit != null )
             unit = unit.toUpperCase();
 
-        if ( !DefaultGroovyMethods.asBoolean(unit) || unit == "B" ) {
+        if ( !DefaultGroovyMethods.asBoolean(unit) || "B".equals(unit) ) {
             this.size = Long.parseLong(value);
         }
         else {
