@@ -107,7 +107,7 @@ class AwsContainerOptionsMapper {
         // shared Memory Size
         def value = findOptionWithSingleValue(options, 'shm-size')
         if ( value ) {
-            MemoryUnit sharedMemorySize = (value as MemoryUnit)
+            final sharedMemorySize = MemoryUnit.of(value)
             params.setSharedMemorySize(sharedMemorySize.mega as Integer)
             atLeastOneSet = true
         }
