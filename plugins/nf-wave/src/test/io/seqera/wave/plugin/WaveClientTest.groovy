@@ -1073,11 +1073,11 @@ class WaveClientTest extends Specification {
         
         where:
         ARCH                | EXPECTED
-        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.3-amd64.json'
-        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.3-amd64.json'
-        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.3-arm64.json'
-        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.3-arm64.json'
-        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.3-arm64.json'
+        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
     }
 
     @Unroll
@@ -1092,11 +1092,11 @@ class WaveClientTest extends Specification {
 
         where:
         ARCH                | EXPECTED
-        'linux/amd64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
-        'linux/x86_64'      | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.0.0.json'
-        'arm64'             | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
-        'linux/arm64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
-        'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.0.0.json'
+        'linux/amd64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
+        'linux/x86_64'      | 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
+        'arm64'             | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.2.2.json'
+        'linux/arm64'       | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.2.2.json'
+        'linux/arm64/v8'    | 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.2.2.json'
     }
 
     def 'should configure custom s5cmd' () {

@@ -449,7 +449,9 @@ class BashWrapperBuilder {
                 }
                 return path
             }
-            catch (FileSystemException | SocketException | RuntimeException e) {
+            catch (Exception e) {
+                if( !isRetryable0(e) )
+                    throw e
                 final isLocalFS = path.getFileSystem()==FileSystems.default
                 // the retry logic is needed for non-local file system such as S3.
                 // when the file is local fail without retrying
@@ -461,6 +463,18 @@ class BashWrapperBuilder {
                 Thread.sleep(delay)
             }
         }
+    }
+
+    static protected boolean isRetryable0(Exception e) {
+        if( e instanceof FileSystemException )
+            return true
+        if( e instanceof SocketException )
+            return true
+        if( e instanceof RuntimeException )
+            return true
+        if( e.class.getSimpleName() == 'HttpResponseException' )
+            return true
+        return false
     }
 
     protected String getTaskMetadata() {

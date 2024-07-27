@@ -16,19 +16,21 @@ If you don't have a compatible version of Java installed in your computer, it is
 
 To install Java with SDKMAN:
 
-1. Install SDKMAN:
+1. [Install SDKMAN](https://sdkman.io/install):
 
     ```bash
     curl -s https://get.sdkman.io | bash
     ```
 
-2. Open a new terminal and install Java:
+2. Open a new terminal.
+
+3. Install Java:
 
     ```bash
     sdk install java 17.0.10-tem
     ```
 
-3. Confirm that Java is installed correctly:
+4. Confirm that Java is installed correctly:
 
     ```bash
     java -version
