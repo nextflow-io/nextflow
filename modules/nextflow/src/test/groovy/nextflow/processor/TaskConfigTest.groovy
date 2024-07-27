@@ -18,6 +18,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
@@ -649,5 +650,25 @@ class TaskConfigTest extends Specification {
         then:
         config.getResourceLabels() == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
         config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'
+    }
+
+    def 'should report error on negative cpus' () {
+        when:
+        def config = new TaskConfig([cpus:-1])
+        and:
+        config.getCpus()
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == "Directive 'cpus' cannot be a negative value - offending value: -1"
+    }
+
+    def 'should report error on negative resourceLimits cpus' () {
+        when:
+        def config = new TaskConfig([cpus:4, resourceLimits:[cpus:-1]])
+        and:
+        config.getCpus()
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == "Directive 'resourceLimits.cpus' cannot be a negative value - offending value: -1"
     }
 }
