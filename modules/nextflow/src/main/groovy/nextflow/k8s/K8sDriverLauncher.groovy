@@ -546,6 +546,7 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
             .withMemory(headMemory?:"")
             .withCpus(headCpus)
+            .withCpuLimits(k8sConfig.cpuLimitsEnabled())
 
         if ( k8sConfig.useJobResource()) {
             this.resourceType = ResourceType.Job

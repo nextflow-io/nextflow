@@ -288,8 +288,7 @@ class K8sDriverLauncherTest extends Specification {
 
     }
 
-    def 'should use user provided head-cpu and head-memory' () {
-
+    def 'should use user provided head-cpu and head-memory request' () {
         given:
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
@@ -319,9 +318,40 @@ class K8sDriverLauncherTest extends Specification {
             requests: [cpu: 2, memory: '200Mi'],
             limits: [memory: '200Mi']
         ]
-
     }
 
+    def 'should use user provided head-cpu and head-memory limits' () {
+        given:
+        def pod = Mock(PodOptions)
+        pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
+        pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+
+        def k8s = Mock(K8sConfig)
+        k8s.getNextflowImageName() >> 'the-image'
+        k8s.getLaunchDir() >> '/the/user/dir'
+        k8s.getWorkDir() >> '/the/work/dir'
+        k8s.getProjectDir() >> '/the/project/dir'
+        k8s.getPodOptions() >> pod
+        k8s.cpuLimitsEnabled() >> true
+
+        and:
+        def driver = Spy(K8sDriverLauncher)
+        driver.@runName = 'foo-boo'
+        driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
+        driver.@k8sConfig = k8s
+        driver.@headCpus = 2
+        driver.@headMemory = '200Mi'
+
+        when:
+        def result = driver.makeLauncherSpec()
+        then:
+        driver.getLaunchCli() >> 'nextflow run foo'
+        and:
+        result.spec.containers[0].resources == [
+            requests: [cpu: 2, memory: '200Mi'],
+            limits: [cpu: 2, memory: '200Mi']
+        ]
+    }
 
     def 'should create config map' () {
 
