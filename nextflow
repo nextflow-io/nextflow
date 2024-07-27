@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'24.06.0-edge'}
+NXF_VER=${NXF_VER:-'24.07.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -263,13 +263,8 @@ NXF_HOST=${HOSTNAME:-localhost}
 
 # Determine the path to this file
 if [[ $NXF_PACK = all ]]; then
-  if [[ $NXF_CAPSULE_LAUNCHER ]]; then
     NXF_BIN=$(which "$0" 2>/dev/null)
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
-  else
-    echo "NXF_PACK=all is deprecated"
-    exit 1
-  fi
 fi
 
 # use nextflow custom java home path

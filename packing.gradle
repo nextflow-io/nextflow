@@ -98,6 +98,25 @@ task pack( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
     }
 }
 
+task packAll( dependsOn: [clean, compile, ":nf-all:shadowJar"]) {
+
+    doLast {
+        file(releaseDir).mkdirs()
+        // cleanup
+        def source = file("modules/nf-all/build/libs/nextflow-${version}-all.jar")
+        def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
+        // append the big jar
+        target.withOutputStream {
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
+            it << new FileInputStream(source)
+        }
+        // execute permission
+        "chmod +x $target".execute()
+        // done
+        println "+ Nextflow package `ALL` copied to: $releaseDir\n"
+    }
+}
+
 
 task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
 
