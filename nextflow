@@ -27,9 +27,9 @@ NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 
 NXF_LEGACY_LAUNCHER=1
-NXF_V1=$(echo $NXF_VER| cut -d'.' -f1)
-NXF_V2=$(echo $NXF_VER| cut -d'.' -f2)
-if [[ NXF_V1 -ge 24 ]] && [[ NXF_V2 -ge 7 ]]; then
+NXF_VER_MAJOR=$(echo $NXF_VER| cut -d'.' -f1)
+NXF_VER_MINOR=$(echo $NXF_VER| cut -d'.' -f2)
+if [[ NXF_VER_MAJOR -ge 24 ]] && [[ NXF_VER_MINOR -ge 7 ]]; then
   unset NXF_LEGACY_LAUNCHER
 fi
 
