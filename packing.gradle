@@ -90,33 +90,40 @@ protected coordinates( it ) {
 /*
  * Compile and pack all packages
  */
-task pack( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
+task packOne( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
     doLast {
-        ant.copy(file: "modules/nextflow/build/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
-        ant.copy(file: "modules/nextflow/build/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package `ONE` copied to: $releaseDir"
+        def source = "modules/nextflow/build/libs/nextflow-${version}-one.jar"
+        ant.copy(file: source, todir: releaseDir, overwrite: true)
+        ant.copy(file: source, todir: nextflowDir, overwrite: true)
+        println "\n+ Nextflow package `ONE` copied to: $releaseDir/nextflow-${version}-one.jar"
     }
 }
 
-task packAll( dependsOn: [clean, compile, ":nf-all:shadowJar"]) {
+task packDist( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
 
     doLast {
         file(releaseDir).mkdirs()
         // cleanup
-        def source = file("modules/nf-all/build/libs/nextflow-${version}-all.jar")
-        def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
+        def source = file("modules/nextflow/build/libs/nextflow-${version}-one.jar")
+        def target = file("$releaseDir/nextflow-${version}-dist"); target.delete()
         // append the big jar
         target.withOutputStream {
-            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=dist')
             it << new FileInputStream(source)
         }
         // execute permission
         "chmod +x $target".execute()
         // done
-        println "+ Nextflow package `ALL` copied to: $releaseDir\n"
+        println "+ Nextflow package `ALL` copied to: $target\n"
     }
 }
 
+/*
+ * Compile and pack all packages
+ */
+task pack( dependsOn: [packOne, packDist]) {
+
+}
 
 task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
 

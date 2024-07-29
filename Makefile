@@ -97,9 +97,6 @@ upload:
 pack:
 	BUILD_PACK=1 ./gradlew pack
 
-packAll:
-	BUILD_PACK=1 ./gradlew packAll
-
 #
 # Upload NF launcher to nextflow.io web site
 #

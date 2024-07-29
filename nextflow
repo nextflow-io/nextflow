@@ -263,7 +263,7 @@ NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 
 # Determine the path to this file
-if [[ $NXF_PACK = all ]]; then
+if [[ $NXF_PACK = dist ]]; then
     NXF_BIN=$(which "$0" 2>/dev/null)
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
 fi
