@@ -256,10 +256,11 @@ NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
-NXF_GRAB=${NXF_GRAB:-''}
-NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 NXF_HOST=${HOSTNAME:-localhost}
 [[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
+# both NXF_GRAB and NXF_CLASSPATH are not supported any more as of version 24.04.7-edge
+NXF_GRAB=${NXF_GRAB:-''}
+NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 
 # Determine the path to this file
 if [[ $NXF_PACK = all ]]; then

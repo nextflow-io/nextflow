@@ -26,7 +26,6 @@ rootProject.name = 'nextflow-prj'
 include 'nextflow'
 include 'nf-commons'
 include 'nf-httpfs'
-include 'nf-all'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/modules/$prj.name")
