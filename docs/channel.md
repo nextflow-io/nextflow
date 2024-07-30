@@ -469,6 +469,10 @@ This feature requires the `nextflow.preview.topic` feature flag to be enabled.
 
 A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
 
+:::{tip}
+You can think about it as a channel that is shared across many different process using the same *topic name*.
+:::
+
 A process output can be assigned to a topic using the `topic` option on an output, for example:
 
 ```groovy
