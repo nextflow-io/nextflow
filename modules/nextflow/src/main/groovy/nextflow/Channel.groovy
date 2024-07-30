@@ -122,7 +122,8 @@ class Channel  {
     }
 
     static DataflowWriteChannel topic(String name) {
-        if( !NF.topicChannelEnabled ) throw new MissingMethodException('topic', Channel.class, InvokerHelper.EMPTY_ARGS)
+        if( !NF.topicChannelEnabled )
+            throw new IllegalStateException("Channel.topic() requires the `nextflow.preview.topic` feature flag")
         return CH.topic(name)
     }
 

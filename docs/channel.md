@@ -467,11 +467,7 @@ See also: [channel.fromList](#fromlist) factory method.
 This feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-A *topic* is a channel type introduced as of Nextflow 23.11.0-edge along with {ref}`channel-type-value` and
-{ref}`channel-type-queue`.
-
-A *topic channel*, similarly to a *queue channel*, is non-blocking unidirectional FIFO queue, however it connects
-multiple *producer* processes with multiple *consumer* processes or operators.
+A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
 
 :::{tip}
 You can think about it as a channel that is shared across many different process using the same *topic name*.
@@ -498,11 +494,10 @@ input or operator composition as any other Nextflow channel:
 channel.topic('my-topic').view()
 ```
 
-This approach is a convenient way to collect related items from many different sources without explicitly defining
-the logic connecting many different queue channels altogether, commonly using the `mix` operator.
+This approach is a convenient way to collect related items from many different sources without explicitly connecting them (e.g. using the `mix` operator).
 
 :::{warning}
-Any process that consumes a channel topic should not send any outputs to that topic, or else the pipeline will hang forever.
+Any process that consumes a topic channel (directly or indirectly) should not send any outputs to that topic, or else the pipeline will hang forever.
 :::
 
 See also: {ref}`process-additional-options` for process outputs.
