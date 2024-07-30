@@ -51,13 +51,16 @@ class CloudCacheStore implements CacheStore {
     /** The path to the index file */
     private Path indexPath
 
+    /** The path to the index file of the previous run */
+    private Path prevIndexPath
+
     /** Index file input stream */
-    private InputStream indexReader
+    private Path readIndexPath
 
     /** Index file output stream */
     private OutputStream indexWriter
 
-    CloudCacheStore(UUID uniqueId, String runName, Path basePath) {
+    CloudCacheStore(UUID uniqueId, String runName, String prevRunName, Path basePath) {
         assert uniqueId, "Missing cloudcache 'uniqueId' argument"
         assert runName, "Missing cloudcache 'runName' argument"
         assert basePath, "Missing cloudcache 'basePath' argument"
@@ -67,11 +70,15 @@ class CloudCacheStore implements CacheStore {
         this.basePath = basePath
         this.dataPath = this.basePath.resolve("$uniqueId")
         this.indexPath = dataPath.resolve("index.$runName")
+        if( prevRunName )
+            this.prevIndexPath = dataPath.resolve("index.$prevRunName")
     }
 
     @Override
     CloudCacheStore open() {
         indexWriter = new BufferedOutputStream(Files.newOutputStream(indexPath))
+        if( prevIndexPath?.exists() )
+            readIndexPath = prevIndexPath
         return this
     }
 
@@ -79,7 +86,9 @@ class CloudCacheStore implements CacheStore {
     CloudCacheStore openForRead() {
         if( !dataPath.exists() )
             throw new AbortOperationException("Missing cache directory: $dataPath")
-        indexReader = Files.newInputStream(indexPath)
+        if( !indexPath.exists() )
+            throw new AbortOperationException("Missing cache index file: $indexPath")
+        readIndexPath = indexPath
         return this
     }
 
@@ -107,10 +116,14 @@ class CloudCacheStore implements CacheStore {
     @Override
     Iterator<Index> iterateIndex() {
         return new Iterator<Index>() {
+            private InputStream reader
             private Index next
 
             {
-                next = fetch()
+                if( readIndexPath ) {
+                    reader = Files.newInputStream(readIndexPath)
+                    next = fetch()
+                }
             }
 
             @Override
@@ -127,9 +140,9 @@ class CloudCacheStore implements CacheStore {
 
             private Index fetch() {
                 byte[] key = new byte[KEY_SIZE]
-                if( indexReader.read(key) == -1 )
+                if( reader.read(key) == -1 )
                     return null
-                final cached = indexReader.read() == 1
+                final cached = reader.read() == 1
                 return new Index(HashCode.fromBytes(key), cached)
             }
         }

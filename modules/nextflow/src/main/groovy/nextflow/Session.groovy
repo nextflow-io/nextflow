@@ -123,6 +123,11 @@ class Session implements ISession {
     boolean resumeMode
 
     /**
+     * whenever it has been launched as a dry run
+     */
+    boolean dryRun
+
+    /**
      * The folder where tasks temporary files are stored
      */
     Path workDir
@@ -349,11 +354,14 @@ class Session implements ISession {
         }
         log.debug "Session UUID: $uniqueId"
 
+        // -- dry run
+        this.dryRun = config.dryRun
+
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
         log.debug "Run name: $runName"
 
-        // -- dry run
+        // -- stub run
         this.stubRun = config.stubRun
 
         // -- preview
