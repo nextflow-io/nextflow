@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'24.06.0-edge'}
+NXF_VER=${NXF_VER:-'24.07.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -25,6 +25,13 @@ NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
+
+NXF_LEGACY_LAUNCHER=1
+NXF_VER_MAJOR=$(echo $NXF_VER| cut -d'.' -f1)
+NXF_VER_MINOR=$(echo $NXF_VER| cut -d'.' -f2)
+if [[ NXF_VER_MAJOR -ge 24 ]] && [[ NXF_VER_MINOR -ge 7 ]]; then
+  unset NXF_LEGACY_LAUNCHER
+fi
 
 export NXF_CLI
 export NXF_ORG
@@ -249,18 +256,19 @@ NXF_JAR=${NXF_JAR:-nextflow-$NXF_VER-$NXF_PACK.jar}
 NXF_BIN=${NXF_BIN:-$NXF_DIST/$NXF_VER/$NXF_JAR}
 NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
-NXF_GRAB=${NXF_GRAB:-''}
-NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 NXF_HOST=${HOSTNAME:-localhost}
 [[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
+# both NXF_GRAB and NXF_CLASSPATH are not supported any more as of version 24.04.7-edge
+NXF_GRAB=${NXF_GRAB:-''}
+NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 
 # Determine the path to this file
-if [[ $NXF_PACK = all ]]; then
+if [[ $NXF_PACK = dist ]]; then
     NXF_BIN=$(which "$0" 2>/dev/null)
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
 fi
 
-# use nextflow custom java home path 
+# use nextflow custom java home path
 if [[ "$NXF_JAVA_HOME" ]]; then
   JAVA_HOME="$NXF_JAVA_HOME"
   unset JAVA_CMD
@@ -346,10 +354,12 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
+if [[ $NXF_LEGACY_LAUNCHER ]]; then
+  [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
+  [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
+  [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
+fi
 [[ "$JAVA_VER" =~ ^(21|22) ]] && [[ ! "$NXF_ENABLE_VIRTUAL_THREADS" ]] && NXF_ENABLE_VIRTUAL_THREADS=true
-[[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
-[[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
-[[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
@@ -401,9 +411,14 @@ LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ] && [[ "$remote_debug" -ne 1 ]]; then
     declare -a launcher="($(cat "$LAUNCH_FILE"))"
 else
-    # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
-    cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
-    [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
+    if [[ $NXF_LEGACY_LAUNCHER ]]; then
+      # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
+      cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
+      [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
+    else
+      # otherwise parse the command and get the result classpath in the 'launcher' and save it to a file
+      cli=("\"$JAVA_CMD\"" "${JAVA_OPTS[@]}" -jar "$NXF_BIN")
+    fi
 
     # first string between double quotes is the full path to java, also blank spaces are included
     # remainder string are arguments
@@ -445,6 +460,8 @@ else
       launcher+=("${cmd_tail[@]}")
     fi
 
+    # create the launch file only when using the legacy launcher (capsule)
+    if [[ $NXF_LEGACY_LAUNCHER ]]; then
     # Don't show errors if the LAUNCH_FILE can't be created
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
         STR=''
@@ -454,6 +471,7 @@ else
         printf "$STR">"$LAUNCH_FILE"
     else
         echo_yellow "Warning: Couldn't create cached classpath folder: $NXF_LAUNCHER -- Maybe NXF_HOME is not writable?"
+    fi
     fi
 
 fi

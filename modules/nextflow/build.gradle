@@ -1,3 +1,6 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "8.1.1"
+}
 apply plugin: 'groovy'
 apply plugin: 'application'
 
@@ -71,4 +74,13 @@ application {
 
 run{
     args( (project.hasProperty("runCmd") ? project.findProperty("runCmd") : "set a cmd to run").split(' ') )
+}
+
+shadowJar {
+    archiveClassifier='one'
+    manifest {
+        attributes 'Main-Class': "$mainClassName"
+    }
+    mergeServiceFiles()
+    mergeGroovyExtensionModules()
 }

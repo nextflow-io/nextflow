@@ -318,8 +318,8 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start( String pluginId ) {
-        if( isSelfContained() && defaultPlugins.hasPlugin(pluginId) ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring for plugin: $pluginId"
+        if( isEmbedded() && defaultPlugins.hasPlugin(pluginId) ) {
+            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $pluginId"
             return
         }
 
@@ -327,8 +327,8 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start(PluginSpec plugin) {
-        if( isSelfContained() && defaultPlugins.hasPlugin(plugin.id) ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring for plugin: $plugin.id"
+        if( isEmbedded() && defaultPlugins.hasPlugin(plugin.id) ) {
+            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $plugin.id"
             return
         }
 
@@ -346,19 +346,19 @@ class PluginsFacade implements PluginStateListener {
     }
 
     /**
-     * @return {@code true} when running in self-contained mode ie. the nextflow distribution
+     * @return {@code true} when running in embedded mode ie. the nextflow distribution
      * include also plugin libraries. When running is this mode, plugins should not be started
      * and cannot be updated. 
      */
-    protected boolean isSelfContained() {
-        return env.get('NXF_PACK')=='all' || embedded
+    protected boolean isEmbedded() {
+        return embedded
     }
 
     protected List<PluginSpec> pluginsRequirement(Map config) {
         def specs = parseConf(config)
-        if( isSelfContained() && specs ) {
+        if( isEmbedded() && specs ) {
             // custom plugins are not allowed for nextflow self-contained package
-            log.warn "Nextflow self-contained distribution allows only core plugins -- User config plugins will be ignored: ${specs.join(',')}"
+            log.warn "Nextflow embedded mode only core plugins -- User config plugins will be ignored: ${specs.join(',')}"
             return Collections.emptyList()
         }
         if( specs ) {
@@ -441,7 +441,7 @@ class PluginsFacade implements PluginStateListener {
     boolean startIfMissing(String pluginId) {
         if( env.NXF_PLUGINS_DEFAULT == 'false' )
             return false
-        if( isSelfContained() && defaultPlugins.hasPlugin(pluginId) )
+        if( isEmbedded() && defaultPlugins.hasPlugin(pluginId) )
             return false
 
         if( isStarted(pluginId) )

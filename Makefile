@@ -95,10 +95,7 @@ upload:
 # Create self-contained distribution package
 #
 pack:
-	BUILD_PACK=1 ./gradlew packAll
-
-packCore:
-	BUILD_PACK=1 ./gradlew packCore
+	BUILD_PACK=1 ./gradlew pack
 
 #
 # Upload NF launcher to nextflow.io web site
