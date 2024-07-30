@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Plugin-Class: nextflow.cloud.aws.codecommit.AwsCodeCommitPlugin
 Plugin-Id: nf-codecommit
-Plugin-Version: 0.1.5-patch1
+Plugin-Version: 0.1.5-patch2
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=23.10.2
