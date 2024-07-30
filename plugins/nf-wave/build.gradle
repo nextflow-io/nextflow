@@ -36,7 +36,7 @@ dependencies {
     api 'org.apache.commons:commons-lang3:3.12.0'
     api 'com.google.code.gson:gson:2.10.1'
     api 'org.yaml:snakeyaml:2.2'
-    api 'io.seqera:wave-api:0.9.1'
+    api 'io.seqera:wave-api:0.11.1'
     api 'io.seqera:wave-utils:0.12.1'
 
     testImplementation(testFixtures(project(":nextflow")))
