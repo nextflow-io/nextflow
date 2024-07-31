@@ -18,6 +18,14 @@ Currently it supports AWS S3, Google Cloud Storage and Azure Blob containers.
 
 ## Getting started
 
+The Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files in
+parallel to and from object storage into a container-local temporary folder. This means that the performance of the disk
+volume used to carry out your computation is key to achieving maximum performance.
+
+By default Fusion uses the container `/tmp` directory as a temporary cache, so the size of the volume can be much lower
+than the actual needs of your pipeline processes. Fusion has a built-in garbage collector that constantly monitors remaining
+disk space on the temporary folder and immediately evicts old cached entries when necessary.
+
 ### Requirements
 
 Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container engine
@@ -33,9 +41,9 @@ The support for Azure does not require any specific setting other then enabling 
 configuration. For example:
 
 ```
-process.executor = 'azure-batch'
-wave.enabled = true
 fusion.enabled = true
+wave.enabled = true
+process.executor = 'azure-batch'
 tower.accessToken = '<your platform access token>'
 ```
 
@@ -45,7 +53,9 @@ Then run your pipeline using the usual command:
 nextflow run <your pipeline> -work-dir az://<your blob container>/scratch
 ```
 
-Azure machines come with fast SSDs attached, therefore no additional storage configuration is required however it is recommended to use the machine types with larger data disks attached, denoted by the suffix 'd' after the core number (e.g. Standard_E32*d*_v5). These will increase the throughput of Fusion and reduce the chance of overloading the machine.
+Azure machines come with fast SSDs attached, therefore no additional storage configuration is required however it is
+recommended to use the machine types with larger data disks attached, denoted by the suffix `d` after the core number
+(e.g. `Standard_E32*d*_v5`). These will increase the throughput of Fusion and reduce the chance of overloading the machine.
 
 ### AWS Cloud
 
@@ -56,22 +66,12 @@ line tool, when setting up the AWS Batch compute environment.
 The configuration for this deployment scenario looks like the following:
 
 ```groovy
-fusion {
-    enabled = true
-}
-
-wave {
-    enabled = true
-}
-
-process {
-    executor = 'awsbatch'
-    queue = '<YOUR BATCH QUEUE>'
-}
-
-aws {
-    region = '<YOUR AWS REGION>'
-}
+fusion.enabled = true
+wave.enabled = true
+process.executor = 'awsbatch'
+process.queue = '<YOUR BATCH QUEUE>'
+aws.region = '<YOUR AWS REGION>'
+tower.accessToken = '<your platform access token>'
 ```
 
 Then you can run your pipeline using the following command:
@@ -85,14 +85,6 @@ If you are creating the AWS Batch compute environment by yourselves, you will ne
 
 
 #### NVMe storage
-
-The Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files in
-parallel to and from object storage into a container-local temporary folder. This means that the performance of the temporary
-folder inside the container (`/tmp` in a default setup) is key to achieving maximum performance.
-
-The temporary folder is used only as a temporary cache, so the size of the volume can be much lower than the actual needs of your
-pipeline processes. Fusion has a built-in garbage collector that constantly monitors remaining disk space on the temporary folder
-and immediately evicts old cached entries when necessary.
 
 The recommended setup to get maximum performance is to mount a NVMe disk as the temporary folder and run the pipeline with
 the {ref}`scratch <process-scratch>` directive set to `false` to also avoid stage-out transfer time.
@@ -151,9 +143,9 @@ The support for Google does not require any specific setting other then enabling
 configuration. For example:
 
 ```
-process.executor = 'google-batch'
-wave.enabled = true
 fusion.enabled = true
+wave.enabled = true
+process.executor = 'google-batch'
 tower.accessToken = '<your platform access token>'
 ```
 
@@ -174,23 +166,13 @@ The use of Fusion makes obsolete the need to create and manage and separate pers
 The configuration for this deployment scenario looks like the following:
 
 ```groovy
-wave {
-    enabled = true
-}
-
-fusion {
-    enabled = true
-}
-
-process {
-    executor = 'k8s'
-}
-
-k8s {
-    context = '<YOUR K8S CONFIGURATION CONTEXT>'
-    namespace = '<YOUR K8S NAMESPACE>'
-    serviceAccount = '<YOUR K8S SERVICE ACCOUNT>'
-}
+fusion.enabled = true
+wave.enabled = true
+process.executor = 'k8s'
+k8s.context = '<YOUR K8S CONFIGURATION CONTEXT>'
+k8s.namespace = '<YOUR K8S NAMESPACE>'
+k8s.serviceAccount = '<YOUR K8S SERVICE ACCOUNT>'
+tower.accessToken = '<your platform access token>'
 ```
 
 The `k8s.context` represents the Kubernetes configuration context to be used for the pipeline execution. This setting can be omitted if Nextflow itself is run as a pod in the Kubernetes clusters.
@@ -218,18 +200,10 @@ The AWS S3 bucket credentials should be made accessible via standard `AWS_ACCESS
 The following configuration should be added in your Nextflow configuration file:
 
 ```groovy
-docker {
-    enabled = true
-}
-
-fusion {
-    enabled = true
-    exportStorageCredentials = true
-}
-
-wave {
-    enabled = true
-}
+docker.enabled = true
+fusion.enabled = true
+fusion.exportStorageCredentials = true
+wave.enabled = true
 ```
 
 Then you can run your pipeline using the following command:
@@ -243,6 +217,11 @@ Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket 
 ```bash
 nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
 ```
+
+:::{warning}
+The option `fusion.exportStorageCredentials` leaks the AWS credentials on the task launcher script created by Nextflow.
+This option should only be used for development purposes.
+:::
 
 ## Advanced settings
 
