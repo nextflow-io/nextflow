@@ -163,7 +163,7 @@ Then run your pipeline using the usual command:
 nextflow run <your pipeline> -work-dir gs://<your google bucket>/scratch
 ```
 
-[TODO add some notes on Google Storage permission and the need for SSD disk and instance type(?)]
+When using Fusion, if the `process.disk` is not set, Nextflow will attach a single local SSD disk to the machine. The size of this disk can be much lower than the actual needs of your pipeline processes because Fusion uses it only as a temporal cache. Fusion is also compatible with other types of `process.disk`, but better performance is achieved when using local SSD disks.
 
 ### Kubernetes
 
