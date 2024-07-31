@@ -45,7 +45,6 @@ Then run your pipeline using the usual command:
 nextflow run <your pipeline> -work-dir az://<your blob container>/scratch
 ```
 
-[TODO add some notes on Azure Blob permission]
 
 Azure machines come with fast SSDs attached, therefore no additional storage configuration is required however it is recommended to use the machine types with larger data disks attached, denoted by the suffix 'd' after the core number (e.g. Standard_E32*d*_v5). These will increase the throughput of Fusion and reduce the chance of overloading the machine.
 
