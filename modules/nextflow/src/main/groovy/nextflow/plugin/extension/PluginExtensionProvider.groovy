@@ -286,6 +286,9 @@ class PluginExtensionProvider implements ExtensionProvider {
             def factory = (ChannelFactoryInstance)reference.target
             return factory.invokeExtensionMethod(reference.method, args)
         }
+        else {
+            throw new MissingMethodException("Channel.${name}", Object.class, args)
+        }
     }
 
 }
