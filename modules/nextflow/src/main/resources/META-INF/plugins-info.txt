@@ -1,7 +1,7 @@
-nf-amazon@2.1.4-patch2
-nf-azure@1.3.3-patch2
+nf-amazon@2.1.4-patch3
+nf-azure@1.3.3-patch3
 nf-cloudcache@0.3.0-patch1
-nf-codecommit@0.1.5-patch1
+nf-codecommit@0.1.5-patch2
 nf-console@1.0.6-patch1
 nf-ga4gh@1.1.0-patch1
 nf-google@1.8.3-patch2
