@@ -45,7 +45,7 @@ Then run your pipeline using the usual command:
 nextflow run <your pipeline> -work-dir az://<your blob container>/scratch
 ```
 
-[TODO add some notes on Azure Blob permission and the need for SSD disk (?)]
+Azure machines come with fast SSDs attached, therefore no additional storage configuration is required however it is recommended to use the machine types with larger data disks attached, denoted by the suffix 'd' after the core number (e.g. Standard_E32*d*_v5). These will increase the throughput of Fusion and reduce the chance of overloading the machine.
 
 ### AWS Cloud
 
@@ -163,7 +163,7 @@ Then run your pipeline using the usual command:
 nextflow run <your pipeline> -work-dir gs://<your google bucket>/scratch
 ```
 
-[TODO add some notes on Google Storage permission and the need for SSD disk and instance type(?)]
+When using Fusion, if the `process.disk` is not set, Nextflow will attach a single local SSD disk to the machine. The size of this disk can be much lower than the actual needs of your pipeline processes because Fusion uses it only as a temporal cache. Fusion is also compatible with other types of `process.disk`, but better performance is achieved when using local SSD disks.
 
 ### Kubernetes
 
