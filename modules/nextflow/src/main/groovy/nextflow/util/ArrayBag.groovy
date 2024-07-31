@@ -63,6 +63,16 @@ class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
         InvokerHelper.inspect(this)
     }
 
+   @Override
+   int hashCode() {
+       target.hashCode()
+   }
+
+   @Override
+   boolean equals(Object o) {
+       target.equals(o)
+   }
+
 //    E getAt( int index )  {
 //        target.get(index)
 //    }
