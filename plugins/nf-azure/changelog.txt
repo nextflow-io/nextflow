@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.3.3-patch3 - 31 Jul 2024
+- Update Azure batch deps [e0c6d77d]
+
 1.3.3-patch2 - 11 Jun 2024
 - Fix security vulnerabilities (#5057) [6d8765b8]
 
