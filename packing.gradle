@@ -166,6 +166,11 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
     into "$homeDir/.nextflow/framework/$version/"
 }
 
+task installScratch(type: Copy, dependsOn: ['pack']) {
+    from "$releaseDir/nextflow-$version-one.jar"
+    into "${rootProject.projectDir}/docker-scratch/.nextflow/framework/$version/"
+}
+
 /*
  * build, tag and publish a and new docker packaged nextflow release
  */
