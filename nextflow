@@ -26,10 +26,40 @@ NXF_CLI="$0 $@"
 NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 NXF_REMOTE_DEBUG_PORT=${NXF_REMOTE_DEBUG_PORT:-5005}
 
+function cmp_ver() {
+    local IFS=.
+    local i ver1 ver2
+    read -r -a ver1 <<< "${1//./ }"
+    read -r -a ver2 <<< "${2//./ }"
+
+    # Compare major, minor, and patch numbers
+    for ((i=0; i<3; i++)); do
+        ver1[i]=${ver1[i]//[^0-9]}
+        ver2[i]=${ver2[i]//[^0-9]}
+        [[ ${ver1[i]:-0} -lt ${ver2[i]:-0} ]] && echo -1 && return
+        [[ ${ver1[i]:-0} -gt ${ver2[i]:-0} ]] && echo 1 && return
+    done
+
+    # Extract suffixes for comparison
+    local suffix1="${1##*.}"
+    local suffix2="${2##*.}"
+    suffix1="${suffix1//[0-9]}"
+    suffix2="${suffix2//[0-9]}"
+
+    # Compare suffixes
+    [[ -z $suffix1 && -n $suffix2 ]] && echo 1 && return
+    [[ -n $suffix1 && -z $suffix2 ]] && echo -1 && return
+    [[ $suffix1 < $suffix2 ]] && echo -1 && return
+    [[ $suffix1 > $suffix2 ]] && echo 1 && return
+
+    # Versions are equal
+    echo 0
+}
+
+# if the nextflow version is greater or equals to "24.07.0-edge" the new shadow jar launcher
+# should be used, otherwise fallback on the legacy behavior setting the variable NXF_LEGACY_LAUNCHER
 NXF_LEGACY_LAUNCHER=1
-NXF_VER_MAJOR=$(echo $NXF_VER| cut -d'.' -f1)
-NXF_VER_MINOR=$(echo $NXF_VER| cut -d'.' -f2)
-if [[ NXF_VER_MAJOR -ge 24 ]] && [[ NXF_VER_MINOR -ge 7 ]]; then
+if [[ $(cmp_ver "$NXF_VER" "24.07.0-edge") -ge 0 ]]; then
   unset NXF_LEGACY_LAUNCHER
 fi
 
@@ -154,7 +184,7 @@ function check_latest() {
     [[ $cmd != run ]] && return 0
     [[ $NXF_OFFLINE == true || $NXF_DISABLE_CHECK_LATEST == true ]] && return 0
     local latest=$(get_ver "$NXF_BASE/$(current_ver)/version?current=$NXF_VER")
-    if [[ -n "$latest" && "$latest" != $NXF_VER ]]; then
+    if [[ -n "$latest" && $(cmp_ver "$latest" "$NXF_VER") -gt 0 ]]; then
       echo_yellow "Nextflow $latest is available - Please consider updating your version to it"
     fi
 }
