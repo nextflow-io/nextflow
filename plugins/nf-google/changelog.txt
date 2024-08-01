@@ -44,6 +44,12 @@ nf-google changelog
 - Fix Bypass Google Batch Price query if task cpus and memory are defined (#4521) [7f8f20d3]
 - Update logging filter for Google Batch provider. (#4488) [66a3ed19]
 
+1.8.3-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+1.8.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 1.8.3 - 10 Oct 2023
 - Add setting to enable the use of sync command [f0d5cc5c]
 - Fix Google Batch do not stop running jobs (#4381) [3d6b7358]

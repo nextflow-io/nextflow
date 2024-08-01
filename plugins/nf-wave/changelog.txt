@@ -49,6 +49,12 @@ nf-wave changelog
 - Use consistently NXF_TASK_WORKDIR (#4484) [48ee3c64]
 - Fix Inspect command fails with Singularity [f5bb829f]
 
+1.0.1-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
+1.0.1 - 12 Jan 2024
+- Fix Inspect command fails with Singularity [25883df3]
+
 1.0.0 - 15 Oct 2023
 - Fix conda channels order [ci fast] [6672c6d7]
 - Bump nf-wave@1.0.0 [795849d7]
