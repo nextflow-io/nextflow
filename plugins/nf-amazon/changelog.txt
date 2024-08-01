@@ -45,6 +45,16 @@ nf-amazon changelog
 - Fix Fusion symlinks when publishing files (#4348) [89f09fe0]
 - Bump javax.xml.bind:jaxb-api:2.4.0-b180830.0359
 
+2.1.4-patch3 - 30 Jul 2024
+- Bump amazon sdk to version 1.12.766 [189f58ed]
+- Bump pf4j to version 3.12.0 [8dfa4076]
+
+2.1.4-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+2.1.4-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
 2.1.4 - 10 Oct 2023
 - Improve S3 endpoint validation [2b9ae6aa]
 - Add -cloudcache CLI option (#4385) [73fda582]
