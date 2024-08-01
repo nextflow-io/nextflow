@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.6.1 - 1 Aug 2024
+- Update Azure batch deps [72576648]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
 1.6.0 - 15 Apr 2024
 - Add support for Azure custom startTask (#4913) [27d01e3a]
 - Improve control on azcopy install (#4883) [01447d5c]
