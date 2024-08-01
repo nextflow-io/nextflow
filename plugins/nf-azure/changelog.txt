@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.6.1 - 1 Aug 2024
+- Update Azure batch deps [72576648]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
 1.8.0 - 8 Jul 2024
 - Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
 - Add retry options to Azure Blob client (#5098) [7d5e5d2b]

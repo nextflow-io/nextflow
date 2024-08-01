@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+0.2.1 - 1 Aug 2024
+- Bump amazon sdk to version 1.12.766 [5ce42b79]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
 0.2.0 - 5 Feb 2024
 - Bump Groovy 4 (#4443) [9d32503b]
 

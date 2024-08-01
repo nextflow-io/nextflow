@@ -1,5 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.04.4 - 1 Aug 2024
+- Fix parsing of shm-size containerOptions (#5177) [98cf0068]
+- Fix aws logs group name (#5146) [b2ab651c]
+- Update Azure batch deps [72576648]
+- Bump nf-wave@1.4.2-patch1 [19a7272f]
+- Bump nf-codecommit@0.2.1 [f2bcce99]
+- Bump nf-azure@1.6.1 [0ea1f102]
+- Bump nf-amazon@2.5.3 [b13b5548]
+- Bump wave-api to 0.11.1 [87828afd]
+- Bump amazon sdk to version 1.12.766 [5ce42b79]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+- Bump jgit 6.10.0 [cc2ccd81]
+
 24.04.3 - 9 Jul 2024
 - Add ability to override failOnError setting default via env variable (#5117) [ci fast] [6852429c]
 - Fix normalization of consecutive slashes in uri path (#5114) [3f366b7e]
