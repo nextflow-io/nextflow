@@ -45,8 +45,10 @@ class CmdInfoTest extends Specification {
     def setupSpec() {
         tempDir = Files.createTempDirectory('test')
         AssetManager.root = tempDir.toFile()
+        String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
         // download the project
         manager.download()
     }
@@ -70,7 +72,7 @@ class CmdInfoTest extends Specification {
         screen.contains(" local path  : $tempDir/nextflow-io/hello" )
         screen.contains(" main script : main.nf")
         screen.contains(" revisions   : ")
-        screen.contains(" * master (default)")
+        screen.contains(" P master (default)")
     }
 
     def 'should print json info' () {
@@ -90,8 +92,9 @@ class CmdInfoTest extends Specification {
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == 'master'
-        json.revisions.current == 'master'
         json.revisions.master == 'master'
+        json.revisions.pulled.size() == 1
+        json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
         json.revisions.tags.size()>1
@@ -116,8 +119,9 @@ class CmdInfoTest extends Specification {
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == 'master'
-        json.revisions.current == 'master'
         json.revisions.master == 'master'
+        json.revisions.pulled.size() == 1
+        json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
         json.revisions.tags.size()>1

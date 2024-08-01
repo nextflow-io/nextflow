@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.REVISION_SUBDIR
+
 import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 
@@ -40,13 +42,13 @@ class CmdPullTest extends Specification {
         given:
         def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def dir = Files.createTempDirectory('test')
-        def cmd = new CmdPull(args: ['nextflow-io/hello'], root: dir.toFile(), hubUser: accessToken)
+        def cmd = new CmdPull(args: ['nextflow-io/hello'], root: dir.toFile(), revision: '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8', hubUser: accessToken)
 
         when:
         cmd.run()
         then:
-        dir.resolve('nextflow-io/hello/.git').exists()
-        dir.resolve('nextflow-io/hello/README.md').exists()
+        dir.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/.git').exists()
+        dir.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/README.md').exists()
 
         cleanup:
         dir?.deleteDir()

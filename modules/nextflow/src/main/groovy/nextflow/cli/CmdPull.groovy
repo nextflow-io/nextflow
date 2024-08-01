@@ -15,6 +15,9 @@
  */
 
 package nextflow.cli
+
+import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -37,10 +40,10 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(description = 'project name or repository url to pull', arity = 1)
     List<String> args
 
-    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+    @Parameter(names=['-a','-all'], description = 'Update all downloaded projects', arity = 0)
     boolean all
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
@@ -58,11 +61,11 @@ class CmdPull extends CmdBase implements HubOptions {
         if( !all && !args )
             throw new AbortOperationException('Missing argument')
 
-        def list = all ? AssetManager.list() : args.toList()
-        if( !list ) {
-            log.info "(nothing to do)"
-            return
-        }
+        if( all && args )
+            throw new AbortOperationException('Option `all` requires no arguments')
+
+        if( all && revision )
+            throw new AbortOperationException('Option `all` is not compatible with `revision`')
 
         /* only for testing purpose */
         if( root ) {
@@ -71,12 +74,33 @@ class CmdPull extends CmdBase implements HubOptions {
 
         // init plugin system
         Plugins.init()
-        
-        list.each {
-            log.info "Checking $it ..."
-            def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision,deep)
+        List<AssetManager> list = []
+        if ( all ) {
+            def all = AssetManager.list()
+            all.each{ proj ->
+                def revManager = new AssetManager(proj)
+                revManager.listRevisions().each{ rev ->
+                    if( rev == DEFAULT_REVISION_DIRNAME )
+                        rev = null
+                    list << new AssetManager(proj, this).setRevisionAndLocalPath(proj, rev)
+                }
+            }
+        } else {
+            args.toList().each {
+                list << new AssetManager(it, this).setRevisionAndLocalPath(it, revision)
+            }
+        }
+
+        if( !list ) {
+            log.info "(nothing to do)"
+            return
+        }
+
+        list.each { manager ->
+            log.info "Checking ${manager.getProjectWithRevision()} ..."
+
+            def result = manager.download(deep)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()
