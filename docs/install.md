@@ -60,11 +60,15 @@ Nextflow is distributed as a self-installing package, in order to make the insta
     chmod +x nextflow
     ```
 
-3. Move Nextflow into an executable path:
+3. Move Nextflow into an executable path. For example:
 
     ```bash
-    sudo mv nextflow /usr/local/bin
+    mv nextflow $HOME/.local/bin/
     ```
+
+    :::{tip}
+    You can set `export PATH="$PATH:$HOME/.local/bin"` to add it as an executable path.
+    :::
 
 4. Confirm that Nextflow is installed correctly:
 
@@ -98,10 +102,10 @@ To use the latest edge release, set `NXF_EDGE=1` when updating:
 NXF_EDGE=1 nextflow self-update
 ```
 
-You can also use `NXF_VER` to switch to any edge release:
+You can also use `NXF_VER` to switch to any edge release. For example:
 
 ```bash
-$ nextflow info
+NXF_VER=24.06.0-edge nextflow run hello
 ```
 
 ## Standalone distribution
