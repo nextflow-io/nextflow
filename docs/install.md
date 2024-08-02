@@ -105,7 +105,7 @@ NXF_EDGE=1 nextflow self-update
 You can also use `NXF_VER` to temporarily switch to any edge release. For example:
 
 ```bash
-NXF_VER=24.06.0-edge nextflow run hello
+NXF_VER=24.06.0-edge nextflow info
 ```
 
 ## Standalone distribution
