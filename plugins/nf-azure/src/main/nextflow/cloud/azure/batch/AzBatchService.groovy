@@ -159,23 +159,23 @@ class AzBatchService implements Closeable {
         return listAllVms(location).collect { it.name as String }
     }
 
-    AzVmType guessBestVm(String location, int cpus, MemoryUnit mem, String family) {
+    AzVmType guessBestVm(String location, int cpus, MemoryUnit mem, MemoryUnit disk, String family) {
         log.debug "[AZURE BATCH] guessing best VM given location=$location; cpus=$cpus; mem=$mem; family=$family"
         if( !family.contains('*') && !family.contains('?') )
-            return findBestVm(location, cpus, mem, family)
+            return findBestVm(location, cpus, mem, disk, family)
 
         // well this is a quite heuristic tentative to find a bigger instance to accommodate more tasks
         AzVmType result=null
         if( cpus<=4 ) {
-            result = findBestVm(location, cpus*4, mem!=null ? mem*4 : null, family)
+            result = findBestVm(location, cpus*4, mem!=null ? mem*4 : null, disk!=null ? disk*4 : null, family)
             if( !result )
-                result = findBestVm(location, cpus*2, mem!=null ? mem*2 : null, family)
+                result = findBestVm(location, cpus*2, mem!=null ? mem*2 : null, disk!=null ? disk*2 : null, family)
         }
         else if( cpus <=8 ) {
-            result = findBestVm(location, cpus*2, mem!=null ? mem*2 : null, family)
+            result = findBestVm(location, cpus*2, mem!=null ? mem*2 : null, disk!=null ? disk*2 : null, family)
         }
         if( !result )
-            result = findBestVm(location, cpus, mem, family)
+            result = findBestVm(location, cpus, mem, disk, family)
         return result
     }
 
@@ -188,7 +188,7 @@ class AzBatchService implements Closeable {
      * @param allFamilies Comma separate list of Azure VM machine types, each value can also contain wildcard characters ie. `*` and `?`
      * @return The `AzVmType` instance that best accommodate the resource requirement
      */
-    AzVmType findBestVm(String location, int cpus, MemoryUnit mem, String allFamilies) {
+    AzVmType findBestVm(String location, int cpus, MemoryUnit mem, MemoryUnit disk, String allFamilies) {
         def all = listAllVms(location)
         def scores = new TreeMap<Double,String>()
         def list = allFamilies ? allFamilies.tokenize(',') : ['']
@@ -196,10 +196,14 @@ class AzBatchService implements Closeable {
             for( Map entry : all ) {
                 if( !matchType(family, entry.name as String) )
                     continue
-                def score = computeScore(cpus, mem, entry)
+                def score = computeScore(cpus, mem, disk, entry)
                 if( score != null )
                     scores.put(score, entry.name as String)
             }
+        }
+
+        if ( scores ) {
+            log.debug "[AZURE BATCH] Found VMs: ${scores}"
         }
 
         return scores ? getVmType(location, scores.firstEntry().value) : null
@@ -216,13 +220,13 @@ class AzBatchService implements Closeable {
         return vmType =~ /(?i)^${family}$/
     }
 
-    protected Double computeScore(int cpus, MemoryUnit mem, Map entry) {
+    protected Double computeScore(int cpus, MemoryUnit mem, MemoryUnit disk, Map entry) {
         def vmCores = entry.numberOfCores as int
         double vmMemGb = (entry.memoryInMB as int) /1024
+        double vmDiskGb = (entry.resourceDiskSizeInMB as int) /1024
 
-        if( cpus > vmCores ) {
+        if( cpus > vmCores )
             return null
-        }
 
         int cpusDelta = cpus-vmCores
         double score = cpusDelta * cpusDelta
@@ -232,6 +236,13 @@ class AzBatchService implements Closeable {
                 return null
             double memDelta = memGb - vmMemGb
             score += memDelta*memDelta
+        }
+        if( disk && vmDiskGb != MemoryUnit.ZERO) {
+            double diskGb = disk.toMega()/1024
+            if( diskGb > vmDiskGb )
+                return null
+            double diskDelta =  diskGb - vmDiskGb
+            score += diskDelta*diskDelta
         }
 
         return Math.sqrt(score)
@@ -246,24 +257,40 @@ class AzBatchService implements Closeable {
         new AzVmType(vm)
     }
 
-    protected int computeSlots(int cpus, MemoryUnit mem, int vmCpus, MemoryUnit vmMem) {
+    protected int computeSlots(int cpus, MemoryUnit mem, MemoryUnit disk, int vmCpus, MemoryUnit vmMem, MemoryUnit vmDisk) {
         //  cpus requested should not exceed max cpus avail
         final cpuSlots = Math.min(cpus, vmCpus) as int
         if( !mem || !vmMem )
             return cpuSlots
+
         //  mem requested should not exceed max mem avail
         final vmMemGb = vmMem.mega /_1GB as float
         final memGb = mem.mega /_1GB as float
         final mem0 = Math.min(memGb, vmMemGb)
-        return Math.max(cpuSlots, memSlots(mem0, vmMemGb, vmCpus))
+        final nMemSlots = memSlots(mem0, vmMemGb, vmCpus)
+
+        // If disk and vmDisk are not supplied, grab the max of cpuSlots and nMemSlots
+        if ( !disk || !vmDisk)
+            return Math.max(cpuSlots, nMemSlots)
+
+        // Get slots based on disk usage
+        final vmDiskGb = vmDisk.mega /_1GB as float
+        final diskGb = disk.mega /_1GB as float
+        final disk0 = Math.min(diskGb, vmDiskGb)
+        final nDiskSlots = diskSlots(disk0, vmDiskGb, vmCpus)
+
+        // Get maximum slots per VM based on CPU, memory, and disk
+        return Collections.max([cpuSlots, nMemSlots, nDiskSlots])
     }
 
     protected int computeSlots(TaskRun task, AzVmPoolSpec pool) {
         computeSlots(
                 task.config.getCpus(),
                 task.config.getMemory(),
+                task.config.getDisk(),
                 pool.vmType.numberOfCores,
-                pool.vmType.memory )
+                pool.vmType.memory,
+                pool.vmType.resourceDiskSize )
     }
 
 
@@ -272,6 +299,10 @@ class AzBatchService implements Closeable {
         result.setScale(0, RoundingMode.UP).intValue()
     }
 
+    protected int diskSlots(float disk, float vmDisk, int vmCpus) {
+        BigDecimal result = disk / (vmDisk / vmCpus)
+        result.setScale(0, RoundingMode.UP).intValue()
+    }
 
     protected AzureNamedKeyCredential createBatchCredentialsWithKey() {
         log.debug "[AZURE BATCH] Creating Azure Batch client using shared key creddentials"
@@ -559,11 +590,12 @@ class AzBatchService implements Closeable {
         final opts = config.batch().autoPoolOpts()
         final mem = task.config.getMemory()
         final cpus = task.config.getCpus()
+        final disk = task.config.getDisk()
         final type = task.config.getMachineType() ?: opts.vmType
         if( !type )
             throw new IllegalArgumentException("Missing Azure Batch VM type for task '${task.name}'")
 
-        final vmType = guessBestVm(loc, cpus, mem, type)
+        final vmType = guessBestVm(loc, cpus, mem, disk, type)
         if( !vmType ) {
             def msg = "Cannot find a VM for task '${task.name}' matching these requirements: type=$type, cpus=${cpus}, mem=${mem?:'-'}, location=${loc}"
             throw new IllegalArgumentException(msg)
