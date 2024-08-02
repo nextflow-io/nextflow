@@ -21,6 +21,8 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Global
+import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.MixOp
@@ -35,65 +37,19 @@ import nextflow.file.FileHelper
 @CompileStatic
 class OutputDsl {
 
+    private Session session = Global.session as Session
+
     private Map<String,Map> publishConfigs = [:]
-
-    private Path directory
-
-    private Map defaults = [:]
 
     private volatile List<PublishOp> ops = []
 
     void directory(String directory) {
-        if( this.directory )
-            throw new ScriptRuntimeException("Publish directory cannot be defined more than once in the workflow publish definition")
-        this.directory = FileHelper.toCanonicalPath(directory)
-    }
-
-    void contentType(String value) {
-        setDefault('contentType', value)
-    }
-
-    void contentType(boolean value) {
-        setDefault('contentType', value)
-    }
-
-    void ignoreErrors(boolean value) {
-        setDefault('ignoreErrors', value)
-    }
-
-    void mode(String value) {
-        setDefault('mode', value)
-    }
-
-    void overwrite(boolean value) {
-        setDefault('overwrite', value)
-    }
-
-    void overwrite(String value) {
-        setDefault('overwrite', value)
-    }
-
-    void storageClass(String value) {
-        setDefault('storageClass', value)
-    }
-
-    void tags(Map value) {
-        setDefault('tags', value)
-    }
-
-    void enabled( boolean value ) {
-        setDefault('enabled', value)
-    }
-
-    private void setDefault(String name, Object value) {
-        if( defaults.containsKey(name) )
-            throw new ScriptRuntimeException("Default `${name}` option cannot be defined more than once in the workflow publish definition")
-        defaults[name] = value
+        throw new ScriptRuntimeException('Output directory should be set using the `outputDir` config option or `-output-dir` command line option')
     }
 
     void target(String name, Closure closure) {
         if( publishConfigs.containsKey(name) )
-            throw new ScriptRuntimeException("Target '${name}' is defined more than once in the workflow publish definition")
+            throw new ScriptRuntimeException("Target '${name}' is defined more than once in the workflow output definition")
 
         final dsl = new TargetDsl()
         final cl = (Closure)closure.clone()
@@ -105,6 +61,8 @@ class OutputDsl {
     }
 
     void build(Map<DataflowWriteChannel,String> targets) {
+        final defaults = session.config.navigate('workflow.output', Collections.emptyMap()) as Map
+
         // construct mapping of target name -> source channels
         final Map<String,List<DataflowWriteChannel>> publishSources = [:]
         for( final source : targets.keySet() ) {
@@ -122,16 +80,14 @@ class OutputDsl {
             final mixed = sources.size() > 1
                 ? new MixOp(sources.collect( ch -> CH.getReadChannel(ch) )).apply()
                 : sources.first()
-            final opts = publishOptions(name, publishConfigs[name] ?: [:])
+            final overrides = publishConfigs[name] ?: Collections.emptyMap()
+            final opts = publishOptions(name, defaults, overrides)
 
             ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
         }
     }
 
-    private Map publishOptions(String name, Map overrides) {
-        if( !directory )
-            directory = FileHelper.toCanonicalPath('.')
-
+    private Map publishOptions(String name, Map defaults, Map overrides) {
         final opts = defaults + overrides
         if( opts.containsKey('ignoreErrors') )
             opts.failOnError = !opts.remove('ignoreErrors')
@@ -139,9 +95,9 @@ class OutputDsl {
             opts.overwrite = 'standard'
 
         final path = opts.path as String ?: name
-        if( path.startsWith('/') )
-            throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should be a relative path")
-        opts.path = directory.resolve(path)
+        if( path.startsWith('/') || path.endsWith('/') )
+            throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should not contain a leading or trailing slash")
+        opts.path = session.outputDir.resolve(path)
 
         if( opts.index && !(opts.index as Map).path )
             throw new ScriptRuntimeException("Index file definition for publish target '${name}' is missing `path` option")
@@ -166,6 +122,10 @@ class OutputDsl {
 
         void contentType(boolean value) {
             setOption('contentType', value)
+        }
+
+        void enabled(boolean value) {
+            setOption('enabled', value)
         }
 
         void ignoreErrors(boolean value) {
@@ -197,16 +157,17 @@ class OutputDsl {
             setOption('path', value)
         }
 
+        void path(Closure value) {
+            setOption('path', '.')
+            setOption('pathAs', value)
+        }
+
         void storageClass(String value) {
             setOption('storageClass', value)
         }
 
         void tags(Map value) {
             setOption('tags', value)
-        }
-
-        void enabled( boolean value ) {
-            setOption('enabled', value)
         }
 
         private void setOption(String name, Object value) {

@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.preview.output = true
-
 params.save_foo = true
 
 process align {
@@ -59,13 +57,14 @@ process foo {
 }
 
 workflow {
-  def input = Channel.of('alpha','beta','delta')
+  main:
+  input = Channel.of('alpha','beta','delta')
   align(input)
 
-  def bam = align.out[0].toSortedList { it.name }
-  def bai = align.out[1].toSortedList { it.name }
-  my_combine( bam, bai )
-  my_combine.out.view{ it.text }
+  bams = align.out[0].toSortedList { bam -> bam.name }
+  bais = align.out[1].toSortedList { bai -> bai.name }
+  my_combine( bams, bais )
+  my_combine.out.view { it -> it.text }
 
   foo()
 
@@ -76,10 +75,8 @@ workflow {
 }
 
 output {
-  directory 'results'
-  mode 'copy'
-
   'data' {
+    path { filename, val -> filename }
     index {
       path 'index.csv'
       mapper { val -> [filename: val] }

@@ -123,6 +123,11 @@ class Session implements ISession {
     boolean resumeMode
 
     /**
+     * The folder where workflow outputs are stored
+     */
+    Path outputDir
+
+    /**
      * The folder where tasks temporary files are stored
      */
     Path workDir
@@ -375,8 +380,11 @@ class Session implements ISession {
         // -- DAG object
         this.dag = new DAG()
 
+        // -- init output dir
+        this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+
         // -- init work dir
-        this.workDir = ((config.workDir ?: 'work') as Path).complete()
+        this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
         this.setLibDir( config.libDir as String )
 
         // -- init cloud cache path

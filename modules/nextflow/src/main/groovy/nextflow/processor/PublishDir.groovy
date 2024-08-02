@@ -222,7 +222,7 @@ class PublishDir {
     protected void apply0(Set<Path> files) {
         assert path
 
-        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
+        final retryOpts = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
         this.retryConfig = new PublishRetryConfig(retryOpts)
 
         createPublishDir()

@@ -633,11 +633,6 @@ class NextflowDSLImpl implements ASTTransformation {
                             }
                             break
 
-                        case 'publish':
-                            if( stm instanceof ExpressionStatement )
-                                convertPublishMethod( stm )
-                            break
-
                         case 'exec':
                             bodyLabel = currentLabel
                             iterator.remove()
@@ -1297,27 +1292,6 @@ class NextflowDSLImpl implements ASTTransformation {
             }
 
             return false
-        }
-
-        protected void convertPublishMethod(ExpressionStatement stmt) {
-            if( stmt.expression !instanceof BinaryExpression ) {
-                syntaxError(stmt, "Invalid process publish statement")
-                return
-            }
-
-            final binaryX = (BinaryExpression)stmt.expression
-            if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
-                syntaxError(stmt, "Invalid process publish statement")
-                return
-            }
-
-            final left = binaryX.leftExpression
-            if( left !instanceof VariableExpression ) {
-                syntaxError(stmt, "Invalid process publish statement")
-                return
-            }
-
-            stmt.expression = callThisX('_publish_target', args(constX(((VariableExpression)left).name), binaryX.rightExpression))
         }
 
         protected boolean isIllegalName(String name, ASTNode node) {
