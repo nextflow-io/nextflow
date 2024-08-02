@@ -87,7 +87,7 @@ nextflow self-update
 You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
 
 ```bash
-NXF_VER=23.10.0 nextflow run hello
+NXF_VER=23.10.0 nextflow info
 ```
 
 ## Stable and edge releases
