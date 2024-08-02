@@ -102,7 +102,7 @@ To use the latest edge release, set `NXF_EDGE=1` when updating:
 NXF_EDGE=1 nextflow self-update
 ```
 
-You can also use `NXF_VER` to switch to any edge release. For example:
+You can also use `NXF_VER` to temporarily switch to any edge release. For example:
 
 ```bash
 NXF_VER=24.06.0-edge nextflow run hello
