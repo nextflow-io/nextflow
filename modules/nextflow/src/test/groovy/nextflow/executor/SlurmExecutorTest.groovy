@@ -230,6 +230,7 @@ class SlurmExecutorTest extends Specification {
         executor.getHeaders(taskArray) == '''
                 #SBATCH --array 0-4
                 #SBATCH -J nf-the_task_name
+                #SBATCH -o /dev/null
                 #SBATCH --no-requeue
                 #SBATCH --signal B:USR2@30
                 '''
