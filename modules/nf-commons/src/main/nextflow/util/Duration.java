@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import groovy.transform.EqualsAndHashCode;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.runtime.StringGroovyMethods;
 import org.apache.commons.lang.time.DurationFormatUtils;
@@ -34,7 +33,6 @@ import org.slf4j.LoggerFactory;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode(includes = "durationInMillis")
 public class Duration implements Comparable<Duration>, Serializable, Cloneable {
 
     private static final Logger log = LoggerFactory.getLogger(Duration.class);
@@ -362,6 +360,16 @@ public class Duration implements Comparable<Duration>, Serializable, Cloneable {
             return left.compareTo(Duration.of(right.toString()));
 
         throw new IllegalArgumentException("Not a valid duration value: " + right.toString());
+    }
+
+    @Override
+    public boolean equals(Object that) {
+        return compareTo(this, that) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(durationInMillis);
     }
 
 }

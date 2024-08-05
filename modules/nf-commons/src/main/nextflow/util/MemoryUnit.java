@@ -23,14 +23,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import groovy.transform.EqualsAndHashCode;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 /**
  * Represent a memory unit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode(includes = "size", includeFields = true)
 public class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
     public static final List<String> UNITS = List.of("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB");
@@ -205,5 +203,15 @@ public class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneab
         if( p == -1 )
             throw new IllegalArgumentException("Not a valid memory unit: " + unit);
         return size / Math.round(Math.pow(1024, p));
+    }
+
+    @Override
+    public boolean equals(Object that) {
+        return compareTo(this, that) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(size);
     }
 }
