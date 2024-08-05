@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.14.0 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
+- Make Google Batch auto retry codes configurable (#5148) [e562ce06]
+- Improve Google Batch 5000x error class handling (#5141) [61b2205f]
+
 1.13.2-patch1 - 9 Jul 2024
 - Fix normalization of consecutive slashes in uri path (#5114) [3f366b7e]
 
