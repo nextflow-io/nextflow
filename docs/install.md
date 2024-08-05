@@ -68,7 +68,7 @@ Nextflow is distributed as a self-installing package, in order to make the insta
     ```
 
     :::{tip}
-    Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. If it is not, you can add it temporarily using `export PATH="$PATH:$HOME/.local/bin"`. To permanently add it to your `PATH` this command can be added to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, you could move the `nextflow` executable to a directory already in your `PATH`.
+    Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. Temporarily add this directory to `PATH` by setting `export PATH="$PATH:$HOME/.local/bin"`. Add the directory to `PATH` permanently by adding the export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, move the `nextflow` executable to a directory already in your `PATH`.
     :::
 
     :::{warning}
