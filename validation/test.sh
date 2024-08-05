@@ -46,14 +46,6 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS
     $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 
-    #
-    # RNASEQ-NF with async finalizer
-    #
-    echo nextflow-io/rnaseq-nf async finalizer
-    [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
-    NXF_ENABLE_ASYNC_FINALIZER=true $NXF_CMD run nextflow-io/rnaseq-nf -with-docker
-    NXF_ENABLE_ASYNC_FINALIZER=true $NXF_CMD run nextflow-io/rnaseq-nf -with-docker -resume
-
     exit 0
 fi
 

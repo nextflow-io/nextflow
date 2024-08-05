@@ -90,7 +90,7 @@ protected coordinates( it ) {
 /*
  * Compile and pack all packages
  */
-task packOne( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
+task packOne( dependsOn: [compile, ":nextflow:shadowJar"]) {
     doLast {
         def source = "modules/nextflow/build/libs/nextflow-${version}-one.jar"
         ant.copy(file: source, todir: releaseDir, overwrite: true)
@@ -99,7 +99,7 @@ task packOne( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
     }
 }
 
-task packDist( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
+task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
 
     doLast {
         file(releaseDir).mkdirs()

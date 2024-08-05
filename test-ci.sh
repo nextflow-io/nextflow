@@ -16,7 +16,6 @@ fi
 export WITH_DOCKER='-with-docker'
 export NXF_PLUGINS_DIR=$PWD/build/plugins
 export NXF_CMD=$PWD/nextflow;
-export CAPSULE_LOG=none
 export TEST_JDK
 export TEST_MODE
 
