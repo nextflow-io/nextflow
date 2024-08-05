@@ -1,5 +1,8 @@
 nf-codecommit changelog
 =======================
+0.2.2 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
+
 0.2.1 - 1 Aug 2024
 - Bump amazon sdk to version 1.12.766 [5ce42b79]
 - Bump pf4j to version 3.12.0 [1a8f086a]
