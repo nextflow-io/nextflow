@@ -63,11 +63,16 @@ Nextflow is distributed as a self-installing package, in order to make the insta
 3. Move Nextflow into an executable path. For example:
 
     ```bash
+    mkdir -p $HOME/.local/bin/
     mv nextflow $HOME/.local/bin/
     ```
 
     :::{tip}
-    You can set `export PATH="$PATH:$HOME/.local/bin"` to add it as an executable path.
+    Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. If it is not, you can add it temporarily using `export PATH="$PATH:$HOME/.local/bin"`. To permanently add it to your `PATH` this command can be added to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, you could move the `nextflow` executable to a directory already in your `PATH`.
+    :::
+
+    :::warning
+    Nextflow will update its executable during the self update process and it should not be placed in a directory with restricted permissions.
     :::
 
 4. Confirm that Nextflow is installed correctly:
