@@ -240,7 +240,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
-    def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
+    def nextflowAllFile = file("$releaseDir/nextflow-${version}-dist")
     def versionFile = file('VERSION').absoluteFile
 
     def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
