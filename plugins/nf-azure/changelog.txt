@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.6.1 - 1 Aug 2024
+- Update Azure batch deps [72576648]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
 1.8.0 - 8 Jul 2024
 - Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
 - Add retry options to Azure Blob client (#5098) [7d5e5d2b]
@@ -30,6 +34,19 @@ nf-azure changelog
 1.4.0 - 24 Nov 2023
 - Fix security vulnerabilities (#4513) [a310c777]
 - Add support for Azure low-priority pool (#4527) [8320ea10]
+
+1.3.3-patch3 - 31 Jul 2024
+- Update Azure batch deps [e0c6d77d]
+
+1.3.3-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+1.3.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
+1.3.3 - 12 Jan 2023
+- Use AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e1cb413]
+- Fix azure retry policy (#4638) [2bc3cf0e]
 
 1.3.2 - 28 Sep 2023
 - Retry TimeoutException in azure file system (#4295) [79248355]
