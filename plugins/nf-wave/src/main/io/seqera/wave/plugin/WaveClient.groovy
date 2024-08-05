@@ -563,11 +563,9 @@ class WaveClient {
             log.trace "Wave fingerprint: $key; assets: $assets"
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
-            if( config.freezeMode() )  {
-                if( response.buildId && !response.cached && !ContainerInspectMode.active() ) {
-                    // await the image to be available when a new image is being built
-                    awaitCompletion(response.buildId)
-                }
+            if( response.buildId && !response.cached && !ContainerInspectMode.active() ) {
+                // await the image to be available when a new image is being built
+                awaitCompletion(response.buildId)
             }
             // assemble the container info response
             return new ContainerInfo(assets.containerImage, response.targetImage, key)

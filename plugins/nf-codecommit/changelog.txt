@@ -1,11 +1,22 @@
-nf-amazon changelog
-===================
+nf-codecommit changelog
+=======================
+0.2.1 - 1 Aug 2024
+- Bump amazon sdk to version 1.12.766 [5ce42b79]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
 0.2.0 - 5 Feb 2024
 - Bump Groovy 4 (#4443) [9d32503b]
 
 0.1.6 - 24 Nov 2023
 - Fix security vulnerabilities (#4513) [a310c777]
 - Bump javax.xml.bind:jaxb-api:2.4.0-b180830.0359
+
+0.1.5-patch2 - 30 Jul 2024
+- Bump amazon sdk to version 1.12.766 [189f58ed]
+- Bump pf4j to version 3.12.0 [8dfa4076]
+
+0.1.5-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
 
 0.1.5 - 15 May 2023
 - Update logging libraries [d7eae86e]

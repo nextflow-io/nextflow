@@ -1894,9 +1894,6 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_CHARLIECLOUD_CACHEDIR`
 : Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
-`NXF_CLASSPATH`
-: Allows the extension of the Java runtime classpath with extra JAR files or class folders.
-
 `NXF_CLOUDCACHE_PATH`
 : :::{versionadded} 23.07.0-edge
   :::
