@@ -1,5 +1,8 @@
 nf-cloudcache changelog
 =======================
+0.4.2 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
+
 0.4.1 - 10 Mar 2024
 - Fix typo in error message [ci fast] [a7f23305]
 - minor cli docstring fix (#4759) [ci skip] [ee4b4a25]
