@@ -1,8 +1,7 @@
 nf-azure changelog
 ===================
-1.6.1 - 1 Aug 2024
-- Update Azure batch deps [72576648]
-- Bump pf4j to version 3.12.0 [1a8f086a]
+1.8.1 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
 
 1.8.0 - 8 Jul 2024
 - Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
@@ -15,6 +14,10 @@ nf-azure changelog
 - Fix support for Azure managed identity clientId [306814e7]
 - Bump azure-compute-batch:1.0.0-beta.2 [c08dc49b]
 - Bump azure-storage-blob 12.26.1 [c76ff5e7]
+
+1.6.1 - 1 Aug 2024
+- Update Azure batch deps [72576648]
+- Bump pf4j to version 3.12.0 [1a8f086a]
 
 1.6.0 - 15 Apr 2024
 - Add support for Azure custom startTask (#4913) [27d01e3a]
