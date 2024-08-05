@@ -288,7 +288,7 @@ public class Duration implements Comparable<Duration>, Serializable, Cloneable {
 
         // when less than 60 seconds round to 100th of seconds
         if( durationInMillis < 60_000 ) {
-            return String.valueOf( Math.round((double)durationInMillis / 1_000.0 * 10.0) / 10.0 ) + "s";
+            return String.valueOf( Math.round((double)durationInMillis / 1_000.0 * 10.0) / 10 ) + "s";
         }
 
         long secs;
