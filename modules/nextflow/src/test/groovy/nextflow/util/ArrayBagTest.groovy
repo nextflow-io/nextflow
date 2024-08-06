@@ -74,4 +74,15 @@ class ArrayBagTest extends Specification {
         String.valueOf(bag) == '[1, 2, 3]'
     }
 
+    def 'equivalent ArrayBags can be used as HashMap entries' () {
+        given:
+        def bag1 = new ArrayBag('foo')
+        def bag2 = new ArrayBag('foo')
+        HashMap myMap = [:]
+        myMap[bag1] = 'bar'
+
+        expect:
+        myMap[bag2] == 'bar'
+    }
+
 }
