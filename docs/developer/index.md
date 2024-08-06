@@ -144,7 +144,7 @@ If you need to test changes to the `nextflow` launcher script, you can run it di
 
 ### Groovy REPL
 
-The `groovysh` command provides a command-line REPL that you can use to play around with Groovy code independently of Nextflow. The `groovyConsole` command provides a graphical REPL similar to `nextflow console`. These commands require a standalone Groovy distribution, which can be installed as described for Java in {ref}`Getting started <install-requirements>`.
+The `groovysh` command provides a command-line REPL that you can use to play around with Groovy code independently of Nextflow. The `groovyConsole` command provides a graphical REPL similar to `nextflow console`. These commands require a standalone Groovy distribution, which can be installed as described for Java on the {ref}`Installation <install-requirements>` page.
 
 :::{note}
 If you are using WSL, you must also install an X server for Windows, such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [Xming](http://www.straightrunning.com/XmingNotes/), in order to use these commands.
