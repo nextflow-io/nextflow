@@ -99,12 +99,12 @@ public class Duration implements Comparable<Duration>, Serializable, Cloneable {
     public Duration(String str) {
         try {
             long millis;
+            try {
                 millis = parseSimple(str);
-            // try {
-            // }
-            // catch( IllegalArgumentException e ) {
-            //     millis = parseLegacy(str);
-            // }
+            }
+            catch( IllegalArgumentException e ) {
+                millis = parseLegacy(str);
+            }
             this.durationInMillis = millis;
         }
         catch( IllegalArgumentException e ) {
@@ -284,9 +284,9 @@ public class Duration implements Comparable<Duration>, Serializable, Cloneable {
             return String.valueOf( durationInMillis ) + "ms";
         }
 
-        // when less than 60 seconds round to 100th of seconds
+        // when less than 60 seconds round to tenth of seconds
         if( durationInMillis < 60_000 ) {
-            return String.valueOf( Math.round((double)durationInMillis / 1_000.0 * 10.0) / 10 ) + "s";
+            return String.valueOf( Math.round((double)durationInMillis / 1_000 * 10) / 10.0 ) + "s";
         }
 
         long secs;
@@ -328,11 +328,11 @@ public class Duration implements Comparable<Duration>, Serializable, Cloneable {
     }
 
     public Duration multiply(Number value) {
-        return new Duration(durationInMillis * value.longValue());
+        return new Duration((long)(durationInMillis * value.doubleValue()));
     }
 
     public Duration div(Number value) {
-        return new Duration(Math.round((double)durationInMillis / value.longValue()));
+        return new Duration(Math.round((double)durationInMillis / value.doubleValue()));
     }
 
     public boolean asBoolean() {

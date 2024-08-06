@@ -138,11 +138,11 @@ public class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneab
     }
 
     public MemoryUnit multiply(Number value) {
-        return new MemoryUnit( size * value.longValue() );
+        return new MemoryUnit( (long)(size * value.doubleValue()) );
     }
 
     public MemoryUnit div(Number value) {
-        return new MemoryUnit( Math.round((double)size / value.longValue()) );
+        return new MemoryUnit( Math.round((double)size / value.doubleValue()) );
     }
 
     @Override

@@ -349,7 +349,7 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         then:
         history.text == '''
 2016-07-24 16:43:16\t10m\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t.nextflow run hello
-2016-07-24 16:43:34\t16s\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
+2016-07-24 16:43:34\t16.0s\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
 2016-07-24 16:43:34\t1h\tsmall_cirum\tERR\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
 2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
