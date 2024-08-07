@@ -19,6 +19,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 /**
  * Implements a builder for Charliecloud containerisation
  *
@@ -36,7 +37,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     protected boolean useSquash
 
     protected boolean writeFake
-    
+
+    private String containerStore
+
     CharliecloudBuilder(String name) {
         this.image = name
     }
@@ -62,6 +65,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
+        if( params.containsKey('containerStore') )
+            this.containerStore = params.containerStore
+
         return this
     }
 
@@ -72,25 +78,31 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
     @Override
     CharliecloudBuilder build(StringBuilder result) {
+        
         assert image
         def imageStorage = Paths.get(image).parent.parent
         def imageToRun = String
 
+        if(containerStore == null || containerStore.trim().isEmpty()) {
+            containerStore = Global.session.workDir.resolve('charliecloud_store') as String
+        }
+        
         if (!writeFake) {
-            // define image to run, if --write-fake is not used this is a copy of the image in the current workDir
-            imageToRun = '"$NXF_TASK_WORKDIR"/container_' + image.split('/')[-1]
-
-            // optional squash
-            if (useSquash) {
-                imageToRun = imageToRun + '.squashfs'
-            }
-
-            result << 'ch-convert -i ch-image --storage '
-            // handle storage to deal with cases where CH_IMAGE_STORAGE is not set
+            // define imageToRun, if --write-fake is not used this is a copy of the image in the containerStore
+            // Container stored in containerStore/hash/hash
+            imageToRun = containerStore + '"${NXF_TASK_WORKDIR: -34}"'
+            
+            result << 'mkdir -p ' + imageToRun + ' && ch-convert -i ch-image --storage '
+            // add storage to deal with cases where CH_IMAGE_STORAGE is not set
             result << imageStorage
             result << ' '
             result << image.split('/')[-1]
             result << ' '
+            // If squash is enabled the container will be a file inside the folder
+            if (useSquash) {
+                imageToRun = imageToRun + '/container.squashfs'
+            }
+
             result << imageToRun
             result << ' && '
         }
