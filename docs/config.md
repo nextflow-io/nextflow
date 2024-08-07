@@ -511,10 +511,13 @@ The following settings are available:
 : The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
 `charliecloud.writeFake`
-: Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode, using overlayfs, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details 
+: Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode, using overlayfs, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details. Using this is `writeFake`, given that the kernel supports it. If `writeFake` is not enabled, each process will run in an individual container, which can lead to the creation of many temporary containers for a pipeline with many containers. 
+
+`charliecloud.containerStore`
+:  If `writeFake` is enabled, this option has no effect. Directoy that stores temporary containers. Unless `writeFake` is enabled, each process runs in an individual container. If this is not set, nextflow will default to `work/charliecloud_store`. Path to temporary containers inside the `containerStore` is the full hash of the process.
 
 `charliecloud.useSquash`
-: Create a temporary squashFS container image in the process work directory instead of a folder.
+:  If `writeFake` is enabled, this option has no effect. Create a temporary squashFS container image in `containerStore` (see above) named `container.squashfs`. If `writeFake` is not available but squashFS is an option, this should be enabled.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
