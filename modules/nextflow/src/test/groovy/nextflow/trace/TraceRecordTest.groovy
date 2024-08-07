@@ -54,7 +54,7 @@ class TraceRecordTest extends Specification {
         'native_id' | null      | '-'
         'submit'    | null      | '2014-10-06 12:03:02.622'
         'submit'    | 'num'     | timestamp.toString()
-        'duration'  | null      | '2s'
+        'duration'  | null      | '2.0s'
         '%cpu'      | null      | '5.0%'
         'rss'       | null      | '1 KB'
         'queue'     | null      | 'big'
@@ -113,7 +113,7 @@ class TraceRecordTest extends Specification {
         str                     | fmt   | expect
         0                       | null  | '0ms'
         100                     | null  | '100ms'
-        2000                    | null  | '2s'
+        2000                    | null  | '2.0s'
         3600 * 1000 * 3         | null  | '3h'
         3600 * 1000 * 3 + 5000  | null  | '3h 5s'
 
@@ -251,7 +251,7 @@ class TraceRecordTest extends Specification {
         json.task_id == 'hola'
         json.native_id == '-'
         json.submit == '2014-10-06 12:03:02.622'
-        json.duration == '2s'
+        json.duration == '2.0s'
         json.'%cpu' == '5.0%'
         json.rss == '1 KB'
         json.queue == 'big'
