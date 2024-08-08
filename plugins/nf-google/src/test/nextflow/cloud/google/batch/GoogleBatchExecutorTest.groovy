@@ -106,7 +106,7 @@ class GoogleBatchExecutorTest extends Specification {
             getTask() >> Mock(TaskRun) { getWorkDir() >> WORK_DIR }
         }
         expect:
-        executor.getArrayWorkDir(handler) == EXPECTED
+        executor.getChildWorkDir(handler) == EXPECTED
 
         where:
         FUSION  | DEFAULT_FS  | WORK_DIR              | EXPECTED
@@ -122,7 +122,7 @@ class GoogleBatchExecutorTest extends Specification {
             isWorkDirDefaultFS()>>DEFAULT_FS
         }
         expect:
-        executor.getArrayLaunchCommand(TASK_DIR) == EXPECTED
+        executor.getChildLaunchCommand(TASK_DIR) == EXPECTED
 
         where:
         FUSION  | DEFAULT_FS  | TASK_DIR            | EXPECTED

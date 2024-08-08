@@ -103,7 +103,7 @@ class AwsBatchExecutorTest extends Specification {
             getTask() >> Mock(TaskRun) { getWorkDir() >> WORK_DIR }
         }
         expect:
-        executor.getArrayWorkDir(handler) == EXPECTED
+        executor.getChildWorkDir(handler) == EXPECTED
 
         where:
         FUSION  | DEFAULT_FS  | WORK_DIR              | EXPECTED
@@ -123,7 +123,7 @@ class AwsBatchExecutorTest extends Specification {
             }
         }
         expect:
-        executor.getArrayLaunchCommand(TASK_DIR) == EXPECTED
+        executor.getChildLaunchCommand(TASK_DIR) == EXPECTED
 
         where:
         FUSION  | DEFAULT_FS  | S5CMD   | TASK_DIR            | EXPECTED

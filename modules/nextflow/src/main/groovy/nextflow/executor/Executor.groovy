@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -23,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
@@ -190,6 +192,40 @@ abstract class Executor {
      */
     boolean isFusionEnabled() {
         return false
+    }
+
+    boolean isWorkDirDefaultFS() {
+        getWorkDir().fileSystem == FileSystems.default
+    }
+
+    /**
+     * Get the work directory for a child task when using
+     * a job array or task batch.
+     *
+     * @param handler
+     */
+    String getChildWorkDir(TaskHandler handler) {
+        return isFusionEnabled()
+            ? FusionHelper.toContainerMount(handler.task.workDir).toString()
+            : handler.task.workDir.toUriString()
+    }
+
+    /**
+     * Get the launch command for a child task when using
+     * a job array or task batch.
+     *
+     * @param taskDir
+     */
+    String getChildLaunchCommand(String taskDir) {
+        if( isFusionEnabled() ) {
+            return "bash ${taskDir}/${TaskRun.CMD_RUN}"
+        }
+        else if( isWorkDirDefaultFS() ) {
+            return "bash ${taskDir}/${TaskRun.CMD_RUN} 2>&1 > ${taskDir}/${TaskRun.CMD_LOG}"
+        }
+        else {
+            throw new IllegalStateException("Executor ${getName()} does not support array jobs")
+        }
     }
 
     /**

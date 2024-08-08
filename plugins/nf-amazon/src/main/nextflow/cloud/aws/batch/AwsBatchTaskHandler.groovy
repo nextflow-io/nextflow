@@ -374,10 +374,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
     }
 
-    protected void buildTaskWrapper() {
-        createTaskWrapper().build()
-    }
-
     protected AWSBatch bypassProxy(AWSBatch batch) {
         batch instanceof AwsBatchProxy ? batch.getClient() : batch
     }

@@ -14,30 +14,36 @@
  * limitations under the License.
  */
 
-package nextflow.executor
+package nextflow.processor
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
 /**
- * Interface for executors that support job arrays.
+ * Models a task batch, which executes a set of tasks
+ * on the same node.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 @CompileStatic
-interface TaskArrayExecutor {
+class TaskBatchRun extends TaskRun {
 
-    /**
-     * Get the environment variable name that provides the array index of a task.
-     */
-    String getArrayIndexName()
+    List<TaskHandler> children
 
-    /**
-     * Get the start of the job array index range.
-     */
-    int getArrayIndexStart()
+    @Override
+    boolean isContainerEnabled() {
+        return false
+    }
 
-    /**
-     * Get the name of a child job based on the array job name
-     * and child index.
-     */
-    String getArrayTaskId(String jobId, int index)
+    void finalize() {
+        for( TaskHandler handler : children ) {
+            final task = handler.task
+            task.exitStatus = exitStatus
+            task.error = error
+            task.stdout = task.workDir.resolve(TaskRun.CMD_OUTFILE)
+            task.stderr = task.workDir.resolve(TaskRun.CMD_ERRFILE)
+        }
+    }
+
 }

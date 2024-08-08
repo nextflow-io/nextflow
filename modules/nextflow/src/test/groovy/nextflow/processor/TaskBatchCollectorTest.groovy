@@ -21,7 +21,6 @@ import java.nio.file.Paths
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.executor.Executor
-import nextflow.executor.TaskArrayExecutor
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -31,24 +30,15 @@ import test.TestHelper
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class TaskArrayCollectorTest extends Specification {
+class TaskBatchCollectorTest extends Specification {
 
-    static class DummyExecutor extends Executor implements TaskArrayExecutor {
-        TaskMonitor createTaskMonitor() { null }
-        TaskHandler createTaskHandler(TaskRun task) { null }
-
-        String getArrayIndexName() { null }
-        int getArrayIndexStart() { 0 }
-        String getArrayTaskId(String jobId, int index) { null }
-    }
-
-    def 'should submit tasks as job arrays' () {
+    def 'should submit tasks as task batches' () {
         given:
-        def executor = Mock(DummyExecutor)
+        def executor = Mock(Executor)
         def handler = Mock(TaskHandler)
-        def taskArray = [:] as TaskArrayRun
-        def collector = Spy(new TaskArrayCollector(null, executor, 5)) {
-            createAggregateTask(_) >> taskArray
+        def taskBatch = [:] as TaskBatchRun
+        def collector = Spy(new TaskBatchCollector(null, executor, 5, false)) {
+            createAggregateTask(_) >> taskBatch
         }
         and:
         def task = Mock(TaskRun) {
@@ -57,7 +47,7 @@ class TaskArrayCollectorTest extends Specification {
             }
         }
 
-        // collect tasks into job array
+        // collect tasks into task batch
         when:
         collector.collect(task)
         collector.collect(task)
@@ -66,19 +56,19 @@ class TaskArrayCollectorTest extends Specification {
         then:
         0 * executor.submit(_)
 
-        // submit job array when it is ready
+        // submit task batch when it is ready
         when:
         collector.collect(task)
         then:
-        1 * executor.submit(taskArray)
+        1 * executor.submit(taskBatch)
 
-        // submit partial job array when closed
+        // submit partial task batch when closed
         when:
         collector.collect(task)
         collector.collect(task)
         collector.close()
         then:
-        1 * executor.submit(taskArray)
+        1 * executor.submit(taskBatch)
 
         // submit tasks directly once closed
         when:
@@ -89,8 +79,8 @@ class TaskArrayCollectorTest extends Specification {
 
     def 'should submit retried tasks directly' () {
         given:
-        def executor = Mock(DummyExecutor)
-        def collector = Spy(new TaskArrayCollector(null, executor, 5))
+        def executor = Mock(Executor)
+        def collector = Spy(new TaskBatchCollector(null, executor, 5, false))
         and:
         def task = Mock(TaskRun) {
             getConfig() >> Mock(TaskConfig) {
@@ -104,11 +94,10 @@ class TaskArrayCollectorTest extends Specification {
         1 * executor.submit(task)
     }
 
-    def 'should create task array' () {
+    def 'should create task batch' () {
         given:
-        def exec = Mock(DummyExecutor) {
+        def executor = Mock(Executor) {
             getWorkDir() >> TestHelper.createInMemTempDir()
-            getArrayIndexName() >> 'ARRAY_JOB_INDEX'
         }
         def config = Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) {
             createTaskConfig() >> Mock(TaskConfig)
@@ -117,13 +106,13 @@ class TaskArrayCollectorTest extends Specification {
         }
         def proc = Mock(TaskProcessor) {
             getConfig() >> config
-            getExecutor() >> exec
+            getExecutor() >> executor
             getName() >> 'PROC'
             getSession() >> Mock(Session)
             isSingleton() >> false
             getTaskBody() >> { new BodyDef(null, 'source') }
         }
-        def collector = Spy(new TaskArrayCollector(proc, exec, 5))
+        def collector = Spy(new TaskBatchCollector(proc, executor, 5, false))
         and:
         def task = Mock(TaskRun) {
             index >> 1
@@ -135,64 +124,78 @@ class TaskArrayCollectorTest extends Specification {
         }
 
         when:
-        def taskArray = collector.createAggregateTask([task, task, task])
+        def taskBatch = collector.createAggregateTask([task, task, task])
         then:
-        3 * exec.createTaskHandler(task) >> handler
+        3 * executor.createTaskHandler(task) >> handler
         3 * handler.prepareLauncher()
-        1 * collector.createArrayTaskScript([handler, handler, handler]) >> 'the-task-array-script'
+        1 * collector.createBatchTaskScript([handler, handler, handler]) >> 'the-task-batch-script'
         and:
-        taskArray.name == 'PROC (1)'
-        taskArray.config.cpus == 4
-        taskArray.config.tag == null
-        taskArray.processor == proc
-        taskArray.script == 'the-task-array-script'
+        taskBatch.name == 'PROC (1)'
+        taskBatch.config.cpus == 4
+        taskBatch.config.tag == null
+        taskBatch.processor == proc
+        taskBatch.script == 'the-task-batch-script'
         and:
-        taskArray.getArraySize() == 3
-        taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]
-        taskArray.isContainerEnabled() == false
+        taskBatch.children.size() == 3
+        taskBatch.isContainerEnabled() == false
     }
 
-    def 'should get array ref' () {
+    def 'should get batch launch script' () {
         given:
         def processor = Mock(TaskProcessor)
-        def executor = Mock(DummyExecutor) {
-            getArrayIndexName() >> NAME
-            getArrayIndexStart() >> START
+        def executor = Spy(Executor) {
+            isWorkDirDefaultFS() >> true
         }
-        def collector = Spy(new TaskArrayCollector(processor, executor, 10))
-        expect:
-        collector.getArrayIndexRef() == EXPECTED
-
-        where:
-        NAME        | START     | EXPECTED
-        'INDEX'     | 0         | '${array[INDEX]}'
-        'INDEX'     | 1         | '${array[INDEX - 1]}'
-        'OTHER'     | 99        | '${array[OTHER - 99]}'
-    }
-
-    def 'should get array launch script' () {
-        given:
-        def processor = Mock(TaskProcessor)
-        def executor = Spy(DummyExecutor) { isWorkDirDefaultFS()>>true }
-        def collector = Spy(new TaskArrayCollector(processor, executor, 10))
+        def collector = Spy(new TaskBatchCollector(processor, executor, 10, false))
         and:
         def h1 = Mock(TaskHandler)
         def h2 = Mock(TaskHandler)
         def h3 = Mock(TaskHandler)
 
         when:
-        def result = collector.createArrayTaskScript([h1,h2,h3])
+        def result = collector.createBatchTaskScript([h1,h2,h3])
         then:
         executor.getChildWorkDir(h1) >> '/work/dir/1'
         executor.getChildWorkDir(h2) >> '/work/dir/2'
         executor.getChildWorkDir(h3) >> '/work/dir/3'
-        and:
-        collector.getArrayIndexRef() >> '$array[INDEX]'
         then:
         result == '''\
-                array=( /work/dir/1 /work/dir/2 /work/dir/3 )
-                export nxf_array_task_dir=$array[INDEX]
-                bash $nxf_array_task_dir/.command.run 2>&1 > $nxf_array_task_dir/.command.log
-                '''.stripIndent(true)
+            array=( /work/dir/1 /work/dir/2 /work/dir/3 )
+            for nxf_batch_task_dir in ${array[@]}; do
+                export nxf_batch_task_dir
+                bash $nxf_batch_task_dir/.command.run 2>&1 > $nxf_batch_task_dir/.command.log || true
+            done
+
+            '''.stripIndent(true)
     }
+
+    def 'should execute tasks in parallel if specified' () {
+        given:
+        def processor = Mock(TaskProcessor)
+        def executor = Spy(Executor) {
+            isWorkDirDefaultFS() >> true
+        }
+        def collector = Spy(new TaskBatchCollector(processor, executor, 10, true))
+        and:
+        def h1 = Mock(TaskHandler)
+        def h2 = Mock(TaskHandler)
+        def h3 = Mock(TaskHandler)
+
+        when:
+        def result = collector.createBatchTaskScript([h1,h2,h3])
+        then:
+        executor.getChildWorkDir(h1) >> '/work/dir/1'
+        executor.getChildWorkDir(h2) >> '/work/dir/2'
+        executor.getChildWorkDir(h3) >> '/work/dir/3'
+        then:
+        result == '''\
+            array=( /work/dir/1 /work/dir/2 /work/dir/3 )
+            for nxf_batch_task_dir in ${array[@]}; do
+                export nxf_batch_task_dir
+                bash $nxf_batch_task_dir/.command.run 2>&1 > $nxf_batch_task_dir/.command.log || true &
+            done
+            wait
+            '''.stripIndent(true)
+    }
+
 }

@@ -21,35 +21,31 @@ import java.nio.file.Files
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
-import nextflow.executor.TaskArrayExecutor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
 /**
- * Collect tasks and submit them as job arrays to the underlying
+ * Collect tasks and submit them as task batches to the underlying
  * executor.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class TaskArrayCollector extends TaskCollector {
+class TaskBatchCollector extends TaskCollector {
 
     private TaskProcessor processor
 
-    TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize) {
-        super(executor, arraySize)
-        if( executor !instanceof TaskArrayExecutor )
-            throw new IllegalArgumentException("Executor '${executor.name}' does not support job arrays")
-        this.processor = processor
-    }
+    private boolean parallel
 
-    private TaskArrayExecutor arrayExecutor() {
-        (TaskArrayExecutor)executor
+    TaskBatchCollector(TaskProcessor processor, Executor executor, int batchSize, boolean parallel) {
+        super(executor, batchSize)
+        this.processor = processor
+        this.parallel = parallel
     }
 
     /**
-     * Create the task run for a job array.
+     * Create the task run for a task batch.
      *
      * @param tasks
      */
@@ -67,12 +63,12 @@ class TaskArrayCollector extends TaskCollector {
         Files.createDirectories(workDir)
 
         // create wrapper script
-        final script = createArrayTaskScript(handlers)
-        log.debug "Creating task array run >> $workDir\n$script"
+        final script = createBatchTaskScript(handlers)
+        log.debug "Creating task batch run >> $workDir\n$script"
 
-        // create job array
+        // create task batch
         final first = tasks.min( t -> t.index )
-        final taskArray = new TaskArrayRun(
+        final taskBatch = new TaskBatchRun(
             id: first.id,
             index: first.index,
             processor: processor,
@@ -84,32 +80,28 @@ class TaskArrayCollector extends TaskCollector {
             script: script,
             children: handlers
         )
-        taskArray.config.context = taskArray.context
-        taskArray.config.process = taskArray.processor.name
-        taskArray.config.executor = taskArray.processor.executor.name
+        taskBatch.config.context = taskBatch.context
+        taskBatch.config.process = taskBatch.processor.name
+        taskBatch.config.executor = taskBatch.processor.executor.name
 
-        return taskArray
+        return taskBatch
     }
 
     /**
-     * Create the wrapper script for a job array.
+     * Create the wrapper script for a task batch.
      *
-     * @param array
+     * @param batch
      */
-    protected String createArrayTaskScript(List<TaskHandler> array) {
-        final workDirs = array.collect( h -> Escape.path(executor.getChildWorkDir(h)) )
+    protected String createBatchTaskScript(List<TaskHandler> batch) {
+        final workDirs = batch.collect( h -> Escape.path(executor.getChildWorkDir(h)) )
         """
         array=( ${workDirs.join(' ')} )
-        export nxf_array_task_dir=${getArrayIndexRef()}
-        ${executor.getChildLaunchCommand('$nxf_array_task_dir')}
+        for nxf_batch_task_dir in \${array[@]}; do
+            export nxf_batch_task_dir
+            ${executor.getChildLaunchCommand('$nxf_batch_task_dir')} || true${parallel ? ' &' : ''}
+        done
+        ${parallel ? 'wait' : ''}
         """.stripIndent().leftTrim()
-    }
-
-    protected String getArrayIndexRef() {
-        final name = arrayExecutor().getArrayIndexName()
-        final start = arrayExecutor().getArrayIndexStart()
-        final index = start > 0 ? "${name} - ${start}" : name
-        return '${array[' + index + ']}'
     }
 
 }
