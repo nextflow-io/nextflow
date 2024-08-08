@@ -242,7 +242,7 @@ abstract class RepositoryProvider {
     }
 
     @Memoized
-    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+    protected List invokeAndResponseWithPaging(String request, Closure parse) {
         int page = 0
         final result = new ArrayList()
         while( true ) {
