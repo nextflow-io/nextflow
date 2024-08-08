@@ -30,11 +30,33 @@ class BatchConfigTest extends Specification {
     def 'should create batch config' () {
         given:
         def CONFIG = [google: [
-                                batch: [
-                                    spot: true,
-                                    retryPolicy: [maxAttempts: 10]
-                                ]
-                        ] ]
+            batch: [
+                spot: true
+            ]
+        ] ]
+        def session = Mock(Session) { getConfig()>>CONFIG }
+
+        when:
+        def config = BatchConfig.create(session)
+        then:
+        config.getSpot()
+        and:
+        config.retryConfig.maxAttempts == 5
+        config.maxSpotAttempts == 5
+        config.autoRetryExitCodes == [50001]
+    }
+
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
+    def 'should create batch config with custom settings' () {
+        given:
+        def CONFIG = [google: [
+            batch: [
+                spot: true,
+                maxSpotAttempts: 8,
+                autoRetryExitCodes: [50001, 50003, 50005],
+                retryPolicy: [maxAttempts: 10]
+            ]
+        ] ]
         def session = Mock(Session) { getConfig()>>CONFIG }
 
         when:
@@ -43,7 +65,8 @@ class BatchConfigTest extends Specification {
         config.getSpot()
         and:
         config.retryConfig.maxAttempts == 10
-        
+        config.maxSpotAttempts == 8
+        config.autoRetryExitCodes == [50001, 50003, 50005]
     }
 
 }

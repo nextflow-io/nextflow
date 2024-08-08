@@ -14,7 +14,6 @@ The following functionalities are provided via plugin components, and they make 
 - `nf-azure`: Support for Microsoft Azure.
 - `nf-cloudcache`: Support for the cloud cache (see `NXF_CLOUDCACHE_PATH` under {ref}`config-env-vars`).
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
-- `nf-ga4gh`: Support [GA4GH APIs](https://www.ga4gh.org/).
 - `nf-google`: Support for Google Cloud.
 - `nf-tower`: Support for [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 - `nf-wave`: Support for [Wave containers](https://seqera.io/wave/) service.
@@ -366,7 +365,7 @@ You can also use a different plugin registry with the `NXF_PLUGINS_TEST_REPOSITO
 For example:
 
 ```bash
-# custom registry at https://github.com/my-org/plugins
+# custom plugin repository at https://github.com/my-org/plugins
 export NXF_PLUGINS_TEST_REPOSITORY="https://raw.githubusercontent.com/my-org/plugins/main/plugins.json"
 
 # custom plugin release
@@ -374,6 +373,11 @@ export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/nextflow-io/nf-hello/rele
 
 nextflow run <pipeline> -plugins nf-hello
 ```
+
+:::{tip}
+This variable can be either the URI of a plugins repository JSON file or the URI of a specific plugin JSON meta file.
+In the latter case it should match the pattern `https://host.name/some/path/<plugin id>-X.Y.Z-meta.json`.
+:::
 
 ## Offline usage
 

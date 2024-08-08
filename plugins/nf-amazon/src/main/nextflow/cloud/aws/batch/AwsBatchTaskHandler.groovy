@@ -62,6 +62,7 @@ import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
+import nextflow.exception.ProcessException
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
@@ -267,7 +268,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             // finalize the task
             task.stdout = outputFile
             if( job?.status == 'FAILED' || task.exitStatus==Integer.MAX_VALUE ) {
-                task.error = new ProcessUnrecoverableException(errReason(job))
+                final reason = errReason(job)
+                // retry all CannotPullContainer errors apart when it does not exist or cannot be accessed
+                final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
+                task.error = unrecoverable ? new ProcessUnrecoverableException(reason) : new ProcessException(reason)
                 task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
             }
             else {
@@ -921,7 +925,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final mega = mem.toMega()
         final slot = FARGATE_MEM.get(cpus)
         if( slot==null )
-            new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
+            throw new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
         if( mega <=slot.min ) {
             log.warn "Process '${task.lazyName()}' memory requirement of ${mem} is below the minimum allowed by Fargate of ${MemoryUnit.of(mega+'MB')}"
             return slot.min

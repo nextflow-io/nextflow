@@ -846,6 +846,7 @@ The following output qualifiers are available:
 - `env`: Emit the variable defined in the process environment with the specified name.
 - `stdout`: Emit the `stdout` of the executed process.
 - `tuple`: Emit multiple values.
+- `eval`: Emit the result of a script or command evaluated in the task execution context.
 
 ### Output type `val`
 
@@ -1408,9 +1409,7 @@ process foo {
 }
 ```
 
-:::{note}
-When combined with the {ref}`container directive <process-container>`, the `beforeScript` will be executed outside the specified container. In other words, the `beforeScript` is always executed in the host environment.
-:::
+When the process is containerized (using the {ref}`process-container` directive), the `beforeScript` will be executed in the container only if the executor is *container-native* (e.g. cloud batch executors, Kubernetes). Otherwise, the `beforeScript` will be executed outside the container.
 
 (process-cache)=
 
@@ -1654,16 +1653,19 @@ The `errorStrategy` directive allows you to define how an error condition is man
 The following error strategies are available:
 
 `terminate` (default)
-: Terminate the execution as soon as an error condition is reported. Pending jobs are killed.
+: When a task fails, terminate the pipeline immediately. Pending and running jobs are killed.
 
 `finish`
-: Initiate an orderly pipeline shutdown when an error condition is raised, waiting for the completion of any submitted jobs.
+: When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline.
 
 `ignore`
-: Ignore process execution errors.
+: Ignore all task failures and complete the pipeline execution successfully.
+: :::{versionadded} 24.05.0-edge
+  When the `workflow.failOnIgnore` config option is set to `true`, the pipeline will return a non-zero exit code if one or more failed tasks were ignored.
+  :::
 
 `retry`
-: Re-submit any process that returns an error condition.
+: When a task fails, retry it.
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
 
@@ -1680,6 +1682,17 @@ process ignoreAnyError {
 
 :::{note}
 By definition, a command script fails when it ends with a non-zero exit status.
+:::
+
+:::{tip}
+To illustrate the differences between error strategies, consider the following example. Let's say you are analyzing 96 patient samples and the data from one is corrupted, causing the associated task to fail. The different ways to handle this failure are as follows:
+
+- **errorStrategy `terminate`**: Nextflow will cancel any other ongoing tasks at the time of the failure, exit the pipeline, and report an error.
+- **errorStrategy `finish`**: Nextflow will allow any other existing tasks to conclude (but not submit any more) and report an error.
+- **errorStrategy `ignore`**: Nextflow will continue submitting tasks for the remaining 95 samples, complete the workflow, and report a successful pipeline completion.
+- **errorStrategy `ignore` and `workflow.failOnIgnore` set to `true` in configuration**: The same behavior as setting the errorStrategy alone, except the pipeline will return an exit status of -1 and report an error.
+
+See {ref}`metadata-workflow` for more information on `workflow.failOnIgnore`.
 :::
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
@@ -1727,7 +1740,6 @@ The following executors are available:
 | `pbspro`              | [PBS Pro](https://www.pbsworks.com/) job scheduler                                          |
 | `sge`                 | Sun Grid Engine / [Open Grid Engine](http://gridscheduler.sourceforge.net/)                 |
 | `slurm`               | [SLURM](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) workload manager              |
-| `tes`                 | [GA4GH TES](https://github.com/ga4gh/task-execution-schemas) service                        |
 | `uge`                 | Alias for the `sge` executor                                                                |
 
 The following example shows how to set the process's executor:
@@ -1894,7 +1906,7 @@ process foo {
 
 In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
 task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
-queue named `on-demand-compute`. 
+queue named `on-demand-compute`.
 
 (process-maxerrors)=
 
@@ -2194,7 +2206,7 @@ The following options are available:
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
 `schedulerName: '<name>'`
-: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container. 
+: Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container.
 
 `secret: '<secret>/<key>', mountPath: '</absolute/path>'`
 : *Can be specified multiple times*
@@ -2358,18 +2370,10 @@ process grid_job {
 }
 ```
 
-Multiple queues can be specified by separating their names with a comma for example:
-
-```groovy
-process grid_job {
-    queue 'short,long,cn-el6'
-    executor 'sge'
-
-    """
-    your task script here
-    """
-}
-```
+:::{tip}
+Grid executors allow specifying multiple queue names separating them with a comma e.g. `queue 'short,long,cn-el6'`.
+However, this does not generally apply to other executors such as AWS Batch, Azure Batch, Google Batch.
+:::
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
