@@ -885,4 +885,10 @@ class TaskRunTest extends Specification {
         info == new ContainerInfo('ubuntu','ubuntu','ubuntu')
     }
 
+    def 'should not be an array' () {
+        given:
+        def task = new TaskRun()
+        expect:
+        !task.isArray()
+    }
 }

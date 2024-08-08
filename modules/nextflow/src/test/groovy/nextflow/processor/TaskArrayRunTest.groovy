@@ -46,4 +46,11 @@ class TaskArrayRunTest extends Specification {
         info == new ContainerInfo('ubuntu','ubuntu','ubuntu')
     }
 
+    def 'should be an array' () {
+        given:
+        def task = new TaskArrayRun()
+        expect:
+        task.isArray()
+    }
+
 }

@@ -98,6 +98,10 @@ workflow {
 
 ## Module parameters
 
+:::{deprecated} 24.07.0-edge
+As a best practice, parameters should be used in the entry workflow and passed to functions / processes / workflows as explicit inputs.
+:::
+
 A module script can define parameters using the same syntax as a Nextflow workflow script:
 
 ```groovy
@@ -247,7 +251,7 @@ baseDir
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 
-To enable this feature, enable the following flag in your pipeline script or configuration file:
+To enable this feature, enable the following flag in your pipeline configuration file:
 
 ```groovy
 nextflow.enable.moduleBinaries = true

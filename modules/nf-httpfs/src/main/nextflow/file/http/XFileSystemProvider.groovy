@@ -255,7 +255,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             int read(ByteBuffer buffer) throws IOException {
                 def data=0
                 int len=0
-                while( len<buffer.capacity() && (data=stream.read())!=-1 ) {
+                while( buffer.hasRemaining() && (data=stream.read())!=-1 ) {
                     buffer.put((byte)data)
                     len++
                 }

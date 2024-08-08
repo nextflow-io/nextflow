@@ -734,6 +734,10 @@ class TaskRun implements Cloneable {
         return processor.executor?.isContainerNative() ?: false
     }
 
+    boolean isArray() {
+        return false
+    }
+
     boolean isContainerEnabled() {
         return getContainerConfig().isEnabled() && getContainer()!=null
     }
