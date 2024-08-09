@@ -41,9 +41,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     private Path remoteWorkDir
     private Map<String,String> env
 
-    /* ONLY FOR TESTING - DO NOT USE */
-    protected FusionScriptLauncher() { }
-
     static FusionScriptLauncher create(TaskBean bean, String scheme) {
 
         final remoteWorkDir = bean.workDir

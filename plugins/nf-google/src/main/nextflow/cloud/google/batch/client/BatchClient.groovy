@@ -61,9 +61,6 @@ class BatchClient {
         this.batchServiceClient = createBatchService(config)
     }
 
-    /** Only for testing - do not use */
-    protected BatchClient() {}
-
     protected CredentialsProvider createCredentialsProvider(BatchConfig config) {
         if( !config.getCredentials() )
             return null

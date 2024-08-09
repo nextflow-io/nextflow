@@ -137,7 +137,8 @@ class ScriptMetaTest extends Dsl2Spec {
 
     def 'should add a module component' () {
         given:
-        def meta = Spy(ScriptMeta)
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
         def comp1 = Mock(ComponentDef)
         def comp2 = Mock(ComponentDef)
 
@@ -161,7 +162,8 @@ class ScriptMetaTest extends Dsl2Spec {
 
     def 'should not throw a duplicate process name exception' () {
         given:
-        def meta = Spy(ScriptMeta)
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
         def comp1 = Mock(ComponentDef)
 
         when:
@@ -185,7 +187,9 @@ class ScriptMetaTest extends Dsl2Spec {
         Files.createFile(mod.resolve('resources/foo.txt'))
         Files.createFile(mod.resolve('resources/bar.txt'))
         and:
-        def meta = new ScriptMeta(scriptPath: scriptPath)
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
+        meta.setScriptPath(scriptPath)
 
         when:
         def bundle = meta.getModuleBundle()

@@ -48,12 +48,6 @@ class TransposeOp {
         this.remainder = params?.remainder as Boolean
     }
 
-    /**
-     * Only for test -- do not use
-     */
-    @PackageScope
-    TransposeOp() {}
-
     private List<Integer> parseByParam(value) {
         if( value == null )
             return Collections.emptyList()

@@ -44,6 +44,7 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import nextflow.util.TestOnly
 import nextflow.util.Threads
 
 /**
@@ -157,9 +158,7 @@ class TowerClient implements TraceObserver {
         return this
     }
 
-    /**
-     * only for testing purpose -- do not use
-     */
+    @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }

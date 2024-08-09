@@ -41,6 +41,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
+import nextflow.util.TestOnly
 
 /**
  * Helper class for Google Pipelines.
@@ -81,7 +82,7 @@ class GoogleLifeSciencesHelper {
         DISABLE_STANDARD_ERROR_CAPTURE
     }
 
-    /* only for testing purpose */
+    @TestOnly
     protected GoogleLifeSciencesHelper(GoogleCredentials credential = null, String name = DEFAULT_APP_NAME) {
         this.credentials = credential
         this.applicationName = name

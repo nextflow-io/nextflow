@@ -76,6 +76,7 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -120,7 +121,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     private BatchContext<String,JobDetail> context
 
-    /** only for testing purpose -- do not use */
+    @TestOnly
     protected AwsBatchTaskHandler() {}
 
     /**

@@ -43,6 +43,7 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
 import nextflow.util.PathTrie
+import nextflow.util.TestOnly
 /**
  * Implements the {@link TaskHandler} interface for Kubernetes pods
  *
@@ -97,10 +98,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         this.resourceType = executor.k8sConfig.useJobResource() ? ResourceType.Job : ResourceType.Pod
     }
 
-    /** only for testing -- do not use */
-    protected K8sTaskHandler() {
-
-    }
+    @TestOnly
+    protected K8sTaskHandler() {}
 
     /**
      * @return The workflow execution unique run name
