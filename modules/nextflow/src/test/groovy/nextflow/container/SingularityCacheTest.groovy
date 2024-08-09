@@ -148,7 +148,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(new SingularityCache([:] as ContainerConfig))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -172,7 +172,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(new SingularityCache([:] as ContainerConfig))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -197,7 +197,7 @@ class SingularityCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(new SingularityCache([:] as ContainerConfig))
 
         when:
         def file = cache.getCachePathFor(IMAGE)

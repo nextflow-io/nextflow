@@ -49,6 +49,7 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.util.TestOnly
 
 /**
  * Holds the process configuration properties
@@ -185,9 +186,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         this.processName = name
     }
 
-    /* Only for testing purpose */
-    @PackageScope
-    ProcessConfig( Map delegate ) {
+    @TestOnly
+    protected ProcessConfig( Map delegate ) {
         configProperties = delegate
     }
 

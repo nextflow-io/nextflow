@@ -44,6 +44,7 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
+import nextflow.util.TestOnly
 import nextflow.util.Throttle
 /**
  * Handles a job execution in the underlying grid platform
@@ -83,7 +84,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     BatchCleanup batch
 
-    /** only for testing purpose */
+    @TestOnly
     protected GridTaskHandler() {}
 
     GridTaskHandler( TaskRun task, AbstractGridExecutor executor ) {

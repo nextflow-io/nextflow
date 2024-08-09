@@ -24,6 +24,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
+import nextflow.util.TestOnly
 /**
  * Actions to handle the underlying job running the user task.
  *
@@ -41,8 +42,8 @@ abstract class TaskHandler {
         this.task = task
     }
 
-    /** Only for testing purpose */
-    protected TaskHandler() { }
+    @TestOnly
+    protected TaskHandler() {}
 
     /**
      * The task managed by this handler

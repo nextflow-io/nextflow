@@ -35,9 +35,4 @@ class K8sWrapperBuilder extends BashWrapperBuilder {
         this.headerScript = "NXF_CHDIR=${Escape.path(task.workDir)}"
     }
 
-    /**
-     * only for testing purpose -- do not use
-     */
-    protected K8sWrapperBuilder() {}
-
 }

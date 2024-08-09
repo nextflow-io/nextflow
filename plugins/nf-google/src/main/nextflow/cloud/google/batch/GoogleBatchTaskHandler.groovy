@@ -51,6 +51,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.TestOnly
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -109,6 +110,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
     }
 
+    @TestOnly
+    protected GoogleBatchTaskHandler() {}
+
     /**
      * Resolve the `jobName` property defined in the nextflow config file
      *
@@ -140,11 +144,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 .withConfig(executor.config)
         }
     }
-
-    /*
-     * Only for testing -- do not use
-     */
-    protected GoogleBatchTaskHandler() {}
 
     protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
         if( launcher instanceof GoogleBatchLauncherSpec )
