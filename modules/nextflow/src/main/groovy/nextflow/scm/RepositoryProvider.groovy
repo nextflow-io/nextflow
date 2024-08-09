@@ -241,6 +241,7 @@ abstract class RepositoryProvider {
         }
     }
 
+    // NOTE: @Memoized with <T> does not work with bytebuddy
     @Memoized
     protected List invokeAndResponseWithPaging(String request, Closure parse) {
         int page = 0
