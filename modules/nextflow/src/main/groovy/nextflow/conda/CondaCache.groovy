@@ -162,6 +162,10 @@ class CondaCache {
         (str.endsWith('.yml') || str.endsWith('.yaml')) && !str.contains('\n')
     }
 
+    boolean isCondalockFilePath(String str) {
+        (str.endsWith('-lock.yml') || str.endsWith('-lock.yaml')) && !str.contains('\n')
+    }
+
     boolean isTextFilePath(String str) {
         str.endsWith('.txt') && !str.contains('\n')
     }
@@ -285,7 +289,24 @@ class CondaCache {
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${target}"
+            if ( isCondalockFilePath(condaEnv) ) {
+                try {
+                    def process = "conda-lock --version".execute()
+                    process.waitFor()
+
+                    if (process.exitValue() == 0) {
+                        println "conda-lock is available."
+                    } else {
+                        throw new RuntimeException("conda-lock command not found.")
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException("Error checking conda-lock command: ${e.message}")
+                }
+                cmd = "conda-lock install --prefix ${Escape.path(prefixPath)} --lockfile conda-lock.yml"
+            }
+            else {
+                cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${target}"
+            }
         }
         else if( isTextFilePath(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
