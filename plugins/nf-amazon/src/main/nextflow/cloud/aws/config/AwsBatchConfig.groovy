@@ -36,7 +36,7 @@ import nextflow.util.Duration
 @CompileStatic
 class AwsBatchConfig implements CloudTransferOptions {
 
-    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 5
+    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 0
 
     public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
 

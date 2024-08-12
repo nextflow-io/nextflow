@@ -197,7 +197,10 @@ The following settings are available:
 `aws.batch.maxSpotAttempts`
 : :::{versionadded} 22.04.0
   :::
-: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
+: :::{versionchanged} 24.08.0-edge
+  The default value was changed from `5` to `0`.
+  :::
+: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `0`)
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
