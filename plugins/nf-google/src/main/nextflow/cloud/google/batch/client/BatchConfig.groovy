@@ -31,9 +31,9 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class BatchConfig {
 
-    static private int DEFAULT_MAX_SPOT_ATTEMPTS = 0
+    static final private int DEFAULT_MAX_SPOT_ATTEMPTS = 0
     
-    static private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
+    static final private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
 
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
