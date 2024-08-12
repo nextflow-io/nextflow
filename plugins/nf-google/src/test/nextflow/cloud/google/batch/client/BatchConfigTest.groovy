@@ -42,7 +42,7 @@ class BatchConfigTest extends Specification {
         config.getSpot()
         and:
         config.retryConfig.maxAttempts == 5
-        config.maxSpotAttempts == 5
+        config.maxSpotAttempts == 0
         config.autoRetryExitCodes == [50001]
     }
 
