@@ -163,7 +163,11 @@ class CondaCache {
     }
 
     boolean isCondalockFilePath(String str) {
-        (str.endsWith('-lock.yml') || str.endsWith('-lock.yaml')) && !str.contains('\n')
+        if ((str.endsWith('-lock.yml') || str.endsWith('-lock.yaml')) && !str.contains('\n')) {
+            def content = new File(str).text
+            return content.contains('version:') && content.contains('metadata:') && content.contains('package:')
+        }
+        return false
     }
 
     boolean isTextFilePath(String str) {
