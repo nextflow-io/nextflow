@@ -93,7 +93,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     List<BranchInfo> getBranches() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-heads
         final url = "$endpointUrl/refs?filter=heads&api-version=6.0"
-        this.invokeAndResponseWithPaging(url, { Map branch ->
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch ->
             new BranchInfo(strip(branch.name), branch.objectId as String)
         })
     }
@@ -104,7 +104,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     List<TagInfo> getTags() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-tags
         final url = "$endpointUrl/refs?filter=tags&api-version=6.0"
-        this.invokeAndResponseWithPaging(url, { Map tag ->
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag ->
             new TagInfo(strip(tag.name), tag.objectId as String)
         })
     }
@@ -118,10 +118,9 @@ final class AzureRepositoryProvider extends RepositoryProvider {
                 .replace('refs/heads/','')
     }
 
-    // NOTE: @Memoized with <T> does not work with bytebuddy
     @Memoized
-    protected List invokeAndResponseWithPaging(String url, Closure parse) {
-        final result = new ArrayList(50)
+    protected <T> List<T> invokeAndResponseWithPaging(String url, Closure<T> parse) {
+        final result = new ArrayList<T>(50)
         do {
             final resp = invokeAndParseResponse(url)
             final tags = resp.value as List<Map>
