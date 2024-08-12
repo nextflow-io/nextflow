@@ -302,7 +302,7 @@ class CondaCache {
                 } catch (IOException e) {
                     throw new RuntimeException("Error checking conda-lock command: ${e.message}")
                 }
-                cmd = "conda-lock install --prefix ${Escape.path(prefixPath)} conda-lock.yml"
+                cmd = "conda-lock install --conda ${binaryName} --prefix ${Escape.path(prefixPath)} conda-lock.yml"
             }
             else {
                 cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${target}"
