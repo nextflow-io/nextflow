@@ -872,7 +872,10 @@ The following settings are available for Google Cloud Batch:
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
-: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
+: :::{versionchanged} 24.08.0-edge
+  The default value was changed from `5` to `0`.
+  :::
+: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
 `google.project`
