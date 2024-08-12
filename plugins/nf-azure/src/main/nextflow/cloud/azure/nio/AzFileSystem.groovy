@@ -527,9 +527,15 @@ class AzFileSystem extends FileSystem {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
-    // NOTE: @Memoized with <T> does not work with bytebuddy
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        // this is needed because apparently bytebuddy used by testing framework is not able
+        // to handle properly this method signature using both generics and `@Memoized` annotation.
+        // therefore the `@Memoized` has been moved to the inner method invocation
+        return (RetryPolicy<T>) retryPolicy0(cond)
+    }
+
     @Memoized
-    protected RetryPolicy retryPolicy(Predicate<? extends Throwable> cond) {
+    protected RetryPolicy retryPolicy0(Predicate<? extends Throwable> cond) {
         final cfg = AzConfig.getConfig().retryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
