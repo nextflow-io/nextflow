@@ -35,11 +35,15 @@ The AWS access and secret keys can be specified by using the `aws` section in th
 
 ```groovy
 aws {
-    accessKey = '<Your AWS access key>'
-    secretKey = '<Your AWS secret key>'
+    accessKey = secrets.MY_ACCESS_KEY
+    secretKey = secrets.MY_SECRET_KEY
     region = '<AWS region identifier>'
 }
 ```
+
+:::{tip}
+Use {ref}`secrets-page` to avoid hardcoding sensitive credentials in configuration files.
+:::
 
 If the access credentials are not found in the above file, Nextflow looks for AWS credentials in the following order:
 
@@ -65,9 +69,9 @@ Learn more about [Using IAM Roles to Delegate Permissions to Applications that R
 To use an AWS China region, make sure to specify the corresponding AWS API S3 endpoint in the Nextflow configuration file as shown below:
 
 ```groovy
-aws { 
+aws {
     client {
-        endpoint = "https://s3.cn-north-1.amazonaws.com.cn"        
+        endpoint = "https://s3.cn-north-1.amazonaws.com.cn"
     }
 }
 ```
@@ -76,21 +80,25 @@ Read more about AWS API endpoints in the [AWS documentation](https://docs.aws.am
 
 ## S3-compatible storage
 
-To use S3-compatible object storage such as [Ceph](https://ceph.io) or [Minio](https://min.io) specify the endpoint of 
-your storage provider and enable the [S3 path style access](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access) 
+To use S3-compatible object storage such as [Ceph](https://ceph.io) or [Minio](https://min.io) specify the endpoint of
+your storage provider and enable the [S3 path style access](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access)
 in your Nextflow configuration as shown below:
 
 
 ```groovy
 aws {
-    accessKey = '<Your access key>'
-    secretKey = '<Your secret key>'
+    accessKey = secrets.MY_ACCESS_KEY
+    secretKey = secrets.MY_SECRET_KEY
     client {
         endpoint = '<Your storage endpoint URL>'
         s3PathStyleAccess = true
     }
 }
 ```
+
+:::{tip}
+Use {ref}`secrets-page` to avoid hardcoding sensitive credentials in configuration files.
+:::
 
 ## Advanced configuration
 

@@ -16,8 +16,8 @@ The Blob storage account name and key need to be provided in the Nextflow config
 ```groovy
 azure {
     storage {
-        accountName = "<YOUR BLOB ACCOUNT NAME>"
-        accountKey = "<YOUR BLOB ACCOUNT KEY>"
+        accountName = secrets.BLOB_ACCOUNT_NAME
+        accountKey = secrets.BLOB_ACCOUNT_KEY
     }
 }
 ```
@@ -30,6 +30,10 @@ When creating the Shared Access Token, make sure to allow the resource types `Co
 
 :::{tip}
 The value of `sasToken` is the token stripped by the character `?` from the beginning of the token.
+:::
+
+:::{tip}
+Use {ref}`secrets-page` to avoid hardcoding sensitive credentials in configuration files.
 :::
 
 Once the Blob Storage credentials are set, you can access the files in the blob container like local files by prepending the file path with `az://` followed by the container name. For example, a blob container named `my-data` with a file named `foo.txt` can be specified in your Nextflow script as `az://my-data/foo.txt`.
@@ -47,8 +51,8 @@ For example:
 ```groovy
 azure {
     storage {
-        accountName = "<YOUR BLOB ACCOUNT NAME>"
-        accountKey = "<YOUR BLOB ACCOUNT KEY>"
+        accountName = secrets.BLOB_ACCOUNT_NAME
+        accountKey = secrets.BLOB_ACCOUNT_KEY
         fileShares {
             <YOUR SOURCE FILE SHARE NAME> {
                 mountPath = "<YOUR MOUNT DESTINATION>"
@@ -123,13 +127,13 @@ process {
 
 azure {
     storage {
-        accountName = "<YOUR STORAGE ACCOUNT NAME>"
-        accountKey = "<YOUR STORAGE ACCOUNT KEY>"
+        accountName = secrets.BLOB_ACCOUNT_NAME
+        accountKey = secrets.BLOB_ACCOUNT_KEY
     }
     batch {
         location = '<YOUR LOCATION>'
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
-        accountKey = '<YOUR BATCH ACCOUNT KEY>'
+        accountName = secrets.BATCH_ACCOUNT_NAME
+        accountKey = secrets.BATCH_ACCOUNT_KEY
         autoPoolMode = true
     }
 }
@@ -454,11 +458,11 @@ azure {
     }
 
     storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountName = secrets.STORAGE_ACCOUNT_NAME
     }
 
     batch {
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        accountName = secrets.BATCH_ACCOUNT_NAME
         location = '<YOUR BATCH ACCOUNT LOCATION>'
     }
 }
@@ -484,11 +488,11 @@ azure {
     }
 
     storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountName = secrets.STORAGE_ACCOUNT_NAME
     }
 
     batch {
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        accountName = secrets.BATCH_ACCOUNT_NAME
         location = '<YOUR BATCH ACCOUNT LOCATION>'
     }
 }
@@ -514,11 +518,11 @@ azure {
     }
 
     storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountName = secrets.STORAGE_ACCOUNT_NAME
     }
 
     batch {
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        accountName = secrets.BATCH_ACCOUNT_NAME
         location = '<YOUR BATCH ACCOUNT LOCATION>'
     }
 }

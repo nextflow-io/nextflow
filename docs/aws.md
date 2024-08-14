@@ -35,6 +35,10 @@ The AWS region is selected from the following sources, in order of descending pr
 2. Environment variables - `AWS_REGION` or `AWS_DEFAULT_REGION`
 3. EC2 instance metadata (if Nextflow is running in an EC2 instance)
 
+:::{tip}
+Use {ref}`secrets-page` when using Nextflow configuration files to avoid hardcoding sensitive credentials.
+:::
+
 SSO credentials and instance profile credentials are the most recommended because they don't require you to manage and distribute AWS keys explicitly. SSO credentials are ideal for launching pipelines from outside of AWS (e.g. your laptop), while instance profile credentials are ideal for launching pipelines within AWS (e.g. an EC2 instance).
 
 ## AWS IAM policies
