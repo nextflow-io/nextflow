@@ -139,6 +139,10 @@ azure {
 }
 ```
 
+:::{tip}
+Use {ref}`secrets-page` to avoid hardcoding sensitive credentials in configuration files.
+:::
+
 In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values corresponding to your configuration.
 
 :::{tip}

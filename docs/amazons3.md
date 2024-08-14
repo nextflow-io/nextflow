@@ -96,10 +96,6 @@ aws {
 }
 ```
 
-:::{tip}
-Use {ref}`secrets-page` to avoid hardcoding sensitive credentials in configuration files.
-:::
-
 ## Advanced configuration
 
 Read {ref}`AWS configuration<config-aws>` section to learn more about advanced S3 client configuration options.
