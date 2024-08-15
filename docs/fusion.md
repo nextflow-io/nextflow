@@ -175,7 +175,7 @@ k8s.serviceAccount = '<YOUR K8S SERVICE ACCOUNT>'
 tower.accessToken = '<your platform access token>'
 ```
 
-The `k8s.context` represents the Kubernetes configuration context to be used for the pipeline execution. This setting can be omitted if Nextflow itself is run as a pod in the Kubernetes clusters.
+The `k8s.context` represents the Kubernetes configuration context to be used for the pipeline execution. This setting can be omitted if Nextflow itself is running as a pod in the Kubernetes clusters.
 
 The `k8s.namespace` represents the Kubernetes namespace where the jobs submitted by the pipeline execution should be executed.
 
