@@ -5,6 +5,7 @@ NEXTFLOW CHANGE-LOG
 - Apply k8s.cpuLimits to kuberun driver pod (#5160) [4300adf1]
 - Await build completion for all Wave containers [2b8117e9]
 - Deprecate module addParams() and params() (#5200) [ci fast] [82c97f8c]
+- Remove capsule launcher dependencies (#3395) [f15e4246]
 - Fix AWS Cloudwatch access when using custom log group name [30195838]
 - Fix Invalid AWS Fargate CPUs usage error reporting [d9c50e59]
 - Fix Prevent AwS Batch retry the job execution when the container does not exist [4e218f22]
