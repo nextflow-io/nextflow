@@ -79,7 +79,7 @@ version = release.replace("-edge", "")
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = f"Nextflow v{release} documentation"
+html_title = f"Nextflow {release} documentation"
 
 # Get the current sha if not checked out at a specific version
 if len(release) == 0:
