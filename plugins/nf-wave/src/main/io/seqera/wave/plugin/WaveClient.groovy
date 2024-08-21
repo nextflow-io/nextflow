@@ -265,7 +265,7 @@ class WaveClient {
                     throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
             }
             else
-                throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+                throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
         }
         catch (IOException e) {
             throw new IllegalStateException("Unable to connect Wave service: $endpoint")
