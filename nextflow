@@ -229,6 +229,7 @@ fi
 # clean up env
 # see https://github.com/nextflow-io/nextflow/issues/1716
 unset JAVA_TOOL_OPTIONS
+unset _JAVA_OPTIONS
 
 # parse the command line
 bg=''
