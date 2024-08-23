@@ -75,23 +75,37 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
             bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
         }
 
-        // include task script as an input to force its staging in the container work directory
-        bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
-        // add the wrapper file when stats are enabled
-        // NOTE: this must match the logic that uses the run script in BashWrapperBuilder
-        if( isTraceRequired() ) {
-            bean.inputFiles[TaskRun.CMD_RUN] = bean.workDir.resolve(TaskRun.CMD_RUN)
-        }
-        // include task stdin file
-        if( bean.input != null ) {
-            bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
+        // Consider use of local scratch dir to be default
+        if( scratch==null )
+            scratch = true
+
+        // Because Google Batch uses gcsfuse to mount the working directory, it is possible to work
+        // directly in the working directory without using a separate scratch directory. When a
+        // scratch directory is used, input files will be symlinked from the working directory to
+        // the scratch directory as part of process staging, and output files will be copied from
+        // the scratch directory to the working directory as part of unstaging.
+        //
+        // Without a scratch directory, all file IO to the process's current directory is handled by
+        // gcsfuse. If a process writes files that are not defined as the outputs of the process,
+        // they will still be written out to cloud storage and may slow down your process. The only
+        // advantage of not using a scratch directory is that output files are written out to cloud
+        // storage by gcsfuse as soon as they are closed, rather than as part of process unstaging.
+        if (scratch) {
+            // include task script as an input to force its staging in the container work directory
+            bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
+            // add the wrapper file when stats are enabled
+            // NOTE: this must match the logic that uses the run script in BashWrapperBuilder
+            if( isTraceRequired() ) {
+                bean.inputFiles[TaskRun.CMD_RUN] = bean.workDir.resolve(TaskRun.CMD_RUN)
+            }
+            // include task stdin file
+            if( bean.input != null ) {
+                bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
+            }
         }
 
         // make it change to the task work dir
         bean.headerScript = headerScript(bean)
-        // enable use of local scratch dir
-        if( scratch==null )
-            scratch = true
     }
 
     protected String headerScript(TaskBean bean) {
