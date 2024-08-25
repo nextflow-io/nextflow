@@ -24,8 +24,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.util.ArrayBag
 import spock.lang.Specification
 
-import java.lang.reflect.Array
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
