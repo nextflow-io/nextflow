@@ -65,13 +65,34 @@ class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
 
    @Override
    int hashCode() {
-       target.hashCode()
+       int hash = 0
+       target.each { element ->
+           hash ^= (element != null ? element.hashCode() : 0)
+       }
+       return hash
    }
 
    @Override
    boolean equals(Object o) {
-       target.equals(o)
+       if (this.is(o)) return true
+       if (!(o instanceof ArrayBag)) return false
+
+       ArrayBag other = (ArrayBag) o
+       def thisFrequencyMap = createFrequencyMap(this.target)
+       def otherFrequencyMap = createFrequencyMap(other.target)
+
+       return thisFrequencyMap == otherFrequencyMap
    }
+
+    private static Map<Object, Integer> createFrequencyMap(List list) {
+        Map<Object, Integer> frequencyMap = [:]
+        list.each { element ->
+            if (element != null) {
+                frequencyMap[element] = frequencyMap.getOrDefault(element, 0) + 1
+            }
+        }
+        return frequencyMap
+    }
 
 //    E getAt( int index )  {
 //        target.get(index)

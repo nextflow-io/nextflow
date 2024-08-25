@@ -224,6 +224,20 @@ class JoinOpTest extends Specification {
         !result.isEmpty()
     }
 
+    def 'should differentiate nonidentical ArrayBags join key' () {
+        given:
+        def key1 = new ArrayBag(["key", "key", "quay"])
+        def key2 = new ArrayBag(["quay", "quay", "key"])
+        def ch1 = Channel.of([key1, "foo"])
+        def ch2 = Channel.of([key2, "bar"])
+
+        when:
+        def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
+        List result = op.apply().toList().getVal()
+
+        then:
+        result.isEmpty()
+    }
 
     def 'should not fail on mismatches' () {
         given:
