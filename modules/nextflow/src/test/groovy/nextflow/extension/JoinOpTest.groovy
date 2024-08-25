@@ -21,7 +21,11 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.util.ArrayBag
 import spock.lang.Specification
+
+import java.lang.reflect.Array
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -205,6 +209,21 @@ class JoinOpTest extends Specification {
         result[1] == ['B','hello','world']
         result[2] == ['C','ciao','mondo']
 
+    }
+
+    def 'should be able to use identical ArrayBags join key' () {
+        given:
+        def key1 = new ArrayBag(["key"])
+        def key2 = new ArrayBag(["key"])
+        def ch1 = Channel.of([key1, "foo"])
+        def ch2 = Channel.of([key2, "bar"])
+
+        when:
+        def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
+        List result = op.apply().toList().getVal()
+
+        then:
+        !result.isEmpty()
     }
 
 
