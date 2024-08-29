@@ -76,13 +76,7 @@ class GithubRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getCloneUrl() {
-        Map response = invokeAndParseResponse( getEndpointUrl() )
-
-        def result = response.get('clone_url')
-        if( !result )
-            throw new IllegalStateException("Missing clone URL for: $project")
-
-        return result
+        return "${config.server}/${project}.git"
     }
 
     @Override
