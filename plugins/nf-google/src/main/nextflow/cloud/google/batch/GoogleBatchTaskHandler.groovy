@@ -382,7 +382,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( executor.config.preemptible )
                 instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
 
-            if( executor.config.spot )
+            if (machineType.priceModel == PriceModel.spot)
                 instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
 
             instancePolicyOrTemplate.setPolicy( instancePolicy )
@@ -566,7 +566,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
         final executorPriceModel = executor.config.spot ?: executor.config.preemptible
-        final spot = config.spot() ?: executorPriceModel
+        final spot = config.spot() != null ? config.spot() : executorPriceModel
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
