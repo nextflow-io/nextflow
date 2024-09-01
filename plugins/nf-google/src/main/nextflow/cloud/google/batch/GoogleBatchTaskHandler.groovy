@@ -565,7 +565,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
-        final spot = executor.config.spot ?: executor.config.preemptible
+        final executorPriceModel = executor.config.spot ?: executor.config.preemptible
+        final spot = config.spot() ?: executorPriceModel
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
