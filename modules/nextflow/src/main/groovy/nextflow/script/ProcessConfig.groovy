@@ -103,6 +103,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'storeDir',
             'tag',
             'time',
+            'spot',
             // input-output qualifiers
             'file',
             'val',
