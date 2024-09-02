@@ -389,7 +389,6 @@ if [[ $NXF_LEGACY_LAUNCHER ]]; then
   [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
   [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
 fi
-[[ "$JAVA_VER" =~ ^(21|22) ]] && [[ ! "$NXF_ENABLE_VIRTUAL_THREADS" ]] && NXF_ENABLE_VIRTUAL_THREADS=true
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
