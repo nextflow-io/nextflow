@@ -332,8 +332,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 instancePolicyOrTemplate.setInstallGpuDrivers(true)
             }
 
-            if( executor.config.bootDiskImage )
-                instancePolicy.setBootDisk(AllocationPolicy.Disk.newBuilder().setImage( executor.config.bootDiskImage ))
+            if( executor.config.getBootDiskImage() )
+                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( executor.config.getBootDiskImage() ) )
 
             if( fusionEnabled() && !disk ) {
                 disk = new DiskResource(request: '375 GB', type: 'local-ssd')
