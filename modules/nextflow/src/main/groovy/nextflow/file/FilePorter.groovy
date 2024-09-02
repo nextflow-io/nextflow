@@ -299,9 +299,21 @@ class FilePorter {
             try {
                 stageForeignFile(source, target)
             }
+            catch (Throwable e) {
+                log.error("Unrecoverable error staging file ${source.toUriString()}", e)
+            }
             finally {
                 if( semaphore )
                     semaphore.release()
+            }
+        }
+
+        protected void cleanup(Path path) {
+            try {
+                FileHelper.deletePath(path)
+            }
+            catch (IOException e) {
+                log.warn "Unable to cleanup file path: ${path.toUriString()} - cause: ${e.message}"
             }
         }
 
@@ -319,8 +331,9 @@ class FilePorter {
                     return stageForeignFile0(filePath, stagePath)
                 }
                 catch( IOException e ) {
+                    cleanup(stagePath)
                     if( count++ < maxRetries && e !instanceof NoSuchFileException && e !instanceof InterruptedIOException && !Thread.currentThread().isInterrupted() ) {
-                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
+                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
                         log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
 
                         sleep (10 + RND.nextInt(300))

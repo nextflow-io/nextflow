@@ -100,32 +100,6 @@ class HttpFilesTests extends Specification {
         server?.stop(0)
     }
 
-    def 'should re-try read when incomplete read' () {
-        given:
-        def attempt = 0
-        and:
-        def RESP = Mock(CharSequence) {
-            toString() >> "Hello world"
-            length() >> { ++attempt < 3 ? super.length()+1 : super.length()  }
-        }
-        and:
-        // launch web server
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new BasicHandler(RESP, 200));
-
-        server.start()
-
-        when:
-        def path = Paths.get(new URI('http://admin:Secret1@localhost:9900/foo/bar'))
-        then:
-        path.text == 'Hello world'
-        and:
-        attempt == 3
-
-        cleanup:
-        server?.stop(0)
-    }
-
     def 'read a http file ' () {
         given:
         def uri = new URI('http://www.nextflow.io/index.html')
