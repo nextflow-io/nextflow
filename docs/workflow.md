@@ -409,6 +409,9 @@ A script may define the set of outputs that should be published by the implicit 
 ```groovy
 workflow {
     foo(bar())
+
+    publish:
+    foo.out >> 'foo'
 }
 
 output {
