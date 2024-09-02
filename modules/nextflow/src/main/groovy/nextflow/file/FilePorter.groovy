@@ -300,7 +300,7 @@ class FilePorter {
                 stageForeignFile(source, target)
             }
             catch (Throwable e) {
-                log.error("Unrecoverable error staging file ${source.toUriString()}", e)
+                log.error("Unrecoverable error while staging file ${source.toUriString()}", e)
             }
             finally {
                 if( semaphore )

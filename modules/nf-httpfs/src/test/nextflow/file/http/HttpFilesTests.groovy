@@ -269,20 +269,20 @@ class HttpFilesTests extends Specification {
     @CompileStatic
     static class BasicHandler implements HttpHandler {
 
-        CharSequence body
+        String body
 
         Closure<Integer> respCode
 
         Map<String,String> allHeaders
 
-        BasicHandler(CharSequence s, int code, Map<String,String> headers=null) {
-            this.body = s
+        BasicHandler(String s, int code, Map<String,String> headers=null) {
+            this.body=s
             this.respCode = { return code }
             this.allHeaders = headers ?: Collections.<String,String>emptyMap()
         }
 
-        BasicHandler(CharSequence s, Closure<Integer> code, Map<String,String> headers=null) {
-            this.body = s
+        BasicHandler(String s, Closure<Integer> code, Map<String,String> headers=null) {
+            this.body=s
             this.respCode = code
             this.allHeaders = headers ?: Collections.<String,String>emptyMap()
         }
@@ -297,10 +297,10 @@ class HttpFilesTests extends Specification {
             }
             
             header.set("Content-Type", "text/plain")
-            request.sendResponseHeaders(respCode.call(), body.length())
+            request.sendResponseHeaders(respCode.call(), body.size())
 
-            OutputStream os = request.getResponseBody()
-            os.write(body.toString().bytes)
+            OutputStream os = request.getResponseBody();
+            os.write(body.bytes);
             os.close();
         }
     }
