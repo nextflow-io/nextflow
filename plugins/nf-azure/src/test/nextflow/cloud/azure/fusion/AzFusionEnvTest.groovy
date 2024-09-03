@@ -19,6 +19,7 @@ package nextflow.cloud.azure.fusion
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.fusion.FusionConfig
 import spock.lang.Specification
 
@@ -27,6 +28,14 @@ import spock.lang.Specification
  * @author Alberto Miranda <alberto.miranda@seqera.io>
  */
 class AzFusionEnvTest extends Specification {
+
+    def setup() {
+        SysEnv.push([:])  // <-- clear the system host env
+    }
+
+    def cleanup() {
+        SysEnv.pop()      // <-- restore the system host env
+    }
 
     def 'should return empty env'() {
         given:
@@ -50,8 +59,6 @@ class AzFusionEnvTest extends Specification {
         then:
         env == [AZURE_STORAGE_ACCOUNT: 'x1']
 
-        cleanup:
-        Global.session = null
     }
 
     def 'should return env environment with SAS token config'() {
@@ -67,8 +74,6 @@ class AzFusionEnvTest extends Specification {
         then:
         env == [AZURE_STORAGE_ACCOUNT: 'x1', AZURE_STORAGE_SAS_TOKEN: 'y1']
 
-        cleanup:
-        Global.session = null
     }
 
     def 'should throw an exception when missing Azure Storage account name'() {
@@ -81,8 +86,6 @@ class AzFusionEnvTest extends Specification {
         def env = new AzFusionEnv().getEnvironment('az', Mock(FusionConfig))
         then:
         thrown(IllegalArgumentException)
-        cleanup:
-        Global.session = null
     }
 
     def 'should throw an exception when both account key and SAS token are present'() {
@@ -95,7 +98,5 @@ class AzFusionEnvTest extends Specification {
         def env = new AzFusionEnv().getEnvironment('az', Mock(FusionConfig))
         then:
         thrown(IllegalArgumentException)
-        cleanup:
-        Global.session = null
     }
 }
