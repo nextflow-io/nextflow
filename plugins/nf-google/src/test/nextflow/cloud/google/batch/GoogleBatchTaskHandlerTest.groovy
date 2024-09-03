@@ -105,6 +105,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         !instancePolicy.getMachineType()
         !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
+        !instancePolicy.getBootDisk().getImage()
         and:
         allocationPolicy.getLocation().getAllowedLocationsCount() == 0
         allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
