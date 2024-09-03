@@ -129,4 +129,9 @@ class PbsProExecutor extends PbsExecutor {
         DECODE_STATUS.get(status)
     }
 
+    @Override
+    String getArrayIndexName() {
+        return 'PBS_ARRAY_INDEX'
+    }
+
 }
