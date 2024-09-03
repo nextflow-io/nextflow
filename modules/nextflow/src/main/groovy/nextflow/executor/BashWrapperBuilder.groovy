@@ -757,7 +757,7 @@ class BashWrapperBuilder {
         result += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
         if( statsEnabled )
             result += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
-        if(  outputEnvNames )
+        if( outputEnvNames || outputEvals )
             result += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
         return result
     }
