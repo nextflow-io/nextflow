@@ -105,6 +105,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         !instancePolicy.getMachineType()
         !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
+        !instancePolicy.getBootDisk().getImage()
         and:
         allocationPolicy.getLocation().getAllowedLocationsCount() == 0
         allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
@@ -121,6 +122,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def ACCELERATOR = new AcceleratorResource(request: 1, type: 'nvidia-tesla-v100')
         def BOOT_DISK = MemoryUnit.of('10 GB')
+        def BOOT_IMAGE = 'batch-debian'
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def CONTAINER_OPTS = '--this --that'
         def CPU_PLATFORM = 'Intel Skylake'
@@ -134,6 +136,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getConfig() >> Mock(BatchConfig) {
                 getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
+                getBootDiskImage() >> BOOT_IMAGE
                 getCpuPlatform() >> CPU_PLATFORM
                 getMaxSpotAttempts() >> 5
                 getSpot() >> true
@@ -211,6 +214,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
+        instancePolicy.getBootDisk().getImage() == BOOT_IMAGE
         instancePolicy.getDisks(0).getNewDisk().getSizeGb() == DISK.request.toGiga()
         instancePolicy.getDisks(0).getNewDisk().getType() == DISK.type
         instancePolicy.getMachineType() == MACHINE_TYPE

@@ -886,6 +886,11 @@ The following settings are available for Google Cloud Batch:
   :::
 : Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
 
+`google.batch.bootDiskImage`
+: :::{versionadded} 24.08.0-edge
+  :::
+: Set the image URI of the virtual machine boot disk, e.g `batch-debian`. See [Google documentation](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) for details (default: none).
+
 `google.batch.bootDiskSize`
 : Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).
 

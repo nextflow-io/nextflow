@@ -38,6 +38,7 @@ class BatchConfig {
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
     private List<String> allowedLocations
+    private String bootDiskImage
     private MemoryUnit bootDiskSize
     private String cpuPlatform
     private int maxSpotAttempts
@@ -54,6 +55,7 @@ class BatchConfig {
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
     List<String> getAllowedLocations() { allowedLocations }
+    String getBootDiskImage() { bootDiskImage }
     MemoryUnit getBootDiskSize() { bootDiskSize }
     String getCpuPlatform() { cpuPlatform }
     int getMaxSpotAttempts() { maxSpotAttempts }
@@ -72,6 +74,7 @@ class BatchConfig {
         result.googleOpts = GoogleOpts.create(session)
         result.credentials = result.googleOpts.credentials
         result.allowedLocations = session.config.navigate('google.batch.allowedLocations', List.of()) as List<String>
+        result.bootDiskImage = session.config.navigate('google.batch.bootDiskImage')
         result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
         result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
         result.maxSpotAttempts = session.config.navigate('google.batch.maxSpotAttempts', DEFAULT_MAX_SPOT_ATTEMPTS) as int
