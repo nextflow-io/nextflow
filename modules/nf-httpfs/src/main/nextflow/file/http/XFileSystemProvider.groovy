@@ -245,7 +245,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
 
         final conn = toConnection(path)
-        final stream = new BufferedInputStream(conn.getInputStream())
+        final length = conn.getContentLengthLong()
+        final target = length>0
+                ? new FixedInputStream(conn.getInputStream(),length)
+                : conn.getInputStream()
+        final stream = new BufferedInputStream(target)
 
         new SeekableByteChannel() {
 
@@ -346,7 +350,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        return toConnection(path).getInputStream()
+        final conn = toConnection(path)
+        final length = conn.getContentLengthLong()
+        return length>0
+            ? new FixedInputStream(conn.getInputStream(), length)
+            : conn.getInputStream()
     }
 
     /**
