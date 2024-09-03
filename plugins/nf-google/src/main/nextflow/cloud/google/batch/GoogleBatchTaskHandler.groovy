@@ -303,6 +303,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( task.config.getDisk() )
                 log.warn1 'Process directive `disk` ignored because an instance template was specified'
 
+            if( executor.config.getBootDiskImage() )
+                log.warn1 'Config option `google.batch.bootDiskImage` ignored because an instance template was specified'
+
             if( executor.config.cpuPlatform )
                 log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
 
