@@ -33,18 +33,31 @@ class AzFusionEnv implements FusionEnv {
 
     @Override
     Map<String, String> getEnvironment(String scheme, FusionConfig config) {
-        if( scheme!='az' )
-            return Collections.<String,String>emptyMap()
+        if (scheme != 'az')
+            return Collections.<String, String> emptyMap()
 
-        final cfg = AzConfig.config.storage()
+        final cfg = AzConfig.config
         final result = new LinkedHashMap(10)
-        if( !cfg.accountName )
-            throw new IllegalArgumentException("Missing Azure storage account name")
-        if( !cfg.sasToken && !cfg.accountKey )
-            throw new IllegalArgumentException("Missing Azure storage SAS token")
-        
-        result.AZURE_STORAGE_ACCOUNT = cfg.accountName
-        result.AZURE_STORAGE_SAS_TOKEN = cfg.getOrCreateSasToken()
+
+        if (!cfg.storage().accountName)
+            throw new IllegalArgumentException("Missing Azure Storage account name")
+
+        if (cfg.storage().accountKey && cfg.storage().sasToken)
+            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
+
+        // the account name is always required
+        result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
+
+        // If a Managed Identity or Service Principal is configured, Fusion only needs to know the account name
+        if (cfg.managedIdentity().isConfigured() || cfg.activeDirectory().isConfigured()) {
+            return result
+        }
+
+        // If a SAS token is configured, instead, Fusion also requires the token value
+        if (cfg.storage().sasToken) {
+            result.AZURE_STORAGE_SAS_TOKEN = cfg.storage().getOrCreateSasToken()
+        }
+
         return result
     }
 }
