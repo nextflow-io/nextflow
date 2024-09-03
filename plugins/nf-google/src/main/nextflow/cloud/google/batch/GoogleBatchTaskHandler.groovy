@@ -332,6 +332,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 instancePolicyOrTemplate.setInstallGpuDrivers(true)
             }
 
+            if( executor.config.getBootDiskImage() )
+                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( executor.config.getBootDiskImage() ) )
+
             if( fusionEnabled() && !disk ) {
                 disk = new DiskResource(request: '375 GB', type: 'local-ssd')
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
