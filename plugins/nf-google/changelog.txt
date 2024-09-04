@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.15.0 - 4 Sep 2024
+- Add Google Batch warning when for conflicting disk image config (#5279) [ci fast] [96cb57cb]
+- Add support for Google Batch used specified boot images  (#5268) [0aaa6482]
+- Disable Google Batch automatic spot retries (#5223) [aad21533]
+
 1.14.0 - 5 Aug 2024
 - Bump pf4j to version 3.12.0 [96117b9a]
 - Make Google Batch auto retry codes configurable (#5148) [e562ce06]
