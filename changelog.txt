@@ -1,10 +1,30 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.08.0-edge - 4 Sep 2024
+- Add Google Batch warning when for conflicting disk image config (#5279) [96cb57cb]
+- Add support for Google Batch used specified boot images  (#5268) [0aaa6482]
+- Disable AWS spot retry (#5215) [f28fcb25]
+- Disable Google Batch automatic spot retries (#5223) [aad21533]
+- Disable automatic detection of virtual threads (#5270) [b3ba2c2d]
+- Fix  missing .command.env when eval is used and task runs on a cloud env [4a6b54aa]
+- Fix job array syntax for PBS/Torque executor (#5281) [d59f5fae]
+- Fix k8s client status cond is possible null in podState (#5264) [46672415]
+- Fix non-determinist behaviour of join operator with bag array as key (#5189) [e7dc0d69]
+- Fix stage retry on corrupted HTTP downloads  (#5275) [bf0cd326]
+- Support Azure Managed Identities in Fusion configuration logic (#5278) [a0bf8b40]
+- Use public.cr.seqera.io in place of AWS ECR [5a01f277]
+- Wave client logs improvement [5a37e617]
+- Bump amazoncorretto:21-al2023 [59aed581]
+- Bump nf-wave@1.5.1 [97c4e08f]
+- Bump nf-google@1.15.0 [24133f2a]
+- Bump nf-azure@1.9.0 [29f49ba7]
+- Bump nf-amazon@2.8.0 [bbc3adca]
+
 24.07.0-edge - 8 Aug 2024
 - Add runtime error for missing channel factory (#5170) [1f9210ab]
 - Apply k8s.cpuLimits to kuberun driver pod (#5160) [4300adf1]
 - Await build completion for all Wave containers [2b8117e9]
-- Deprecate module addParams() and params() (#5200) [ci fast] [82c97f8c]
+- Deprecate module addParams() and params() (#5200) [82c97f8c]
 - Remove capsule launcher dependencies (#3395) [f15e4246]
 - Fix AWS Cloudwatch access when using custom log group name [30195838]
 - Fix Invalid AWS Fargate CPUs usage error reporting [d9c50e59]
@@ -61,7 +81,7 @@ NEXTFLOW CHANGE-LOG
 - Bump jgit 6.10.0 [4cf6b9f7]
 
 24.04.3 - 9 Jul 2024
-- Add ability to override failOnError setting default via env variable (#5117) [ci fast] [6852429c]
+- Add ability to override failOnError setting default via env variable (#5117) [6852429c]
 - Fix normalization of consecutive slashes in uri path (#5114) [3f366b7e]
 - Fix executions hangs on finalisation exception (#5070) [4c207c23]
 - Bump nf-google@1.13.2-patch1 [55ec5ec5]
