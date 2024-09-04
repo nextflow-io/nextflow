@@ -74,15 +74,35 @@ class ArrayBagTest extends Specification {
         String.valueOf(bag) == '[1, 2, 3]'
     }
 
-    def 'equivalent ArrayBags can be used as HashMap entries' () {
+    def 'hashCode should be invariant to order' () {
         given:
-        def bag1 = new ArrayBag('foo')
-        def bag2 = new ArrayBag('foo')
-        HashMap myMap = [:]
-        myMap[bag1] = 'bar'
+        def bag1 = new ArrayBag([1,2,3])
+        def bag2 = new ArrayBag([3,1,2])
+        def bag3 = new ArrayBag([4,1,2])
 
         expect:
-        myMap[bag2] == 'bar'
+        bag1.hashCode() == bag2.hashCode()
+        bag1.hashCode() != bag3.hashCode()
+
+        /**
+         * NOTE!!! equality cannot be checked due to groovy overriding the equals implementation
+         * see {@link ArrayBag#equals(java.lang.Object)}
+         */
+    }
+
+    def 'should access map entry using bag as key' () {
+        given:
+        def bag1 = new ArrayBag([1,2,3])
+        def bag2 = new ArrayBag([3,1,2])
+        def bag3 = new ArrayBag([4,1,2])
+        and:
+        def map = [(bag1):'foo']
+
+        expect:
+        map.get(bag1) == 'foo'
+        map.get(bag2) == 'foo'
+        map.get(bag3) == null
+
     }
 
 }

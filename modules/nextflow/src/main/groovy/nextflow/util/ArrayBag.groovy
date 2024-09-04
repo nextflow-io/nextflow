@@ -63,84 +63,66 @@ class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
         InvokerHelper.inspect(this)
     }
 
-   @Override
-   int hashCode() {
-       int hash = 0
-       target.each { element ->
-           hash ^= (element != null ? element.hashCode() : 0)
-       }
-       return hash
-   }
-
-   @Override
-   boolean equals(Object o) {
-       if (this.is(o)) return true
-       if (!(o instanceof ArrayBag)) return false
-
-       ArrayBag other = (ArrayBag) o
-       def thisFrequencyMap = createFrequencyMap(this.target)
-       def otherFrequencyMap = createFrequencyMap(other.target)
-
-       return thisFrequencyMap == otherFrequencyMap
-   }
-
-    private static Map<Object, Integer> createFrequencyMap(List list) {
-        Map<Object, Integer> frequencyMap = [:]
-        list.each { element ->
-            if (element != null) {
-                frequencyMap[element] = frequencyMap.getOrDefault(element, 0) + 1
-            }
+    @Override
+    int hashCode() {
+        int h = 0;
+        Iterator<E> i = target.iterator();
+        while (i.hasNext()) {
+            E obj = i.next();
+            if (obj != null)
+                h += obj.hashCode();
         }
-        return frequencyMap
+        return h;
     }
 
-//    E getAt( int index )  {
-//        target.get(index)
-//    }
-//
-//    void putAt( int index, E value ) {
-//        target.set(index, value)
-//    }
-//
-//    @Override
-//    int hashCode() {
-//        int h = 0;
-//        Iterator<E> i = target.iterator();
-//        while (i.hasNext()) {
-//            E obj = i.next();
-//            if (obj != null)
-//                h += obj.hashCode();
-//        }
-//        return h;
-//    }
-//
-//    @Override
-//    boolean equals(Object o) {
-//        if ( o.is(this) )
-//            return true;
-//
-//        if (!(o instanceof ArrayBag))
-//            return false;
-//
-//        Collection other = ((ArrayBag)o).target
-//        if (other.size() != target.size())
-//            return false;
-//
-//        try {
-//            return target.containsAll(other);
-//        }
-//        catch (ClassCastException unused)   {
-//            return false;
-//        }
-//        catch (NullPointerException unused) {
-//            return false;
-//        }
-//    }
+    /**
+     * NOTE!!! this method implements an equality is NOT used when invoking `equals` method
+     * or using `==` operator from Groovy code. This because the Groovy runtime implements its
+     * own equality logic both for {@link Map} and {@link Collection} logic.
+     *
+     * See
+     * https://issues.apache.org/jira/browse/GROOVY-9003
+     *
+     * However this is still applied when equality is checked by Java compiled code e.g. Java SDK.
+     * For this reason is necessary to implement the expected equals (and hashCode) semantic by `join`
+     * (and other) operators.
+     *
+     * See issue
+     * https://github.com/nextflow-io/nextflow/issues/5187
+     *
+     * @return
+     *      {@code true} is the content of the bag is equals to another bag irrespective the elements order,
+     *      {@code false} otherwise
+     */
+    @Override
+    boolean equals(Object o) {
+        if ( o.is(this) )
+            return true;
 
+        if (!(o instanceof ArrayBag))
+            return false;
+
+        Collection other = ((ArrayBag)o).target
+        if (other.size() != target.size())
+            return false;
+
+        try {
+            return target.containsAll(other);
+        }
+        catch (ClassCastException unused)   {
+            return false;
+        }
+        catch (NullPointerException unused) {
+            return false;
+        }
+    }
+
+    @Override
     void read (Kryo kryo, Input input) {
         target = kryo.readObject(input,ArrayList)
     }
 
+    @Override
     void write (Kryo kryo, Output output) {
         kryo.writeObject(output, target)
     }
