@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+2.8.0 - 4 Sep 2024
+- Disable AWS spot retry (#5215) [f28fcb25]
+
 2.7.0 - 5 Aug 2024
 - More robust parsing of shm-size containerOptions (#5177) [b56802a3]
 - Fix AWS Cloudwatch access when using custom log group name [30195838]
