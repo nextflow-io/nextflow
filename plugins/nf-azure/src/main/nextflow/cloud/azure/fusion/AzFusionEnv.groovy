@@ -53,7 +53,9 @@ class AzFusionEnv implements FusionEnv {
             return result
         }
 
-        // If Fusion does not use a managed identity, get or create a SAS token for Fusion to use
+        // When the Azure machine has a managed identity, it can use that to authenticate to Azure Storage without any keys
+        // If not using a managed identity, use the existing SAS token or create one using the Nextflow authentication (key, service principal)
+        // This SAS token confers time limited access to Azure Storage. It is added to the Fusion environment
         if (cfg.storage().sasToken || cfg.storage().accountKey || cfg.activeDirectory().isConfigured()) {
             result.AZURE_STORAGE_SAS_TOKEN = cfg.storage().getOrCreateSasToken()
         }
