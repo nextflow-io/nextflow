@@ -197,7 +197,10 @@ The following settings are available:
 `aws.batch.maxSpotAttempts`
 : :::{versionadded} 22.04.0
   :::
-: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
+: :::{versionchanged} 24.08.0-edge
+  The default value was changed from `5` to `0`.
+  :::
+: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `0`)
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
@@ -869,7 +872,10 @@ The following settings are available for Google Cloud Batch:
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
-: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
+: :::{versionchanged} 24.08.0-edge
+  The default value was changed from `5` to `0`.
+  :::
+: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
 `google.project`
@@ -879,6 +885,11 @@ The following settings are available for Google Cloud Batch:
 : :::{versionadded} 22.12.0-edge
   :::
 : Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
+
+`google.batch.bootDiskImage`
+: :::{versionadded} 24.08.0-edge
+  :::
+: Set the image URI of the virtual machine boot disk, e.g `batch-debian`. See [Google documentation](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) for details (default: none).
 
 `google.batch.bootDiskSize`
 : Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).
