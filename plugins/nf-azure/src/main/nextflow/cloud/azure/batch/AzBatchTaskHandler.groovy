@@ -63,9 +63,6 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         validateConfiguration()
     }
 
-    /** only for testing purpose - DO NOT USE */
-    protected AzBatchTaskHandler() { }
-
     AzBatchService getBatchService() {
         return executor.batchService
     }

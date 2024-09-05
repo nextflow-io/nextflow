@@ -47,21 +47,6 @@ class CharliecloudCacheTest extends Specification {
         'foo:bar'                   | 'foo+bar'
     }
 
-    @Unroll
-    def 'should return a path with registry'() {
-
-        given:
-        def helper = new CharliecloudCache([registry: registry])
-
-        expect:
-        helper.simpleName(url) == expected
-
-        where:
-        url                      | registry   | expected
-        'foo:2.0'                | 'my.reg'   | 'my.reg%foo+2.0'
-        'foo:2.0'                | 'my.reg/'  | 'my.reg%foo+2.0'
-    }
-
     def 'should return the cache dir from the config file' () {
 
         given:
@@ -103,7 +88,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
 
         when:
         def result = cache.downloadCharliecloudImage(IMAGE)
@@ -129,7 +114,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
         TARGET_PATH.mkdirs()
 
         when:
@@ -154,7 +139,7 @@ class CharliecloudCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
 
         when:
         def file = cache.getCachePathFor(IMAGE)

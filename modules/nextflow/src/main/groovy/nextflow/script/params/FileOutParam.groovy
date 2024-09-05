@@ -26,6 +26,7 @@ import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
 import nextflow.script.TokenVar
 import nextflow.util.BlankSeparatedList
+import nextflow.util.TestOnly
 /**
  * Model a process *file* output parameter
  *
@@ -35,9 +36,7 @@ import nextflow.util.BlankSeparatedList
 @InheritConstructors
 class FileOutParam extends BaseOutParam implements OutParam, ArityParam, OptionalParam, PathQualifier {
 
-    /**
-     * ONLY FOR TESTING DO NOT USE
-     */
+    @TestOnly
     protected FileOutParam(Map params) {
         super(new Binding(), [])
     }

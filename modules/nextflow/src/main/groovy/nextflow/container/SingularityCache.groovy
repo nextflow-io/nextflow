@@ -52,10 +52,6 @@ class SingularityCache {
 
     private Duration pullTimeout = Duration.of('20min')
 
-    /** Only for debugging purpose - do not use */
-    @PackageScope
-    SingularityCache() {}
-
     protected String getBinaryName() { return 'singularity' }
 
     protected String getAppName() { getBinaryName().capitalize() }
