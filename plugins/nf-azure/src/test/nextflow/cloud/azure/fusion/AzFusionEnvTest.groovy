@@ -61,6 +61,27 @@ class AzFusionEnvTest extends Specification {
 
     }
 
+    def 'should return env environment with SAS token config when accountKey is provided'() {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [storage: [accountName: 'myaccount', accountKey: 'myaccountkey']]]
+        }
+        def mockStorageObject = Mock(Object) {
+            getOrCreateSasToken() >> 'generatedSasToken'
+        }
+        def config = Mock(FusionConfig) {
+            storage() >> mockStorageObject
+        }
+
+        when:
+        def env = new AzFusionEnv().getEnvironment('az', config)
+
+        then:
+        env.AZURE_STORAGE_ACCOUNT == 'myaccount'
+        env.AZURE_STORAGE_SAS_TOKEN
+        env.size() == 2
+    }
+    
     def 'should return env environment with SAS token config'() {
         given:
         Global.session = Mock(Session) {
@@ -99,4 +120,5 @@ class AzFusionEnvTest extends Specification {
         then:
         thrown(IllegalArgumentException)
     }
+
 }

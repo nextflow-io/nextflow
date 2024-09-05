@@ -48,13 +48,13 @@ class AzFusionEnv implements FusionEnv {
         // the account name is always required
         result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
 
-        // If a Managed Identity or Service Principal is configured, Fusion only needs to know the account name
-        if (cfg.managedIdentity().isConfigured() || cfg.activeDirectory().isConfigured()) {
+        // If a Managed Identity is configured, Fusion only needs to know the account name
+        if (cfg.managedIdentity().isConfigured()) {
             return result
         }
 
         // If a SAS token is configured, instead, Fusion also requires the token value
-        if (cfg.storage().sasToken) {
+        if (cfg.storage().sasToken || cfg.storage().accountKey) {
             result.AZURE_STORAGE_SAS_TOKEN = cfg.storage().getOrCreateSasToken()
         }
 
