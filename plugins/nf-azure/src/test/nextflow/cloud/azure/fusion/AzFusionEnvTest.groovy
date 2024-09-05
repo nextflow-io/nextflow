@@ -21,6 +21,8 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.fusion.FusionConfig
+import nextflow.cloud.azure.config.AzStorageOpts
+
 import spock.lang.Specification
 
 /**
@@ -66,7 +68,7 @@ class AzFusionEnvTest extends Specification {
         Global.session = Mock(Session) {
             getConfig() >> [azure: [storage: [accountName: 'myaccount', accountKey: 'myaccountkey']]]
         }
-        def mockStorageObject = Mock(Object) {
+        def mockStorageObject = Mock(AzStorageOpts) {
             getOrCreateSasToken() >> 'generatedSasToken'
         }
         def config = Mock(FusionConfig) {
