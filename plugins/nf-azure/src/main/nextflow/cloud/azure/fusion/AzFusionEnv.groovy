@@ -54,7 +54,7 @@ class AzFusionEnv implements FusionEnv {
         }
 
         // If a SAS token is configured, instead, Fusion also requires the token value
-        if (cfg.storage().sasToken || cfg.storage().accountKey) {
+        if (cfg.storage().sasToken || cfg.storage().accountKey || cfg.activeDirectory().isConfigured()) {
             result.AZURE_STORAGE_SAS_TOKEN = cfg.storage().getOrCreateSasToken()
         }
 
