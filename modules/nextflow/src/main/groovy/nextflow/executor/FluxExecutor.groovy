@@ -78,7 +78,6 @@ class FluxExecutor extends AbstractGridExecutor {
         // Time limit in minutes when no units provided
         if( task.config.getTime() ) {
             result << '--time-limit=' + task.config.getTime().format('mm')
-//            result << '--time-limit=' + task.config.getTime().format('mm')
         }
 
         // Flux does not support asking for specific memory
@@ -89,7 +88,6 @@ class FluxExecutor extends AbstractGridExecutor {
         // the requested partition (a.k.a queue) name
         if( task.config.queue ) {
             result << '--queue=' + (task.config.queue.toString())
-//            result << '--queue=' + (task.config.queue.toString())
         }
 
         // Any extra cluster options the user wants!
