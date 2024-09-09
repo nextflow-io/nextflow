@@ -64,7 +64,6 @@ class FluxExecutor extends AbstractGridExecutor {
         List<String> result = ['flux', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
         result << '--job-name="' + getJobNameFor(task) + '"'
-        result << '--flags=waitable'
 
         // Only write output to file if user doesn't want written entirely to terminal
         Boolean terminalOutput = session.config.navigate('flux.terminalOutput') as Boolean
@@ -78,7 +77,7 @@ class FluxExecutor extends AbstractGridExecutor {
 
         // Time limit in minutes when no units provided
         if( task.config.getTime() ) {
-            log.debug "Custom task wallclock time request is not currently supported here."
+            result << '--time-limit=' + task.config.getTime().format('mm')
 //            result << '--time-limit=' + task.config.getTime().format('mm')
         }
 
@@ -89,7 +88,7 @@ class FluxExecutor extends AbstractGridExecutor {
 
         // the requested partition (a.k.a queue) name
         if( task.config.queue ) {
-            log.debug "Queue parameter not supported by standalone flux."
+            result << '--queue=' + (task.config.queue.toString())
 //            result << '--queue=' + (task.config.queue.toString())
         }
 
