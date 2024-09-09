@@ -1320,6 +1320,46 @@ class BashWrapperBuilderTest extends Specification {
         
     }
 
+    def 'should get unstage control script'(){
+        given:
+        BashWrapperBuilder builder
+        when:
+        builder = newBashWrapperBuilder()
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                '''.stripIndent()
+
+
+        when:
+        builder = newBashWrapperBuilder(statsEnabled: true)
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.trace /work/dir/.command.trace || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEnvNames: ['some-data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEvals: [some:'data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+    }
+
 
     def 'should create wrapper with podman' () {
         when:

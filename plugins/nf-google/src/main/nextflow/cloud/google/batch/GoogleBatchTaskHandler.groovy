@@ -303,6 +303,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( task.config.getDisk() )
                 log.warn1 'Process directive `disk` ignored because an instance template was specified'
 
+            if( executor.config.getBootDiskImage() )
+                log.warn1 'Config option `google.batch.bootDiskImage` ignored because an instance template was specified'
+
             if( executor.config.cpuPlatform )
                 log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
 
@@ -331,6 +334,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 instancePolicy.addAccelerators(accelerator)
                 instancePolicyOrTemplate.setInstallGpuDrivers(true)
             }
+
+            if( executor.config.getBootDiskImage() )
+                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( executor.config.getBootDiskImage() ) )
 
             if( fusionEnabled() && !disk ) {
                 disk = new DiskResource(request: '375 GB', type: 'local-ssd')
