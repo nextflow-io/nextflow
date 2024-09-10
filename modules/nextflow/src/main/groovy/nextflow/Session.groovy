@@ -826,6 +826,8 @@ class Session implements ISession {
 
     boolean isCancelled() { cancelled }
 
+    boolean isFailOnIgnore() { failOnIgnore }
+
     boolean isSuccess() { !aborted && !cancelled && !failOnIgnore }
 
     void processRegister(TaskProcessor process) {
