@@ -100,7 +100,7 @@ Here is an example of submitting a job and getting the log for it.
 First submit the job:
 
 ```console
-$ flux mini submit echo "HELLO MOTO"
+$ flux submit echo "HELLO MOTO"
 ƒEzWqspb
 ```
 
@@ -114,7 +114,7 @@ HELLO MOTO
 Try submitting a longer job:
 
 ```console
-$ flux mini submit sleep 60
+$ flux submit sleep 60
 ```
 
 And then seeing it in the jobs listing.
