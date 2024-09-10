@@ -61,7 +61,7 @@ class FluxExecutor extends AbstractGridExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
-        List<String> result = ['flux', 'mini', 'submit']
+        List<String> result = ['flux', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
         result << '--job-name="' + getJobNameFor(task) + '"'
 

@@ -95,7 +95,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 The `flux` executor allows you to run your pipeline script using the [Flux Framework](https://flux-framework.org).
 
-Nextflow manages each process as a separate job that is submitted to the cluster by using the `flux mini submit` command.
+Nextflow submits each process to the cluster as a separate job using the `flux submit` command.
 
 To enable the Flux executor, set `process.executor = 'flux'` in the `nextflow.config` file.
 
