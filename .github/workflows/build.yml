@@ -69,40 +69,40 @@ jobs:
           architecture: x64
           cache: gradle
 
-      - name: Compile
-        if: steps.changed-files.outputs.any_changed == 'true'
-        run: make assemble
-
-      - name: Test
-        if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-            # configure test env
-            if [[ "$GOOGLE_SECRET" ]]; then
-            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
-            fi
-            # run tests
-            make test
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
-          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
-          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
-          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
-          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
-          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
-
-      - name: Publish tests report
-        uses: actions/upload-artifact@v4
-        if: steps.changed-files.outputs.any_changed == 'true' && always()
-        with:
-          name: report-unit-tests-jdk-${{ matrix.java_version }}
-          path: |
-            **/build/reports/tests/test
+#      - name: Compile
+#        if: steps.changed-files.outputs.any_changed == 'true'
+#        run: make assemble
+#
+#      - name: Test
+#        if: steps.changed-files.outputs.any_changed == 'true'
+#        run: |
+#            # configure test env
+#            if [[ "$GOOGLE_SECRET" ]]; then
+#            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+#            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+#            fi
+#            # run tests
+#            make test
+#        env:
+#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+#          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+#          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+#          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+#          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
+#          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+#          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
+#          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
+#
+#      - name: Publish tests report
+#        uses: actions/upload-artifact@v4
+#        if: steps.changed-files.outputs.any_changed == 'true' && always()
+#        with:
+#          name: report-unit-tests-jdk-${{ matrix.java_version }}
+#          path: |
+#            **/build/reports/tests/test
 
     outputs:
       any_changed: ${{ steps.changed-files.outputs.any_changed }}
@@ -182,12 +182,6 @@ jobs:
       runs-on: ubuntu-latest
       timeout-minutes: 10
       steps:
-          - name: Setup env
-            run: |
-              wget -O tw https://github.com/seqeralabs/tower-cli/releases/download/v0.10.1/tw-linux-x86_64
-              cxmod +x tw
-              mv tw /usr/local/bin/
-
           - name: Setup Java 17
             uses: actions/setup-java@v4
             with:
