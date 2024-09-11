@@ -214,8 +214,9 @@ jobs:
 
           - name: Launch tests
             run: |
-              cd tests-platform
-              bash run.sh
+                gh auth login 
+                cd tests-platform
+                bash run.sh
             env:
                 GH_TOKEN: ${{ github.token }}
                 GRADLE_OPTS: '-Dorg.gradle.daemon=false'
