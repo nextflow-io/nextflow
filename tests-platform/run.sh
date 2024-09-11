@@ -40,10 +40,13 @@ if [ -z "$commitId" ]; then
     echo "Error: commitId is empty or missing"; exit 1
 fi
 
-TAG=${version}-${commitId}
+#
+# build a scratch container image with assembled newxtflow runtime and plugins
+#
+tag=${version}-${commitId}
 base=${base:-'public.cr.seqera.io/platform/nf-launcher:j17-base'}
 repository=${repository:-'public.cr.seqera.io/snapshots/nextflow-scratch'}
-image=${repository}:${TAG}
+image=${repository}:${tag}
 
 docker buildx build \
   --platform linux/amd64 \
@@ -52,16 +55,28 @@ docker buildx build \
   --tag ${image} \
   --build-arg TARGETPLATFORM=linux/amd64 \
   .
+echo "Nextflow snapshots launcher image $image"
 
+#
+# Create an ephemeral container with the scratch image and base Platform launcher image
+#
 launcher=$(wave -i ${base} --include ${image} --config-env NXF_HOME=/.nextflow)
-
 echo "Running Platform tests using image launcher: $launcher"
 
-gh workflow run \
-  seqera-showcase-staging.yml \
-  --repo seqeralabs/showcase-automation \
-  -f launch_container=$launcher
+# determine the running environment by the last commit comment
+# if it contains [platform prod] run the script `seqera-showcase-production.yml`
+# otherwise run `seqera-showcase-staging.yml`
+if echo $(git show -s --format='%s') | grep -q "\[platform prod\]"; then
+  ENVIRONMENT="production"
+else
+  ENVIRONMENT="staging"
+fi
 
-#tw launch hello \
-#  -w seqeralabs/showcase \
-#  --launch-container $launcher
+#
+# Finally launch the showcase automation
+# see https://github.com/seqeralabs/showcase-automation/
+gh workflow run \
+  seqera-showcase-${ENVIRONMENT}.yml \
+  --repo seqeralabs/showcase-automation \
+  -f launch_container=${launcher}
+
