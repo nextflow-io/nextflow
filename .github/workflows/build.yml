@@ -69,112 +69,112 @@ jobs:
           architecture: x64
           cache: gradle
 
-#      - name: Compile
-#        if: steps.changed-files.outputs.any_changed == 'true'
-#        run: make assemble
-#
-#      - name: Test
-#        if: steps.changed-files.outputs.any_changed == 'true'
-#        run: |
-#            # configure test env
-#            if [[ "$GOOGLE_SECRET" ]]; then
-#            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-#            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
-#            fi
-#            # run tests
-#            make test
-#        env:
-#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
-#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-#          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
-#          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-#          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
-#          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
-#          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-#          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
-#          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
-#
-#      - name: Publish tests report
-#        uses: actions/upload-artifact@v4
-#        if: steps.changed-files.outputs.any_changed == 'true' && always()
-#        with:
-#          name: report-unit-tests-jdk-${{ matrix.java_version }}
-#          path: |
-#            **/build/reports/tests/test
+      - name: Compile
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: make assemble
+
+      - name: Test
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+            # configure test env
+            if [[ "$GOOGLE_SECRET" ]]; then
+            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+            fi
+            # run tests
+            make test
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
+          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
+          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
+
+      - name: Publish tests report
+        uses: actions/upload-artifact@v4
+        if: steps.changed-files.outputs.any_changed == 'true' && always()
+        with:
+          name: report-unit-tests-jdk-${{ matrix.java_version }}
+          path: |
+            **/build/reports/tests/test
 
     outputs:
       any_changed: ${{ steps.changed-files.outputs.any_changed }}
 
-#  test:
-#    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
-#    needs: build
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 90
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        java_version: [11, 21]
-#        test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 1
-#          submodules: true
-#
-#      - name: Setup env
-#        run: |
-#          rm -f $HOME/.gitconfig;
-#          mkdir -p "$HOME/.nextflow";
-#          echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
-#        env:
-#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-#
-#      - name: Setup Java ${{ matrix.java_version }}
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{matrix.java_version}}
-#          distribution: 'temurin'
-#          architecture: x64
-#          cache: gradle
-#
-#      - name: Run tests
-#        run: |
-#          cat $HOME/.nextflow/scm
-#          make clean assemble install
-#          bash test-ci.sh
-#        env:
-#          TEST_JDK: ${{ matrix.java_version }}
-#          TEST_MODE: ${{ matrix.test_mode }}
-#          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-#          TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
-#          AWS_DEFAULT_REGION: eu-west-1
-#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
-#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-#          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
-#          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-#          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
-#          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
-#          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-#          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
-#          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
-#
-#      - name: Tar integration tests
-#        if: always()
-#        run: tar -cvf integration-tests.tar tests/checks
-#
-#      - name: Publish tests report
-#        uses: actions/upload-artifact@v4
-#        if: always()
-#        with:
-#          name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
-#          path: |
-#            validation/**
-#            integration-tests.tar
+  test:
+    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        java_version: [11, 21]
+        test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Setup env
+        run: |
+          rm -f $HOME/.gitconfig;
+          mkdir -p "$HOME/.nextflow";
+          echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+        env:
+          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+
+      - name: Setup Java ${{ matrix.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{matrix.java_version}}
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      - name: Run tests
+        run: |
+          cat $HOME/.nextflow/scm
+          make clean assemble install
+          bash test-ci.sh
+        env:
+          TEST_JDK: ${{ matrix.java_version }}
+          TEST_MODE: ${{ matrix.test_mode }}
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+          TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
+          AWS_DEFAULT_REGION: eu-west-1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
+          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
+          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
+
+      - name: Tar integration tests
+        if: always()
+        run: tar -cvf integration-tests.tar tests/checks
+
+      - name: Publish tests report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
+          path: |
+            validation/**
+            integration-tests.tar
 
   test-platform:
       if: ${{ contains(github.event.head_commit.message, '[platform prod]') || contains(github.event.head_commit.message, '[platform stage]') }}
