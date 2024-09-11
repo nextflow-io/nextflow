@@ -214,7 +214,7 @@ jobs:
 
           - name: Launch tests
             run: |
-                cd tests-platform
+                cd test-platform
                 bash run.sh
             env:
                 GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
