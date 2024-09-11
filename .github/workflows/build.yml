@@ -181,6 +181,9 @@ jobs:
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 10
+      permissions:
+          actions: write  # Allow writing to actions
+          contents: write # Allow writing to repository contents
       steps:
           - name: Checkout
             uses: actions/checkout@v4
