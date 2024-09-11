@@ -214,7 +214,6 @@ jobs:
 
           - name: Launch tests
             run: |
-                gh auth login 
                 cd tests-platform
                 bash run.sh
             env:
