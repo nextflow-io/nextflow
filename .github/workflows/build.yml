@@ -217,5 +217,5 @@ jobs:
                 cd tests-platform
                 bash run.sh
             env:
-                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                 GRADLE_OPTS: '-Dorg.gradle.daemon=false'
