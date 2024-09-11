@@ -20,9 +20,11 @@ rm -rf .nextflow && mkdir .nextflow
 # copy nextflow dependencies
 (cd ..
 ./gradlew compile assemble
-BUILD_PACK=1 ./gradlew installScratch publishToMavenLocal -Dmaven.repo.local=${PWD}/docker-scratch/.nextflow/capsule/deps/
+BUILD_PACK=1 ./gradlew installScratch publishToMavenLocal
 )
 
+# copy nextflow plugins
+cp -r ../build/plugins .nextflow/
 # copy nextflow launcher script
 cp ../nextflow . && chmod +x nextflow
 cp ../modules/nextflow/src/main/resources/META-INF/build-info.properties .
@@ -38,21 +40,28 @@ if [ -z "$commitId" ]; then
     echo "Error: commitId is empty or missing"; exit 1
 fi
 
-
 TAG=${version}-${commitId}
-repository=${repository:-'docker.io/pditommaso/nf-launcher-dev'}
+base=${base:-'public.cr.seqera.io/platform/nf-launcher:j17-base'}
+repository=${repository:-'public.cr.seqera.io/snapshots/nextflow-scratch'}
 image=${repository}:${TAG}
-base=${base:-'docker.io/pditommaso/nf-lancher:j17-base'}
 
 docker buildx build \
-  --no-cache \
   --platform linux/amd64 \
-  --output=type=docker \
+  --push \
   --progress=plain \
   --tag ${image} \
   --build-arg TARGETPLATFORM=linux/amd64 \
   .
 
-#launcher=$(wave -i ${base} --include ${image} --config-env NXF_HOME=/.nextflow)
-#
-#echo $launcher
+launcher=$(wave -i ${base} --include ${image} --config-env NXF_HOME=/.nextflow)
+
+echo "Running Platform tests using image launcher: $launcher"
+
+gh workflow run \
+  seqera-showcase-staging.yml \
+  --repo seqeralabs/showcase-automation \
+  -f launch_container=$launcher
+
+#tw launch hello \
+#  -w seqeralabs/showcase \
+#  --launch-container $launcher
