@@ -30,6 +30,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.google.common.cache.Cache
@@ -565,7 +566,7 @@ class WaveClient {
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             if( response.buildId && !response.cached && !ContainerInspectMode.active() ) {
                 // await the image to be available when a new image is being built
-                awaitCompletion(response.buildId)
+                awaitCompletion(response.buildId, response.targetImage)
             }
             // assemble the container info response
             return new ContainerInfo(assets.containerImage, response.targetImage, key)
@@ -575,12 +576,19 @@ class WaveClient {
         }
     }
 
-    void awaitCompletion(String buildId) {
-        final long maxAwait = Duration.ofMinutes(15).toMillis();
-        final long startTime = Instant.now().toEpochMilli();
+    void awaitCompletion(String buildId, String containerImage) throws TimeoutException {
+        final long maxAwait = config.buildMaxDuration().toMillis()
+        final long startTime = Instant.now().toEpochMilli()
+        int count=0
         while( !isComplete(buildId) ) {
+            count++
             if( System.currentTimeMillis()-startTime > maxAwait ) {
+                log.error "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - build id: ${buildId}"
                 break
+            }
+            // report a log info first 10 secs, then every 2 mins
+            if( count==10 || count % 120 == 0 ) {
+                log.info "Awaiting provisioning for container $containerImage"
             }
             Thread.sleep(randomRange(10,15) * 1_000)
         }
