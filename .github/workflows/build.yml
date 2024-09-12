@@ -175,3 +175,47 @@ jobs:
           path: |
             validation/**
             integration-tests.tar
+
+  test-platform:
+      if: ${{ contains(github.event.head_commit.message, '[platform prod]') || contains(github.event.head_commit.message, '[platform stage]') }}
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 10
+      permissions:
+          actions: write  # Allow writing to actions
+          contents: write # Allow writing to repository contents
+      steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+            with:
+                fetch-depth: 1
+                submodules: true
+                
+          - name: Setup Java 17
+            uses: actions/setup-java@v4
+            with:
+                java-version: 17
+                distribution: 'temurin'
+                architecture: x64
+                cache: gradle
+
+          - name: Setup env
+            run: |
+                wget -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
+                chmod +x wave
+                mv wave /usr/local/bin/
+
+          - name : Docker Login to Seqera public CR
+            uses : docker/login-action@v3
+            with :
+                registry : "public.cr.seqera.io"
+                username : "public-cr-admin"
+                password : ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+          - name: Launch tests
+            run: |
+                cd test-platform
+                bash run.sh
+            env:
+                GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+                GRADLE_OPTS: '-Dorg.gradle.daemon=false'
