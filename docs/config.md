@@ -491,14 +491,14 @@ The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charl
 
 The following settings are available:
 
+`charliecloud.enabled`
+: Enable Charliecloud execution (default: `false`).
+
 `charliecloud.writeFake`
-: Enable `writeFake` with charliecloud (default) This allows to run containers from storage in writeable mode, using overlayfs. `writeFake` requires `overlayfs` (Linux kernel >= 5.11). For full suppornt tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required , see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
+: Enable `writeFake` with charliecloud (default: `true`) This allows to run containers from storage in writeable mode, using overlayfs. `writeFake` requires `overlayfs` (Linux kernel >= 5.11). For full suppornt tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required , see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
 
 `charliecloud.cacheDir`
 : The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
-
-`charliecloud.enabled`
-: Enable Charliecloud execution (default: `false`).
 
 `charliecloud.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
