@@ -491,6 +491,9 @@ The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charl
 
 The following settings are available:
 
+`charliecloud.writeFake`
+: Enable `writeFake` with charliecloud (default) This allows to run containers from storage in writeable mode, using overlayfs. `writeFake` requires `overlayfs` (Linux kernel >= 5.11). For full suppornt tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required , see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
+
 `charliecloud.cacheDir`
 : The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 
@@ -511,12 +514,6 @@ The following settings are available:
 
 `charliecloud.registry`
 : The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
-
-`charliecloud.writeFake`
-: Enable `writeFake` with charliecloud (default) This allows to run containers from storage in writeable mode, using overlayfs. `writeFake` requires `overlayfs` (Linux kernel >= 5.11). For full suppornt tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required , see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
-
-`charliecloud.useSquash`
-: Create a temporary squashFS container image in the process work directory instead of a folder.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
