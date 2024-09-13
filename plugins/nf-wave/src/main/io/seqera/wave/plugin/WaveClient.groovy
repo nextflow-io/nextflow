@@ -58,6 +58,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
@@ -583,8 +584,8 @@ class WaveClient {
         while( !isComplete(buildId) ) {
             count++
             if( System.currentTimeMillis()-startTime > maxAwait ) {
-                log.error "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - build id: ${buildId}"
-                break
+                final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - build id: ${buildId}"
+                throw new ProcessUnrecoverableException(msg)
             }
             // report a log info first 10 secs, then every 2 mins
             if( count==10 || count % 120 == 0 ) {
