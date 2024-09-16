@@ -488,15 +488,17 @@ The following settings are available:
 ### Scope `charliecloud`
 
 The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charliecloud/) containers are executed by Nextflow.
-If `charliecloud.writeFake` is unset / `false`, charliecloud will create a copy of the container in the process working directory.
 
 The following settings are available:
 
-`charliecloud.cacheDir`
-: The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
-
 `charliecloud.enabled`
 : Enable Charliecloud execution (default: `false`).
+
+`charliecloud.writeFake`
+: Enable `writeFake` with charliecloud (default: `true`) This allows to run containers from storage in writeable mode, using overlayfs. `writeFake` requires unprivileged `overlayfs` (Linux kernel >= 5.11). For full support, tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
+
+`charliecloud.cacheDir`
+: The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 
 `charliecloud.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
@@ -512,12 +514,6 @@ The following settings are available:
 
 `charliecloud.registry`
 : The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
-
-`charliecloud.writeFake`
-: Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode, using overlayfs, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details 
-
-`charliecloud.useSquash`
-: Create a temporary squashFS container image in the process work directory instead of a folder.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
