@@ -131,7 +131,7 @@ class CharliecloudCache {
         if( config.pullTimeout )
             pullTimeout = config.pullTimeout as Duration
 
-        def writeFake = true as Boolean
+        def writeFake = true
 
         if( config.writeFake ) 
             writeFake = config.writeFake?.toString() == 'true'
