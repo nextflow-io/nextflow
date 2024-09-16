@@ -1209,4 +1209,29 @@ class WaveClientTest extends Specification {
         100 .times { assert WaveClient.randomRange(0, 10) >= 0 }
     }
 
+    def 'should print info message' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def BUILD_ID = 'build-123'
+
+        when:
+        wave.awaitCompletion(BUILD_ID, 'wave.com/foo')
+
+        then:
+        1 * wave.isComplete(BUILD_ID) >> false
+        then:
+        wave.sleep0(_) >> null
+        then:
+        1 * wave.isComplete(BUILD_ID) >> false
+        then:
+        wave.sleep0(_) >> null
+
+        then:
+        1 * wave.isComplete(BUILD_ID) >> true
+        then:
+        wave.sleep0(_) >> null
+
+    }
 }

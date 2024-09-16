@@ -577,22 +577,26 @@ class WaveClient {
         }
     }
 
-    void awaitCompletion(String buildId, String containerImage) throws TimeoutException {
+    protected void awaitCompletion(String buildId, String containerImage) throws TimeoutException {
         final long maxAwait = config.buildMaxDuration().toMillis()
         final long startTime = Instant.now().toEpochMilli()
         int count=0
         while( !isComplete(buildId) ) {
-            count++
             if( System.currentTimeMillis()-startTime > maxAwait ) {
                 final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - build id: ${buildId}"
                 throw new ProcessUnrecoverableException(msg)
             }
             // report a log info first 10 secs, then every 2 mins
-            if( count==10 || count % 120 == 0 ) {
+            log.debug "count ${(count-1) % 12}"
+            if( (count-1++) % 12 == 0 ) {
                 log.info "Awaiting provisioning for container $containerImage"
             }
-            Thread.sleep(randomRange(10,15) * 1_000)
+            sleep0(randomRange(10,15) * 1_000)
         }
+    }
+
+    protected void sleep0(long period) {
+        Thread.sleep(period)
     }
 
     protected static int randomRange(int min, int max) {
