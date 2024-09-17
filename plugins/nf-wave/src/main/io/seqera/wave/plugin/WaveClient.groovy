@@ -581,14 +581,20 @@ class WaveClient {
         final long maxAwait = config.buildMaxDuration().toMillis()
         final long startTime = Instant.now().toEpochMilli()
         int count=0
-        while( !isComplete(buildId) ) {
+        while( !Thread.currentThread().isInterrupted() ) {
+            final resp = buildStatus(buildId)
+            if( resp.status==BuildStatusResponse.Status.COMPLETED ) {
+                if( resp.succeeded )
+                    return
+                final msg = "Wave provisioning for container '${containerImage}' did not complete successfully - check details here: ${endpoint}/view/builds/${buildId}"
+                throw new ProcessUnrecoverableException(msg)
+            }
             if( System.currentTimeMillis()-startTime > maxAwait ) {
-                final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - build id: ${buildId}"
+                final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - check details here: ${endpoint}/view/builds/${buildId}"
                 throw new ProcessUnrecoverableException(msg)
             }
             // report a log info first 10 secs, then every 2 mins
-            log.debug "count ${(count-1) % 12}"
-            if( (count-1++) % 12 == 0 ) {
+            if( ((count++)-1) % 12 == 0 ) {
                 log.info "Awaiting provisioning for container $containerImage"
             }
             sleep0(randomRange(10,15) * 1_000)
@@ -605,7 +611,7 @@ class WaveClient {
         return rand.nextInt((max - min) + 1) + min;
     }
 
-    protected boolean isComplete(String buildId) {
+    protected BuildStatusResponse buildStatus(String buildId) {
         final String statusEndpoint = endpoint + "/v1alpha1/builds/"+buildId+"/status";
         final HttpRequest req = HttpRequest.newBuilder()
             .uri(URI.create(statusEndpoint))
@@ -616,8 +622,7 @@ class WaveClient {
         final HttpResponse<String> resp = httpSend(req);
         log.debug("Wave build status response: statusCode={}; body={}", resp.statusCode(), resp.body())
         if( resp.statusCode()==200 ) {
-            final result = jsonToBuildStatusResponse(resp.body())
-            return result.status == BuildStatusResponse.Status.COMPLETED
+            return jsonToBuildStatusResponse(resp.body())
         }
         else {
             String msg = String.format("Wave invalid response: GET %s [%s] %s", statusEndpoint, resp.statusCode(), resp.body());
